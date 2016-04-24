@@ -1,3 +1,5 @@
+https://codeship.com/projects/06d4f230-ec6c-0133-e3a5-7e5a65a93a48/status?branch=master
+
 # FunctionalTypeScript 
 > A Functional Library for TypeScript based on Scala
 
