@@ -2,63 +2,64 @@
  * Created by Jordan on 4/23/2016.
  */
 
-export module lang {
-  export class Option<T> {
+export class Option<T> {
 
-    constructor(protected value:T) {
-    }
+  public isEmpty: boolean;
 
-    public map(f:(object:T) => any) {
-      return new Some(f(this.value));
-    }
-
-    public get() {
-      return this.value;
-    }
-
-    public getOrElse(defaultValue:T):T {
-      return this.value ? this.value : defaultValue;
-    }
-
+  constructor(protected value: T) {
   }
 
-  export class Some<T> extends Option<T> {
-
-    constructor(value:T) {
-      super(value);
-    }
-
-    public isEmpty = () => {
-      return false;
-    };
-
-    public get() {
-      return this.value;
-    }
+  public map(f: (object: T) => any) {
+    return new Some(f(this.value));
   }
 
-  export class None<T> extends Option<T> {
+  public get get() {
+    return this.value;
+  }
 
-    constructor(none:T = null) {
-      super(none);
-    }
+  public getOrElse(defaultValue: T): T {
+    return this.value ? this.value : defaultValue;
+  }
 
-    public isEmpty = () => {
-      return true;
-    };
+}
 
-    public get():T {
-      throw new Error("None.get");
-    }
+export class Some<T> extends Option<T> {
+
+  constructor(value: T) {
+    super(value);
+  }
+
+  public get isEmpty() {
+    return true;
+  };
+
+  public get get() {
+    return this.value;
   }
 }
 
-export function Option<T>(x:T):lang.Option<T> {
-  return new lang.Option(x);
+export class None<T> extends Option<T> {
+
+  constructor(none: T = null) {
+    super(none);
+  }
+
+  public get isEmpty() {
+    return true;
+  }
+
+  public get get(): T {
+    throw new Error('None.get');
+  }
+
 }
 
-export function Some<T>(x:T):lang.Some<T> {
-  return new lang.Some(x);
+export function option<T>(x: T): Option<T> {
+  return x ? some(x) : none;
 }
 
-export const None : lang.None<any> = new lang.None();
+export function some<T>(x: T): Some<T> {
+  return new Some(x);
+}
+
+export const none: None<any> = new None();
