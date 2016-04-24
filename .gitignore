@@ -1,0 +1,16 @@
+.jsTmp/
+.cssTmp/
+.idea/
+.gulp-scss-cache/
+.sass-cache/
+coverage/
+docs/
+node_modules/
+typings/
+npm-debug.log
+src/**/*.js
+src/**/*.js.map
+src/**/*.ts.ktp.ts
+test/**/*.js
+test/**/*.js.map
+test/**/*.ts.ktp.ts

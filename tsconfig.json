@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "emitError": false,
+    "target": "ES5",
+    "sourceMap": false,
+    "declaration": true,
+    "module": "commonjs",
+    "noExternalResolve": false,
+    "sortOutput": true
+  },
+  "filesGlob": [
+    "typings/browser.d.ts",
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ],
+  "files": [
+    "typings\\browser.d.ts",
+    "src\\index.ts",
+    "src\\main\\Greeter.ts",
+    "src\\main\\Option.ts",
+    "src\\main\\Wish.ts",
+    "test\\main\\Wish.spec.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
