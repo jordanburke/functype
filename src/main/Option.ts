@@ -5,6 +5,7 @@
 export class Option<T> {
 
   public isEmpty: boolean;
+  public size: number;
 
   constructor(protected value: T) {
   }
@@ -36,6 +37,10 @@ export class Some<T> extends Option<T> {
   public get get() {
     return this.value;
   }
+
+  public get size(): number {
+    return 1;
+  }
 }
 
 export class None<T> extends Option<T> {
@@ -52,6 +57,9 @@ export class None<T> extends Option<T> {
     throw new Error('None.get');
   }
 
+  public get size(): number {
+    return 0;
+  }
 }
 
 export function option<T>(x: T): Option<T> {
