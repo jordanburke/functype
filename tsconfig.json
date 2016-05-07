@@ -12,12 +12,19 @@
   ],
   "files": [
     "typings\\browser.d.ts",
+    "src\\index.d.ts",
     "src\\index.ts",
-    "src\\main\\Greeter.ts",
+    "src\\main\\List.d.ts",
     "src\\main\\List.ts",
+    "src\\main\\Map.d.ts",
+    "src\\main\\Map.ts",
+    "src\\main\\Option.d.ts",
     "src\\main\\Option.ts",
-    "src\\main\\Wish.ts",
+    "src\\main\\Tuple.d.ts",
+    "src\\main\\Tuple.ts",
+    "test\\main\\List.spec.d.ts",
     "test\\main\\List.spec.ts",
+    "test\\main\\Option.spec.d.ts",
     "test\\main\\Option.spec.ts"
   ],
   "exclude": [

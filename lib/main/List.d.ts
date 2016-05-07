@@ -23,6 +23,7 @@ export declare class List<A> {
     length: number;
     reduce<A1 extends A>(op: (x: A1, y: A1) => A1): A;
     size: number;
-    union(that: A[]): List<A>;
+    toArray(): A[];
+    union(that: A[] | List<A>): List<A>;
 }
 export declare function list<A>(args: A[]): List<A>;

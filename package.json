@@ -1,6 +1,6 @@
 {
   "name": "functional-type-script",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "description": "A Functional Library for TypeScript based on Scala",
   "homepage": "http://sapienapps.com",
   "author": {
@@ -35,6 +35,7 @@
   "typings": "lib/index.d.ts",
   "repository": "jordanburke/FunctionalTypeScript",
   "dependencies": {
+    "es6-shim": "0.35.0",
     "lodash": "4.8.2"
   },
   "devDependencies": {

@@ -62,6 +62,8 @@ export class None<T> extends Option<T> {
   }
 }
 
+export const none: None<any> = new None();
+
 export function option<T>(x: T): Option<T> {
   return x ? some(x) : none;
 }
@@ -69,5 +71,3 @@ export function option<T>(x: T): Option<T> {
 export function some<T>(x: T): Some<T> {
   return new Some(x);
 }
-
-export const none: None<any> = new None();
