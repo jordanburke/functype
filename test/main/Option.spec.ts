@@ -1,6 +1,6 @@
 import {option, some, none, Option, Some, None} from '../../src/main/Option';
 
-describe('Wish Test ', () => {
+describe('Option Test ', () => {
 
   beforeEach(() => {
   });

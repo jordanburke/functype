@@ -25,7 +25,8 @@
     "test\\main\\List.spec.d.ts",
     "test\\main\\List.spec.ts",
     "test\\main\\Option.spec.d.ts",
-    "test\\main\\Option.spec.ts"
+    "test\\main\\Option.spec.ts",
+    "test\\main\\Tuple.spec.ts"
   ],
   "exclude": [
     "node_modules"

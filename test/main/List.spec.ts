@@ -1,7 +1,7 @@
 import {list, List} from '../../src/main/List';
 import {option, some, none, Option} from '../../src/main/Option';
 
-describe('Wish Test ', () => {
+describe('List Test ', () => {
   let myStringList: List<string>;
   let myNumberList: List<number>;
 

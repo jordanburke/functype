@@ -1,6 +1,7 @@
+import {Iterable} from "./Iterable"
 import {option, Option} from "./Option"
-import {Array as ES56Array} from "es6-shim"
-Array = ES56Array;
+import {Array as ES6Array} from "es6-shim"
+Array = ES6Array;
 
 /**
  * An Immutable List class in similar to a Scala List. It's important to point out that this list is not infact a real
@@ -9,7 +10,7 @@ Array = ES56Array;
  * traditional List this will remain this way. Externally the List Interface will ensure immutabliy by returning new
  * instances of the List and will not mutate the List or the underlying Array in any way.
  */
-export class List<A> {
+export class List<A> implements Iterable<A> {
 
   private data : A[];
 

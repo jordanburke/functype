@@ -1,6 +1,6 @@
-var greeter = new App.Greeter();
+var option = App.option;
 
-console.log(greeter.greet("Well done , You have successfully loaded everything"));
+console.log(option('test'));
 
 
 
