@@ -1,3 +1,4 @@
+import { Iterable } from "./Iterable";
 import { Option } from "./Option";
 /**
  * An Immutable List class in similar to a Scala List. It's important to point out that this list is not infact a real
@@ -6,7 +7,7 @@ import { Option } from "./Option";
  * traditional List this will remain this way. Externally the List Interface will ensure immutabliy by returning new
  * instances of the List and will not mutate the List or the underlying Array in any way.
  */
-export declare class List<A> {
+export declare class List<A> implements Iterable<A> {
     private data;
     constructor(args: A[]);
     contains(elem: A): boolean;
