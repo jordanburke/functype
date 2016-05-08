@@ -1,5 +1,5 @@
 {
-  "name": "functional-type-script",
+  "name": "functional-typescript",
   "version": false,
   "ambientDependencies": {
     "jasmine": "github:DefinitelyTyped/DefinitelyTyped/jasmine/jasmine.d.ts#a44529fcb1e1cdc0355e71c42a6048de99b57c34",

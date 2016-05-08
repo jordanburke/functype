@@ -26,6 +26,7 @@
     "src\\main\\Tuple.ts",
     "test\\main\\List.spec.d.ts",
     "test\\main\\List.spec.ts",
+    "test\\main\\Map.spec.d.ts",
     "test\\main\\Map.spec.ts",
     "test\\main\\Option.spec.d.ts",
     "test\\main\\Option.spec.ts"

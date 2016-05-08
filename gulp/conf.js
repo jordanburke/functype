@@ -9,7 +9,7 @@
 var gutil = require('gulp-util');
 
 /** Project Name goes here */
-var Project_Name ='functional-type-script';
+var Project_Name ='functional-typescript';
 
 /**
  *  The main paths of your project handle these with care
