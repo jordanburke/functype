@@ -12,6 +12,7 @@ export declare class IMap<K, V> implements Iterable<[K, V]> {
     get(key: K): Option<V>;
     getOrElse(key: K, defaultValue: V): V;
     head: [K, V];
+    headOption: Option<[K, V]>;
     set(entry: [K, V]): IMap<K, V>;
 }
 export declare function iMap<K, V>(iterable: Iterable<[K, V]>): IMap<K, V>;

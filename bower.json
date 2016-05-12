@@ -1,6 +1,6 @@
 {
   "name": "functional-typescript",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "description": "A Functional Library for TypeScript based on Scala",
   "main": "bower/FunctionalTypeScript.js",
   "dependencies": {},
