@@ -15,7 +15,7 @@ export class List<A> implements Iterable<A> {
   private data : A[];
 
   constructor(args: A[]) {
-    this.data = [].concat(...args);
+    this.data = args.concat([]);
   }
 
   public contains(elem: A) : boolean {

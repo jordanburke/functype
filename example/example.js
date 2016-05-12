@@ -1,6 +1,8 @@
-var option = App.option;
+var opt = App.opt;
+var list = App.list;
+var map = App.map;
 
-console.log(option('test'));
+console.log(opt.option('test'));
 
 
 

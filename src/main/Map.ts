@@ -1,4 +1,5 @@
 import {Iterable, IterableImpl} from "./Iterable";
+import {list, List} from "./List";
 import {option, Option} from "./Option";
 import {Array as ES6Array, Map} from "es6-shim";
 Array = ES6Array;
@@ -64,6 +65,26 @@ export class IMap<K,V> implements Iterable<[K,V]> {
       }
     });
     return new IMap<K,V>(new IMapIterator(this.data.entries()));
+  }
+
+  public get(key: K) : Option<V> {
+    return option(this.data.get(key));
+  }
+
+  public getOrElse(key: K, defaultValue: V) : V {
+    return option(this.data.get(key)).getOrElse(defaultValue);
+  }
+
+  public get head() : [K,V] {
+    return this.data.entries().next().value;
+  }
+
+  public get headOption() : Option<[K,V]> {
+    return option(this.data.entries().next().value);
+  }
+
+  public set(entry: [K,V]) : IMap<K,V> {
+    return iMap(list<[K,V]>([entry]));
   }
 }
 

@@ -1,5 +1,7 @@
-import { option, some, none, Option, Some, None } from './main/Option';
+import * as opt from './main/Option';
+import * as list from './main/List';
+import * as map from './main/Map';
 /**
  * Export to public as typescript modules.
  */
-export { option, some, none, Option, Some, None };
+export { opt, list, map };
