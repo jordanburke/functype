@@ -1,6 +1,6 @@
 {
   "name": "functional-typescript",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A Functional Library for TypeScript based on Scala",
   "homepage": "http://sapienapps.com",
   "author": {
