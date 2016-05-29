@@ -1,3 +1,4 @@
+import {iMap, IMap} from "./Map"
 import {Iterable} from "./Iterable"
 import {option, Option} from "./Option"
 import {Array as ES6Array} from "es6-shim"
@@ -14,8 +15,15 @@ export class List<A> implements Iterable<A> {
 
   private data : A[];
 
-  constructor(args: A[]) {
-    this.data = args.concat([]);
+  constructor(args: A[] | Iterable<A>) {
+    if (args instanceof ES6Array) {
+      this.data = args.concat([]);
+    } else {
+      this.data = [];
+      args.forEach((item) => {
+        this.data.push(item);
+      });
+    }
   }
 
   public contains(elem: A) : boolean {
@@ -36,6 +44,10 @@ export class List<A> implements Iterable<A> {
 
   public dropRight(n : number) : List<A> {
     return list<A>(this.data.slice(0, n));
+  }
+
+  public dropWhile(p: (a: A) => boolean) : List<A> {
+    throw new Error("dropWhile");
   }
 
   public filter(p: (a: A) => boolean) : List<A> {
@@ -61,6 +73,14 @@ export class List<A> implements Iterable<A> {
     return this.data[index];
   }
 
+  head(): A {
+    return this.data[0];
+  }
+
+  headOption(): Option<A> {
+    return option(this.head());
+  }
+
   public map<B>(f : (a : A) => B) : List<B> {
     const newArray : B[] = this.data.map(f);
     return list(newArray);
@@ -82,6 +102,15 @@ export class List<A> implements Iterable<A> {
     return [].concat(this.data);
   }
 
+  public toList() : List<A> {
+    return list(this.data);
+  }
+
+  public toString() : string {
+    const rawString = this.data.join(', ');
+    return `List(${rawString})`;
+  }
+
   public union(that: A[] | List<A>) : List<A> {
     if (that instanceof List) {
       return list<A>(this.data.concat(that.toArray()));
@@ -93,6 +122,6 @@ export class List<A> implements Iterable<A> {
   }
 }
 
-export function list<A>(args: A[]) : List<A> {
+export function list<A>(args: A[] | Iterable<A>) : List<A> {
   return new List(args);
 }

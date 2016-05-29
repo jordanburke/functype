@@ -37,6 +37,12 @@ describe('List Test ', () => {
     expect(value).toBe(55);
   });
 
+
+  it('toString Should be expected', () => {
+    expect(myStringList.toString()).toBe('List(hello, you, wonderful, world!)');
+    expect(myNumberList.toString()).toBe('List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)');
+  });
+
   it('Union Should return a new List', () => {
     const newNumberList = list<number>([11,12,13,14,15]);
     const value : List<number> = myNumberList.union(newNumberList);
