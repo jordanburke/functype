@@ -23,6 +23,7 @@ export declare class List<A> implements Iterable<A> {
     get(index: number): A;
     head(): A;
     headOption(): Option<A>;
+    iterator(): Iterable<A>;
     map<B>(f: (a: A) => B): List<B>;
     length: number;
     reduce<A1 extends A>(op: (x: A1, y: A1) => A1): A;

@@ -1,5 +1,5 @@
 import {iMap, IMap} from "./Map"
-import {Iterable} from "./Iterable"
+import {Iterable, IterableImpl} from "./Iterable"
 import {option, Option} from "./Option"
 import {Array as ES6Array} from "es6-shim"
 Array = ES6Array;
@@ -81,6 +81,10 @@ export class List<A> implements Iterable<A> {
     return option(this.head());
   }
 
+  public iterator() : Iterable<A> {
+    return new ListIterator(this.data.values(), this);
+  }
+
   public map<B>(f : (a : A) => B) : List<B> {
     const newArray : B[] = this.data.map(f);
     return list(newArray);
@@ -124,4 +128,8 @@ export class List<A> implements Iterable<A> {
 
 export function list<A>(args: A[] | Iterable<A>) : List<A> {
   return new List(args);
+}
+
+class ListIterator<A> extends IterableImpl<A> {
+
 }

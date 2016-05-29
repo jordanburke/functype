@@ -21,10 +21,6 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return new IMapIterator(this.data.entries()).count(p);
   }
 
-  public forEach(f: (a : [K,V]) => void) {
-    return new IMapIterator(this.data.entries()).forEach(f);
-  }
-
   public drop(n : number) : IMap<K,V> {
     let count = 0;
     const newMap = new Map<K,V>();
@@ -77,6 +73,10 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return new IMap<K,V>(new IMapIterator(newInternalMap.entries()));
   }
 
+  public forEach(f: (a : [K,V]) => void) {
+    return new IMapIterator(this.data.entries()).forEach(f);
+  }
+
   public get(key: K) : Option<V> {
     return option(this.data.get(key));
   }
@@ -93,7 +93,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return option(this.data.entries().next().value);
   }
 
-  public get iterator(): IterableImpl<[K,V]> {
+  public get iterator(): Iterable<[K,V]> {
     return new IMapIterator(this.data.entries());
   }
 
@@ -129,6 +129,7 @@ export function iMap<K,V>(iterable : Iterable<[K,V]>) : IMap<K,V> {
 }
 
 class IMapIterator<A> extends IterableImpl<A> {
+
   drop(n : number) : Iterable<A> {
     throw new Error();
   }
