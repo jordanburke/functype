@@ -93,12 +93,20 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return option(this.data.entries().next().value);
   }
 
-  public get iterator(): Iterable<[K,V]> {
+  public iterator(): Iterable<[K,V]> {
     return new IMapIterator(this.data.entries());
   }
 
-  public set(entry: [K,V]) : IMap<K,V> {
-    return iMap(list<[K,V]>([entry]));
+  public set(entry: [K,V] | K, value ?: V) : IMap<K,V> {
+    if (entry) {
+      if (entry instanceof Array) {
+        return iMap(list<[K,V]>([entry]));
+      } else if (entry && value) {
+        return iMap(list<[K,V]>([[entry, value]]));
+      }
+    } else {
+      throw Error("Invalid set " + entry);
+    }
   }
 
   public map<K1, V1>(f : (a : [K,V]) => [K1,V1]) : IMap<K1, V1> {
