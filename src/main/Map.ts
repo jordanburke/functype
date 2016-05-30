@@ -123,7 +123,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
   }
 
   public toList() : List<[K,V]> {
-    return list(this.iterator);
+    return list(this.iterator());
   }
 
   public toString() : string {
