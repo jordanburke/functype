@@ -37,6 +37,14 @@ export abstract class Option<A> implements Iterable<A> {
     return !p(this.value) ? this : new None<A>();
   }
 
+  public foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B {
+    return this.toList().foldLeft(z);
+  }
+
+  public foldRight<B>(z: B): (op: (a : A, b : B) => B) => B {
+    return this.toList().foldRight(z);
+  }
+
   public map(f: (object: A) => any) {
     return new Some(f(this.value));
   }
@@ -55,6 +63,10 @@ export abstract class Option<A> implements Iterable<A> {
 
   public headOption(): Option<A> {
     return this;
+  }
+
+  public toArray() : A[] {
+    return this.toList().toArray();
   }
 
   public abstract toList() : List<A>

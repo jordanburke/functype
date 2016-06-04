@@ -65,6 +65,28 @@ export class List<A> implements Iterable<A> {
     return option(this.data.find(p));
   }
 
+  public foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B {
+    let accumulator : B = z;
+    return (op: (b : B, a : A) => B) => {
+      this.forEach((item : A) => {
+        accumulator = op(accumulator, item);
+      });
+      return accumulator;
+    }
+  }
+
+  public foldRight<B>(z: B): (op: (a : A, b : B) => B) => B {
+    const reversedList = this.reverse();
+    let accumulator : B = z;
+    // Couldn't get delegate call to foldLeft here, TypeScript compiler issue? or bad syntax?
+    return (op: (a : A, b : B) => B) => {
+      reversedList.forEach((item : A) => {
+        accumulator = op(item, accumulator);
+      });
+      return accumulator;
+    }
+  }
+
   public _(index :number) : A {
     return this.get(index);
   }
@@ -96,6 +118,10 @@ export class List<A> implements Iterable<A> {
 
   public reduce<A1 extends A>(op: (x : A1, y : A1) => A1) {
     return this.data.reduce(op);
+  }
+
+  public reverse() : List<A> {
+    return new List([].concat(this.data).reverse());
   }
 
   public get size() {

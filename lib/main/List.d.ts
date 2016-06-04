@@ -19,6 +19,8 @@ export declare class List<A> implements Iterable<A> {
     filter(p: (a: A) => boolean): List<A>;
     filterNot(p: (a: A) => boolean): List<A>;
     find(p: (a: A) => boolean): Option<A>;
+    foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;
+    foldRight<B>(z: B): (op: (a: A, b: B) => B) => B;
     _(index: number): A;
     get(index: number): A;
     head(): A;
@@ -27,6 +29,7 @@ export declare class List<A> implements Iterable<A> {
     map<B>(f: (a: A) => B): List<B>;
     length: number;
     reduce<A1 extends A>(op: (x: A1, y: A1) => A1): A;
+    reverse(): List<A>;
     size: number;
     toArray(): A[];
     toList(): List<A>;

@@ -11,25 +11,17 @@
     "test/**/*.ts"
   ],
   "files": [
-    "typings/browser.d.ts",
-    "src/index.d.ts",
-    "src/index.ts",
-    "src/main/Iterable.d.ts",
-    "src/main/Iterable.ts",
-    "src/main/List.d.ts",
-    "src/main/List.ts",
-    "src/main/Map.d.ts",
-    "src/main/Map.ts",
-    "src/main/Option.d.ts",
-    "src/main/Option.ts",
-    "src/main/Tuple.d.ts",
-    "src/main/Tuple.ts",
-    "test/main/List.spec.d.ts",
-    "test/main/List.spec.ts",
-    "test/main/Map.spec.d.ts",
-    "test/main/Map.spec.ts",
-    "test/main/Option.spec.d.ts",
-    "test/main/Option.spec.ts"
+    "src\\index.d.ts",
+    "src\\index.ts",
+    "src\\main\\Iterable.ts",
+    "src\\main\\List.ts",
+    "src\\main\\Map.ts",
+    "src\\main\\Option.ts",
+    "src\\main\\Tuple.ts",
+    "test\\main\\List.spec.ts",
+    "test\\main\\Map.spec.ts",
+    "test\\main\\Option.spec.ts",
+    "typings\\browser.d.ts"
   ],
   "exclude": [
     "node_modules"

@@ -12,11 +12,14 @@ export declare abstract class Option<A> implements Iterable<A> {
     dropWhile(p: (a: A) => boolean): List<A>;
     filter(p: (a: A) => boolean): Option<A>;
     filterNot(p: (a: A) => boolean): Option<A>;
+    foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;
+    foldRight<B>(z: B): (op: (a: A, b: B) => B) => B;
     map(f: (object: A) => any): Some<any>;
     get: A;
     getOrElse(defaultValue: A): A;
     head(): A;
     headOption(): Option<A>;
+    toArray(): A[];
     abstract toList(): List<A>;
 }
 export declare class Some<A> extends Option<A> {

@@ -73,6 +73,14 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return new IMap<K,V>(new IMapIterator(newInternalMap.entries()));
   }
 
+  public foldLeft<B>(z: B): (op: (b : B, a : [K,V]) => B) => B {
+    return this.toList().foldLeft(z);
+  }
+
+  public foldRight<B>(z: B): (op: (a : [K,V], b : B) => B) => B {
+    return this.toList().foldRight(z);
+  }
+
   public forEach(f: (a : [K,V]) => void) {
     return new IMapIterator(this.data.entries()).forEach(f);
   }

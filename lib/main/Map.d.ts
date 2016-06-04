@@ -10,6 +10,8 @@ export declare class IMap<K, V> implements Iterable<[K, V]> {
     dropWhile(p: (a: [K, V]) => boolean): IMap<K, V>;
     filter(p: (a: [K, V]) => boolean): IMap<K, V>;
     filterNot(p: (a: [K, V]) => boolean): IMap<K, V>;
+    foldLeft<B>(z: B): (op: (b: B, a: [K, V]) => B) => B;
+    foldRight<B>(z: B): (op: (a: [K, V], b: B) => B) => B;
     forEach(f: (a: [K, V]) => void): void;
     get(key: K): Option<V>;
     getOrElse(key: K, defaultValue: V): V;

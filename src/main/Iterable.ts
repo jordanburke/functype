@@ -9,12 +9,14 @@ export interface Iterable<A> {
   dropWhile(p: (a: A) => boolean) : Iterable<A>
   filter(p: (a: A) => boolean) : Iterable<A>
   filterNot(p: (a: A) => boolean) : Iterable<A>
+  foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B
+  foldRight<B>(z: B): (op: (a : A, b : B) => B) => B
   head(): A
   headOption(): Option<A>
 
   map<B>(f : (a : A) => B) : Iterable<B>
 
-
+  toArray() : A[]
   toList() : List<A>
 }
 
@@ -43,6 +45,14 @@ export abstract class IterableImpl<A> implements Iterable<A> {
     }
   }
 
+  public foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B {
+    return this._data.foldLeft(z);
+  }
+
+  public foldRight<B>(z: B): (op: (a : A, b : B) => B) => B {
+    return this._data.foldRight(z);
+  }
+
   public head(): A {
     return this._iterator.next().value;
   }
@@ -50,7 +60,7 @@ export abstract class IterableImpl<A> implements Iterable<A> {
   public headOption(): Option<A> {
     return option(this.head());
   }
-  
+
   public iterator(): Iterable<A> {
     return this;
   }
@@ -66,17 +76,21 @@ export abstract class IterableImpl<A> implements Iterable<A> {
   public dropWhile(p: (a: A) => boolean) : Iterable<A> {
     return this._data.dropWhile(p);
   }
-  
+
   public filter(p: (a: A) => boolean) : Iterable<A> {
     return this._data.filter(p);
   }
-  
+
   public filterNot(p: (a: A) => boolean) : Iterable<A> {
     return this._data.filterNot(p);
   }
 
   public map<B>(f : (a : A) => B) : Iterable<B> {
     return this._data.map(f);
+  }
+
+  public toArray() : A[] {
+    return this.toList().toArray();
   }
 
   public toList() : List<A> {

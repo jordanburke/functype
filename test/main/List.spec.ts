@@ -27,6 +27,22 @@ describe('List Test ', () => {
     expect(value.get).toBe('wonderful');
   });
 
+  it('foldLeft Should return a different value', () => {
+    const folder : (op: (b : number, a : string) => number) => number = myStringList.foldLeft<number>(10);
+    const total = folder((b, a) => {
+      return b + a.length;
+    });
+    expect(total).toBe(33);
+  });
+
+  it('foldRight Should return a different value', () => {
+    const folder : (op: (a : string, b : number) => number) => number = myStringList.foldRight<number>(10);
+    const total = folder((a, b) => {
+      return a.length + b;
+    });
+    expect(total).toBe(33);
+  });
+
   it('Find Should return a none', () => {
     const value : Option<string> = myStringList.find((item) => { return item === 'horrible'});
     expect(value).toBe(none);
