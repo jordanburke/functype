@@ -14,7 +14,7 @@ export declare abstract class Option<A> implements Iterable<A> {
     filterNot(p: (a: A) => boolean): Option<A>;
     foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;
     foldRight<B>(z: B): (op: (a: A, b: B) => B) => B;
-    map(f: (object: A) => any): Some<any>;
+    abstract map<B>(f: (object: A) => B): Option<B>;
     get: A;
     getOrElse(defaultValue: A): A;
     head(): A;
@@ -26,6 +26,7 @@ export declare class Some<A> extends Option<A> {
     constructor(value: A);
     isEmpty(): boolean;
     get: A;
+    map<B>(f: (object: A) => B): Option<B>;
     size: number;
     toList(): List<A>;
 }
@@ -33,6 +34,7 @@ export declare class None<A> extends Option<A> {
     constructor();
     isEmpty(): boolean;
     get: A;
+    map<B>(f: (object: A) => B): Option<B>;
     size: number;
     toList(): List<A>;
 }

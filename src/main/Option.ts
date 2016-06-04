@@ -45,9 +45,7 @@ export abstract class Option<A> implements Iterable<A> {
     return this.toList().foldRight(z);
   }
 
-  public map(f: (object: A) => any) {
-    return new Some(f(this.value));
-  }
+  public abstract map<B>(f: (object: A) => B) : Option<B>;
 
   public get get() {
     return this.value;
@@ -86,6 +84,10 @@ export class Some<A> extends Option<A> {
     return this.value;
   }
 
+  public map<B>(f: (object: A) => B) : Option<B> {
+    return new Some(f(this.value));
+  }
+
   public get size(): number {
     return 1;
   }
@@ -107,6 +109,10 @@ export class None<A> extends Option<A> {
 
   public get get(): A {
     throw new Error('None.get');
+  }
+
+  public map<B>(f: (object: A) => B) : Option<B> {
+    return none;
   }
 
   public get size(): number {
