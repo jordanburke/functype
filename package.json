@@ -1,6 +1,6 @@
 {
   "name": "functional-typescript",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "A Functional Library for TypeScript based on Scala",
   "homepage": "http://sapienapps.com",
   "author": {
@@ -13,24 +13,10 @@
   ],
   "main": "lib/index.js",
   "keywords": [
-    "f",
-    "u",
-    "n",
-    "c",
-    "t",
-    "i",
-    "o",
-    "a",
-    "l",
-    ",",
-    "b",
-    "r",
-    "y",
-    "p",
-    "g",
-    "m",
-    "e",
-    "s"
+    "functional",
+    "typescript",
+    "scala",
+    "scala-like"
   ],
   "typings": "lib/index.d.ts",
   "repository": "jordanburke/FunctionalTypeScript",
