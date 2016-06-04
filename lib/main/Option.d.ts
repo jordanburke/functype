@@ -1,26 +1,37 @@
-/**
- * Created by Jordan on 4/23/2016.
- */
-export declare class Option<T> {
-    protected value: T;
-    isEmpty: boolean;
+import { Iterable } from "./Iterable";
+import { List } from "./List";
+export declare abstract class Option<A> implements Iterable<A> {
+    protected value: A;
+    abstract isEmpty(): boolean;
     size: number;
-    constructor(value: T);
-    map(f: (object: T) => any): Some<any>;
-    get: T;
-    getOrElse(defaultValue: T): T;
+    constructor(value: A);
+    count(p: (x: A) => boolean): number;
+    forEach(f: (a: A) => void): void;
+    drop(n: number): List<A>;
+    dropRight(n: number): List<A>;
+    dropWhile(p: (a: A) => boolean): List<A>;
+    filter(p: (a: A) => boolean): Option<A>;
+    filterNot(p: (a: A) => boolean): Option<A>;
+    map(f: (object: A) => any): Some<any>;
+    get: A;
+    getOrElse(defaultValue: A): A;
+    head(): A;
+    headOption(): Option<A>;
+    abstract toList(): List<A>;
 }
-export declare class Some<T> extends Option<T> {
-    constructor(value: T);
-    isEmpty: boolean;
-    get: T;
+export declare class Some<A> extends Option<A> {
+    constructor(value: A);
+    isEmpty(): boolean;
+    get: A;
     size: number;
+    toList(): List<A>;
 }
-export declare class None<T> extends Option<T> {
-    constructor(none?: T);
-    isEmpty: boolean;
-    get: T;
+export declare class None<A> extends Option<A> {
+    constructor();
+    isEmpty(): boolean;
+    get: A;
     size: number;
+    toList(): List<A>;
 }
 export declare const none: None<any>;
 export declare function option<T>(x: T): Option<T>;

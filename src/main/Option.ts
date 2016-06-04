@@ -1,16 +1,43 @@
-/**
- * Created by Jordan on 4/23/2016.
- */
+import {Iterable, IterableImpl} from "./Iterable"
+import {List} from "./List"
 
-export class Option<T> {
+export abstract class Option<A> implements Iterable<A> {
 
-  public isEmpty: boolean;
+  public abstract isEmpty(): boolean;
   public size: number;
 
-  constructor(protected value: T) {
+  constructor(protected value: A) {
   }
 
-  public map(f: (object: T) => any) {
+  public count(p : (x : A) => boolean) : number {
+    return this.toList().count(p);
+  }
+
+  public forEach(f: (a : A) => void) {
+    f(this.value);
+  }
+
+  public drop(n : number) : List<A> {
+    return this.toList().drop(n);
+  }
+
+  public dropRight(n : number) : List<A> {
+    return this.toList().dropRight(n);
+  }
+
+  public dropWhile(p: (a: A) => boolean) : List<A> {
+    return this.toList().dropWhile(p);
+  }
+
+  public filter(p: (a: A) => boolean) : Option<A> {
+    return p(this.value) ? this : new None<A>();
+  }
+
+  public filterNot(p: (a: A) => boolean) : Option<A> {
+    return !p(this.value) ? this : new None<A>();
+  }
+
+  public map(f: (object: A) => any) {
     return new Some(f(this.value));
   }
 
@@ -18,21 +45,30 @@ export class Option<T> {
     return this.value;
   }
 
-  public getOrElse(defaultValue: T): T {
+  public getOrElse(defaultValue: A): A {
     return this.value ? this.value : defaultValue;
   }
 
+  public head(): A {
+    return this.get;
+  }
+
+  public headOption(): Option<A> {
+    return this;
+  }
+
+  public abstract toList() : List<A>
 }
 
-export class Some<T> extends Option<T> {
+export class Some<A> extends Option<A> {
 
-  constructor(value: T) {
+  constructor(value: A) {
     super(value);
   }
 
-  public get isEmpty() {
-    return true;
-  };
+  public isEmpty() {
+    return false;
+  }
 
   public get get() {
     return this.value;
@@ -41,24 +77,32 @@ export class Some<T> extends Option<T> {
   public get size(): number {
     return 1;
   }
+
+  public toList() : List<A> {
+    return new List([this.value]);
+  }
 }
 
-export class None<T> extends Option<T> {
+export class None<A> extends Option<A> {
 
-  constructor(none: T = null) {
-    super(none);
+  constructor() {
+    super(null);
   }
 
-  public get isEmpty() {
+  public isEmpty() {
     return true;
   }
 
-  public get get(): T {
+  public get get(): A {
     throw new Error('None.get');
   }
 
   public get size(): number {
     return 0;
+  }
+
+  public toList() : List<A> {
+    return new List([]);
   }
 }
 

@@ -1,7 +1,7 @@
 import { Option } from "./Option";
 import { List } from "./List";
 export interface Iterable<A> {
-    count(p: (x: A) => Boolean): number;
+    count(p: (x: A) => boolean): number;
     forEach(f: (a: A) => void): any;
     drop(n: number): Iterable<A>;
     dropRight(n: number): Iterable<A>;
