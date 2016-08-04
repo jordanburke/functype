@@ -1,8 +1,26 @@
 import {iMap, IMap} from "./Map"
 import {Iterable, IterableImpl} from "./Iterable"
-import {option, Option} from "./Option"
+import {option, Option, IOption} from "./Option"
 import {Array as ES6Array} from "es6-shim"
 Array = ES6Array;
+
+export interface IList<A> extends Iterable<A> {
+
+  length: number;
+
+  _(index :number);
+
+  get(index : number) : A;
+
+  map<B>(f : (a : A) => B) : IList<B>
+
+  reduce<A1 extends A>(op: (x : A1, y : A1) => A1) : A;
+
+  reverse() : IList<A>;
+
+  union(that: A[] | IList<A>) : IList<A>;
+
+}
 
 /**
  * An Immutable List class in similar to a Scala List. It's important to point out that this list is not infact a real
@@ -11,10 +29,12 @@ Array = ES6Array;
  * traditional List this will remain this way. Externally the List Interface will ensure immutabliy by returning new
  * instances of the List and will not mutate the List or the underlying Array in any way.
  */
-export class List<A> implements Iterable<A> {
+export class List<A> implements IList<A> {
 
   private data : A[];
 
+  //constructor(args: A[]);
+  //constructor(args: Iterable<A>)
   constructor(args: A[] | Iterable<A>) {
     if (args instanceof ES6Array) {
       this.data = args.concat([]);
@@ -38,30 +58,30 @@ export class List<A> implements Iterable<A> {
     [].concat(this.data).forEach(f);
   }
 
-  public drop(n : number) : List<A> {
+  public drop(n : number) : IList<A> {
     return list<A>(this.data.slice(n));
   }
 
-  public dropRight(n : number) : List<A> {
+  public dropRight(n : number) : IList<A> {
     return list<A>(this.data.slice(0, n));
   }
 
-  public dropWhile(p: (a: A) => boolean) : List<A> {
+  public dropWhile(p: (a: A) => boolean) : IList<A> {
     throw new Error("dropWhile");
   }
 
-  public filter(p: (a: A) => boolean) : List<A> {
+  public filter(p: (a: A) => boolean) : IList<A> {
     return list<A>(this.data.filter(p));
   }
 
-  public filterNot(p: (a: A) => boolean) : List<A> {
+  public filterNot(p: (a: A) => boolean) : IList<A> {
     const inverse = (a: A) => {
       return !p(a);
     };
     return list<A>(this.data.filter(inverse));
   }
 
-  public find(p: (a: A) => boolean) : Option<A> {
+  public find(p: (a: A) => boolean) : IOption<A> {
     return option(this.data.find(p));
   }
 
@@ -95,19 +115,23 @@ export class List<A> implements Iterable<A> {
     return this.data[index];
   }
 
-  head(): A {
+  public head(): A {
     return this.data[0];
   }
 
-  headOption(): Option<A> {
+  public headOption(): IOption<A> {
     return option(this.head());
+  }
+
+  public isEmpty() : boolean {
+    return this.size() === 0;
   }
 
   public iterator() : Iterable<A> {
     return new ListIterator(this.data.values(), this);
   }
 
-  public map<B>(f : (a : A) => B) : List<B> {
+  public map<B>(f : (a : A) => B) : IList<B> {
     const newArray : B[] = this.data.map(f);
     return list(newArray);
   }
@@ -116,15 +140,15 @@ export class List<A> implements Iterable<A> {
     return this.data.length;
   }
 
-  public reduce<A1 extends A>(op: (x : A1, y : A1) => A1) {
+  public reduce<A1 extends A>(op: (x : A1, y : A1) => A1) : A {
     return this.data.reduce(op);
   }
 
-  public reverse() : List<A> {
+  public reverse() : IList<A> {
     return new List([].concat(this.data).reverse());
   }
 
-  public get size() {
+  public size() : number {
     return this.length;
   }
 
@@ -132,7 +156,7 @@ export class List<A> implements Iterable<A> {
     return [].concat(this.data);
   }
 
-  public toList() : List<A> {
+  public toList() : IList<A> {
     return list(this.data);
   }
 
@@ -141,7 +165,7 @@ export class List<A> implements Iterable<A> {
     return `List(${rawString})`;
   }
 
-  public union(that: A[] | List<A>) : List<A> {
+  public union(that: A[] | IList<A>) : IList<A> {
     if (that instanceof List) {
       return list<A>(this.data.concat(that.toArray()));
     } else if (that instanceof Array){
@@ -152,8 +176,10 @@ export class List<A> implements Iterable<A> {
   }
 }
 
+//export function list(args: A[]);
+//export function list(args: Iterable<A>);
 export function list<A>(args: A[] | Iterable<A>) : List<A> {
-  return new List(args);
+  return new List<A>(args);
 }
 
 class ListIterator<A> extends IterableImpl<A> {

@@ -1,10 +1,15 @@
 import {Iterable, IterableImpl} from "./Iterable"
-import {List} from "./List"
+import {IList, List} from "./List"
 
-export abstract class Option<A> implements Iterable<A> {
+export interface IOption<A> extends Iterable<A> {
+
+  get : A;
+
+}
+
+export abstract class Option<A> implements IOption<A> {
 
   public abstract isEmpty(): boolean;
-  public size: number;
 
   constructor(protected value: A) {
   }
@@ -13,19 +18,23 @@ export abstract class Option<A> implements Iterable<A> {
     return this.toList().count(p);
   }
 
+  public find(p: (a: A) => boolean): IOption<A> {
+    return p(this.get) ? this : none;
+  }
+
   public forEach(f: (a : A) => void) {
     f(this.value);
   }
 
-  public drop(n : number) : List<A> {
+  public drop(n : number) : Iterable<A> {
     return this.toList().drop(n);
   }
 
-  public dropRight(n : number) : List<A> {
+  public dropRight(n : number) : Iterable<A> {
     return this.toList().dropRight(n);
   }
 
-  public dropWhile(p: (a: A) => boolean) : List<A> {
+  public dropWhile(p: (a: A) => boolean) : Iterable<A> {
     return this.toList().dropWhile(p);
   }
 
@@ -63,11 +72,13 @@ export abstract class Option<A> implements Iterable<A> {
     return this;
   }
 
+  public abstract size() : number;
+
   public toArray() : A[] {
     return this.toList().toArray();
   }
 
-  public abstract toList() : List<A>
+  public abstract toList() : IList<A>
 }
 
 export class Some<A> extends Option<A> {
@@ -88,11 +99,11 @@ export class Some<A> extends Option<A> {
     return new Some(f(this.value));
   }
 
-  public get size(): number {
+  public size(): number {
     return 1;
   }
 
-  public toList() : List<A> {
+  public toList() : IList<A> {
     return new List([this.value]);
   }
 }
@@ -115,11 +126,11 @@ export class None<A> extends Option<A> {
     return none;
   }
 
-  public get size(): number {
+  public size(): number {
     return 0;
   }
 
-  public toList() : List<A> {
+  public toList() : IList<A> {
     return new List([]);
   }
 }

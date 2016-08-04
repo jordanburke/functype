@@ -1,23 +1,41 @@
-import {option, Option} from "./Option"
-import {list, List} from "./List"
+import {option, Option, IOption} from "./Option"
+import {list, List, IList} from "./List"
 
 export interface Iterable<A> {
-  count(p : (x : A) => boolean) : number
+
+  count(p : (x : A) => boolean) : number;
+
+  find(p: (a: A) => boolean): IOption<A>;
+
   forEach(f: (a : A) => void)
+
   drop(n : number) : Iterable<A>
+
   dropRight(n : number) : Iterable<A>
+
   dropWhile(p: (a: A) => boolean) : Iterable<A>
+
   filter(p: (a: A) => boolean) : Iterable<A>
+
   filterNot(p: (a: A) => boolean) : Iterable<A>
+
   foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B
+
   foldRight<B>(z: B): (op: (a : A, b : B) => B) => B
+
   head(): A
-  headOption(): Option<A>
+
+  headOption(): IOption<A>
+
+  isEmpty() : boolean;
 
   map<B>(f : (a : A) => B) : Iterable<B>
 
+  size(): number;
+
   toArray() : A[]
-  toList() : List<A>
+
+  toList() : IList<A>
 }
 
 export abstract class IterableImpl<A> implements Iterable<A> {
@@ -37,6 +55,10 @@ export abstract class IterableImpl<A> implements Iterable<A> {
       count = result ? count + 1 : count;
     }
     return count;
+  }
+
+  find(p: (a: A) => boolean): IOption<A> {
+    return this._data.find(p);
   }
 
   public forEach(f: (a : A) => void) {
@@ -59,6 +81,10 @@ export abstract class IterableImpl<A> implements Iterable<A> {
 
   public headOption(): Option<A> {
     return option(this.head());
+  }
+
+  public isEmpty() : boolean {
+    return this._data.size() === 0;
   }
 
   public iterator(): Iterable<A> {
@@ -89,11 +115,15 @@ export abstract class IterableImpl<A> implements Iterable<A> {
     return this._data.map(f);
   }
 
+  public size() : number {
+    return this._data.size();
+  }
+
   public toArray() : A[] {
     return this.toList().toArray();
   }
 
-  public toList() : List<A> {
+  public toList() : IList<A> {
     return this._data.toList();
   }
 }

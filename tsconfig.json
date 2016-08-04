@@ -3,7 +3,9 @@
     "target": "ES5",
     "sourceMap": false,
     "declaration": true,
-    "module": "commonjs"
+    "module": "commonjs",
+    "noExternalResolve": false,
+    "sortOutput": true
   },
   "filesGlob": [
     "typings/browser.d.ts",
@@ -11,17 +13,17 @@
     "test/**/*.ts"
   ],
   "files": [
-    "src\\index.d.ts",
-    "src\\index.ts",
-    "src\\main\\Iterable.ts",
-    "src\\main\\List.ts",
-    "src\\main\\Map.ts",
-    "src\\main\\Option.ts",
-    "src\\main\\Tuple.ts",
-    "test\\main\\List.spec.ts",
-    "test\\main\\Map.spec.ts",
-    "test\\main\\Option.spec.ts",
-    "typings\\browser.d.ts"
+    "src/index.d.ts",
+    "src/index.ts",
+    "src/main/Iterable.ts",
+    "src/main/List.ts",
+    "src/main/Map.ts",
+    "src/main/Option.ts",
+    "src/main/Tuple.ts",
+    "test/main/List.spec.ts",
+    "test/main/Map.spec.ts",
+    "test/main/Option.spec.ts",
+    "typings/browser.d.ts"
   ],
   "exclude": [
     "node_modules"

@@ -1,6 +1,6 @@
 import {Iterable, IterableImpl} from "./Iterable";
-import {list, List} from "./List";
-import {option, Option} from "./Option";
+import {list, List, IList} from "./List";
+import {option, Option, IOption} from "./Option";
 import {Array as ES6Array, Map as ES6Map} from "es6-shim";
 Array = ES6Array;
 
@@ -73,6 +73,10 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return new IMap<K,V>(new IMapIterator(newInternalMap.entries()));
   }
 
+  public find(p: (a: [K,V]) => boolean) : IOption<[K,V]> {
+    return this.toList().find(p);
+  }
+
   public foldLeft<B>(z: B): (op: (b : B, a : [K,V]) => B) => B {
     return this.toList().foldLeft(z);
   }
@@ -101,6 +105,10 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return option(this.data.entries().next().value);
   }
 
+  public isEmpty() : boolean {
+    return this.size() === 0;
+  }
+
   public iterator(): Iterable<[K,V]> {
     return new IMapIterator(this.data.entries());
   }
@@ -126,12 +134,16 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return new IMap<K1,V1>(new IMapIterator<[K1,V1]>(newInternalMap.entries()));
   }
 
+  public size() : number {
+    return this.data.size;
+  }
+
   public toArray() : [K,V][]  {
     return this.toList().toArray();
   }
 
-  public toList() : List<[K,V]> {
-    return list(this.iterator());
+  public toList() : IList<[K,V]> {
+    return list<[K,V]>(this.iterator());
   }
 
   public toString() : string {

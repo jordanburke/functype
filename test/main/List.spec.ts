@@ -1,9 +1,9 @@
-import {list, List} from '../../src/main/List';
-import {option, some, none, Option} from '../../src/main/Option';
+import {list, List, IList} from '../../src/main/List';
+import {option, some, none, Option, IOption} from '../../src/main/Option';
 
 describe('List Test ', () => {
-  let myStringList: List<string>;
-  let myNumberList: List<number>;
+  let myStringList: IList<string>;
+  let myNumberList: IList<number>;
 
   beforeEach(() => {
     myStringList = list(['hello', 'you', 'wonderful', 'world!']);
@@ -11,7 +11,7 @@ describe('List Test ', () => {
   });
 
   it('Map Should return a new List of Mapped Values of the Same Size', () => {
-    const myListCounts = myStringList.map((item) => item.length);
+    const myListCounts : IList<number> = myStringList.map((item) => item.length);
     expect(myListCounts.get(0)).toBe(5);
     expect(myListCounts.get(1)).toBe(3);
     expect(myListCounts.get(2)).toBe(9);
@@ -23,7 +23,7 @@ describe('List Test ', () => {
   });
 
   it('Find Should return a value', () => {
-    const value : Option<string> = myStringList.find((item) => { return item === 'wonderful'});
+    const value : IOption<string> = myStringList.find((item) => { return item === 'wonderful'});
     expect(value.get).toBe('wonderful');
   });
 
@@ -44,7 +44,7 @@ describe('List Test ', () => {
   });
 
   it('Find Should return a none', () => {
-    const value : Option<string> = myStringList.find((item) => { return item === 'horrible'});
+    const value : IOption<string> = myStringList.find((item) => { return item === 'horrible'});
     expect(value).toBe(none);
   });
 
@@ -61,10 +61,10 @@ describe('List Test ', () => {
 
   it('Union Should return a new List', () => {
     const newNumberList = list<number>([11,12,13,14,15]);
-    const value : List<number> = myNumberList.union(newNumberList);
+    const value : IList<number> = myNumberList.union(newNumberList);
     expect(value.toArray()).toEqual([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]);
-    expect(myNumberList.size).toBe(10);
-    expect(newNumberList.size).toBe(5);
-    expect(value.size).toBe(15);
+    expect(myNumberList.size()).toBe(10);
+    expect(newNumberList.size()).toBe(5);
+    expect(value.size()).toBe(15);
   });
 });
