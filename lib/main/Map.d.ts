@@ -2,12 +2,13 @@ import { Iterable } from './Iterable';
 import { IList } from './List';
 import { Option, IOption } from './Option';
 export declare class IMap<K, V> implements Iterable<[K, V]> {
-    private data;
+    private _mapData;
     constructor(data: Iterable<[K, V]>);
     count(p: (tuple: [K, V]) => boolean): number;
     drop(n: number): IMap<K, V>;
     dropRight(n: number): IMap<K, V>;
     dropWhile(p: (a: [K, V]) => boolean): IMap<K, V>;
+    exists(p: (a: [K, V]) => boolean): boolean;
     filter(p: (a: [K, V]) => boolean): IMap<K, V>;
     filterNot(p: (a: [K, V]) => boolean): IMap<K, V>;
     find(p: (a: [K, V]) => boolean): IOption<[K, V]>;

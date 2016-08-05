@@ -15,6 +15,8 @@ export interface Iterable<A> {
 
   dropWhile(p: (a: A) => boolean) : Iterable<A>;
 
+  exists(p: (a: A) => boolean): Boolean;
+
   filter(p: (a: A) => boolean) : Iterable<A>;
 
   filterNot(p: (a: A) => boolean) : Iterable<A>;
@@ -57,7 +59,11 @@ export abstract class IterableImpl<A> implements Iterable<A> {
     return count;
   }
 
-  find(p: (a: A) => boolean): IOption<A> {
+  public exists(p: (a: A) => boolean): Boolean {
+    return !this.find(p).isEmpty();
+  }
+
+  public find(p: (a: A) => boolean): IOption<A> {
     return this._data.find(p);
   }
 

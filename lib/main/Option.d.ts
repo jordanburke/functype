@@ -8,11 +8,12 @@ export declare abstract class Option<A> implements IOption<A> {
     abstract isEmpty(): boolean;
     constructor(value: A);
     count(p: (x: A) => boolean): number;
-    find(p: (a: A) => boolean): IOption<A>;
-    forEach(f: (a: A) => void): void;
     drop(n: number): Iterable<A>;
     dropRight(n: number): Iterable<A>;
     dropWhile(p: (a: A) => boolean): Iterable<A>;
+    exists(p: (a: A) => boolean): boolean;
+    find(p: (a: A) => boolean): IOption<A>;
+    forEach(f: (a: A) => void): void;
     filter(p: (a: A) => boolean): Option<A>;
     filterNot(p: (a: A) => boolean): Option<A>;
     foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;

@@ -12,9 +12,11 @@ export {
 /**
  * Export to public by binding them to the window property.
  */
-window['App'] = {
-  opt: opt,
-  list: list,
-  map: map
-};
+if (window) {
+  window['App'] = {
+    opt: opt,
+    list: list,
+    map: map
+  };
+}
 

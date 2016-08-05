@@ -7,46 +7,50 @@ Array = ES6Array;
 
 export class ISet<A> implements Iterable<A> {
 
-  private data : Set<A>;
+  private _setData : Set<A>;
 
-  constructor(data : Iterable<A>) {
-    this.data = new Set<A>();
+  constructor(data: A[] | Iterable<A>) {
+    this._setData = new Set<A>();
     if (data) {
       data.forEach((value : A) => {
-        this.data.add(value);
+        this._setData.add(value);
       });
     }
   }
 
+  public contains(elem: A) : boolean {
+    return this._setData.has(elem);
+  }
+
   public count(p: (tuple : A) => boolean) : number {
-    return new ISetIterator(this.data.keys()).count(p);
+    return new ISetIterator(this._setData.keys()).count(p);
   }
 
   public drop(n : number) : ISet<A> {
     let count = 0;
     const newSet = new Set<A>();
-    new ISetIterator(this.data.keys()).forEach((value : A) => {
+    new ISetIterator(this._setData.keys()).forEach((value : A) => {
       if (count >= n) {
         newSet.add(value);
       }
     });
-    return new ISet<A>(new ISetIterator(this.data.keys()));
+    return new ISet<A>(new ISetIterator(this._setData.keys()));
   }
 
   public dropRight(n : number) : ISet<A> {
-    let count = this.data.size - n;
+    let count = this._setData.size - n;
     const newSet = new Set<A>();
-    new ISetIterator(this.data.keys()).forEach((value : A) => {
+    new ISetIterator(this._setData.keys()).forEach((value : A) => {
       if (count < n) {
         newSet.add(value);
       }
     });
-    return new ISet<A>(new ISetIterator(this.data.keys()));
+    return new ISet<A>(new ISetIterator(this._setData.keys()));
   }
 
   public dropWhile(p: (a: A) => boolean) : ISet<A> {
     let count = -1;
-    new ISetIterator(this.data.keys()).forEach((pair : A) => {
+    new ISetIterator(this._setData.keys()).forEach((pair : A) => {
       if (p(pair)) {
         count++;
       }
@@ -54,9 +58,13 @@ export class ISet<A> implements Iterable<A> {
     return this.drop(count);
   }
 
+  public exists(p: (a: A) => boolean): boolean {
+    return !this.find(p).isEmpty();
+  }
+
   public filter(p: (a: A) => boolean) : ISet<A> {
     const newInternalSet = new Set<A>();
-    new ISetIterator(this.data.keys()).forEach((value : A) => {
+    new ISetIterator(this._setData.keys()).forEach((value : A) => {
       if (p(value)) {
         newInternalSet.add(value);
       }
@@ -66,7 +74,7 @@ export class ISet<A> implements Iterable<A> {
 
   public filterNot(p: (a: A) => boolean) : ISet<A> {
     const newInternalSet = new Set<A>();
-    new ISetIterator(this.data.keys()).forEach((value : A) => {
+    new ISetIterator(this._setData.keys()).forEach((value : A) => {
       if (!p(value)) {
         newInternalSet.add(value);
       }
@@ -74,7 +82,7 @@ export class ISet<A> implements Iterable<A> {
     return new ISet<A>(new ISetIterator(newInternalSet.keys()));
   }
 
-  find(p: (a: A) => boolean): IOption<A> {
+  public find(p: (a: A) => boolean): IOption<A> {
     return this.toList().find(p);
   }
 
@@ -87,15 +95,15 @@ export class ISet<A> implements Iterable<A> {
   }
 
   public forEach(f: (a : A) => void) {
-    return new ISetIterator(this.data.keys()).forEach(f);
+    return new ISetIterator(this._setData.keys()).forEach(f);
   }
 
   public head() : A {
-    return this.data.keys().next().value;
+    return this._setData.keys().next().value;
   }
 
   public headOption() : IOption<A> {
-    return option(this.data.keys().next().value);
+    return option(this._setData.keys().next().value);
   }
 
   public isEmpty() : boolean {
@@ -103,7 +111,7 @@ export class ISet<A> implements Iterable<A> {
   }
 
   public iterator(): Iterable<A> {
-    return new ISetIterator(this.data.keys());
+    return new ISetIterator(this._setData.keys());
   }
 
   public add(value: A) : ISet<A> {
@@ -118,7 +126,7 @@ export class ISet<A> implements Iterable<A> {
 
   public map<B>(f : (a : A) => B) : ISet<B> {
     const newInternalSet = new Set<B>();
-    new ISetIterator(this.data.keys()).forEach((pair : A) => {
+    new ISetIterator(this._setData.keys()).forEach((pair : A) => {
       const newValue = f(pair);
       newInternalSet.add(newValue);
     });
@@ -126,7 +134,7 @@ export class ISet<A> implements Iterable<A> {
   }
 
   public size() : number {
-    return this.data.size;
+    return this._setData.size;
   }
 
   public toArray() : A[]  {
@@ -143,8 +151,8 @@ export class ISet<A> implements Iterable<A> {
   }
 }
 
-export function iSet<A>(iterable : Iterable<A>) : ISet<A> {
-  return new ISet<A>(iterable);
+export function iSet<A>(data: A[] | Iterable<A>) : ISet<A> {
+  return new ISet<A>(data);
 }
 
 class ISetIterator<A> extends IterableImpl<A> {

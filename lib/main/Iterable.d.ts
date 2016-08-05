@@ -7,6 +7,7 @@ export interface Iterable<A> {
     drop(n: number): Iterable<A>;
     dropRight(n: number): Iterable<A>;
     dropWhile(p: (a: A) => boolean): Iterable<A>;
+    exists(p: (a: A) => boolean): Boolean;
     filter(p: (a: A) => boolean): Iterable<A>;
     filterNot(p: (a: A) => boolean): Iterable<A>;
     foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;
@@ -24,6 +25,7 @@ export declare abstract class IterableImpl<A> implements Iterable<A> {
     private _data;
     constructor(iterator: Iterator<A>, data?: Iterable<A>);
     count(p: (x: A) => Boolean): number;
+    exists(p: (a: A) => boolean): Boolean;
     find(p: (a: A) => boolean): IOption<A>;
     forEach(f: (a: A) => void): void;
     foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;

@@ -6,46 +6,46 @@ Array = ES6Array;
 
 export class IMap<K,V> implements Iterable<[K,V]> {
 
-  private data : Map<K,V>;
+  private _mapData : Map<K,V>;
 
   constructor(data : Iterable<[K,V]>) {
-    this.data = new Map<K,V>();
+    this._mapData = new Map<K,V>();
     if (data) {
       data.forEach((pair : [K,V]) => {
-        this.data.set(pair[0], pair[1]);
+        this._mapData.set(pair[0], pair[1]);
       });
     }
   }
 
   public count(p: (tuple : [K,V]) => boolean) : number {
-    return new IMapIterator(this.data.entries()).count(p);
+    return new IMapIterator(this._mapData.entries()).count(p);
   }
 
   public drop(n : number) : IMap<K,V> {
     let count = 0;
     const newMap = new Map<K,V>();
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
        if (count >= n) {
          newMap.set(pair[0], pair[1]);
        }
     });
-    return new IMap<K,V>(new IMapIterator(this.data.entries()));
+    return new IMap<K,V>(new IMapIterator(this._mapData.entries()));
   }
 
   public dropRight(n : number) : IMap<K,V> {
-    let count = this.data.size - n;
+    let count = this._mapData.size - n;
     const newMap = new Map<K,V>();
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
       if (count < n) {
         newMap.set(pair[0], pair[1]);
       }
     });
-    return new IMap<K,V>(new IMapIterator(this.data.entries()));
+    return new IMap<K,V>(new IMapIterator(this._mapData.entries()));
   }
 
   public dropWhile(p: (a: [K,V]) => boolean) : IMap<K,V> {
     let count = -1;
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
       if (p(pair)) {
         count++;
       }
@@ -53,9 +53,13 @@ export class IMap<K,V> implements Iterable<[K,V]> {
     return this.drop(count);
   }
 
+  public exists(p: (a: [K,V]) => boolean): boolean {
+    return !this.find(p).isEmpty();
+  }
+
   public filter(p: (a: [K,V]) => boolean) : IMap<K,V> {
     const newInternalMap = new Map<K,V>();
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
       if (p(pair)) {
         newInternalMap.set(pair[0], pair[1]);
       }
@@ -65,7 +69,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
 
   public filterNot(p: (a: [K,V]) => boolean) : IMap<K,V> {
     const newInternalMap = new Map<K,V>();
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
       if (!p(pair)) {
         newInternalMap.set(pair[0], pair[1]);
       }
@@ -86,23 +90,23 @@ export class IMap<K,V> implements Iterable<[K,V]> {
   }
 
   public forEach(f: (a : [K,V]) => void) {
-    return new IMapIterator(this.data.entries()).forEach(f);
+    return new IMapIterator(this._mapData.entries()).forEach(f);
   }
 
   public get(key: K) : Option<V> {
-    return option(this.data.get(key));
+    return option(this._mapData.get(key));
   }
 
   public getOrElse(key: K, defaultValue: V) : V {
-    return option(this.data.get(key)).getOrElse(defaultValue);
+    return option(this._mapData.get(key)).getOrElse(defaultValue);
   }
 
   public head() : [K,V] {
-    return this.data.entries().next().value;
+    return this._mapData.entries().next().value;
   }
 
   public headOption() : Option<[K,V]> {
-    return option(this.data.entries().next().value);
+    return option(this._mapData.entries().next().value);
   }
 
   public isEmpty() : boolean {
@@ -110,7 +114,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
   }
 
   public iterator(): Iterable<[K,V]> {
-    return new IMapIterator(this.data.entries());
+    return new IMapIterator(this._mapData.entries());
   }
 
   public set(entry: [K,V] | K, value ?: V) : IMap<K,V> {
@@ -127,7 +131,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
 
   public map<K1, V1>(f : (a : [K,V]) => [K1,V1]) : IMap<K1, V1> {
     const newInternalMap = new Map<K1,V1>();
-    new IMapIterator(this.data.entries()).forEach((pair : [K,V]) => {
+    new IMapIterator(this._mapData.entries()).forEach((pair : [K,V]) => {
       const newValue = f(pair);
       newInternalMap.set(newValue[0], newValue[1]);
     });
@@ -135,7 +139,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
   }
 
   public size() : number {
-    return this.data.size;
+    return this._mapData.size;
   }
 
   public toArray() : [K,V][]  {

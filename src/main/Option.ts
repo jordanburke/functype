@@ -18,14 +18,6 @@ export abstract class Option<A> implements IOption<A> {
     return this.toList().count(p);
   }
 
-  public find(p: (a: A) => boolean): IOption<A> {
-    return p(this.get) ? this : none;
-  }
-
-  public forEach(f: (a : A) => void) {
-    f(this.value);
-  }
-
   public drop(n : number) : Iterable<A> {
     return this.toList().drop(n);
   }
@@ -36,6 +28,18 @@ export abstract class Option<A> implements IOption<A> {
 
   public dropWhile(p: (a: A) => boolean) : Iterable<A> {
     return this.toList().dropWhile(p);
+  }
+
+  public exists(p: (a: A) => boolean): boolean {
+    return !this.find(p).isEmpty();
+  }
+
+  public find(p: (a: A) => boolean): IOption<A> {
+    return p(this.get) ? this : none;
+  }
+
+  public forEach(f: (a : A) => void) {
+    f(this.value);
   }
 
   public filter(p: (a: A) => boolean) : Option<A> {

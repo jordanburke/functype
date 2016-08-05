@@ -24,6 +24,7 @@
     "test/main/List.spec.ts",
     "test/main/Map.spec.ts",
     "test/main/Option.spec.ts",
+    "test/main/Set.spec.ts",
     "typings/browser.d.ts"
   ],
   "exclude": [

@@ -2,12 +2,14 @@ import { Iterable } from './Iterable';
 import { List } from './List';
 import { IOption } from './Option';
 export declare class ISet<A> implements Iterable<A> {
-    private data;
-    constructor(data: Iterable<A>);
+    private _setData;
+    constructor(data: A[] | Iterable<A>);
+    contains(elem: A): boolean;
     count(p: (tuple: A) => boolean): number;
     drop(n: number): ISet<A>;
     dropRight(n: number): ISet<A>;
     dropWhile(p: (a: A) => boolean): ISet<A>;
+    exists(p: (a: A) => boolean): boolean;
     filter(p: (a: A) => boolean): ISet<A>;
     filterNot(p: (a: A) => boolean): ISet<A>;
     find(p: (a: A) => boolean): IOption<A>;
@@ -25,4 +27,4 @@ export declare class ISet<A> implements Iterable<A> {
     toList(): List<A>;
     toString(): string;
 }
-export declare function iSet<A>(iterable: Iterable<A>): ISet<A>;
+export declare function iSet<A>(data: A[] | Iterable<A>): ISet<A>;

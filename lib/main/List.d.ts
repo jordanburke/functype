@@ -2,6 +2,7 @@ import { Iterable } from './Iterable';
 import { IOption } from './Option';
 export interface IList<A> extends Iterable<A> {
     length: number;
+    contains(elem: A): boolean;
     _(index: number): any;
     get(index: number): A;
     map<B>(f: (a: A) => B): IList<B>;
@@ -17,19 +18,20 @@ export interface IList<A> extends Iterable<A> {
  * instances of the List and will not mutate the List or the underlying Array in any way.
  */
 export declare class List<A> implements IList<A> {
-    private data;
+    private _listData;
     constructor(args: A[] | Iterable<A>);
     contains(elem: A): boolean;
     count(p: (a: A) => boolean): number;
-    forEach(f: (a: A) => void): void;
     drop(n: number): IList<A>;
     dropRight(n: number): IList<A>;
     dropWhile(p: (a: A) => boolean): IList<A>;
+    exists(p: (a: A) => boolean): Boolean;
     filter(p: (a: A) => boolean): IList<A>;
     filterNot(p: (a: A) => boolean): IList<A>;
     find(p: (a: A) => boolean): IOption<A>;
     foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B;
     foldRight<B>(z: B): (op: (a: A, b: B) => B) => B;
+    forEach(f: (a: A) => void): void;
     _(index: number): A;
     get(index: number): A;
     head(): A;

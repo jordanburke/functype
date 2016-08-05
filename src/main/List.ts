@@ -8,6 +8,8 @@ export interface IList<A> extends Iterable<A> {
 
   length: number;
 
+  contains(elem: A) : boolean;
+
   _(index :number);
 
   get(index : number) : A;
@@ -31,56 +33,56 @@ export interface IList<A> extends Iterable<A> {
  */
 export class List<A> implements IList<A> {
 
-  private data : A[];
+  private _listData : A[];
 
   constructor(args: A[] | Iterable<A>) {
     if (args instanceof ES6Array) {
-      this.data = args.concat([]);
+      this._listData = args.concat([]);
     } else {
-      this.data = [];
+      this._listData = [];
       args.forEach((item) => {
-        this.data.push(item);
+        this._listData.push(item);
       });
     }
   }
 
   public contains(elem: A) : boolean {
-    return this.data.indexOf(elem) > -1;
+    return this._listData.indexOf(elem) > -1;
   }
 
   public count(p: (a : A) => boolean) : number {
-    return this.data.filter(p).length;
-  }
-
-  public forEach(f: (a : A) => void) {
-    [].concat(this.data).forEach(f);
+    return this._listData.filter(p).length;
   }
 
   public drop(n : number) : IList<A> {
-    return list<A>(this.data.slice(n));
+    return list<A>(this._listData.slice(n));
   }
 
   public dropRight(n : number) : IList<A> {
-    return list<A>(this.data.slice(0, n));
+    return list<A>(this._listData.slice(0, n));
   }
 
   public dropWhile(p: (a: A) => boolean) : IList<A> {
     throw new Error('dropWhile');
   }
 
+  public exists(p: (a: A) => boolean): Boolean {
+    return !this.find(p).isEmpty();
+  }
+
   public filter(p: (a: A) => boolean) : IList<A> {
-    return list<A>(this.data.filter(p));
+    return list<A>(this._listData.filter(p));
   }
 
   public filterNot(p: (a: A) => boolean) : IList<A> {
     const inverse = (a: A) => {
       return !p(a);
     };
-    return list<A>(this.data.filter(inverse));
+    return list<A>(this._listData.filter(inverse));
   }
 
   public find(p: (a: A) => boolean) : IOption<A> {
-    return option(this.data.find(p));
+    return option(this._listData.find(p));
   }
 
   public foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B {
@@ -105,16 +107,20 @@ export class List<A> implements IList<A> {
     };
   }
 
+  public forEach(f: (a : A) => void) {
+    [].concat(this._listData).forEach(f);
+  }
+
   public _(index :number) : A {
     return this.get(index);
   }
 
   public get(index : number) : A {
-    return this.data[index];
+    return this._listData[index];
   }
 
   public head(): A {
-    return this.data[0];
+    return this._listData[0];
   }
 
   public headOption(): IOption<A> {
@@ -126,24 +132,24 @@ export class List<A> implements IList<A> {
   }
 
   public iterator() : Iterable<A> {
-    return new ListIterator(this.data.values(), this);
+    return new ListIterator(this._listData.values(), this);
   }
 
   public map<B>(f : (a : A) => B) : IList<B> {
-    const newArray : B[] = this.data.map(f);
+    const newArray : B[] = this._listData.map(f);
     return list(newArray);
   }
 
   public get length() {
-    return this.data.length;
+    return this._listData.length;
   }
 
   public reduce<A1 extends A>(op: (x : A1, y : A1) => A1) : A {
-    return this.data.reduce(op);
+    return this._listData.reduce(op);
   }
 
   public reverse() : IList<A> {
-    return new List([].concat(this.data).reverse());
+    return new List([].concat(this._listData).reverse());
   }
 
   public size() : number {
@@ -151,23 +157,23 @@ export class List<A> implements IList<A> {
   }
 
   public toArray() : A[] {
-    return [].concat(this.data);
+    return [].concat(this._listData);
   }
 
   public toList() : IList<A> {
-    return list(this.data);
+    return list(this._listData);
   }
 
   public toString() : string {
-    const rawString = this.data.join(', ');
+    const rawString = this._listData.join(', ');
     return `List(${rawString})`;
   }
 
   public union(that: A[] | IList<A>) : IList<A> {
     if (that instanceof List) {
-      return list<A>(this.data.concat(that.toArray()));
+      return list<A>(this._listData.concat(that.toArray()));
     } else if (that instanceof Array){
-      return list<A>(this.data.concat(...that));
+      return list<A>(this._listData.concat(...that));
     } else {
       throw 'Unsupported Type ' + typeof that;
     }
