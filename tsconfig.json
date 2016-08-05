@@ -19,6 +19,7 @@
     "src/main/List.ts",
     "src/main/Map.ts",
     "src/main/Option.ts",
+    "src/main/Set.ts",
     "src/main/Tuple.ts",
     "test/main/List.spec.ts",
     "test/main/Map.spec.ts",

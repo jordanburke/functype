@@ -176,8 +176,6 @@ export class List<A> implements IList<A> {
   }
 }
 
-//export function list(args: A[]);
-//export function list(args: Iterable<A>);
 export function list<A>(args: A[] | Iterable<A>) : List<A> {
   return new List<A>(args);
 }
