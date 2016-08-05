@@ -1,5 +1,5 @@
-import { Iterable } from "./Iterable";
-import { IOption } from "./Option";
+import { Iterable } from './Iterable';
+import { IOption } from './Option';
 export interface IList<A> extends Iterable<A> {
     length: number;
     _(index: number): any;

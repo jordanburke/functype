@@ -1,6 +1,6 @@
-import { Iterable } from "./Iterable";
-import { IList } from "./List";
-import { Option, IOption } from "./Option";
+import { Iterable } from './Iterable';
+import { IList } from './List';
+import { Option, IOption } from './Option';
 export declare class IMap<K, V> implements Iterable<[K, V]> {
     private data;
     constructor(data: Iterable<[K, V]>);

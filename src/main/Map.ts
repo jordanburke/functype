@@ -1,7 +1,7 @@
-import {Iterable, IterableImpl} from "./Iterable";
-import {list, List, IList} from "./List";
-import {option, Option, IOption} from "./Option";
-import {Array as ES6Array, Map as ES6Map} from "es6-shim";
+import {Iterable, IterableImpl} from './Iterable';
+import {list, List, IList} from './List';
+import {option, Option, IOption} from './Option';
+import {Array as ES6Array, Map as ES6Map} from 'es6-shim';
 Array = ES6Array;
 
 export class IMap<K,V> implements Iterable<[K,V]> {
@@ -121,7 +121,7 @@ export class IMap<K,V> implements Iterable<[K,V]> {
         return iMap(list<[K,V]>([[entry, value]]));
       }
     } else {
-      throw Error("Invalid set " + entry);
+      throw Error('Invalid set ' + entry);
     }
   }
 

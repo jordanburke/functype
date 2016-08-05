@@ -1,5 +1,5 @@
-import {option, Option, IOption} from "./Option"
-import {list, List, IList} from "./List"
+import {option, Option, IOption} from './Option';
+import {list, List, IList} from './List';
 
 export interface Iterable<A> {
 
@@ -7,35 +7,35 @@ export interface Iterable<A> {
 
   find(p: (a: A) => boolean): IOption<A>;
 
-  forEach(f: (a : A) => void)
+  forEach(f: (a : A) => void);
 
-  drop(n : number) : Iterable<A>
+  drop(n : number) : Iterable<A>;
 
-  dropRight(n : number) : Iterable<A>
+  dropRight(n : number) : Iterable<A>;
 
-  dropWhile(p: (a: A) => boolean) : Iterable<A>
+  dropWhile(p: (a: A) => boolean) : Iterable<A>;
 
-  filter(p: (a: A) => boolean) : Iterable<A>
+  filter(p: (a: A) => boolean) : Iterable<A>;
 
-  filterNot(p: (a: A) => boolean) : Iterable<A>
+  filterNot(p: (a: A) => boolean) : Iterable<A>;
 
-  foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B
+  foldLeft<B>(z: B): (op: (b : B, a : A) => B) => B;
 
-  foldRight<B>(z: B): (op: (a : A, b : B) => B) => B
+  foldRight<B>(z: B): (op: (a : A, b : B) => B) => B;
 
-  head(): A
+  head(): A;
 
-  headOption(): IOption<A>
+  headOption(): IOption<A>;
 
   isEmpty() : boolean;
 
-  map<B>(f : (a : A) => B) : Iterable<B>
+  map<B>(f : (a : A) => B) : Iterable<B>;
 
   size(): number;
 
-  toArray() : A[]
+  toArray() : A[];
 
-  toList() : IList<A>
+  toList() : IList<A>;
 }
 
 export abstract class IterableImpl<A> implements Iterable<A> {

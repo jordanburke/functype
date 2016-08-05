@@ -1,5 +1,5 @@
-import { Iterable } from "./Iterable";
-import { IList } from "./List";
+import { Iterable } from './Iterable';
+import { IList } from './List';
 export interface IOption<A> extends Iterable<A> {
     get: A;
 }

@@ -1,6 +1,6 @@
-import { Iterable } from "./Iterable";
-import { List } from "./List";
-import { IOption } from "./Option";
+import { Iterable } from './Iterable';
+import { List } from './List';
+import { IOption } from './Option';
 export declare class ISet<A> implements Iterable<A> {
     private data;
     constructor(data: Iterable<A>);

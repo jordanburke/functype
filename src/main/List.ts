@@ -1,7 +1,7 @@
-import {iMap, IMap} from "./Map"
-import {Iterable, IterableImpl} from "./Iterable"
-import {option, Option, IOption} from "./Option"
-import {Array as ES6Array} from "es6-shim"
+import {iMap, IMap} from './Map';
+import {Iterable, IterableImpl} from './Iterable';
+import {option, Option, IOption} from './Option';
+import {Array as ES6Array} from 'es6-shim';
 Array = ES6Array;
 
 export interface IList<A> extends Iterable<A> {
@@ -12,7 +12,7 @@ export interface IList<A> extends Iterable<A> {
 
   get(index : number) : A;
 
-  map<B>(f : (a : A) => B) : IList<B>
+  map<B>(f : (a : A) => B) : IList<B>;
 
   reduce<A1 extends A>(op: (x : A1, y : A1) => A1) : A;
 
@@ -33,8 +33,6 @@ export class List<A> implements IList<A> {
 
   private data : A[];
 
-  //constructor(args: A[]);
-  //constructor(args: Iterable<A>)
   constructor(args: A[] | Iterable<A>) {
     if (args instanceof ES6Array) {
       this.data = args.concat([]);
@@ -67,7 +65,7 @@ export class List<A> implements IList<A> {
   }
 
   public dropWhile(p: (a: A) => boolean) : IList<A> {
-    throw new Error("dropWhile");
+    throw new Error('dropWhile');
   }
 
   public filter(p: (a: A) => boolean) : IList<A> {
@@ -92,7 +90,7 @@ export class List<A> implements IList<A> {
         accumulator = op(accumulator, item);
       });
       return accumulator;
-    }
+    };
   }
 
   public foldRight<B>(z: B): (op: (a : A, b : B) => B) => B {
@@ -104,7 +102,7 @@ export class List<A> implements IList<A> {
         accumulator = op(item, accumulator);
       });
       return accumulator;
-    }
+    };
   }
 
   public _(index :number) : A {
@@ -171,7 +169,7 @@ export class List<A> implements IList<A> {
     } else if (that instanceof Array){
       return list<A>(this.data.concat(...that));
     } else {
-      throw "Unsupported Type " + typeof that;
+      throw 'Unsupported Type ' + typeof that;
     }
   }
 }

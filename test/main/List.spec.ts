@@ -23,7 +23,7 @@ describe('List Test ', () => {
   });
 
   it('Find Should return a value', () => {
-    const value : IOption<string> = myStringList.find((item) => { return item === 'wonderful'});
+    const value : IOption<string> = myStringList.find((item) => { return item === 'wonderful'; });
     expect(value.get).toBe('wonderful');
   });
 
@@ -44,7 +44,7 @@ describe('List Test ', () => {
   });
 
   it('Find Should return a none', () => {
-    const value : IOption<string> = myStringList.find((item) => { return item === 'horrible'});
+    const value : IOption<string> = myStringList.find((item) => { return item === 'horrible'; });
     expect(value).toBe(none);
   });
 

@@ -1,5 +1,5 @@
-import { Option, IOption } from "./Option";
-import { IList } from "./List";
+import { Option, IOption } from './Option';
+import { IList } from './List';
 export interface Iterable<A> {
     count(p: (x: A) => boolean): number;
     find(p: (a: A) => boolean): IOption<A>;

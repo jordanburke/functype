@@ -1,7 +1,7 @@
-import {Iterable, IterableImpl} from "./Iterable";
-import {list, List} from "./List";
-import {option, Option, IOption} from "./Option";
-import {Array as ES6Array} from "es6-shim";
+import {Iterable, IterableImpl} from './Iterable';
+import {list, List} from './List';
+import {option, Option, IOption} from './Option';
+import {Array as ES6Array} from 'es6-shim';
 Array = ES6Array;
 
 
