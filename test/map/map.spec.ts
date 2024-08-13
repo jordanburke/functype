@@ -1,12 +1,10 @@
-import { iMap } from "../../src"
-import { Some, None } from "../../src"
-import { Tuple } from "../../src"
+import { Map, None, Some, Tuple } from "../../src"
 
 describe("Map", () => {
-  let map: iMap<string, number>
+  let map: Map<string, number>
 
   beforeEach(() => {
-    map = new iMap([
+    map = new Map([
       ["a", 1],
       ["b", 2],
       ["c", 3],
@@ -31,7 +29,7 @@ describe("Map", () => {
   })
 
   test("flatMap should transform values and flatten", () => {
-    const newMap = map.flatMap((value) => new iMap([["a", value * 2]]))
+    const newMap = map.flatMap((value) => new Map([["a", value * 2]]))
     console.log(newMap)
     expect(newMap.get("a").getOrElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
@@ -68,7 +66,7 @@ describe("Map", () => {
   })
 
   test("isEmpty should return true for an empty map", () => {
-    const emptyMap = new iMap<string, number>()
+    const emptyMap = new Map<string, number>()
     expect(emptyMap.isEmpty).toBe(true)
   })
 
