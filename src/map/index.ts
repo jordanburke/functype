@@ -1,1 +1,1 @@
-export { Map, _Map_ } from "./Map"
+export { iMap, _Map_ } from "./Map"

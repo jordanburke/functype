@@ -1,10 +1,10 @@
 {
   "name": "functype",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
-  "url": "https://github.com/jordanburke/TypeScript/tree/main/functype",
+  "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "ts-types": "tsc",
     "build:dev": "rimraf lib && tsup --watch",

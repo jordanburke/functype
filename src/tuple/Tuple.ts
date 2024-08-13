@@ -8,6 +8,8 @@ export type _Tuple_<T extends ArrayType> = _ArrayFunctor_<T> & {
   map<U extends any[]>(f: (value: T) => U): _Tuple_<U>
 
   flatMap<U extends any[]>(f: (value: T) => _Tuple_<U>): _Tuple_<U>
+
+  toArray(): T
 }
 
 export class Tuple<T extends ArrayType> implements _Tuple_<T> {

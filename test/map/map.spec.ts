@@ -1,12 +1,12 @@
-import { Map } from "../../src"
+import { iMap } from "../../src"
 import { Some, None } from "../../src"
 import { Tuple } from "../../src"
 
 describe("Map", () => {
-  let map: Map<string, number>
+  let map: iMap<string, number>
 
   beforeEach(() => {
-    map = new Map([
+    map = new iMap([
       ["a", 1],
       ["b", 2],
       ["c", 3],
@@ -14,14 +14,24 @@ describe("Map", () => {
   })
 
   test("map should transform values", () => {
+    const newMap = map.add(new Tuple(["d", 4]))
+    expect(newMap.get("a").getOrElse(0)).toBe(1)
+    expect(newMap.get("b").getOrElse(0)).toBe(2)
+    expect(newMap.get("c").getOrElse(0)).toBe(3)
+    expect(newMap.get("d").getOrElse(0)).toBe(4)
+    expect(newMap.get("e").getOrElse(0)).toBe(0)
+  })
+
+  test("map should transform values", () => {
     const newMap = map.map((value) => value * 2)
     expect(newMap.get("a").getOrElse(0)).toBe(2)
     expect(newMap.get("b").getOrElse(0)).toBe(4)
     expect(newMap.get("c").getOrElse(0)).toBe(6)
+    expect(newMap.get("d").getOrElse(0)).toBe(0)
   })
 
   test("flatMap should transform values and flatten", () => {
-    const newMap = map.flatMap((value) => new Map([["a", value * 2]]))
+    const newMap = map.flatMap((value) => new iMap([["a", value * 2]]))
     console.log(newMap)
     expect(newMap.get("a").getOrElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
@@ -58,7 +68,7 @@ describe("Map", () => {
   })
 
   test("isEmpty should return true for an empty map", () => {
-    const emptyMap = new Map<string, number>()
+    const emptyMap = new iMap<string, number>()
     expect(emptyMap.isEmpty).toBe(true)
   })
 

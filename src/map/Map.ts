@@ -22,7 +22,7 @@ export type _Map_<K, V> = {
 } & SafeTraversable<K, V> &
   _Collection<_Tuple_<[K, V]>>
 
-export class Map<K, V> implements _Map_<K, V> {
+export class iMap<K, V> implements _Map_<K, V> {
   private values: IESMap<K, V>
 
   private get entries() {
@@ -33,12 +33,12 @@ export class Map<K, V> implements _Map_<K, V> {
     this.values = new ESMap<K, V>(entries)
   }
 
-  add(item: _Tuple_<[K, V]>): Map<K, V> {
-    return new Map<K, V>(this.values.set(item[0], item[1]).entries())
+  add(item: _Tuple_<[K, V]>): iMap<K, V> {
+    return new iMap<K, V>(this.values.set(item.toArray()[0], item.toArray()[1]).entries())
   }
 
-  remove(value: _Tuple_<[K, V]>): Map<K, V> {
-    const newMap = new Map<K, V>([...this.values.entries()])
+  remove(value: _Tuple_<[K, V]>): iMap<K, V> {
+    const newMap = new iMap<K, V>([...this.values.entries()])
     return newMap.values.delete(value[0]) ? newMap : this
   }
 
@@ -51,20 +51,20 @@ export class Map<K, V> implements _Map_<K, V> {
   }
 
   map<U>(f: (value: V) => U): _Map_<K, U> {
-    return new Map(Array.from(this.values.entries()).map((kv) => [kv[0], f(kv[1])]))
+    return new iMap(Array.from(this.values.entries()).map((kv) => [kv[0], f(kv[1])]))
   }
 
   flatMap<U>(f: (value: V) => _Map_<K, U>): _Map_<K, U> {
     const newEntries: [K, U][] = []
     for (const [key, value] of this.values.entries()) {
       const mapped = f(value)
-      if (mapped instanceof Map) {
+      if (mapped instanceof iMap) {
         for (const [newKey, newValue] of mapped.values.entries()) {
           newEntries.push([newKey, newValue])
         }
       }
     }
-    return new Map(newEntries)
+    return new iMap(newEntries)
   }
 
   reduce(f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> {
@@ -120,7 +120,7 @@ export class Map<K, V> implements _Map_<K, V> {
 }
 
 // Example usage
-const myMap = new Map<string, any>([
+const myMap = new iMap<string, any>([
   ["a", 1],
   ["b", 2],
   ["c", 3],
