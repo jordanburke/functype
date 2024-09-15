@@ -4,10 +4,10 @@ import { Seq } from "../iterable"
 import { _List_, List } from "../list"
 import { _Option_, option } from "../option"
 import { _Set_, Set } from "../set"
-import { _Tuple_, Tuple } from "../tuple"
+import { Tuple } from "../tuple"
 import { ESMap, IESMap } from "./shim"
 
-type SafeTraversable<K, V> = Omit<_Traversable_<_Tuple_<[K, V]>>, "map" | "flatMap">
+type SafeTraversable<K, V> = Omit<_Traversable_<Tuple<[K, V]>>, "map" | "flatMap">
 
 export type _Map_<K, V> = {
   map<U>(f: (value) => U): _Map_<K, U>
@@ -20,29 +20,29 @@ export type _Map_<K, V> = {
 
   orElse(key: K, alternative: _Option_<V>): _Option_<V>
 } & SafeTraversable<K, V> &
-  _Collection<_Tuple_<[K, V]>>
+  _Collection<Tuple<[K, V]>>
 
 export class Map<K, V> implements _Map_<K, V> {
   private values: IESMap<K, V>
 
   private get entries() {
-    return Array.from(this.values.entries()).map(([key, value]) => new Tuple<[K, V]>([key, value]))
+    return Array.from(this.values.entries()).map(([key, value]) => Tuple<[K, V]>([key, value]))
   }
 
   constructor(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null) {
     this.values = new ESMap<K, V>(entries)
   }
 
-  add(item: _Tuple_<[K, V]>): Map<K, V> {
+  add(item: Tuple<[K, V]>): Map<K, V> {
     return new Map<K, V>(this.values.set(item.toArray()[0], item.toArray()[1]).entries())
   }
 
-  remove(value: _Tuple_<[K, V]>): Map<K, V> {
+  remove(value: Tuple<[K, V]>): Map<K, V> {
     const newMap = new Map<K, V>([...this.values.entries()])
     return newMap.values.delete(value[0]) ? newMap : this
   }
 
-  contains(value: _Tuple_<[K, V]>): boolean {
+  contains(value: Tuple<[K, V]>): boolean {
     return this.values.get(value[0]) === value[1]
   }
 
@@ -75,16 +75,16 @@ export class Map<K, V> implements _Map_<K, V> {
     return new Seq(this.entries).reduceRight(f)
   }
 
-  foldLeft<B>(z: B): (op: (b: B, a: _Tuple_<[K, V]>) => B) => B {
+  foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B {
     const iterables = new Seq(this.entries)
-    return (f: (b: B, a: _Tuple_<[K, V]>) => B) => {
+    return (f: (b: B, a: Tuple<[K, V]>) => B) => {
       return iterables.foldLeft(z)(f)
     }
   }
 
-  foldRight<B>(z: B): (op: (a: _Tuple_<[K, V]>, b: B) => B) => B {
+  foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B {
     const iterables = new Seq(this.entries)
-    return (f: (a: _Tuple_<[K, V]>, b: B) => B) => {
+    return (f: (a: Tuple<[K, V]>, b: B) => B) => {
       return iterables.foldRight(z)(f)
     }
   }

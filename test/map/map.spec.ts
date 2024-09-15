@@ -12,7 +12,7 @@ describe("Map", () => {
   })
 
   test("map should transform values", () => {
-    const newMap = map.add(new Tuple(["d", 4]))
+    const newMap = map.add(Tuple(["d", 4]))
     expect(newMap.get("a").getOrElse(0)).toBe(1)
     expect(newMap.get("b").getOrElse(0)).toBe(2)
     expect(newMap.get("c").getOrElse(0)).toBe(3)
@@ -35,7 +35,7 @@ describe("Map", () => {
   })
 
   test("reduce should accumulate values", () => {
-    const result = map.reduce((acc, value) => new Tuple([acc.get(0) + value.get(0), acc.get(1) + value.get(1)]))
+    const result = map.reduce((acc, value) => Tuple([acc.get(0) + value.get(0), acc.get(1) + value.get(1)]))
     expect(result.get(0)).toBe("abc") // "a" + "b" + "c"
     expect(result.get(1)).toBe(6) // 1 + 2 + 3
   })
