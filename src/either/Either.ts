@@ -1,6 +1,6 @@
-import { none, Option, some } from "../option"
-import { List } from "../list"
 import { _Functor_ } from "../functor"
+import { List } from "../list"
+import { none, Option, some } from "../option"
 
 export type Either<L, R> = {
   value: L | R
@@ -42,7 +42,7 @@ export class Right<L, R> implements Either<L, R> {
   }
 
   toList(): List<R> {
-    return new List<R>([this.value])
+    return List<R>([this.value])
   }
 }
 
@@ -70,6 +70,6 @@ export class Left<L, R> implements Either<L, R> {
   }
 
   toList(): List<R> {
-    return new List()
+    return List()
   }
 }

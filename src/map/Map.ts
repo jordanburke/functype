@@ -68,22 +68,22 @@ export class Map<K, V> implements _Map_<K, V> {
   }
 
   reduce(f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> {
-    return new Seq(this.entries).reduce(f)
+    return Seq(this.entries).reduce(f)
   }
 
   reduceRight(f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> {
-    return new Seq(this.entries).reduceRight(f)
+    return Seq(this.entries).reduceRight(f)
   }
 
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B {
-    const iterables = new Seq(this.entries)
+    const iterables = Seq(this.entries)
     return (f: (b: B, a: Tuple<[K, V]>) => B) => {
       return iterables.foldLeft(z)(f)
     }
   }
 
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B {
-    const iterables = new Seq(this.entries)
+    const iterables = Seq(this.entries)
     return (f: (a: Tuple<[K, V]>, b: B) => B) => {
       return iterables.foldRight(z)(f)
     }
@@ -107,11 +107,11 @@ export class Map<K, V> implements _Map_<K, V> {
   }
 
   toList(): _List_<Tuple<[K, V]>> {
-    return new List(this.entries)
+    return List(this.entries)
   }
 
   toSet(): _Set_<Tuple<[K, V]>> {
-    return new Set(this.entries)
+    return Set(this.entries)
   }
 
   toString(): string {

@@ -38,7 +38,7 @@ export type _Iterable_<A extends Type> = {
 
   map<B extends Type>(f: (a: A) => B): _Iterable_<B>
 
-  flatMap<B extends Type>(f: (a: A) => _Iterable_<B>): _Iterable_<B>
+  flatMap<B extends Type>(f: (a: A) => _Iterable_<B> | Iterable<B>): _Iterable_<B>
 
   get size(): number
 

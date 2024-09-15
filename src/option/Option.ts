@@ -42,7 +42,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     <B>(z: B) =>
     (op: (a: T, b: B) => B) =>
       op(value, z),
-  toList: () => new Seq<T>([value]),
+  toList: () => Seq<T>([value]),
   contains: (val: T) => val === value,
   size: 1,
   valueOf: () => ({ _tag: "Some", value }),
@@ -70,7 +70,7 @@ const NONE: Option<never> = {
     <B>(z: B) =>
     () =>
       z,
-  toList: () => new Seq([]),
+  toList: () => Seq([]),
   contains: () => false,
   size: 0,
   valueOf: () => ({ _tag: "None" }),

@@ -1,72 +1,84 @@
 import { _Collection } from "../collections"
-import { _Iterable_ } from "../iterable"
-import { Seq } from "../iterable"
+import { _Iterable_, Seq } from "../iterable"
 import { option } from "../option"
 import { Option } from "../option"
 import { Set } from "../set"
 
-export interface _List_<T> extends _Iterable_<T>, ArrayLike<T> {
-  add(item: T): _List_<T>
+export type _List_<T> = _Iterable_<T> &
+  ArrayLike<T> & {
+    add: (item: T) => _List_<T>
+    removeAt: (index: number) => _List_<T>
+  }
+
+export type List<A> = _Collection<A> & {
+  map: <B>(f: (a: A) => B) => List<B>
+  flatMap: <B>(f: (a: A) => _Iterable_<B>) => List<B>
+  remove: (value: A) => List<A>
+  contains: (value: A) => boolean
+  removeAt: (index: number) => List<A>
+  get: (index: number) => Option<A>
+  concat: (other: List<A>) => List<A>
+  toList: () => _List_<A>
+  toSet: () => Set<A>
+  toString: () => string
+  valueOf: () => { values: A[] }
+} & _List_<A>
+
+const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
+  function isIterable<T>(value: any): value is Iterable<T> {
+    return value != null && typeof value[Symbol.iterator] === "function"
+  }
+
+  //const array = Array.isArray(values) ? values : Array.from(values ?? [])
+  const array = Array.isArray(values) ? values : isIterable(values) ? Array.from(values) : []
+  const seqMethods = Seq(array)
+
+  const list: List<A> = {
+    ...seqMethods,
+
+    length: array.length,
+
+    //[Symbol.iterator]: () => array[Symbol.iterator](),
+
+    map: <B>(f: (a: A) => B): List<B> => createList(array.map(f)),
+
+    flatMap: <B>(f: (a: A) => _Iterable_<B>): List<B> => createList(seqMethods.flatMap(f)),
+
+    remove: (value: A): List<A> => {
+      const index = array.indexOf(value)
+      return list.removeAt(index)
+    },
+
+    contains: (value: A): boolean => array.includes(value),
+
+    add: (item: A): List<A> => createList([...array, item]),
+
+    removeAt: (index: number): List<A> => {
+      if (index < 0 || index >= array.length) {
+        return list
+      }
+      return createList([...array.slice(0, index), ...array.slice(index + 1)])
+    },
+
+    get: (index: number): Option<A> => option(array[index]),
+
+    concat: (other: List<A>): List<A> => createList([...array, ...other.toArray()]),
+
+    toList: (): _List_<A> => list,
+
+    toSet: (): Set<A> => Set(array),
+
+    toString: (): string => `List(${array.toString()})`,
+  }
+
+  return new Proxy(list, {
+    get(target, prop) {
+      if (typeof prop === "symbol" || isNaN(Number(prop))) {
+        return target[prop as keyof typeof target]
+      }
+      return target.get(Number(prop))
+    },
+  })
 }
 
-export class List<A> extends Seq<A> implements _List_<A>, _Collection<A> {
-  constructor(values?: Iterable<A> | _Iterable_<A>) {
-    super(values)
-  }
-
-  readonly [n: number]: A
-
-  map<B>(f: (a: A) => B): List<B> {
-    return new List(super.map(f))
-  }
-
-  flatMap<B>(f: (a: A) => _Iterable_<B>): List<B> {
-    return new List(super.flatMap(f))
-  }
-
-  remove(value: A): List<A> {
-    const newList = new List<A>()
-    const index = newList.toArray().indexOf(value)
-    return this.removeAt(index)
-  }
-
-  contains(value: A): boolean {
-    return this.toArray().indexOf(value) !== -1
-  }
-
-  add(item: A): List<A> {
-    const temp = this.toArray()
-    const values = [...temp, item]
-    return new List(values)
-  }
-
-  // Remove the item from the list by index and return a new list
-  removeAt(index: number): List<A> {
-    if (index < 0 || index >= this.toArray().length) {
-      return this // return the same list if index is out of bounds
-    }
-    const newItems = [...this.toArray().slice(0, index), ...this.toArray().slice(index + 1)]
-    return new List(newItems)
-  }
-
-  // Retrieve an item by index
-  get(index: number): Option<A> {
-    return option(this.toArray()[index])
-  }
-
-  concat(other: List<A>): List<A> {
-    return new List([...this.toArray(), ...other.toArray()])
-  }
-
-  toList(): _List_<A> {
-    return this
-  }
-
-  toSet(): Set<A> {
-    return new Set(this.toArray())
-  }
-
-  toString(): string {
-    return `List(${this.toArray().toString()})`
-  }
-}
+export const List = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => createList(values)
