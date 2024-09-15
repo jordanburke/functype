@@ -14,7 +14,7 @@ export type _Iterable_<A extends Type> = {
   //
   // dropWhile(p: (a: A) => boolean): IIterable<A>
 
-  exists(p: (a: A) => boolean): Boolean
+  exists(p: (a: A) => boolean): boolean
 
   filter(p: (a: A) => boolean): _Iterable_<A>
 

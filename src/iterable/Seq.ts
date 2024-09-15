@@ -1,7 +1,7 @@
 import { none, option } from "../option"
-import { _Iterable_ } from "./index"
 import { Option } from "../option"
 import { isIterable } from "../util/isIterable"
+import { _Iterable_ } from "./index"
 export class Seq<A> implements _Iterable_<A> {
   protected readonly values: Iterable<A>
   constructor(values?: Iterable<A> | _Iterable_<A>) {
@@ -55,7 +55,7 @@ export class Seq<A> implements _Iterable_<A> {
   //   return undefined
   // }
 
-  exists(p: (a: A) => boolean): Boolean {
+  exists(p: (a: A) => boolean): boolean {
     return !this.find(p).isEmpty
   }
 
