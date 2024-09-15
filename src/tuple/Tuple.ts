@@ -1,13 +1,11 @@
-import { ArrayType, _ArrayFunctor_ } from "../functor"
+import { _ArrayFunctor_, ArrayType } from "../functor"
 
 export type _Tuple_<T extends ArrayType> = _ArrayFunctor_<T> & {
-  get(index: number): T[number]
+  get<K extends number>(index: K): T[K]
 
-  getAs<U>(index: number, f?: (item: T) => boolean): U
+  map<U extends ArrayType>(f: (value: T) => U): _Tuple_<U>
 
-  map<U extends any[]>(f: (value: T) => U): _Tuple_<U>
-
-  flatMap<U extends any[]>(f: (value: T) => _Tuple_<U>): _Tuple_<U>
+  flatMap<U extends ArrayType>(f: (value: T) => _Tuple_<U>): _Tuple_<U>
 
   toArray(): T
 }
@@ -25,21 +23,8 @@ export class Tuple<T extends ArrayType> implements _Tuple_<T> {
   }
 
   // Additional Tuple methods
-  get(index: number): T[number] {
+  get<K extends number>(index: K): T[K] {
     return this.values[index]
-  }
-
-  getAs<U>(index: number, f?: (item: T) => boolean): U {
-    const value = this.values[index]
-    if (f) {
-      if (f(this.values)) {
-        return value as U
-      } else {
-        throw new Error("Cannot cast tuple value")
-      }
-    } else {
-      return value as any as U
-    }
   }
 
   toArray(): T {

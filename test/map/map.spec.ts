@@ -35,21 +35,18 @@ describe("Map", () => {
   })
 
   test("reduce should accumulate values", () => {
-    const result = map.reduce(
-      (acc, value) =>
-        new Tuple([acc.getAs<string>(0) + value.getAs<string>(0), acc.getAs<number>(1) + value.getAs<number>(1)]),
-    )
+    const result = map.reduce((acc, value) => new Tuple([acc.get(0) + value.get(0), acc.get(1) + value.get(1)]))
     expect(result.get(0)).toBe("abc") // "a" + "b" + "c"
     expect(result.get(1)).toBe(6) // 1 + 2 + 3
   })
 
   test("foldLeft should accumulate values with an initial value", () => {
-    const result = map.foldLeft(0)((acc, value) => acc + value.getAs<number>(1))
+    const result = map.foldLeft(0)((acc, value) => acc + value.get(1))
     expect(result).toBe(6) // 1 + 2 + 3
   })
 
   test("foldRight should accumulate values with an initial value", () => {
-    const result = map.foldRight(0)((value, acc) => acc + value.getAs<number>(1))
+    const result = map.foldRight(0)((value, acc) => acc + value.get(1))
     expect(result).toBe(6) // 3 + 2 + 1
   })
 

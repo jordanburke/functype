@@ -1,11 +1,11 @@
-import { ESMap, IESMap } from "./shim"
-import { _Tuple_, Tuple } from "../tuple"
-import { Seq } from "../iterable"
-import { _Set_, Set } from "../set"
-import { _Option_, option } from "../option"
-import { _List_, List } from "../list"
-import { _Traversable_ } from "../index"
 import { _Collection } from "../collections"
+import { _Traversable_ } from "../index"
+import { Seq } from "../iterable"
+import { _List_, List } from "../list"
+import { _Option_, option } from "../option"
+import { _Set_, Set } from "../set"
+import { _Tuple_, Tuple } from "../tuple"
+import { ESMap, IESMap } from "./shim"
 
 type SafeTraversable<K, V> = Omit<_Traversable_<_Tuple_<[K, V]>>, "map" | "flatMap">
 
@@ -120,7 +120,7 @@ export class Map<K, V> implements _Map_<K, V> {
 }
 
 // Example usage
-const myMap = new Map<string, any>([
+const myMap = new Map<string, unknown>([
   ["a", 1],
   ["b", 2],
   ["c", 3],

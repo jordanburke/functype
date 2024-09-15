@@ -1,4 +1,4 @@
-export type SingleType = any
+export type SingleType = unknown
 
 export type ArrayType = SingleType[]
 
