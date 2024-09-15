@@ -1,13 +1,13 @@
 import { None, option } from "../../src"
-import { _Option_ } from "../../src"
+import { Option } from "../../src"
 
 describe("Option", () => {
   beforeEach(async () => {
     // Nothing
   })
 
-  const something: _Option_<string> = option<string>("hello")
-  const nothing: _Option_<string> = option()
+  const something: Option<string> = option<string>("hello")
+  const nothing: Option<string> = option()
 
   it("parse valid number", () => {
     expect(something.getOrElse("world")).toBe("hello")
@@ -22,6 +22,6 @@ describe("Option", () => {
   })
 
   it("map on None", () => {
-    expect(nothing.map(() => 10)).toEqual(new None())
+    expect(nothing.map(() => 10)).toEqual(None())
   })
 })

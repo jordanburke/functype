@@ -1,8 +1,8 @@
-import { ESSet, IESSet } from "./shim"
+import { _Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
 import { _List_, List } from "../list"
-import { _Collection } from "../collections"
 import { isIterable } from "../util/isIterable"
+import { ESSet, IESSet } from "./shim"
 
 export type _Set_<T> = {
   has(value: T): boolean

@@ -2,7 +2,7 @@ import { _Collection } from "../collections"
 import { _Traversable_ } from "../index"
 import { Seq } from "../iterable"
 import { _List_, List } from "../list"
-import { _Option_, option } from "../option"
+import { Option } from "../option"
 import { _Set_, Set } from "../set"
 import { Tuple } from "../tuple"
 import { ESMap, IESMap } from "./shim"
@@ -14,11 +14,11 @@ export type _Map_<K, V> = {
 
   flatMap<U>(f: (value) => _Map_<K, U>): _Map_<K, U>
 
-  get(key: K): _Option_<V>
+  get(key: K): Option<V>
 
   getOrElse(key: K, defaultValue: V): V
 
-  orElse(key: K, alternative: _Option_<V>): _Option_<V>
+  orElse(key: K, alternative: Option<V>): Option<V>
 } & SafeTraversable<K, V> &
   _Collection<Tuple<[K, V]>>
 
@@ -89,20 +89,20 @@ export class Map<K, V> implements _Map_<K, V> {
     }
   }
 
-  get(key: K): _Option_<V> {
-    return option(this.values.get(key))
+  get(key: K): Option<V> {
+    return Option(this.values.get(key))
   }
 
   getOrElse(key: K, defaultValue: V): V {
-    return option(this.values.get(key)).getOrElse(defaultValue)
+    return Option(this.values.get(key)).getOrElse(defaultValue)
   }
 
   get isEmpty(): boolean {
     return this.values.size === 0
   }
 
-  orElse(key: K, alternative: _Option_<V>): _Option_<V> {
-    const v = option(this.values.get(key))
+  orElse(key: K, alternative: Option<V>): Option<V> {
+    const v = Option(this.values.get(key))
     return alternative
   }
 
@@ -120,8 +120,8 @@ export class Map<K, V> implements _Map_<K, V> {
 }
 
 // Example usage
-const myMap = new Map<string, unknown>([
-  ["a", 1],
-  ["b", 2],
-  ["c", 3],
-])
+// const myMap = new Map<string, unknown>([
+//   ["a", 1],
+//   ["b", 2],
+//   ["c", 3],
+// ])

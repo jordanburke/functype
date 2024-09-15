@@ -1,139 +1,86 @@
 import { _Functor_, Type } from "../functor"
-import { _Traversable_, _Try_ } from "../index"
-import { _Iterable_ } from "../iterable"
-import { Seq } from "../iterable/Seq"
+import { _Traversable_ } from "../index"
+import { _Iterable_, Seq } from "../iterable"
 
-export type _Option_<T extends Type> = {
+export type Option<T extends Type> = {
+  readonly _tag: "Some" | "None"
+  readonly value: T | undefined
+  isEmpty: boolean
   get(): T
-
   getOrElse(defaultValue: T): T
-
-  orElse(alternative: _Option_<T>): _Option_<T>
-
-  map<U extends Type>(f: (value: T) => U): _Option_<U>
-
-  flatMap<U extends Type>(f: (value: T) => _Option_<U>): _Option_<U>
-
+  orElse(alternative: Option<T>): Option<T>
+  map<U extends Type>(f: (value: T) => U): Option<U>
+  flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
+  reduce<U>(f: (acc: U, value: T) => U): U
+  reduceRight<U>(f: (acc: U, value: T) => U): U
+  foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
+  foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   toList(): _Iterable_<T>
-
-  valueOf(): Object
+  contains(value: T): boolean
+  size: number
+  valueOf(): { _tag: "Some" | "None"; value?: T }
+  toString(): string
 } & _Traversable_<T> &
   _Functor_<T>
 
-export class Some<A extends Type> implements _Option_<A> {
-  constructor(private value: A) {}
+export const Some = <T extends Type>(value: T): Option<T> => ({
+  _tag: "Some",
+  value,
+  isEmpty: false,
+  get: () => value,
+  getOrElse: () => value,
+  orElse: () => Some(value),
+  map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
+  flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
+  reduce: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
+  reduceRight: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
+  foldLeft:
+    <B>(z: B) =>
+    (op: (b: B, a: T) => B) =>
+      op(z, value),
+  foldRight:
+    <B>(z: B) =>
+    (op: (a: T, b: B) => B) =>
+      op(value, z),
+  toList: () => new Seq<T>([value]),
+  contains: (val: T) => val === value,
+  size: 1,
+  valueOf: () => ({ _tag: "Some", value }),
+  toString: () => `Some(${JSON.stringify(value)})`,
+})
 
-  get isEmpty(): boolean {
-    return false
-  }
-
-  get(): A {
-    return this.value
-  }
-
-  getOrElse(defaultValue: A): A {
-    return this.value
-  }
-
-  orElse(alternative: _Option_<A>): _Option_<A> {
-    return this
-  }
-
-  map<U extends Type>(f: (value: A) => U): _Option_<U> {
-    return new Some(f(this.value))
-  }
-
-  flatMap<U extends Type>(f: (value: A) => _Option_<U>): _Option_<U> {
-    return f(this.value)
-  }
-
-  reduce<U>(f: (acc: U, value: A) => U): U {
-    return f(undefined as any, this.value)
-  }
-
-  reduceRight<U>(f: (acc: U, value: A) => U): U {
-    return f(undefined as any, this.value)
-  }
-
-  foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B {
-    return (f: (b: B, a: A) => B) => {
-      return f(z, this.value)
-    }
-  }
-
-  foldRight<B>(z: B): (op: (a: A, b: B) => B) => B {
-    return (f: (a: A, b: B) => B) => {
-      return f(this.value, z)
-    }
-  }
-
-  toList(): _Iterable_<A> {
-    return new Seq<A>([this.value])
-  }
-
-  contains(value: A): boolean {
-    return false
-  }
-
-  get size(): number {
-    return 0
-  }
+const NONE: Option<never> = {
+  _tag: "None",
+  value: undefined,
+  isEmpty: true,
+  get: () => {
+    throw new Error("Cannot call get() on None")
+  },
+  getOrElse: <T>(defaultValue: T) => defaultValue,
+  orElse: <T>(alternative: Option<T>) => alternative,
+  map: () => NONE,
+  flatMap: () => NONE,
+  reduce: () => undefined as never,
+  reduceRight: () => undefined as never,
+  foldLeft:
+    <B>(z: B) =>
+    () =>
+      z,
+  foldRight:
+    <B>(z: B) =>
+    () =>
+      z,
+  toList: () => new Seq([]),
+  contains: () => false,
+  size: 0,
+  valueOf: () => ({ _tag: "None" }),
+  toString: () => "None",
 }
 
-export class None<A extends Type> implements _Option_<A> {
-  get isEmpty(): boolean {
-    return true
-  }
+export const None = <T extends Type>(): Option<T> => NONE as Option<T>
 
-  get(): A {
-    throw new Error("Cannot call get() on a None")
-  }
+export const Option = <T extends Type>(value: T | null | undefined): Option<T> =>
+  value !== null && value !== undefined ? Some(value) : None()
 
-  getOrElse(defaultValue: A): A {
-    return defaultValue
-  }
-
-  orElse(alternative: _Option_<A>): _Option_<A> {
-    return alternative
-  }
-
-  map<U extends Type>(f: (value: A) => U): _Option_<U> {
-    return new None<U>()
-  }
-
-  flatMap<U extends Type>(f: (value: A) => _Option_<U>): _Option_<U> {
-    return new None<U>()
-  }
-
-  reduce(f: (acc: A, value: A) => A): A {
-    return f(undefined as any, undefined as any)
-  }
-
-  reduceRight(f: (b: A, a: A) => A): A {
-    return f(undefined as any, undefined as any)
-  }
-
-  foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B {
-    return (f: (b: B, a: A) => B) => {
-      return z
-    }
-  }
-
-  foldRight<B>(z: B): (op: (a: A, b: B) => B) => B {
-    return (f: (a: A, b: B) => B) => {
-      return z
-    }
-  }
-
-  toList(): _Iterable_<A> {
-    return new Seq<A>()
-  }
-
-  contains(value: A): boolean {
-    return false
-  }
-
-  get size(): number {
-    return 0
-  }
-}
+export const match = <T extends Type, U>(option: Option<T>, patterns: { Some: (value: T) => U; None: () => U }): U =>
+  option._tag === "Some" ? patterns.Some(option.value as T) : patterns.None()

@@ -1,9 +1,9 @@
-import { option } from "../option"
+import { _Collection } from "../collections"
 import { _Iterable_ } from "../iterable"
 import { Seq } from "../iterable"
-import { _Collection } from "../collections"
+import { option } from "../option"
+import { Option } from "../option"
 import { Set } from "../set"
-import { _Option_ } from "../option"
 
 export interface _List_<T> extends _Iterable_<T>, ArrayLike<T> {
   add(item: T): _List_<T>
@@ -50,7 +50,7 @@ export class List<A> extends Seq<A> implements _List_<A>, _Collection<A> {
   }
 
   // Retrieve an item by index
-  get(index: number): _Option_<A> {
+  get(index: number): Option<A> {
     return option(this.toArray()[index])
   }
 

@@ -1,4 +1,4 @@
-import { none, _Option_, some } from "../option"
+import { none, Option, some } from "../option"
 import { List } from "../list"
 import { _Functor_ } from "../functor"
 
@@ -13,7 +13,7 @@ export type Either<L, R> = {
 
   flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U>
 
-  toOption(): _Option_<R>
+  toOption(): Option<R>
 
   toList(): List<R>
 } & _Functor_<R>
@@ -37,7 +37,7 @@ export class Right<L, R> implements Either<L, R> {
     return f(this.value)
   }
 
-  toOption(): _Option_<R> {
+  toOption(): Option<R> {
     return some<R>(this.value)
   }
 
@@ -65,7 +65,7 @@ export class Left<L, R> implements Either<L, R> {
     return new Left<L, U>(this.value)
   }
 
-  toOption(): _Option_<R> {
+  toOption(): Option<R> {
     return none<R>()
   }
 

@@ -1,10 +1,10 @@
 import { _Functor_, Type } from "../functor"
-import { _Option_ } from "../option"
+import { Option } from "../option"
 
 export type _Iterable_<A extends Type> = {
   count(p: (x: A) => boolean): number
 
-  find(p: (a: A) => boolean): _Option_<A>
+  find(p: (a: A) => boolean): Option<A>
 
   forEach(f: (a: A) => void): void
 
@@ -32,7 +32,7 @@ export type _Iterable_<A extends Type> = {
 
   get head(): A
 
-  get headOption(): _Option_<A>
+  get headOption(): Option<A>
 
   get isEmpty(): boolean
 

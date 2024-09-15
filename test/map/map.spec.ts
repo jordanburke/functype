@@ -30,7 +30,6 @@ describe("Map", () => {
 
   test("flatMap should transform values and flatten", () => {
     const newMap = map.flatMap((value) => new Map([["a", value * 2]]))
-    console.log(newMap)
     expect(newMap.get("a").getOrElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
 
@@ -51,11 +50,11 @@ describe("Map", () => {
   })
 
   test("get should return Some if key exists", () => {
-    expect(map.get("a")).toEqual(new Some(1))
+    expect(map.get("a").valueOf()).toEqual(Some(1).valueOf())
   })
 
   test("get should return None if key does not exist", () => {
-    expect(map.get("z")).toEqual(new None())
+    expect(map.get("z").valueOf()).toEqual(None().valueOf())
   })
 
   test("getOrElse should return default value if key does not exist", () => {
@@ -72,6 +71,6 @@ describe("Map", () => {
   })
 
   test("orElse should return alternative option if key does not exist", () => {
-    expect(map.orElse("z", new Some(10))).toEqual(new Some(10))
+    expect(map.orElse("z", Some(10)).valueOf()).toEqual(Some(10).valueOf())
   })
 })
