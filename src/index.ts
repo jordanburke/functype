@@ -25,5 +25,3 @@ export * from "./option"
 export * from "./set"
 export * from "./try"
 export * from "./tuple"
-
-export type Typeable = { _tag: Type }

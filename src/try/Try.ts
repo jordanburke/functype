@@ -1,6 +1,5 @@
-import { Left, Right, Either } from "../either"
-
-import { Typeable } from "../index"
+import { Either, Left, Right } from "../either"
+import { Typeable } from "../typeable/Typeable"
 
 export type Try<T> = {
   readonly _tag: "Success" | "Failure"
@@ -15,7 +14,7 @@ export type Try<T> = {
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
   valueOf: () => { _tag: "Success" | "Failure"; value?: T; error?: Error }
   toString: () => string
-} & Typeable
+} & Typeable<"Success" | "Failure">
 
 const createSuccess = <T>(value: T): Try<T> => ({
   _tag: "Success",

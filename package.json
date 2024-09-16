@@ -14,9 +14,9 @@
     "lint:fix": "eslint ./src --ext .ts,.tsx --quiet --fix --ignore-path ./.gitignore",
     "lint:format": "prettier  --loglevel warn --write \"./**/*.{ts,tsx,css,md,json}\" ",
     "lint": "pnpm lint:format && pnpm lint:fix ",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test": "tsc && jest",
+    "test:watch": "tsc && jest --watch",
+    "test:cov": "tsc && jest --coverage"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",
