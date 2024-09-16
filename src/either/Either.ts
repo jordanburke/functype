@@ -1,75 +1,66 @@
-import { _Functor_ } from "../functor"
+import { Functor, Type } from "../functor"
 import { List } from "../list"
 import { none, Option, some } from "../option"
 
-export type Either<L, R> = {
+export type Either<L, R extends Type> = {
+  readonly _tag: "Left" | "Right"
   value: L | R
+  isLeft: () => boolean
+  isRight: () => boolean
+  map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
+  toOption: () => Option<R>
+  toList: () => List<R>
+  valueOf: () => { _tag: "Left" | "Right"; value: L | R }
+  toString: () => string
+} & Functor<R>
 
-  isLeft(): boolean
+const createRight = <L, R extends Type>(value: R): Either<L, R> => ({
+  _tag: "Right",
+  value,
+  isLeft: () => false,
+  isRight: () => true,
+  map: <U extends Type>(f: (value: R) => U) => createRight<L, U>(f(value)),
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => f(value),
+  toOption: () => some<R>(value),
+  toList: () => List<R>([value]),
+  valueOf: () => ({ _tag: "Right", value }),
+  toString: () => `Right(${JSON.stringify(value)})`,
+})
 
-  isRight(): boolean
+const createLeft = <L, R extends Type>(value: L): Either<L, R> => ({
+  _tag: "Left",
+  value,
+  isLeft: () => true,
+  isRight: () => false,
+  map: <U extends Type>(_f: (value: R) => U) => createLeft<L, U>(value),
+  flatMap: <U extends Type>(_f: (value: R) => Either<L, U>) => createLeft<L, U>(value),
+  toOption: () => none<R>(),
+  toList: () => List<R>(),
+  valueOf: () => ({ _tag: "Left", value }),
+  toString: () => `Left(${JSON.stringify(value)})`,
+})
 
-  map<U>(f: (value: R) => U): Either<L, U>
+export const Right = <L, R extends Type>(value: R): Either<L, R> => createRight(value)
+export const Left = <L, R extends Type>(value: L): Either<L, R> => createLeft(value)
 
-  flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U>
+// Type guards
+export const isRight = <L, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
+  either.isRight()
+export const isLeft = <L, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
+  either.isLeft()
 
-  toOption(): Option<R>
-
-  toList(): List<R>
-} & _Functor_<R>
-
-export class Right<L, R> implements Either<L, R> {
-  constructor(public value: R) {}
-
-  isLeft(): this is Left<L, R> {
-    return false
-  }
-
-  isRight(): this is Right<L, R> {
-    return true
-  }
-
-  map<U>(f: (value: R) => U): Either<L, U> {
-    return new Right<L, U>(f(this.value))
-  }
-
-  flatMap<U>(f: (value: R) => Either<L, U>): Either<L, U> {
-    return f(this.value)
-  }
-
-  toOption(): Option<R> {
-    return some<R>(this.value)
-  }
-
-  toList(): List<R> {
-    return List<R>([this.value])
-  }
-}
-
-export class Left<L, R> implements Either<L, R> {
-  constructor(public value: L) {}
-
-  isLeft(): this is Left<L, R> {
-    return true
-  }
-
-  isRight(): this is Right<L, R> {
-    return false
-  }
-
-  map<U>(_f: (value: R) => U): Either<L, U> {
-    return new Left<L, U>(this.value)
-  }
-
-  flatMap<U>(_f: (value: R) => Either<L, U>): Either<L, U> {
-    return new Left<L, U>(this.value)
-  }
-
-  toOption(): Option<R> {
-    return none<R>()
-  }
-
-  toList(): List<R> {
-    return List()
+// Helper function to create Either from a potential error-throwing function
+export const tryCatch = <L, R extends Type>(f: () => R, onError: (error: unknown) => L): Either<L, R> => {
+  try {
+    return Right<L, R>(f())
+  } catch (error) {
+    return Left<L, R>(onError(error))
   }
 }
+
+// Pattern matching function
+export const match = <L, R extends Type, U>(
+  either: Either<L, R>,
+  patterns: { Left: (value: L) => U; Right: (value: R) => U },
+): U => (either._tag === "Right" ? patterns.Right(either.value as R) : patterns.Left(either.value as L))

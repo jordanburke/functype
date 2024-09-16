@@ -1,1 +1,1 @@
-export { _Try_, Try } from "./Try"
+export { Try } from "./Try"

@@ -1,4 +1,4 @@
-import { _Functor_, Type } from "../functor"
+import { Functor, Type } from "../functor"
 import { Option } from "../option"
 
 export type _Iterable_<A extends Type> = {
@@ -43,6 +43,6 @@ export type _Iterable_<A extends Type> = {
   get size(): number
 
   toArray(): readonly A[]
-} & _Functor_<A>
+} & Functor<A>
 
 export { Seq } from "./Seq"

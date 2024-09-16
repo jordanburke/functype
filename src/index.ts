@@ -1,6 +1,6 @@
-import { _Functor_, Type } from "./functor"
+import { Functor, Type } from "./functor"
 
-export type _Traversable_<A extends Type> = _Functor_<A> & {
+export type _Traversable_<A extends Type> = Functor<A> & {
   get size(): number
 
   get isEmpty(): boolean

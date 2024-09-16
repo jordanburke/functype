@@ -1,4 +1,4 @@
-import { _ArrayFunctor_, ArrayType } from "../functor"
+import { ArrayFunctor, ArrayType } from "../functor"
 
 export type Tuple<T extends ArrayType> = {
   get<K extends number>(index: K): T[K]
@@ -8,7 +8,7 @@ export type Tuple<T extends ArrayType> = {
   flatMap<U extends ArrayType>(f: (value: T) => Tuple<U>): Tuple<U>
 
   toArray(): T
-} & _ArrayFunctor_<T>
+} & ArrayFunctor<T>
 
 export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
   return {
