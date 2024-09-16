@@ -1,5 +1,5 @@
 import { Collection } from "../collections"
-import { _Traversable_ } from "../index"
+import { _Iterable_, Traversable } from "../index"
 import { Seq } from "../iterable"
 import { List } from "../list"
 import { Option } from "../option"
@@ -7,120 +7,110 @@ import { Set } from "../set"
 import { Tuple } from "../tuple"
 import { ESMap, IESMap } from "./shim"
 
-type SafeTraversable<K, V> = Omit<_Traversable_<Tuple<[K, V]>>, "map" | "flatMap">
+type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">
 
-export type _Map_<K, V> = {
-  map<U>(f: (value) => U): _Map_<K, U>
-
-  flatMap<U>(f: (value) => _Map_<K, U>): _Map_<K, U>
-
+export type Map<K, V> = {
+  add(item: Tuple<[K, V]>): Map<K, V>
+  remove(value: K): Map<K, V>
+  map<U>(f: (value: V) => U): Map<K, U>
+  flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => _Iterable_<[K2, V2]>): Map<K2, V2>
   get(key: K): Option<V>
-
   getOrElse(key: K, defaultValue: V): V
-
   orElse(key: K, alternative: Option<V>): Option<V>
 } & SafeTraversable<K, V> &
   Collection<Tuple<[K, V]>>
 
-export class Map<K, V> implements _Map_<K, V> {
-  private values: IESMap<K, V>
+type MapState<K, V> = {
+  values: IESMap<K, V>
+}
 
-  private get entries() {
-    return Array.from(this.values.entries()).map(([key, value]) => Tuple<[K, V]>([key, value]))
+const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
+  const state: MapState<K, V> = {
+    values: new ESMap<K, V>(entries),
   }
 
-  constructor(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null) {
-    this.values = new ESMap<K, V>(entries)
+  const getEntries = () => Array.from(state.values.entries()).map(([key, value]) => Tuple<[K, V]>([key, value]))
+
+  const add = (item: Tuple<[K, V]>): Map<K, V> =>
+    createMap(new ESMap(state.values).set(item.toArray()[0], item.toArray()[1]).entries())
+
+  const remove = (value: K): Map<K, V> => {
+    const newMap = new ESMap(state.values)
+    return newMap.delete(value) ? createMap(newMap.entries()) : createMap(state.values.entries())
   }
 
-  add(item: Tuple<[K, V]>): Map<K, V> {
-    return new Map<K, V>(this.values.set(item.toArray()[0], item.toArray()[1]).entries())
+  const contains = (value: Tuple<[K, V]>): boolean => state.values.get(value[0]) === value[1]
+
+  const size = (): number => state.values.size
+
+  const map = <U>(f: (value: V) => U): Map<K, U> =>
+    createMap(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
+
+  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => _Iterable_<[K2, V2]>): Map<K2, V2> => {
+    const list = createMap(state.values.entries()).toList()
+    return createMap(list.flatMap(f).toArray())
   }
 
-  remove(value: Tuple<[K, V]>): Map<K, V> {
-    const newMap = new Map<K, V>([...this.values.entries()])
-    return newMap.values.delete(value[0]) ? newMap : this
-  }
+  const reduce = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
+    Seq(getEntries()).reduce(f)
 
-  contains(value: Tuple<[K, V]>): boolean {
-    return this.values.get(value[0]) === value[1]
-  }
+  const reduceRight = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
+    Seq(getEntries()).reduceRight(f)
 
-  get size(): number {
-    return this.values.size
-  }
+  const foldLeft =
+    <B>(z: B) =>
+    (op: (b: B, a: Tuple<[K, V]>) => B): B =>
+      Seq(getEntries()).foldLeft(z)(op)
 
-  map<U>(f: (value: V) => U): _Map_<K, U> {
-    return new Map(Array.from(this.values.entries()).map((kv) => [kv[0], f(kv[1])]))
-  }
+  const foldRight =
+    <B>(z: B) =>
+    (op: (a: Tuple<[K, V]>, b: B) => B): B =>
+      Seq(getEntries()).foldRight(z)(op)
 
-  flatMap<U>(f: (value: V) => _Map_<K, U>): _Map_<K, U> {
-    const newEntries: [K, U][] = []
-    for (const [key, value] of this.values.entries()) {
-      const mapped = f(value)
-      if (mapped instanceof Map) {
-        for (const [newKey, newValue] of mapped.values.entries()) {
-          newEntries.push([newKey, newValue])
-        }
-      }
-    }
-    return new Map(newEntries)
-  }
+  const get = (key: K): Option<V> => Option(state.values.get(key))
 
-  reduce(f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> {
-    return Seq(this.entries).reduce(f)
-  }
+  const getOrElse = (key: K, defaultValue: V): V => Option(state.values.get(key)).getOrElse(defaultValue)
 
-  reduceRight(f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> {
-    return Seq(this.entries).reduceRight(f)
-  }
+  const isEmpty = (): boolean => state.values.size === 0
 
-  foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B {
-    const iterables = Seq(this.entries)
-    return (f: (b: B, a: Tuple<[K, V]>) => B) => {
-      return iterables.foldLeft(z)(f)
-    }
-  }
+  const orElse = (key: K, alternative: Option<V>): Option<V> => Option(state.values.get(key)).orElse(alternative)
 
-  foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B {
-    const iterables = Seq(this.entries)
-    return (f: (a: Tuple<[K, V]>, b: B) => B) => {
-      return iterables.foldRight(z)(f)
-    }
-  }
+  const toList = (): List<Tuple<[K, V]>> => List(getEntries())
 
-  get(key: K): Option<V> {
-    return Option(this.values.get(key))
-  }
+  const toSet = (): Set<Tuple<[K, V]>> => Set(getEntries())
 
-  getOrElse(key: K, defaultValue: V): V {
-    return Option(this.values.get(key)).getOrElse(defaultValue)
-  }
+  const toString = (): string => `Map(${getEntries().toString()})`
 
-  get isEmpty(): boolean {
-    return this.values.size === 0
-  }
-
-  orElse(key: K, alternative: Option<V>): Option<V> {
-    const v = Option(this.values.get(key))
-    return alternative
-  }
-
-  toList(): List<Tuple<[K, V]>> {
-    return List(this.entries)
-  }
-
-  toSet(): Set<Tuple<[K, V]>> {
-    return Set(this.entries)
-  }
-
-  toString(): string {
-    return `Map(${this.entries.toString()})`
+  return {
+    add,
+    remove,
+    contains,
+    get size() {
+      return size()
+    },
+    map,
+    flatMap,
+    reduce,
+    reduceRight,
+    foldLeft,
+    foldRight,
+    get,
+    getOrElse,
+    get isEmpty() {
+      return isEmpty()
+    },
+    orElse,
+    toList,
+    toSet,
+    toString,
   }
 }
 
+export const Map = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
+  createMap(entries)
+
 // Example usage
-// const myMap = new Map<string, unknown>([
+// const myMap = createMap<string, unknown>([
 //   ["a", 1],
 //   ["b", 2],
 //   ["c", 3],

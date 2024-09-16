@@ -21,10 +21,10 @@ describe("Either", () => {
   })
 
   it("parse valid invalid number", () => {
-    expect(result2.value).toStrictEqual(new ParseError("NaN"))
+    expect(result2.value).toStrictEqual(ParseError("NaN"))
   })
 
   it("map on Left", () => {
-    expect(result2.map((f) => 10).value).toStrictEqual(new ParseError("NaN"))
+    expect(result2.map((f) => 10).value).toStrictEqual(ParseError("NaN"))
   })
 })

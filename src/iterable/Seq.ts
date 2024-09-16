@@ -1,4 +1,4 @@
-import { None, option, Option } from "../option"
+import { None, Option, option } from "../option"
 import { isIterable } from "../util/isIterable"
 import { _Iterable_ } from "./index"
 

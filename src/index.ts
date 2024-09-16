@@ -1,6 +1,6 @@
 import { Functor, Type } from "./functor"
 
-export type _Traversable_<A extends Type> = Functor<A> & {
+export type Traversable<A extends Type> = Functor<A> & {
   get size(): number
 
   get isEmpty(): boolean
@@ -16,12 +16,14 @@ export type _Traversable_<A extends Type> = Functor<A> & {
   foldRight<B>(z: B): (op: (a: A, b: B) => B) => B
 }
 
+export * from "./either"
 export * from "./functor"
 export * from "./iterable"
 export * from "./list"
 export * from "./map"
 export * from "./option"
-export * from "./either"
 export * from "./set"
-export * from "./tuple"
 export * from "./try"
+export * from "./tuple"
+
+export type Typeable = { _tag: Type }

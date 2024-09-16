@@ -1,5 +1,5 @@
-import { Set } from "../set"
 import { List } from "../list"
+import { Set } from "../set"
 
 export type Converters<A> = {
   toList(): List<A>

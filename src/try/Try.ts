@@ -1,5 +1,6 @@
 import { Left, Right, Either } from "../either"
-import { Typeable } from "../functor"
+
+import { Typeable } from "../index"
 
 export type Try<T> = {
   readonly _tag: "Success" | "Failure"

@@ -15,7 +15,10 @@
     "strictPropertyInitialization": false
   },
   "include": [
-    "src/**/*",
-    "lib/index.d.ts" // declaration file path
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "lib"
   ]
 }

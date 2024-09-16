@@ -8,6 +8,8 @@ export type Tuple<T extends ArrayType> = {
   flatMap<U extends ArrayType>(f: (value: T) => Tuple<U>): Tuple<U>
 
   toArray(): T
+
+  [Symbol.iterator](): Iterator<T[number]>
 } & ArrayFunctor<T>
 
 export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
@@ -27,6 +29,24 @@ export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
 
     toArray: (): T => {
       return values
+    },
+    [Symbol.iterator](): Iterator<T[number]> {
+      let index = 0
+      return {
+        next: (): IteratorResult<T[number]> => {
+          if (index < values.length) {
+            return {
+              value: values[index++],
+              done: false,
+            }
+          } else {
+            return {
+              value: undefined,
+              done: true,
+            }
+          }
+        },
+      }
     },
   }
 }

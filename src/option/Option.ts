@@ -1,5 +1,5 @@
-import { Functor, Type, Typeable } from "../functor"
-import { _Traversable_ } from "../index"
+import { Functor, Type } from "../functor"
+import { Traversable, Typeable } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 
 export type Option<T extends Type> = {
@@ -20,7 +20,7 @@ export type Option<T extends Type> = {
   size: number
   valueOf(): { _tag: "Some" | "None"; value?: T }
   toString(): string
-} & _Traversable_<T> &
+} & Traversable<T> &
   Functor<T> &
   Typeable
 
