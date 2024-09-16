@@ -3,7 +3,7 @@ import { _Traversable_ } from "../index"
 import { Seq } from "../iterable"
 import { List } from "../list"
 import { Option } from "../option"
-import { _Set_, Set } from "../set"
+import { Set } from "../set"
 import { Tuple } from "../tuple"
 import { ESMap, IESMap } from "./shim"
 
@@ -110,7 +110,7 @@ export class Map<K, V> implements _Map_<K, V> {
     return List(this.entries)
   }
 
-  toSet(): _Set_<Tuple<[K, V]>> {
+  toSet(): Set<Tuple<[K, V]>> {
     return Set(this.entries)
   }
 

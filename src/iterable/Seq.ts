@@ -1,5 +1,4 @@
-import { None, none, option } from "../option"
-import { Option } from "../option"
+import { None, option, Option } from "../option"
 import { isIterable } from "../util/isIterable"
 import { _Iterable_ } from "./index"
 
@@ -35,7 +34,7 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
 
   const array = Array.from(iterable)
 
-  const seq: Seq<A> = {
+  return {
     [Symbol.iterator]: () => array[Symbol.iterator](),
 
     get length() {
@@ -92,8 +91,6 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
 
     valueOf: () => ({ values: array }),
   }
-
-  return seq
 }
 
 export const Seq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => createSeq(values)

@@ -1,4 +1,4 @@
-import { Functor, Type } from "../functor"
+import { Functor, Type, Typeable } from "../functor"
 import { _Traversable_ } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 
@@ -21,7 +21,8 @@ export type Option<T extends Type> = {
   valueOf(): { _tag: "Some" | "None"; value?: T }
   toString(): string
 } & _Traversable_<T> &
-  Functor<T>
+  Functor<T> &
+  Typeable
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",

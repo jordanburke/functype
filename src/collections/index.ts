@@ -1,9 +1,9 @@
-import { _Set_ } from "../set"
-import { _List_ } from "../list"
+import { Set } from "../set"
+import { List } from "../list"
 
 export type Converters<A> = {
-  toList(): _List_<A>
-  toSet(): _Set_<A>
+  toList(): List<A>
+  toSet(): Set<A>
   toString(): string
 }
 

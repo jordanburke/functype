@@ -4,6 +4,10 @@ export type ArrayType = SingleType[]
 
 export type Type = SingleType | ArrayType
 
+export type TypeName = "_tag"
+
+export type Typeable = { [key in TypeName]: Type }
+
 export type AbstractFunctor<A extends Type> = {
   map(f: (value: A) => Type): AbstractFunctor<Type>
 

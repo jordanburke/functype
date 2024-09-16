@@ -4,21 +4,18 @@ import { List } from "../list"
 import { isIterable } from "../util/isIterable"
 import { ESSet, IESSet } from "./shim"
 
-export type _Set_<T> = {
-  has: (value: T) => boolean
-} & _Iterable_<T> &
-  Collection<T>
-
-export type Set<A> = _Set_<A> & {
+export type Set<A> = {
   add: (value: A) => Set<A>
   remove: (value: A) => Set<A>
   contains: (value: A) => boolean
+  has: (value: A) => boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => _Iterable_<B>) => Set<B>
   toList: () => List<A>
-  toSet: () => _Set_<A>
+  toSet: () => Set<A>
   toString: () => string
-}
+} & _Iterable_<A> &
+  Collection<A>
 
 const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
   const values: IESSet<A> = isIterable(iterable) ? new ESSet<A>(iterable) : new ESSet<A>(iterable?.toArray() ?? [])
@@ -46,7 +43,7 @@ const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
 
     toList: (): List<A> => List(values),
 
-    toSet: (): _Set_<A> => set,
+    toSet: (): Set<A> => set,
 
     toString: (): string => `Set(${Array.from(values).toString()})`,
   }

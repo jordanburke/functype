@@ -1,4 +1,4 @@
-import { Functor, Type } from "../functor"
+import { Functor, Type, Typeable } from "../functor"
 import { List } from "../list"
 import { none, Option, some } from "../option"
 
@@ -13,7 +13,8 @@ export type Either<L, R extends Type> = {
   toList: () => List<R>
   valueOf: () => { _tag: "Left" | "Right"; value: L | R }
   toString: () => string
-} & Functor<R>
+} & Functor<R> &
+  Typeable
 
 const createRight = <L, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",

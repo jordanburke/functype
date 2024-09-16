@@ -70,7 +70,7 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
   return new Proxy(list, {
     get(target, prop) {
       if (typeof prop === "symbol" || isNaN(Number(prop))) {
-        return target[prop as keyof typeof target]
+        return target[prop]
       }
       return target.get(Number(prop))
     },

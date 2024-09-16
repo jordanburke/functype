@@ -1,1 +1,1 @@
-export { Set, _Set_ } from "./Set"
+export { Set } from "./Set"
