@@ -1,4 +1,4 @@
-import { Either, Left, Right } from "../either"
+import { Either, Left, Right } from "../either/Either"
 import { Typeable } from "../typeable/Typeable"
 
 export type Try<T> = {
@@ -55,8 +55,8 @@ export const Try = <T>(f: () => T): Try<T> => {
 }
 
 // Pattern matching function
-export const match = <T, U>(
-  tryValue: Try<T>,
-  patterns: { Success: (value: T) => U; Failure: (error: Error) => U },
-): U =>
-  tryValue._tag === "Success" ? patterns.Success(tryValue.value as T) : patterns.Failure(tryValue.error as Error)
+// export const match = <T, U>(
+//   tryValue: Try<T>,
+//   patterns: { Success: (value: T) => U; Failure: (error: Error) => U },
+// ): U =>
+//   tryValue._tag === "Success" ? patterns.Success(tryValue.value as T) : patterns.Failure(tryValue.error as Error)

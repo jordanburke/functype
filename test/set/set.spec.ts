@@ -1,5 +1,5 @@
-import { Set } from "../../src/set/Set"
-import { List } from "../../src/list/List"
+import { Set } from "../../src"
+import { List } from "../../src"
 
 describe("Set", () => {
   test("add should add a new value", () => {

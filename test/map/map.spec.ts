@@ -1,5 +1,7 @@
 import { Seq } from "../../src"
-import { Map, None, Some, Tuple } from "../../src"
+import { Map } from "../../src"
+import { None, Some } from "../../src"
+import { Tuple } from "../../src"
 
 describe("Map", () => {
   let map: Map<string, number>

@@ -1,6 +1,6 @@
 import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
-import { List } from "../list"
+import { List } from "../list/List"
 import { isIterable } from "../util/isIterable"
 import { ESSet, IESSet } from "./shim"
 

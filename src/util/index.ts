@@ -1,12 +1,11 @@
-import { left, right } from "../either"
-import { Either } from "../either"
+import { Either, Left, Right } from "../either/Either"
 import { ParseError } from "../error/ParseError"
 
 export const parseNumber = (input: string): Either<ParseError, number> => {
   const result = parseInt(input, 10)
   if (isNaN(result)) {
-    return left(ParseError(`${result}`))
+    return Left(ParseError(`${result}`))
   } else {
-    return right(result)
+    return Right(result)
   }
 }

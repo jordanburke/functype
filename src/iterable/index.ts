@@ -1,5 +1,5 @@
 import { Functor, Type } from "../functor"
-import { Option } from "../option"
+import { Option } from "../option/Option"
 
 export type _Iterable_<A extends Type> = {
   count(p: (x: A) => boolean): number

@@ -1,13 +1,12 @@
-import { None, option } from "../../src"
-import { Option } from "../../src"
+import { None, Option } from "../../src"
 
 describe("Option", () => {
   beforeEach(async () => {
     // Nothing
   })
 
-  const something: Option<string> = option<string>("hello")
-  const nothing: Option<string> = option()
+  const something: Option<string> = Option<string>("hello")
+  const nothing: Option<string> = Option<string>(undefined)
 
   it("parse valid number", () => {
     expect(something.getOrElse("world")).toBe("hello")

@@ -1,4 +1,4 @@
-import { Try } from "../../src" // Update import path as needed
+import { Try } from "../../src/try/Try"
 
 describe("Try", () => {
   describe("Try.of()", () => {

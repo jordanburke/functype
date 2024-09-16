@@ -16,12 +16,12 @@ export type Traversable<A extends Type> = Functor<A> & {
   foldRight<B>(z: B): (op: (a: A, b: B) => B) => B
 }
 
-export * from "./either"
+export * from "./either/Either"
 export * from "./functor"
 export * from "./iterable"
-export * from "./list"
-export * from "./map"
-export * from "./option"
-export * from "./set"
-export * from "./try"
-export * from "./tuple"
+export * from "./list/List"
+export * from "./map/Map"
+export * from "./option/Option"
+export * from "./set/Set"
+export * from "./try/Try"
+export * from "./tuple/Tuple"

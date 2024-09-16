@@ -1,8 +1,7 @@
 import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
-import { option } from "../option"
-import { Option } from "../option"
-import { Set } from "../set"
+import { Option } from "../option/Option"
+import { Set } from "../set/Set"
 
 export type List<A> = {
   add: (item: A) => List<A>
@@ -56,7 +55,7 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
       return createList([...array.slice(0, index), ...array.slice(index + 1)])
     },
 
-    get: (index: number): Option<A> => option(array[index]),
+    get: (index: number): Option<A> => Option(array[index]),
 
     concat: (other: List<A>): List<A> => createList([...array, ...other.toArray()]),
 

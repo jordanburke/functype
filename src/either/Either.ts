@@ -1,6 +1,6 @@
 import { Functor, Type } from "../functor"
-import { List } from "../list"
-import { none, Option, some } from "../option"
+import { List } from "../list/List"
+import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
 
 export type Either<L extends Type, R extends Type> = {
@@ -24,7 +24,7 @@ const RightConstructor = <L, R>(value: R): Either<L, R> => ({
   isRight: () => true,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => RightConstructor<L, U>(f(value)),
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
-  toOption: () => some<R>(value),
+  toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   valueOf: () => ({ _tag: "Right", value }),
   toString: () => `Right(${JSON.stringify(value)})`,
@@ -37,7 +37,7 @@ const LeftConstructor = <L, R>(value: L): Either<L, R> => ({
   isRight: () => false,
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => LeftConstructor<L, U>(value),
   flatMap: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U> => LeftConstructor<L, U>(value),
-  toOption: () => none<R>(),
+  toOption: () => None<R>(),
   toList: () => List<R>(),
   valueOf: () => ({ _tag: "Left", value }),
   toString: () => `Left(${JSON.stringify(value)})`,
@@ -60,5 +60,5 @@ export const tryCatch = <L, R>(f: () => R, onError: (error: unknown) => L): Eith
 }
 
 // Pattern matching function
-export const match = <L, R, U>(either: Either<L, R>, patterns: { Left: (value: L) => U; Right: (value: R) => U }): U =>
-  either._tag === "Right" ? patterns.Right(either.value as R) : patterns.Left(either.value as L)
+// export const match = <L, R, U>(either: Either<L, R>, patterns: { Left: (value: L) => U; Right: (value: R) => U }): U =>
+//   either._tag === "Right" ? patterns.Right(either.value as R) : patterns.Left(either.value as L)

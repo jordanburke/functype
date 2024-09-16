@@ -1,4 +1,4 @@
-import { None, Option, option } from "../option"
+import { None, Option } from "../option/Option"
 import { isIterable } from "../util/isIterable"
 import { _Iterable_ } from "./index"
 
@@ -55,14 +55,14 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
 
     filterNot: (p: (a: A) => boolean) => createSeq(array.filter((x) => !p(x))),
 
-    find: (p: (a: A) => boolean) => option(array.find(p)),
+    find: (p: (a: A) => boolean) => Option(array.find(p)),
 
     get head() {
       return array[0]
     },
 
     get headOption() {
-      return array.length > 0 ? option(array[0]) : None<A>()
+      return array.length > 0 ? Option(array[0]) : None<A>()
     },
 
     get isEmpty() {
