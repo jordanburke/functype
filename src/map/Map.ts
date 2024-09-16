@@ -1,7 +1,7 @@
-import { _Collection } from "../collections"
+import { Collection } from "../collections"
 import { _Traversable_ } from "../index"
 import { Seq } from "../iterable"
-import { _List_, List } from "../list"
+import { List } from "../list"
 import { Option } from "../option"
 import { _Set_, Set } from "../set"
 import { Tuple } from "../tuple"
@@ -20,7 +20,7 @@ export type _Map_<K, V> = {
 
   orElse(key: K, alternative: Option<V>): Option<V>
 } & SafeTraversable<K, V> &
-  _Collection<Tuple<[K, V]>>
+  Collection<Tuple<[K, V]>>
 
 export class Map<K, V> implements _Map_<K, V> {
   private values: IESMap<K, V>
@@ -106,7 +106,7 @@ export class Map<K, V> implements _Map_<K, V> {
     return alternative
   }
 
-  toList(): _List_<Tuple<[K, V]>> {
+  toList(): List<Tuple<[K, V]>> {
     return List(this.entries)
   }
 

@@ -1,16 +1,11 @@
-import { _Collection } from "../collections"
+import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
 import { option } from "../option"
 import { Option } from "../option"
 import { Set } from "../set"
 
-export type _List_<T> = _Iterable_<T> &
-  ArrayLike<T> & {
-    add: (item: T) => _List_<T>
-    removeAt: (index: number) => _List_<T>
-  }
-
-export type List<A> = _Collection<A> & {
+export type List<A> = {
+  add: (item: A) => List<A>
   map: <B>(f: (a: A) => B) => List<B>
   flatMap: <B>(f: (a: A) => _Iterable_<B>) => List<B>
   remove: (value: A) => List<A>
@@ -18,18 +13,19 @@ export type List<A> = _Collection<A> & {
   removeAt: (index: number) => List<A>
   get: (index: number) => Option<A>
   concat: (other: List<A>) => List<A>
-  toList: () => _List_<A>
+  toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
   valueOf: () => { values: A[] }
-} & _List_<A>
+} & ArrayLike<A> &
+  _Iterable_<A> &
+  Collection<A>
 
 const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
-  function isIterable<T>(value: any): value is Iterable<T> {
+  function isIterable<T>(value: unknown): value is Iterable<T> {
     return value != null && typeof value[Symbol.iterator] === "function"
   }
 
-  //const array = Array.isArray(values) ? values : Array.from(values ?? [])
   const array = Array.isArray(values) ? values : isIterable(values) ? Array.from(values) : []
   const seqMethods = Seq(array)
 
@@ -64,7 +60,7 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
 
     concat: (other: List<A>): List<A> => createList([...array, ...other.toArray()]),
 
-    toList: (): _List_<A> => list,
+    toList: (): List<A> => list,
 
     toSet: (): Set<A> => Set(array),
 

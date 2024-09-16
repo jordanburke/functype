@@ -1,13 +1,13 @@
-import { _Collection } from "../collections"
+import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
-import { _List_, List } from "../list"
+import { List } from "../list"
 import { isIterable } from "../util/isIterable"
 import { ESSet, IESSet } from "./shim"
 
 export type _Set_<T> = {
   has: (value: T) => boolean
 } & _Iterable_<T> &
-  _Collection<T>
+  Collection<T>
 
 export type Set<A> = _Set_<A> & {
   add: (value: A) => Set<A>
@@ -15,7 +15,7 @@ export type Set<A> = _Set_<A> & {
   contains: (value: A) => boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => _Iterable_<B>) => Set<B>
-  toList: () => _List_<A>
+  toList: () => List<A>
   toSet: () => _Set_<A>
   toString: () => string
 }
@@ -44,7 +44,7 @@ const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
 
     flatMap: <B>(f: (a: A) => _Iterable_<B>): Set<B> => createSet(seqMethods.flatMap(f)),
 
-    toList: (): _List_<A> => List(values),
+    toList: (): List<A> => List(values),
 
     toSet: (): _Set_<A> => set,
 
