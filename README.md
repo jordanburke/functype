@@ -11,10 +11,11 @@ You can install `functype` using any package manager:
 ```bash
 npm install functype
 ```
+
 ```bash
 pnpm install functype
 ```
+
 ```bash
 yarn install functype
 ```
-
