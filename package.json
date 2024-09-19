@@ -1,10 +1,13 @@
 {
   "name": "functype",
-  "version": "0.8.5-RC1",
+  "version": "0.8.5",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
-  "repository": "https://github.com/jordanburke/functype",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git"
+  },
   "homepage": "https://github.com/jordanburke/functype#readme",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
