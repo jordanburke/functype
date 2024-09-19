@@ -10,28 +10,30 @@ export type Try<T> = {
   getOrElse: (defaultValue: T) => T
   orElse: (alternative: Try<T>) => Try<T>
   toEither: () => Either<Error, T>
+  orThrow: () => T
   map: <U>(f: (value: T) => U) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
   valueOf: () => { _tag: "Success" | "Failure"; value?: T; error?: Error }
   toString: () => string
 } & Typeable<"Success" | "Failure">
 
-const createSuccess = <T>(value: T): Try<T> => ({
+const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
   value,
   error: undefined,
   isSuccess: () => true,
   isFailure: () => false,
   getOrElse: (_defaultValue: T) => value,
-  orElse: (_alternative: Try<T>) => createSuccess(value),
+  orElse: (_alternative: Try<T>) => Success(value),
   toEither: () => Right<Error, T>(value),
+  orThrow: () => value,
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   valueOf: () => ({ _tag: "Success", value }),
   toString: () => `Success(${JSON.stringify(value)})`,
 })
 
-const createFailure = <T>(error: Error): Try<T> => ({
+const Failure = <T>(error: Error): Try<T> => ({
   _tag: "Failure",
   value: undefined,
   error,
@@ -40,23 +42,19 @@ const createFailure = <T>(error: Error): Try<T> => ({
   getOrElse: (defaultValue: T) => defaultValue,
   orElse: (alternative: Try<T>) => alternative,
   toEither: () => Left<Error, T>(error),
-  map: <U>(_f: (value: T) => U) => createFailure<U>(error),
-  flatMap: <U>(_f: (value: T) => Try<U>) => createFailure<U>(error),
+  orThrow: () => {
+    throw error
+  },
+  map: <U>(_f: (value: T) => U) => Failure<U>(error),
+  flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   valueOf: () => ({ _tag: "Failure", error }),
   toString: () => `Failure(${error.message})`,
 })
 
 export const Try = <T>(f: () => T): Try<T> => {
   try {
-    return createSuccess(f())
+    return Success(f())
   } catch (error) {
-    return createFailure(error instanceof Error ? error : new Error(String(error)))
+    return Failure(error instanceof Error ? error : new Error(String(error)))
   }
 }
-
-// Pattern matching function
-// export const match = <T, U>(
-//   tryValue: Try<T>,
-//   patterns: { Success: (value: T) => U; Failure: (error: Error) => U },
-// ): U =>
-//   tryValue._tag === "Success" ? patterns.Success(tryValue.value as T) : patterns.Failure(tryValue.error as Error)

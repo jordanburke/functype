@@ -1,9 +1,11 @@
 {
   "name": "functype",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
+  "repository": "https://github.com/jordanburke/functype",
+  "homepage": "https://github.com/jordanburke/functype#readme",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "ts-types": "tsc",

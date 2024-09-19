@@ -1,4 +1,4 @@
-import { Try } from "../../src/try/Try"
+import { Try } from "../../src"
 
 describe("Try", () => {
   describe("Try.of()", () => {
@@ -60,6 +60,21 @@ describe("Try", () => {
       })
       const either = myTry.toEither()
       expect(either.isLeft()).toBe(true)
+    })
+  })
+
+  describe("orThrow()", () => {
+    it("should return the value on success", () => {
+      const myTry = Try(() => 1 + 1)
+      expect(myTry.orThrow()).toBe(2)
+    })
+
+    it("should throw the error on failure", () => {
+      const errorMessage = "Something went wrong"
+      const myTry = Try(() => {
+        throw new Error(errorMessage)
+      })
+      expect(() => myTry.orThrow()).toThrow(errorMessage)
     })
   })
 })
