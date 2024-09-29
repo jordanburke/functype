@@ -1,5 +1,5 @@
 import { Functor, Type } from "../functor"
-import { Traversable } from "../index"
+import { Either, Left, Right, Traversable } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 import { Typeable } from "../typeable/Typeable"
 
@@ -20,6 +20,7 @@ export type Option<T extends Type> = {
   contains(value: T): boolean
   size: number
   valueOf(): { _tag: "Some" | "None"; value?: T }
+  toEither<E>(left: E): Either<E, T>
   toString(): string
 } & Traversable<T> &
   Functor<T> &
@@ -47,8 +48,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toList: () => Seq<T>([value]),
   contains: (val: T) => val === value,
   size: 1,
-  valueOf: () => ({ _tag: "Some", value }),
+  toEither: <E>(_left: E) => Right<E, T>(value),
   toString: () => `Some(${JSON.stringify(value)})`,
+  valueOf: () => ({ _tag: "Some", value }),
 })
 
 const NONE: Option<never> = {
@@ -75,8 +77,9 @@ const NONE: Option<never> = {
   toList: () => Seq([]),
   contains: () => false,
   size: 0,
-  valueOf: () => ({ _tag: "None" }),
+  toEither: <E>(left: E) => Left<E, never>(left),
   toString: () => "None",
+  valueOf: () => ({ _tag: "None" }),
 }
 
 export const None = <T extends Type>(): Option<T> => NONE as Option<T>
