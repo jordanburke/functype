@@ -85,7 +85,4 @@ const NONE: Option<never> = {
 export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T>
 
 export const Option = <T extends Type>(value: T | null | undefined): Option<T> =>
-  value !== null && value !== undefined ? Some(value as T) : None<T>()
-
-// export const match = <T extends Type, U>(option: Option<T>, patterns: { Some: (value: T) => U; None: () => U }): U =>
-//   option._tag === "Some" ? patterns.Some(option.value as T) : patterns.None()
+  value !== null && value !== undefined ? Some<T>(value) : None<T>()
