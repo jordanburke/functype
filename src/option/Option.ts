@@ -62,8 +62,8 @@ const NONE: Option<never> = {
   },
   getOrElse: <T>(defaultValue: T) => defaultValue,
   orElse: <T>(alternative: Option<T>) => alternative,
-  map: () => NONE,
-  flatMap: () => NONE,
+  map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
+  flatMap: <U extends Type>(f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
   reduce: () => undefined as never,
   reduceRight: () => undefined as never,
   foldLeft:
@@ -82,10 +82,10 @@ const NONE: Option<never> = {
   valueOf: () => ({ _tag: "None" }),
 }
 
-export const None = <T extends Type>(): Option<T> => NONE as Option<T>
+export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T>
 
 export const Option = <T extends Type>(value: T | null | undefined): Option<T> =>
-  value !== null && value !== undefined ? Some(value) : None()
+  value !== null && value !== undefined ? Some(value as T) : None<T>()
 
 // export const match = <T extends Type, U>(option: Option<T>, patterns: { Some: (value: T) => U; None: () => U }): U =>
 //   option._tag === "Some" ? patterns.Some(option.value as T) : patterns.None()
