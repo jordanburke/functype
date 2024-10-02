@@ -8,6 +8,7 @@ export type Either<L extends Type, R extends Type> = {
   value: L | R
   isLeft: () => boolean
   isRight: () => boolean
+  getOrElse: (value: R) => R
   map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
   toOption: () => Option<R>
@@ -22,6 +23,7 @@ const RightConstructor = <L, R>(value: R): Either<L, R> => ({
   value,
   isLeft: () => false,
   isRight: () => true,
+  getOrElse: (_else: R) => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => RightConstructor<L, U>(f(value)),
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
   toOption: () => Some<R>(value),
@@ -35,8 +37,9 @@ const LeftConstructor = <L, R>(value: L): Either<L, R> => ({
   value,
   isLeft: () => true,
   isRight: () => false,
-  map: <U extends Type>(_f: (value: R) => U): Either<L, U> => LeftConstructor<L, U>(value),
-  flatMap: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U> => LeftConstructor<L, U>(value),
+  getOrElse: (value: R) => value,
+  map: <U extends Type>(_f: (_value: R) => U): Either<L, U> => LeftConstructor<L, U>(value),
+  flatMap: <U extends Type>(_f: (_value: R) => Either<L, U>): Either<L, U> => LeftConstructor<L, U>(value),
   toOption: () => None<R>(),
   toList: () => List<R>(),
   valueOf: () => ({ _tag: "Left", value }),
