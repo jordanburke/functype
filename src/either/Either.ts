@@ -28,12 +28,20 @@ const RightConstructor = <L, R>(value: R): Either<L, R> => ({
   getOrElse: (_else: R) => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => RightConstructor<L, U>(f(value)),
   mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => {
-    const result = await f(value)
-    return RightConstructor<L, U>(result)
+    try {
+      const result = await f(value)
+      return RightConstructor<L, U>(result)
+    } catch (error: unknown) {
+      return LeftConstructor<L, U>(error as L)
+    }
   },
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
   flatMapAsync: async <U extends Type>(f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> => {
-    return await f(value)
+    try {
+      return await f(value)
+    } catch (error: unknown) {
+      return LeftConstructor<L, U>(error as L)
+    }
   },
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),

@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.9",
+  "version": "0.8.10",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
