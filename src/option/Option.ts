@@ -11,6 +11,7 @@ export type Option<T extends Type> = {
   getOrElse(defaultValue: T): T
   orElse(alternative: Option<T>): Option<T>
   map<U extends Type>(f: (value: T) => U): Option<U>
+  filter(predicate: (value: T) => boolean): Option<T>
   flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
   reduce<U>(f: (acc: U, value: T) => U): U
   reduceRight<U>(f: (acc: U, value: T) => U): U
@@ -34,6 +35,13 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   getOrElse: () => value,
   orElse: () => Some(value),
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
+  filter(predicate: (value: T) => boolean) {
+    if (predicate(value)) {
+      return Some<T>(value) // type narrowing
+    } else {
+      return NONE as unknown as Option<T>
+    }
+  },
   flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
   reduce: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
   reduceRight: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
@@ -63,6 +71,9 @@ const NONE: Option<never> = {
   getOrElse: <T>(defaultValue: T) => defaultValue,
   orElse: <T>(alternative: Option<T>) => alternative,
   map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
+  filter(predicate: (value: never) => boolean): Option<never> {
+    return NONE
+  },
   flatMap: <U extends Type>(f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
   reduce: () => undefined as never,
   reduceRight: () => undefined as never,

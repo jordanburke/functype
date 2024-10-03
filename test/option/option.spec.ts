@@ -23,4 +23,16 @@ describe("Option", () => {
   it("map on None", () => {
     expect(nothing.map(() => 10)).toEqual(None())
   })
+
+  it("filter on Some with predicate returning true", () => {
+    expect(something.filter((s) => s.length === 5).getOrElse("nope")).toBe("hello")
+  })
+
+  it("filter on Some with predicate returning false", () => {
+    expect(something.filter((s) => s.length === 4)).toEqual(None())
+  })
+
+  it("filter on None", () => {
+    expect(nothing.filter(() => true)).toEqual(None())
+  })
 })
