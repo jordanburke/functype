@@ -3,29 +3,27 @@ import { Either, Left, Right, Traversable } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 import { Typeable } from "../typeable/Typeable"
 
-export type Option<T extends Type> = Traversable<T> &
-  Functor<T> &
-  Typeable<"Some" | "None"> & {
-    readonly _tag: "Some" | "None"
-    readonly value: T | undefined
-    isEmpty: boolean
-    get(): T
-    getOrElse(defaultValue: T): T
-    orElse(alternative: Option<T>): Option<T>
-    map<U extends Type>(f: (value: T) => U): Option<U>
-    filter(predicate: (value: T) => boolean): Option<T>
-    flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
-    reduce<U>(f: (acc: U, value: T) => U): U
-    reduceRight<U>(f: (acc: U, value: T) => U): U
-    foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
-    foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
-    toList(): _Iterable_<T>
-    contains(value: T): boolean
-    size: number
-    valueOf(): { _tag: "Some" | "None"; value?: T }
-    toEither<E>(left: E): Either<E, T>
-    toString(): string
-  }
+export type Option<T extends Type> = {
+  readonly _tag: "Some" | "None"
+  readonly value: T | undefined
+  isEmpty: boolean
+  get(): T
+  getOrElse(defaultValue: T): T
+  orElse(alternative: Option<T>): Option<T>
+  map<U extends Type>(f: (value: T) => U): Option<U>
+  filter(predicate: (value: T) => boolean): Option<T>
+  flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
+  reduce<U>(f: (acc: U, value: T) => U): U
+  reduceRight<U>(f: (acc: U, value: T) => U): U
+  foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
+  foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
+  toList(): _Iterable_<T>
+  contains(value: T): boolean
+  size: number
+  valueOf(): { _tag: "Some" | "None"; value?: T }
+  toEither<E>(left: E): Either<E, T>
+  toString(): string
+} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None">)
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",

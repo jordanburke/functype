@@ -3,23 +3,25 @@ import { List } from "../list/List"
 import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
 
-export type Either<L extends Type, R extends Type> = Functor<R> &
-  Typeable<"Left" | "Right"> & {
-    readonly _tag: "Left" | "Right"
-    value: L | R
-    isLeft: () => boolean
-    isRight: () => boolean
-    getOrElse: (defaultValue: R) => R
-    getOrThrow: () => R
-    map: <U extends Type>(f: (value: R) => U) => Either<L, U>
-    mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
-    flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
-    flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
-    toOption: () => Option<R>
-    toList: () => List<R>
-    valueOf: () => { _tag: "Left" | "Right"; value: L | R }
-    toString: () => string
-  }
+type Right = Type
+type Left = Type
+
+export type Either<L extends Left, R extends Right> = {
+  readonly _tag: "Left" | "Right"
+  value: L | R
+  isLeft: () => boolean
+  isRight: () => boolean
+  getOrElse: (defaultValue: R) => R
+  getOrThrow: () => R
+  map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
+  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
+  toOption: () => Option<R>
+  toList: () => List<R>
+  valueOf: () => { _tag: "Left" | "Right"; value: L | R }
+  toString: () => string
+} & (Functor<R> & Typeable<"Left" | "Right">)
 
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",
