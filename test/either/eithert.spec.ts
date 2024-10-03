@@ -178,28 +178,34 @@ describe("EitherT", () => {
   })
 
   test("handles exceptions in map function", async () => {
-    const eitherT = EitherT(Promise.resolve(Right<string, number>(10)))
+    const eitherT = EitherT(Promise.resolve(Right<Error, number>(10)))
 
     const mappedEitherT = eitherT.map((value) => {
       throw new Error("Error in map function")
     })
 
-    const result = await mappedEitherT.value.catch((error) => error)
+    const result = await mappedEitherT.value
 
-    expect(result).toBeInstanceOf(Error)
-    expect((result as Error).message).toBe("Error in map function")
+    expect(isLeft(result)).toBe(true)
+    if (isLeft(result)) {
+      expect(result.value).toBeInstanceOf(Error)
+      expect(result.value.message).toBe("Error in map function")
+    }
   })
 
   test("handles exceptions in flatMap function", async () => {
-    const eitherT = EitherT(Promise.resolve(Right<string, number>(10)))
+    const eitherT = EitherT(Promise.resolve(Right<Error, number>(10)))
 
     const flatMappedEitherT = eitherT.flatMap((value) => {
       throw new Error("Error in flatMap function")
     })
 
-    const result = await flatMappedEitherT.value.catch((error) => error)
+    const result = await flatMappedEitherT.value
 
-    expect(result).toBeInstanceOf(Error)
-    expect((result as Error).message).toBe("Error in flatMap function")
+    expect(isLeft(result)).toBe(true)
+    if (isLeft(result)) {
+      expect(result.value).toBeInstanceOf(Error)
+      expect(result.value.message).toBe("Error in flatMap function")
+    }
   })
 })
