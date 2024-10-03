@@ -17,6 +17,7 @@ export type Traversable<A extends Type> = Functor<A> & {
 }
 
 export * from "./either/Either"
+export * from "./either/EitherT"
 export * from "./functor"
 export * from "./identity/Identity"
 export * from "./iterable"
