@@ -84,7 +84,7 @@ export const tryCatch = <L extends Type, R extends Type>(f: () => R, onError: (e
 
 export const TypeCheckRight = <L extends Type, R extends Type>(value: R): TestEither<L, R> => RightConstructor(value)
 console.assert(TypeCheckRight)
-export const TypeCheckLeft = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)
+export const TypeCheckLeft = <L extends Type, R extends Type>(value: L): TestEither<L, R> => LeftConstructor(value)
 console.assert(TypeCheckLeft)
 
 // Async tryCatch

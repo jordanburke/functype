@@ -4,7 +4,7 @@ import { Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
 
-export type List<A> = ({
+export type List<A> = {
   add: (item: A) => List<A>
   map: <B>(f: (a: A) => B) => List<B>
   flatMap: <B>(f: (a: A) => _Iterable_<B>) => List<B>
@@ -17,8 +17,10 @@ export type List<A> = ({
   toSet: () => Set<A>
   toString: () => string
   valueOf: () => { _tag: string; values: A[] }
-} & ArrayLike<A>) &
-  (_Iterable_<A> & Collection<A> & Typeable<"List">)
+} & Typeable<"List"> &
+  Seq<A>
+
+type InternalList<A> = List<A> & ArrayLike<A> & _Iterable_<A> & Collection<A>
 
 const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
   function isIterable<T>(value: unknown): value is Iterable<T> {
@@ -81,3 +83,6 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
 }
 
 export const List = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => createList(values)
+
+export const TestList = <A>(values?: Iterable<A> | _Iterable_<A>): InternalList<A> => createList(values)
+console.assert(TestList)
