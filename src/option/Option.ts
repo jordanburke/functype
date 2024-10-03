@@ -1,5 +1,5 @@
 import { Functor, Type } from "../functor"
-import { Either, Left, Right, Traversable } from "../index"
+import { Either, Left, List, Right, Traversable } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 import { Typeable } from "../typeable/Typeable"
 
@@ -17,7 +17,7 @@ export type Option<T extends Type> = {
   reduceRight<U>(f: (acc: U, value: T) => U): U
   foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
   foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
-  toList(): _Iterable_<T>
+  toList(): List<T>
   contains(value: T): boolean
   size: number
   valueOf(): { _tag: "Some" | "None"; value?: T }
@@ -51,7 +51,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     <B>(z: B) =>
     (op: (a: T, b: B) => B) =>
       op(value, z),
-  toList: () => Seq<T>([value]),
+  toList: () => List<T>([value]),
   contains: (val: T) => val === value,
   size: 1,
   toEither: <E>(_left: E) => Right<E, T>(value),
@@ -83,7 +83,7 @@ const NONE: Option<never> = {
     <B>(z: B) =>
     () =>
       z,
-  toList: () => Seq([]),
+  toList: () => List([]),
   contains: () => false,
   size: 0,
   toEither: <E>(left: E) => Left<E, never>(left),

@@ -1,4 +1,4 @@
-import { List, Right } from "../../src"
+import { Either, List, Right } from "../../src"
 import { ParseError } from "../../src/error/ParseError"
 import { parseNumber } from "../../src/util"
 
@@ -7,8 +7,8 @@ describe("Either", () => {
     // Nothing
   })
 
-  const result1 = parseNumber("123").map((num) => num * 2)
-  const result2 = parseNumber("hello").map((num) => num * 2)
+  const result1: Either<ParseError, number> = parseNumber("123").map((num) => num * 2)
+  const result2: Either<ParseError, number> = parseNumber("hello").map((num) => num * 2)
 
   // console.log(result1); // Right { value: 246 }
   // console.log(result2); // Left { value: 'Invalid number' }
