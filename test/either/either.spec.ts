@@ -1,3 +1,4 @@
+import { List, Right } from "../../src"
 import { ParseError } from "../../src/error/ParseError"
 import { parseNumber } from "../../src/util"
 
@@ -26,5 +27,16 @@ describe("Either", () => {
 
   it("map on Left", () => {
     expect(result2.map((f) => 10).value).toStrictEqual(ParseError("NaN"))
+  })
+
+  it("should contain all items in list on Right", () => {
+    const list = List([1, 2, 3, 4])
+    const result = Right(list)
+    expect(result.getOrElse(List()).toArray()).toEqual([1, 2, 3, 4])
+  })
+
+  it("map over Right containing a list", () => {
+    const result = Right(List([1, 2, 3, 4])).map((list) => list.map((x) => x * 2))
+    expect(result.getOrElse(List()).toArray()).toEqual([2, 4, 6, 8])
   })
 })

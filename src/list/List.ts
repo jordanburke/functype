@@ -2,6 +2,7 @@ import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
 import { Option } from "../option/Option"
 import { Set } from "../set/Set"
+import { Typeable } from "../typeable/Typeable"
 
 export type List<A> = {
   add: (item: A) => List<A>
@@ -15,10 +16,11 @@ export type List<A> = {
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
-  valueOf: () => { values: A[] }
+  valueOf: () => { _tag: string; values: A[] }
 } & ArrayLike<A> &
   _Iterable_<A> &
-  Collection<A>
+  Collection<A> &
+  Typeable<"List">
 
 const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
   function isIterable<T>(value: unknown): value is Iterable<T> {
@@ -30,6 +32,8 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
 
   const list: List<A> = {
     ...seqMethods,
+
+    _tag: "List",
 
     length: array.length,
 
@@ -64,6 +68,8 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
     toSet: (): Set<A> => Set(array),
 
     toString: (): string => `List(${array.toString()})`,
+
+    valueOf: (): { _tag: string; values: A[] } => ({ _tag: "List", values: array }),
   }
 
   return new Proxy(list, {
