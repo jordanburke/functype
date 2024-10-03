@@ -1,111 +1,101 @@
-import { Functor } from "../functor"
+import { Functor, Type } from "../functor"
 import { List } from "../list/List"
 import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
 
-export type Left<L, R> = {
-  readonly _tag: "Left"
-  readonly value: L
-  isLeft: () => true
-  isRight: () => false
+export type Either<L extends Type, R extends Type> = {
+  readonly _tag: "Left" | "Right"
+  value: L | R
+  isLeft: () => boolean
+  isRight: () => boolean
   getOrElse: (defaultValue: R) => R
   getOrThrow: () => R
-  map: <U>(f: (value: R) => U) => Left<L, U>
-  mapAsync: <U>(f: (value: R) => Promise<U>) => Promise<Left<L, U>>
-  flatMap: <L1, U>(f: (value: R) => Either<L1, U>) => Left<L | L1, U>
-  flatMapAsync: <L1, U>(f: (value: R) => Promise<Either<L1, U>>) => Promise<Left<L | L1, U>>
+  map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
+  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
   toOption: () => Option<R>
   toList: () => List<R>
-  valueOf: () => { _tag: "Left"; value: L }
+  valueOf: () => { _tag: "Left" | "Right"; value: L | R }
   toString: () => string
-} & Typeable<"Left">
+} & Typeable<"Left" | "Right">
 
-export type Right<L, R> = {
-  readonly _tag: "Right"
-  readonly value: R
-  isLeft: () => false
-  isRight: () => true
-  getOrElse: (defaultValue: R) => R
-  getOrThrow: () => R
-  map: <U>(f: (value: R) => U) => Right<L, U>
-  mapAsync: <U>(f: (value: R) => Promise<U>) => Promise<Right<L, U>>
-  flatMap: <L1, U>(f: (value: R) => Either<L1, U>) => Either<L | L1, U>
-  flatMapAsync: <L1, U>(f: (value: R) => Promise<Either<L1, U>>) => Promise<Either<L | L1, U>>
-  toOption: () => Option<R>
-  toList: () => List<R>
-  valueOf: () => { _tag: "Right"; value: R }
-  toString: () => string
-} & Functor<R> &
-  Typeable<"Right">
+// Remove the abstractions and just test it as TS compiler mixes up the types
+export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R>
 
-export type Either<L, R> = Left<L, R> | Right<L, R>
-
-// Left Constructor
-const LeftConstructor = <L, R>(value: L): Left<L, R> => ({
-  _tag: "Left",
-  value,
-  isLeft: () => true as const,
-  isRight: () => false as const,
-  getOrElse: (defaultValue: R) => defaultValue,
-  getOrThrow: () => {
-    throw value
-  },
-  map: <U>(_: (value: R) => U): Left<L, U> => LeftConstructor<L, U>(value),
-  mapAsync: async <U>(_: (value: R) => Promise<U>): Promise<Left<L, U>> => LeftConstructor<L, U>(value),
-  flatMap: <L1, U>(_: (value: R) => Either<L1, U>): Left<L | L1, U> => LeftConstructor<L | L1, U>(value),
-  flatMapAsync: async <L1, U>(_: (value: R) => Promise<Either<L1, U>>): Promise<Left<L | L1, U>> =>
-    LeftConstructor<L | L1, U>(value),
-  toOption: () => None<R>(),
-  toList: () => None<R>().toList(),
-  valueOf: () => ({ _tag: "Left", value }),
-  toString: () => `Left(${JSON.stringify(value)})`,
-})
-
-// Right Constructor
-const RightConstructor = <L, R>(value: R): Right<L, R> => ({
+const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",
   value,
-  isLeft: () => false as const,
-  isRight: () => true as const,
+  isLeft: () => false,
+  isRight: () => true,
   getOrElse: (_defaultValue: R) => value,
   getOrThrow: () => value,
-  map: <U>(f: (value: R) => U): Right<L, U> => RightConstructor<L, U>(f(value)),
-  mapAsync: async <U>(f: (value: R) => Promise<U>): Promise<Right<L, U>> => RightConstructor<L, U>(await f(value)),
-  flatMap: <L1, U>(f: (value: R) => Either<L1, U>): Either<L | L1, U> => f(value),
-  flatMapAsync: <L1, U>(f: (value: R) => Promise<Either<L1, U>>): Promise<Either<L | L1, U>> => f(value),
-  toOption: () => Some(value),
-  toList: () => Some(value).toList(),
+  map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
+  mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
+    f(value)
+      .then((result) => Right<L, U>(result))
+      .catch((error: unknown) => Left<L, U>(error as L)),
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
+  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
+    f(value).catch((error: unknown) => Left<L, U>(error as L)),
+  toOption: () => Some<R>(value),
+  toList: () => List<R>([value]),
   valueOf: () => ({ _tag: "Right", value }),
   toString: () => `Right(${JSON.stringify(value)})`,
 })
 
-// Exported Constructors
-export const Left = <L, R>(value: L): Left<L, R> => LeftConstructor<L, R>(value)
-export const Right = <L, R>(value: R): Right<L, R> => RightConstructor<L, R>(value)
+const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
+  _tag: "Left",
+  value,
+  isLeft: () => true,
+  isRight: () => false,
+  getOrElse: (defaultValue: R) => defaultValue,
+  getOrThrow: () => {
+    throw value
+  },
+  map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
+  mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> => Promise.resolve(Left<L, U>(value)),
+  flatMap: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U> => Left<L, U>(value),
+  flatMapAsync: <U extends Type>(_f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
+    Promise.resolve(Left<L, U>(value)),
+  toOption: () => None<R>(),
+  toList: () => List<R>(),
+  valueOf: () => ({ _tag: "Left", value }),
+  toString: () => `Left(${JSON.stringify(value)})`,
+})
 
-// Type Guards
-export const isLeft = <L, R>(either: Either<L, R>): either is Left<L, R> => either._tag === "Left"
+export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)
+export const Left = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)
 
-export const isRight = <L, R>(either: Either<L, R>): either is Right<L, R> => either._tag === "Right"
+// Type guards
+export const isRight = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
+  either.isRight()
+export const isLeft = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
+  either.isLeft()
 
 // Helper function to create Either from a potentially error-throwing function
-export const tryCatch = <L, R>(f: () => R, onError: (error: unknown) => L): Either<L, R> => {
+export const tryCatch = <L extends Type, R extends Type>(f: () => R, onError: (error: unknown) => L): Either<L, R> => {
   try {
     return Right<L, R>(f())
-  } catch (error) {
+  } catch (error: unknown) {
     return Left<L, R>(onError(error))
   }
 }
 
+export const TypeCheckRight = <L extends Type, R extends Type>(value: R): TestEither<L, R> => RightConstructor(value)
+console.assert(TypeCheckRight)
+export const TypeCheckLeft = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)
+console.assert(TypeCheckLeft)
+
 // Async tryCatch
-export const tryCatchAsync = async <L, R>(
+export const tryCatchAsync = async <L extends Type, R extends Type>(
   f: () => Promise<R>,
   onError: (error: unknown) => L,
 ): Promise<Either<L, R>> => {
   try {
     const result = await f()
     return Right<L, R>(result)
-  } catch (error) {
+  } catch (error: unknown) {
     return Left<L, R>(onError(error))
   }
 }
