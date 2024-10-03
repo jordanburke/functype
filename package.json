@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.15",
+  "version": "0.8.16",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
@@ -15,7 +15,8 @@
     "build:dev": "rimraf lib && tsup --watch",
     "build:prod": "rimraf dist && cross-env NODE_ENV=production tsup",
     "build:watch": "tsup --watch",
-    "build:publish": "pnpm build:prod && pnpm publish --access public",
+    "build:publish":
+    "pnpm build:prod && pnpm publish --access public",
     "lint:fix": "eslint ./src --ext .ts,.tsx --quiet --fix --ignore-path ./.gitignore",
     "lint:format": "prettier  --loglevel warn --write \"./**/*.{ts,tsx,css,md,json}\" ",
     "lint": "pnpm lint:format && pnpm lint:fix ",

@@ -9,6 +9,7 @@ export type Either<L extends Type, R extends Type> = {
   isLeft: () => boolean
   isRight: () => boolean
   getOrElse: (defaultValue: R) => R
+  getOrThrow: () => R
   map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
@@ -26,6 +27,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   isLeft: () => false,
   isRight: () => true,
   getOrElse: (_defaultValue: R) => value,
+  getOrThrow: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
     f(value)
@@ -46,6 +48,9 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   isLeft: () => true,
   isRight: () => false,
   getOrElse: (defaultValue: R) => defaultValue,
+  getOrThrow: () => {
+    throw value
+  },
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
   mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> => Promise.resolve(Left<L, U>(value)),
   flatMap: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U> => Left<L, U>(value),
