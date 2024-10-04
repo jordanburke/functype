@@ -21,9 +21,9 @@ export type Option<T extends Type> = {
   toList(): List<T>
   contains(value: T): boolean
   size: number
-  valueOf(): { _tag: "Some" | "None"; value?: T }
   toEither<E>(left: E): Either<E, T>
   toString(): string
+  toValue(): { _tag: "Some" | "None"; value: T }
 } & (Traversable<T> & Functor<T> & Typeable<"Some" | "None">)
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
@@ -57,7 +57,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   size: 1,
   toEither: <E>(_left: E) => Right<E, T>(value),
   toString: () => `Some(${stringify(value)})`,
-  valueOf: () => ({ _tag: "Some", value }),
+  toValue: () => ({ _tag: "Some", value }),
 })
 
 const NONE: Option<never> = {
@@ -89,7 +89,7 @@ const NONE: Option<never> = {
   size: 0,
   toEither: <E>(left: E) => Left<E, never>(left),
   toString: () => "None",
-  valueOf: () => ({ _tag: "None" }),
+  toValue: () => ({ _tag: "None", value: undefined as never }),
 }
 
 export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T>

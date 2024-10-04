@@ -11,31 +11,31 @@ describe("List", () => {
   const list4 = list3.removeAt(0)
 
   it("new list", () => {
-    expect(list1.valueOf()).toEqual({ _tag: "List", values: [] })
+    expect(list1.toValue()).toEqual({ _tag: "List", value: [] })
   })
 
   it("list of 10", () => {
-    expect(list2.valueOf()).toEqual({ _tag: "List", values: [10] })
+    expect(list2.toValue()).toEqual({ _tag: "List", value: [10] })
   })
 
   it("list of 10, 20", () => {
-    expect(list3.valueOf()).toEqual({ _tag: "List", values: [10, 20] })
+    expect(list3.toValue()).toEqual({ _tag: "List", value: [10, 20] })
   })
 
   it("list of 20", () => {
-    expect(list4.valueOf()).toEqual({ _tag: "List", values: [20] })
+    expect(list4.toValue()).toEqual({ _tag: "List", value: [20] })
   })
 
   const list = List([1, 2, 3, 4])
 
   const squared = list.map((x) => x * x)
   it("squared", () => {
-    expect(squared.valueOf()).toEqual({ _tag: "List", values: [1, 4, 9, 16] })
+    expect(squared.toValue()).toEqual({ _tag: "List", value: [1, 4, 9, 16] })
   })
 
   const flatMapped = list.flatMap((x) => List([x, x * 10]))
   it("flatMapped", () => {
-    expect(flatMapped.valueOf()).toEqual({ _tag: "List", values: [1, 10, 2, 20, 3, 30, 4, 40] })
+    expect(flatMapped.toValue()).toEqual({ _tag: "List", value: [1, 10, 2, 20, 3, 30, 4, 40] })
   })
 
   const sum = list.foldLeft(0)((acc, x) => acc + x)

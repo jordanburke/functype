@@ -17,7 +17,6 @@ export type Either<L extends Type, R extends Type> = {
   flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
   toOption: () => Option<R>
   toList: () => List<R>
-  valueOf: () => { _tag: "Left" | "Right"; value: L | R }
   toString: () => string
 } & Typeable<"Left" | "Right">
 
@@ -41,7 +40,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value).catch((error: unknown) => Left<L, U>(error as L)),
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
-  valueOf: () => ({ _tag: "Right", value }),
   toString: () => `Right(${stringify(value)})`,
 })
 
@@ -61,7 +59,6 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     Promise.resolve(Left<L, U>(value)),
   toOption: () => None<R>(),
   toList: () => List<R>(),
-  valueOf: () => ({ _tag: "Left", value }),
   toString: () => `Left(${stringify(value)})`,
 })
 

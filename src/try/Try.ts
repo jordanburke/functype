@@ -16,7 +16,6 @@ export type Try<T> = {
   toEither: () => Either<Error, T>
   map: <U>(f: (value: T) => U) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
-  valueOf: () => { _tag: "Success" | "Failure"; value?: T; error?: Error }
   toString: () => string
 } & Typeable<"Success" | "Failure">
 
@@ -33,7 +32,6 @@ const Success = <T>(value: T): Try<T> => ({
   toEither: () => Right<Error, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
-  valueOf: () => ({ _tag: "Success", value }),
   toString: () => `Success(${stringify(value)})`,
 })
 
@@ -54,8 +52,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   toEither: () => Left<Error, T>(error),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
-  valueOf: () => ({ _tag: "Failure", error }),
-  toString: () => `Failure(${error.message})`,
+  toString: () => `Failure(${stringify(error)}))`,
 })
 
 export const Try = <T>(f: () => T): Try<T> => {

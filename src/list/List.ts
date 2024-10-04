@@ -17,7 +17,7 @@ export type List<A> = {
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
-  valueOf: () => { _tag: string; values: A[] }
+  toValue: () => { _tag: "List"; value: unknown }
 } & Typeable<"List"> &
   Seq<A>
 
@@ -68,9 +68,9 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
 
     toSet: (): Set<A> => Set(array),
 
-    toString: () => `List(${stringify(values)})`,
+    toValue: () => ({ _tag: "List", value: array }),
 
-    valueOf: (): { _tag: string; values: A[] } => ({ _tag: "List", values: array }),
+    toString: () => `List(${stringify(List(array))})`,
   }
 
   return new Proxy(list, {

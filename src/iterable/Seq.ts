@@ -24,7 +24,6 @@ export type Seq<A> = {
   reduceRight: (f: (prev: A, curr: A) => A) => A
   foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
   foldRight: <B>(z: B) => (op: (a: A, b: B) => B) => B
-  valueOf: () => { values: A[] }
   toString: () => string
 } & _Iterable_<A>
 
@@ -91,8 +90,6 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
       <B>(z: B) =>
       (op: (a: A, b: B) => B) =>
         array.reduceRight((acc, value) => op(value, acc), z),
-
-    valueOf: () => ({ values: array }),
     toString: () => `Seq(${stringify(values)})`,
   }
 }

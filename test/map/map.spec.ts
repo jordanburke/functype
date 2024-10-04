@@ -53,11 +53,11 @@ describe("Map", () => {
   })
 
   test("get should return Some if key exists", () => {
-    expect(map.get("a").valueOf()).toEqual(Some(1).valueOf())
+    expect(map.get("a").toValue()).toEqual(Some(1).toValue())
   })
 
   test("get should return None if key does not exist", () => {
-    expect(map.get("z").valueOf()).toEqual(None().valueOf())
+    expect(map.get("z").toValue()).toEqual(None().toValue())
   })
 
   test("getOrElse should return default value if key does not exist", () => {
@@ -74,6 +74,6 @@ describe("Map", () => {
   })
 
   test("orElse should return alternative option if key does not exist", () => {
-    expect(map.orElse("z", Some(10)).valueOf()).toEqual(Some(10).valueOf())
+    expect(map.orElse("z", Some(10)).toValue()).toEqual(Some(10).toValue())
   })
 })
