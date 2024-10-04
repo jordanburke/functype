@@ -1,3 +1,5 @@
+import stringify from "safe-stable-stringify"
+
 import { None, Option } from "../option/Option"
 import { isIterable } from "../util/isIterable"
 import { _Iterable_ } from "./index"
@@ -23,6 +25,7 @@ export type Seq<A> = {
   foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
   foldRight: <B>(z: B) => (op: (a: A, b: B) => B) => B
   valueOf: () => { values: A[] }
+  toString: () => string
 } & _Iterable_<A>
 
 export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
@@ -90,6 +93,7 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
         array.reduceRight((acc, value) => op(value, acc), z),
 
     valueOf: () => ({ values: array }),
+    toString: () => `Seq(${stringify(values)})`,
   }
 }
 

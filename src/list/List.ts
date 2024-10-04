@@ -3,6 +3,7 @@ import { _Iterable_, Seq } from "../iterable"
 import { Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
+import stringify from "safe-stable-stringify"
 
 export type List<A> = {
   add: (item: A) => List<A>
@@ -67,7 +68,7 @@ const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
 
     toSet: (): Set<A> => Set(array),
 
-    toString: (): string => `List(${array.toString()})`,
+    toString: () => `List(${stringify(values)})`,
 
     valueOf: (): { _tag: string; values: A[] } => ({ _tag: "List", values: array }),
   }
