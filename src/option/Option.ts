@@ -2,6 +2,7 @@ import { Functor, Type } from "../functor"
 import { Either, Left, List, Right, Traversable } from "../index"
 import { _Iterable_, Seq } from "../iterable"
 import { Typeable } from "../typeable/Typeable"
+import stringify from "safe-stable-stringify"
 
 export type Option<T extends Type> = {
   readonly _tag: "Some" | "None"
@@ -55,7 +56,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   contains: (val: T) => val === value,
   size: 1,
   toEither: <E>(_left: E) => Right<E, T>(value),
-  toString: () => `Some(${JSON.stringify(value)})`,
+  toString: () => `Some(${stringify(value)})`,
   valueOf: () => ({ _tag: "Some", value }),
 })
 

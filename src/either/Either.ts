@@ -2,6 +2,7 @@ import { Functor, Type } from "../functor"
 import { List } from "../list/List"
 import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
+import stringify from "safe-stable-stringify"
 
 export type Either<L extends Type, R extends Type> = {
   readonly _tag: "Left" | "Right"
@@ -41,7 +42,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   valueOf: () => ({ _tag: "Right", value }),
-  toString: () => `Right(${JSON.stringify(value)})`,
+  toString: () => `Right(${stringify(value)})`,
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -61,7 +62,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   toOption: () => None<R>(),
   toList: () => List<R>(),
   valueOf: () => ({ _tag: "Left", value }),
-  toString: () => `Left(${JSON.stringify(value)})`,
+  toString: () => `Left(${stringify(value)})`,
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)

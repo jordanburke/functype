@@ -1,3 +1,5 @@
+import stringify from "safe-stable-stringify"
+
 import { Either, Left, Right } from "../either/Either"
 import { Typeable } from "../typeable/Typeable"
 
@@ -32,7 +34,7 @@ const Success = <T>(value: T): Try<T> => ({
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   valueOf: () => ({ _tag: "Success", value }),
-  toString: () => `Success(${JSON.stringify(value)})`,
+  toString: () => `Success(${stringify(value)})`,
 })
 
 const Failure = <T>(error: Error): Try<T> => ({

@@ -1,3 +1,5 @@
+import stringify from "safe-stable-stringify"
+
 export type SerializableTypes = "json" | "yaml"
 
 type SerializationMethods<T> = {
@@ -48,7 +50,7 @@ const mySerializableData = createSerializable<["json", "yaml"], MyData>(
   {
     json: {
       toJSON() {
-        return JSON.stringify(this)
+        return stringify(this)
       },
       fromJSON(json: string) {
         return JSON.parse(json)
