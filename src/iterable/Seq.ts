@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { None, Option } from "../option/Option"
+import { Typeable } from "../typeable/Typeable"
 import { isIterable } from "../util/isIterable"
 import { _Iterable_ } from "./index"
 
@@ -25,7 +26,9 @@ export type Seq<A> = {
   foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
   foldRight: <B>(z: B) => (op: (a: A, b: B) => B) => B
   toString: () => string
-} & _Iterable_<A>
+  toValue: () => { _tag: string; value: A[] }
+} & _Iterable_<A> &
+  Typeable<"Seq">
 
 export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
   const iterable: Iterable<A> = isIterable(values)
@@ -36,12 +39,16 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
 
   const array = Array.from(iterable)
 
+  const _tag = "Seq"
+
   return {
     [Symbol.iterator]: () => array[Symbol.iterator](),
 
     get length() {
       return array.length
     },
+
+    _tag: _tag,
 
     map: <B>(f: (a: A) => B) => createSeq(array.map(f)),
 
@@ -91,6 +98,8 @@ export const createSeq = <A>(values?: Iterable<A> | _Iterable_<A>): Seq<A> => {
       (op: (a: A, b: B) => B) =>
         array.reduceRight((acc, value) => op(value, acc), z),
     toString: () => `Seq(${stringify(values)})`,
+
+    toValue: () => ({ _tag, value: array }),
   }
 }
 

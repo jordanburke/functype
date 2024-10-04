@@ -1,9 +1,10 @@
+import stringify from "safe-stable-stringify"
+
 import { Collection } from "../collections"
 import { _Iterable_, Seq } from "../iterable"
 import { Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
-import stringify from "safe-stable-stringify"
 
 export type List<A> = {
   add: (item: A) => List<A>
@@ -17,9 +18,9 @@ export type List<A> = {
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
-  toValue: () => { _tag: "List"; value: unknown }
-} & Typeable<"List"> &
-  Seq<A>
+  toValue: () => { _tag: string; value: A[] }
+} & Seq<A> &
+  Typeable<"List">
 
 type InternalList<A> = List<A> & ArrayLike<A> & _Iterable_<A> & Collection<A>
 
