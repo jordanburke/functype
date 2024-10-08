@@ -158,4 +158,262 @@ describe("Either", () => {
     }
     expect(values).toEqual([])
   })
+
+  // New tests for yield method
+  it("should yield the value for Right", () => {
+    const right = Right<string, number>(5)
+    const yielded = [...right.yield()]
+    expect(yielded).toEqual([5])
+  })
+
+  it("should yield nothing for Left", () => {
+    const left = Left<string, number>("error")
+    const yielded = [...left.yield()]
+    expect(yielded).toEqual([])
+  })
+
+  // Tests for traverse method
+  it("should traverse a Right value", () => {
+    const right = Right<string, number>(5)
+    const traversed = right.traverse((x) => Right<string, string>(x.toString()))
+    expect(traversed.isRight()).toBe(true)
+    expect(traversed.value).toEqual(["5"])
+  })
+
+  it("should not traverse a Left value", () => {
+    const left = Left<string, number>("error")
+    const traversed = left.traverse((x) => Right<string, string>(x.toString()))
+    expect(traversed.isLeft()).toBe(true)
+    expect(traversed.value).toBe("error")
+  })
+
+  // Tests for lazyMap method
+  it("should lazyMap a Right value", () => {
+    const right = Right<string, number>(5)
+    const lazyMapped = [...right.lazyMap((x) => x * 2)]
+    expect(lazyMapped[0].isRight()).toBe(true)
+    expect(lazyMapped[0].value).toBe(10)
+  })
+
+  it("should not lazyMap a Left value", () => {
+    const left = Left<string, number>("error")
+    const lazyMapped = [...left.lazyMap((x) => x * 2)]
+    expect(lazyMapped[0].isLeft()).toBe(true)
+    expect(lazyMapped[0].value).toBe("error")
+  })
+
+  // Tests for Either.sequence
+  it("should sequence an array of Rights", () => {
+    const eithers = [Right<string, number>(1), Right<string, number>(2), Right<string, number>(3)]
+    const sequenced = Either.sequence(eithers)
+    expect(sequenced.isRight()).toBe(true)
+    expect(sequenced.value).toEqual([1, 2, 3])
+  })
+
+  it("should return Left when sequencing array with a Left", () => {
+    const eithers = [Right<string, number>(1), Left<string, number>("error"), Right<string, number>(3)]
+    const sequenced = Either.sequence(eithers)
+    expect(sequenced.isLeft()).toBe(true)
+    expect(sequenced.value).toBe("error")
+  })
+
+  // Tests for Either.traverse
+  it("should traverse an array with a function returning Right", () => {
+    const numbers = [1, 2, 3]
+    const traversed = Either.traverse(numbers, (x) => Right<string, number>(x * 2))
+    expect(traversed.isRight()).toBe(true)
+    expect(traversed.value).toEqual([2, 4, 6])
+  })
+
+  it("should return Left when traversing with a function returning Left", () => {
+    const numbers = [1, 2, 3]
+    const traversed = Either.traverse(numbers, (x) =>
+      x === 2 ? Left<string, number>("error") : Right<string, number>(x * 2),
+    )
+    expect(traversed.isLeft()).toBe(true)
+    expect(traversed.value).toBe("error")
+  })
+
+  // Tests for Either.fromNullable
+  it("should create Right from non-null value", () => {
+    const result = Either.fromNullable(5, "Value is null")
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(5)
+  })
+
+  it("should create Left from null value", () => {
+    const result = Either.fromNullable(null, "Value is null")
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("Value is null")
+  })
+
+  it("should create Left from undefined value", () => {
+    const result = Either.fromNullable(undefined, "Value is undefined")
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("Value is undefined")
+  })
+
+  // Tests for Either.fromPredicate
+  it("should create Right when predicate is true", () => {
+    const result = Either.fromPredicate(10, (x) => x > 5, "Value is not greater than 5")
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(10)
+  })
+
+  it("should create Left when predicate is false", () => {
+    const result = Either.fromPredicate(3, (x) => x > 5, "Value is not greater than 5")
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("Value is not greater than 5")
+  })
+
+  // Tests for Either.ap
+  it("should apply a function in Right to a value in Right", () => {
+    const eitherFunction = Right<string, (x: number) => number>((x) => x * 2)
+    const eitherValue = Right<string, number>(5)
+    const result = Either.ap(eitherFunction, eitherValue)
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(10)
+  })
+
+  it("should return Left when applying to a Left value", () => {
+    const eitherFunction = Right<string, (x: number) => number>((x) => x * 2)
+    const eitherValue = Left<string, number>("error")
+    const result = Either.ap(eitherFunction, eitherValue)
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("error")
+  })
+
+  it("should return Left when the function is Left", () => {
+    const eitherFunction = Left<string, (x: number) => number>("error")
+    const eitherValue = Right<string, number>(5)
+    const result = Either.ap(eitherFunction, eitherValue)
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("error")
+  })
+
+  // New tests for tap method
+  it("should tap a Right value", () => {
+    let sideEffect = 0
+    const right = Right<string, number>(5)
+    const result = right.tap((x) => {
+      sideEffect = x
+    })
+    expect(result.toString()).toBe(right.toString())
+    expect(sideEffect).toBe(5)
+  })
+
+  it("should not tap a Left value", () => {
+    let sideEffect = 0
+    const left = Left<string, number>("error")
+    const result = left.tap((x) => {
+      sideEffect = x
+    })
+    expect(result.toString()).toBe(left.toString())
+    expect(sideEffect).toBe(0)
+  })
+
+  // Tests for tapLeft method
+  it("should tapLeft a Left value", () => {
+    let sideEffect = ""
+    const left = Left<string, number>("error")
+    const result = left.tapLeft((x) => {
+      sideEffect = x
+    })
+    expect(result.toString()).toBe(left.toString())
+    expect(sideEffect).toBe("error")
+  })
+
+  it("should not tapLeft a Right value", () => {
+    let sideEffect = ""
+    const right = Right<string, number>(5)
+    const result = right.tapLeft((x) => {
+      sideEffect = x
+    })
+    expect(result.toString()).toBe(right.toString())
+    expect(sideEffect).toBe("")
+  })
+
+  // Tests for mapLeft method
+  it("should mapLeft a Left value", () => {
+    const left = Left<string, number>("error")
+    const result = left.mapLeft((x) => x.toUpperCase())
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("ERROR")
+  })
+
+  it("should not mapLeft a Right value", () => {
+    const right = Right<string, number>(5)
+    const result = right.mapLeft((x) => x.toUpperCase())
+    expect(result.toString()).toBe(right.toString())
+  })
+
+  // Tests for bimap method
+  it("should bimap a Right value", () => {
+    const right = Right<string, number>(5)
+    const result = right.bimap(
+      (x) => x.toUpperCase(),
+      (x) => x * 2,
+    )
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(10)
+  })
+
+  it("should bimap a Left value", () => {
+    const left = Left<string, number>("error")
+    const result = left.bimap(
+      (x) => x.toUpperCase(),
+      (x) => x * 2,
+    )
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("ERROR")
+  })
+
+  // Tests for fold method
+  it("should fold a Right value", () => {
+    const right = Right<string, number>(5)
+    const result = right.fold(
+      (l) => `Error: ${l}`,
+      (r) => `Value: ${r}`,
+    )
+    expect(result).toBe("Value: 5")
+  })
+
+  it("should fold a Left value", () => {
+    const left = Left<string, number>("error")
+    const result = left.fold(
+      (l) => `Error: ${l}`,
+      (r) => `Value: ${r}`,
+    )
+    expect(result).toBe("Error: error")
+  })
+
+  // Tests for swap method
+  it("should swap a Right to a Left", () => {
+    const right = Right<string, number>(5)
+    const result = right.swap()
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe(5)
+  })
+
+  it("should swap a Left to a Right", () => {
+    const left = Left<string, number>("error")
+    const result = left.swap()
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe("error")
+  })
+
+  // Tests for Either.fromPromise
+  it("should create Right from resolved promise", async () => {
+    const promise = Promise.resolve(5)
+    const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(5)
+  })
+
+  it("should create Left from rejected promise", async () => {
+    const promise = Promise.reject("Rejected")
+    const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("Error: Rejected")
+  })
 })
