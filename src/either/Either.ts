@@ -1,8 +1,9 @@
+import stringify from "safe-stable-stringify"
+
 import { Functor, Type } from "../functor"
 import { List } from "../list/List"
 import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
-import stringify from "safe-stable-stringify"
 
 export type Either<L extends Type, R extends Type> = {
   readonly _tag: "Left" | "Right"
@@ -12,6 +13,7 @@ export type Either<L extends Type, R extends Type> = {
   getOrElse: (defaultValue: R) => R
   getOrThrow: () => R
   map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
   flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
@@ -35,6 +37,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value)
       .then((result) => Right<L, U>(result))
       .catch((error: unknown) => Left<L, U>(error as L)),
+  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
+    other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
   flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
     f(value).catch((error: unknown) => Left<L, U>(error as L)),
@@ -48,12 +52,14 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   value,
   isLeft: () => true,
   isRight: () => false,
-  getOrElse: (defaultValue: R) => defaultValue,
+  getOrElse: (defaultValue: R): R => defaultValue,
   getOrThrow: () => {
     throw value
   },
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
   mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> => Promise.resolve(Left<L, U>(value)),
+  merge: <L1 extends Type, R1 extends Type>(_other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
+    Left<L | L1, [R, R1]>(value),
   flatMap: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U> => Left<L, U>(value),
   flatMapAsync: <U extends Type>(_f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
     Promise.resolve(Left<L, U>(value)),
