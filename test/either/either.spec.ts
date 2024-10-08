@@ -3,7 +3,7 @@ import { ParseError } from "../../src/error/ParseError"
 import { parseNumber } from "../../src/util"
 
 describe("Either", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     // Nothing
   })
 
@@ -36,8 +36,6 @@ describe("Either", () => {
     const result = Right(List([1, 2, 3, 4])).map((list) => list.map((x) => x * 2))
     expect(result.getOrElse(List()).toArray()).toEqual([2, 4, 6, 8])
   })
-
-  // New tests
 
   it("merge two Rights", () => {
     const right1 = Right<string, number>(5)
@@ -130,5 +128,34 @@ describe("Either", () => {
   it("toString on Left", () => {
     const left = Left<string, number>("error")
     expect(left.toString()).toBe('Left("error")')
+  })
+
+  // New tests for Symbol.iterator implementation
+  it("should be iterable for Right", () => {
+    const right = Right<string, number>(5)
+    expect([...right]).toEqual([5])
+  })
+
+  it("should be iterable for Left", () => {
+    const left = Left<string, number>("error")
+    expect([...left]).toEqual([])
+  })
+
+  it("should work with for...of loop for Right", () => {
+    const right = Right<string, number>(5)
+    const values: number[] = []
+    for (const value of right) {
+      values.push(value)
+    }
+    expect(values).toEqual([5])
+  })
+
+  it("should work with for...of loop for Left", () => {
+    const left = Left<string, number>("error")
+    const values: number[] = []
+    for (const value of left) {
+      values.push(value)
+    }
+    expect(values).toEqual([])
   })
 })

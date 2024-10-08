@@ -20,9 +20,9 @@ export type Either<L extends Type, R extends Type> = {
   toOption: () => Option<R>
   toList: () => List<R>
   toString: () => string
+  [Symbol.iterator]: () => Iterator<R>
 } & Typeable<"Left" | "Right">
 
-// Remove the abstractions and just test it as TS compiler mixes up the types
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R>
 
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
@@ -45,6 +45,9 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toString: () => `Right(${stringify(value)})`,
+  [Symbol.iterator]: function* () {
+    yield value
+  },
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -66,18 +69,19 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   toOption: () => None<R>(),
   toList: () => List<R>(),
   toString: () => `Left(${stringify(value)})`,
+  [Symbol.iterator]: function* () {
+    // Left doesn't yield any values
+  },
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)
 export const Left = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)
 
-// Type guards
 export const isRight = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
   either.isRight()
 export const isLeft = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
   either.isLeft()
 
-// Helper function to create Either from a potentially error-throwing function
 export const tryCatch = <L extends Type, R extends Type>(f: () => R, onError: (error: unknown) => L): Either<L, R> => {
   try {
     return Right<L, R>(f())
@@ -91,7 +95,6 @@ console.assert(TypeCheckRight)
 export const TypeCheckLeft = <L extends Type, R extends Type>(value: L): TestEither<L, R> => LeftConstructor(value)
 console.assert(TypeCheckLeft)
 
-// Async tryCatch
 export const tryCatchAsync = async <L extends Type, R extends Type>(
   f: () => Promise<R>,
   onError: (error: unknown) => L,
@@ -99,6 +102,17 @@ export const tryCatchAsync = async <L extends Type, R extends Type>(
   try {
     const result = await f()
     return Right<L, R>(result)
+  } catch (error: unknown) {
+    return Left<L, R>(onError(error))
+  }
+}
+
+export const tryCatchSync = <L extends Type, R extends Type>(
+  f: () => R,
+  onError: (error: unknown) => L,
+): Either<L, R> => {
+  try {
+    return Right<L, R>(f())
   } catch (error: unknown) {
     return Left<L, R>(onError(error))
   }
