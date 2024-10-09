@@ -406,14 +406,12 @@ describe("Either", () => {
   it("should create Right from resolved promise", async () => {
     const promise = Promise.resolve(5)
     const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
-    expect(result.isRight()).toBe(true)
-    expect(result.value).toBe(5)
+    expect(result).toBe(5)
   })
 
-  it("should create Left from rejected promise", async () => {
+  it("should throw error from rejected promise", async () => {
     const promise = Promise.reject("Rejected")
-    const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
-    expect(result.isLeft()).toBe(true)
-    expect(result.value).toBe("Error: Rejected")
+    const result = Either.fromPromise(promise, (err) => `Error: ${err}`)
+    await expect(result).rejects.toBe("Error: Rejected")
   })
 })
