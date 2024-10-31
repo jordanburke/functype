@@ -165,17 +165,6 @@ export const tryCatchAsync = async <L extends Type, R extends Type>(
   }
 }
 
-export const tryCatchSync = <L extends Type, R extends Type>(
-  f: () => R,
-  onError: (error: unknown) => L,
-): Either<L, R> => {
-  try {
-    return Right<L, R>(f())
-  } catch (error: unknown) {
-    return Left<L, R>(onError(error))
-  }
-}
-
 export const Either = {
   sequence: <L extends Type, R extends Type>(eithers: Either<L, R>[]): Either<L, R[]> => {
     const rights: R[] = []

@@ -5,4 +5,4 @@ export function Valuable<T>(value: T) {
 }
 
 // Extract the return type of the EncodedType function
-export type Valuable<T extends string> = ReturnType<typeof Valuable<T>>
+export type Valuable<T> = ReturnType<typeof Valuable<T>>

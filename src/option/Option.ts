@@ -2,8 +2,8 @@ import stringify from "safe-stable-stringify"
 
 import { Functor, Type } from "../functor"
 import { Either, Left, List, Right, Traversable } from "../index"
-import { _Iterable_, Seq } from "../iterable"
 import { Typeable } from "../typeable/Typeable"
+import { Valuable } from "../valuable/Valuable"
 
 export type Option<T extends Type> = {
   readonly _tag: "Some" | "None"
@@ -25,7 +25,7 @@ export type Option<T extends Type> = {
   toEither<E>(left: E): Either<E, T>
   toString(): string
   toValue(): { _tag: "Some" | "None"; value: T }
-} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None">)
+} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<T>)
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",
@@ -63,7 +63,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
 
 const NONE: Option<never> = {
   _tag: "None",
-  value: undefined,
+  value: undefined as never,
   isEmpty: true,
   get: () => {
     throw new Error("Cannot call get() on None")
@@ -71,7 +71,7 @@ const NONE: Option<never> = {
   getOrElse: <T>(defaultValue: T) => defaultValue,
   orElse: <T>(alternative: Option<T>) => alternative,
   map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
-  filter(predicate: (value: never) => boolean): Option<never> {
+  filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
   },
   flatMap: <U extends Type>(f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
