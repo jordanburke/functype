@@ -16,6 +16,8 @@ export type Traversable<A extends Type> = Functor<A> & {
   foldRight<B>(z: B): (op: (a: A, b: B) => B) => B
 }
 
+export * from "./core/base/Base"
+export * from "./core/error/Throwable"
 export * from "./core/task/Task"
 export * from "./either/Either"
 export * from "./functor"
