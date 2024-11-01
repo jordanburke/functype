@@ -2,7 +2,10 @@
 
 A small functional library for TypeScript inspired by FP, Scala Standard Library, and ZIO
 
+![NPM Version](https://img.shields.io/npm/v/functype?link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Ffunctype)
+
 [![Node.js Build](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml/badge.svg)](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml)
+
 
 # Functype - A Functional Library for TypeScript
 
