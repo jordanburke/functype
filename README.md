@@ -6,7 +6,6 @@ A small functional library for TypeScript inspired by FP, Scala Standard Library
 
 [![Node.js Build](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml/badge.svg)](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml)
 
-
 # Functype - A Functional Library for TypeScript
 
 Functype is a functional programming library for TypeScript, inspired by FP, Scala's standard library and ZIO. It offers a collection of utilities and abstractions to facilitate functional programming paradigms within TypeScript applications. The library is designed to provide developers with tools that promote immutability, pure functions, and composability, aligning with functional programming principles.
