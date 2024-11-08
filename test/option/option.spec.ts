@@ -35,4 +35,38 @@ describe("Option", () => {
   it("filter on None", () => {
     expect(nothing.filter(() => true)).toEqual(None())
   })
+
+  describe("getOrThrow", () => {
+    it("should return the value when Option is Some", () => {
+      const error = new Error("Should not throw")
+      expect(something.getOrThrow(error)).toBe("hello")
+    })
+
+    it("should throw the provided error when Option is None", () => {
+      const error = new Error("Custom error message")
+      expect(() => nothing.getOrThrow(error)).toThrow("Custom error message")
+    })
+
+    it("should preserve the error instance when throwing", () => {
+      const customError = new Error("Custom error")
+      try {
+        nothing.getOrThrow(customError)
+        fail("Should have thrown")
+      } catch (e) {
+        expect(e).toBe(customError) // Ensure it's the exact same error instance
+      }
+    })
+
+    it("should work with different error types", () => {
+      class CustomError extends Error {
+        constructor() {
+          super("Custom error type")
+          this.name = "CustomError"
+        }
+      }
+
+      const customError = new CustomError()
+      expect(() => nothing.getOrThrow(customError)).toThrow("Custom error type")
+    })
+  })
 })

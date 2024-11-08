@@ -11,6 +11,7 @@ export type Option<T extends Type> = {
   isEmpty: boolean
   get(): T
   getOrElse(defaultValue: T): T
+  getOrThrow(error: Error): T
   orElse(alternative: Option<T>): Option<T>
   map<U extends Type>(f: (value: T) => U): Option<U>
   filter(predicate: (value: T) => boolean): Option<T>
@@ -33,6 +34,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   isEmpty: false,
   get: () => value,
   getOrElse: () => value,
+  getOrThrow: () => value,
   orElse: () => Some(value),
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
   filter(predicate: (value: T) => boolean) {
@@ -69,6 +71,9 @@ const NONE: Option<never> = {
     throw new Error("Cannot call get() on None")
   },
   getOrElse: <T>(defaultValue: T) => defaultValue,
+  getOrThrow<T>(error: Error): T {
+    throw error
+  },
   orElse: <T>(alternative: Option<T>) => alternative,
   map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {

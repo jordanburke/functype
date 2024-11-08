@@ -1,5 +1,4 @@
-import { AppException, AppResult, AsyncTask, isLeft, isRight, Task } from "../../../src"
-import { Throwable } from "../../../src/core/error/Throwable"
+import { AppException, AppResult, AsyncTask, isLeft, isRight, Task, Throwable } from "../../../src"
 
 describe("AppException", () => {
   test("should create an AppException with error", () => {
