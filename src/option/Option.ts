@@ -13,7 +13,7 @@ export type Option<T extends Type> = {
   getOrElse(defaultValue: T): T
   getOrThrow(error: Error): T
   orElse(alternative: Option<T>): Option<T>
-  getOrNull(): T | null
+  orNull(): T | null
   map<U extends Type>(f: (value: T) => U): Option<U>
   filter(predicate: (value: T) => boolean): Option<T>
   flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
@@ -38,7 +38,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   getOrElse: () => value,
   getOrThrow: () => value,
   orElse: () => Some(value),
-  getOrNull: () => value,
+  orNull: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
   filter(predicate: (value: T) => boolean) {
     if (predicate(value)) {
@@ -81,7 +81,7 @@ const NONE: Option<never> = {
     throw error
   },
   orElse: <T>(alternative: Option<T>) => alternative,
-  getOrNull: () => null,
+  orNull: () => null,
   map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE

@@ -108,58 +108,58 @@ describe("Option", () => {
     })
   })
 
-  describe("getOrNull", () => {
+  describe("orNull", () => {
     it("should return value for Some", () => {
-      expect(something.getOrNull()).toBe("hello")
+      expect(something.orNull()).toBe("hello")
     })
 
     it("should return null for None", () => {
-      expect(nothing.getOrNull()).toBeNull()
+      expect(nothing.orNull()).toBeNull()
     })
 
     it("should handle Option with number", () => {
       const numOption = Option(42)
-      expect(numOption.getOrNull()).toBe(42)
+      expect(numOption.orNull()).toBe(42)
     })
 
     it("should handle Option with object", () => {
       const obj = { test: "value" }
       const objOption = Option(obj)
-      expect(objOption.getOrNull()).toBe(obj)
+      expect(objOption.orNull()).toBe(obj)
     })
 
     it("should handle Option created from null", () => {
       const nullOption = Option(null)
-      expect(nullOption.getOrNull()).toBeNull()
+      expect(nullOption.orNull()).toBeNull()
     })
 
     it("should handle Option created from undefined", () => {
       const undefinedOption = Option(undefined)
-      expect(undefinedOption.getOrNull()).toBeNull()
+      expect(undefinedOption.orNull()).toBeNull()
     })
   })
 
   describe("Option creation and chaining", () => {
-    it("should chain fold and getOrNull correctly", () => {
+    it("should chain fold and orNull correctly", () => {
       const result = something
         .map((s) => s.toUpperCase())
         .fold(
           () => Option<string>(null),
           (value) => Option(value),
         )
-        .getOrNull()
+        .orNull()
 
       expect(result).toBe("HELLO")
     })
 
-    it("should chain fold and getOrNull with None", () => {
+    it("should chain fold and orNull with None", () => {
       const result = nothing
         .map((s) => s.toUpperCase())
         .fold(
           () => Option<string>(null),
           (value) => Option(value),
         )
-        .getOrNull()
+        .orNull()
 
       expect(result).toBeNull()
     })
