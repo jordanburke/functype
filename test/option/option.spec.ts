@@ -69,4 +69,140 @@ describe("Option", () => {
       expect(() => nothing.getOrThrow(customError)).toThrow("Custom error type")
     })
   })
+
+  describe("fold", () => {
+    it("should handle Some case", () => {
+      const result = something.fold(
+        () => "none case",
+        (value) => `some case: ${value}`,
+      )
+      expect(result).toBe("some case: hello")
+    })
+
+    it("should handle None case", () => {
+      const result = nothing.fold(
+        () => "none case",
+        (value) => `some case: ${value}`,
+      )
+      expect(result).toBe("none case")
+    })
+
+    it("should handle different return types", () => {
+      const result = something.fold(
+        () => 0,
+        (value) => value.length,
+      )
+      expect(result).toBe(5)
+    })
+
+    it("should not execute Some handler for None", () => {
+      const someHandler = jest.fn()
+      nothing.fold(() => "none", someHandler)
+      expect(someHandler).not.toHaveBeenCalled()
+    })
+
+    it("should not execute None handler for Some", () => {
+      const noneHandler = jest.fn()
+      something.fold(noneHandler, (value) => value)
+      expect(noneHandler).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("getOrNull", () => {
+    it("should return value for Some", () => {
+      expect(something.getOrNull()).toBe("hello")
+    })
+
+    it("should return null for None", () => {
+      expect(nothing.getOrNull()).toBeNull()
+    })
+
+    it("should handle Option with number", () => {
+      const numOption = Option(42)
+      expect(numOption.getOrNull()).toBe(42)
+    })
+
+    it("should handle Option with object", () => {
+      const obj = { test: "value" }
+      const objOption = Option(obj)
+      expect(objOption.getOrNull()).toBe(obj)
+    })
+
+    it("should handle Option created from null", () => {
+      const nullOption = Option(null)
+      expect(nullOption.getOrNull()).toBeNull()
+    })
+
+    it("should handle Option created from undefined", () => {
+      const undefinedOption = Option(undefined)
+      expect(undefinedOption.getOrNull()).toBeNull()
+    })
+  })
+
+  describe("Option creation and chaining", () => {
+    it("should chain fold and getOrNull correctly", () => {
+      const result = something
+        .map((s) => s.toUpperCase())
+        .fold(
+          () => Option<string>(null),
+          (value) => Option(value),
+        )
+        .getOrNull()
+
+      expect(result).toBe("HELLO")
+    })
+
+    it("should chain fold and getOrNull with None", () => {
+      const result = nothing
+        .map((s) => s.toUpperCase())
+        .fold(
+          () => Option<string>(null),
+          (value) => Option(value),
+        )
+        .getOrNull()
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe("fold with type transformations", () => {
+    interface User {
+      name: string
+      age: number
+    }
+
+    it("should transform types correctly", () => {
+      const userOption = Option<User>({ name: "John", age: 30 })
+
+      const result = userOption.fold(
+        () => "No user",
+        (user) => `${user.name} is ${user.age}`,
+      )
+
+      expect(result).toBe("John is 30")
+    })
+
+    it("should handle complex transformations with explicit typing", () => {
+      const stringOption = Option("test")
+
+      type SuccessResult = {
+        exists: true
+        value: string
+      }
+
+      type FailureResult = {
+        exists: false
+        value: null
+      }
+
+      type Result = SuccessResult | FailureResult
+
+      const result = stringOption.fold<Result>(
+        (): FailureResult => ({ exists: false, value: null }),
+        (value): SuccessResult => ({ exists: true, value }),
+      )
+
+      expect(result).toEqual({ exists: true, value: "test" })
+    })
+  })
 })

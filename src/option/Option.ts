@@ -13,11 +13,13 @@ export type Option<T extends Type> = {
   getOrElse(defaultValue: T): T
   getOrThrow(error: Error): T
   orElse(alternative: Option<T>): Option<T>
+  getOrNull(): T | null
   map<U extends Type>(f: (value: T) => U): Option<U>
   filter(predicate: (value: T) => boolean): Option<T>
   flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
   reduce<U>(f: (acc: U, value: T) => U): U
   reduceRight<U>(f: (acc: U, value: T) => U): U
+  fold<U>(onNone: () => U, onSome: (value: T) => U): U
   foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
   foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   toList(): List<T>
@@ -36,6 +38,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   getOrElse: () => value,
   getOrThrow: () => value,
   orElse: () => Some(value),
+  getOrNull: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
   filter(predicate: (value: T) => boolean) {
     if (predicate(value)) {
@@ -43,6 +46,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     } else {
       return NONE as unknown as Option<T>
     }
+  },
+  fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
+    return onSome(value)
   },
   flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
   reduce: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
@@ -75,6 +81,7 @@ const NONE: Option<never> = {
     throw error
   },
   orElse: <T>(alternative: Option<T>) => alternative,
+  getOrNull: () => null,
   map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
@@ -82,6 +89,9 @@ const NONE: Option<never> = {
   flatMap: <U extends Type>(f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
   reduce: () => undefined as never,
   reduceRight: () => undefined as never,
+  fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {
+    return onNone()
+  },
   foldLeft:
     <B>(z: B) =>
     () =>
@@ -102,3 +112,6 @@ export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T
 
 export const Option = <T extends Type>(value: T | null | undefined): Option<T> =>
   value !== null && value !== undefined ? Some<T>(value) : None<T>()
+
+Option.from = <T>(value: T) => Option(value)
+Option.none = <T>() => None<T>()
