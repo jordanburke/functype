@@ -1,7 +1,4 @@
-import { Seq } from "../../src"
-import { Map } from "../../src"
-import { None, Some } from "../../src"
-import { Tuple } from "../../src"
+import { List, Map, None, Some, Tuple } from "../../src"
 
 describe("Map", () => {
   let map: Map<string, number>
@@ -32,7 +29,7 @@ describe("Map", () => {
   })
 
   test("flatMap should transform values and flatten", () => {
-    const newMap = map.flatMap((value) => Seq([["a", value.get(1) * 2]]))
+    const newMap = map.flatMap((value) => List([["a", value.get(1) * 2]]))
     expect(newMap.get("a").getOrElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
 

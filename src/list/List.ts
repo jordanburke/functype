@@ -1,90 +1,129 @@
 import stringify from "safe-stable-stringify"
 
-import { Collection } from "../collections"
-import { _Iterable_, Seq } from "../iterable"
-import { Option } from "../option/Option"
+import { IterableType } from "../iterable"
+import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
 
 export type List<A> = {
-  add: (item: A) => List<A>
+  readonly length: number
+  readonly [Symbol.iterator]: () => Iterator<A>
   map: <B>(f: (a: A) => B) => List<B>
-  flatMap: <B>(f: (a: A) => _Iterable_<B>) => List<B>
+  flatMap: <B>(f: (a: A) => IterableType<B>) => List<B>
+  forEach: (f: (a: A) => void) => void
+  count: (p: (x: A) => boolean) => number
+  exists: (p: (a: A) => boolean) => boolean
+  filter: (p: (a: A) => boolean) => List<A>
+  filterNot: (p: (a: A) => boolean) => List<A>
+  find: (p: (a: A) => boolean) => Option<A>
+  readonly head: A
+  readonly headOption: Option<A>
+  readonly isEmpty: boolean
+  toArray: () => A[]
+  reduce: (f: (prev: A, curr: A) => A) => A
+  reduceRight: (f: (prev: A, curr: A) => A) => A
+  foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
+  foldRight: <B>(z: B) => (op: (a: A, b: B) => B) => B
   remove: (value: A) => List<A>
-  contains: (value: A) => boolean
   removeAt: (index: number) => List<A>
+  add: (item: A) => List<A>
   get: (index: number) => Option<A>
   concat: (other: List<A>) => List<A>
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
   toValue: () => { _tag: string; value: A[] }
-} & Seq<A> &
+} & IterableType<A> &
   Typeable<"List">
 
-type InternalList<A> = List<A> & ArrayLike<A> & _Iterable_<A> & Collection<A>
-
-const createList = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => {
-  function isIterable<T>(value: unknown): value is Iterable<T> {
-    return value != null && typeof value[Symbol.iterator] === "function"
-  }
-
-  const array = Array.isArray(values) ? values : isIterable(values) ? Array.from(values) : []
-  const seqMethods = Seq(array)
+const createList = <A>(values?: Iterable<A>): List<A> => {
+  const array = Array.from(values || [])
 
   const list: List<A> = {
-    ...seqMethods,
-
     _tag: "List",
 
-    length: array.length,
+    [Symbol.iterator]: () => array[Symbol.iterator](),
 
-    //[Symbol.iterator]: () => array[Symbol.iterator](),
-
-    map: <B>(f: (a: A) => B): List<B> => createList(array.map(f)),
-
-    flatMap: <B>(f: (a: A) => _Iterable_<B>): List<B> => createList(seqMethods.flatMap(f)),
-
-    remove: (value: A): List<A> => {
-      const index = array.indexOf(value)
-      return list.removeAt(index)
+    get size() {
+      return array.length
     },
 
-    contains: (value: A): boolean => array.includes(value),
-
-    add: (item: A): List<A> => createList([...array, item]),
-
-    removeAt: (index: number): List<A> => {
-      if (index < 0 || index >= array.length) {
-        return list
-      }
-      return createList([...array.slice(0, index), ...array.slice(index + 1)])
+    get length() {
+      return array.length
     },
 
-    get: (index: number): Option<A> => Option(array[index]),
+    map: <B>(f: (a: A) => B) => createList(array.map(f)),
 
-    concat: (other: List<A>): List<A> => createList([...array, ...other.toArray()]),
+    flatMap: <B>(f: (a: A) => IterableType<B>) => createList(array.flatMap((a) => Array.from(f(a)))),
 
-    toList: (): List<A> => list,
+    forEach: (f: (a: A) => void) => array.forEach(f),
 
-    toSet: (): Set<A> => Set(array),
+    count: (p: (x: A) => boolean) => array.filter(p).length,
+
+    exists: (p: (a: A) => boolean) => array.some(p),
+
+    filter: (p: (a: A) => boolean) => createList(array.filter(p)),
+
+    filterNot: (p: (a: A) => boolean) => createList(array.filter((x) => !p(x))),
+
+    find: (p: (a: A) => boolean) => Option(array.find(p)),
+
+    get head() {
+      return array[0]
+    },
+
+    get headOption() {
+      return array.length > 0 ? Option(array[0]) : None<A>()
+    },
+
+    get isEmpty() {
+      return array.length === 0
+    },
+
+    toArray: () => [...array],
+
+    reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
+
+    reduceRight: (f: (prev: A, curr: A) => A) => array.reduceRight(f),
+
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: A) => B) =>
+        array.reduce(op, z),
+
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: A, b: B) => B) =>
+        array.reduceRight((acc, value) => op(value, acc), z),
+
+    remove: (value: A) => createList(array.filter((x) => x !== value)),
+
+    removeAt: (index: number) => createList(array.slice(0, index).concat(array.slice(index + 1))),
+
+    add: (item: A) => createList([...array, item]),
+
+    get: (index: number) => Option(array[index]),
+
+    concat: (other: List<A>) => createList([...array, ...other.toArray()]),
+
+    drop: (n: number) => createList(array.slice(n)),
+
+    dropRight: (n: number) => createList(array.slice(0, -n)),
+
+    dropWhile: (p: (a: A) => boolean) => createList(array.slice(array.findIndex((x) => !p(x)))),
+
+    flatten: <B>() => createList(array.flatMap((item) => (Array.isArray(item) ? item : ([item] as unknown as B[])))),
+
+    toList: () => list,
+
+    toSet: () => Set(array),
+
+    toString: () => `List(${stringify(array)})`,
 
     toValue: () => ({ _tag: "List", value: array }),
-
-    toString: () => `List(${stringify(List(array))})`,
   }
 
-  return new Proxy(list, {
-    get(target, prop) {
-      if (typeof prop === "symbol" || isNaN(Number(prop))) {
-        return target[prop]
-      }
-      return target.get(Number(prop))
-    },
-  })
+  return list
 }
 
-export const List = <A>(values?: Iterable<A> | _Iterable_<A>): List<A> => createList(values)
-
-export const TestList = <A>(values?: Iterable<A> | _Iterable_<A>): InternalList<A> => createList(values)
-console.assert(TestList)
+export const List = <A>(values?: Iterable<A>): List<A> => createList(values)

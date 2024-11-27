@@ -1,7 +1,6 @@
 import { Collection } from "../collections"
-import { _Iterable_, Seq } from "../iterable"
+import { IterableType } from "../iterable"
 import { List } from "../list/List"
-import { isIterable } from "../util/isIterable"
 import { ESSet, IESSet } from "./shim"
 
 export type Set<A> = {
@@ -10,17 +9,17 @@ export type Set<A> = {
   contains: (value: A) => boolean
   has: (value: A) => boolean
   map: <B>(f: (a: A) => B) => Set<B>
-  flatMap: <B>(f: (a: A) => _Iterable_<B>) => Set<B>
+  flatMap: <B>(f: (a: A) => IterableType<B>) => Set<B>
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
-} & _Iterable_<A> &
+} & IterableType<A> &
   Collection<A>
 
-const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
-  const values: IESSet<A> = isIterable(iterable) ? new ESSet<A>(iterable) : new ESSet<A>(iterable?.toArray() ?? [])
+const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
+  const values: IESSet<A> = new ESSet<A>(iterable)
 
-  const seqMethods = Seq(values)
+  const seqMethods = List(values)
 
   const set: Set<A> = {
     ...seqMethods,
@@ -39,7 +38,7 @@ const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
 
     map: <B>(f: (a: A) => B): Set<B> => createSet(seqMethods.map(f)),
 
-    flatMap: <B>(f: (a: A) => _Iterable_<B>): Set<B> => createSet(seqMethods.flatMap(f)),
+    flatMap: <B>(f: (a: A) => IterableType<B>): Set<B> => createSet(seqMethods.flatMap(f)),
 
     toList: (): List<A> => List(values),
 
@@ -51,4 +50,4 @@ const createSet = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => {
   return set
 }
 
-export const Set = <A>(iterable?: Iterable<A> | _Iterable_<A>): Set<A> => createSet(iterable)
+export const Set = <A>(iterable?: Iterable<A> | IterableType<A>): Set<A> => createSet(iterable)

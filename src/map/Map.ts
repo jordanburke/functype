@@ -1,6 +1,6 @@
 import { Collection } from "../collections"
 import { Traversable } from "../index"
-import { _Iterable_, Seq } from "../iterable"
+import { IterableType } from "../iterable"
 import { List } from "../list/List"
 import { Option } from "../option/Option"
 import { Set } from "../set/Set"
@@ -13,7 +13,7 @@ export type Map<K, V> = {
   add(item: Tuple<[K, V]>): Map<K, V>
   remove(value: K): Map<K, V>
   map<U>(f: (value: V) => U): Map<K, U>
-  flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => _Iterable_<[K2, V2]>): Map<K2, V2>
+  flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2>
   get(key: K): Option<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
@@ -46,26 +46,26 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   const map = <U>(f: (value: V) => U): Map<K, U> =>
     createMap(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
 
-  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => _Iterable_<[K2, V2]>): Map<K2, V2> => {
+  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2> => {
     const list = createMap(state.values.entries()).toList()
     return createMap(list.flatMap(f).toArray())
   }
 
   const reduce = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
-    Seq(getEntries()).reduce(f)
+    List(getEntries()).reduce(f)
 
   const reduceRight = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
-    Seq(getEntries()).reduceRight(f)
+    List(getEntries()).reduceRight(f)
 
   const foldLeft =
     <B>(z: B) =>
     (op: (b: B, a: Tuple<[K, V]>) => B): B =>
-      Seq(getEntries()).foldLeft(z)(op)
+      List(getEntries()).foldLeft(z)(op)
 
   const foldRight =
     <B>(z: B) =>
     (op: (a: Tuple<[K, V]>, b: B) => B): B =>
-      Seq(getEntries()).foldRight(z)(op)
+      List(getEntries()).foldRight(z)(op)
 
   const get = (key: K): Option<V> => Option(state.values.get(key))
 

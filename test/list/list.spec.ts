@@ -1,8 +1,8 @@
-import { List } from "../../src"
+import { List, None, Option } from "../../src"
 
 describe("List", () => {
   beforeEach(async () => {
-    // Nothing
+    // Setup if needed
   })
 
   const list1 = List<number>()
@@ -51,5 +51,60 @@ describe("List", () => {
   const foldLeftToString = list.foldLeft("hello")((acc, x) => acc + x.toString())
   it("foldLeftToString", () => {
     expect(foldLeftToString).toEqual("hello1234")
+  })
+
+  const dropped = list.drop(2)
+  it("drop", () => {
+    expect(dropped.toValue()).toEqual({ _tag: "List", value: [3, 4] })
+  })
+
+  const dropMoreThanSize = list.drop(10)
+  it("drop more than size", () => {
+    expect(dropMoreThanSize.toValue()).toEqual({ _tag: "List", value: [] })
+  })
+
+  const dropRight = list.dropRight(2)
+  it("dropRight", () => {
+    expect(dropRight.toValue()).toEqual({ _tag: "List", value: [1, 2] })
+  })
+
+  const dropRightMoreThanSize = list.dropRight(10)
+  it("dropRight more than size", () => {
+    expect(dropRightMoreThanSize.toValue()).toEqual({ _tag: "List", value: [] })
+  })
+
+  const dropWhile = list.dropWhile((x) => x < 3)
+  it("dropWhile", () => {
+    expect(dropWhile.toValue()).toEqual({ _tag: "List", value: [3, 4] })
+  })
+
+  const flatten = List([[1, 2], [3, 4], 5]).flatten<number>()
+  it("flatten", () => {
+    expect(flatten.toValue()).toEqual(List([1, 2, 3, 4, 5]).toValue())
+  })
+
+  const flattenEmpty = List([]).flatten<number>()
+  it("flatten empty list", () => {
+    expect(flattenEmpty.toValue()).toEqual(List([]).toValue())
+  })
+
+  const isEmpty = list1.isEmpty
+  it("isEmpty for empty list", () => {
+    expect(isEmpty).toBe(true)
+  })
+
+  const isNotEmpty = list3.isEmpty
+  it("isEmpty for non-empty list", () => {
+    expect(isNotEmpty).toBe(false)
+  })
+
+  const headOption = list.headOption
+  it("headOption for non-empty list", () => {
+    expect(headOption.toValue()).toEqual(Option(1).toValue())
+  })
+
+  const headOptionEmpty = list1.headOption
+  it("headOption for empty list", () => {
+    expect(headOptionEmpty).toEqual(None())
   })
 })

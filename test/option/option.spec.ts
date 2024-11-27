@@ -97,6 +97,7 @@ describe("Option", () => {
 
     it("should not execute Some handler for None", () => {
       const someHandler = jest.fn()
+      Option.none()
       nothing.fold(() => "none", someHandler)
       expect(someHandler).not.toHaveBeenCalled()
     })
