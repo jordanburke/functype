@@ -1,4 +1,4 @@
-import { Functor, Type } from "../functor"
+import { AsyncFunctor, Functor, Type } from "../functor"
 import { Option } from "../option/Option"
 
 export type IterableType<A extends Type> = {
@@ -46,4 +46,5 @@ export type IterableType<A extends Type> = {
 
   toValue: () => { _tag: string; value: A[] }
 } & Iterable<A> &
-  Functor<A>
+  Functor<A> &
+  AsyncFunctor<A>

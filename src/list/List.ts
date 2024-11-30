@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import { AsyncFunctor } from "../functor"
 import { IterableType } from "../iterable"
 import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
@@ -10,6 +11,7 @@ export type List<A> = {
   readonly [Symbol.iterator]: () => Iterator<A>
   map: <B>(f: (a: A) => B) => List<B>
   flatMap: <B>(f: (a: A) => IterableType<B>) => List<B>
+  flatMapAsync: <B>(f: (a: A) => PromiseLike<IterableType<B>>) => PromiseLike<List<B>>
   forEach: (f: (a: A) => void) => void
   count: (p: (x: A) => boolean) => number
   exists: (p: (a: A) => boolean) => boolean
@@ -34,7 +36,8 @@ export type List<A> = {
   toString: () => string
   toValue: () => { _tag: string; value: A[] }
 } & IterableType<A> &
-  Typeable<"List">
+  Typeable<"List"> &
+  AsyncFunctor<A>
 
 const createList = <A>(values?: Iterable<A>): List<A> => {
   const array = Array.from(values || [])
@@ -55,6 +58,11 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
     map: <B>(f: (a: A) => B) => createList(array.map(f)),
 
     flatMap: <B>(f: (a: A) => IterableType<B>) => createList(array.flatMap((a) => Array.from(f(a)))),
+
+    flatMapAsync: async <B>(f: (a: A) => PromiseLike<IterableType<B>>): Promise<List<B>> => {
+      const results = await Promise.all(array.map(async (a) => await f(a)))
+      return createList(results.flatMap((iterable) => Array.from(iterable)))
+    },
 
     forEach: (f: (a: A) => void) => array.forEach(f),
 

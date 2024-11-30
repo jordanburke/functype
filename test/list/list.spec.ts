@@ -38,6 +38,15 @@ describe("List", () => {
     expect(flatMapped.toValue()).toEqual({ _tag: "List", value: [1, 10, 2, 20, 3, 30, 4, 40] })
   })
 
+  const flatMapAsync = async (x: number) => {
+    return List([x, x * 2])
+  }
+
+  it("flatMapAsync", async () => {
+    const result = await list.flatMapAsync(flatMapAsync)
+    expect(result.toValue()).toEqual({ _tag: "List", value: [1, 2, 2, 4, 3, 6, 4, 8] })
+  })
+
   const sum = list.foldLeft(0)((acc, x) => acc + x)
   it("sum", () => {
     expect(sum).toEqual(10)
@@ -106,5 +115,20 @@ describe("List", () => {
   const headOptionEmpty = list1.headOption
   it("headOption for empty list", () => {
     expect(headOptionEmpty).toEqual(None())
+  })
+
+  it("flatMapAsync with empty list", async () => {
+    const emptyList = List<number>()
+    const result = await emptyList.flatMapAsync(flatMapAsync)
+    expect(result.toValue()).toEqual({ _tag: "List", value: [] })
+  })
+
+  it("flatMapAsync with delayed function", async () => {
+    const delayedAsyncFunction = async (x: number) => {
+      return new Promise<List<number>>((resolve) => setTimeout(() => resolve(List([x, x * 3])), 100))
+    }
+
+    const result = await list.flatMapAsync(delayedAsyncFunction)
+    expect(result.toValue()).toEqual({ _tag: "List", value: [1, 3, 2, 6, 3, 9, 4, 12] })
   })
 })

@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { Functor, Type } from "../functor"
+import { AsyncFunctor, Functor, Type } from "../functor"
 import { Either, Left, List, Right, Traversable } from "../index"
 import { Typeable } from "../typeable/Typeable"
 import { Valuable } from "../valuable/Valuable"
@@ -17,6 +17,7 @@ export type Option<T extends Type> = {
   map<U extends Type>(f: (value: T) => U): Option<U>
   filter(predicate: (value: T) => boolean): Option<T>
   flatMap<U extends Type>(f: (value: T) => Option<U>): Option<U>
+  flatMapAsync<U extends Type>(f: (value: T) => Promise<Option<U>>): Promise<Option<U>>
   reduce<U>(f: (acc: U, value: T) => U): U
   reduceRight<U>(f: (acc: U, value: T) => U): U
   fold<U>(onNone: () => U, onSome: (value: T) => U): U
@@ -28,7 +29,7 @@ export type Option<T extends Type> = {
   toEither<E>(left: E): Either<E, T>
   toString(): string
   toValue(): { _tag: "Some" | "None"; value: T }
-} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<T>)
+} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<T> & AsyncFunctor<T>)
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",
@@ -51,6 +52,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     return onSome(value)
   },
   flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
+  flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Option<U>>) => {
+    return await f(value)
+  },
   reduce: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
   reduceRight: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
   foldLeft:
@@ -82,11 +86,14 @@ const NONE: Option<never> = {
   },
   orElse: <T>(alternative: Option<T>) => alternative,
   orNull: () => null,
-  map: <U extends Type>(f: (value: never) => U) => NONE as unknown as Option<U>,
+  map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
   },
-  flatMap: <U extends Type>(f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
+  flatMap: <U extends Type>(_f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
+  flatMapAsync: async <U extends Type>(_f: (value: never) => Promise<Option<U>>) => {
+    return NONE as unknown as Option<U>
+  },
   reduce: () => undefined as never,
   reduceRight: () => undefined as never,
   fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {

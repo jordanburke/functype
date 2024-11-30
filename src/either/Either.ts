@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { Functor, Type } from "../functor"
+import { AsyncFunctor, Functor, Type } from "../functor"
 import { List } from "../list/List"
 import { None, Option, Some } from "../option/Option"
 import { Typeable } from "../typeable/Typeable"
@@ -31,9 +31,10 @@ export type Either<L extends Type, R extends Type> = {
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
   swap: () => Either<R, L>
 } & Typeable<"Left" | "Right"> &
-  PromiseLike<R>
+  PromiseLike<R> &
+  AsyncFunctor<R>
 
-export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R>
+export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
 
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",

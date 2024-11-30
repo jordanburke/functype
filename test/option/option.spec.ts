@@ -70,6 +70,53 @@ describe("Option", () => {
     })
   })
 
+  describe("flatMapAsync", () => {
+    it("should handle Some with async function", async () => {
+      const asyncFunction = async (value: string) => {
+        return Option(`${value} world`)
+      }
+
+      const result = await something.flatMapAsync(asyncFunction)
+      expect(result.getOrElse("default")).toBe("hello world")
+    })
+
+    it("should handle None with async function", async () => {
+      const asyncFunction = async (value: string) => {
+        return Option(`${value} world`)
+      }
+
+      const result = await nothing.flatMapAsync(asyncFunction)
+      expect(result).toEqual(None())
+    })
+
+    it("should handle Some with async function returning None", async () => {
+      const asyncFunction = async (_value: string) => {
+        return None<string>()
+      }
+
+      const result = await something.flatMapAsync(asyncFunction)
+      expect(result).toEqual(None())
+    })
+
+    it("should handle delayed async function", async () => {
+      const delayedAsyncFunction = async (value: string) => {
+        return new Promise<Option<string>>((resolve) => setTimeout(() => resolve(Option(`${value} delayed`)), 100))
+      }
+
+      const result = await something.flatMapAsync(delayedAsyncFunction)
+      expect(result.getOrElse("default")).toBe("hello delayed")
+    })
+
+    it("should preserve the original state when using None", async () => {
+      const asyncFunction = async (_value: string) => {
+        return Option("should not be used")
+      }
+
+      const result = await nothing.flatMapAsync(asyncFunction)
+      expect(result).toEqual(None())
+    })
+  })
+
   describe("fold", () => {
     it("should handle Some case", () => {
       const result = something.fold(
