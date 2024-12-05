@@ -153,3 +153,214 @@ describe("AsyncTask", () => {
     expect(result).toBe("success")
   })
 })
+
+describe("Task with finally", () => {
+  test("should execute finally block on success", async () => {
+    let finallyExecuted = false
+    try {
+      const result = await Task(
+        () => "success",
+        (error) => error,
+        () => {
+          finallyExecuted = true
+        },
+      )
+      expect(result).toBe("success")
+      expect(finallyExecuted).toBe(true)
+    } catch (error) {
+      fail("Should not throw error")
+    }
+  })
+
+  test("should execute finally block on error", async () => {
+    let finallyExecuted = false
+    const error = new Error("Task failed")
+
+    try {
+      await Task(
+        () => {
+          throw error
+        },
+        (error) => error,
+        () => {
+          finallyExecuted = true
+        },
+      )
+      fail("Should throw error")
+    } catch (error) {
+      expect((error as Throwable)._tag).toBe("Throwable")
+      expect((error as Error).message).toBe("Task failed")
+      expect(finallyExecuted).toBe(true)
+    }
+  })
+
+  test("should execute finally block even if error handler throws", async () => {
+    let finallyExecuted = false
+    const error = new Error("Task failed")
+
+    try {
+      await Task(
+        () => {
+          throw error
+        },
+        () => {
+          throw new Error("Error handler failed")
+        },
+        () => {
+          finallyExecuted = true
+        },
+      )
+      fail("Should throw error")
+    } catch (error) {
+      expect((error as Error).message).toBe("Error handler failed")
+      expect(finallyExecuted).toBe(true)
+    }
+  })
+
+  test("should throw error when finally throws", async () => {
+    try {
+      await Task(
+        () => "success",
+        (error) => error,
+        () => {
+          throw new Error("Finally failed")
+        },
+      )
+      fail("Should throw error from finally block")
+    } catch (error) {
+      expect((error as Error).message).toBe("Finally failed")
+    }
+  })
+
+  test("should throw finally error even when operation fails", async () => {
+    try {
+      await Task(
+        () => {
+          throw new Error("Operation failed")
+        },
+        (error) => error,
+        () => {
+          throw new Error("Finally failed")
+        },
+      )
+      fail("Should throw error from finally block")
+    } catch (error) {
+      expect((error as Error).message).toBe("Finally failed")
+    }
+  })
+})
+
+describe("AsyncTask with finally", () => {
+  test("should execute finally block on success", async () => {
+    let finallyExecuted = false
+    try {
+      const result = await AsyncTask(
+        async () => "success",
+        async (error) => error,
+        () => {
+          finallyExecuted = true
+        },
+      )
+      expect(result).toBe("success")
+      expect(finallyExecuted).toBe(true)
+    } catch (error) {
+      fail("Should not throw error")
+    }
+  })
+
+  test("should execute finally block on error", async () => {
+    let finallyExecuted = false
+    const error = new Error("AsyncTask failed")
+
+    try {
+      await AsyncTask(
+        async () => {
+          throw error
+        },
+        async (error) => error,
+        () => {
+          finallyExecuted = true
+        },
+      )
+      fail("Should throw error")
+    } catch (error) {
+      expect((error as Throwable)._tag).toBe("Throwable")
+      expect((error as Error).message).toBe("AsyncTask failed")
+      expect(finallyExecuted).toBe(true)
+    }
+  })
+
+  test("should execute finally block even if error handler throws", async () => {
+    let finallyExecuted = false
+    const error = new Error("AsyncTask failed")
+
+    try {
+      await AsyncTask(
+        async () => {
+          throw error
+        },
+        async () => {
+          throw new Error("Error handler failed")
+        },
+        () => {
+          finallyExecuted = true
+        },
+      )
+      fail("Should throw error")
+    } catch (error) {
+      expect((error as Error).message).toBe("Error handler failed")
+      expect(finallyExecuted).toBe(true)
+    }
+  })
+
+  test("should execute finally block with async operations", async () => {
+    let finallyExecuted = false
+    try {
+      const result = await AsyncTask(
+        async () => "success",
+        async (error) => error,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          finallyExecuted = true
+        },
+      )
+      expect(result).toBe("success")
+      expect(finallyExecuted).toBe(true)
+    } catch (error) {
+      console.log(error)
+      fail("Should not throw error")
+    }
+  })
+
+  test("should throw error when finally throws", async () => {
+    try {
+      await AsyncTask(
+        async () => "success",
+        async (error) => error,
+        () => {
+          throw new Error("Finally failed")
+        },
+      )
+      fail("Should throw error from finally block")
+    } catch (error) {
+      expect((error as Error).message).toBe("Finally failed")
+    }
+  })
+
+  test("should throw finally error even when operation fails", async () => {
+    try {
+      await AsyncTask(
+        async () => {
+          throw new Error("Operation failed")
+        },
+        async (error) => error,
+        () => {
+          throw new Error("Finally failed")
+        },
+      )
+      fail("Should throw error from finally block")
+    } catch (error) {
+      expect((error as Error).message).toBe("Finally failed")
+    }
+  })
+})

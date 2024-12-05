@@ -29,11 +29,17 @@ export const AppResult = <T>(data: T): AppResult<T> => {
 
 export type Task<T> = Either<Throwable, T>
 
-export function Task<T>(f: () => T, e: (error: unknown) => unknown = (error: unknown) => error): Task<T> {
+export function Task<T>(
+  t: () => T,
+  e: (error: unknown) => unknown = (error: unknown) => error,
+  f: () => void = () => {},
+): Task<T> {
   try {
-    return AppResult<T>(f())
+    return AppResult<T>(t())
   } catch (error) {
     return AppException<T>(e(error))
+  } finally {
+    f()
   }
 }
 
@@ -43,17 +49,20 @@ Task.fail = <T>(error: unknown) => AppException<T>(error)
 export type AsyncTask<T> = Promise<Task<T>>
 
 export async function AsyncTask<T>(
-  f: () => T,
+  t: () => T,
   e: (error: unknown) => unknown = (error: unknown) => error,
+  f: () => Promise<void> | void = async () => {},
 ): AsyncTask<T> {
   try {
-    const result = await f()
+    const result = await t()
     return AppResult<T>(result)
   } catch (error) {
-    const result = await e(error)
-    return AppException<T>(result)
+    const errorResult = await e(error)
+    return AppException<T>(errorResult)
+  } finally {
+    await f()
   }
 }
 
-AsyncTask.success = <T>(data: T) => AppResult<T>(data)
-AsyncTask.fail = <T>(error: unknown) => AppException<T>(error)
+AsyncTask.success = <T>(data: T): AppResult<T> => AppResult<T>(data)
+AsyncTask.fail = <T>(error: unknown): AppException<T> => AppException<T>(error)
