@@ -1,4 +1,4 @@
-import { List, None, Option, Typeable } from "../../src"
+import { List, None, Option, Typeable, TypeGuard } from "../../src"
 
 type Shape = Typeable<"circle" | "square"> & {
   kind: string
@@ -139,13 +139,16 @@ describe("List", () => {
 
   // Type guard tests
   describe("Type Guards", () => {
-    const shapes: List<Shape> = List([
+    const shapes: List<Shape | undefined> = List([
       { _tag: "circle", kind: "circle", value: 5 },
+      undefined,
       { _tag: "square", kind: "square", value: 4 },
       { _tag: "circle", kind: "circle", value: 3 },
     ])
 
-    const isCircle = (shape: Shape): shape is Typeable<"circle"> & Shape => shape._tag === "circle"
+    const isCircle: TypeGuard<Shape, Shape & Typeable<"circle">> = (
+      shape: Shape | undefined,
+    ): shape is Shape & Typeable<"circle"> => shape !== undefined && shape._tag === "circle"
 
     it("filter with type guard", () => {
       const circles = shapes.filter(isCircle)
@@ -159,10 +162,10 @@ describe("List", () => {
     })
 
     it("filterNot", () => {
-      const nonCircles = shapes.filterNot((shape) => shape._tag === "circle")
+      const nonCircles = shapes.filterNot((shape) => shape !== undefined && shape._tag === "circle")
       expect(nonCircles.toValue()).toEqual({
         _tag: "List",
-        value: [{ _tag: "square", kind: "square", value: 4 }],
+        value: [undefined, { _tag: "square", kind: "square", value: 4 }],
       })
     })
 
@@ -175,13 +178,15 @@ describe("List", () => {
     })
 
     it("find with type guard - non-existing element", () => {
-      const isLarge = (shape: Shape): shape is Shape => shape.value > 10
+      const isLarge: TypeGuard<Shape, Shape> = (shape: Shape | undefined): shape is Shape =>
+        shape !== undefined && shape.value > 10
+
       const largeShape = shapes.find(isLarge)
       expect(largeShape).toEqual(None())
     })
 
     it("filter with regular predicate", () => {
-      const largeShapes = shapes.filter((shape) => !!shape && shape.value > 4)
+      const largeShapes = shapes.filter((shape) => shape !== undefined && shape.value > 4)
       expect(largeShapes.toValue()).toEqual({
         _tag: "List",
         value: [{ _tag: "circle", kind: "circle", value: 5 }],
@@ -189,7 +194,7 @@ describe("List", () => {
     })
 
     it("handles empty list with type guards", () => {
-      const emptyList = List<Shape>()
+      const emptyList = List<Shape | undefined>()
       expect(emptyList.filter(isCircle).toValue()).toEqual({ _tag: "List", value: [] })
       expect(emptyList.find(isCircle)).toEqual(None())
     })

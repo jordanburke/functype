@@ -52,9 +52,9 @@ export type List<A> = {
 const createList = <A>(values?: Iterable<A>): List<A> => {
   const array = Array.from(values || [])
 
-  const filter: FilterFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => createList(array.filter(p))
+  const filter: FilterFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => createList(array.filter((x) => p(x)))
 
-  const find: FindFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => Option(array.find(p))
+  const find: FindFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => Option(array.find((x) => p(x)))
 
   const list: List<A> = {
     _tag: "List",
