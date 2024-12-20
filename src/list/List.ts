@@ -6,7 +6,7 @@ import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
 
-type TypeGuard<A, B extends A> = (a: A) => a is B
+type TypeGuard<A, B extends A> = (a: A | undefined) => a is B
 
 type FilterFn<A> = {
   <B extends A>(p: TypeGuard<A, B>): List<B>

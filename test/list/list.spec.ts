@@ -181,7 +181,7 @@ describe("List", () => {
     })
 
     it("filter with regular predicate", () => {
-      const largeShapes = shapes.filter((shape) => shape.value > 4)
+      const largeShapes = shapes.filter((shape) => !!shape && shape.value > 4)
       expect(largeShapes.toValue()).toEqual({
         _tag: "List",
         value: [{ _tag: "circle", kind: "circle", value: 5 }],
