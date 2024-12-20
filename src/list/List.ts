@@ -31,7 +31,7 @@ export type List<A> = {
   readonly head: A
   readonly headOption: Option<A>
   readonly isEmpty: boolean
-  toArray: <B extends A = A>() => B[]
+  toArray: <B = A>() => B[]
   reduce: (f: (prev: A, curr: A) => A) => A
   reduceRight: (f: (prev: A, curr: A) => A) => A
   foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
@@ -102,7 +102,7 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
       return array.length === 0
     },
 
-    toArray: <B extends A = A>(): B[] => [...array] as B[],
+    toArray: <B = A>(): B[] => [...array] as unknown as B[],
 
     reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
 

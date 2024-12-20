@@ -42,7 +42,7 @@ export type IterableType<A extends Type> = {
 
   get size(): number
 
-  toArray<B extends A = A>(): readonly B[]
+  toArray<B = A>(): readonly B[]
 
   toValue: () => { _tag: string; value: A[] }
 } & Iterable<A> &
