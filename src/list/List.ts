@@ -6,6 +6,18 @@ import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
 import { Typeable } from "../typeable/Typeable"
 
+type TypeGuard<A, B extends A> = (a: A) => a is B
+
+type FilterFn<A> = {
+  <B extends A>(p: TypeGuard<A, B>): List<B>
+  (p: (a: A) => boolean): List<A>
+}
+
+type FindFn<A> = {
+  <B extends A>(p: TypeGuard<A, B>): Option<B>
+  (p: (a: A) => boolean): Option<A>
+}
+
 export type List<A> = {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
@@ -15,9 +27,9 @@ export type List<A> = {
   forEach: (f: (a: A) => void) => void
   count: (p: (x: A) => boolean) => number
   exists: (p: (a: A) => boolean) => boolean
-  filter: (p: (a: A) => boolean) => List<A>
+  filter: FilterFn<A>
   filterNot: (p: (a: A) => boolean) => List<A>
-  find: (p: (a: A) => boolean) => Option<A>
+  find: FindFn<A>
   readonly head: A
   readonly headOption: Option<A>
   readonly isEmpty: boolean
@@ -41,6 +53,10 @@ export type List<A> = {
 
 const createList = <A>(values?: Iterable<A>): List<A> => {
   const array = Array.from(values || [])
+
+  const filter: FilterFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => createList(array.filter(p))
+
+  const find: FindFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => Option(array.find(p))
 
   const list: List<A> = {
     _tag: "List",
@@ -70,11 +86,11 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
 
     exists: (p: (a: A) => boolean) => array.some(p),
 
-    filter: (p: (a: A) => boolean) => createList(array.filter(p)),
+    filter,
 
     filterNot: (p: (a: A) => boolean) => createList(array.filter((x) => !p(x))),
 
-    find: (p: (a: A) => boolean) => Option(array.find(p)),
+    find,
 
     get head() {
       return array[0]
@@ -106,7 +122,8 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
 
     remove: (value: A) => createList(array.filter((x) => x !== value)),
 
-    removeAt: (index: number) => createList(array.slice(0, index).concat(array.slice(index + 1))),
+    removeAt: (index: number) =>
+      index < 0 || index >= array.length ? list : createList([...array.slice(0, index), ...array.slice(index + 1)]),
 
     add: (item: A) => createList([...array, item]),
 

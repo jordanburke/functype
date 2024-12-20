@@ -1,4 +1,9 @@
-import { List, None, Option } from "../../src"
+import { List, None, Option, Typeable } from "../../src"
+
+type Shape = Typeable<"circle" | "square"> & {
+  kind: string
+  value: number
+}
 
 describe("List", () => {
   beforeEach(async () => {
@@ -130,5 +135,63 @@ describe("List", () => {
 
     const result = await list.flatMapAsync(delayedAsyncFunction)
     expect(result.toValue()).toEqual({ _tag: "List", value: [1, 3, 2, 6, 3, 9, 4, 12] })
+  })
+
+  // Type guard tests
+  describe("Type Guards", () => {
+    const shapes: List<Shape> = List([
+      { _tag: "circle", kind: "circle", value: 5 },
+      { _tag: "square", kind: "square", value: 4 },
+      { _tag: "circle", kind: "circle", value: 3 },
+    ])
+
+    const isCircle = (shape: Shape): shape is Typeable<"circle"> & Shape => shape._tag === "circle"
+
+    it("filter with type guard", () => {
+      const circles = shapes.filter(isCircle)
+      expect(circles.toValue()).toEqual({
+        _tag: "List",
+        value: [
+          { _tag: "circle", kind: "circle", value: 5 },
+          { _tag: "circle", kind: "circle", value: 3 },
+        ],
+      })
+    })
+
+    it("filterNot", () => {
+      const nonCircles = shapes.filterNot((shape) => shape._tag === "circle")
+      expect(nonCircles.toValue()).toEqual({
+        _tag: "List",
+        value: [{ _tag: "square", kind: "square", value: 4 }],
+      })
+    })
+
+    it("find with type guard - existing element", () => {
+      const firstCircle = shapes.find(isCircle)
+      expect(firstCircle.toValue()).toEqual({
+        _tag: "Some",
+        value: { _tag: "circle", kind: "circle", value: 5 },
+      })
+    })
+
+    it("find with type guard - non-existing element", () => {
+      const isLarge = (shape: Shape): shape is Shape => shape.value > 10
+      const largeShape = shapes.find(isLarge)
+      expect(largeShape).toEqual(None())
+    })
+
+    it("filter with regular predicate", () => {
+      const largeShapes = shapes.filter((shape) => shape.value > 4)
+      expect(largeShapes.toValue()).toEqual({
+        _tag: "List",
+        value: [{ _tag: "circle", kind: "circle", value: 5 }],
+      })
+    })
+
+    it("handles empty list with type guards", () => {
+      const emptyList = List<Shape>()
+      expect(emptyList.filter(isCircle).toValue()).toEqual({ _tag: "List", value: [] })
+      expect(emptyList.find(isCircle)).toEqual(None())
+    })
   })
 })
