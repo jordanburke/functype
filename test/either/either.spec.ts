@@ -29,6 +29,7 @@ describe("Either", () => {
   it("should contain all items in list on Right", () => {
     const list = List([1, 2, 3, 4])
     const result = Right(list)
+    const foo = list.toArray()
     expect(result.getOrElse(List()).toArray()).toEqual([1, 2, 3, 4])
   })
 

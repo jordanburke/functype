@@ -31,7 +31,7 @@ export type List<A> = {
   readonly head: A
   readonly headOption: Option<A>
   readonly isEmpty: boolean
-  toArray: () => A[]
+  toArray: <B extends A = A>() => B[]
   reduce: (f: (prev: A, curr: A) => A) => A
   reduceRight: (f: (prev: A, curr: A) => A) => A
   foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
@@ -50,7 +50,7 @@ export type List<A> = {
   AsyncFunctor<A>
 
 const createList = <A>(values?: Iterable<A>): List<A> => {
-  const array = Array.from(values || [])
+  const array: A[] = Array.from(values || [])
 
   const filter: FilterFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => createList(array.filter((x) => p(x)))
 
@@ -102,7 +102,7 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
       return array.length === 0
     },
 
-    toArray: () => [...array],
+    toArray: <B extends A = A>(): B[] => [...array] as B[],
 
     reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
 
