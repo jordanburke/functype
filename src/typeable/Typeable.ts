@@ -8,3 +8,5 @@ export function Typeable<T extends string>(type: T) {
 export type Typeable<T extends string> = ReturnType<typeof Typeable<T>>
 
 export type UnTag<T> = Omit<T, "_tag">
+
+export type TypeGuard<A, B extends A> = (a: A | undefined) => a is B

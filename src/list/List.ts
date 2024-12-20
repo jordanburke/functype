@@ -4,9 +4,7 @@ import { AsyncFunctor } from "../functor"
 import { IterableType } from "../iterable"
 import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
-import { Typeable } from "../typeable/Typeable"
-
-type TypeGuard<A, B extends A> = (a: A | undefined) => a is B
+import { Typeable, TypeGuard } from "../typeable/Typeable"
 
 type FilterFn<A> = {
   <B extends A>(p: TypeGuard<A, B>): List<B>
