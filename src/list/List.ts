@@ -4,17 +4,7 @@ import { AsyncFunctor } from "../functor"
 import { IterableType } from "../iterable"
 import { None, Option } from "../option/Option"
 import { Set } from "../set/Set"
-import { Typeable, TypeGuard } from "../typeable/Typeable"
-
-type FilterFn<A> = {
-  <B extends A>(p: TypeGuard<A, B>): List<B>
-  (p: (a: A) => boolean): List<A>
-}
-
-type FindFn<A> = {
-  <B extends A>(p: TypeGuard<A, B>): Option<B>
-  (p: (a: A) => boolean): Option<A>
-}
+import { ExtractTag, isTypeable, Typeable } from "../typeable/Typeable"
 
 export type List<A> = {
   readonly length: number
@@ -25,9 +15,11 @@ export type List<A> = {
   forEach: (f: (a: A) => void) => void
   count: (p: (x: A) => boolean) => number
   exists: (p: (a: A) => boolean) => boolean
-  filter: FilterFn<A>
+  filter<S extends A>(predicate: (a: A) => a is S): List<S>
+  filter(predicate: (a: A) => unknown): List<A>
   filterNot: (p: (a: A) => boolean) => List<A>
-  find: FindFn<A>
+  filterType: <T extends A>(tag: ExtractTag<T>) => List<T>
+  find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => Option<T>
   readonly head: A
   readonly headOption: Option<A>
   readonly isEmpty: boolean
@@ -51,10 +43,6 @@ export type List<A> = {
 
 const createList = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
-
-  const filter: FilterFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => createList(array.filter((x) => p(x)))
-
-  const find: FindFn<A> = (p: TypeGuard<A, A> | ((a: A) => boolean)) => Option(array.find((x) => p(x)))
 
   const list: List<A> = {
     _tag: "List",
@@ -84,11 +72,16 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
 
     exists: (p: (a: A) => boolean) => array.some(p),
 
-    filter,
+    filter: (predicate: (a: A) => unknown) => createList(array.filter(predicate as (a: A) => boolean)),
 
     filterNot: (p: (a: A) => boolean) => createList(array.filter((x) => !p(x))),
 
-    find,
+    filterType: <T extends A>(tag: ExtractTag<T>) => createList(array.filter((x): x is T => isTypeable(x, tag))),
+
+    find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => {
+      const result = array.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))
+      return Option<T>(result as T | null | undefined)
+    },
 
     get head() {
       return array[0]

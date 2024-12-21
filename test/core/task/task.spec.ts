@@ -6,7 +6,7 @@ describe("AppException", () => {
     const result = AppException<string>(error)
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("Left")
+    expect(result._tag).toBe("AppException")
     expect((result.value as Throwable)._tag).toBe("Throwable")
     expect((result.value as Error).message).toBe("Test error")
   })
@@ -17,7 +17,7 @@ describe("AppException", () => {
     const result = AppException<string>(error, data)
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("Left")
+    expect(result._tag).toBe("AppException")
     expect(result.value instanceof Error).toBe(false)
     expect((result.value as unknown as Throwable).data).toEqual(data)
   })
@@ -27,9 +27,8 @@ describe("AppResult", () => {
   test("should create a successful AppResult", () => {
     const data = "test data"
     const result = AppResult(data)
-
     expect(isRight(result)).toBe(true)
-    expect(result._tag).toBe("Right")
+    expect(result._tag).toBe("AppResult")
     expect(result.value).toBe(data)
   })
 

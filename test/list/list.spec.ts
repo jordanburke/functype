@@ -1,4 +1,4 @@
-import { List, None, Option, Typeable, TypeGuard } from "../../src"
+import { isTypeable, List, None, Option, Typeable } from "../../src"
 
 type Shape = Typeable<"circle" | "square"> & {
   kind: string
@@ -138,20 +138,21 @@ describe("List", () => {
   })
 
   // Type guard tests
+  // Type guard tests
   describe("Type Guards", () => {
+    type Circle = Typeable<"circle", { kind: string; value: number }>
+    type Square = Typeable<"square", { kind: string; value: number }>
+    type Shape = Circle | Square
+
     const shapes: List<Shape | undefined> = List([
-      { _tag: "circle", kind: "circle", value: 5 },
+      Typeable("circle", { kind: "circle", value: 5 }),
       undefined,
-      { _tag: "square", kind: "square", value: 4 },
-      { _tag: "circle", kind: "circle", value: 3 },
+      Typeable("square", { kind: "square", value: 4 }),
+      Typeable("circle", { kind: "circle", value: 3 }),
     ])
 
-    const isCircle: TypeGuard<Shape, Shape & Typeable<"circle">> = (
-      shape: Shape | undefined,
-    ): shape is Shape & Typeable<"circle"> => shape !== undefined && shape._tag === "circle"
-
-    it("filter with type guard", () => {
-      const circles = shapes.filter(isCircle)
+    it("filterType narrows type", () => {
+      const circles = shapes.filterType<Circle>("circle")
       expect(circles.toValue()).toEqual({
         _tag: "List",
         value: [
@@ -161,42 +162,55 @@ describe("List", () => {
       })
     })
 
-    it("filterNot", () => {
-      const nonCircles = shapes.filterNot((shape) => shape !== undefined && shape._tag === "circle")
-      expect(nonCircles.toValue()).toEqual({
+    it("filter with regular predicate", () => {
+      const circles = shapes.filter((shape) => shape !== undefined && isTypeable<Circle>(shape, "circle"))
+      expect(circles.toValue()).toEqual({
         _tag: "List",
-        value: [undefined, { _tag: "square", kind: "square", value: 4 }],
+        value: [
+          { _tag: "circle", kind: "circle", value: 5 },
+          { _tag: "circle", kind: "circle", value: 3 },
+        ],
       })
     })
 
-    it("find with type guard - existing element", () => {
-      const firstCircle = shapes.find(isCircle)
+    it("find with predicate only", () => {
+      const firstCircle = shapes.find((shape) => shape !== undefined && shape.value > 4)
       expect(firstCircle.toValue()).toEqual({
         _tag: "Some",
         value: { _tag: "circle", kind: "circle", value: 5 },
       })
     })
 
-    it("find with type guard - non-existing element", () => {
-      const isLarge: TypeGuard<Shape, Shape> = (shape: Shape | undefined): shape is Shape =>
-        shape !== undefined && shape.value > 10
-
-      const largeShape = shapes.find(isLarge)
-      expect(largeShape).toEqual(None())
+    it("find with predicate and type tag", () => {
+      const firstCircle = shapes.find<Circle>((shape) => shape !== undefined && shape.value > 4, "circle")
+      expect(firstCircle.toValue()).toEqual({
+        _tag: "Some",
+        value: { _tag: "circle", kind: "circle", value: 5 },
+      })
     })
 
-    it("filter with regular predicate", () => {
-      const largeShapes = shapes.filter((shape) => shape !== undefined && shape.value > 4)
-      expect(largeShapes.toValue()).toEqual({
+    it("combining filterType and predicate", () => {
+      const largeCircles = shapes.filterType<Circle>("circle").filter((circle) => circle.value > 4)
+
+      expect(largeCircles.toValue()).toEqual({
         _tag: "List",
         value: [{ _tag: "circle", kind: "circle", value: 5 }],
       })
     })
 
-    it("handles empty list with type guards", () => {
+    it("handles empty list", () => {
       const emptyList = List<Shape | undefined>()
-      expect(emptyList.filter(isCircle).toValue()).toEqual({ _tag: "List", value: [] })
-      expect(emptyList.find(isCircle)).toEqual(None())
+      expect(emptyList.filterType<Circle>("circle").toValue()).toEqual({ _tag: "List", value: [] })
+      expect(emptyList.find((shape) => true, "circle")).toEqual(None())
+    })
+
+    it("type narrowing preserves through operations", () => {
+      const circles = shapes.filterType<Circle>("circle")
+      const circleValues = circles.map((circle) => circle.value)
+      expect(circleValues.toValue()).toEqual({
+        _tag: "List",
+        value: [5, 3],
+      })
     })
   })
 })

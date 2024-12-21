@@ -13,8 +13,7 @@ export type AppException<T> = Either<Throwable, T>
 export const AppException = <T>(error: unknown, data?: unknown): AppException<T> => {
   const appError = Throwable(error, data)
   return {
-    ...Base("AppException"),
-    ...Left(appError),
+    ...Base("AppException", Left(appError)),
   }
 }
 
@@ -22,8 +21,8 @@ export type AppResult<T> = Either<Throwable, T>
 
 export const AppResult = <T>(data: T): AppResult<T> => {
   return {
-    ...Base("AppResult"),
-    ...Right(data),
+    ...Base("AppResult", Right(data)),
+    ///..Right(data),
   }
 }
 
