@@ -213,4 +213,107 @@ describe("List", () => {
       })
     })
   })
+
+  describe("List Type Filtering", () => {
+    // First, let's define base interfaces for our data
+    type BaseNodeData = {
+      calculated: boolean | null
+      created: string | null
+      dataType: string
+      deleted: string | null
+      entityId: string
+      flowGridId: string
+      id: string
+      parentId: string | null
+      projectId: string
+      tenantId: string
+      updated: string | null
+      x: number
+      y: number
+    }
+
+    type BaseSegmentData = {
+      created: string | null
+      deleted: string | null
+      description: string | null
+      duration: number
+      externalId: string | null
+      fileName: string | null
+      id: string
+      imageUrl: string
+      parentDuration: number
+      parentId: string
+      projectId: string
+      segmentDuration: number[]
+      tags: string[]
+      tenantId: string
+      title: string
+      updated: string | null
+      url: string
+    }
+
+    // Then create our Typeable types
+    type FlowNodeData = Typeable<"FlowNode", BaseNodeData>
+    type SegmentData = Typeable<"SegmentData", BaseSegmentData>
+
+    // Create test data that exactly matches our types
+    const testData: (FlowNodeData | SegmentData)[] = [
+      Typeable<"FlowNode", BaseNodeData>("FlowNode", {
+        calculated: null,
+        created: null,
+        dataType: "node",
+        deleted: null,
+        entityId: "entity1",
+        flowGridId: "grid1",
+        id: "1",
+        parentId: null,
+        projectId: "proj1",
+        tenantId: "tenant1",
+        updated: null,
+        x: 0,
+        y: 0,
+      }),
+      Typeable<"SegmentData", BaseSegmentData>("SegmentData", {
+        created: null,
+        deleted: null,
+        description: null,
+        duration: 120,
+        externalId: null,
+        fileName: null,
+        id: "2",
+        imageUrl: "image.jpg",
+        parentDuration: 120,
+        parentId: "parent1",
+        projectId: "proj1",
+        segmentDuration: [60, 60],
+        tags: ["tag1"],
+        tenantId: "tenant1",
+        title: "Segment 1",
+        updated: null,
+        url: "video.mp4",
+      }),
+    ]
+
+    const mixedData = List(testData)
+
+    it("should filter FlowNodes", () => {
+      const nodes = mixedData.filterType<FlowNodeData>("FlowNode")
+
+      expect(nodes.length).toBe(1)
+      nodes.forEach((node) => {
+        expect(node._tag).toBe("FlowNode")
+        expect(node.dataType).toBe("node")
+      })
+    })
+
+    it("should filter SegmentData", () => {
+      const segments = mixedData.filterType<SegmentData>("SegmentData")
+
+      expect(segments.length).toBe(1)
+      segments.forEach((segment) => {
+        expect(segment._tag).toBe("SegmentData")
+        expect(segment.duration).toBe(120)
+      })
+    })
+  })
 })

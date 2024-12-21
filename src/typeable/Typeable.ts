@@ -15,7 +15,7 @@ export function Typeable<Tag extends string, T>(tag: Tag, data: T): Typeable<Tag
 }
 
 // Type guard with automatic type inference using the full type
-export function isTypeable<T>(value: unknown, tag?: ExtractTag<T>): value is T {
+export function isTypeable<T>(value: unknown, tag: string): value is T {
   if (!value || typeof value !== "object" || !("_tag" in value)) {
     return false
   }
