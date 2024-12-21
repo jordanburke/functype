@@ -18,7 +18,7 @@ export type List<A> = {
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>
   filterNot: (p: (a: A) => boolean) => List<A>
-  filterType: <T extends A & Typeable<string, unknown>>(tag: string) => List<T>
+  filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
   find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => Option<T>
   readonly head: A
   readonly headOption: Option<A>
@@ -76,8 +76,8 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
 
     filterNot: (p: (a: A) => boolean) => createList(array.filter((x) => !p(x))),
 
-    filterType: <T extends A & Typeable<string, unknown>>(tag: string) =>
-      createList(array.filter((x): x is T => isTypeable(x, tag))),
+    filterType: <T extends Typeable<string, unknown>>(tag: string) =>
+      createList(array.filter((x): x is T & A => isTypeable(x, tag))),
 
     find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => {
       const result = array.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))

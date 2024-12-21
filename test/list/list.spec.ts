@@ -1,10 +1,5 @@
 import { isTypeable, List, None, Option, Typeable } from "../../src"
 
-type Shape = Typeable<"circle" | "square"> & {
-  kind: string
-  value: number
-}
-
 describe("List", () => {
   beforeEach(async () => {
     // Setup if needed
@@ -201,7 +196,7 @@ describe("List", () => {
     it("handles empty list", () => {
       const emptyList = List<Shape | undefined>()
       expect(emptyList.filterType<Circle>("circle").toValue()).toEqual({ _tag: "List", value: [] })
-      expect(emptyList.find((shape) => true, "circle")).toEqual(None())
+      expect(emptyList.find((_shape) => true, "circle")).toEqual(None())
     })
 
     it("type narrowing preserves through operations", () => {
