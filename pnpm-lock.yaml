@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@vitest/coverage-v8':
-        specifier: ^2.1.8
-        version: 2.1.8(vitest@2.1.8)
       safe-stable-stringify:
         specifier: ^2.5.0
         version: 2.5.0
@@ -33,6 +30,9 @@ importers:
       '@typescript-eslint/parser':
         specifier: ^8.18.1
         version: 8.18.2(eslint@9.17.0)(typescript@5.7.2)
+      '@vitest/coverage-v8':
+        specifier: ^2.1.8
+        version: 2.1.8(vitest@2.1.8)
       '@vitest/ui':
         specifier: ^2.1.8
         version: 2.1.8(vitest@2.1.8)
