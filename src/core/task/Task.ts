@@ -1,7 +1,7 @@
+import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
 
 import { Base } from "../base/Base"
-import { Throwable } from "../error/Throwable"
 
 export type AppException<T> = Either<Throwable, T>
 
@@ -12,7 +12,7 @@ export type AppException<T> = Either<Throwable, T>
  * @constructor
  */
 export const AppException = <T>(error: unknown, data?: unknown): AppException<T> => {
-  const appError = Throwable(error, data)
+  const appError = Throwable.apply(error, data)
   return {
     ...Base("AppException", Left(appError)),
   }

@@ -20,7 +20,7 @@ describe("AppException", () => {
 
     expect(isLeft(result)).toBe(true)
     expect(result._tag).toBe("AppException")
-    expect(result.value instanceof Error).toBe(false)
+    expect(result.value instanceof Throwable).toBe(true)
     expect((result.value as unknown as Throwable).data).toEqual(data)
   })
 })
