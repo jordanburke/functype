@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
-import { Either, Left, Right } from "../either/Either"
-import { Typeable } from "../typeable/Typeable"
+import { Either, Left, Right } from "@/either/Either"
+import { Typeable } from "@/typeable/Typeable"
 
 export type Try<T> = {
   readonly _tag: "Success" | "Failure"

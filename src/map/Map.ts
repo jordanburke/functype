@@ -1,10 +1,11 @@
-import { Collection } from "../collections"
-import { Traversable } from "../index"
-import { IterableType } from "../iterable"
-import { List } from "../list/List"
-import { Option } from "../option/Option"
-import { Set } from "../set/Set"
-import { Tuple } from "../tuple/Tuple"
+import { Collection } from "@/collections"
+import { Traversable } from "@/index"
+import { IterableType } from "@/iterable"
+import { List } from "@/list/List"
+import { Option } from "@/option/Option"
+import { Set } from "@/set/Set"
+import { Tuple } from "@/tuple/Tuple"
+
 import { ESMap, IESMap } from "./shim"
 
 type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">

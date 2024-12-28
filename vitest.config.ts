@@ -1,4 +1,5 @@
-// vitest.config.ts
+import path from "node:path"
+
 import { defineConfig } from "vitest/config"
 
 export default defineConfig({
@@ -20,6 +21,11 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html"],
       exclude: ["node_modules/", "dist/", "**/*.d.ts", "**/*.test.{js,ts}", "**/*.config.{js,ts}"],
+    },
+  },
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
   },
 })

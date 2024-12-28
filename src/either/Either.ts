@@ -1,9 +1,9 @@
 import stringify from "safe-stable-stringify"
 
-import { AsyncFunctor, Functor, Type } from "../functor"
-import { List } from "../list/List"
-import { None, Option, Some } from "../option/Option"
-import { Typeable } from "../typeable/Typeable"
+import { AsyncFunctor, Functor, Type } from "@/functor"
+import { List } from "@/list/List"
+import { None, Option, Some } from "@/option/Option"
+import { Typeable } from "@/typeable/Typeable"
 
 export type Either<L extends Type, R extends Type> = {
   readonly _tag: "Left" | "Right"

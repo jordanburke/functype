@@ -1,5 +1,5 @@
-import { Either, Left, Right } from "../either/Either"
-import { ParseError } from "../error/ParseError"
+import { Either, Left, Right } from "@/either/Either"
+import { ParseError } from "@/error/ParseError"
 
 export const parseNumber = (input: string): Either<ParseError, number> => {
   const result = parseInt(input, 10)

@@ -1,4 +1,5 @@
-import { Either, Left, Right } from "../../either/Either"
+import { Either, Left, Right } from "@/either/Either"
+
 import { Base } from "../base/Base"
 import { Throwable } from "../error/Throwable"
 

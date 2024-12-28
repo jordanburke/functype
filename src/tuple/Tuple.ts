@@ -1,4 +1,4 @@
-import { ArrayFunctor, ArrayType } from "../functor"
+import { ArrayFunctor, ArrayType } from "@/functor"
 
 export type Tuple<T extends ArrayType> = {
   get<K extends number>(index: K): T[K]

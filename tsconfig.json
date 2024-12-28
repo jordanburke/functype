@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    },
     "declaration": true,
     "target": "ESNext",
     "lib": ["esnext", "dom"],

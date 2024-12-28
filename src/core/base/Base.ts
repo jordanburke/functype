@@ -1,4 +1,4 @@
-import { Typeable } from "../../typeable/Typeable"
+import { Typeable } from "@/typeable/Typeable"
 
 /**
  * Base Object from which most other objects inherit

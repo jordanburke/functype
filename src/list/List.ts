@@ -1,10 +1,10 @@
 import stringify from "safe-stable-stringify"
 
-import { AsyncFunctor } from "../functor"
-import { IterableType } from "../iterable"
-import { None, Option } from "../option/Option"
-import { Set } from "../set/Set"
-import { ExtractTag, isTypeable, Typeable } from "../typeable/Typeable"
+import { AsyncFunctor } from "@/functor"
+import { IterableType } from "@/iterable"
+import { None, Option } from "@/option/Option"
+import { Set } from "@/set/Set"
+import { ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
 
 export type List<A> = {
   readonly length: number

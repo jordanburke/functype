@@ -1,6 +1,7 @@
-import { Collection } from "../collections"
-import { IterableType } from "../iterable"
-import { List } from "../list/List"
+import { Collection } from "@/collections"
+import { IterableType } from "@/iterable"
+import { List } from "@/list/List"
+
 import { ESSet, IESSet } from "./shim"
 
 export type Set<A> = {

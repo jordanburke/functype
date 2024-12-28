@@ -1,5 +1,5 @@
-import { AsyncFunctor, Functor, Type } from "../functor"
-import { Option } from "../option/Option"
+import { AsyncFunctor, Functor, Type } from "@/functor"
+import { Option } from "@/option/Option"
 
 export type IterableType<A extends Type> = {
   count(p: (x: A) => boolean): number

@@ -1,4 +1,4 @@
-import { Typeable } from "../../typeable/Typeable"
+import { Typeable } from "@/typeable/Typeable"
 
 const NAME = "Throwable" as const
 
