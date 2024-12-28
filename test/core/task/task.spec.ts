@@ -1,3 +1,5 @@
+import { describe, expect, test } from "vitest"
+
 import { AppException, AppResult, AsyncTask, isLeft, isRight, Task, Throwable } from "../../../src"
 
 describe("AppException", () => {
@@ -167,7 +169,7 @@ describe("Task with finally", () => {
       expect(result).toBe("success")
       expect(finallyExecuted).toBe(true)
     } catch (error) {
-      fail("Should not throw error")
+      expect.fail("Should not throw error")
     }
   })
 
@@ -185,7 +187,7 @@ describe("Task with finally", () => {
           finallyExecuted = true
         },
       )
-      fail("Should throw error")
+      expect.fail("Should throw error")
     } catch (error) {
       expect((error as Throwable)._tag).toBe("Throwable")
       expect((error as Error).message).toBe("Task failed")
@@ -209,7 +211,7 @@ describe("Task with finally", () => {
           finallyExecuted = true
         },
       )
-      fail("Should throw error")
+      expect.fail("Should throw error")
     } catch (error) {
       expect((error as Error).message).toBe("Error handler failed")
       expect(finallyExecuted).toBe(true)
@@ -225,7 +227,7 @@ describe("Task with finally", () => {
           throw new Error("Finally failed")
         },
       )
-      fail("Should throw error from finally block")
+      expect.fail("Should throw error from finally block")
     } catch (error) {
       expect((error as Error).message).toBe("Finally failed")
     }
@@ -242,7 +244,7 @@ describe("Task with finally", () => {
           throw new Error("Finally failed")
         },
       )
-      fail("Should throw error from finally block")
+      expect.fail("Should throw error from finally block")
     } catch (error) {
       expect((error as Error).message).toBe("Finally failed")
     }
@@ -263,7 +265,7 @@ describe("AsyncTask with finally", () => {
       expect(result).toBe("success")
       expect(finallyExecuted).toBe(true)
     } catch (error) {
-      fail("Should not throw error")
+      expect.fail("Should not throw error")
     }
   })
 
@@ -281,7 +283,7 @@ describe("AsyncTask with finally", () => {
           finallyExecuted = true
         },
       )
-      fail("Should throw error")
+      expect.fail("Should throw error")
     } catch (error) {
       expect((error as Throwable)._tag).toBe("Throwable")
       expect((error as Error).message).toBe("AsyncTask failed")
@@ -305,7 +307,7 @@ describe("AsyncTask with finally", () => {
           finallyExecuted = true
         },
       )
-      fail("Should throw error")
+      expect.fail("Should throw error")
     } catch (error) {
       expect((error as Error).message).toBe("Error handler failed")
       expect(finallyExecuted).toBe(true)
@@ -327,7 +329,7 @@ describe("AsyncTask with finally", () => {
       expect(finallyExecuted).toBe(true)
     } catch (error) {
       console.log(error)
-      fail("Should not throw error")
+      expect.fail("Should not throw error")
     }
   })
 
@@ -340,7 +342,7 @@ describe("AsyncTask with finally", () => {
           throw new Error("Finally failed")
         },
       )
-      fail("Should throw error from finally block")
+      expect.fail("Should throw error from finally block")
     } catch (error) {
       expect((error as Error).message).toBe("Finally failed")
     }
@@ -357,7 +359,7 @@ describe("AsyncTask with finally", () => {
           throw new Error("Finally failed")
         },
       )
-      fail("Should throw error from finally block")
+      expect.fail("Should throw error from finally block")
     } catch (error) {
       expect((error as Error).message).toBe("Finally failed")
     }

@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, test } from "vitest"
+
 import { List, Map, None, Some, Tuple } from "../../src"
 
 describe("Map", () => {

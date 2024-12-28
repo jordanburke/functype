@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { None, Option } from "../../src"
 
 describe("Option", () => {
@@ -51,7 +53,7 @@ describe("Option", () => {
       const customError = new Error("Custom error")
       try {
         nothing.getOrThrow(customError)
-        fail("Should have thrown")
+        expect.fail("Should have thrown")
       } catch (e) {
         expect(e).toBe(customError) // Ensure it's the exact same error instance
       }
@@ -143,14 +145,14 @@ describe("Option", () => {
     })
 
     it("should not execute Some handler for None", () => {
-      const someHandler = jest.fn()
+      const someHandler = vi.fn()
       Option.none()
       nothing.fold(() => "none", someHandler)
       expect(someHandler).not.toHaveBeenCalled()
     })
 
     it("should not execute None handler for Some", () => {
-      const noneHandler = jest.fn()
+      const noneHandler = vi.fn()
       something.fold(noneHandler, (value) => value)
       expect(noneHandler).not.toHaveBeenCalled()
     })
