@@ -5,6 +5,7 @@ import { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
 import { ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
+import { Valuable } from "@/valuable/Valuable"
 
 export type List<A> = {
   readonly length: number
@@ -36,10 +37,10 @@ export type List<A> = {
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
-  toValue: () => { _tag: string; value: A[] }
 } & IterableType<A> &
+  AsyncFunctor<A> &
   Typeable<"List"> &
-  AsyncFunctor<A>
+  Valuable<"List", A[]>
 
 const createList = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])

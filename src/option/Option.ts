@@ -30,7 +30,7 @@ export type Option<T extends Type> = {
   toEither<E>(left: E): Either<E, T>
   toString(): string
   toValue(): { _tag: "Some" | "None"; value: T }
-} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<T> & AsyncFunctor<T>)
+} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<"Some" | "None", T> & AsyncFunctor<T>)
 
 export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",

@@ -4,6 +4,7 @@ import { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
 import { Typeable } from "@/typeable/Typeable"
+import { Valuable } from "@/valuable/Valuable"
 
 export type Either<L extends Type, R extends Type> = {
   readonly _tag: "Left" | "Right"
@@ -31,6 +32,7 @@ export type Either<L extends Type, R extends Type> = {
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
   swap: () => Either<R, L>
 } & Typeable<"Left" | "Right"> &
+  Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
   AsyncFunctor<R>
 
@@ -84,6 +86,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   ): PromiseLike<TResult1 | TResult2> => {
     return Promise.resolve(value).then(onfulfilled, onrejected)
   },
+  toValue: () => ({ _tag: "Right", value }),
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -131,6 +134,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   ): PromiseLike<TResult1 | TResult2> => {
     return Promise.reject(value).then(null, onrejected)
   },
+  toValue: () => ({ _tag: "Right", value }),
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)

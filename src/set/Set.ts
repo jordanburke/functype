@@ -1,6 +1,7 @@
 import { Collection } from "@/collections"
 import { IterableType } from "@/iterable"
 import { List } from "@/list/List"
+import { Typeable } from "@/typeable/Typeable"
 
 import { ESSet, IESSet } from "./shim"
 
@@ -15,7 +16,8 @@ export type Set<A> = {
   toSet: () => Set<A>
   toString: () => string
 } & IterableType<A> &
-  Collection<A>
+  Collection<A> &
+  Typeable<"Set">
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: IESSet<A> = new ESSet<A>(iterable)
@@ -24,6 +26,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
   const set: Set<A> = {
     ...seqMethods,
+    _tag: "Set",
 
     add: (value: A): Set<A> => createSet([...values, value]),
 

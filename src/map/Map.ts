@@ -1,10 +1,11 @@
 import { Collection } from "@/collections"
-import { Traversable } from "@/index"
+import { Traversable, Typeable } from "@/index"
 import { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { Set } from "@/set/Set"
 import { Tuple } from "@/tuple/Tuple"
+import { Valuable } from "@/valuable/Valuable"
 
 import { ESMap, IESMap } from "./shim"
 
@@ -19,13 +20,16 @@ export type Map<K, V> = {
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
 } & SafeTraversable<K, V> &
-  Collection<Tuple<[K, V]>>
+  Collection<Tuple<[K, V]>> &
+  Typeable<"Map"> &
+  Valuable<"Map", IESMap<K, V>>
 
 type MapState<K, V> = {
   values: IESMap<K, V>
 }
 
 const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
+  const _tag = "Map"
   const state: MapState<K, V> = {
     values: new ESMap<K, V>(entries),
   }
@@ -82,7 +86,10 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   const toString = (): string => `Map(${getEntries().toString()})`
 
+  const toValue = () => ({ _tag: "Map", value: state.values })
+
   return {
+    _tag,
     add,
     remove,
     contains,
@@ -104,6 +111,7 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toList,
     toSet,
     toString,
+    toValue: () => ({ _tag: "Map", value: state.values }),
   }
 }
 

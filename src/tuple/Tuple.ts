@@ -1,4 +1,6 @@
 import { ArrayFunctor, ArrayType } from "@/functor"
+import { Typeable } from "@/typeable/Typeable"
+import { Valuable } from "@/valuable/Valuable"
 
 export type Tuple<T extends ArrayType> = {
   get<K extends number>(index: K): T[K]
@@ -10,10 +12,13 @@ export type Tuple<T extends ArrayType> = {
   toArray(): T
 
   [Symbol.iterator](): Iterator<T[number]>
-} & ArrayFunctor<T>
+} & ArrayFunctor<T> &
+  Typeable<"Tuple"> &
+  Valuable<"Tuple", T>
 
 export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
   return {
+    _tag: "Tuple",
     map: <U extends ArrayType>(f: (value: T) => U): Tuple<U> => {
       const mapValue = f(values)
       return Tuple(mapValue)
@@ -48,5 +53,6 @@ export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
         },
       }
     },
+    toValue: () => ({ _tag: "Tuple", value: values }),
   }
 }

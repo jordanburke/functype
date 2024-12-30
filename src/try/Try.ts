@@ -2,10 +2,12 @@ import stringify from "safe-stable-stringify"
 
 import { Either, Left, Right } from "@/either/Either"
 import { Typeable } from "@/typeable/Typeable"
+import { Valuable } from "@/valuable/Valuable"
+
+type TypeNames = "Success" | "Failure"
 
 export type Try<T> = {
-  readonly _tag: "Success" | "Failure"
-  readonly value: T | undefined
+  readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess: () => boolean
   isFailure: () => boolean
@@ -17,11 +19,11 @@ export type Try<T> = {
   map: <U>(f: (value: T) => U) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
   toString: () => string
-} & Typeable<"Success" | "Failure">
+} & Typeable<TypeNames> &
+  Valuable<TypeNames, T | Error>
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
-  value,
   error: undefined,
   isSuccess: () => true,
   isFailure: () => false,
@@ -33,11 +35,11 @@ const Success = <T>(value: T): Try<T> => ({
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   toString: () => `Success(${stringify(value)})`,
+  toValue: () => ({ _tag: "Success", value }),
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
   _tag: "Failure",
-  value: undefined,
   error,
   isSuccess: () => false,
   isFailure: () => true,
@@ -53,6 +55,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   toString: () => `Failure(${stringify(error)}))`,
+  toValue: () => ({ _tag: "Failure", value: error }),
 })
 
 export const Try = <T>(f: () => T): Try<T> => {
