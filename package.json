@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.48",
+  "version": "0.8.49",
   "type": "module",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
@@ -13,8 +13,8 @@
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "compile": "tsc --noEmit",
-    "build:dev": "rimraf lib && tsup --watch",
-    "build:prod": "tsc --noEmit && rimraf dist && cross-env NODE_ENV=production tsup",
+    "build:dev": "tsup --watch",
+    "build:prod": "cross-env NODE_ENV=production tsup",
     "build:watch": "tsup --watch",
     "build:publish": "pnpm build:prod && pnpm publish --access public",
     "lint:fix": "eslint ./src --quiet --fix",
@@ -48,20 +48,17 @@
     "typescript": "5.7.2",
     "vitest": "^2.1.8"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "module": "./dist/index.mjs",
   "exports": {
     ".": {
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.ts"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.mjs"
+      }
     }
   },
-  "files": [
-    "lib",
-    "dist"
-  ],
+  "files": ["dist"],
   "dependencies": {
     "safe-stable-stringify": "^2.5.0"
   }
