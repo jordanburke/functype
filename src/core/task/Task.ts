@@ -46,19 +46,19 @@ export function Task<T>(
 Task.success = <T>(data: T) => AppResult<T>(data)
 Task.fail = <T>(error: unknown) => AppException<T>(error)
 
-export type AsyncTask<T> = Promise<Task<T>>
+export type AsyncTask<T> = PromiseLike<Task<T>>
 
 export async function AsyncTask<T>(
   t: () => T,
   e: (error: unknown) => unknown = (error: unknown) => error,
   f: () => Promise<void> | void = async () => {},
-): AsyncTask<T> {
+): Promise<Awaited<T>> {
   try {
     const result = await t()
-    return AppResult<T>(result)
+    return AppResult<Awaited<T>>(result)
   } catch (error) {
     const errorResult = await e(error)
-    return AppException<T>(errorResult)
+    return AppException<Awaited<T>>(errorResult)
   } finally {
     await f()
   }
