@@ -1,4 +1,20 @@
 {
-  "ignoredFiles": ["tsconfig.json", "dist", "node_modules", "pnpm-lock.yaml"],
-  "ignoredExtensions": [".raw"]
+  "ignoredFiles": [
+    "tsconfig.json",
+    "dist",
+    "node_modules",
+    "pnpm-lock.yaml",
+    "archive",
+    "bun.lock"
+  ],
+  "ignoredExtensions": [
+    ".raw",
+    ".env",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".svg",
+    ".gif",
+    ".webp"
+  ]
 }
