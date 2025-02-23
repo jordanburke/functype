@@ -1,4 +1,4 @@
-import { describe, expect, beforeEach, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { isTypeable, List, None, Option, Typeable } from "../../src"
 
@@ -142,10 +142,10 @@ describe("List", () => {
     type Shape = Circle | Square
 
     const shapes: List<Shape | undefined> = List([
-      Typeable("circle", { kind: "circle", value: 5 }),
+      Typeable({ tag: "circle", data: { kind: "circle", value: 5 } }),
       undefined,
-      Typeable("square", { kind: "square", value: 4 }),
-      Typeable("circle", { kind: "circle", value: 3 }),
+      Typeable({ tag: "square", data: { kind: "square", value: 4 } }),
+      Typeable({ tag: "circle", data: { kind: "circle", value: 3 } }),
     ])
 
     it("filterType narrows type", () => {
@@ -255,39 +255,45 @@ describe("List", () => {
 
     // Create test data that exactly matches our types
     const testData: (FlowNodeData | SegmentData)[] = [
-      Typeable<"FlowNode", BaseNodeData>("FlowNode", {
-        calculated: null,
-        created: null,
-        dataType: "node",
-        deleted: null,
-        entityId: "entity1",
-        flowGridId: "grid1",
-        id: "1",
-        parentId: null,
-        projectId: "proj1",
-        tenantId: "tenant1",
-        updated: null,
-        x: 0,
-        y: 0,
+      Typeable<"FlowNode", BaseNodeData>({
+        tag: "FlowNode",
+        data: {
+          calculated: null,
+          created: null,
+          dataType: "node",
+          deleted: null,
+          entityId: "entity1",
+          flowGridId: "grid1",
+          id: "1",
+          parentId: null,
+          projectId: "proj1",
+          tenantId: "tenant1",
+          updated: null,
+          x: 0,
+          y: 0,
+        },
       }),
-      Typeable<"SegmentData", BaseSegmentData>("SegmentData", {
-        created: null,
-        deleted: null,
-        description: null,
-        duration: 120,
-        externalId: null,
-        fileName: null,
-        id: "2",
-        imageUrl: "image.jpg",
-        parentDuration: 120,
-        parentId: "parent1",
-        projectId: "proj1",
-        segmentDuration: [60, 60],
-        tags: ["tag1"],
-        tenantId: "tenant1",
-        title: "Segment 1",
-        updated: null,
-        url: "video.mp4",
+      Typeable<"SegmentData", BaseSegmentData>({
+        tag: "SegmentData",
+        data: {
+          created: null,
+          deleted: null,
+          description: null,
+          duration: 120,
+          externalId: null,
+          fileName: null,
+          id: "2",
+          imageUrl: "image.jpg",
+          parentDuration: 120,
+          parentId: "parent1",
+          projectId: "proj1",
+          segmentDuration: [60, 60],
+          tags: ["tag1"],
+          tenantId: "tenant1",
+          title: "Segment 1",
+          updated: null,
+          url: "video.mp4",
+        },
       }),
     ]
 

@@ -3,11 +3,13 @@ export type Typeable<Tag extends string, T = object> = T & {
   readonly _tag: Tag
 }
 
+export type TypeableParams<Tag extends string, T> = { tag: Tag; data: T }
+
 // Utility type to extract the Tag from a Typeable type
 export type ExtractTag<T> = T extends Typeable<infer Tag, unknown> ? Tag : never
 
 // Create a tagged object with type inference
-export function Typeable<Tag extends string, T>(tag: Tag, data: T): Typeable<Tag, T> {
+export function Typeable<Tag extends string, T>({ tag, data }: TypeableParams<Tag, T>): Typeable<Tag, T> {
   return {
     ...data,
     _tag: tag,

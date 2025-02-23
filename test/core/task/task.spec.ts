@@ -1,14 +1,14 @@
 import { describe, expect, test } from "vitest"
 
-import { AppException, AppResult, AsyncTask, isLeft, isRight, Task, Throwable } from "../../../src"
+import { isLeft, isRight, Task, TaskException, TaskResult, Throwable } from "../../../src"
 
 describe("AppException", () => {
   test("should create an AppException with error", () => {
     const error = new Error("Test error")
-    const result = AppException<string>(error)
+    const result = TaskException<string>(error)
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("AppException")
+    expect(result._tag).toBe("TaskException")
     expect((result.value as Throwable)._tag).toBe("Throwable")
     expect((result.value as Error).message).toBe("Test error")
   })
@@ -16,28 +16,28 @@ describe("AppException", () => {
   test("should create an AppException with error and additional data", () => {
     const error = new Error("Test error")
     const data = { additionalInfo: "extra data" }
-    const result = AppException<string>(error, data)
+    const result = TaskException<string>(error, {}, data)
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("AppException")
+    expect(result._tag).toBe("TaskException")
     expect(result.value instanceof Throwable).toBe(true)
     expect((result.value as unknown as Throwable).data).toEqual(data)
   })
 })
 
-describe("AppResult", () => {
-  test("should create a successful AppResult", () => {
+describe("TaskResult", () => {
+  test("should create a successful TaskResult", () => {
     const data = "test data"
-    const result = AppResult(data)
+    const result = TaskResult(data)
     expect(isRight(result)).toBe(true)
-    expect(result._tag).toBe("AppResult")
+    expect(result._tag).toBe("TaskResult")
     expect(result.value).toBe(data)
   })
 
   test("should work with different data types", () => {
-    const numberResult = AppResult(42)
-    const objectResult = AppResult({ key: "value" })
-    const arrayResult = AppResult([1, 2, 3])
+    const numberResult = TaskResult(42)
+    const objectResult = TaskResult({ key: "value" })
+    const arrayResult = TaskResult([1, 2, 3])
 
     expect(isRight(numberResult)).toBe(true)
     expect(numberResult.value).toBe(42)
@@ -48,29 +48,29 @@ describe("AppResult", () => {
   })
 })
 
-describe("Task", () => {
+describe("Sync", () => {
   test("should handle successful operations", () => {
-    const result = Task(() => "success")
+    const result = Task().Sync(() => "success")
 
     expect(isRight(result)).toBe(true)
     expect(result.value).toBe("success")
   })
 
   test("should handle errors", () => {
-    const error = new Error("Task failed")
-    const result = Task(() => {
+    const error = new Error("Sync failed")
+    const result = Task().Sync(() => {
       throw error
     })
 
     expect(isLeft(result)).toBe(true)
     expect(result.value._tag).toBe("Throwable")
-    expect((result.value as Error).message).toBe("Task failed")
+    expect((result.value as Error).message).toBe("Sync failed")
   })
 
   test("should use custom error handler", () => {
     const error = new Error("Original error")
     const customError = "Custom error message"
-    const result = Task(
+    const result = Task().Sync(
       () => {
         throw error
       },
@@ -81,16 +81,16 @@ describe("Task", () => {
     expect(result.value.message).toBe(customError)
   })
 
-  test("Task.success should create successful result", () => {
-    const result = Task.success("data")
+  test("Sync.success should create successful result", () => {
+    const result = Task().success("data")
 
     expect(isRight(result)).toBe(true)
     expect(result.value).toBe("data")
   })
 
-  test("Task.fail should create failure result", () => {
+  test("Sync.fail should create failure result", () => {
     const error = new Error("Failed")
-    const result = Task.fail(error)
+    const result = Task().fail(error)
 
     expect(isLeft(result)).toBe(true)
     expect((result.value as Throwable)._tag).toBe("Throwable")
@@ -98,21 +98,21 @@ describe("Task", () => {
   })
 })
 
-describe("AsyncTask", () => {
+describe("Async", () => {
   test("should handle successful async operations", async () => {
-    const result = await AsyncTask(async () => "success")
+    const result = await Task().Async(async () => "success")
 
     expect(result).toBe("success")
   })
 
   test("should handle async errors", async () => {
-    const error = new Error("Async task failed")
+    const error = new Error("Async Sync failed")
     try {
-      await AsyncTask(async () => {
+      await Task().Async(async () => {
         throw error
       })
     } catch (error) {
-      expect((error as unknown as Throwable).message).toBe("Async task failed")
+      expect((error as unknown as Throwable).message).toBe("Async Sync failed")
     }
   })
 
@@ -120,7 +120,7 @@ describe("AsyncTask", () => {
     const error = new Error("Original error")
     const customError = "Custom async error message"
     try {
-      await AsyncTask(
+      await Task().Async(
         async () => {
           throw error
         },
@@ -131,16 +131,16 @@ describe("AsyncTask", () => {
     }
   })
 
-  test("AsyncTask.success should create successful result", () => {
-    const result = AsyncTask.success("data")
+  test("Async.success should create successful result", () => {
+    const result = Task().success("data")
 
     expect(isRight(result)).toBe(true)
     expect(result.value).toBe("data")
   })
 
-  test("AsyncTask.fail should create failure result", () => {
+  test("Async.fail should create failure result", () => {
     const error = new Error("Failed")
-    const result = AsyncTask.fail(error)
+    const result = Task().fail(error)
 
     expect(isLeft(result)).toBe(true)
     expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
@@ -149,17 +149,17 @@ describe("AsyncTask", () => {
 
   test("should handle promises", async () => {
     const successPromise = Promise.resolve("success")
-    const result = await AsyncTask(async () => successPromise)
+    const result = await Task().Async(async () => successPromise)
 
     expect(result).toBe("success")
   })
 })
 
-describe("Task with finally", () => {
+describe("Sync with finally", () => {
   test("should execute finally block on success", async () => {
     let finallyExecuted = false
     try {
-      const result = await Task(
+      const result = await Task().Sync(
         () => "success",
         (error) => error,
         () => {
@@ -175,10 +175,10 @@ describe("Task with finally", () => {
 
   test("should execute finally block on error", async () => {
     let finallyExecuted = false
-    const error = new Error("Task failed")
+    const error = new Error("Sync failed")
 
     try {
-      await Task(
+      await Task().Sync(
         () => {
           throw error
         },
@@ -190,17 +190,17 @@ describe("Task with finally", () => {
       expect.fail("Should throw error")
     } catch (error) {
       expect((error as Throwable)._tag).toBe("Throwable")
-      expect((error as Error).message).toBe("Task failed")
+      expect((error as Error).message).toBe("Sync failed")
       expect(finallyExecuted).toBe(true)
     }
   })
 
   test("should execute finally block even if error handler throws", async () => {
     let finallyExecuted = false
-    const error = new Error("Task failed")
+    const error = new Error("Sync failed")
 
     try {
-      await Task(
+      await Task().Sync(
         () => {
           throw error
         },
@@ -220,7 +220,7 @@ describe("Task with finally", () => {
 
   test("should throw error when finally throws", async () => {
     try {
-      await Task(
+      await Task().Sync(
         () => "success",
         (error) => error,
         () => {
@@ -235,7 +235,7 @@ describe("Task with finally", () => {
 
   test("should throw finally error even when operation fails", async () => {
     try {
-      await Task(
+      await Task().Sync(
         () => {
           throw new Error("Operation failed")
         },
@@ -251,11 +251,11 @@ describe("Task with finally", () => {
   })
 })
 
-describe("AsyncTask with finally", () => {
+describe("Async with finally", () => {
   test("should execute finally block on success", async () => {
     let finallyExecuted = false
     try {
-      const result = await AsyncTask(
+      const result = await Task().Async(
         async () => "success",
         async (error) => error,
         () => {
@@ -271,10 +271,10 @@ describe("AsyncTask with finally", () => {
 
   test("should execute finally block on error", async () => {
     let finallyExecuted = false
-    const error = new Error("AsyncTask failed")
+    const error = new Error("Async failed")
 
     try {
-      await AsyncTask(
+      await Task().Async(
         async () => {
           throw error
         },
@@ -286,17 +286,17 @@ describe("AsyncTask with finally", () => {
       expect.fail("Should throw error")
     } catch (error) {
       expect((error as Throwable)._tag).toBe("Throwable")
-      expect((error as Error).message).toBe("AsyncTask failed")
+      expect((error as Error).message).toBe("Async failed")
       expect(finallyExecuted).toBe(true)
     }
   })
 
   test("should execute finally block even if error handler throws", async () => {
     let finallyExecuted = false
-    const error = new Error("AsyncTask failed")
+    const error = new Error("Async failed")
 
     try {
-      await AsyncTask(
+      await Task().Async(
         async () => {
           throw error
         },
@@ -317,7 +317,7 @@ describe("AsyncTask with finally", () => {
   test("should execute finally block with async operations", async () => {
     let finallyExecuted = false
     try {
-      const result = await AsyncTask(
+      const result = await Task().Async(
         async () => "success",
         async (error) => error,
         async () => {
@@ -335,7 +335,7 @@ describe("AsyncTask with finally", () => {
 
   test("should throw error when finally throws", async () => {
     try {
-      await AsyncTask(
+      await Task().Async(
         async () => "success",
         async (error) => error,
         () => {
@@ -350,7 +350,7 @@ describe("AsyncTask with finally", () => {
 
   test("should throw finally error even when operation fails", async () => {
     try {
-      await AsyncTask(
+      await Task().Async(
         async () => {
           throw new Error("Operation failed")
         },

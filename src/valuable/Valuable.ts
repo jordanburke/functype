@@ -1,9 +1,11 @@
-import { Typeable } from "@/typeable/Typeable"
+import { Typeable, TypeableParams } from "@/typeable/Typeable"
 
-export function Valuable<Tag extends string, V, T = object>(tag: Tag, data: T, value: V) {
-  const t = Typeable(tag, data)
+export type ValuableParams<Tag extends string, T, V> = TypeableParams<Tag, T> & { value: V }
+
+export function Valuable<Tag extends string, V, T = object>(params: ValuableParams<Tag, T, V>) {
+  const t = Typeable(params)
   return {
-    toValue: () => ({ _tag: t._tag, value }),
+    toValue: () => ({ _tag: t._tag, value: params.value }),
   }
 }
 
