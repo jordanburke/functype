@@ -1,4 +1,4 @@
-import { Functor, Type } from "./functor"
+import type { Functor, Type } from "./functor"
 
 export type Traversable<A extends Type> = Functor<A> & {
   get size(): number

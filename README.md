@@ -48,20 +48,20 @@ bun add functype
 import { Option, Some, None } from "functype"
 
 // Create options
-const value = Option("hello")      // Some("hello")
-const empty = Option(null)         // None
-const explicit = Some(42)          // Some(42)
+const value = Option("hello") // Some("hello")
+const empty = Option(null) // None
+const explicit = Some(42) // Some(42)
 
 // Transform values
-const length = value.map(s => s.length)     // Some(5)
-const nothing = empty.map(s => s.length)    // None
+const length = value.map((s) => s.length) // Some(5)
+const nothing = empty.map((s) => s.length) // None
 
 // Handle default values
-const result = value.getOrElse("world")     // "hello"
-const fallback = empty.getOrElse("world")   // "world"
+const result = value.getOrElse("world") // "hello"
+const fallback = empty.getOrElse("world") // "world"
 
 // Conditionally filter
-const filtered = value.filter(s => s.length > 10)  // None
+const filtered = value.filter((s) => s.length > 10) // None
 ```
 
 ### Either
@@ -75,18 +75,18 @@ const success = Right<string, number>(42)
 const failure = Left<string, number>("error")
 
 // Transform values (map only applies to Right)
-const doubled = success.map(x => x * 2)   // Right(84)
-const stillError = failure.map(x => x * 2) // Left("error")
+const doubled = success.map((x) => x * 2) // Right(84)
+const stillError = failure.map((x) => x * 2) // Left("error")
 
 // Handle errors
-const value = success.getOrElse(0)  // 42
-const fallback = failure.getOrElse(0)  // 0
+const value = success.getOrElse(0) // 42
+const fallback = failure.getOrElse(0) // 0
 
 // Pattern matching with fold
 const result = success.fold(
-  err => `Error: ${err}`,
-  val => `Success: ${val}`
-)  // "Success: 42"
+  (err) => `Error: ${err}`,
+  (val) => `Success: ${val}`,
+) // "Success: 42"
 ```
 
 ### List
@@ -97,17 +97,17 @@ import { List } from "functype"
 const numbers = List([1, 2, 3, 4])
 
 // Transform
-const doubled = numbers.map(x => x * 2)  // List([2, 4, 6, 8])
+const doubled = numbers.map((x) => x * 2) // List([2, 4, 6, 8])
 
 // Filter
-const evens = numbers.filter(x => x % 2 === 0)  // List([2, 4])
+const evens = numbers.filter((x) => x % 2 === 0) // List([2, 4])
 
 // Reduce
-const sum = numbers.foldLeft(0)((acc, x) => acc + x)  // 10
+const sum = numbers.foldLeft(0)((acc, x) => acc + x) // 10
 
 // Add/remove elements (immutably)
-const withFive = numbers.add(5)  // List([1, 2, 3, 4, 5])
-const without3 = numbers.remove(3)  // List([1, 2, 4])
+const withFive = numbers.add(5) // List([1, 2, 3, 4, 5])
+const without3 = numbers.remove(3) // List([1, 2, 4])
 ```
 
 ### Try
@@ -129,7 +129,7 @@ if (result.isSuccess()) {
 }
 
 // Transform with map (only applies on Success)
-const name = result.map(obj => obj.name)
+const name = result.map((obj) => obj.name)
 
 // Convert to Either
 const either = result.toEither()
@@ -143,14 +143,14 @@ import { Task } from "functype"
 // Synchronous operations with error handling
 const syncResult = Task().Sync(
   () => "success",
-  (error) => new Error(`Failed: ${error}`)
+  (error) => new Error(`Failed: ${error}`),
 )
 
 // Asynchronous operations
 const asyncTask = async () => {
   const result = await Task().Async(
     async () => await fetchData(),
-    async (error) => new Error(`Fetch failed: ${error}`)
+    async (error) => new Error(`Fetch failed: ${error}`),
   )
   return result
 }
@@ -164,7 +164,7 @@ Functype leverages TypeScript's advanced type system to provide compile-time saf
 // Type inference works seamlessly
 const option = Option(42)
 // Inferred as number
-const mappedValue = option.map(x => x.toString())
+const mappedValue = option.map((x) => x.toString())
 // Inferred as string
 ```
 

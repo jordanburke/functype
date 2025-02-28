@@ -1,10 +1,10 @@
 import stringify from "safe-stable-stringify"
 
-import { AsyncFunctor, Functor, Type } from "@/functor"
+import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
-import { Either, Left, List, Right, Traversable } from "../index"
+import { Either, Left, List, Right, type Traversable } from "../index"
 
 export type Option<T extends Type> = {
   readonly _tag: "Some" | "None"

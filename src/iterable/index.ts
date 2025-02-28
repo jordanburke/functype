@@ -1,4 +1,4 @@
-import { AsyncFunctor, Functor, Type } from "@/functor"
+import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { Option } from "@/option/Option"
 
 export type IterableType<A extends Type> = {

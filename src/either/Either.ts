@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { AsyncFunctor, Functor, Type } from "@/functor"
+import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
 import { Typeable } from "@/typeable/Typeable"

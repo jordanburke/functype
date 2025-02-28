@@ -1,9 +1,9 @@
-import { Collection } from "@/collections"
-import { IterableType } from "@/iterable"
+import type { Collection } from "@/collections"
+import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Typeable } from "@/typeable/Typeable"
 
-import { ESSet, IESSet } from "./shim"
+import { ESSet, type IESSet } from "./shim"
 
 export type Set<A> = {
   add: (value: A) => Set<A>

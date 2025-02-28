@@ -1,5 +1,5 @@
 import { Base } from "@/core/base/Base"
-import { Identity } from "@/identity/Identity"
+import type { Identity } from "@/identity/Identity"
 
 type Params = {
   id: string

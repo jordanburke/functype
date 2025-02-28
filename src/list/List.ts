@@ -1,10 +1,10 @@
 import stringify from "safe-stable-stringify"
 
-import { AsyncFunctor } from "@/functor"
-import { IterableType } from "@/iterable"
+import type { AsyncFunctor } from "@/functor"
+import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
-import { ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
+import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
 export type List<A> = {
