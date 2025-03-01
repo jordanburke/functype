@@ -43,8 +43,8 @@ export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
   }
 }
 
-export type Task<T> = Either<Throwable, T>
-export type Async<T> = Promise<Task<T>>
+export type Sync<T> = Either<Throwable, T>
+export type Async<T> = Promise<Sync<T>>
 
 export const Task = <T = unknown>(params?: TaskParams) => {
   const name = params?.name || "Task"
@@ -69,7 +69,7 @@ export const Task = <T = unknown>(params?: TaskParams) => {
       t: () => U,
       e: (error: unknown) => unknown = (error: unknown) => error,
       f: () => void = () => {},
-    ): Task<U> => {
+    ): Sync<U> => {
       try {
         return TaskResult<U>(t(), { name, description })
       } catch (error) {
