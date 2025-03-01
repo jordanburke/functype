@@ -141,7 +141,7 @@ const either = result.toEither()
 import { Task } from "functype"
 
 // Synchronous operations with error handling
-const syncResult = Task().Sync(
+const syncResult = Task().Task(
   () => "success",
   (error) => new Error(`Failed: ${error}`),
 )

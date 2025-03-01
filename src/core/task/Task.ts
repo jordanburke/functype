@@ -43,37 +43,37 @@ export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
   }
 }
 
-export type Sync<T> = Either<Throwable, T>
-export type Async<T> = Promise<Sync<T>>
+export type Task<T> = Either<Throwable, T>
+export type Async<T> = Promise<Task<T>>
 
-export const Task = <T>(params?: TaskParams) => {
+export const Task = <T = unknown>(params?: TaskParams) => {
   const name = params?.name || "Task"
   const description = params?.description || ""
   const body = {
-    Async: async (
-      t: () => T,
+    Async: async <U = T>(
+      t: () => U,
       e: (error: unknown) => unknown = (error: unknown) => error,
       f: () => Promise<void> | void = async () => {},
-    ): Async<T> => {
+    ): Async<U> => {
       try {
         const result = await t()
-        return TaskResult<T>(result, { name, description })
+        return TaskResult<U>(result, { name, description })
       } catch (error) {
         const errorResult = await e(error)
-        return TaskException<T>(errorResult, { name, description })
+        return TaskException<U>(errorResult, { name, description })
       } finally {
         await f()
       }
     },
-    Sync: (
-      t: () => T,
+    Sync: <U = T>(
+      t: () => U,
       e: (error: unknown) => unknown = (error: unknown) => error,
       f: () => void = () => {},
-    ): Sync<T> => {
+    ): Task<U> => {
       try {
-        return TaskResult<T>(t(), { name, description })
+        return TaskResult<U>(t(), { name, description })
       } catch (error) {
-        return TaskException<T>(e(error), { name, description })
+        return TaskException<U>(e(error), { name, description })
       } finally {
         f()
       }
