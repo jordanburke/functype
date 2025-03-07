@@ -8,7 +8,7 @@ import { Typeable } from "@/typeable/Typeable"
  */
 export function Base<T>(type: string, body: T) {
   return {
-    ...Typeable({ tag: type, data: body }),
+    ...Typeable({ _tag: type, impl: body }),
     toString() {
       return `${type}()`
     },

@@ -142,10 +142,10 @@ describe("List", () => {
     type Shape = Circle | Square
 
     const shapes: List<Shape | undefined> = List([
-      Typeable({ tag: "circle", data: { kind: "circle", value: 5 } }),
+      Typeable({ _tag: "circle", impl: { kind: "circle", value: 5 } }),
       undefined,
-      Typeable({ tag: "square", data: { kind: "square", value: 4 } }),
-      Typeable({ tag: "circle", data: { kind: "circle", value: 3 } }),
+      Typeable({ _tag: "square", impl: { kind: "square", value: 4 } }),
+      Typeable({ _tag: "circle", impl: { kind: "circle", value: 3 } }),
     ])
 
     it("filterType narrows type", () => {
@@ -178,7 +178,7 @@ describe("List", () => {
       })
     })
 
-    it("find with predicate and type tag", () => {
+    it("find with predicate and type _tag", () => {
       const firstCircle = shapes.find<Circle>((shape) => shape !== undefined && shape.value > 4, "circle")
       expect(firstCircle.toValue()).toEqual({
         _tag: "Some",
@@ -242,7 +242,7 @@ describe("List", () => {
       parentId: string
       projectId: string
       segmentDuration: number[]
-      tags: string[]
+      _tags: string[]
       tenantId: string
       title: string
       updated: string | null
@@ -256,8 +256,8 @@ describe("List", () => {
     // Create test data that exactly matches our types
     const testData: (FlowNodeData | SegmentData)[] = [
       Typeable<"FlowNode", BaseNodeData>({
-        tag: "FlowNode",
-        data: {
+        _tag: "FlowNode",
+        impl: {
           calculated: null,
           created: null,
           dataType: "node",
@@ -274,8 +274,8 @@ describe("List", () => {
         },
       }),
       Typeable<"SegmentData", BaseSegmentData>({
-        tag: "SegmentData",
-        data: {
+        _tag: "SegmentData",
+        impl: {
           created: null,
           deleted: null,
           description: null,
@@ -288,7 +288,7 @@ describe("List", () => {
           parentId: "parent1",
           projectId: "proj1",
           segmentDuration: [60, 60],
-          tags: ["tag1"],
+          _tags: ["tag1"],
           tenantId: "tenant1",
           title: "Segment 1",
           updated: null,
