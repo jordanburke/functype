@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { FPromise } from "../../src/fpromise/FPromise"
+import { FPromise } from "../../src/fPromise/FPromise"
 
 describe("FPromise", () => {
   describe("basic functionality", () => {
     it("should resolve with a value", async () => {
-      const promise = FPromise<number>((resolve) => resolve(42))
+      const promise = FPromise<number>((resolve: (value: number) => void) => resolve(42))
       const result = await promise.toPromise()
       expect(result).toBe(42)
     })
@@ -98,18 +98,18 @@ describe("FPromise", () => {
   describe("flatMapAsync", () => {
     it("should chain promises asynchronously", async () => {
       const promise = FPromise.resolve(42)
-      // flatMapAsync returns a Promise<FPromise<string>> not FPromise<FPromise<string>>
-      const fpromise = promise.flatMapAsync((x) => FPromise.resolve(x.toString()))
+      // flatMapAsync now returns Promise<string> directly
+      const result = await promise.flatMapAsync((x) => FPromise.resolve(x.toString()))
 
-      expect(await fpromise.toPromise()).toBe("42")
+      expect(result).toBe("42")
     })
 
     it("should work with regular promises", async () => {
       const promise = FPromise.resolve(42)
-      // flatMapAsync returns a Promise<FPromise<string>> not FPromise<FPromise<string>>
-      const fpromise = promise.flatMapAsync((x) => Promise.resolve(x.toString()))
+      // flatMapAsync now returns Promise<string> directly
+      const result = await promise.flatMapAsync((x) => Promise.resolve(x.toString()))
 
-      expect(await fpromise).toBe("42")
+      expect(result).toBe("42")
     })
   })
 
@@ -234,17 +234,17 @@ describe("FPromise", () => {
     describe("from", () => {
       it("should convert a Promise to an FPromise", async () => {
         const originalPromise = Promise.resolve(42)
-        const fpromise = FPromise.from(originalPromise)
+        const fPromise = FPromise.from(originalPromise)
 
-        expect(await fpromise.toPromise()).toBe(42)
+        expect(await fPromise.toPromise()).toBe(42)
       })
 
       it("should handle rejected promises", async () => {
         const error = new Error("Test error")
         const originalPromise = Promise.reject(error)
-        const fpromise = FPromise.from(originalPromise)
+        const fPromise = FPromise.from(originalPromise)
 
-        await expect(fpromise.toPromise()).rejects.toEqual(error)
+        await expect(fPromise.toPromise()).rejects.toEqual(error)
       })
     })
 

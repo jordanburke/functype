@@ -5,7 +5,7 @@ import { Typeable } from "@/typeable/Typeable"
 export type FPromise<T extends Type> = PromiseLike<T> & {
   map: <U>(f: (value: T) => U) => FPromise<U>
   flatMap: <U extends Type>(f: (value: T) => PromiseLike<U>) => FPromise<U>
-  flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>) => Promise<FPromise<U>>
+  flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>) => Promise<U>
   tap: (f: (value: T) => void) => FPromise<T>
   mapError: <E>(f: (error: unknown) => E) => FPromise<T>
   tapError: (f: (error: unknown) => void) => FPromise<T>
@@ -20,7 +20,7 @@ const FPromiseImpl = <T extends Type>(
 ): FPromise<T> => {
   const promise = new Promise<T>(executor)
 
-  const fPromise: FPromise<T> = {
+  return {
     _tag: "FPromise",
 
     map: <U extends Type>(f: (value: T) => U): FPromise<U> => {
@@ -57,31 +57,19 @@ const FPromiseImpl = <T extends Type>(
       })
     },
 
-    // Fixed flatMapAsync to return Promise<FPromise<U>> instead of FPromise<FPromise<U>>
-    flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>): Promise<FPromise<U>> => {
-      return promise.then(
-        (value) => {
-          try {
-            const innerPromise = f(value)
-            if (innerPromise instanceof Promise) {
-              return innerPromise.then(
-                (result) => FPromise.resolve(result),
-                (error) => FPromise.reject<U>(error),
-              )
-            } else {
-              return new Promise<FPromise<U>>((resolve, reject) => {
-                innerPromise.then(
-                  (result) => resolve(FPromise.resolve(result)),
-                  (error) => resolve(FPromise.reject<U>(error)),
-                )
-              })
-            }
-          } catch (error) {
-            return Promise.resolve(FPromise.reject<U>(error))
-          }
-        },
-        (error) => Promise.resolve(FPromise.reject<U>(error)),
-      )
+    // Fixed flatMapAsync to return Promise<U> directly
+    flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>): Promise<U> => {
+      return promise.then((value) => {
+        const result = f(value)
+        if (result instanceof Promise) {
+          return result
+        } else {
+          // Convert PromiseLike to Promise
+          return new Promise<U>((resolve, reject) => {
+            result.then(resolve, reject)
+          })
+        }
+      })
     },
 
     tap: (f: (value: T) => void): FPromise<T> => {
@@ -125,18 +113,16 @@ const FPromiseImpl = <T extends Type>(
     },
 
     then: <TResult1 = T, TResult2 = never>(
-      onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-      onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+      onFulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
+      onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
     ): PromiseLike<TResult1 | TResult2> => {
-      return promise.then(onfulfilled, onrejected)
+      return promise.then(onFulfilled, onRejected)
     },
 
     toPromise: (): Promise<T> => {
       return promise
     },
   }
-
-  return fPromise
 }
 
 // Add static utility methods using the Companion pattern
@@ -177,6 +163,3 @@ export const FPromiseCompanion = {
 }
 
 export const FPromise = Companion(FPromiseImpl, FPromiseCompanion)
-
-const promise = FPromise.resolve(42)
-const fpromise = promise.flatMapAsync((x) => FPromise.resolve(x.toString()))
