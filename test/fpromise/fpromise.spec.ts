@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { FPromise } from "../../src/fPromise/FPromise"
+import { FPromise } from "../../src"
+import { retry } from "../../src/fpromise/retry"
 
 describe("FPromise", () => {
   describe("basic functionality", () => {
@@ -365,23 +366,6 @@ describe("FPromise", () => {
       }
 
       // Fixed retry implementation
-      const retry = <T>(operation: () => FPromise<T>, maxRetries: number): FPromise<T> => {
-        return FPromise<T>((resolve, reject) => {
-          operation()
-            .toPromise()
-            .then(resolve)
-            .catch((error) => {
-              if (maxRetries > 0) {
-                retry(operation, maxRetries - 1)
-                  .toPromise()
-                  .then(resolve)
-                  .catch(reject)
-              } else {
-                reject(error)
-              }
-            })
-        })
-      }
 
       // Using Promise's catch instead for the test
       try {
