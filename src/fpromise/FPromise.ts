@@ -1,16 +1,15 @@
 import { Companion } from "@/core/companion/Companion"
-import type { Type } from "@/functor"
+import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
 
 export type FPromise<T extends Type> = PromiseLike<T> & {
-  map: <U>(f: (value: T) => U) => FPromise<U>
-  flatMap: <U extends Type>(f: (value: T) => PromiseLike<U>) => FPromise<U>
-  flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>) => Promise<U>
   tap: (f: (value: T) => void) => FPromise<T>
   mapError: <E>(f: (error: unknown) => E) => FPromise<T>
   tapError: (f: (error: unknown) => void) => FPromise<T>
   toPromise: () => Promise<T>
-} & Typeable<"FPromise">
+} & Typeable<"FPromise"> &
+  Functor<T> &
+  AsyncFunctor<T>
 
 /**
  * Creates an FPromise from an executor function
@@ -37,18 +36,13 @@ const FPromiseImpl = <T extends Type>(
       })
     },
 
-    flatMap: <U extends Type>(f: (value: T) => PromiseLike<U>): FPromise<U> => {
+    flatMap: <U extends Type>(f: (value: T) => FPromise<U>): FPromise<U> => {
       return FPromiseImpl<U>((resolve, reject) => {
         promise
           .then((value) => {
             try {
               const result = f(value)
-              if (result instanceof Promise) {
-                result.then(resolve).catch(reject)
-              } else {
-                // Handle PromiseLike objects that may not have catch
-                result.then(resolve, reject)
-              }
+              result.then(resolve, reject)
             } catch (error) {
               reject(error)
             }
@@ -58,18 +52,17 @@ const FPromiseImpl = <T extends Type>(
     },
 
     // Fixed flatMapAsync to return Promise<U> directly
-    flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>): Promise<U> => {
-      return promise.then((value) => {
-        const result = f(value)
-        if (result instanceof Promise) {
-          return result
-        } else {
-          // Convert PromiseLike to Promise
-          return new Promise<U>((resolve, reject) => {
-            result.then(resolve, reject)
-          })
-        }
-      })
+    flatMapAsync: async <U extends Type>(f: (value: T) => PromiseLike<U>): Promise<U> => {
+      const value_1 = await promise
+      const result = f(value_1)
+      if (result instanceof Promise) {
+        return result
+      } else {
+        // Convert PromiseLike to Promise
+        return new Promise<U>((resolve, reject) => {
+          result.then(resolve, reject)
+        })
+      }
     },
 
     tap: (f: (value: T) => void): FPromise<T> => {
