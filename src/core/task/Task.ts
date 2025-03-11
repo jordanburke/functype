@@ -1,5 +1,6 @@
 import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
+import { FPromise } from "@/fpromise/FPromise"
 
 import { Base } from "../base/Base"
 
@@ -39,31 +40,55 @@ export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
   return {
     ...Base("TaskResult", Right(data)),
     _task: { name, description },
-    ///..Right(data),
   }
 }
 
 export type Sync<T> = Either<Throwable, T>
-export type Async<T> = Promise<Sync<T>>
+export type Async<T> = FPromise<Sync<T>>
 
 export const Task = <T = unknown>(params?: TaskParams) => {
   const name = params?.name || "Task"
   const description = params?.description || ""
   const body = {
-    Async: async <U = T>(
-      t: () => U,
+    Async: <U = T>(
+      t: () => U | Promise<U>,
       e: (error: unknown) => unknown = (error: unknown) => error,
-      f: () => Promise<void> | void = async () => {},
-    ): Async<U> => {
-      try {
-        const result = await t()
-        return TaskResult<U>(result, { name, description })
-      } catch (error) {
-        const errorResult = await e(error)
-        return TaskException<U>(errorResult, { name, description })
-      } finally {
-        await f()
-      }
+      f: () => Promise<void> | void = () => {},
+    ): FPromise<U> => {
+      return FPromise<U>(async (resolve, reject) => {
+        try {
+          // Run the main operation
+          const result = await t()
+          try {
+            // Run finally before resolving
+            await f()
+          } catch (finallyError) {
+            // Finally errors take precedence
+            reject(Throwable.apply(finallyError))
+            return
+          }
+          // Success path - resolve with the value directly
+          resolve(result)
+        } catch (error) {
+          // Save error but don't reject yet - need to run finally first
+          try {
+            // Always run finally
+            await f()
+          } catch (finallyError) {
+            // Finally errors take precedence over operation errors
+            reject(Throwable.apply(finallyError))
+            return
+          }
+          // Process the original error through error handler
+          try {
+            const errorResult = await e(error)
+            reject(Throwable.apply(errorResult))
+          } catch (handlerError) {
+            // If error handler throws, use that error
+            reject(Throwable.apply(handlerError))
+          }
+        }
+      })
     },
     Sync: <U = T>(
       t: () => U,
