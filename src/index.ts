@@ -17,6 +17,7 @@ export type Traversable<A extends Type> = Functor<A> & {
 }
 
 export * from "./core/base/Base"
+export * from "./core/companion/Companion"
 export * from "./core/task/Task"
 export * from "./core/throwable/Throwable"
 export * from "./either/Either"
