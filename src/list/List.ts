@@ -42,7 +42,7 @@ export type List<A> = {
   Typeable<"List"> &
   Valuable<"List", A[]>
 
-const createList = <A>(values?: Iterable<A>): List<A> => {
+const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
 
   const list: List<A> = {
@@ -58,13 +58,13 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
       return array.length
     },
 
-    map: <B>(f: (a: A) => B) => createList(array.map(f)),
+    map: <B>(f: (a: A) => B) => ListObject(array.map(f)),
 
-    flatMap: <B>(f: (a: A) => IterableType<B>) => createList(array.flatMap((a) => Array.from(f(a)))),
+    flatMap: <B>(f: (a: A) => IterableType<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
 
     flatMapAsync: async <B>(f: (a: A) => PromiseLike<IterableType<B>>): Promise<List<B>> => {
       const results = await Promise.all(array.map(async (a) => await f(a)))
-      return createList(results.flatMap((iterable) => Array.from(iterable)))
+      return ListObject(results.flatMap((iterable) => Array.from(iterable)))
     },
 
     forEach: (f: (a: A) => void) => array.forEach(f),
@@ -73,12 +73,12 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
 
     exists: (p: (a: A) => boolean) => array.some(p),
 
-    filter: (predicate: (a: A) => unknown) => createList(array.filter(predicate as (a: A) => boolean)),
+    filter: (predicate: (a: A) => unknown) => ListObject(array.filter(predicate as (a: A) => boolean)),
 
-    filterNot: (p: (a: A) => boolean) => createList(array.filter((x) => !p(x))),
+    filterNot: (p: (a: A) => boolean) => ListObject(array.filter((x) => !p(x))),
 
     filterType: <T extends Typeable<string, unknown>>(tag: string) =>
-      createList(array.filter((x): x is T & A => isTypeable(x, tag))),
+      ListObject(array.filter((x): x is T & A => isTypeable(x, tag))),
 
     find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => {
       const result = array.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))
@@ -113,24 +113,24 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
       (op: (a: A, b: B) => B) =>
         array.reduceRight((acc, value) => op(value, acc), z),
 
-    remove: (value: A) => createList(array.filter((x) => x !== value)),
+    remove: (value: A) => ListObject(array.filter((x) => x !== value)),
 
     removeAt: (index: number) =>
-      index < 0 || index >= array.length ? list : createList([...array.slice(0, index), ...array.slice(index + 1)]),
+      index < 0 || index >= array.length ? list : ListObject([...array.slice(0, index), ...array.slice(index + 1)]),
 
-    add: (item: A) => createList([...array, item]),
+    add: (item: A) => ListObject([...array, item]),
 
     get: (index: number) => Option(array[index]),
 
-    concat: (other: List<A>) => createList([...array, ...other.toArray()]),
+    concat: (other: List<A>) => ListObject([...array, ...other.toArray()]),
 
-    drop: (n: number) => createList(array.slice(n)),
+    drop: (n: number) => ListObject(array.slice(n)),
 
-    dropRight: (n: number) => createList(array.slice(0, -n)),
+    dropRight: (n: number) => ListObject(array.slice(0, -n)),
 
-    dropWhile: (p: (a: A) => boolean) => createList(array.slice(array.findIndex((x) => !p(x)))),
+    dropWhile: (p: (a: A) => boolean) => ListObject(array.slice(array.findIndex((x) => !p(x)))),
 
-    flatten: <B>() => createList(array.flatMap((item) => (Array.isArray(item) ? item : ([item] as unknown as B[])))),
+    flatten: <B>() => ListObject(array.flatMap((item) => (Array.isArray(item) ? item : ([item] as unknown as B[])))),
 
     toList: () => list,
 
@@ -144,4 +144,4 @@ const createList = <A>(values?: Iterable<A>): List<A> => {
   return list
 }
 
-export const List = <A>(values?: Iterable<A>): List<A> => createList(values)
+export const List = <A>(values?: Iterable<A>): List<A> => ListObject(values)

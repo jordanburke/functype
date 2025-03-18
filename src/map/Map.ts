@@ -28,7 +28,7 @@ type MapState<K, V> = {
   values: IESMap<K, V>
 }
 
-const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
+const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
   const _tag = "Map"
   const state: MapState<K, V> = {
     values: new ESMap<K, V>(entries),
@@ -37,11 +37,11 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   const getEntries = () => Array.from(state.values.entries()).map(([key, value]) => Tuple<[K, V]>([key, value]))
 
   const add = (item: Tuple<[K, V]>): Map<K, V> =>
-    createMap(new ESMap(state.values).set(item.toArray()[0], item.toArray()[1]).entries())
+    MapObject(new ESMap(state.values).set(item.toArray()[0], item.toArray()[1]).entries())
 
   const remove = (value: K): Map<K, V> => {
     const newMap = new ESMap(state.values)
-    return newMap.delete(value) ? createMap(newMap.entries()) : createMap(state.values.entries())
+    return newMap.delete(value) ? MapObject(newMap.entries()) : MapObject(state.values.entries())
   }
 
   const contains = (value: Tuple<[K, V]>): boolean => state.values.get(value[0]) === value[1]
@@ -49,11 +49,11 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   const size = (): number => state.values.size
 
   const map = <U>(f: (value: V) => U): Map<K, U> =>
-    createMap(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
+    MapObject(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
 
   const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2> => {
-    const list = createMap(state.values.entries()).toList()
-    return createMap(list.flatMap(f).toArray())
+    const list = MapObject(state.values.entries()).toList()
+    return MapObject(list.flatMap(f).toArray())
   }
 
   const reduce = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
@@ -116,7 +116,7 @@ const createMap = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 }
 
 export const Map = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
-  createMap(entries)
+  MapObject(entries)
 
 // Example usage
 // const myMap = createMap<string, unknown>([
