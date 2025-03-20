@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.55",
+  "version": "0.8.51",
   "type": "module",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
@@ -23,7 +23,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "docs": "typedoc",
+    "docs:watch": "typedoc --watch"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.7",
@@ -45,6 +47,7 @@
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.4.0",
+    "typedoc": "^0.28.1",
     "typescript": "5.8.2",
     "vitest": "^3.0.8"
   },

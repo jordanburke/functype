@@ -6,6 +6,12 @@ import { None, Option, Some } from "@/option/Option"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
+/**
+ * Either type module
+ * @module Either
+ * @category Core
+ */
+
 export type Either<L extends Type, R extends Type> = {
   readonly _tag: "Left" | "Right"
   value: L | R

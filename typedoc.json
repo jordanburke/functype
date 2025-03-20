@@ -1,0 +1,27 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "docs",
+  "name": "FuncType",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "categoryOrder": [
+    "Core",
+    "Collections",
+    "Monads",
+    "Utilities",
+    "*"
+  ],
+  "navigationLinks": {
+    "GitHub": "https://github.com/jordanburke/functype"
+  },
+  "visibilityFilters": {
+    "protected": false,
+    "private": false,
+    "inherited": true,
+    "external": false
+  },
+  "readme": "README.md"
+}

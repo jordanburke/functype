@@ -7,6 +7,8 @@
 
 Functype is a lightweight functional programming library for TypeScript, drawing inspiration from functional programming paradigms, the Scala Standard Library, and ZIO. It provides a comprehensive set of utilities and abstractions designed to facilitate functional programming within TypeScript applications.
 
+[API Documentation](https://jordanburke.github.io/functype/)
+
 ## Core Principles
 
 - **Immutability**: All data structures are immutable, promoting predictable and side-effect-free code
