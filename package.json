@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.51",
+  "version": "0.8.55",
   "type": "module",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
@@ -26,7 +26,7 @@
     "test:ui": "vitest --ui",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "postdocs": "echo \"Documentation generated in ./docs\""
+    "postdocs": "node -e \"console.log('Documentation generated in ./docs')\""
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.7",
