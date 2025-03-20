@@ -23,5 +23,6 @@
     "inherited": true,
     "external": false
   },
-  "readme": "README.md"
+  "readme": "README.md",
+  "disableSources": true
 }
