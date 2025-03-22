@@ -36,6 +36,7 @@ export function createSerializable<STypes extends SerializableTypes[], T>(
   } as Serializable<STypes, T>
 }
 
+/*
 // Example usage
 type MyData = {
   name: string
@@ -69,8 +70,6 @@ const mySerializableData = createSerializable<["json", "yaml"], MyData>(
   },
 )
 
-console.log(mySerializableData.toJSON()) // {"name":"John","age":30}
-console.log(mySerializableData.toYAML()) // name: John\nage: 30
-
 // Type checking
 type SupportedTypes = SupportedSerializationTypes<typeof mySerializableData> // ["json", "yaml"]
+*/
