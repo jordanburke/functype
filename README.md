@@ -26,6 +26,52 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **Tuple**: Type-safe fixed-length arrays
 - **Typeable**: Runtime type identification with compile-time safety
 
+## Roadmap / TODO
+
+### Missing Functionality
+
+- [ ] Add lazy evaluation structures (LazyList/Stream)
+- [ ] Implement Validation type for applicative validation
+- [ ] Add Reader/State/IO monads for more functional patterns
+- [ ] Implement lens/optics for immutable updates
+- [ ] Expand concurrent execution utilities beyond FPromise.all
+
+### Performance Optimizations
+
+- [ ] Add memoization utilities
+- [ ] Improve recursive operations for large collections
+- [ ] Implement immutable data structures with structural sharing
+- [ ] Add performance benchmarks
+- [x] Optimize TreeShaking with sideEffects flag in package.json
+
+### API Consistency
+
+- [ ] Ensure all modules follow the Scala-inspired pattern:
+  - Constructor functions that return objects with methods
+  - Object methods for common operations
+  - Companion functions for additional utilities
+- [ ] Align Task API with other monadic structures
+- [ ] Standardize import patterns (@ imports vs relative paths)
+- [ ] Implement consistent error handling strategy for async operations
+
+### Testing and Documentation
+
+- [ ] Add observable test coverage metrics
+- [ ] Implement property-based testing
+- [ ] Expand error handling tests
+- [ ] Add interoperability tests with other libraries
+
+### TypeScript Improvements
+
+- [x] Enable stricter TypeScript settings (noImplicitAny: true)
+- [x] Add noUncheckedIndexedAccess for safer array indexing
+- [ ] Improve support for higher-kinded types:
+  - Current type parameters work well for first-order types
+  - Expand to support type constructors as parameters (F<A> => F<B>)
+- [ ] Add branded/nominal types for stronger type safety
+- [ ] Implement more type-level utilities (conditional types, template literals)
+- [ ] Leverage newer TypeScript features (const type parameters, tuple manipulation)
+
 ## Installation
 
 ```bash

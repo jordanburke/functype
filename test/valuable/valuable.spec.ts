@@ -18,7 +18,7 @@ describe("Valuable", () => {
   it("should be composable with Typeable", () => {
     const typeable = Typeable({ _tag: "TypedValue" })
     const valuable = Valuable({ _tag: "TypedValue", value: "important data" })
-    
+
     expect(typeable._tag).toBe("TypedValue")
     expect(valuable.toValue()._tag).toBe("TypedValue")
     expect(valuable.toValue().value).toBe("important data")

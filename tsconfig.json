@@ -7,7 +7,9 @@
     "target": "ES2020",
     "lib": ["esnext"],
     "strict": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
     "esModuleInterop": true,
     "moduleResolution": "node",
     "outDir": "lib",
@@ -15,9 +17,10 @@
     "skipLibCheck": true,
     "rootDir": "src",
     "emitDeclarationOnly": true,
-    "strictPropertyInitialization": false,
+    "strictPropertyInitialization": true,
     "moduleDetection": "force",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "noErrorTruncation": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "lib"]

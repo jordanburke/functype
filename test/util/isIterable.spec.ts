@@ -19,18 +19,25 @@ describe("isIterable", () => {
   })
 
   it("should return true for Map objects", () => {
-    expect(isIterable(new Map([['a', 1], ['b', 2]]))).toBe(true)
+    expect(
+      isIterable(
+        new Map([
+          ["a", 1],
+          ["b", 2],
+        ]),
+      ),
+    ).toBe(true)
     expect(isIterable(new Map())).toBe(true)
   })
 
   it("should return true for custom iterables", () => {
     const customIterable = {
       [Symbol.iterator]: function* () {
-        yield 1;
-        yield 2;
-        yield 3;
-      }
-    };
+        yield 1
+        yield 2
+        yield 3
+      },
+    }
     expect(isIterable(customIterable)).toBe(true)
   })
 
@@ -47,11 +54,11 @@ describe("isIterable", () => {
   it("should return false for primitive types", () => {
     expect(isIterable(42)).toBe(false)
     expect(isIterable(true)).toBe(false)
-    expect(isIterable(Symbol('test'))).toBe(false)
+    expect(isIterable(Symbol("test"))).toBe(false)
   })
 
   it("should return false for functions", () => {
     expect(isIterable(() => {})).toBe(false)
-    expect(isIterable(function() {})).toBe(false)
+    expect(isIterable(function () {})).toBe(false)
   })
 })

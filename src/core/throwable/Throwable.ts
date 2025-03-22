@@ -9,11 +9,14 @@ export type ThrowableType = Error &
   }
 
 export class Throwable extends Error implements ThrowableType {
-  public readonly _tag: typeof NAME
+  public readonly _tag: typeof NAME = NAME
   public readonly data?: unknown
   public readonly cause?: Error
 
-  protected constructor(message: string, options?: { data?: unknown; cause?: Error; stack?: string }) {
+  protected constructor(
+    message: string,
+    options?: { data?: unknown | undefined; cause?: Error | undefined; stack?: string | undefined },
+  ) {
     super(message, { cause: options?.cause })
 
     // Set name before we capture stack trace
@@ -62,8 +65,8 @@ export class Throwable extends Error implements ThrowableType {
       // For Error instances, preserve the original stack trace
       return new Throwable(srcError.message, {
         data,
-        cause: srcError.cause as Error | undefined,
-        stack: srcError.stack,
+        cause: (srcError.cause as Error | undefined) || undefined,
+        stack: srcError.stack || undefined,
       })
     }
 

@@ -32,12 +32,12 @@ describe("Typeable", () => {
 
     const myObj: MyInterface = {
       data: "test data",
-      process: () => "processed data"
+      process: () => "processed data",
     }
 
-    const typed = { 
+    const typed = {
       ...Typeable({ _tag: "MyType", impl: {} }),
-      ...myObj
+      ...myObj,
     }
 
     expect(typed._tag).toBe("MyType")

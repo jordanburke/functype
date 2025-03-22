@@ -7,13 +7,7 @@
   "excludePrivate": true,
   "excludeProtected": true,
   "excludeExternals": true,
-  "categoryOrder": [
-    "Core",
-    "Collections",
-    "Monads",
-    "Utilities",
-    "*"
-  ],
+  "categoryOrder": ["Core", "Collections", "Monads", "Utilities", "*"],
   "navigationLinks": {
     "GitHub": "https://github.com/jordanburke/functype"
   },

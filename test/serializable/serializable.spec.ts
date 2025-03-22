@@ -7,28 +7,25 @@ describe("Serializable", () => {
   describe.skip("JSON serialization", () => {
     it("should correctly serialize and deserialize JSON", () => {
       const original = { name: "Test", value: 42 }
-      
-      const serializable = createSerializable<["json"], typeof original>(
-        original,
-        {
-          json: {
-            toJSON() {
-              return JSON.stringify(this)
-            },
-            fromJSON(json: string) {
-              return JSON.parse(json)
-            },
+
+      const serializable = createSerializable<["json"], typeof original>(original, {
+        json: {
+          toJSON() {
+            return JSON.stringify(this)
           },
-        }
-      )
-      
+          fromJSON(json: string) {
+            return JSON.parse(json)
+          },
+        },
+      })
+
       const serialized = serializable.toJSON()
       expect(typeof serialized).toBe("string")
-      
+
       const deserialized = serializable.fromJSON(serialized)
       expect(deserialized).toEqual(original)
     })
-    
+
     it("should handle complex objects", () => {
       const complex = {
         name: "Complex",
@@ -36,69 +33,63 @@ describe("Serializable", () => {
         array: [1, 2, 3],
         date: new Date("2023-01-01").toISOString(),
       }
-      
-      const serializable = createSerializable<["json"], typeof complex>(
-        complex,
-        {
-          json: {
-            toJSON() {
-              return JSON.stringify(this)
-            },
-            fromJSON(json: string) {
-              return JSON.parse(json)
-            },
+
+      const serializable = createSerializable<["json"], typeof complex>(complex, {
+        json: {
+          toJSON() {
+            return JSON.stringify(this)
           },
-        }
-      )
-      
+          fromJSON(json: string) {
+            return JSON.parse(json)
+          },
+        },
+      })
+
       const serialized = serializable.toJSON()
       const deserialized = serializable.fromJSON(serialized)
       expect(deserialized).toEqual(complex)
     })
   })
-  
+
   describe.skip("Multiple serialization formats", () => {
     it("should support multiple serialization formats", () => {
       const data = { name: "Multi", value: 42 }
-      
-      const serializable = createSerializable<["json", "yaml"], typeof data>(
-        data,
-        {
-          json: {
-            toJSON() {
-              return JSON.stringify(this)
-            },
-            fromJSON(json: string) {
-              return JSON.parse(json)
-            },
+
+      const serializable = createSerializable<["json", "yaml"], typeof data>(data, {
+        json: {
+          toJSON() {
+            return JSON.stringify(this)
           },
-          yaml: {
-            toYAML() {
-              return Object.entries(this)
-                .map(([key, value]) => `${key}: ${value}`)
-                .join("\n")
-            },
-            fromYAML(yaml: string) {
-              const result: Record<string, string> = {}
-              yaml.split("\n").forEach(line => {
-                const [key, value] = line.split(": ")
-                result[key] = value
-              })
-              return result as any
-            },
+          fromJSON(json: string) {
+            return JSON.parse(json)
           },
-        }
-      )
-      
+        },
+        yaml: {
+          toYAML() {
+            return Object.entries(this)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join("\n")
+          },
+          fromYAML(yaml: string) {
+            const result: Record<string, string> = {}
+            yaml.split("\n").forEach((line) => {
+              const [key, value] = line.split(": ")
+              result[key] = value
+            })
+            return result as any
+          },
+        },
+      })
+
       // Test JSON
       const jsonSerialized = serializable.toJSON()
       expect(serializable.fromJSON(jsonSerialized)).toEqual(data)
-      
+
       // Test YAML
       const yamlSerialized = serializable.toYAML()
       expect(yamlSerialized).toContain("name: Multi")
       expect(yamlSerialized).toContain("value: 42")
-      
+
       // Basic YAML parsing test
       const yamlParsed = serializable.fromYAML(yamlSerialized)
       expect(yamlParsed.name).toBe("Multi")

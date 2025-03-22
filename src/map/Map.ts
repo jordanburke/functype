@@ -44,7 +44,10 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     return newMap.delete(value) ? MapObject(newMap.entries()) : MapObject(state.values.entries())
   }
 
-  const contains = (value: Tuple<[K, V]>): boolean => state.values.get(value[0]) === value[1]
+  const contains = (value: Tuple<[K, V]>): boolean => {
+    const tuple = value.toArray()
+    return state.values.get(tuple[0]) === tuple[1]
+  }
 
   const size = (): number => state.values.size
 

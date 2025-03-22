@@ -30,7 +30,7 @@ export type IterableType<A extends Type> = {
 
   foldRight<B>(z: B): (op: (a: A, b: B) => B) => B
 
-  get head(): A
+  get head(): A | undefined
 
   get headOption(): Option<A>
 

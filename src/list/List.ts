@@ -21,7 +21,7 @@ export type List<A> = {
   filterNot: (p: (a: A) => boolean) => List<A>
   filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
   find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => Option<T>
-  readonly head: A
+  readonly head: A | undefined
   readonly headOption: Option<A>
   readonly isEmpty: boolean
   toArray: <B = A>() => B[]
@@ -86,7 +86,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     },
 
     get head() {
-      return array[0]
+      return array[0] as A | undefined
     },
 
     get headOption() {
