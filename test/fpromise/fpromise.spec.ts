@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { FPromise } from "../../src"
-import { retry } from "../../src/fpromise/retry"
+import { Left, Right } from "../../src/either/Either"
+import { retry, retryWithBackoff, retryWithOptions } from "../../src/fpromise/retry"
 
 describe("FPromise", () => {
   describe("basic functionality", () => {
@@ -153,7 +154,9 @@ describe("FPromise", () => {
     it("should transform rejected errors", async () => {
       const originalError = new Error("Original error")
       const promise = FPromise.reject<number>(originalError)
-      const mapped = promise.mapError((err) => {
+      const mapped = promise.mapError((err, context) => {
+        expect(context.originalError).toBe(originalError)
+        expect(context.timestamp).toBeGreaterThan(0)
         if (err instanceof Error) {
           return new Error(`Transformed: ${err.message}`)
         }
@@ -215,6 +218,230 @@ describe("FPromise", () => {
     })
   })
 
+  // New tests for recover methods
+  describe("recover", () => {
+    it("should recover from errors with a fallback value", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const recovered = promise.recover(42)
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+
+    it("should not affect successful promises", async () => {
+      const promise = FPromise.resolve<number>(42)
+      const recovered = promise.recover(100)
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+  })
+
+  describe("recoverWith", () => {
+    it("should recover from errors by transforming the error", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const recovered = promise.recoverWith((err) => {
+        expect(err).toBe(error)
+        return 42
+      })
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+
+    it("should handle errors in the recovery function", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const recovered = promise.recoverWith(() => {
+        throw new Error("Recovery error")
+        return 42
+      })
+
+      // Should still resolve with null as fallback
+      const result = await recovered.toPromise()
+      expect(result).toBeNull()
+    })
+
+    it("should not affect successful promises", async () => {
+      const promise = FPromise.resolve<number>(42)
+      const recovered = promise.recoverWith(() => 100)
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+  })
+
+  describe("recoverWithF", () => {
+    it("should recover from errors with another FPromise", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const recovered = promise.recoverWithF((err) => {
+        expect(err).toBe(error)
+        return FPromise.resolve(42)
+      })
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+
+    it("should propagate errors from the recovery promise", async () => {
+      const originalError = new Error("Original error")
+      const recoveryError = new Error("Recovery error")
+
+      const promise = FPromise.reject<number>(originalError)
+      const recovered = promise.recoverWithF(() => FPromise.reject<number>(recoveryError))
+
+      await expect(recovered.toPromise()).rejects.toEqual(recoveryError)
+    })
+
+    it("should handle errors in the recovery function", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const recovered = promise.recoverWithF(() => {
+        throw new Error("Recovery function error")
+        return FPromise.resolve(42)
+      })
+
+      await expect(recovered.toPromise()).rejects.toThrow("Recovery function error")
+    })
+
+    it("should not affect successful promises", async () => {
+      const promise = FPromise.resolve<number>(42)
+      const recovered = promise.recoverWithF(() => FPromise.resolve(100))
+
+      expect(await recovered.toPromise()).toBe(42)
+    })
+  })
+
+  // Tests for filterError
+  describe("filterError", () => {
+    it("should handle specific errors based on predicate", async () => {
+      const error = new Error("Network error")
+      error.name = "NetworkError"
+
+      const promise = FPromise.reject<string>(error)
+      const filtered = promise.filterError(
+        (err) => err instanceof Error && err.name === "NetworkError",
+        () => FPromise.resolve("Fallback for network errors"),
+      )
+
+      expect(await filtered.toPromise()).toBe("Fallback for network errors")
+    })
+
+    it("should not handle errors that don't match the predicate", async () => {
+      const error = new Error("Database error")
+      error.name = "DatabaseError"
+
+      const promise = FPromise.reject<string>(error)
+      const filtered = promise.filterError(
+        (err) => err instanceof Error && err.name === "NetworkError",
+        () => FPromise.resolve("Fallback for network errors"),
+      )
+
+      await expect(filtered.toPromise()).rejects.toEqual(error)
+    })
+
+    it("should propagate errors from the handler", async () => {
+      const originalError = new Error("Original error")
+      const handlerError = new Error("Handler error")
+
+      const promise = FPromise.reject<string>(originalError)
+      const filtered = promise.filterError(
+        () => true,
+        () => FPromise.reject(handlerError),
+      )
+
+      await expect(filtered.toPromise()).rejects.toEqual(handlerError)
+    })
+
+    it("should handle errors in the handler function", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<string>(error)
+      const filtered = promise.filterError(
+        () => true,
+        () => {
+          throw new Error("Handler function error")
+          return FPromise.resolve("Fallback")
+        },
+      )
+
+      await expect(filtered.toPromise()).rejects.toThrow("Handler function error")
+    })
+
+    it("should not affect successful promises", async () => {
+      const promise = FPromise.resolve<string>("Success")
+      const filtered = promise.filterError(
+        () => true,
+        () => FPromise.resolve("Fallback"),
+      )
+
+      expect(await filtered.toPromise()).toBe("Success")
+    })
+  })
+
+  // Tests for logError
+  describe("logError", () => {
+    it("should log errors without affecting the error flow", async () => {
+      const error = new Error("Test error")
+      let loggedError: unknown = null
+      let loggedContext: unknown = null
+
+      const promise = FPromise.reject<number>(error)
+      const logged = promise.logError((err, context) => {
+        loggedError = err
+        loggedContext = context
+      })
+
+      await expect(logged.toPromise()).rejects.toEqual(error)
+      expect(loggedError).toBe(error)
+      expect(loggedContext).toHaveProperty("originalError", error)
+      expect(loggedContext).toHaveProperty("timestamp")
+    })
+
+    it("should ignore errors in the logger function", async () => {
+      const error = new Error("Test error")
+
+      const promise = FPromise.reject<number>(error)
+      const logged = promise.logError(() => {
+        throw new Error("Logger error")
+      })
+
+      await expect(logged.toPromise()).rejects.toEqual(error)
+    })
+
+    it("should not affect successful promises", async () => {
+      let loggerCalled = false
+      const promise = FPromise.resolve<number>(42)
+      const logged = promise.logError(() => {
+        loggerCalled = true
+      })
+
+      expect(await logged.toPromise()).toBe(42)
+      expect(loggerCalled).toBe(false)
+    })
+  })
+
+  // Tests for toEither
+  describe("toEither", () => {
+    it("should convert a successful promise to a Right", async () => {
+      const promise = FPromise.resolve<number>(42)
+      const either = await promise.toEither()
+
+      expect(either._tag).toBe("Right")
+      expect(either.value).toBe(42)
+      expect(either.isRight()).toBe(true)
+      expect(either.isLeft()).toBe(false)
+    })
+
+    it("should convert a failed promise to a Left", async () => {
+      const error = new Error("Test error")
+      const promise = FPromise.reject<number>(error)
+      const either = await promise.toEither()
+
+      expect(either._tag).toBe("Left")
+      expect(either.value).toBe(error)
+      expect(either.isRight()).toBe(false)
+      expect(either.isLeft()).toBe(true)
+    })
+  })
+
   describe("static methods", () => {
     describe("resolve", () => {
       it("should create a resolved FPromise", async () => {
@@ -249,6 +476,24 @@ describe("FPromise", () => {
       })
     })
 
+    // Tests for fromEither
+    describe("fromEither", () => {
+      it("should convert a Right to a resolved FPromise", async () => {
+        const either = Right<Error, number>(42)
+        const promise = FPromise.fromEither(either)
+
+        expect(await promise.toPromise()).toBe(42)
+      })
+
+      it("should convert a Left to a rejected FPromise", async () => {
+        const error = new Error("Test error")
+        const either = Left<Error, number>(error)
+        const promise = FPromise.fromEither(either)
+
+        await expect(promise.toPromise()).rejects.toEqual(error)
+      })
+    })
+
     describe("all", () => {
       it("should resolve with an array of all resolved values", async () => {
         const promises = [FPromise.resolve(1), FPromise.resolve(2), FPromise.resolve(3)]
@@ -269,6 +514,157 @@ describe("FPromise", () => {
 
         const result = await FPromise.all(promises).toPromise()
         expect(result).toEqual([1, 2, 3])
+      })
+    })
+
+    // Tests for allSettled
+    describe("allSettled", () => {
+      it("should resolve with an array of Either results for all promises", async () => {
+        const error = new Error("Test error")
+        const promises = [FPromise.resolve(1), FPromise.reject<number>(error), FPromise.resolve(3)]
+
+        const result = await FPromise.allSettled(promises).toPromise()
+
+        expect(result.length).toBe(3)
+        expect(result[0]._tag).toBe("Right")
+        expect(result[0].value).toBe(1)
+        expect(result[1]._tag).toBe("Left")
+        expect(result[1].value).toBe(error)
+        expect(result[2]._tag).toBe("Right")
+        expect(result[2].value).toBe(3)
+      })
+
+      it("should handle empty arrays", async () => {
+        const result = await FPromise.allSettled([]).toPromise()
+        expect(result).toEqual([])
+      })
+
+      it("should work with regular promises", async () => {
+        const error = new Error("Test error")
+        const promises = [Promise.resolve(1), Promise.reject(error), Promise.resolve(3)]
+
+        const result = await FPromise.allSettled(promises).toPromise()
+
+        expect(result.length).toBe(3)
+        expect(result[0]._tag).toBe("Right")
+        expect(result[0].value).toBe(1)
+        expect(result[1]._tag).toBe("Left")
+        expect(result[1].value).toBe(error)
+        expect(result[2]._tag).toBe("Right")
+        expect(result[2].value).toBe(3)
+      })
+    })
+
+    // Tests for race
+    describe("race", () => {
+      it("should resolve with the first promise to resolve", async () => {
+        const slow = FPromise<number>((resolve) => {
+          setTimeout(() => resolve(1), 50)
+        })
+        const fast = FPromise<number>((resolve) => {
+          setTimeout(() => resolve(2), 10)
+        })
+
+        const result = await FPromise.race([slow, fast]).toPromise()
+        expect(result).toBe(2)
+      })
+
+      it("should reject with the first promise to reject", async () => {
+        const slow = FPromise<number>((resolve) => {
+          setTimeout(() => resolve(1), 50)
+        })
+        const error = new Error("Fast error")
+        const fast = FPromise<number>((_, reject) => {
+          setTimeout(() => reject(error), 10)
+        })
+
+        await expect(FPromise.race([slow, fast]).toPromise()).rejects.toEqual(error)
+      })
+    })
+
+    // Tests for any
+    describe("any", () => {
+      it("should resolve with the first promise to fulfill", async () => {
+        const error1 = new Error("Error 1")
+        const error2 = new Error("Error 2")
+        const promises = [FPromise.reject<number>(error1), FPromise.resolve(2), FPromise.reject<number>(error2)]
+
+        const result = await FPromise.any(promises).toPromise()
+        expect(result).toBe(2)
+      })
+
+      it("should reject if all promises reject", async () => {
+        const error1 = new Error("Error 1")
+        const error2 = new Error("Error 2")
+        const promises = [FPromise.reject<number>(error1), FPromise.reject<number>(error2)]
+
+        try {
+          await FPromise.any(promises).toPromise()
+          expect.fail("Should have rejected")
+        } catch (error) {
+          expect(error).toBeInstanceOf(AggregateError)
+        }
+      })
+
+      it("should handle empty arrays", async () => {
+        try {
+          await FPromise.any([]).toPromise()
+          expect.fail("Should have rejected")
+        } catch (error) {
+          expect(error).toBeInstanceOf(AggregateError)
+        }
+      })
+    })
+
+    // Tests for retryWithBackoff
+    describe("retryWithBackoff", () => {
+      it("should retry operations until success", async () => {
+        let attempts = 0
+        const operation = () => {
+          attempts++
+          if (attempts < 3) {
+            return FPromise.reject<number>(new Error(`Attempt ${attempts} failed`))
+          }
+          return FPromise.resolve(42)
+        }
+
+        const result = await FPromise.retryWithBackoff(operation, { maxRetries: 3 }).toPromise()
+        expect(result).toBe(42)
+        expect(attempts).toBe(3)
+      })
+
+      it("should respect maxRetries", async () => {
+        let attempts = 0
+        const operation = () => {
+          attempts++
+          return FPromise.reject<number>(new Error(`Attempt ${attempts} failed`))
+        }
+
+        await expect(FPromise.retryWithBackoff(operation, { maxRetries: 3 }).toPromise()).rejects.toThrow(
+          "Attempt 4 failed",
+        )
+        expect(attempts).toBe(4) // Initial + 3 retries
+      })
+
+      it("should use shouldRetry to determine whether to retry", async () => {
+        let attempts = 0
+        const operation = () => {
+          attempts++
+          return FPromise.reject<number>(new Error(`Attempt ${attempts} failed`))
+        }
+
+        await expect(
+          FPromise.retryWithBackoff(operation, {
+            maxRetries: 3,
+            shouldRetry: (error, attempt) => {
+              expect(error).toBeInstanceOf(Error)
+              expect(attempt).toBe(1)
+              return false // Don't retry
+            },
+          }).toPromise(),
+        ).rejects.toThrow("Attempt 1 failed")
+
+        expect(attempts).toBe(1) // Only the initial attempt
       })
     })
   })
@@ -326,6 +722,42 @@ describe("FPromise", () => {
       expect(result).toBe(42)
       expect(mockFn).toHaveBeenCalled()
     })
+
+    // New test for recovery chain
+    it("should support recovery in chains", async () => {
+      const result = await FPromise.reject<number>(new Error("Test error"))
+        .recover(42)
+        .map((x) => x * 2)
+        .toPromise()
+
+      expect(result).toBe(84)
+    })
+
+    // New test for error filtering in chains
+    it("should support error filtering in chains", async () => {
+      const networkError = new Error("Network error")
+      networkError.name = "NetworkError"
+
+      const result = await FPromise.reject<number>(networkError)
+        .filterError(
+          (err) => err instanceof Error && err.name === "NetworkError",
+          () => FPromise.resolve(42),
+        )
+        .map((x) => x * 2)
+        .toPromise()
+
+      expect(result).toBe(84)
+    })
+
+    // New test for Either conversion in chains
+    it("should support Either conversion in chains", async () => {
+      const either = await FPromise.resolve(42)
+        .map((x) => x * 2)
+        .toEither()
+
+      expect(either._tag).toBe("Right")
+      expect(either.value).toBe(84)
+    })
   })
 
   describe("real-world scenarios", () => {
@@ -365,17 +797,78 @@ describe("FPromise", () => {
         return FPromise.resolve(42)
       }
 
-      // Fixed retry implementation
+      const result = await retry(unreliableOperation, 3).toPromise()
+      expect(result).toBe(42)
+      expect(attempts).toBe(3)
+    })
 
-      // Using Promise's catch instead for the test
-      try {
-        const result = await retry(unreliableOperation, 3).toPromise()
-        expect(result).toBe(42)
-        expect(attempts).toBe(3)
-      } catch (error) {
-        // This should not happen if retry works correctly
-        expect.fail("Retry should have succeeded")
+    // New test for retryWithBackoff
+    it("should handle retries with backoff", async () => {
+      let attempts = 0
+
+      const unreliableOperation = () => {
+        attempts++
+        if (attempts < 3) {
+          return FPromise.reject<number>(new Error(`Attempt ${attempts} failed`))
+        }
+        return FPromise.resolve(42)
       }
+
+      const result = await retryWithBackoff(unreliableOperation, 3, 10).toPromise()
+      expect(result).toBe(42)
+      expect(attempts).toBe(3)
+    })
+
+    // New test for retryWithOptions
+    it("should handle retries with custom options", async () => {
+      let attempts = 0
+      const retryLog: Array<{ attempt: number; error: Error }> = []
+
+      const unreliableOperation = () => {
+        attempts++
+        if (attempts < 3) {
+          return FPromise.reject<number>(new Error(`Attempt ${attempts} failed`))
+        }
+        return FPromise.resolve(42)
+      }
+
+      const result = await retryWithOptions(unreliableOperation, {
+        maxRetries: 3,
+        delayFn: (attempt) => attempt * 10,
+        onRetry: (error, attempt) => {
+          retryLog.push({ attempt, error: error as Error })
+        },
+      }).toPromise()
+
+      expect(result).toBe(42)
+      expect(attempts).toBe(3)
+      expect(retryLog.length).toBe(2) // 2 retries logged
+      expect(retryLog[0].attempt).toBe(1)
+      expect(retryLog[1].attempt).toBe(2)
+    })
+
+    // New test for error handling with Either
+    it("should handle errors with Either", async () => {
+      const fetchData = (id: number): FPromise<string, Error> => {
+        if (id > 0) {
+          return FPromise.resolve(`Data for ID: ${id}`)
+        } else {
+          return FPromise.reject(new Error("Invalid ID"))
+        }
+      }
+
+      // Success case
+      const successEither = await fetchData(42).toEither()
+      expect(successEither._tag).toBe("Right")
+      expect(successEither.value).toBe("Data for ID: 42")
+      expect(successEither.isRight()).toBe(true)
+
+      // Error case
+      const errorEither = await fetchData(-1).toEither()
+      expect(errorEither._tag).toBe("Left")
+      expect(errorEither.value).toBeInstanceOf(Error)
+      expect((errorEither.value as Error).message).toBe("Invalid ID")
+      expect(errorEither.isLeft()).toBe(true)
     })
   })
 })
