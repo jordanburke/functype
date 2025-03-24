@@ -57,7 +57,7 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 ### Testing and Documentation
 
 - [ ] Add observable test coverage metrics
-- [ ] Implement property-based testing
+- [x] Implement property-based testing
 - [ ] Expand error handling tests
 - [ ] Add interoperability tests with other libraries
 
