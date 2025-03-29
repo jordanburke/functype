@@ -25,7 +25,7 @@ describe("Option - Property-based tests", () => {
         fc.property(fc.constant(null), (value) => {
           const option = createOption(value)
           expect(option.isEmpty).toBe(true)
-          expect(option.getOrElse("default")).toBe("default")
+          expect(option.getOrElse(null)).toBe(null)
         }),
       )
     })

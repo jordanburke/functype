@@ -26,6 +26,10 @@ describe("Companion", () => {
   it("should maintain proper this context", () => {
     type State = { counter: number }
 
+    // Create state object
+    const state: State = { counter: 0 }
+
+    // Create companions with state as context
     const companions = Companion(
       {
         getCounter: function (this: State) {
@@ -36,7 +40,7 @@ describe("Companion", () => {
           return this.counter
         },
       },
-      { counter: 0 },
+      state,
     )
 
     expect(companions.getCounter()).toBe(0)

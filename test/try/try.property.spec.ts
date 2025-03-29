@@ -25,7 +25,7 @@ describe("Try - Property-based tests", () => {
           expect(tryResult.isFailure()).toBe(true)
           expect(tryResult.isSuccess()).toBe(false)
           expect(() => tryResult.get()).toThrow()
-          expect(tryResult.error.message).toBe(errorMessage)
+          expect(tryResult.error?.message).toBe(errorMessage)
         }),
       )
     })
@@ -38,7 +38,7 @@ describe("Try - Property-based tests", () => {
         fc.property(fc.string(), (value) => {
           const tryResult = Try(() => value)
           const mapped = tryResult.map((x) => x)
-          
+
           expect(mapped.isSuccess()).toEqual(tryResult.isSuccess())
           if (tryResult.isSuccess()) {
             expect(mapped.get()).toEqual(tryResult.get())
@@ -51,17 +51,17 @@ describe("Try - Property-based tests", () => {
     it("should satisfy composition law for Success", () => {
       const f = (s: string) => s.length
       const g = (n: number) => n * 2
-      
+
       fc.assert(
         fc.property(fc.string(), (value) => {
           const tryResult = Try(() => value)
-          
+
           // First approach: map(f).map(g)
           const result1 = tryResult.map(f).map(g)
-          
+
           // Second approach: map(x => g(f(x)))
           const result2 = tryResult.map((x) => g(f(x)))
-          
+
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
             expect(result1.get()).toEqual(result2.get())
@@ -79,13 +79,13 @@ describe("Try - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), (value) => {
           const tryResult = Try(() => value)
-          
+
           // First approach: flatMap(f).flatMap(g)
           const result1 = tryResult.flatMap(f).flatMap(g)
-          
+
           // Second approach: flatMap(x => f(x).flatMap(g))
           const result2 = tryResult.flatMap((x) => f(x).flatMap(g))
-          
+
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
             expect(result1.get()).toEqual(result2.get())
@@ -99,79 +99,67 @@ describe("Try - Property-based tests", () => {
     // getOrElse should return the value for Success and the default for Failure
     it("should properly handle getOrElse", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.string(),
-          (value, defaultValue) => {
-            const success = Try(() => value)
-            expect(success.getOrElse(defaultValue)).toBe(value)
-            
-            const failure = Try<string>(() => {
-              throw new Error("Test error")
-            })
-            expect(failure.getOrElse(defaultValue)).toBe(defaultValue)
-          },
-        ),
+        fc.property(fc.string(), fc.string(), (value, defaultValue) => {
+          const success = Try(() => value)
+          expect(success.getOrElse(defaultValue)).toBe(value)
+
+          const failure = Try<string>(() => {
+            throw new Error("Test error")
+          })
+          expect(failure.getOrElse(defaultValue)).toBe(defaultValue)
+        }),
       )
     })
 
     // Test pattern matching with isSuccess/isFailure
     it("should allow pattern matching on Success/Failure", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.integer(),
-          (errorMsg, value) => {
-            // Test Success case
-            const success = Try(() => value)
-            let successResult = ""
-            if (success.isSuccess()) {
-              successResult = `success: ${success.get()}`
-            } else {
-              successResult = `error: ${success.error?.message || ""}`
-            }
-            expect(successResult).toBe(`success: ${value}`)
-            
-            // Test Failure case with explicit error
-            const failure = Try<number>(() => {
-              throw new Error(errorMsg)
-            })
-            
-            // Verify the error exists and has the expected message
-            expect(failure.error).toBeDefined()
-            expect(failure.error.message).toBe(errorMsg)
-            
-            // Now construct the result string
-            let failureResult = ""
-            if (failure.isSuccess()) {
-              failureResult = `success: ${failure.get()}`
-            } else {
-              failureResult = `error: ${failure.error.message}`
-            }
-            expect(failureResult).toBe(`error: ${errorMsg}`)
-          },
-        ),
+        fc.property(fc.string(), fc.integer(), (errorMsg, value) => {
+          // Test Success case
+          const success = Try(() => value)
+          let successResult = ""
+          if (success.isSuccess()) {
+            successResult = `success: ${success.get()}`
+          } else {
+            successResult = `error: ${success.error?.message || ""}`
+          }
+          expect(successResult).toBe(`success: ${value}`)
+
+          // Test Failure case with explicit error
+          const failure = Try<number>(() => {
+            throw new Error(errorMsg)
+          })
+
+          // Verify the error exists and has the expected message
+          expect(failure.error).toBeDefined()
+          expect(failure.error?.message).toBe(errorMsg)
+
+          // Now construct the result string
+          let failureResult = ""
+          if (failure.isSuccess()) {
+            failureResult = `success: ${failure.get()}`
+          } else {
+            failureResult = `error: ${failure.error?.message}`
+          }
+          expect(failureResult).toBe(`error: ${errorMsg}`)
+        }),
       )
     })
 
     // map should only transform Success values
     it("should only transform Success values with map", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.integer(),
-          (errorMsg, value) => {
-            const transform = (n: number) => n * 2
-            
-            const success = Try(() => value)
-            expect(success.map(transform).get()).toBe(transform(value))
-            
-            const failure = Try<number>(() => {
-              throw new Error(errorMsg)
-            })
-            expect(failure.map(transform).isFailure()).toBe(true)
-          },
-        ),
+        fc.property(fc.string(), fc.integer(), (errorMsg, value) => {
+          const transform = (n: number) => n * 2
+
+          const success = Try(() => value)
+          expect(success.map(transform).get()).toBe(transform(value))
+
+          const failure = Try<number>(() => {
+            throw new Error(errorMsg)
+          })
+          expect(failure.map(transform).isFailure()).toBe(true)
+        }),
       )
     })
   })
@@ -180,63 +168,51 @@ describe("Try - Property-based tests", () => {
     // orElse should return the original Try for Success and the alternative for Failure
     it("should properly handle orElse", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.integer(),
-          (errorMsg, fallbackValue) => {
-            const success = Try(() => 42)
-            const alternative = Try(() => fallbackValue)
-            expect(success.orElse(alternative).get()).toBe(42)
-            
-            const failure = Try<number>(() => {
-              throw new Error(errorMsg)
-            })
-            expect(failure.orElse(alternative).get()).toBe(fallbackValue)
-          },
-        ),
+        fc.property(fc.string(), fc.integer(), (errorMsg, fallbackValue) => {
+          const success = Try(() => 42)
+          const alternative = Try(() => fallbackValue)
+          expect(success.orElse(alternative).get()).toBe(42)
+
+          const failure = Try<number>(() => {
+            throw new Error(errorMsg)
+          })
+          expect(failure.orElse(alternative).get()).toBe(fallbackValue)
+        }),
       )
     })
 
     // orThrow should return the value for Success and throw the provided error for Failure
     it("should properly handle orThrow", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.integer(),
-          (errorMsg, value) => {
-            const success = Try(() => value)
-            expect(success.orThrow(new Error("Custom error"))).toBe(value)
-            
-            const failure = Try<number>(() => {
-              throw new Error(errorMsg)
-            })
-            const customError = new Error("Custom error")
-            expect(() => failure.orThrow(customError)).toThrow(customError)
-          },
-        ),
+        fc.property(fc.string(), fc.integer(), (errorMsg, value) => {
+          const success = Try(() => value)
+          expect(success.orThrow(new Error("Custom error"))).toBe(value)
+
+          const failure = Try<number>(() => {
+            throw new Error(errorMsg)
+          })
+          const customError = new Error("Custom error")
+          expect(() => failure.orThrow(customError)).toThrow(customError)
+        }),
       )
     })
 
     // toEither should convert Success to Right and Failure to Left
     it("should properly convert to Either", () => {
       fc.assert(
-        fc.property(
-          fc.string(),
-          fc.integer(),
-          (errorMsg, value) => {
-            const success = Try(() => value)
-            const successEither = success.toEither()
-            expect(successEither.isRight()).toBe(true)
-            expect(successEither.getOrElse(0)).toBe(value)
-            
-            const failure = Try<number>(() => {
-              throw new Error(errorMsg)
-            })
-            const failureEither = failure.toEither()
-            expect(failureEither.isLeft()).toBe(true)
-            expect(failureEither.getOrElse(0)).toBe(0)
-          },
-        ),
+        fc.property(fc.string(), fc.integer(), (errorMsg, value) => {
+          const success = Try(() => value)
+          const successEither = success.toEither()
+          expect(successEither.isRight()).toBe(true)
+          expect(successEither.getOrElse(0)).toBe(value)
+
+          const failure = Try<number>(() => {
+            throw new Error(errorMsg)
+          })
+          const failureEither = failure.toEither()
+          expect(failureEither.isLeft()).toBe(true)
+          expect(failureEither.getOrElse(0)).toBe(0)
+        }),
       )
     })
   })

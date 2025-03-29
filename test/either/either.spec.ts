@@ -194,15 +194,19 @@ describe("Either", () => {
   it("should lazyMap a Right value", () => {
     const right = Right<string, number>(5)
     const lazyMapped = [...right.lazyMap((x) => x * 2)]
-    expect(lazyMapped[0].isRight()).toBe(true)
-    expect(lazyMapped[0].value).toBe(10)
+    expect(lazyMapped.length).toBeGreaterThan(0)
+    const firstEither = lazyMapped[0]
+    expect(firstEither?.isRight()).toBe(true)
+    expect(firstEither?.value).toBe(10)
   })
 
   it("should not lazyMap a Left value", () => {
     const left = Left<string, number>("error")
     const lazyMapped = [...left.lazyMap((x) => x * 2)]
-    expect(lazyMapped[0].isLeft()).toBe(true)
-    expect(lazyMapped[0].value).toBe("error")
+    expect(lazyMapped.length).toBeGreaterThan(0)
+    const firstEither = lazyMapped[0]
+    expect(firstEither?.isLeft()).toBe(true)
+    expect(firstEither?.value).toBe("error")
   })
 
   // Tests for Either.sequence

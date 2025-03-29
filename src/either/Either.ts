@@ -140,7 +140,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   ): PromiseLike<TResult1 | TResult2> => {
     return Promise.reject(value).then(null, onrejected)
   },
-  toValue: () => ({ _tag: "Right", value }),
+  toValue: () => ({ _tag: "Left", value }),
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)

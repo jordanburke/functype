@@ -37,16 +37,20 @@ export type List<A> = {
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
+  toValue: () => { _tag: "List"; value: A[] }
+  drop: (n: number) => List<A>
+  dropRight: (n: number) => List<A>
+  dropWhile: (p: (a: A) => boolean) => List<A>
+  flatten: <B>() => List<B>
 } & IterableType<A> &
   AsyncFunctor<A> &
-  Typeable<"List"> &
-  Valuable<"List", A[]>
+  Typeable<"List">
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
 
   const list: List<A> = {
-    _tag: "List",
+    _tag: "List" as const,
 
     [Symbol.iterator]: () => array[Symbol.iterator](),
 

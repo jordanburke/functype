@@ -3,26 +3,40 @@
  * This utility allows creating TypeScript function objects with attached methods,
  * mimicking Scala's class + companion object pattern without using classes.
  *
- * @param mainFn The main function that will be invoked when the object is called
- * @param methods Additional static methods to attach to the function
- * @returns A function with the attached methods
+ * @param methods Methods to include in the companion object
+ * @param context Optional context/this value to bind to methods
+ * @returns An object with the provided methods
  *
  * @example
- * const greet = (name: string) => `Hello, ${name}!`;
- * const methods = {
+ * const Greeter = Companion({
  *   formal: (name: string) => `Good day, ${name}.`,
  *   casual: (name: string) => `Hey ${name}!`
- * };
- * const Greeter = createCompanionObject(greet, methods);
+ * });
  *
  * // Usage:
- * Greeter("World"); // Hello, World!
  * Greeter.formal("Sir"); // Good day, Sir.
  * Greeter.casual("Friend"); // Hey Friend!
  */
-export function Companion<TMainFn extends object, TMethods extends object>(
-  mainFn: TMainFn,
+export function Companion<TMethods extends object, TContext extends object = Record<string, unknown>>(
   methods: TMethods,
-): TMainFn & TMethods {
-  return Object.assign(mainFn, methods)
+  context?: TContext,
+): TMethods & TContext {
+  if (context) {
+    // Create a merged object that combines context and methods
+    const result = { ...context } as any
+
+    // Add all methods to the result object
+    for (const [key, value] of Object.entries(methods)) {
+      if (typeof value === "function") {
+        result[key] = function (this: any, ...args: any[]) {
+          return (value as Function).apply(this, args)
+        }.bind(result)
+      } else {
+        result[key] = value
+      }
+    }
+
+    return result as TMethods & TContext
+  }
+  return { ...methods } as TMethods & TContext
 }
