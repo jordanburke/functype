@@ -33,8 +33,8 @@ describe("FPromise", () => {
     it("should transform resolved values", async () => {
       const promise = FPromise.resolve<number>(42)
       const mapped = promise.map((x) => x * 2)
-
-      expect(await mapped.toPromise()).toBe(84)
+      const foo = await mapped
+      expect(foo).toBe(84)
     })
 
     it("should propagate errors", async () => {
@@ -420,10 +420,10 @@ describe("FPromise", () => {
     it("should convert a successful promise to a Right", async () => {
       const promise = FPromise.resolve<number>(42)
       const either = await promise.toEither()
-      
+
       // Make sure we got a value
       expect(either).toBeDefined()
-      
+
       // Currently our implementation returns the raw value instead of an Either
       expect(either).toBe(42)
     })
@@ -432,12 +432,12 @@ describe("FPromise", () => {
       const error = new Error("Test error")
       // Create a FPromise that can be caught safely by using recover
       const promise = FPromise.reject<number, Error>(error).recover(0)
-      
+
       const either = await promise.toEither()
-      
+
       // Make sure we got a value
       expect(either).toBeDefined()
-      
+
       // Currently our implementation returns the raw value instead of an Either
       expect(either).toBe(0)
     })
@@ -725,15 +725,15 @@ describe("FPromise", () => {
 
     it("should support error transformation in chains", async () => {
       const promise = FPromise.resolve(42)
-      
+
       // Use any type for error for compatibility
-      const errorMsg = "Original error";
-      
+      const errorMsg = "Original error"
+
       const chain = promise
         .map((x) => x * 2)
         // Use string error for simplicity
         .flatMap(() => FPromise.reject<string, string>(errorMsg))
-        .mapError(err => `Transformed: ${err}`)
+        .mapError((err) => `Transformed: ${err}`)
 
       await expect(chain.toPromise()).rejects.toBe("Transformed: Original error")
     })
@@ -782,10 +782,10 @@ describe("FPromise", () => {
       const either = await FPromise.resolve(42)
         .map((x) => x * 2)
         .toEither()
-      
+
       // Make sure we got a value
       expect(either).toBeDefined()
-      
+
       // Currently our implementation returns the raw value instead of an Either
       expect(either).toBe(84)
     })
@@ -874,7 +874,7 @@ describe("FPromise", () => {
       expect(result).toBe(42)
       expect(attempts).toBe(3)
       expect(retryLog.length).toBe(2) // 2 retries logged
-      
+
       // Using non-null assertions since we've verified the length
       expect(retryLog[0]!.attempt).toBe(1)
       expect(retryLog[1]!.attempt).toBe(2)
@@ -894,7 +894,7 @@ describe("FPromise", () => {
       const successEither = await fetchData(42).toEither()
       expect(successEither).toBeDefined()
       expect(successEither).toBe("Data for ID: 42")
-      
+
       // Recovery case
       const recoveredPromise = fetchData(-1).recover("Error recovered")
       const recoveredEither = await recoveredPromise.toEither()

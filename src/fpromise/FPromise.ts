@@ -1,4 +1,4 @@
-import { Companion } from "@/core/companion/Companion"
+import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either/Either"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
@@ -459,7 +459,7 @@ const FPromiseImpl = <T extends Type, E = unknown>(
     // Implementation note: This currently returns the raw value, not an Either
     // This is not the ideal implementation but matches what the tests expect
     toEither: (): Promise<T> => {
-      return promise;
+      return promise
     },
   }
 }
@@ -744,4 +744,4 @@ export const FPromiseCompanion = {
  * @param executor - A function that receives resolve and reject functions
  * @returns An FPromise instance
  */
-export const FPromise = Object.assign(FPromiseImpl, FPromiseCompanion) as typeof FPromiseImpl & typeof FPromiseCompanion
+export const FPromise = Companion(FPromiseImpl, FPromiseCompanion)

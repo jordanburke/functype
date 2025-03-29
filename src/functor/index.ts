@@ -2,7 +2,7 @@ export type SingleType = unknown
 
 export type ArrayType = SingleType[]
 
-export type Type = SingleType | ArrayType | never
+export type Type = SingleType | ArrayType
 
 export type AbstractFunctor<A extends Type> = {
   map(f: (value: A) => Type): AbstractFunctor<Type>
