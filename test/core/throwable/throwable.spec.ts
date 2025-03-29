@@ -94,11 +94,13 @@ describe("Throwable", () => {
     const error = Throwable.apply("Test error")
 
     expect(() => {
-      error._tag = "NewTag"
+      // @ts-expect-error - Testing that assignment to read-only property throws at runtime
+      ;(error as never)._tag = "NewTag"
     }).toThrow()
 
     expect(() => {
-      error.data = { new: "data" }
+      // @ts-expect-error - Testing that assignment to read-only property throws at runtime
+      ;(error as never).data = { new: "data" }
     }).toThrow()
   })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { FPromise, Left, Right } from "../../src"
+import { type Either, FPromise, Left, Right } from "../../src"
 import { retry, retryWithBackoff, retryWithOptions } from "../../src/fpromise/retry"
 
 describe("FPromise", () => {
@@ -421,7 +421,7 @@ describe("FPromise", () => {
   describe("toEither", () => {
     it("should convert a successful promise to a Right", async () => {
       const promise = FPromise.resolve<number>(42)
-      const either = await promise.toEither()
+      const either: Either<never, number> = await promise.toEither()
 
       expect(either._tag).toBe("Right")
       expect(either.value).toBe(42)

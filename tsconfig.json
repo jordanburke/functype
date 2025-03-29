@@ -15,13 +15,12 @@
     "outDir": "lib",
     "module": "ESNext",
     "skipLibCheck": true,
-    "rootDir": "src",
     "emitDeclarationOnly": true,
     "strictPropertyInitialization": true,
     "moduleDetection": "force",
     "verbatimModuleSyntax": true,
     "noErrorTruncation": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "lib"]
 }

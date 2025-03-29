@@ -74,9 +74,11 @@ describe("Serializable", () => {
             const result: Record<string, string> = {}
             yaml.split("\n").forEach((line) => {
               const [key, value] = line.split(": ")
-              result[key] = value
+              if (key !== undefined && key !== null && value !== undefined) {
+                result[key] = value
+              }
             })
-            return result as any
+            return result as never
           },
         },
       })

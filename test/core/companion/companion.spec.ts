@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { Companion } from "../../../src/core/companion/Companion"
+import { Companion } from "@/core/companion/Companion"
 
 describe("Companion", () => {
   it("should create a companion object with methods", () => {

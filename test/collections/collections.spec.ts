@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest"
 
-import { Collection } from "../../src/collections"
-import { List } from "../../src/list/List"
-import { Set } from "../../src/set/Set"
+import type { Collection } from "@/collections"
+import { List } from "@/list/List"
+import { Set } from "@/set/Set"
 
 describe("Collection Type", () => {
   it("should define required converter methods", () => {
