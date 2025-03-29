@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { type Either, FPromise, Left, Right } from "../../src"
-import { retry, retryWithBackoff, retryWithOptions } from "../../src/fpromise/retry"
+import { retry, retryWithBackoff, retryWithOptions } from "@/fpromise/retry"
 
 describe("FPromise", () => {
   describe("basic functionality", () => {
