@@ -34,7 +34,13 @@ export type ErrorContext = {
  * @template T - The type of the value that the FPromise resolves to
  * @template E - The type of the error that the FPromise may reject with (defaults to unknown)
  */
-export type FPromise<T extends Type, E = unknown> = PromiseLike<T> & {
+/**
+ * FPromise type that defines the function signature and methods
+ */
+export interface FPromise<T extends Type, E = unknown> extends PromiseLike<T> {
+  readonly _tag: "FPromise"
+
+  // FPromise methods
   tap: (f: (value: T) => void) => FPromise<T, E>
   mapError: <E2>(f: (error: E, context: ErrorContext) => E2) => FPromise<T, E2>
   tapError: (f: (error: E) => void) => FPromise<T, E>
@@ -48,9 +54,14 @@ export type FPromise<T extends Type, E = unknown> = PromiseLike<T> & {
   logError: (logger: (error: E, context: ErrorContext) => void) => FPromise<T, E>
   toPromise: () => Promise<T>
   toEither: () => Promise<Either<E, T>>
-} & Typeable<"FPromise"> &
-  Functor<T> &
-  AsyncFunctor<T>
+
+  // Functor implementation
+  map: <U extends Type>(f: (value: T) => U) => FPromise<U, E>
+
+  // AsyncFunctor implementation
+  flatMap: <U extends Type>(f: (value: T) => FPromise<U, E> | PromiseLike<U>) => FPromise<U, E>
+  flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>) => Promise<U>
+}
 
 /**
  * Creates an FPromise from an executor function.
@@ -115,7 +126,7 @@ const FPromiseImpl = <T extends Type, E = unknown>(
      * This is equivalent to Promise's then method when the callback returns a Promise.
      *
      * @template U - The type of the value that the new FPromise resolves to
-     * @param f - A function that takes the resolved value and returns a new FPromise
+     * @param f - A function that takes the resolved value and returns a new FPromise or PromiseLike
      * @returns A new FPromise that resolves to the result of the function
      *
      * @example
@@ -123,13 +134,19 @@ const FPromiseImpl = <T extends Type, E = unknown>(
      *   .flatMap(x => FPromise.resolve(x.toString()))
      *   .toPromise() // Resolves to "42"
      */
-    flatMap: <U extends Type>(f: (value: T) => FPromise<U, E>): FPromise<U, E> => {
+    flatMap: <U extends Type>(f: (value: T) => FPromise<U, E> | PromiseLike<U>): FPromise<U, E> => {
       return FPromiseImpl<U, E>((resolve, reject) => {
         promise
           .then((value) => {
             try {
               const result = f(value)
-              result.then(resolve, reject)
+              if ("_tag" in result && result._tag === "FPromise") {
+                // It's an FPromise
+                ;(result as FPromise<U, E>).then(resolve, reject)
+              } else {
+                // It's a PromiseLike
+                Promise.resolve(result).then(resolve, reject)
+              }
             } catch (error) {
               reject(error as E)
             }
@@ -428,9 +445,9 @@ const FPromiseImpl = <T extends Type, E = unknown>(
     },
 
     /**
-     * Converts this FPromise to a Promise that resolves to an Either.
-     * This transforms both success and failure into a resolved Promise with an Either value.
-     * This is useful for handling errors in a more functional way.
+     * Creates a Promise that resolves to an Either regardless of whether this FPromise resolves or rejects.
+     * If this FPromise resolves with a value, the returned Promise resolves with a Right containing that value.
+     * If this FPromise rejects with an error, the returned Promise resolves with a Left containing that error.
      *
      * @returns A Promise that resolves to an Either
      *
@@ -440,30 +457,22 @@ const FPromiseImpl = <T extends Type, E = unknown>(
      * // either is Left(Error("Something went wrong"))
      */
     toEither: (): Promise<Either<E, T>> => {
-      // We need to wrap the Either in a non-PromiseLike object to prevent automatic unwrapping
-      return new Promise<Either<E, T>>((resolve) => {
-        promise
-          .then((value) => {
-            // Create a Right Either with the value
-            const rightEither = Right<E, T>(value)
-            // Wrap in a non-PromiseLike object to prevent unwrapping
-            resolve({
-              ...rightEither,
-              // Override the then method to prevent unwrapping
-              then: undefined,
-            } as Either<E, T>)
-          })
-          .catch((error: E) => {
-            // Create a Left Either with the error
-            const leftEither = Left<E, T>(error)
-            // Wrap in a non-PromiseLike object to prevent unwrapping
-            resolve({
-              ...leftEither,
-              // Override the then method to prevent unwrapping
-              then: undefined,
-            } as Either<E, T>)
-          })
-      })
+      return FPromiseImpl<Either<E, T>, never>((resolve) => {
+        // Use an IIFE to handle the promise
+        ;(async () => {
+          try {
+            // Try to get the value from the promise
+            const value = await promise
+            // If successful, create a Right Either
+            const result = Right<E, T>(value)
+            resolve(result)
+          } catch (error) {
+            // If fails, create a Left Either
+            const result = Left<E, T>(error as E)
+            resolve(result)
+          }
+        })()
+      }).toPromise()
     },
   }
 }
@@ -740,4 +749,12 @@ export const FPromiseCompanion = {
   },
 }
 
-export const FPromise = Companion(FPromiseImpl, FPromiseCompanion)
+/**
+ * Creates an FPromise from an executor function.
+ *
+ * @template T - The type of the value that the FPromise resolves to
+ * @template E - The type of the error that the FPromise may reject with
+ * @param executor - A function that receives resolve and reject functions
+ * @returns An FPromise instance
+ */
+export const FPromise = Object.assign(FPromiseImpl, FPromiseCompanion) as typeof FPromiseImpl & typeof FPromiseCompanion
