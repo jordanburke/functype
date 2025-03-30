@@ -48,6 +48,7 @@ This roadmap outlines the planned development path for the Functype library, foc
 ### TypeScript Integration
 
 - [x] Add support for higher-kinded types
+- [ ] Remove `any` from HKT
 - [x] Implement branded/nominal types for stronger type safety
 - [ ] Add type-level utilities using newer TypeScript features
 - [ ] Leverage const type parameters and tuple manipulation
