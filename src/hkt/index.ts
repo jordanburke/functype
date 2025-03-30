@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import { Base } from "@/core/base/Base"
 import { Either } from "@/either/Either"
 import type { Type } from "@/functor"
@@ -74,7 +73,6 @@ export const HKT = () => {
   /**
    * Maps over a value inside a container, using the container's own map function
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const map = <F, A, B>(fa: unknown, f: (a: A) => B): unknown => {
     if (isOption<A & Type>(fa)) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,10 +97,8 @@ export const HKT = () => {
    * Flattens a nested container (container of container) into a single container
    */
   const flatten = <F, A>(ffa: unknown): unknown => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (isOption<any>(ffa)) {
-      const inner = ffa.get()
-      return inner
+    if (isOption<never>(ffa)) {
+      return ffa.get()
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (isList<any>(ffa)) {
@@ -119,15 +115,12 @@ export const HKT = () => {
       }
       return ffa.flatten()
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (isEither<any, any>(ffa)) {
+    if (isEither<never, never>(ffa)) {
       if (ffa.isRight()) {
-        const inner = ffa.fold(
+        return ffa.fold(
           () => null,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           (x) => x,
         )
-        return inner
       }
       return ffa
     }
@@ -205,8 +198,7 @@ export const HKT = () => {
       // Option is Some
       const inner = optionValue.get()
       if (isList<unknown>(inner)) {
-        const result = inner.map((a) => Option(a))
-        return result
+        return inner.map((a) => Option(a))
       }
 
       throw new Error(`Unsupported inner container type for sequence`)

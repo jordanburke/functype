@@ -1,7 +1,6 @@
 import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
-import type { Type } from "@/functor"
 
 import { Base } from "../base/Base"
 

@@ -1,4 +1,4 @@
-import { Typeable, type TypeableParams } from "@/typeable/Typeable"
+import { Typeable } from "@/typeable/Typeable"
 
 export type ValuableParams<Tag extends string, T, V> = { _tag: Tag; impl: T; value: V }
 

@@ -89,8 +89,6 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   const toString = (): string => `Map(${getEntries().toString()})`
 
-  const toValue = () => ({ _tag: "Map", value: state.values })
-
   return {
     _tag,
     add,

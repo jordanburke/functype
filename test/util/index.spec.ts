@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { parseNumber } from "../../src/util"
-import { Left, Right } from "../../src/either/Either"
+import { parseNumber } from "@/util"
 
 describe("Utility Functions", () => {
   describe("parseNumber", () => {

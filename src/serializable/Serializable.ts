@@ -1,5 +1,3 @@
-import stringify from "safe-stable-stringify"
-
 export type SerializableTypes = "json" | "yaml"
 
 type SerializationMethods<T> = {

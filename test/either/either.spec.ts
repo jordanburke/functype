@@ -1,4 +1,4 @@
-import { describe, expect, beforeEach, it } from "vitest"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { Either, Left, List, Right } from "../../src"
 import { ParseError } from "../../src/error/ParseError"
@@ -31,7 +31,6 @@ describe("Either", () => {
   it("should contain all items in list on Right", () => {
     const list = List([1, 2, 3, 4])
     const result = Right(list)
-    const foo = list.toArray()
     expect(result.getOrElse(List()).toArray()).toEqual([1, 2, 3, 4])
   })
 

@@ -1,7 +1,6 @@
 import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either/Either"
-import type { AsyncFunctor, Functor, Type } from "@/functor"
-import { Typeable } from "@/typeable/Typeable"
+import type { Type } from "@/functor"
 
 /**
  * Error context information that provides additional metadata about errors.

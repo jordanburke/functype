@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { type Either, FPromise, Left, Right } from "../../src"
+import { Left, Right } from "@/either/Either"
+import { FPromise } from "@/fpromise/FPromise"
 import { retry, retryWithBackoff, retryWithOptions } from "@/fpromise/retry"
 
 describe("FPromise", () => {

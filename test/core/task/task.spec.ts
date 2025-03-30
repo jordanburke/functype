@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { isLeft, isRight, Task, TaskException, TaskResult, Throwable, FPromise } from "../../../src"
+import { isLeft, isRight, Task, TaskException, TaskResult, Throwable } from "../../../src"
 
 describe("AppException", () => {
   test("should create an AppException with error", () => {

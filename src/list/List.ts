@@ -5,7 +5,6 @@ import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
-import { Valuable } from "@/valuable/Valuable"
 
 export type List<A> = {
   readonly length: number
