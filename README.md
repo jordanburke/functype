@@ -50,9 +50,9 @@ Functype is a lightweight functional programming library for TypeScript, drawing
   - Constructor functions that return objects with methods
   - Object methods for common operations
   - Companion functions for additional utilities
-- [ ] Align Task API with other monadic structures
+- [x] Align Task API with other monadic structures
 - [ ] Standardize import patterns (@ imports vs relative paths)
-- [ ] Implement consistent error handling strategy for async operations
+- [x] Implement consistent error handling strategy for async operations
 
 ### Testing and Documentation
 
@@ -189,7 +189,7 @@ const either = result.toEither()
 import { Task } from "functype"
 
 // Synchronous operations with error handling
-const syncResult = Task().Task(
+const syncResult = Task().Sync(
   () => "success",
   (error) => new Error(`Failed: ${error}`),
 )
@@ -202,6 +202,21 @@ const asyncTask = async () => {
   )
   return result
 }
+
+// Converting promise-based functions to Task
+const fetchUserAPI = (userId: string): Promise<User> => fetch(`/api/users/${userId}`).then((r) => r.json())
+
+// Use the adapter pattern for seamless integration
+const fetchUser = Task({ name: "UserFetch" }).fromPromise(fetchUserAPI)
+
+// Later use it with standard promise patterns
+fetchUser("user123")
+  .then((user) => console.log(user))
+  .catch((error) => console.error(error))
+
+// Or convert Task results back to promises
+const taskResult = Task().Sync(() => "hello world")
+const promise = Task().toPromise(taskResult) // Promise<string>
 ```
 
 ## Type Safety

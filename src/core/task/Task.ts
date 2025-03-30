@@ -1,6 +1,7 @@
 import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
+import type { Type } from "@/functor"
 
 import { Base } from "../base/Base"
 
@@ -16,7 +17,7 @@ export type TaskInfo = {
 export type TaskException<T> = Either<Throwable, T> & TaskInfo
 
 /**
- * AppException factory function
+ * TaskException factory function
  * @param error
  * @param _task
  * @param data
@@ -46,10 +47,17 @@ export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
 export type Sync<T> = Either<Throwable, T>
 export type Async<T> = FPromise<Sync<T>>
 
+/**
+ * Task adapter for bridging promise-based code with functional error handling patterns
+ */
 export const Task = <T = unknown>(params?: TaskParams) => {
   const name = params?.name || "Task"
   const description = params?.description || ""
   const body = {
+    /**
+     * Run an async operation with explicit try/catch/finally semantics
+     * Returns a raw Promise that can interact with traditional Promise-based code
+     */
     Async: <U = T>(
       t: () => U | Promise<U>,
       e: (error: unknown) => unknown = (error: unknown) => error,
@@ -90,6 +98,11 @@ export const Task = <T = unknown>(params?: TaskParams) => {
         }
       })
     },
+
+    /**
+     * Run a synchronous operation with explicit try/catch/finally semantics
+     * Returns an Either for functional error handling
+     */
     Sync: <U = T>(
       t: () => U,
       e: (error: unknown) => unknown = (error: unknown) => error,
@@ -103,8 +116,45 @@ export const Task = <T = unknown>(params?: TaskParams) => {
         f()
       }
     },
-    success: (data: T) => TaskResult<T>(data, { name, description }),
-    fail: (error: unknown) => TaskException<T>(error, { name, description }),
+
+    /**
+     * Create a successful Task result
+     */
+    success: (data: T): TaskResult<T> => TaskResult<T>(data, { name, description }),
+
+    /**
+     * Create a failed Task result
+     */
+    fail: (error: unknown): TaskException<T> => TaskException<T>(error, { name, description }),
+
+    /**
+     * Convert a Promise-returning function to a Task-compatible function
+     */
+    fromPromise: <U>(promiseFn: (...args: unknown[]) => Promise<U>): ((...args: unknown[]) => FPromise<U>) => {
+      return (...args: unknown[]) => {
+        return body.Async<U>(
+          () => promiseFn(...args),
+          (error) => error,
+        )
+      }
+    },
+
+    /**
+     * Convert a Task result to a Promise
+     */
+    toPromise: <U>(taskResult: TaskResult<U> | TaskException<U>): Promise<U> => {
+      return new Promise((resolve, reject) => {
+        if (taskResult.isRight()) {
+          resolve(taskResult.value as U)
+        } else {
+          reject(taskResult.value)
+        }
+      })
+    },
   }
-  return Base("Task", body)
+
+  return {
+    ...Base("Task", body),
+    _type: "Task",
+  }
 }
