@@ -130,7 +130,9 @@ export const Task = <T = unknown>(params?: TaskParams) => {
     /**
      * Convert a Promise-returning function to a Task-compatible function
      */
-    fromPromise: <U, Args extends unknown[]>(promiseFn: (...args: Args) => Promise<U>): ((...args: Args) => FPromise<U>) => {
+    fromPromise: <U, Args extends unknown[]>(
+      promiseFn: (...args: Args) => Promise<U>,
+    ): ((...args: Args) => FPromise<U>) => {
       return (...args: Args) => {
         return body.Async<U>(
           () => promiseFn(...args),
