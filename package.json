@@ -13,8 +13,9 @@
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "compile": "tsc --noEmit",
+    "build": "pnpm compile && pnpm test",
     "build:dev": "tsup --watch",
-    "build:prod": "cross-env NODE_ENV=production tsup",
+    "build:prod": "pnpm compile && pnpm test && cross-env NODE_ENV=production tsup",
     "build:watch": "tsup --watch",
     "build:publish": "pnpm build:prod && pnpm publish --access public",
     "lint:fix": "eslint ./src --quiet --fix",
