@@ -3,8 +3,8 @@
  * This utility allows creating TypeScript function objects with attached methods,
  * mimicking Scala's class + companion object pattern without using classes.
  *
- * @param obj The main function that will be invoked when the object is called
- * @param functions Additional static methods to attach to the function
+ * @param object The main function that will be invoked when the object is called
+ * @param companion Additional static methods to attach to the function
  * @returns A function with the attached methods
  *
  * @example
@@ -20,9 +20,9 @@
  * Greeter.formal("Sir"); // Good day, Sir.
  * Greeter.casual("Friend"); // Hey Friend!
  */
-export function Companion<ObjFn extends object, StaticFn extends object>(
-  obj: ObjFn,
-  functions: StaticFn,
-): ObjFn & StaticFn {
-  return Object.assign(obj, functions)
+export function Companion<ObjectF extends object, CompanionF extends object>(
+  object: ObjectF,
+  companion: CompanionF,
+): ObjectF & CompanionF {
+  return Object.assign(object, companion)
 }
