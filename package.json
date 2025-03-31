@@ -27,7 +27,8 @@
     "test:ui": "vitest --ui",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "postdocs": "node -e \"console.log('Documentation generated in ./docs')\""
+    "postdocs": "node -e \"console.log('Documentation generated in ./docs')\"",
+    "analyze:size": "pnpm build:prod && node ./scripts/analyze-bundle-size.js"
   },
   "devDependencies": {
     "@eslint/compat": "^1.2.7",
@@ -61,6 +62,66 @@
       "import": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.mjs"
+      }
+    },
+    "./option": {
+      "import": {
+        "types": "./dist/option/index.d.ts",
+        "default": "./dist/option/index.mjs"
+      }
+    },
+    "./either": {
+      "import": {
+        "types": "./dist/either/index.d.ts",
+        "default": "./dist/either/index.mjs"
+      }
+    },
+    "./try": {
+      "import": {
+        "types": "./dist/try/index.d.ts",
+        "default": "./dist/try/index.mjs"
+      }
+    },
+    "./list": {
+      "import": {
+        "types": "./dist/list/index.d.ts",
+        "default": "./dist/list/index.mjs"
+      }
+    },
+    "./task": {
+      "import": {
+        "types": "./dist/core/task/index.d.ts",
+        "default": "./dist/core/task/index.mjs"
+      }
+    },
+    "./fpromise": {
+      "import": {
+        "types": "./dist/fpromise/index.d.ts",
+        "default": "./dist/fpromise/index.mjs"
+      }
+    },
+    "./map": {
+      "import": {
+        "types": "./dist/map/index.d.ts",
+        "default": "./dist/map/index.mjs"
+      }
+    },
+    "./set": {
+      "import": {
+        "types": "./dist/set/index.d.ts",
+        "default": "./dist/set/index.mjs"
+      }
+    },
+    "./tuple": {
+      "import": {
+        "types": "./dist/tuple/index.d.ts",
+        "default": "./dist/tuple/index.mjs"
+      }
+    },
+    "./branded": {
+      "import": {
+        "types": "./dist/branded/index.d.ts",
+        "default": "./dist/branded/index.mjs"
       }
     }
   },

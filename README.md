@@ -43,6 +43,8 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - [ ] Implement immutable data structures with structural sharing
 - [ ] Add performance benchmarks
 - [x] Optimize TreeShaking with sideEffects flag in package.json
+- [x] Support selective module imports for smaller bundles
+- [x] Add bundle size monitoring to CI/CD
 
 ### API Consistency
 
@@ -87,6 +89,21 @@ pnpm add functype
 # Bun
 bun add functype
 ```
+
+### Bundle Size Optimization
+
+Functype is optimized for tree-shaking and offers multiple import strategies to minimize bundle size:
+
+```typescript
+// Selective module imports (recommended for production)
+import { Option } from "functype/option"
+import { Either } from "functype/either"
+
+// Direct constructor imports (smallest bundle)
+import { some, none } from "functype/option"
+```
+
+For detailed optimization strategies, see the [Bundle Optimization Guide](docs/BUNDLE_OPTIMIZATION.md).
 
 ## Usage Examples
 

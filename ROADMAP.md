@@ -94,9 +94,9 @@ This roadmap outlines the planned development path for the Functype library, foc
 
 ### Bundle Size
 
-- [ ] Optimize tree-shaking
-- [ ] Provide guidance on importing only needed modules
-- [ ] Add bundle size monitoring to CI/CD
+- [x] Optimize tree-shaking
+- [x] Provide guidance on importing only needed modules
+- [x] Add bundle size monitoring to CI/CD
 
 ### Community Feedback
 
