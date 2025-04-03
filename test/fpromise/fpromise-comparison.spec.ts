@@ -234,7 +234,7 @@ describe("Promise vs FPromise Comparison", () => {
         NetworkError | ValidationError
       >
 
-      const mappedErrorPromise = promise.mapError((error, context) => {
+      const mappedErrorPromise = promise.mapError((error, _context) => {
         // `error` is NetworkError | ValidationError here
         console.log(`Handling error: ${error.name}`)
         if (error instanceof ValidationError) {
