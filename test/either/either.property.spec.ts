@@ -1,7 +1,7 @@
 import * as fc from "fast-check"
 import { describe, expect, it } from "vitest"
 
-import { Either, Left, Right } from "../../src"
+import { Either, Left, Right } from "@/either"
 
 describe("Either - Property-based tests", () => {
   // Helper functions to create Either instances

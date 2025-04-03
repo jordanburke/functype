@@ -32,7 +32,7 @@ describe("Collection Type", () => {
   it("should work with different collection types", () => {
     // Example custom collection that implements Collection interface
     class CustomCollection<T> implements Collection<T> {
-      private items: T[]
+      private readonly items: T[]
 
       constructor(items: T[]) {
         this.items = [...items]

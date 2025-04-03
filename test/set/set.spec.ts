@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 
-import { Set } from "../../src"
-import { List } from "../../src"
+import { List } from "@/list"
+import { Set } from "@/set"
 
 describe("Set", () => {
   test("add should add a new value", () => {

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { None, Option } from "../../src"
+import { None, Option } from "@/option"
 
 describe("Option", () => {
   beforeEach(async () => {

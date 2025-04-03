@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { Tuple } from "../../src"
+import { Tuple } from "@/tuple"
 
 describe("Tuple", () => {
   test("map should apply function to the tuple and return new Tuple", () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { Throwable } from "../../../src"
+import { Throwable } from "@/core"
 
 describe("Throwable", () => {
   it("should create a Throwable from a string message", () => {

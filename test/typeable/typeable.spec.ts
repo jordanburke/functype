@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { isTypeable, Typeable } from "../../src/typeable/Typeable"
+import { isTypeable, Typeable } from "@/typeable"
 
 describe("Typeable", () => {
   it("should create a Typeable with a tag", () => {

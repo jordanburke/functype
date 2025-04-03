@@ -1,7 +1,7 @@
 import * as fc from "fast-check"
 import { describe, expect, it } from "vitest"
 
-import { Try } from "../../src"
+import { Try } from "@/try"
 
 describe("Try - Property-based tests", () => {
   describe("Try construction properties", () => {

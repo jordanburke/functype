@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
-import { Typeable } from "../../src/typeable/Typeable"
-import { Valuable } from "../../src/valuable/Valuable"
+import { Typeable } from "@/typeable"
+import { Valuable } from "@/valuable"
 
 describe("Valuable", () => {
   it("should create a Valuable with a value", () => {

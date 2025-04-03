@@ -1,7 +1,7 @@
 import * as fc from "fast-check"
 import { describe, expect, it } from "vitest"
 
-import { Option } from "../../src"
+import { Option } from "@/option"
 
 describe("Option - Property-based tests", () => {
   // Helper function to create an Option from a possibly null/undefined value

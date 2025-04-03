@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { createSerializable } from "../../src/serializable/Serializable"
+import { createSerializable } from "@/serializable"
 
 describe("Serializable", () => {
   // Skip these tests for now as they require implementation fixes
