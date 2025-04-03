@@ -42,13 +42,9 @@ const measureTime = async (label: string, iterations: number, fn: () => Promise<
   for (let r = 0; r < runs; r++) {
     const start = performance.now()
     for (let i = 0; i < iterations; i++) {
-      // We only await the final result in a real scenario,
-      // but for benchmarking the loop itself, we don't await each one
-      // This focuses on the overhead of creating/chaining the promises/fpromises
       await fn()
     }
-    // Await one final time to ensure microtasks resolve before ending timer
-    await fn()
+    await fn() // Await one final time
     const end = performance.now()
     totalDuration += end - start
   }
@@ -58,16 +54,12 @@ const measureTime = async (label: string, iterations: number, fn: () => Promise<
   return avgDuration
 }
 
-// Helper async function that returns a Promise/FPromise (for flatMap tests)
-const asyncOperation = async (value: number): Promise<string> => {
-  return Promise.resolve(`Processed: ${value}`)
-}
+// Helper async function (for flatMap tests)
+const asyncOperation = async (value: number): Promise<string> => Promise.resolve(`Processed: ${value}`)
+const asyncFpOperation = (value: number): FPromise<string, Error> =>
+  FPromise.from(Promise.resolve(`Processed: ${value}`))
 
-const asyncFpOperation = (value: number): FPromise<string, Error> => {
-  return FPromise.from(Promise.resolve(`Processed: ${value}`))
-}
-
-// Helper function that might fail with different errors
+// Helper function that might fail
 const operationThatMightFail = (type: "network" | "validation" | "other" | "success"): Promise<string> => {
   if (type === "network") {
     return Promise.reject(new NetworkError("Connection timed out"))
@@ -79,9 +71,7 @@ const operationThatMightFail = (type: "network" | "validation" | "other" | "succ
     return Promise.resolve("Operation successful")
   }
 }
-
 const fpOperationThatMightFail = (type: "network" | "validation" | "other" | "success"): FPromise<string, Error> => {
-  // Optimized: Directly create rejected/resolved FPromise
   if (type === "network") {
     return FPromise.reject(new NetworkError("Connection timed out"))
   } else if (type === "validation") {
@@ -96,7 +86,6 @@ const fpOperationThatMightFail = (type: "network" | "validation" | "other" | "su
 describe("Promise vs FPromise Comparison", () => {
   // --- Map Comparison ---
   it("should demonstrate usability differences with map/then (synchronous mapping)", async () => {
-    // ... (previous test code) ...
     const initialValue = 42
     const nativePromiseMapResult = await Promise.resolve(initialValue)
       .then((v) => v * 2)
@@ -113,7 +102,6 @@ describe("Promise vs FPromise Comparison", () => {
 
   // --- FlatMap Comparison ---
   it("should demonstrate usability differences with flatMap/then (asynchronous chaining)", async () => {
-    // ... (previous test code) ...
     const initialValue = 100
     const nativePromiseFlatMapResult = await Promise.resolve(initialValue)
       .then(asyncOperation)
@@ -126,10 +114,9 @@ describe("Promise vs FPromise Comparison", () => {
     expect(fPromiseFlatMapResult).toBe("PROCESSED: 100")
   })
 
-  // --- Error Handling Comparison ---
-  describe("Error Handling Comparison", () => {
+  // --- Error Handling Granularity Comparison ---
+  describe("Error Handling Granularity Comparison", () => {
     it("Native Promise: requires manual checks in .catch", async () => {
-      // ... (previous test code for usability) ...
       const result = await operationThatMightFail("validation")
         .then((res) => `Success: ${res}`)
         .catch((error) => {
@@ -145,7 +132,6 @@ describe("Promise vs FPromise Comparison", () => {
     })
 
     it("FPromise: uses filterError for selective handling", async () => {
-      // ... (previous test code for usability) ...
       const handleValidationOnly = (type: "network" | "validation" | "other" | "success") =>
         fpOperationThatMightFail(type)
           .filterError(
@@ -158,86 +144,126 @@ describe("Promise vs FPromise Comparison", () => {
     })
 
     it("FPromise: uses mapError to transform any error", async () => {
-      // ... (previous test code for usability) ...
       const transformAllErrors = (type: "network" | "validation" | "other" | "success") =>
         fpOperationThatMightFail(type)
-          .mapError(
-            (originalError: Error, _context: ErrorContext) =>
-              new UnexpectedError(`Transformed from ${originalError.name}`, originalError),
-          )
+          .mapError((originalError: Error, context: ErrorContext) => {
+            console.log(`Mapping error that occurred at ${context.timestamp}`) // Example of using context
+            return new UnexpectedError(`Transformed from ${originalError.name}`, originalError)
+          })
           .toPromise()
       await expect(transformAllErrors("validation")).rejects.toThrow(UnexpectedError)
+      await expect(transformAllErrors("validation")).rejects.toMatchObject({
+        message: "Transformed from ValidationError",
+      }) // Check specifics
     })
 
     it("FPromise: uses recoverWith to provide a default value", async () => {
-      // ... (previous test code for usability) ...
       const recoverFromAny = (type: "network" | "validation" | "other" | "success") =>
         fpOperationThatMightFail(type)
           .recoverWith((error: Error) => `Recovered from ${error.name || "Error"}`)
           .toPromise()
       expect(await recoverFromAny("validation")).toBe("Recovered from ValidationError")
+      expect(await recoverFromAny("network")).toBe("Recovered from NetworkError")
     })
 
-    // --- NEW: Error Handling Performance Test ---
     it("should compare performance of error recovery", async () => {
       const iterations = 10000
       const recoveryValue = "Recovered"
 
       // 1. Native Promise with .catch and instanceof
       const nativeCatchFn = () =>
-        operationThatMightFail("validation") // Always fail with validation error
-          .catch((error) => {
-            if (error instanceof ValidationError) {
-              return recoveryValue // Recover
-            }
-            // In a real scenario might handle other errors or re-throw
-            return "Different Error"
-          })
-
+        operationThatMightFail("validation").catch((error) => {
+          if (error instanceof ValidationError) {
+            return recoveryValue
+          }
+          return "Different Error"
+        })
       const nativeTime = await measureTime("Native Promise .catch + instanceof", iterations, nativeCatchFn)
       expect(await nativeCatchFn()).toBe(recoveryValue)
 
-      // 2. FPromise with .filterError + recovery (more steps involved)
+      // 2. FPromise with .filterError + recovery
       const fpromiseFilterFn = () =>
-        fpOperationThatMightFail("validation") // Always fail
+        fpOperationThatMightFail("validation")
           .filterError(
             (e): e is ValidationError => e instanceof ValidationError,
-            () => FPromise.resolve(recoveryValue), // Recovery handler
+            () => FPromise.resolve(recoveryValue),
           )
-          // If filter didn't match (won't happen here), it would reject. Add a final catch/recover for fair comparison.
-          .recoverWith(() => "Different Error")
+          .recoverWith(() => "Different Error") // Fallback if filter doesn't match
           .toPromise()
-
       const filterTime = await measureTime("FPromise .filterError + recover", iterations, fpromiseFilterFn)
       expect(await fpromiseFilterFn()).toBe(recoveryValue)
 
-      // 3. FPromise with .recoverWith (simplest FPromise recovery)
+      // 3. FPromise with .recoverWith
       const fpromiseRecoverFn = () =>
-        fpOperationThatMightFail("validation") // Always fail
+        fpOperationThatMightFail("validation")
           .recoverWith((error) => {
-            // Could add instanceof check here if needed, but recoverWith handles any error
             if (error instanceof ValidationError) {
-              return recoveryValue // Recover
+              return recoveryValue
             }
             return "Different Error"
           })
           .toPromise()
-
       const recoverTime = await measureTime("FPromise .recoverWith", iterations, fpromiseRecoverFn)
       expect(await fpromiseRecoverFn()).toBe(recoveryValue)
 
       console.log(`Error Handling Perf Ratio (Native / filterError): ${(nativeTime / filterTime).toFixed(2)}`)
       console.log(`Error Handling Perf Ratio (Native / recoverWith): ${(nativeTime / recoverTime).toFixed(2)}`)
-
-      // Notes: Expect native .catch to be fastest.
-      // .recoverWith is likely faster than .filterError as it's simpler internally.
-      // .filterError involves predicate checks and potentially creating intermediate promises.
     })
   })
 
-  // --- Performance Comparison (Map/FlatMap) ---
+  // --- Typed Error Comparison ---
+  describe("Typed Error Comparison", () => {
+    it("Native Promise: .catch error is 'unknown' or 'any'", async () => {
+      try {
+        await operationThatMightFail("validation")
+        expect.fail("Promise should have rejected")
+      } catch (error: unknown) {
+        // <-- `error` is typed as unknown
+        expect(error).toBeInstanceOf(ValidationError)
+        if (error instanceof ValidationError) {
+          expect(error.field).toBe("email") // Requires guard
+        } else {
+          expect.fail("Error was not a ValidationError")
+        }
+      }
+    })
+
+    it("FPromise: Error type parameter provides type safety", async () => {
+      const promise: FPromise<string, NetworkError | ValidationError> = fpOperationThatMightFail("network") as FPromise<
+        string,
+        NetworkError | ValidationError
+      >
+
+      const mappedErrorPromise = promise.mapError((error, context) => {
+        // `error` is NetworkError | ValidationError here
+        console.log(`Handling error: ${error.name}`)
+        if (error instanceof ValidationError) {
+          console.log(`Validation failed on field: ${error.field}`)
+          return new UnexpectedError(`Validation Issue on ${error.field}`, error)
+        } else {
+          // error must be NetworkError
+          return new UnexpectedError("Network Issue", error)
+        }
+      })
+
+      await expect(mappedErrorPromise.toPromise()).rejects.toMatchObject({
+        message: "Network Issue",
+        originalError: expect.any(NetworkError),
+      })
+    })
+
+    it("FPromise: Type safety in function signatures", async () => {
+      const handleNetworkError = (promise: FPromise<string, NetworkError>): FPromise<string, UnexpectedError> => {
+        return promise.mapError((netError) => new UnexpectedError("Network Failure", netError)) // netError is known to be NetworkError
+      }
+      const networkPromise = FPromise.reject<string, NetworkError>(new NetworkError("Timeout"))
+      await expect(handleNetworkError(networkPromise).toPromise()).rejects.toThrow(UnexpectedError)
+      expect(true).toBe(true) // Dummy expect
+    })
+  })
+
+  // --- Performance Comparison (Map/FlatMap/Error - From Previous Steps) ---
   it("should perform a basic performance comparison for chained synchronous maps", async () => {
-    // ... (previous test code) ...
     const iterations = 10000
     const initialValue = 1
     const nativePromiseMapFn = () =>
@@ -259,7 +285,6 @@ describe("Promise vs FPromise Comparison", () => {
   })
 
   it("should perform a basic performance comparison for chained asynchronous flatMaps", async () => {
-    // ... (previous test code) ...
     const iterations = 200
     const initialValue = 1
     const nativePromiseFlatMapFn = () =>
