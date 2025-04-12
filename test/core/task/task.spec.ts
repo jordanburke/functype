@@ -16,7 +16,7 @@ describe("AppException", () => {
   test("should create an AppException with error and additional data", () => {
     const error = new Error("Test error")
     const data = { additionalInfo: "extra data" }
-    const result = TaskException<string>(error, {}, data)
+    const result = TaskException<string>(error, data, {})
 
     expect(isLeft(result)).toBe(true)
     expect(result._tag).toBe("TaskException")

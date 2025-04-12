@@ -1,8 +1,7 @@
+import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
-
-import { Base } from "../base/Base"
 
 export type TaskParams = {
   name?: string
@@ -22,7 +21,7 @@ export type TaskException<T> = Either<Throwable, T> & TaskInfo
  * @param data
  * @constructor
  */
-export const TaskException = <T>(error: unknown, _task?: TaskParams, data?: unknown): TaskException<T> => {
+export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskParams): TaskException<T> => {
   const name = _task?.name || "TaskException"
   const description = _task?.description || "Unspecified TaskException"
   const appError = Throwable.apply(error, data)
