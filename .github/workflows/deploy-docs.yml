@@ -4,7 +4,7 @@ on:
   # Runs on pushes targeting the default branch
   push:
     branches: ["main"]
-  
+
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -26,11 +26,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
-          version: 9
+          version: 10
           run_install: false
 
       - name: Setup Node
@@ -38,16 +38,16 @@ jobs:
         with:
           node-version: 22
           cache: 'pnpm'
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
-      
+
       - name: Install dependencies
         run: pnpm install
-      
+
       - name: Build with TypeDoc
         run: node docs-ci.js
-      
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
