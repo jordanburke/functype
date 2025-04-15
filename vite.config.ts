@@ -1,6 +1,6 @@
+import path from "path"
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
-import path from "path"
 
 const modules = ["option", "either", "try", "list", "fpromise", "map", "set", "tuple", "branded"]
 
@@ -57,7 +57,7 @@ export default defineConfig({
     dts({
       entryRoot: "src",
       outDir: "dist",
-      rollupTypes: true,
+      rollupTypes: false,
       exclude: ["test", "**/*.spec.ts"],
     }),
   ],
