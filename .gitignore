@@ -111,7 +111,10 @@ dist
 
 # Documentation
 .docusaurus
-docs
+docs/*
+
+# But include markdown files in that directory
+!docs/**/*.md
 
 # Serverless directories
 .serverless/
