@@ -1,13 +1,13 @@
-import type { ArrayFunctor, ArrayType } from "@/functor"
+import type { ArrayFunctor, Type } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
-export type Tuple<T extends ArrayType> = {
+export type Tuple<T extends Type[]> = {
   get<K extends number>(index: K): T[K]
 
-  map<U extends ArrayType>(f: (value: T) => U): Tuple<U>
+  map<U extends Type[]>(f: (value: T) => U): Tuple<U>
 
-  flatMap<U extends ArrayType>(f: (value: T) => Tuple<U>): Tuple<U>
+  flatMap<U extends Type[]>(f: (value: T) => Tuple<U>): Tuple<U>
 
   toArray(): T
 
@@ -16,15 +16,15 @@ export type Tuple<T extends ArrayType> = {
   Typeable<"Tuple"> &
   Valuable<"Tuple", T>
 
-export const Tuple = <T extends ArrayType>(values: T): Tuple<T> => {
+export const Tuple = <T extends Type[]>(values: T): Tuple<T> => {
   return {
     _tag: "Tuple",
-    map: <U extends ArrayType>(f: (value: T) => U): Tuple<U> => {
+    map: <U extends Type[]>(f: (value: T) => U): Tuple<U> => {
       const mapValue = f(values)
       return Tuple(mapValue)
     },
 
-    flatMap: <U extends ArrayType>(f: (value: T) => Tuple<U>): Tuple<U> => {
+    flatMap: <U extends Type[]>(f: (value: T) => Tuple<U>): Tuple<U> => {
       return f(values)
     },
 

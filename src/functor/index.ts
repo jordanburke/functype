@@ -1,8 +1,4 @@
-export type SingleType = unknown
-
-export type ArrayType = SingleType[]
-
-export type Type = SingleType | ArrayType
+export type Type = unknown
 
 export type AbstractFunctor<A extends Type> = {
   map(f: (value: A) => Type): AbstractFunctor<Type>
@@ -20,8 +16,8 @@ export type AsyncFunctor<A extends Type> = {
   flatMapAsync(f: (value: A) => PromiseLike<AsyncFunctor<A>>): PromiseLike<AsyncFunctor<A>>
 }
 
-export type ArrayFunctor<A extends ArrayType> = AbstractFunctor<A> & {
-  map<U extends ArrayType>(f: (value: A) => U): ArrayFunctor<U>
+export type ArrayFunctor<A extends Type[]> = AbstractFunctor<A> & {
+  map<U extends Type[]>(f: (value: A) => U): ArrayFunctor<U>
 
-  flatMap<U extends ArrayType>(f: (value: A) => ArrayFunctor<U>): ArrayFunctor<U>
+  flatMap<U extends Type[]>(f: (value: A) => ArrayFunctor<U>): ArrayFunctor<U>
 }

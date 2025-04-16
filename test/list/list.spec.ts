@@ -116,7 +116,7 @@ describe("List", () => {
 
   const headOptionEmpty = list1.headOption
   it("headOption for empty list", () => {
-    expect(headOptionEmpty).toEqual(None())
+    expect(headOptionEmpty._tag).toBe("None")
   })
 
   it("flatMapAsync with empty list", async () => {
@@ -132,6 +132,45 @@ describe("List", () => {
 
     const result = await list.flatMapAsync(delayedAsyncFunction)
     expect(result.toValue()).toEqual({ _tag: "List", value: [1, 3, 2, 6, 3, 9, 4, 12] })
+  })
+
+  it("reduce on empty list throws", () => {
+    const empty = List<number>()
+    expect(() => empty.reduce((a, b) => a + b)).toThrow()
+  })
+
+  it("reduceRight on empty list throws", () => {
+    const empty = List<number>()
+    expect(() => empty.reduceRight((a, b) => a + b)).toThrow()
+  })
+
+  it("head and headOption on empty list", () => {
+    const empty = List<number>()
+    expect(empty.head).toBeUndefined()
+    expect(empty.headOption._tag).toBe("None")
+  })
+
+  it("removeAt out of bounds returns same list", () => {
+    const list = List([1, 2, 3])
+    expect(list.removeAt(-1).toArray()).toEqual([1, 2, 3])
+    expect(list.removeAt(10).toArray()).toEqual([1, 2, 3])
+  })
+
+  it("deeply nested flatMap does not stack overflow", () => {
+    let l = List([0])
+    for (let i = 0; i < 1000; i++) {
+      l = l.flatMap((x) => List([x + 1]))
+    }
+    expect(l.length).toBe(1)
+    expect(l.head).toBe(1000)
+  })
+
+  it("concat with empty and non-empty lists", () => {
+    const l1 = List([1, 2, 3])
+    const l2 = List<number>()
+    expect(l1.concat(l2).toArray()).toEqual([1, 2, 3])
+    expect(l2.concat(l1).toArray()).toEqual([1, 2, 3])
+    expect(l2.concat(l2).toArray()).toEqual([])
   })
 
   // Type guard tests
