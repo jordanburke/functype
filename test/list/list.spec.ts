@@ -173,6 +173,38 @@ describe("List", () => {
     expect(l2.concat(l2).toArray()).toEqual([])
   })
 
+  it("should filter elements based on a predicate", () => {
+    const list = List([1, 2, 3, 4, 5])
+    const evenNumbers = list.filter((x) => x % 2 === 0)
+
+    expect(evenNumbers.toArray()).toEqual([2, 4])
+    expect(evenNumbers.length).toBe(2)
+  })
+
+  it("should return an empty list when no elements match the predicate", () => {
+    const list = List([1, 3, 5])
+    const evenNumbers = list.filter((x) => x % 2 === 0)
+
+    expect(evenNumbers.toArray()).toEqual([])
+    expect(evenNumbers.isEmpty).toBe(true)
+  })
+
+  it("should return the same list when all elements match the predicate", () => {
+    const list = List([2, 4, 6])
+    const evenNumbers = list.filter((x) => x % 2 === 0)
+
+    expect(evenNumbers.toArray()).toEqual([2, 4, 6])
+    expect(evenNumbers.length).toBe(3)
+  })
+
+  it("should handle an empty list when filtering", () => {
+    const emptyList = List<number>()
+    const filteredList = emptyList.filter((x) => x % 2 === 0)
+
+    expect(filteredList.toArray()).toEqual([])
+    expect(filteredList.isEmpty).toBe(true)
+  })
+
   // Type guard tests
   // Type guard tests
   describe("Type Guards", () => {
