@@ -1,6 +1,12 @@
-# Functype Improvement Tasks
+# Functype Improvement Ideas
 
-This document contains a comprehensive list of actionable improvement tasks for the Functype library. Tasks are organized by category and include both architectural and code-level improvements.
+This document contains a comprehensive list of potential improvement ideas for the Functype library. These ideas represent possible directions for the library but should be evaluated against the core principles of maintaining a lightweight, focused approach as outlined in the README.md and implemented according to the official ROADMAP.md timeline.
+
+> **Note**: Not all ideas listed here will necessarily be implemented. Each should be evaluated based on:
+> - Alignment with the "lightweight" philosophy of the library
+> - Prioritization in the official ROADMAP.md
+> - Value to users vs. complexity added
+> - Maintenance burden
 
 ## Core Functionality Enhancements
 
@@ -150,3 +156,9 @@ This document contains a comprehensive list of actionable improvement tasks for 
 [ ] Create FPromise.allSettled equivalent with typed results
 [ ] Add FPromise.any with proper typing
 [ ] Implement progress tracking for long-running operations
+
+## Relationship to Official Roadmap
+
+This document serves as a collection of ideas and potential enhancements for Functype. For the official development plan with prioritized tasks and timeline, please refer to the [ROADMAP.md](../ROADMAP.md) file in the project root.
+
+The official roadmap represents the committed development path, while this document captures a broader set of possibilities that may be considered for future development cycles based on community feedback and evolving requirements.
