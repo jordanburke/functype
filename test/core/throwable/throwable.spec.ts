@@ -124,4 +124,132 @@ describe("Throwable", () => {
       }
     }
   })
+
+  it("should preserve custom properties from Error instances", () => {
+    const originalError = new Error("Original error")
+    // Add custom properties to the error
+    const customError = Object.assign(originalError, {
+      code: "E123",
+      details: "Some details",
+      hint: "A helpful hint",
+    })
+
+    const throwable = Throwable.apply(customError)
+
+    expect(throwable.message).toBe("Original error")
+    expect(throwable.name).toBe(Throwable.name)
+    expect(throwable._tag).toBe(Throwable.name)
+    // Check that custom properties are preserved
+    expect((throwable as Record<string, unknown>).code).toBe("E123")
+    expect((throwable as Record<string, unknown>).details).toBe("Some details")
+    expect((throwable as Record<string, unknown>).hint).toBe("A helpful hint")
+  })
+
+  it("should handle plain object errors (like from Supabase)", () => {
+    // Simulate a Supabase-like error object
+    const supabaseError = {
+      code: "42804",
+      details: null,
+      hint: "You will need to rewrite or cast the expression.",
+      message: 'column "role" is of type tenant_user_role but expression is of type text',
+    }
+
+    const throwable = Throwable.apply(supabaseError)
+
+    expect(throwable).toBeInstanceOf(Error)
+    expect(throwable.message).toBe('column "role" is of type tenant_user_role but expression is of type text')
+    expect(throwable.name).toBe(Throwable.name)
+    expect(throwable._tag).toBe(Throwable.name)
+    // Check that all properties from the original object are preserved
+    expect((throwable as Record<string, unknown>).code).toBe("42804")
+    expect((throwable as Record<string, unknown>).details).toBeNull()
+    expect((throwable as Record<string, unknown>).hint).toBe("You will need to rewrite or cast the expression.")
+  })
+
+  it("should handle object errors without a message property", () => {
+    const errorObject = {
+      code: "UNKNOWN",
+      error: "Something went wrong", // Using 'error' instead of 'message'
+      status: 500,
+    }
+
+    const throwable = Throwable.apply(errorObject)
+
+    expect(throwable).toBeInstanceOf(Error)
+    expect(throwable.message).toBe("Something went wrong") // Should use the 'error' property as message
+    // Check that all properties from the original object are preserved
+    expect((throwable as Record<string, unknown>).code).toBe("UNKNOWN")
+    expect((throwable as Record<string, unknown>).error).toBe("Something went wrong")
+    expect((throwable as Record<string, unknown>).status).toBe(500)
+  })
+
+  it("should handle nested object properties", () => {
+    const complexError = {
+      message: "Complex error",
+      details: {
+        field: "username",
+        constraint: "unique",
+        nested: {
+          deeper: "value",
+        },
+      },
+      errors: [
+        { path: "field1", message: "Error 1" },
+        { path: "field2", message: "Error 2" },
+      ],
+    }
+
+    const throwable = Throwable.apply(complexError)
+
+    expect(throwable.message).toBe("Complex error")
+    // Check that complex nested properties are preserved
+    expect((throwable as Record<string, unknown>).details).toEqual({
+      field: "username",
+      constraint: "unique",
+      nested: {
+        deeper: "value",
+      },
+    })
+    expect((throwable as Record<string, unknown>).errors).toEqual([
+      { path: "field1", message: "Error 1" },
+      { path: "field2", message: "Error 2" },
+    ])
+  })
+
+  it("should handle various custom error classes", () => {
+    // Define a variety of custom error classes
+    class DatabaseError extends Error {
+      constructor(
+        message: string,
+        public readonly code: string,
+        public readonly table: string,
+      ) {
+        super(message)
+        this.name = "DatabaseError"
+      }
+    }
+
+    class ValidationError extends Error {
+      constructor(
+        message: string,
+        public readonly fields: string[],
+      ) {
+        super(message)
+        this.name = "ValidationError"
+      }
+    }
+
+    const dbError = new DatabaseError("DB connection failed", "CONNECTION_ERROR", "users")
+    const throwable1 = Throwable.apply(dbError)
+
+    expect(throwable1.message).toBe("DB connection failed")
+    expect((throwable1 as Record<string, unknown>).code).toBe("CONNECTION_ERROR")
+    expect((throwable1 as Record<string, unknown>).table).toBe("users")
+
+    const validationError = new ValidationError("Invalid input", ["email", "password"])
+    const throwable2 = Throwable.apply(validationError)
+
+    expect(throwable2.message).toBe("Invalid input")
+    expect((throwable2 as Record<string, unknown>).fields).toEqual(["email", "password"])
+  })
 })

@@ -62,12 +62,50 @@ export class Throwable extends Error implements ThrowableType {
 
   static apply(srcError: unknown, data?: unknown): ThrowableType {
     if (srcError instanceof Error) {
-      // For Error instances, preserve the original stack trace
-      return new Throwable(srcError.message, {
+      // For Error instances, preserve the original stack trace and all properties
+      const throwable = new Throwable(srcError.message, {
         data,
         cause: (srcError.cause as Error | undefined) || undefined,
         stack: srcError.stack || undefined,
       })
+
+      // Copy all enumerable properties from the source error
+      for (const key of Object.keys(srcError)) {
+        if (!(key in throwable)) {
+          // Use type assertion with Record instead of any
+          ;(throwable as unknown as Record<string, unknown>)[key] = (srcError as unknown as Record<string, unknown>)[
+            key
+          ]
+        }
+      }
+
+      return throwable
+    }
+
+    // For non-Error objects (like Supabase error objects), preserve their structure
+    if (srcError && typeof srcError === "object") {
+      // Create a properly typed reference to the object
+      const errorObj = srcError as Record<string, unknown>
+
+      // Try to extract a reasonable message
+      const message =
+        typeof errorObj.message === "string"
+          ? errorObj.message
+          : typeof errorObj.error === "string"
+            ? errorObj.error
+            : "An unknown error occurred"
+
+      const throwable = new Throwable(message, { data })
+
+      // Copy all properties from the source object
+      for (const key of Object.keys(errorObj)) {
+        if (!(key in throwable)) {
+          // Use type assertion with Record instead of any
+          ;(throwable as unknown as Record<string, unknown>)[key] = errorObj[key]
+        }
+      }
+
+      return throwable
     }
 
     const message = typeof srcError === "string" ? srcError : "An unknown error occurred"
