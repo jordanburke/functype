@@ -36,8 +36,177 @@ describe("Throwable", () => {
   it("should handle undefined error source with default message", () => {
     const error = Throwable.apply(undefined)
 
-    expect(error.message).toBe("An unknown error occurred")
+    expect(error.message).toBe("Undefined error: undefined")
     expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "undefined",
+      errorValue: "undefined",
+      originalError: undefined,
+    })
+  })
+
+  it("should handle null error source", () => {
+    const error = Throwable.apply(null)
+
+    expect(error.message).toBe("Object error: null")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "object",
+      errorValue: "null",
+      originalError: null,
+    })
+  })
+
+  it("should handle number error source", () => {
+    const error = Throwable.apply(42)
+
+    expect(error.message).toBe("Number error: 42")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "number",
+      errorValue: 42,
+      originalError: 42,
+    })
+  })
+
+  it("should handle NaN error source", () => {
+    const error = Throwable.apply(NaN)
+
+    expect(error.message).toBe("Number error: NaN")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "number",
+      errorValue: NaN,
+      originalError: NaN,
+    })
+  })
+
+  it("should handle Infinity error source", () => {
+    const error = Throwable.apply(Infinity)
+
+    expect(error.message).toBe("Number error: Infinity")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "number",
+      errorValue: Infinity,
+      originalError: Infinity,
+    })
+  })
+
+  it("should handle negative Infinity error source", () => {
+    const error = Throwable.apply(-Infinity)
+
+    expect(error.message).toBe("Number error: -Infinity")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "number",
+      errorValue: -Infinity,
+      originalError: -Infinity,
+    })
+  })
+
+  it("should handle boolean error source - true", () => {
+    const error = Throwable.apply(true)
+
+    expect(error.message).toBe("Boolean error: true")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "boolean",
+      errorValue: true,
+      originalError: true,
+    })
+  })
+
+  it("should handle boolean error source - false", () => {
+    const error = Throwable.apply(false)
+
+    expect(error.message).toBe("Boolean error: false")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "boolean",
+      errorValue: false,
+      originalError: false,
+    })
+  })
+
+  it("should handle bigint error source", () => {
+    const bigIntValue = BigInt(9007199254740991)
+    const error = Throwable.apply(bigIntValue)
+
+    expect(error.message).toBe("BigInt error: 9007199254740991n")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "bigint",
+      errorValue: String(bigIntValue),
+      originalError: bigIntValue,
+    })
+  })
+
+  it("should handle symbol error source with description", () => {
+    const symbolValue = Symbol("test symbol")
+    const error = Throwable.apply(symbolValue)
+
+    expect(error.message).toBe("Symbol error: Symbol(test symbol)")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "symbol",
+      symbolDescription: "test symbol",
+      originalError: symbolValue,
+    })
+  })
+
+  it("should handle symbol error source without description", () => {
+    const symbolValue = Symbol()
+    const error = Throwable.apply(symbolValue)
+
+    expect(error.message).toBe("Symbol error: Symbol(unnamed symbol)")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      errorType: "symbol",
+      symbolDescription: "unnamed symbol",
+      originalError: symbolValue,
+    })
+  })
+
+  it("should handle function error source", () => {
+    function testFunction() {
+      return "test"
+    }
+    const error = Throwable.apply(testFunction)
+
+    expect(error.message).toBe("Function error: testFunction")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      functionType: "function",
+      functionName: "testFunction",
+      functionString: expect.stringContaining("function testFunction"),
+    })
+  })
+
+  it("should handle anonymous function error source", () => {
+    const anonFunction = () => "test"
+    const error = Throwable.apply(anonFunction)
+
+    expect(error.message).toBe("Function error: anonFunction")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toEqual({
+      functionType: "function",
+      functionName: "anonFunction",
+      functionString: expect.stringContaining("=>"),
+    })
+  })
+
+  it("should handle object without message or error properties", () => {
+    const obj = { id: 123, status: "failed" }
+    const error = Throwable.apply(obj)
+
+    expect(error.message).toContain("Object error:")
+    expect(error.message).toContain("id")
+    expect(error.message).toContain("123")
+    expect(error.message).toContain("status")
+    expect(error.message).toContain("failed")
+    expect(error.stack).toBeDefined()
+    expect(error.data).toBe(obj)
   })
 
   it("should preserve stack trace line numbers", () => {

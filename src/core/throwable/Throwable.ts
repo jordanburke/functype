@@ -93,9 +93,12 @@ export class Throwable extends Error implements ThrowableType {
           ? errorObj.message
           : typeof errorObj.error === "string"
             ? errorObj.error
-            : "An unknown error occurred"
+            : `Object error: ${JSON.stringify(
+                errorObj,
+                Object.getOwnPropertyNames(errorObj).filter((key) => errorObj[key] !== undefined),
+              )}`
 
-      const throwable = new Throwable(message, { data })
+      const throwable = new Throwable(message, { data: data || errorObj })
 
       // Copy all properties from the source object
       for (const key of Object.keys(errorObj)) {
@@ -108,7 +111,83 @@ export class Throwable extends Error implements ThrowableType {
       return throwable
     }
 
-    const message = typeof srcError === "string" ? srcError : "An unknown error occurred"
-    return new Throwable(message, { data })
+    // Handle functions
+    if (typeof srcError === "function") {
+      const fnName = srcError.name || "anonymous function"
+      const fnString = srcError.toString().substring(0, 100) + (srcError.toString().length > 100 ? "..." : "")
+      return new Throwable(`Function error: ${fnName}`, {
+        data: data || {
+          functionType: typeof srcError,
+          functionName: fnName,
+          functionString: fnString,
+        },
+      })
+    }
+
+    // Handle primitive types
+    const errorType = typeof srcError
+    const errorValue = srcError === null ? "null" : srcError === undefined ? "undefined" : String(srcError)
+
+    // Handle specific primitive types more precisely
+    if (errorType === "number") {
+      const numValue = srcError as number
+      const message = Number.isNaN(numValue)
+        ? "Number error: NaN"
+        : !Number.isFinite(numValue)
+          ? `Number error: ${numValue > 0 ? "Infinity" : "-Infinity"}`
+          : `Number error: ${numValue}`
+
+      return new Throwable(message, {
+        data: data || {
+          errorType,
+          errorValue: numValue,
+          originalError: srcError,
+        },
+      })
+    }
+
+    if (errorType === "bigint") {
+      return new Throwable(`BigInt error: ${srcError}n`, {
+        data: data || {
+          errorType,
+          errorValue: String(srcError),
+          originalError: srcError,
+        },
+      })
+    }
+
+    if (errorType === "boolean") {
+      return new Throwable(`Boolean error: ${srcError}`, {
+        data: data || {
+          errorType,
+          errorValue: srcError,
+          originalError: srcError,
+        },
+      })
+    }
+
+    if (errorType === "symbol") {
+      const symbolDesc = (srcError as symbol).description || "unnamed symbol"
+      return new Throwable(`Symbol error: Symbol(${symbolDesc})`, {
+        data: data || {
+          errorType,
+          symbolDescription: symbolDesc,
+          originalError: srcError,
+        },
+      })
+    }
+
+    const message =
+      typeof srcError === "string"
+        ? srcError
+        : `${errorType.charAt(0).toUpperCase() + errorType.slice(1)} error: ${errorValue}`
+
+    return new Throwable(message, {
+      data: data || {
+        errorType,
+        errorValue,
+        originalError: srcError,
+      },
+    })
   }
 }

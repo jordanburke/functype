@@ -20,16 +20,19 @@ This document provides essential information for developing and maintaining the 
 ### Build Commands
 
 - **Development Build**:
+
   ```bash
   pnpm build:dev
   ```
 
 - **Production Build**:
+
   ```bash
   pnpm build:prod
   ```
 
 - **Watch Mode** (for development):
+
   ```bash
   pnpm build:watch
   ```
@@ -44,6 +47,7 @@ This document provides essential information for developing and maintaining the 
 The project uses the following build tools:
 
 - **TypeScript**: Configuration in `tsconfig.json`
+
   - Target: ES2020
   - Module: ESNext
   - Strict type checking enabled
@@ -70,21 +74,25 @@ The project uses Vitest for testing with the following configuration:
 ### Running Tests
 
 - **Run All Tests**:
+
   ```bash
   pnpm test
   ```
 
 - **Run Specific Test File**:
+
   ```bash
   pnpm test path/to/file.spec.ts
   ```
 
 - **Watch Mode**:
+
   ```bash
   pnpm test:watch
   ```
 
 - **With Coverage**:
+
   ```bash
   pnpm test:coverage
   ```
@@ -112,12 +120,12 @@ import { List } from "../../src"
 describe("List.filter", () => {
   it("should filter elements based on a predicate", () => {
     const list = List([1, 2, 3, 4, 5])
-    const evenNumbers = list.filter(x => x % 2 === 0)
-    
+    const evenNumbers = list.filter((x) => x % 2 === 0)
+
     expect(evenNumbers.toArray()).toEqual([2, 4])
     expect(evenNumbers.length).toBe(2)
   })
-  
+
   // Additional test cases...
 })
 ```
@@ -151,6 +159,7 @@ describe("Option - Property-based tests", () => {
 The project uses ESLint and Prettier for code style enforcement:
 
 - **Prettier Configuration** (`.prettierrc`):
+
   - No semicolons
   - Trailing commas in all places
   - Double quotes
@@ -165,6 +174,7 @@ The project uses ESLint and Prettier for code style enforcement:
 ### Linting Commands
 
 - **Lint and Fix**:
+
   ```bash
   pnpm lint
   ```
@@ -195,15 +205,17 @@ The project follows a Scala-inspired approach:
 - Companion functions for additional utilities
 
 Example:
+
 ```typescript
 // Usage pattern
 const list = List([1, 2, 3])
-const mapped = list.map(x => x * 2)
+const mapped = list.map((x) => x * 2)
 ```
 
 ### Documentation
 
 - **API Documentation**: Generated with TypeDoc
+
   ```bash
   pnpm docs
   ```
@@ -224,5 +236,6 @@ Use functional error handling patterns with `Option`, `Either`, and `Try` types 
 ### CI/CD
 
 The project uses GitHub Actions for CI:
+
 - Runs on Ubuntu with Node.js v22 and pnpm v10
 - Executes tests on push and pull requests
