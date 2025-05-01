@@ -792,6 +792,65 @@ describe("FPromise", () => {
     })
   })
 
+  describe("fold", () => {
+    it("should handle success case", async () => {
+      const result = await FPromise.resolve(42)
+        .fold(
+          (error) => `Error: ${error}`,
+          (value) => `Success: ${value}`,
+        )
+        .toPromise()
+
+      expect(result).toBe("Success: 42")
+    })
+
+    it("should handle error case", async () => {
+      const error = "Something went wrong"
+      const result = await FPromise.reject<number, string>(error)
+        .fold(
+          (error) => `Error: ${error}`,
+          (value) => `Success: ${value}`,
+        )
+        .toPromise()
+
+      expect(result).toBe("Error: Something went wrong")
+    })
+
+    it("should be chainable after fold", async () => {
+      const result = await FPromise.reject<number, string>("Error message")
+        .fold(
+          (error) => error.length,
+          (value) => value,
+        )
+        .map((length) => length * 2)
+        .toPromise()
+
+      expect(result).toBe(26) // "Error message" length is 13, multiplied by 2
+    })
+
+    it("should handle exceptions in success handler", async () => {
+      const promise = FPromise.resolve(42).fold(
+        (error) => "Error handled",
+        () => {
+          throw new Error("Exception in success handler")
+        },
+      )
+
+      await expect(promise.toPromise()).rejects.toThrow("Exception in success handler")
+    })
+
+    it("should handle exceptions in error handler", async () => {
+      const promise = FPromise.reject<number, string>("Original error").fold(
+        () => {
+          throw new Error("Exception in error handler")
+        },
+        (value) => `Success: ${value}`,
+      )
+
+      await expect(promise.toPromise()).rejects.toThrow("Exception in error handler")
+    })
+  })
+
   describe("real-world scenarios", () => {
     it("should handle delays with timeouts", async () => {
       const delayedPromise = FPromise<number>((resolve) => {

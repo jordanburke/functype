@@ -53,6 +53,7 @@ export interface FPromise<T extends Type, E extends Type = unknown> extends Prom
   logError: (logger: (error: E, context: ErrorContext) => void) => FPromise<T, E>
   toPromise: () => Promise<T>
   toEither: () => Promise<T>
+  fold: <R extends Type>(onError: (error: E) => R, onSuccess: (value: T) => R) => FPromise<R, never>
 
   // Functor implementation
   map: <U extends Type>(f: (value: T) => U) => FPromise<U, E>
@@ -459,6 +460,53 @@ const FPromiseImpl = <T extends Type, E = unknown>(
     // This is not the ideal implementation but matches what the tests expect
     toEither: (): Promise<T> => {
       return promise
+    },
+
+    /**
+     * Folds the FPromise into a single value by applying one of two functions,
+     * depending on whether the FPromise resolves or rejects.
+     * This allows handling both success and error cases in a single operation.
+     *
+     * @template R - The type of the result
+     * @param onError - The function to apply if the FPromise rejects
+     * @param onSuccess - The function to apply if the FPromise resolves
+     * @returns An FPromise that resolves to the result of applying the appropriate function
+     *
+     * @example
+     * const result = await FPromise.resolve(42)
+     *   .fold(
+     *     error => `Error: ${error}`,
+     *     value => `Success: ${value}`
+     *   )
+     *   .toPromise()
+     * // result is "Success: 42"
+     *
+     * const result2 = await FPromise.reject<string, number>("Something went wrong")
+     *   .fold(
+     *     error => `Error: ${error}`,
+     *     value => `Success: ${value}`
+     *   )
+     *   .toPromise()
+     * // result2 is "Error: Something went wrong"
+     */
+    fold: <R extends Type>(onError: (error: E) => R, onSuccess: (value: T) => R): FPromise<R, never> => {
+      return FPromiseImpl<R, never>((resolve, reject) => {
+        promise
+          .then((value) => {
+            try {
+              resolve(onSuccess(value))
+            } catch (error) {
+              reject(error as never)
+            }
+          })
+          .catch((error: E) => {
+            try {
+              resolve(onError(error))
+            } catch (error) {
+              reject(error as never)
+            }
+          })
+      })
     },
   }
 }
