@@ -4,7 +4,7 @@ import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
-import { Either, Left, List, Right, type Traversable } from "../index"
+import { Companion, Either, Left, List, Right, type Traversable } from "../index"
 
 /**
  * Option type module
@@ -244,20 +244,23 @@ export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T
  * @returns Some(value) if value is defined, None otherwise
  * @typeParam T - The type of the value
  */
-export const Option = <T extends Type>(value: T | null | undefined): Option<T> =>
+export const OptionConstructor = <T extends Type>(value: T | null | undefined): Option<T> =>
   value !== null && value !== undefined ? Some<T>(value) : None<T>()
 
-/**
- * Creates an Option from any value. Alias for Option function.
- * @param value - The value to wrap
- * @returns Some(value) if value is defined, None otherwise
- * @typeParam T - The type of the value
- */
-Option.from = <T>(value: T) => Option(value)
+const OptionCompanion = {
+  /**
+   * Creates an Option from any value. Alias for Option function.
+   * @param value - The value to wrap
+   * @returns Some(value) if value is defined, None otherwise
+   * @typeParam T - The type of the value
+   */
+  from: <T>(value: T) => Option(value),
+  /**
+   * Returns a None instance. Alias for None function.
+   * @returns A None instance
+   * @typeParam T - The type that would be contained if this was a Some
+   */
+  none: <T>() => None<T>(),
+}
 
-/**
- * Returns a None instance. Alias for None function.
- * @returns A None instance
- * @typeParam T - The type that would be contained if this was a Some
- */
-Option.none = <T>() => None<T>()
+export const Option = Companion(OptionConstructor, OptionCompanion)
