@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion"
-import type { Foldable } from "@/foldable"
+import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Type } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"

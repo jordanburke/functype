@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import type { Foldable } from "@/foldable"
+import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
