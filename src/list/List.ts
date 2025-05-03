@@ -7,6 +7,7 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
+import { Companion } from "@/companion"
 
 export type List<A> = {
   readonly length: number
@@ -200,4 +201,4 @@ const ListCompanion = {
   },
 }
 
-export const List = Object.assign(ListConstructor, ListCompanion)
+export const List = Companion(ListConstructor, ListCompanion)

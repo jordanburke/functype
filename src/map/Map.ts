@@ -1,5 +1,5 @@
 import type { Collection } from "@/collections"
-import { type Traversable, Typeable } from "@/index"
+import { Companion, type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -169,4 +169,4 @@ const MapCompanion = {
   },
 }
 
-export const Map = Object.assign(MapConstructor, MapCompanion)
+export const Map = Companion(MapConstructor, MapCompanion)

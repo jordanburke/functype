@@ -7,6 +7,7 @@ import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
 import { ESSet, type IESSet } from "./shim"
+import { Companion } from "@/companion"
 
 export type Set<A> = {
   add: (value: A) => Set<A>
@@ -111,4 +112,4 @@ const SetCompanion = {
   },
 }
 
-export const Set = Object.assign(SetConstructor, SetCompanion)
+export const Set = Companion(SetConstructor, SetCompanion)

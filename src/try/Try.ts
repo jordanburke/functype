@@ -5,6 +5,7 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
+import { Companion } from "@/companion"
 
 type TypeNames = "Success" | "Failure"
 
@@ -154,4 +155,4 @@ const TryCompanion = {
   },
 }
 
-export const Try = Object.assign(TryConstructor, TryCompanion)
+export const Try = Companion(TryConstructor, TryCompanion)
