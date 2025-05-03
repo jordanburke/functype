@@ -2,6 +2,7 @@ import stringify from "safe-stable-stringify"
 
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
+import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
@@ -141,6 +142,12 @@ export type Option<T extends Type> = {
    * @returns An object with _tag and value properties
    */
   toValue(): { _tag: "Some" | "None"; value: T }
+  /**
+   * Pattern matches over the Option, applying a handler function based on the variant
+   * @param patterns - Object with handler functions for Some and None variants
+   * @returns The result of applying the matching handler function
+   */
+  match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 } & (Traversable<T> &
   Functor<T> &
   Typeable<"Some" | "None"> &
@@ -148,7 +155,8 @@ export type Option<T extends Type> = {
   AsyncFunctor<T> &
   Serializable<T> &
   Pipe<T> &
-  Foldable<T>)
+  Foldable<T> &
+  Matchable<T, "Some" | "None">)
 
 /**
  * Creates a Some variant of Option containing a value.
@@ -175,6 +183,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   },
   fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
     return onSome(value)
+  },
+  match: <R>(patterns: { Some: (value: T) => R; None: () => R }): R => {
+    return patterns.Some(value)
   },
   flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
   flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Option<U>>) => {
@@ -231,6 +242,9 @@ const NONE: Option<never> = {
   reduceRight: () => undefined as never,
   fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {
     return onNone()
+  },
+  match: <R>(patterns: { Some: (value: never) => R; None: () => R }): R => {
+    return patterns.None()
   },
   foldLeft:
     <B>(z: B) =>

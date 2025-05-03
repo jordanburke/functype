@@ -4,6 +4,7 @@ import { Companion } from "@/companion"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Type } from "@/functor"
 import type { IterableType } from "@/iterable"
+import type { Matchable } from "@/matchable"
 import { None, Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
@@ -45,12 +46,19 @@ export type List<A> = {
   dropRight: (n: number) => List<A>
   dropWhile: (p: (a: A) => boolean) => List<A>
   flatten: <B>() => List<B>
+  /**
+   * Pattern matches over the List, applying a handler function based on whether it's empty
+   * @param patterns - Object with handler functions for Empty and NonEmpty variants
+   * @returns The result of applying the matching handler function
+   */
+  match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 } & IterableType<A> &
   AsyncFunctor<A> &
   Typeable<"List"> &
   Serializable<A> &
   Pipe<A[]> &
-  Foldable<A>
+  Foldable<A> &
+  Matchable<A[], "Empty" | "NonEmpty">
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
@@ -130,6 +138,10 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       <B>(z: B) =>
       (op: (a: A, b: B) => B) =>
         array.reduceRight((acc, value) => op(value, acc), z),
+
+    match: <R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R => {
+      return array.length === 0 ? patterns.Empty() : patterns.NonEmpty([...array])
+    },
 
     remove: (value: A) => ListObject(array.filter((x) => x !== value)),
 

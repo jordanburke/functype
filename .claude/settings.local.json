@@ -10,7 +10,8 @@
       "Bash(pnpm compile:*)",
       "Bash(pnpm build:*)",
       "Bash(pnpm vitest run:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }

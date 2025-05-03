@@ -27,6 +27,7 @@ This roadmap outlines the planned development path for the Functype library, foc
 ### Type Classes
 
 - [x] Implement `Foldable` typeclass with fold, foldLeft, and foldRight methods
+- [x] Implement `Matchable` typeclass for pattern matching
 - [ ] Implement proper `Functor` and `Monad` typeclasses
 - [ ] Add `Applicative` typeclass
 - [ ] Support `Traversable` with comprehensive HKT

@@ -264,7 +264,7 @@ const listResult = list.foldLeft(0)((acc, num) => acc + num) // 6
 
 ## Foldable
 
-New in v0.8.67, Functype now includes a proper `Foldable` type class that data structures can implement:
+New in v0.8.67, Functype includes a proper `Foldable` type class that data structures can implement:
 
 ```typescript
 import { FoldableUtils, Option, List, Try } from "functype"
@@ -293,6 +293,54 @@ const convertedToList = FoldableUtils.toList(option) // List([5])
 const convertedToEither = FoldableUtils.toEither(tryVal, "Error") // Right(10)
 ```
 
+## Matchable
+
+New in v0.8.68, Functype now includes a `Matchable` type class for enhanced pattern matching:
+
+```typescript
+import { Option, Either, Try, List, MatchableUtils } from "functype"
+
+// Pattern matching on Option
+const opt = Option(42)
+const optResult = opt.match({
+  Some: (value) => `Found: ${value}`,
+  None: () => "Not found",
+}) // "Found: 42"
+
+// Pattern matching on Either
+const either = Either.fromNullable(null, "Missing value")
+const eitherResult = either.match({
+  Left: (error) => `Error: ${error}`,
+  Right: (value) => `Value: ${value}`,
+}) // "Error: Missing value"
+
+// Pattern matching on Try
+const tryVal = Try(() => JSON.parse('{"name":"John"}'))
+const tryResult = tryVal.match({
+  Success: (data) => `Name: ${data.name}`,
+  Failure: (error) => `Parse error: ${error.message}`,
+}) // "Name: John"
+
+// Pattern matching on List
+const list = List([1, 2, 3])
+const listResult = list.match({
+  NonEmpty: (values) => `Values: ${values.join(", ")}`,
+  Empty: () => "No values",
+}) // "Values: 1, 2, 3"
+
+// Using MatchableUtils for advanced pattern matching
+const isPositive = MatchableUtils.when(
+  (n: number) => n > 0,
+  (n) => `Positive: ${n}`,
+)
+
+const defaultCase = MatchableUtils.default((n: number) => `Default: ${n}`)
+
+// Using pattern guards in custom matching logic
+const num = 42
+const result = isPositive(num) ?? defaultCase(num) // "Positive: 42"
+```
+
 ## Type Safety
 
 Functype leverages TypeScript's advanced type system to provide compile-time safety for functional patterns, ensuring that your code is both robust and maintainable.
@@ -315,6 +363,7 @@ const mappedValue = option.map((x) => x.toString())
 - [ ] Implement lens/optics for immutable updates
 - [ ] Expand concurrent execution utilities beyond FPromise.all
 - [x] Add a proper Foldable type class interface
+- [x] Implement Matchable type class for pattern matching
 - [ ] Implement Applicative and other functional type classes
 
 ### Performance Optimizations

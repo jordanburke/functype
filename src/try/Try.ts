@@ -4,6 +4,7 @@ import { Companion } from "@/companion"
 import { Either, Left, Right } from "@/either/Either"
 import type { Foldable } from "@/foldable/Foldable"
 import type { Type } from "@/functor"
+import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
@@ -31,11 +32,18 @@ export type Try<T> = {
    */
   fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
   toString: () => string
+  /**
+   * Pattern matches over the Try, applying a handler function based on the variant
+   * @param patterns - Object with handler functions for Success and Failure variants
+   * @returns The result of applying the matching handler function
+   */
+  match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
 } & Typeable<TypeNames> &
   Valuable<TypeNames, T | Error> &
   Serializable<T> &
   Pipe<T> &
-  Foldable<T>
+  Foldable<T> &
+  Matchable<T | Error, "Success" | "Failure">
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
@@ -50,6 +58,7 @@ const Success = <T>(value: T): Try<T> => ({
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
+  match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: T) => B) =>
@@ -87,6 +96,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
+  match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
   foldLeft:
     <B>(z: B) =>
     (_op: (b: B, a: T) => B) =>

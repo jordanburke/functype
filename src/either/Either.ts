@@ -3,6 +3,7 @@ import stringify from "safe-stable-stringify"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
+import type { Matchable } from "@/matchable"
 import { None, Option, Some } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
@@ -54,13 +55,20 @@ export type Either<L extends Type, R extends Type> = {
    * @returns The result of applying the function to the value
    */
   pipe<U extends Type>(f: (value: L | R) => U): U
+  /**
+   * Pattern matches over the Either, applying a handler function based on the variant
+   * @param patterns - Object with handler functions for Left and Right variants
+   * @returns The result of applying the matching handler function
+   */
+  match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
 } & Typeable<"Left" | "Right"> &
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
   AsyncFunctor<R> &
   Serializable<R> &
   Pipe<L | R> &
-  Foldable<R>
+  Foldable<R> &
+  Matchable<L | R, "Left" | "Right">
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
 
@@ -115,6 +123,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     <B>(z: B) =>
     (op: (a: R, b: B) => B) =>
       op(value, z),
+  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Right(value),
   swap: () => Left<R, L>(value),
   then: <TResult1 = R, TResult2 = never>(
     onfulfilled?: ((value: R) => TResult1 | PromiseLike<TResult1>) | undefined | null,
@@ -180,6 +189,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     <B>(z: B) =>
     (_op: (a: R, b: B) => B) =>
       z,
+  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Left(value),
   swap: () => Right<R, L>(value),
   then: <TResult1 = R, TResult2 = never>(
     _onfulfilled?: ((value: R) => TResult1 | PromiseLike<TResult1>) | undefined | null,
