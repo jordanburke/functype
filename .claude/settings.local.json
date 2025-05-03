@@ -6,7 +6,9 @@
       "Bash(git commit:*)",
       "Bash(npm config:*)",
       "Bash(pnpm test:watch:*)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "Bash(pnpm compile:*)",
+      "Bash(pnpm build:*)"
     ],
     "deny": []
   }

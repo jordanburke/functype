@@ -3,6 +3,7 @@ import stringify from "safe-stable-stringify"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
+import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
@@ -40,7 +41,8 @@ export type Either<L extends Type, R extends Type> = {
 } & Typeable<"Left" | "Right"> &
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
-  AsyncFunctor<R>
+  AsyncFunctor<R> &
+  Serializable<R>
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
 
@@ -63,7 +65,16 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
-  toString: () => `Right(${stringify(value)})`,
+  toString: () => {
+    // Handle nested Either case by manually stringifying
+    if (value && typeof value === "object" && "_tag" in value) {
+      if (value._tag === "Right" || value._tag === "Left") {
+        const valueAny = value as any
+        return `Right(${stringify({ _tag: value._tag, value: valueAny.value })})`
+      }
+    }
+    return `Right(${stringify(value)})`
+  },
   [Symbol.iterator]: function* () {
     yield value
   },
@@ -93,6 +104,11 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     return Promise.resolve(value).then(onfulfilled, onrejected)
   },
   toValue: () => ({ _tag: "Right", value }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "Right", value }),
+    toYAML: () => `_tag: Right\nvalue: ${stringify(value)}`,
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Right", value })).toString("base64"),
+  },
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -141,6 +157,11 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     return Promise.reject(value).then(null, onrejected)
   },
   toValue: () => ({ _tag: "Left", value }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "Left", value }),
+    toYAML: () => `_tag: Left\nvalue: ${stringify(value)}`,
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Left", value })).toString("base64"),
+  },
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)
@@ -216,5 +237,26 @@ export const Either = {
     } catch (error) {
       return Left<L, R>(onRejected(error))
     }
+  },
+
+  fromJSON: <L extends Type, R extends Type>(json: string): Either<L, R> => {
+    const parsed = JSON.parse(json)
+    return parsed._tag === "Right" ? Right<L, R>(parsed.value) : Left<L, R>(parsed.value)
+  },
+
+  fromYAML: <L extends Type, R extends Type>(yaml: string): Either<L, R> => {
+    const lines = yaml.split("\n")
+    const tag = lines[0]?.split(": ")[1]
+    const valueStr = lines[1]?.split(": ")[1]
+    if (!tag || !valueStr) {
+      throw new Error("Invalid YAML format for Either")
+    }
+    const value = JSON.parse(valueStr)
+    return tag === "Right" ? Right<L, R>(value) : Left<L, R>(value)
+  },
+
+  fromBinary: <L extends Type, R extends Type>(binary: string): Either<L, R> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return Either.fromJSON<L, R>(json)
   },
 }

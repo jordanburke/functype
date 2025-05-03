@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import type { AsyncFunctor, Functor, Type } from "@/functor"
+import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
@@ -138,7 +139,12 @@ export type Option<T extends Type> = {
    * @returns An object with _tag and value properties
    */
   toValue(): { _tag: "Some" | "None"; value: T }
-} & (Traversable<T> & Functor<T> & Typeable<"Some" | "None"> & Valuable<"Some" | "None", T> & AsyncFunctor<T>)
+} & (Traversable<T> &
+  Functor<T> &
+  Typeable<"Some" | "None"> &
+  Valuable<"Some" | "None", T> &
+  AsyncFunctor<T> &
+  Serializable<T>)
 
 /**
  * Creates a Some variant of Option containing a value.
@@ -186,6 +192,11 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toEither: <E>(_left: E) => Right<E, T>(value),
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "Some", value }),
+    toYAML: () => `_tag: Some\nvalue: ${stringify(value)}`,
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
+  },
 })
 
 const NONE: Option<never> = {
@@ -228,6 +239,11 @@ const NONE: Option<never> = {
   toEither: <E>(left: E) => Left<E, never>(left),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "None", value: null }),
+    toYAML: () => "_tag: None\nvalue: null",
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "None", value: null })).toString("base64"),
+  },
 }
 
 /**
@@ -261,6 +277,39 @@ const OptionCompanion = {
    * @typeParam T - The type that would be contained if this was a Some
    */
   none: <T>() => None<T>(),
+  /**
+   * Creates an Option from JSON string
+   * @param json - The JSON string
+   * @returns Option instance
+   */
+  fromJSON: <T>(json: string): Option<T> => {
+    const parsed = JSON.parse(json)
+    return parsed._tag === "Some" ? Some<T>(parsed.value) : None<T>()
+  },
+  /**
+   * Creates an Option from YAML string
+   * @param yaml - The YAML string
+   * @returns Option instance
+   */
+  fromYAML: <T>(yaml: string): Option<T> => {
+    const lines = yaml.split("\n")
+    const tag = lines[0]?.split(": ")[1]
+    const valueStr = lines[1]?.split(": ")[1]
+    if (!tag || !valueStr) {
+      return None<T>()
+    }
+    const value = valueStr === "null" ? null : JSON.parse(valueStr)
+    return tag === "Some" ? Some<T>(value) : None<T>()
+  },
+  /**
+   * Creates an Option from binary string
+   * @param binary - The binary string
+   * @returns Option instance
+   */
+  fromBinary: <T>(binary: string): Option<T> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return OptionCompanion.fromJSON<T>(json)
+  },
 }
 
 export const Option = Companion(OptionConstructor, OptionCompanion)

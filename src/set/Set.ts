@@ -1,7 +1,9 @@
 import type { Collection } from "@/collections"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
+import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
+import { Valuable } from "@/valuable/Valuable"
 
 import { ESSet, type IESSet } from "./shim"
 
@@ -17,7 +19,9 @@ export type Set<A> = {
   toString: () => string
 } & IterableType<A> &
   Collection<A> &
-  Typeable<"Set">
+  Typeable<"Set"> &
+  Valuable<"Set", A[]> &
+  Serializable<A[]>
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: IESSet<A> = new ESSet<A>(iterable)
@@ -49,9 +53,56 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     toSet: (): Set<A> => set,
 
     toString: (): string => `Set(${Array.from(values).toString()})`,
+    
+    toValue: (): { _tag: "Set"; value: A[] } => ({ _tag: "Set", value: Array.from(values) }),
+    
+    serialize: {
+      toJSON: () => JSON.stringify({ _tag: "Set", value: Array.from(values) }),
+      toYAML: () => `_tag: Set\nvalue: ${JSON.stringify(Array.from(values))}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Set", value: Array.from(values) })).toString("base64"),
+    },
   }
 
   return set
 }
 
-export const Set = <A>(iterable?: Iterable<A> | IterableType<A>): Set<A> => createSet(iterable)
+const SetConstructor = <A>(iterable?: Iterable<A> | IterableType<A>): Set<A> => createSet(iterable)
+
+const SetCompanion = {
+  /**
+   * Creates a Set from JSON string
+   * @param json - The JSON string
+   * @returns Set instance
+   */
+  fromJSON: <A>(json: string): Set<A> => {
+    const parsed = JSON.parse(json)
+    return Set<A>(parsed.value)
+  },
+  
+  /**
+   * Creates a Set from YAML string
+   * @param yaml - The YAML string
+   * @returns Set instance
+   */
+  fromYAML: <A>(yaml: string): Set<A> => {
+    const lines = yaml.split("\n")
+    const valueStr = lines[1]?.split(": ")[1]
+    if (!valueStr) {
+      return Set<A>([])
+    }
+    const value = JSON.parse(valueStr)
+    return Set<A>(value)
+  },
+  
+  /**
+   * Creates a Set from binary string
+   * @param binary - The binary string
+   * @returns Set instance
+   */
+  fromBinary: <A>(binary: string): Set<A> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return SetCompanion.fromJSON<A>(json)
+  }
+}
+
+export const Set = Object.assign(SetConstructor, SetCompanion)

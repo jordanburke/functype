@@ -3,6 +3,7 @@ import { type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
+import type { Serializable } from "@/serializable/Serializable" 
 import { Set } from "@/set/Set"
 import { Tuple } from "@/tuple/Tuple"
 import { Valuable } from "@/valuable/Valuable"
@@ -22,7 +23,8 @@ export type Map<K, V> = {
 } & SafeTraversable<K, V> &
   Collection<Tuple<[K, V]>> &
   Typeable<"Map"> &
-  Valuable<"Map", IESMap<K, V>>
+  Valuable<"Map", IESMap<K, V>> &
+  Serializable<[K, V][]>
 
 type MapState<K, V> = {
   values: IESMap<K, V>
@@ -113,15 +115,52 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toSet,
     toString,
     toValue: () => ({ _tag: "Map", value: state.values }),
+    serialize: {
+      toJSON: () => JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) }),
+      toYAML: () => `_tag: Map\nvalue: ${JSON.stringify(Array.from(state.values.entries()))}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) })).toString("base64"),
+    },
   }
 }
 
-export const Map = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
+const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
   MapObject(entries)
 
-// Example usage
-// const myMap = createMap<string, unknown>([
-//   ["a", 1],
-//   ["b", 2],
-//   ["c", 3],
-// ])
+const MapCompanion = {
+  /**
+   * Creates a Map from JSON string
+   * @param json - The JSON string
+   * @returns Map instance
+   */
+  fromJSON: <K, V>(json: string): Map<K, V> => {
+    const parsed = JSON.parse(json)
+    return Map<K, V>(parsed.value)
+  },
+  
+  /**
+   * Creates a Map from YAML string
+   * @param yaml - The YAML string
+   * @returns Map instance
+   */
+  fromYAML: <K, V>(yaml: string): Map<K, V> => {
+    const lines = yaml.split("\n")
+    const valueStr = lines[1]?.split(": ")[1]
+    if (!valueStr) {
+      return Map<K, V>([])
+    }
+    const value = JSON.parse(valueStr)
+    return Map<K, V>(value)
+  },
+  
+  /**
+   * Creates a Map from binary string
+   * @param binary - The binary string
+   * @returns Map instance
+   */
+  fromBinary: <K, V>(binary: string): Map<K, V> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return MapCompanion.fromJSON<K, V>(json)
+  }
+}
+
+export const Map = Object.assign(MapConstructor, MapCompanion)

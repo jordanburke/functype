@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Either, Left, Right } from "@/either/Either"
+import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
@@ -20,7 +21,8 @@ export type Try<T> = {
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
   toString: () => string
 } & Typeable<TypeNames> &
-  Valuable<TypeNames, T | Error>
+  Valuable<TypeNames, T | Error> &
+  Serializable<T>
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
@@ -36,6 +38,11 @@ const Success = <T>(value: T): Try<T> => ({
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   toString: () => `Success(${stringify(value)})`,
   toValue: () => ({ _tag: "Success", value }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "Success", value }),
+    toYAML: () => `_tag: Success\nvalue: ${stringify(value)}`,
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Success", value })).toString("base64"),
+  },
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
@@ -56,12 +63,84 @@ const Failure = <T>(error: Error): Try<T> => ({
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   toString: () => `Failure(${stringify(error)}))`,
   toValue: () => ({ _tag: "Failure", value: error }),
+  serialize: {
+    toJSON: () => JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack }),
+    toYAML: () => `_tag: Failure\nerror: ${error.message}\nstack: ${error.stack}`,
+    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack })).toString("base64"),
+  },
 })
 
-export const Try = <T>(f: () => T): Try<T> => {
+const TryConstructor = <T>(f: () => T): Try<T> => {
   try {
     return Success(f())
   } catch (error) {
     return Failure(error instanceof Error ? error : new Error(String(error)))
   }
 }
+
+const TryCompanion = {
+  /**
+   * Creates a Try from JSON string
+   * @param json - The JSON string
+   * @returns Try instance
+   */
+  fromJSON: <T>(json: string): Try<T> => {
+    const parsed = JSON.parse(json)
+    if (parsed._tag === "Success") {
+      return Success<T>(parsed.value)
+    } else {
+      const error = new Error(parsed.error)
+      if (parsed.stack) {
+        error.stack = parsed.stack
+      }
+      return Failure<T>(error)
+    }
+  },
+  
+  /**
+   * Creates a Try from YAML string
+   * @param yaml - The YAML string
+   * @returns Try instance
+   */
+  fromYAML: <T>(yaml: string): Try<T> => {
+    const lines = yaml.split("\n")
+    const tag = lines[0]?.split(": ")[1]
+    
+    if (!tag) {
+      return Failure<T>(new Error("Invalid YAML format for Try"))
+    }
+    
+    if (tag === "Success") {
+      const valueStr = lines[1]?.split(": ")[1]
+      if (!valueStr) {
+        return Failure<T>(new Error("Invalid YAML format for Try Success"))
+      }
+      const value = JSON.parse(valueStr)
+      return Success<T>(value)
+    } else {
+      const errorMsg = lines[1]?.split(": ")[1]
+      if (!errorMsg) {
+        return Failure<T>(new Error("Invalid YAML format for Try Failure"))
+      }
+      const stackLine = lines[2]?.split(": ")
+      const stack = stackLine && stackLine.length > 1 ? stackLine.slice(1).join(": ") : undefined
+      const error = new Error(errorMsg)
+      if (stack) {
+        error.stack = stack
+      }
+      return Failure<T>(error)
+    }
+  },
+  
+  /**
+   * Creates a Try from binary string
+   * @param binary - The binary string
+   * @returns Try instance
+   */
+  fromBinary: <T>(binary: string): Try<T> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return TryCompanion.fromJSON<T>(json)
+  }
+}
+
+export const Try = Object.assign(TryConstructor, TryCompanion)

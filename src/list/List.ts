@@ -3,6 +3,7 @@ import stringify from "safe-stable-stringify"
 import type { AsyncFunctor } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
+import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
 
@@ -43,7 +44,8 @@ export type List<A> = {
   flatten: <B>() => List<B>
 } & IterableType<A> &
   AsyncFunctor<A> &
-  Typeable<"List">
+  Typeable<"List"> &
+  Serializable<A>
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
@@ -142,9 +144,54 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     toString: () => `List(${stringify(array)})`,
 
     toValue: () => ({ _tag: "List", value: array }),
+
+    serialize: {
+      toJSON: () => JSON.stringify({ _tag: "List", value: array }),
+      toYAML: () => `_tag: List\nvalue: ${stringify(array)}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "List", value: array })).toString("base64"),
+    },
   }
 
   return list
 }
 
-export const List = <A>(values?: Iterable<A>): List<A> => ListObject(values)
+const ListConstructor = <A>(values?: Iterable<A>): List<A> => ListObject(values)
+
+const ListCompanion = {
+  /**
+   * Creates a List from JSON string
+   * @param json - The JSON string
+   * @returns List instance
+   */
+  fromJSON: <A>(json: string): List<A> => {
+    const parsed = JSON.parse(json)
+    return List<A>(parsed.value)
+  },
+
+  /**
+   * Creates a List from YAML string
+   * @param yaml - The YAML string
+   * @returns List instance
+   */
+  fromYAML: <A>(yaml: string): List<A> => {
+    const lines = yaml.split("\n")
+    const valueStr = lines[1]?.split(": ")[1]
+    if (!valueStr) {
+      return List<A>([])
+    }
+    const value = JSON.parse(valueStr)
+    return List<A>(value)
+  },
+
+  /**
+   * Creates a List from binary string
+   * @param binary - The binary string
+   * @returns List instance
+   */
+  fromBinary: <A>(binary: string): List<A> => {
+    const json = Buffer.from(binary, "base64").toString()
+    return ListCompanion.fromJSON<A>(json)
+  },
+}
+
+export const List = Object.assign(ListConstructor, ListCompanion)
