@@ -1,6 +1,7 @@
 import type { Collection } from "@/collections"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
@@ -21,7 +22,8 @@ export type Set<A> = {
   Collection<A> &
   Typeable<"Set"> &
   Valuable<"Set", A[]> &
-  Serializable<A[]>
+  Serializable<A[]> &
+  Pipe<A[]>
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: IESSet<A> = new ESSet<A>(iterable)
@@ -55,6 +57,8 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     toString: (): string => `Set(${Array.from(values).toString()})`,
 
     toValue: (): { _tag: "Set"; value: A[] } => ({ _tag: "Set", value: Array.from(values) }),
+
+    pipe: <U>(f: (value: A[]) => U) => f(Array.from(values)),
 
     serialize: () => {
       return {

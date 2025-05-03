@@ -3,6 +3,7 @@ import { type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { Tuple } from "@/tuple/Tuple"
@@ -24,7 +25,8 @@ export type Map<K, V> = {
   Collection<Tuple<[K, V]>> &
   Typeable<"Map"> &
   Valuable<"Map", IESMap<K, V>> &
-  Serializable<[K, V][]>
+  Serializable<[K, V][]> &
+  Pipe<[K, V][]>
 
 type MapState<K, V> = {
   values: IESMap<K, V>
@@ -115,6 +117,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toSet,
     toString,
     toValue: () => ({ _tag: "Map", value: state.values }),
+    pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
     serialize: () => {
       return {
         toJSON: () => JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) }),
