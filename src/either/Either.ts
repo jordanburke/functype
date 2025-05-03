@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import type { Foldable } from "@/foldable"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
@@ -58,7 +59,8 @@ export type Either<L extends Type, R extends Type> = {
   PromiseLike<R> &
   AsyncFunctor<R> &
   Serializable<R> &
-  Pipe<L | R>
+  Pipe<L | R> &
+  Foldable<R>
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
 
@@ -105,6 +107,14 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
   bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
   fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
+  foldLeft:
+    <B>(z: B) =>
+    (op: (b: B, a: R) => B) =>
+      op(z, value),
+  foldRight:
+    <B>(z: B) =>
+    (op: (a: R, b: B) => B) =>
+      op(value, z),
   swap: () => Left<R, L>(value),
   then: <TResult1 = R, TResult2 = never>(
     onfulfilled?: ((value: R) => TResult1 | PromiseLike<TResult1>) | undefined | null,
@@ -162,6 +172,14 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Left<L2, R>(f(value)),
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, _fr: (value: R) => R2) => Left<L2, R2>(fl(value)),
   fold: <T extends Type>(onLeft: (value: L) => T, _onRight: (value: R) => T) => onLeft(value),
+  foldLeft:
+    <B>(z: B) =>
+    (_op: (b: B, a: R) => B) =>
+      z,
+  foldRight:
+    <B>(z: B) =>
+    (_op: (a: R, b: B) => B) =>
+      z,
   swap: () => Right<R, L>(value),
   then: <TResult1 = R, TResult2 = never>(
     _onfulfilled?: ((value: R) => TResult1 | PromiseLike<TResult1>) | undefined | null,

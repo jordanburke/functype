@@ -1,6 +1,6 @@
 import type { Collection } from "@/collections"
 import type { Type } from "@/functor"
-import { Companion, type Traversable, Typeable } from "@/index"
+import { Companion, type Foldable, type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -30,7 +30,8 @@ export type Map<K, V> = {
   Typeable<"Map"> &
   Valuable<"Map", IESMap<K, V>> &
   Serializable<[K, V][]> &
-  Pipe<[K, V][]>
+  Pipe<[K, V][]> &
+  Foldable<Tuple<[K, V]>>
 
 type MapState<K, V> = {
   values: IESMap<K, V>

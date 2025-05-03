@@ -1,7 +1,8 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion"
-import type { AsyncFunctor } from "@/functor"
+import type { Foldable } from "@/foldable"
+import type { AsyncFunctor, Type } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -48,7 +49,8 @@ export type List<A> = {
   AsyncFunctor<A> &
   Typeable<"List"> &
   Serializable<A> &
-  Pipe<A[]>
+  Pipe<A[]> &
+  Foldable<A>
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
@@ -110,6 +112,14 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
 
     reduceRight: (f: (prev: A, curr: A) => A) => array.reduceRight(f),
+
+    fold: <B extends Type>(onEmpty: () => B, onValue: (value: A) => B): B => {
+      if (array.length === 0) {
+        return onEmpty()
+      }
+      const firstElement = array[0] as A // Type assertion to avoid undefined
+      return onValue(firstElement)
+    },
 
     foldLeft:
       <B>(z: B) =>

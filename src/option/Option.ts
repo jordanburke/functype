@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import type { Foldable } from "@/foldable"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
@@ -146,7 +147,8 @@ export type Option<T extends Type> = {
   Valuable<"Some" | "None", T> &
   AsyncFunctor<T> &
   Serializable<T> &
-  Pipe<T>)
+  Pipe<T> &
+  Foldable<T>)
 
 /**
  * Creates a Some variant of Option containing a value.
