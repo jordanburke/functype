@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Either, Left, Right } from "@/either/Either"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
@@ -22,7 +23,8 @@ export type Try<T> = {
   toString: () => string
 } & Typeable<TypeNames> &
   Valuable<TypeNames, T | Error> &
-  Serializable<T>
+  Serializable<T> &
+  Pipe<T>
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
@@ -38,6 +40,7 @@ const Success = <T>(value: T): Try<T> => ({
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   toString: () => `Success(${stringify(value)})`,
   toValue: () => ({ _tag: "Success", value }),
+  pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Success", value }),
@@ -65,6 +68,9 @@ const Failure = <T>(error: Error): Try<T> => ({
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   toString: () => `Failure(${stringify(error)}))`,
   toValue: () => ({ _tag: "Failure", value: error }),
+  pipe: <U>(_f: (value: T) => U) => {
+    throw error
+  },
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack }),

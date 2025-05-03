@@ -38,6 +38,13 @@ export type Either<L extends Type, R extends Type> = {
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
   swap: () => Either<R, L>
+  /**
+   * Pipes the value through the provided function based on whether this is a Left or Right
+   * @param onLeft - The function to apply if this is a Left
+   * @param onRight - The function to apply if this is a Right
+   * @returns The result of applying the appropriate function
+   */
+  pipeEither<U extends Type>(onLeft: (value: L) => U, onRight: (value: R) => U): U
 } & Typeable<"Left" | "Right"> &
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
@@ -97,6 +104,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     return Promise.resolve(value).then(onfulfilled, onrejected)
   },
   toValue: () => ({ _tag: "Right", value }),
+  pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Right", value }),
@@ -152,6 +160,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     return Promise.reject(value).then(null, onrejected)
   },
   toValue: () => ({ _tag: "Left", value }),
+  pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Left", value }),
