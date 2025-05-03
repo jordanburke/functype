@@ -1,6 +1,6 @@
 import type { Collection } from "@/collections"
 import type { Type } from "@/functor"
-import { Companion, type Foldable, type Traversable, Typeable } from "@/index"
+import { Companion, type Foldable, type Matchable, type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -25,13 +25,20 @@ export type Map<K, V> = {
   fold<U extends Type>(onEmpty: () => U, onValue: (value: Tuple<[K, V]>) => U): U
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B
+  /**
+   * Pattern matches over the Map, applying a handler function based on whether it's empty
+   * @param patterns - Object with handler functions for Empty and NonEmpty variants
+   * @returns The result of applying the matching handler function
+   */
+  match<R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R
 } & SafeTraversable<K, V> &
   Collection<Tuple<[K, V]>> &
   Typeable<"Map"> &
   Valuable<"Map", IESMap<K, V>> &
   Serializable<[K, V][]> &
   Pipe<[K, V][]> &
-  Foldable<Tuple<[K, V]>>
+  Foldable<Tuple<[K, V]>> &
+  Matchable<Array<Tuple<[K, V]>>, "Empty" | "NonEmpty">
 
 type MapState<K, V> = {
   values: IESMap<K, V>
@@ -117,6 +124,13 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   const toString = (): string => `Map(${getEntries().toString()})`
 
+  const match = <R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R => {
+    if (isEmpty()) {
+      return patterns.Empty()
+    }
+    return patterns.NonEmpty(getEntries())
+  }
+
   return {
     _tag,
     add,
@@ -132,6 +146,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     foldLeft,
     foldRight,
     fold,
+    match,
     get,
     getOrElse,
     get isEmpty() {
