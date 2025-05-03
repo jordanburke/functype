@@ -3,7 +3,7 @@ import { type Traversable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
-import type { Serializable } from "@/serializable/Serializable" 
+import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { Tuple } from "@/tuple/Tuple"
 import { Valuable } from "@/valuable/Valuable"
@@ -115,10 +115,13 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toSet,
     toString,
     toValue: () => ({ _tag: "Map", value: state.values }),
-    serialize: {
-      toJSON: () => JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) }),
-      toYAML: () => `_tag: Map\nvalue: ${JSON.stringify(Array.from(state.values.entries()))}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) })).toString("base64"),
+    serialize: () => {
+      return {
+        toJSON: () => JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) }),
+        toYAML: () => `_tag: Map\nvalue: ${JSON.stringify(Array.from(state.values.entries()))}`,
+        toBinary: () =>
+          Buffer.from(JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) })).toString("base64"),
+      }
     },
   }
 }
@@ -136,7 +139,7 @@ const MapCompanion = {
     const parsed = JSON.parse(json)
     return Map<K, V>(parsed.value)
   },
-  
+
   /**
    * Creates a Map from YAML string
    * @param yaml - The YAML string
@@ -151,7 +154,7 @@ const MapCompanion = {
     const value = JSON.parse(valueStr)
     return Map<K, V>(value)
   },
-  
+
   /**
    * Creates a Map from binary string
    * @param binary - The binary string
@@ -160,7 +163,7 @@ const MapCompanion = {
   fromBinary: <K, V>(binary: string): Map<K, V> => {
     const json = Buffer.from(binary, "base64").toString()
     return MapCompanion.fromJSON<K, V>(json)
-  }
+  },
 }
 
 export const Map = Object.assign(MapConstructor, MapCompanion)

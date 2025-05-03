@@ -53,13 +53,15 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     toSet: (): Set<A> => set,
 
     toString: (): string => `Set(${Array.from(values).toString()})`,
-    
+
     toValue: (): { _tag: "Set"; value: A[] } => ({ _tag: "Set", value: Array.from(values) }),
-    
-    serialize: {
-      toJSON: () => JSON.stringify({ _tag: "Set", value: Array.from(values) }),
-      toYAML: () => `_tag: Set\nvalue: ${JSON.stringify(Array.from(values))}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Set", value: Array.from(values) })).toString("base64"),
+
+    serialize: () => {
+      return {
+        toJSON: () => JSON.stringify({ _tag: "Set", value: Array.from(values) }),
+        toYAML: () => `_tag: Set\nvalue: ${JSON.stringify(Array.from(values))}`,
+        toBinary: () => Buffer.from(JSON.stringify({ _tag: "Set", value: Array.from(values) })).toString("base64"),
+      }
     },
   }
 
@@ -78,7 +80,7 @@ const SetCompanion = {
     const parsed = JSON.parse(json)
     return Set<A>(parsed.value)
   },
-  
+
   /**
    * Creates a Set from YAML string
    * @param yaml - The YAML string
@@ -93,7 +95,7 @@ const SetCompanion = {
     const value = JSON.parse(valueStr)
     return Set<A>(value)
   },
-  
+
   /**
    * Creates a Set from binary string
    * @param binary - The binary string
@@ -102,7 +104,7 @@ const SetCompanion = {
   fromBinary: <A>(binary: string): Set<A> => {
     const json = Buffer.from(binary, "base64").toString()
     return SetCompanion.fromJSON<A>(json)
-  }
+  },
 }
 
 export const Set = Object.assign(SetConstructor, SetCompanion)

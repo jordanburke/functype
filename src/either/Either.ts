@@ -66,13 +66,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toString: () => {
-    // Handle nested Either case by manually stringifying
-    if (value && typeof value === "object" && "_tag" in value) {
-      if (value._tag === "Right" || value._tag === "Left") {
-        const valueAny = value as any
-        return `Right(${stringify({ _tag: value._tag, value: valueAny.value })})`
-      }
-    }
     return `Right(${stringify(value)})`
   },
   [Symbol.iterator]: function* () {
@@ -104,10 +97,12 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     return Promise.resolve(value).then(onfulfilled, onrejected)
   },
   toValue: () => ({ _tag: "Right", value }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "Right", value }),
-    toYAML: () => `_tag: Right\nvalue: ${stringify(value)}`,
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Right", value })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "Right", value }),
+      toYAML: () => `_tag: Right\nvalue: ${stringify(value)}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Right", value })).toString("base64"),
+    }
   },
 })
 
@@ -157,10 +152,12 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     return Promise.reject(value).then(null, onrejected)
   },
   toValue: () => ({ _tag: "Left", value }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "Left", value }),
-    toYAML: () => `_tag: Left\nvalue: ${stringify(value)}`,
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Left", value })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "Left", value }),
+      toYAML: () => `_tag: Left\nvalue: ${stringify(value)}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Left", value })).toString("base64"),
+    }
   },
 })
 

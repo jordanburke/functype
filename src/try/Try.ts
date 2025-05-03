@@ -38,10 +38,12 @@ const Success = <T>(value: T): Try<T> => ({
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   toString: () => `Success(${stringify(value)})`,
   toValue: () => ({ _tag: "Success", value }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "Success", value }),
-    toYAML: () => `_tag: Success\nvalue: ${stringify(value)}`,
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Success", value })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "Success", value }),
+      toYAML: () => `_tag: Success\nvalue: ${stringify(value)}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Success", value })).toString("base64"),
+    }
   },
 })
 
@@ -63,10 +65,13 @@ const Failure = <T>(error: Error): Try<T> => ({
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   toString: () => `Failure(${stringify(error)}))`,
   toValue: () => ({ _tag: "Failure", value: error }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack }),
-    toYAML: () => `_tag: Failure\nerror: ${error.message}\nstack: ${error.stack}`,
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack }),
+      toYAML: () => `_tag: Failure\nerror: ${error.message}\nstack: ${error.stack}`,
+      toBinary: () =>
+        Buffer.from(JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack })).toString("base64"),
+    }
   },
 })
 
@@ -96,7 +101,7 @@ const TryCompanion = {
       return Failure<T>(error)
     }
   },
-  
+
   /**
    * Creates a Try from YAML string
    * @param yaml - The YAML string
@@ -105,11 +110,11 @@ const TryCompanion = {
   fromYAML: <T>(yaml: string): Try<T> => {
     const lines = yaml.split("\n")
     const tag = lines[0]?.split(": ")[1]
-    
+
     if (!tag) {
       return Failure<T>(new Error("Invalid YAML format for Try"))
     }
-    
+
     if (tag === "Success") {
       const valueStr = lines[1]?.split(": ")[1]
       if (!valueStr) {
@@ -131,7 +136,7 @@ const TryCompanion = {
       return Failure<T>(error)
     }
   },
-  
+
   /**
    * Creates a Try from binary string
    * @param binary - The binary string
@@ -140,7 +145,7 @@ const TryCompanion = {
   fromBinary: <T>(binary: string): Try<T> => {
     const json = Buffer.from(binary, "base64").toString()
     return TryCompanion.fromJSON<T>(json)
-  }
+  },
 }
 
 export const Try = Object.assign(TryConstructor, TryCompanion)

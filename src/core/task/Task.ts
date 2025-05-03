@@ -1,3 +1,4 @@
+import { Companion } from "@/companion"
 import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
@@ -48,7 +49,7 @@ export type Async<T> = FPromise<Sync<T>>
 /**
  * Task adapter for bridging promise-based code with functional error handling patterns
  */
-export const Task = <T = unknown>(params?: TaskParams) => {
+const TaskConstructor = <T = unknown>(params?: TaskParams) => {
   const name = params?.name || "Task"
   const description = params?.description || ""
   const body = {
@@ -114,43 +115,6 @@ export const Task = <T = unknown>(params?: TaskParams) => {
         f()
       }
     },
-
-    /**
-     * Create a successful Task result
-     */
-    success: (data: T): TaskResult<T> => TaskResult<T>(data, { name, description }),
-
-    /**
-     * Create a failed Task result
-     */
-    fail: (error: unknown): TaskException<T> => TaskException<T>(error, { name, description }),
-
-    /**
-     * Convert a Promise-returning function to a Task-compatible function
-     */
-    fromPromise: <U, Args extends unknown[]>(
-      promiseFn: (...args: Args) => Promise<U>,
-    ): ((...args: Args) => FPromise<U>) => {
-      return (...args: Args) => {
-        return body.Async<U>(
-          () => promiseFn(...args),
-          (error) => error,
-        )
-      }
-    },
-
-    /**
-     * Convert a Task result to a Promise
-     */
-    toPromise: <U>(taskResult: TaskResult<U> | TaskException<U>): Promise<U> => {
-      return new Promise((resolve, reject) => {
-        if (taskResult.isRight()) {
-          resolve(taskResult.value as U)
-        } else {
-          reject(taskResult.value)
-        }
-      })
-    },
   }
 
   return {
@@ -158,3 +122,47 @@ export const Task = <T = unknown>(params?: TaskParams) => {
     _type: "Task",
   }
 }
+
+const TaskCompanion = {
+  /**
+   * Create a successful Task result
+   */
+  success: <T>(data: T, params?: TaskParams): TaskResult<T> => TaskResult<T>(data, params),
+
+  /**
+   * Create a failed Task result
+   */
+  fail: <T>(error: unknown, params?: TaskParams): TaskException<T> => TaskException<T>(error, params),
+
+  /**
+   * Convert a Promise-returning function to a Task-compatible function
+   */
+  fromPromise: <U, Args extends unknown[]>(
+    promiseFn: (...args: Args) => Promise<U>,
+    params?: TaskParams,
+  ): ((...args: Args) => FPromise<U>) => {
+    return (...args: Args) => {
+      return Task(params).Async<U>(
+        () => promiseFn(...args),
+        (error) => error,
+      )
+    }
+  },
+
+  /**
+   * Convert a Task result to a Promise
+   */
+  toPromise: <U>(taskResult: TaskResult<U> | TaskException<U>): Promise<U> => {
+    return new Promise((resolve, reject) => {
+      if (taskResult.isRight()) {
+        resolve(taskResult.value as U)
+      } else {
+        reject(taskResult.value)
+      }
+    })
+  },
+}
+
+export const Task = Companion(TaskConstructor, TaskCompanion)
+
+export type Task = ReturnType<typeof Task>

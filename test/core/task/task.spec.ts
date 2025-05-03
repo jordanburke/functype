@@ -82,7 +82,7 @@ describe("Sync", () => {
   })
 
   test("Sync.success should create successful result", () => {
-    const result = Task().success("data")
+    const result = Task.success("data")
 
     expect(isRight(result)).toBe(true)
     expect(result.value).toBe("data")
@@ -90,7 +90,7 @@ describe("Sync", () => {
 
   test("Sync.fail should create failure result", () => {
     const error = new Error("Failed")
-    const result = Task().fail(error)
+    const result = Task.fail(error)
 
     expect(isLeft(result)).toBe(true)
     expect((result.value as Throwable)._tag).toBe("Throwable")
@@ -132,7 +132,7 @@ describe("Async", () => {
   })
 
   test("Async.success should create successful result", () => {
-    const result = Task().success("data")
+    const result = Task.success("data")
 
     expect(isRight(result)).toBe(true)
     expect(result.value).toBe("data")
@@ -140,7 +140,7 @@ describe("Async", () => {
 
   test("Async.fail should create failure result", () => {
     const error = new Error("Failed")
-    const result = Task().fail(error)
+    const result = Task.fail(error)
 
     expect(isLeft(result)).toBe(true)
     expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
@@ -370,7 +370,7 @@ describe("Promise Adapter Methods", () => {
   test("should convert promise-returning function to Task", async () => {
     const promiseFn = (value: string): Promise<string> => Promise.resolve(value + " processed")
 
-    const taskFn = Task().fromPromise(promiseFn)
+    const taskFn = Task.fromPromise(promiseFn)
     const result = await taskFn("test")
 
     expect(result).toEqual("test processed")
@@ -380,7 +380,7 @@ describe("Promise Adapter Methods", () => {
     const error = new Error("promise error")
     const promiseFn = (): Promise<string> => Promise.reject(error)
 
-    const taskFn = Task().fromPromise(promiseFn)
+    const taskFn = Task.fromPromise(promiseFn)
 
     try {
       await taskFn()
@@ -394,16 +394,16 @@ describe("Promise Adapter Methods", () => {
   test("should pass through arguments to the promise function", async () => {
     const promiseFn = (a: number, b: number): Promise<number> => Promise.resolve(a + b)
 
-    const taskFn = Task().fromPromise(promiseFn)
+    const taskFn = Task.fromPromise(promiseFn)
     const result = await taskFn(40, 2)
 
     expect(result).toEqual(42)
   })
 
   test("should convert TaskResult to Promise", async () => {
-    const taskResult = Task().success(42)
+    const taskResult = Task.success(42)
 
-    const promise = Task().toPromise(taskResult)
+    const promise = Task.toPromise(taskResult)
     const result = await promise
 
     expect(result).toEqual(42)
@@ -411,10 +411,10 @@ describe("Promise Adapter Methods", () => {
 
   test("should convert TaskException to rejected Promise", async () => {
     const error = new Error("task error")
-    const taskException = Task().fail(error)
+    const taskException = Task.fail(error)
 
     try {
-      await Task().toPromise(taskException)
+      await Task.toPromise(taskException)
       expect.fail("Should throw error")
     } catch (e) {
       expect((e as Throwable)._tag).toBe("Throwable")

@@ -192,10 +192,12 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toEither: <E>(_left: E) => Right<E, T>(value),
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "Some", value }),
-    toYAML: () => `_tag: Some\nvalue: ${stringify(value)}`,
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "Some", value }),
+      toYAML: () => `_tag: Some\nvalue: ${stringify(value)}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
+    }
   },
 })
 
@@ -239,10 +241,12 @@ const NONE: Option<never> = {
   toEither: <E>(left: E) => Left<E, never>(left),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
-  serialize: {
-    toJSON: () => JSON.stringify({ _tag: "None", value: null }),
-    toYAML: () => "_tag: None\nvalue: null",
-    toBinary: () => Buffer.from(JSON.stringify({ _tag: "None", value: null })).toString("base64"),
+  serialize: () => {
+    return {
+      toJSON: () => JSON.stringify({ _tag: "None", value: null }),
+      toYAML: () => "_tag: None\nvalue: null",
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "None", value: null })).toString("base64"),
+    }
   },
 }
 

@@ -145,10 +145,12 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     toValue: () => ({ _tag: "List", value: array }),
 
-    serialize: {
-      toJSON: () => JSON.stringify({ _tag: "List", value: array }),
-      toYAML: () => `_tag: List\nvalue: ${stringify(array)}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "List", value: array })).toString("base64"),
+    serialize: () => {
+      return {
+        toJSON: () => JSON.stringify({ _tag: "List", value: array }),
+        toYAML: () => `_tag: List\nvalue: ${stringify(array)}`,
+        toBinary: () => Buffer.from(JSON.stringify({ _tag: "List", value: array })).toString("base64"),
+      }
     },
   }
 

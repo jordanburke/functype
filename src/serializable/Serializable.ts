@@ -5,5 +5,5 @@ type SerializationMethods<T> = {
 }
 
 export type Serializable<T> = {
-  serialize: SerializationMethods<T>
+  serialize(): SerializationMethods<T>
 }
