@@ -3,6 +3,7 @@ import stringify from "safe-stable-stringify"
 import type { AsyncFunctor, Functor, Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
@@ -45,11 +46,19 @@ export type Either<L extends Type, R extends Type> = {
    * @returns The result of applying the appropriate function
    */
   pipeEither<U extends Type>(onLeft: (value: L) => U, onRight: (value: R) => U): U
+
+  /**
+   * Pipes the Either value through the provided function
+   * @param f - The function to apply to the value
+   * @returns The result of applying the function to the value
+   */
+  pipe<U extends Type>(f: (value: L | R) => U): U
 } & Typeable<"Left" | "Right"> &
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
   AsyncFunctor<R> &
-  Serializable<R>
+  Serializable<R> &
+  Pipe<L | R>
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
 
@@ -105,6 +114,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   },
   toValue: () => ({ _tag: "Right", value }),
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
+  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Right", value }),
@@ -161,6 +171,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   },
   toValue: () => ({ _tag: "Left", value }),
   pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
+  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Left", value }),
