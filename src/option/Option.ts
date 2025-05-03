@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import type { AsyncFunctor, Functor, Type } from "@/functor"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
@@ -144,7 +145,8 @@ export type Option<T extends Type> = {
   Typeable<"Some" | "None"> &
   Valuable<"Some" | "None", T> &
   AsyncFunctor<T> &
-  Serializable<T>)
+  Serializable<T> &
+  Pipe<T>)
 
 /**
  * Creates a Some variant of Option containing a value.
@@ -192,6 +194,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toEither: <E>(_left: E) => Right<E, T>(value),
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
+  pipe: <U extends Type>(f: (value: T) => U) => f(value),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "Some", value }),
@@ -241,6 +244,7 @@ const NONE: Option<never> = {
   toEither: <E>(left: E) => Left<E, never>(left),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
+  pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
   serialize: () => {
     return {
       toJSON: () => JSON.stringify({ _tag: "None", value: null }),

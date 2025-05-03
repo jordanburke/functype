@@ -25,7 +25,7 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **Task**: Handle synchronous and asynchronous operations with error handling
 - **Tuple**: Type-safe fixed-length arrays
 - **Typeable**: Runtime type identification with compile-time safety
-- **Branded Types**: Nominal typing in TypeScript's structural type system 
+- **Branded Types**: Nominal typing in TypeScript's structural type system
 - **FPromise**: Enhanced Promise functionality with built-in error handling
 
 ## Installation
@@ -215,7 +215,9 @@ const Email = (email: string): Email => {
 }
 
 // Type safety in action
-function getUserByEmail(email: Email): User { /* ... */ }
+function getUserByEmail(email: Email): User {
+  /* ... */
+}
 
 // These calls are type-safe
 const userId = UserId("U123456")
@@ -238,21 +240,21 @@ import { Option, Either, Try, List } from "functype"
 const opt = Option(5)
 const optResult = opt.fold(
   () => "None",
-  (value) => `Some(${value})`
+  (value) => `Some(${value})`,
 ) // "Some(5)"
 
 // Either fold
 const either = Right<string, number>(42)
 const eitherResult = either.fold(
   (left) => `Left(${left})`,
-  (right) => `Right(${right})`
+  (right) => `Right(${right})`,
 ) // "Right(42)"
 
 // Try fold
 const tryValue = Try(() => 10)
 const tryResult = tryValue.fold(
   (error) => `Error: ${error.message}`,
-  (value) => `Success: ${value}`
+  (value) => `Success: ${value}`,
 ) // "Success: 10"
 
 // List fold
