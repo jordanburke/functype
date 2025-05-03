@@ -24,6 +24,13 @@ This roadmap outlines the planned development path for the Functype library, foc
 
 ## Q3 2025: Advanced Functional Patterns & Optimizations
 
+### Type Classes
+
+- [x] Implement `Foldable` typeclass with fold, foldLeft, and foldRight methods
+- [ ] Implement proper `Functor` and `Monad` typeclasses
+- [ ] Add `Applicative` typeclass
+- [ ] Support `Traversable` with comprehensive HKT
+
 ### Monad Implementations
 
 - [ ] Implement `Reader` monad for dependency injection

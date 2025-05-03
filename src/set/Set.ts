@@ -1,4 +1,7 @@
 import type { Collection } from "@/collections"
+import { Companion } from "@/companion"
+import type { Foldable } from "@/foldable"
+import type { Type } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import type { Pipe } from "@/pipe"
@@ -7,7 +10,6 @@ import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
 
 import { ESSet, type IESSet } from "./shim"
-import { Companion } from "@/companion"
 
 export type Set<A> = {
   add: (value: A) => Set<A>
@@ -16,6 +18,7 @@ export type Set<A> = {
   has: (value: A) => boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => IterableType<B>) => Set<B>
+  fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U) => U
   toList: () => List<A>
   toSet: () => Set<A>
   toString: () => string
@@ -24,7 +27,8 @@ export type Set<A> = {
   Typeable<"Set"> &
   Valuable<"Set", A[]> &
   Serializable<A[]> &
-  Pipe<A[]>
+  Pipe<A[]> &
+  Foldable<A>
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: IESSet<A> = new ESSet<A>(iterable)
@@ -50,6 +54,35 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     map: <B>(f: (a: A) => B): Set<B> => createSet(seqMethods.map(f)),
 
     flatMap: <B>(f: (a: A) => IterableType<B>): Set<B> => createSet(seqMethods.flatMap(f)),
+
+    fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U): U => {
+      if (values.size === 0) return onEmpty()
+
+      // For Set, we'll always return the first entry as the value for fold
+      // This is consistent with how Option and other single-value types work
+      const entries = Array.from(values)
+      if (entries.length === 0) {
+        return onEmpty()
+      }
+
+      const firstEntry = entries[0]
+      // Make sure we handle potential undefined values
+      if (firstEntry === undefined) {
+        return onEmpty()
+      }
+
+      return onValue(firstEntry)
+    },
+
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: A) => B) =>
+        seqMethods.foldLeft(z)(op),
+
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: A, b: B) => B) =>
+        seqMethods.foldRight(z)(op),
 
     toList: (): List<A> => List(values),
 

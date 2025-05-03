@@ -1,11 +1,13 @@
 import stringify from "safe-stable-stringify"
 
+import { Companion } from "@/companion"
 import { Either, Left, Right } from "@/either/Either"
+import type { Foldable } from "@/foldable"
+import type { Type } from "@/functor"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import { Valuable } from "@/valuable/Valuable"
-import { Companion } from "@/companion"
 
 type TypeNames = "Success" | "Failure"
 
@@ -21,11 +23,19 @@ export type Try<T> = {
   toEither: () => Either<Error, T>
   map: <U>(f: (value: T) => U) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
+  /**
+   * Pattern matches over the Try, applying onFailure if Failure and onSuccess if Success
+   * @param onFailure - Function to apply if the Try is Failure
+   * @param onSuccess - Function to apply if the Try is Success
+   * @returns The result of applying the appropriate function
+   */
+  fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
   toString: () => string
 } & Typeable<TypeNames> &
   Valuable<TypeNames, T | Error> &
   Serializable<T> &
-  Pipe<T>
+  Pipe<T> &
+  Foldable<T>
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
@@ -39,6 +49,15 @@ const Success = <T>(value: T): Try<T> => ({
   toEither: () => Right<Error, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
+  fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
+  foldLeft:
+    <B>(z: B) =>
+    (op: (b: B, a: T) => B) =>
+      op(z, value),
+  foldRight:
+    <B>(z: B) =>
+    (op: (a: T, b: B) => B) =>
+      op(value, z),
   toString: () => `Success(${stringify(value)})`,
   toValue: () => ({ _tag: "Success", value }),
   pipe: <U>(f: (value: T) => U) => f(value),
@@ -67,6 +86,15 @@ const Failure = <T>(error: Error): Try<T> => ({
   toEither: () => Left<Error, T>(error),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
+  fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
+  foldLeft:
+    <B>(z: B) =>
+    (_op: (b: B, a: T) => B) =>
+      z, // No transformation on failure
+  foldRight:
+    <B>(z: B) =>
+    (_op: (a: T, b: B) => B) =>
+      z, // No transformation on failure
   toString: () => `Failure(${stringify(error)}))`,
   toValue: () => ({ _tag: "Failure", value: error }),
   pipe: <U>(_f: (value: T) => U) => {

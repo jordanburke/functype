@@ -262,6 +262,37 @@ const list = List([1, 2, 3])
 const listResult = list.foldLeft(0)((acc, num) => acc + num) // 6
 ```
 
+## Foldable
+
+New in v0.8.67, Functype now includes a proper `Foldable` type class that data structures can implement:
+
+```typescript
+import { FoldableUtils, Option, List, Try } from "functype"
+
+// All data structures implement the Foldable interface
+const option = Option(5)
+const list = List([1, 2, 3, 4, 5])
+const tryVal = Try(() => 10)
+
+// Use fold to pattern-match on data structures
+option.fold(
+  () => console.log("Empty option"),
+  (value) => console.log(`Option value: ${value}`),
+)
+
+// Use foldLeft for left-associative operations
+const sum = list.foldLeft(0)((acc, value) => acc + value) // 15
+
+// Use foldRight for right-associative operations
+const product = list.foldRight(1)((value, acc) => value * acc) // 120
+
+// Use FoldableUtils to work with any Foldable
+const isEmpty = FoldableUtils.isEmpty(option) // false
+const size = FoldableUtils.size(list) // 5
+const convertedToList = FoldableUtils.toList(option) // List([5])
+const convertedToEither = FoldableUtils.toEither(tryVal, "Error") // Right(10)
+```
+
 ## Type Safety
 
 Functype leverages TypeScript's advanced type system to provide compile-time safety for functional patterns, ensuring that your code is both robust and maintainable.
@@ -283,6 +314,8 @@ const mappedValue = option.map((x) => x.toString())
 - [ ] Add Reader/State/IO monads for more functional patterns
 - [ ] Implement lens/optics for immutable updates
 - [ ] Expand concurrent execution utilities beyond FPromise.all
+- [x] Add a proper Foldable type class interface
+- [ ] Implement Applicative and other functional type classes
 
 ### Performance Optimizations
 

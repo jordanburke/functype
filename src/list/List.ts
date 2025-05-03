@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import { Companion } from "@/companion"
 import type { AsyncFunctor } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
@@ -7,7 +8,6 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
-import { Companion } from "@/companion"
 
 export type List<A> = {
   readonly length: number
