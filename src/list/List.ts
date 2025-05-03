@@ -3,6 +3,7 @@ import stringify from "safe-stable-stringify"
 import type { AsyncFunctor } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
+import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
@@ -45,7 +46,8 @@ export type List<A> = {
 } & IterableType<A> &
   AsyncFunctor<A> &
   Typeable<"List"> &
-  Serializable<A>
+  Serializable<A> &
+  Pipe<A[]>
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])
@@ -144,6 +146,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     toString: () => `List(${stringify(array)})`,
 
     toValue: () => ({ _tag: "List", value: array }),
+
+    pipe: <U>(f: (value: A[]) => U) => f([...array]),
 
     serialize: () => {
       return {
