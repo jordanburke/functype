@@ -1,4 +1,4 @@
-import type { Functor } from "@/functor"
+import type { Functor } from "@/functor/Functor"
 import type { Type } from "@/types"
 
 /**

@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor, Functor } from "@/functor"
+import type { AsyncFunctor, Functor } from "@/functor/Functor"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { None, Option, Some } from "@/option/Option"

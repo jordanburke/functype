@@ -1,4 +1,4 @@
-import type { AsyncFunctor, Functor } from "@/functor"
+import type { AsyncFunctor, Functor } from "@/functor/Functor"
 import { Option } from "@/option/Option"
 import type { Type } from "@/types"
 

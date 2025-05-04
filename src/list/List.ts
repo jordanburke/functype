@@ -2,7 +2,7 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion"
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor } from "@/functor"
+import type { AsyncFunctor } from "@/functor/Functor"
 import type { IterableType } from "@/iterable"
 import type { Matchable } from "@/matchable"
 import { None, Option } from "@/option/Option"

@@ -1,4 +1,4 @@
-import type { ArrayFunctor } from "@/functor"
+import type { ArrayFunctor } from "@/functor/Functor"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
