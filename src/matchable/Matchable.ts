@@ -9,6 +9,8 @@ export type Matchable<A, Tags extends string = string> = {
    * Pattern matches against this data structure, applying handlers for each variant based on tag.
    * Similar to fold but with stronger type safety for tag-based variants.
    *
+   * The return type is inferred from the pattern handlers when not explicitly specified.
+   *
    * @param patterns - An object containing handler functions for each variant
    * @returns The result of applying the matching handler function
    */
@@ -26,8 +28,7 @@ export const MatchableUtils = {
    * @returns A function that always applies the default handler
    */
   default: <A, R>(handler: (value: A) => R) => {
-    const defaultHandler = (value: A) => handler(value)
-    return defaultHandler
+    return (value: A) => handler(value)
   },
 
   /**

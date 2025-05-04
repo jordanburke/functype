@@ -91,22 +91,56 @@ describe("Matchable", () => {
 
     it("should support different return types from match handlers", () => {
       const success: Either<string, number> = Right(42)
-      const failure: Either<string, number> = Left("missing data")
 
+      // Case 1: Using union type with explicit type parameter
       type Result = { type: "success"; value: number } | { type: "error"; error: string }
 
-      const processSuccess = success.match<Result>({
+      // Explicitly specifying the Result type
+      const explicitType = success.match<Result>({
         Right: (value) => ({ type: "success", value }),
         Left: (error) => ({ type: "error", error }),
       })
 
-      const processFailure = failure.match<Result>({
-        Right: (value) => ({ type: "success", value }),
-        Left: (error) => ({ type: "error", error }),
+      expect(explicitType).toEqual({ type: "success", value: 42 })
+
+      // Case 2: Type inference with consistent return types
+      const inferredString = success.match({
+        Right: (value) => `Success: ${value}`,
+        Left: (error) => `Error: ${error}`,
       })
 
-      expect(processSuccess).toEqual({ type: "success", value: 42 })
-      expect(processFailure).toEqual({ type: "error", error: "missing data" })
+      // TypeScript correctly infers this is a string
+      expect(typeof inferredString).toBe("string")
+      expect(inferredString).toBe("Success: 42")
+
+      // Case 3: Type inference with number return type
+      const inferredNumber = success.match({
+        Right: (value) => value * 2,
+        Left: () => 0,
+      })
+
+      // TypeScript infers this is a number without explicit typing
+      expect(typeof inferredNumber).toBe("number")
+      expect(inferredNumber).toBe(84)
+
+      // Case 4: Complex object with inferred properties
+      const inferredObject = success.match({
+        Right: (value) => ({
+          doubled: value * 2,
+          isPositive: value > 0,
+          description: `The value is ${value}`,
+        }),
+        Left: (error) => ({
+          doubled: 0,
+          isPositive: false,
+          description: `Error: ${error}`,
+        }),
+      })
+
+      // TypeScript infers all the object properties correctly
+      expect(inferredObject.doubled).toBe(84)
+      expect(inferredObject.isPositive).toBe(true)
+      expect(inferredObject.description).toBe("The value is 42")
     })
 
     it("should allow chaining with other operations", () => {
@@ -177,11 +211,27 @@ describe("Matchable", () => {
       const jsonObj = Try(() => JSON.parse('{"name": "John", "age": 30}'))
       const jsonInvalid = Try(() => JSON.parse('{"name": "John", age}'))
 
+      // Define specific types for JSON data
+      type JsonObject = { name: string; age: number }
       type JsonResult = { valid: true; name: string; age: number } | { valid: false; error: string }
 
-      const processJson = (tryValue: Try<any>): JsonResult => {
+      const processJson = (tryValue: Try<unknown>): JsonResult => {
         return tryValue.match<JsonResult>({
-          Success: (data: any): JsonResult => ({ valid: true, name: data.name, age: data.age }),
+          Success: (data: unknown): JsonResult => {
+            // Type guard for JsonObject
+            if (
+              data !== null &&
+              typeof data === "object" &&
+              "name" in data &&
+              "age" in data &&
+              typeof (data as JsonObject).name === "string" &&
+              typeof (data as JsonObject).age === "number"
+            ) {
+              return { valid: true, name: (data as JsonObject).name, age: (data as JsonObject).age }
+            }
+            // Handle unexpected data structure
+            return { valid: false, error: "Invalid JSON structure" }
+          },
           Failure: (error: Error): JsonResult => ({ valid: false, error: error.message }),
         })
       }
@@ -537,6 +587,43 @@ describe("Matchable", () => {
       })
 
       expect(result).toBe("Positive: 42")
+    })
+
+    it("should demonstrate practical use of type inference with match", () => {
+      // Define a data processing function using pattern matching
+      function processUserInput<T>(input: Option<T>) {
+        // Notice no explicit return type is needed - TypeScript infers the correct type
+        return input.match({
+          Some: (value) => ({
+            status: "success",
+            message: `Got value: ${value}`,
+            hasValue: true,
+          }),
+          None: () => ({
+            status: "error",
+            message: "No value provided",
+            hasValue: false,
+          }),
+        })
+      }
+
+      // With numeric input
+      const numResult = processUserInput(Some(42))
+      expect(numResult.status).toBe("success")
+      expect(numResult.message).toBe("Got value: 42")
+      expect(numResult.hasValue).toBe(true)
+
+      // With string input
+      const strResult = processUserInput(Some("hello"))
+      expect(strResult.status).toBe("success")
+      expect(strResult.message).toBe("Got value: hello")
+      expect(strResult.hasValue).toBe(true)
+
+      // With no input
+      const emptyResult = processUserInput(None<string>())
+      expect(emptyResult.status).toBe("error")
+      expect(emptyResult.message).toBe("No value provided")
+      expect(emptyResult.hasValue).toBe(false)
     })
   })
 })
