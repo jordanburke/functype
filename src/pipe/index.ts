@@ -1,4 +1,4 @@
-import type { Type } from "@/functor"
+import type { Type } from "@/types"
 
 /**
  * Pipe interface for functional data structures

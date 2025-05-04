@@ -1,5 +1,6 @@
-import type { ArrayFunctor, Type } from "@/functor"
+import type { ArrayFunctor } from "@/functor"
 import { Typeable } from "@/typeable/Typeable"
+import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
 export type Tuple<T extends Type[]> = {

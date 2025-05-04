@@ -1,25 +1,3 @@
-import type { Functor, Type } from "./functor"
-
-/**
- * Foldable typeclass for data structures that can be folded to a summary value.
- * This is just a reference. The actual Foldable implementation is in @/foldable.
- */
-
-/**
- * Traversable typeclass for data structures that can be traversed through
- */
-export type Traversable<A extends Type> = Functor<A> & {
-  get size(): number
-
-  get isEmpty(): boolean
-
-  contains(value: A): boolean
-
-  reduce(f: (b: A, a: A) => A): A
-
-  reduceRight(f: (b: A, a: A) => A): A
-}
-
 export * from "@/branded"
 export * from "@/companion/Companion"
 export * from "@/core/base/Base"
@@ -39,6 +17,8 @@ export * from "@/matchable"
 export * from "@/option/Option"
 export * from "@/pipe"
 export * from "@/set/Set"
+export * from "@/traversable/Traversable"
 export * from "@/try/Try"
 export * from "@/tuple/Tuple"
 export * from "@/typeable/Typeable"
+export * from "@/types"

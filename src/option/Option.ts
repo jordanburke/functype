@@ -1,14 +1,16 @@
 import stringify from "safe-stable-stringify"
 
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor, Functor, Type } from "@/functor"
+import type { AsyncFunctor, Functor } from "@/functor"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
+import type { Traversable } from "@/traversable"
 import { Typeable } from "@/typeable/Typeable"
+import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
-import { Companion, Either, Left, List, Right, type Traversable } from "../index"
+import { Companion, Either, Left, List, Right } from "../index"
 
 /**
  * Option type module

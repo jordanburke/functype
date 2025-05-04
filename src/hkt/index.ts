@@ -1,9 +1,9 @@
 import { Base } from "@/core/base/Base"
 import { Either } from "@/either/Either"
-import type { Type } from "@/functor"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { Try } from "@/try/Try"
+import type { Type } from "@/types"
 
 /**
  * Type function for representing higher-kinded types

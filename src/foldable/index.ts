@@ -1,8 +1,8 @@
 import { Either, Left, Right } from "@/either/Either"
 import type { Foldable } from "@/foldable/Foldable"
-import type { Type } from "@/functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
+import type { Type } from "@/types"
 
 /**
  * Utility functions for working with Foldable data structures

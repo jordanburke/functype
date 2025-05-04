@@ -1,12 +1,12 @@
 import type { Collection } from "@/collections"
 import { Companion } from "@/companion"
 import type { Foldable } from "@/foldable/Foldable"
-import type { Type } from "@/functor"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
+import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
 import { ESSet, type IESSet } from "./shim"

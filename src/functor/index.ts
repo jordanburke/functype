@@ -1,4 +1,4 @@
-export type Type = unknown
+import type { Type } from "@/types"
 
 export type AbstractFunctor<A extends Type> = {
   map(f: (value: A) => Type): AbstractFunctor<Type>
