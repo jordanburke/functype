@@ -88,6 +88,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     forEach: (f: (a: A) => void) => array.forEach(f),
 
+    contains: (value: A): boolean => array.includes(value),
+
     count: (p: (x: A) => boolean) => array.filter(p).length,
 
     exists: (p: (a: A) => boolean) => array.some(p),

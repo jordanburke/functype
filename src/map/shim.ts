@@ -1,2 +1,2 @@
-export type IESMap<K, V> = Map<K, V>
+export type ESMapType<K, V> = Map<K, V>
 export const ESMap = Map

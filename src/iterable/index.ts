@@ -1,5 +1,6 @@
 import type { AsyncFunctor, Functor } from "@/functor/Functor"
 import { Option } from "@/option/Option"
+import type { Traversable } from "@/traversable/Traversable"
 import type { Type } from "@/types"
 
 export type IterableType<A extends Type> = {
@@ -46,4 +47,5 @@ export type IterableType<A extends Type> = {
   toArray<B = A>(): readonly B[]
 } & Iterable<A> &
   Functor<A> &
-  AsyncFunctor<A>
+  AsyncFunctor<A> &
+  Traversable<A>

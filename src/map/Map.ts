@@ -11,7 +11,7 @@ import { Tuple } from "@/tuple/Tuple"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
-import { ESMap, type IESMap } from "./shim"
+import { ESMap, type ESMapType } from "./shim"
 
 type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">
 
@@ -35,14 +35,14 @@ export type Map<K, V> = {
 } & SafeTraversable<K, V> &
   Collection<Tuple<[K, V]>> &
   Typeable<"Map"> &
-  Valuable<"Map", IESMap<K, V>> &
+  Valuable<"Map", ESMapType<K, V>> &
   Serializable<[K, V][]> &
   Pipe<[K, V][]> &
   Foldable<Tuple<[K, V]>> &
   Matchable<Array<Tuple<[K, V]>>, "Empty" | "NonEmpty">
 
 type MapState<K, V> = {
-  values: IESMap<K, V>
+  values: ESMapType<K, V>
 }
 
 const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
