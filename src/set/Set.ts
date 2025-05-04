@@ -9,7 +9,7 @@ import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
-import { ESSet, type IESSet } from "./shim"
+import { ESSet, type ESSetType } from "./shim"
 
 export type Set<A> = {
   add: (value: A) => Set<A>
@@ -31,7 +31,7 @@ export type Set<A> = {
   Foldable<A>
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
-  const values: IESSet<A> = new ESSet<A>(iterable)
+  const values: ESSetType<A> = new ESSet<A>(iterable)
 
   const seqMethods = List(values)
 
