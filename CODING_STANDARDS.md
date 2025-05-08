@@ -24,6 +24,7 @@ This document outlines coding standards for the Functype project, a functional p
   - `never` where appropriate for exhaustiveness checking
 - **Type Declarations**: Maintain explicit type declarations for function parameters and return types.
 - **Type Guards**: Use type guards for narrow types when working with union types.
+- **Typescript Types**: Please use Types over Interfaces when possible
 
 ```typescript
 // INCORRECT
