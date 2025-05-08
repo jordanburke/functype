@@ -2,9 +2,8 @@ import { Typeable } from "@/typeable/Typeable"
 
 /**
  * Base Object from which most other objects inherit
- * @param type
- * @param body
- * @constructor
+ * @param type - The type name for the object
+ * @param body - The implementation body
  */
 export function Base<T>(type: string, body: T) {
   return {

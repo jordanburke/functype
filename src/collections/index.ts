@@ -7,4 +7,7 @@ export type Converters<A> = {
   toString(): string
 }
 
+/**
+ * Represents a collection with conversion capabilities
+ */
 export type Collection<A> = Converters<A>

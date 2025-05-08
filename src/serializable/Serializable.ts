@@ -1,4 +1,7 @@
-type SerializationMethods<T> = {
+/**
+ * Methods for different serialization formats
+ */
+export type SerializationMethods<T> = {
   toJSON(): string
   toYAML(): string
   toBinary(): string

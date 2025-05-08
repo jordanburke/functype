@@ -13,7 +13,10 @@ import { Valuable } from "@/valuable/Valuable"
 
 import { ESMap, type ESMapType } from "./shim"
 
-type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">
+/**
+ * A traversable interface for map that excludes map and flatMap operations
+ */
+export type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">
 
 export type Map<K, V> = {
   add(item: Tuple<[K, V]>): Map<K, V>

@@ -1,26 +1,36 @@
 import { Typeable } from "@/typeable/Typeable"
 
-const NAME = "Throwable" as const
+/**
+ * The identifier name for Throwable type
+ */
+export const NAME = "Throwable" as const
 
 export type ThrowableType = Error &
   Typeable<typeof NAME> & {
     readonly data?: unknown
     readonly cause?: Error
+    readonly taskInfo?: { name: string; description: string }
   }
 
 export class Throwable extends Error implements ThrowableType {
   public readonly _tag: typeof NAME = NAME
   public readonly data?: unknown
   public readonly cause?: Error
+  public readonly taskInfo?: { name: string; description: string }
 
   protected constructor(
     message: string,
-    options?: { data?: unknown | undefined; cause?: Error | undefined; stack?: string | undefined },
+    options?: {
+      data?: unknown | undefined
+      cause?: Error | undefined
+      stack?: string | undefined
+      taskInfo?: { name: string; description: string } | undefined
+    },
   ) {
     super(message, { cause: options?.cause })
 
     // Set name before we capture stack trace
-    this.name = NAME
+    this.name = options?.taskInfo?.name || NAME
 
     // Set immutable properties
     Object.defineProperties(this, {
@@ -34,8 +44,13 @@ export class Throwable extends Error implements ThrowableType {
         writable: false,
         configurable: false,
       },
+      taskInfo: {
+        value: options?.taskInfo,
+        writable: false,
+        configurable: false,
+      },
       name: {
-        value: NAME,
+        value: options?.taskInfo?.name || NAME,
         writable: false,
         configurable: false,
       },
@@ -60,13 +75,14 @@ export class Throwable extends Error implements ThrowableType {
     }
   }
 
-  static apply(srcError: unknown, data?: unknown): ThrowableType {
+  static apply(srcError: unknown, data?: unknown, taskInfo?: { name: string; description: string }): ThrowableType {
     if (srcError instanceof Error) {
       // For Error instances, preserve the original stack trace and all properties
       const throwable = new Throwable(srcError.message, {
         data,
         cause: (srcError.cause as Error | undefined) || undefined,
         stack: srcError.stack || undefined,
+        taskInfo,
       })
 
       // Copy all enumerable properties from the source error
@@ -98,7 +114,7 @@ export class Throwable extends Error implements ThrowableType {
                 Object.getOwnPropertyNames(errorObj).filter((key) => errorObj[key] !== undefined),
               )}`
 
-      const throwable = new Throwable(message, { data: data || errorObj })
+      const throwable = new Throwable(message, { data: data || errorObj, taskInfo })
 
       // Copy all properties from the source object
       for (const key of Object.keys(errorObj)) {
@@ -121,6 +137,7 @@ export class Throwable extends Error implements ThrowableType {
           functionName: fnName,
           functionString: fnString,
         },
+        taskInfo,
       })
     }
 
@@ -143,6 +160,7 @@ export class Throwable extends Error implements ThrowableType {
           errorValue: numValue,
           originalError: srcError,
         },
+        taskInfo,
       })
     }
 
@@ -153,6 +171,7 @@ export class Throwable extends Error implements ThrowableType {
           errorValue: String(srcError),
           originalError: srcError,
         },
+        taskInfo,
       })
     }
 
@@ -163,6 +182,7 @@ export class Throwable extends Error implements ThrowableType {
           errorValue: srcError,
           originalError: srcError,
         },
+        taskInfo,
       })
     }
 
@@ -174,6 +194,7 @@ export class Throwable extends Error implements ThrowableType {
           symbolDescription: symbolDesc,
           originalError: srcError,
         },
+        taskInfo,
       })
     }
 
@@ -188,6 +209,7 @@ export class Throwable extends Error implements ThrowableType {
         errorValue,
         originalError: srcError,
       },
+      taskInfo,
     })
   }
 }

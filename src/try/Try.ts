@@ -10,7 +10,10 @@ import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
-type TypeNames = "Success" | "Failure"
+/**
+ * Possible types of Try instances
+ */
+export type TypeNames = "Success" | "Failure"
 
 export type Try<T> = {
   readonly _tag: TypeNames

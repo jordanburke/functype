@@ -23,6 +23,20 @@ describe("AppException", () => {
     expect(result.value instanceof Throwable).toBe(true)
     expect((result.value as unknown as Throwable).data).toEqual(data)
   })
+
+  test("should include task name in the error", () => {
+    const error = new Error("Test error")
+    const taskName = "CustomTaskName"
+    const result = TaskException<string>(error, undefined, { name: taskName })
+
+    expect(isLeft(result)).toBe(true)
+    // TaskException has _task property
+    expect((result as any)._task.name).toBe(taskName)
+    // The throwable should have the task name
+    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    // The Error's name should also be set to the task name
+    expect((result.value as Error).name).toBe(taskName)
+  })
 })
 
 describe("TaskResult", () => {
@@ -65,6 +79,20 @@ describe("Sync", () => {
     expect(isLeft(result)).toBe(true)
     expect(result.value._tag).toBe("Throwable")
     expect((result.value as Error).message).toBe("Sync failed")
+  })
+
+  test("should include task name in error when using named task", () => {
+    const error = new Error("Sync failed")
+    const taskName = "CustomTaskName"
+    const result = Task({ name: taskName }).Sync(() => {
+      throw error
+    })
+
+    expect(isLeft(result)).toBe(true)
+    // TaskException has _task property
+    expect((result as any)._task.name).toBe(taskName)
+    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    expect((result.value as Error).name).toBe(taskName)
   })
 
   test("should use custom error handler", () => {
@@ -116,6 +144,20 @@ describe("Async", () => {
     }
   })
 
+  test("should include task name in async error when using named task", async () => {
+    const error = new Error("Async failed")
+    const taskName = "AsyncTaskName"
+    try {
+      await Task({ name: taskName }).Async(async () => {
+        throw error
+      })
+      expect.fail("Should throw error")
+    } catch (error) {
+      expect((error as unknown as Throwable).taskInfo?.name).toBe(taskName)
+      expect((error as Error).name).toBe(taskName)
+    }
+  })
+
   test("should use custom async error handler", async () => {
     const error = new Error("Original error")
     const customError = "Custom async error message"
@@ -145,6 +187,18 @@ describe("Async", () => {
     expect(isLeft(result)).toBe(true)
     expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
     expect((result.value as Error).message).toBe("Failed")
+  })
+
+  test("Task.fail should include task name in the error", () => {
+    const error = new Error("Failed")
+    const taskName = "CustomFailTaskName"
+    const result = Task.fail(error, undefined, { name: taskName })
+
+    expect(isLeft(result)).toBe(true)
+    // TaskException has _task property
+    expect((result as any)._task.name).toBe(taskName)
+    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    expect((result.value as Error).name).toBe(taskName)
   })
 
   test("should handle promises", async () => {

@@ -51,7 +51,7 @@ Transform a container of containers into a container of container (e.g., `Option
 
 ```typescript
 const optionOfList = Option(List([1, 2, 3]))
-const listOfOptions = HKT.sequence(optionOfList) 
+const listOfOptions = HKT.sequence(optionOfList)
 // List([Option(1), Option(2), Option(3)])
 ```
 
@@ -90,16 +90,14 @@ The power of HKT is in creating algorithms that work with any container type:
 
 ```typescript
 // A function that works with any container implementing map
-function increment<F extends (a: number) => any>(
-  container: Kind<F, number>
-): Kind<F, number> {
-  return HKT.map(container, x => x + 1)
+function increment<F extends (a: number) => any>(container: Kind<F, number>): Kind<F, number> {
+  return HKT.map(container, (x) => x + 1)
 }
 
 // Works with any container
-increment(Option(41))  // Option(42)
-increment(List([1, 2, 3]))  // List([2, 3, 4])
-increment(Right<string, number>(41))  // Right(42)
+increment(Option(41)) // Option(42)
+increment(List([1, 2, 3])) // List([2, 3, 4])
+increment(Right<string, number>(41)) // Right(42)
 ```
 
 ## Implementing Your Own Container Types

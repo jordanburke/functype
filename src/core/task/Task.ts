@@ -17,18 +17,19 @@ export type TaskException<T> = Either<Throwable, T> & TaskInfo
 
 /**
  * TaskException factory function
- * @param error
- * @param _task
- * @param data
- * @constructor
+ * @param error - The error object
+ * @param data - Additional data related to the error
+ * @param _task - Task parameters
  */
 export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskParams): TaskException<T> => {
   const name = _task?.name || "TaskException"
   const description = _task?.description || "Unspecified TaskException"
-  const appError = Throwable.apply(error, data)
+  const taskInfo = { name, description }
+  // Pass task info to the Throwable
+  const appError = Throwable.apply(error, data, taskInfo)
   return {
     ...Base("TaskException", Left(appError)),
-    _task: { name, description },
+    _task: taskInfo,
   }
 }
 
@@ -71,7 +72,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
             await f()
           } catch (finallyError) {
             // Finally errors take precedence
-            reject(Throwable.apply(finallyError))
+            reject(Throwable.apply(finallyError, undefined, { name, description }))
             return
           }
           // Success path - resolve with the value directly
@@ -83,16 +84,16 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
             await f()
           } catch (finallyError) {
             // Finally errors take precedence over operation errors
-            reject(Throwable.apply(finallyError))
+            reject(Throwable.apply(finallyError, undefined, { name, description }))
             return
           }
           // Process the original error through error handler
           try {
             const errorResult = await e(error)
-            reject(Throwable.apply(errorResult))
+            reject(Throwable.apply(errorResult, undefined, { name, description }))
           } catch (handlerError) {
             // If error handler throws, use that error
-            reject(Throwable.apply(handlerError))
+            reject(Throwable.apply(handlerError, undefined, { name, description }))
           }
         }
       })
@@ -110,7 +111,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       try {
         return TaskResult<U>(t(), { name, description })
       } catch (error) {
-        return TaskException<U>(e(error), { name, description })
+        return TaskException<U>(e(error), undefined, { name, description })
       } finally {
         f()
       }
@@ -132,7 +133,8 @@ const TaskCompanion = {
   /**
    * Create a failed Task result
    */
-  fail: <T>(error: unknown, params?: TaskParams): TaskException<T> => TaskException<T>(error, params),
+  fail: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskException<T> =>
+    TaskException<T>(error, data, params),
 
   /**
    * Convert a Promise-returning function to a Task-compatible function
