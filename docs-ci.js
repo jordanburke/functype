@@ -25,7 +25,7 @@ const PRESERVE_FILES = [
 // Function to backup important documentation files
 function backupDocsFiles() {
   const docsDir = join(process.cwd(), "docs")
-  const backupDir = join(process.cwd(), ".docs-backup")
+  const backupDir = join(process.cwd(), "readme")
 
   // Create backup directory if it doesn't exist
   if (!existsSync(backupDir)) {
@@ -49,7 +49,7 @@ function backupDocsFiles() {
 // Function to restore important documentation files
 function restoreDocsFiles() {
   const docsDir = join(process.cwd(), "docs")
-  const backupDir = join(process.cwd(), ".docs-backup")
+  const backupDir = join(process.cwd(), "readme")
 
   // Create docs directory if it doesn't exist
   if (!existsSync(docsDir)) {
