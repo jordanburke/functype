@@ -8,6 +8,8 @@ export type ValuableParams<Tag extends string, T, V> = { _tag: Tag; impl: T; val
 /**
  * Creates a Valuable wrapper that adds value extraction capabilities
  * @param params - Configuration parameters
+ * @module Valuable
+ * @category Utilities
  */
 export function Valuable<Tag extends string, V, T = object>(params: ValuableParams<Tag, T, V>) {
   const t = Typeable<Tag, T>({ _tag: params._tag, impl: params.impl })
@@ -17,5 +19,10 @@ export function Valuable<Tag extends string, V, T = object>(params: ValuablePara
   }
 }
 
-// Extract the return type of the Valuable function
+/**
+ * Represents a type that can extract its inner value
+ * @interface
+ * @module Valuable
+ * @category Utilities
+ */
 export type Valuable<Tag extends string, V, T = object> = ReturnType<typeof Valuable<Tag, V, T>>

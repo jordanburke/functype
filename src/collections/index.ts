@@ -1,6 +1,12 @@
 import { List } from "@/list/List"
 import { Set } from "@/set/Set"
 
+/**
+ * Defines conversion methods for collection types
+ * @interface
+ * @module Collections
+ * @category Core
+ */
 export type Converters<A> = {
   toList(): List<A>
   toSet(): Set<A>
@@ -9,5 +15,8 @@ export type Converters<A> = {
 
 /**
  * Represents a collection with conversion capabilities
+ * @interface
+ * @module Collections
+ * @category Core
  */
 export type Collection<A> = Converters<A>

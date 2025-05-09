@@ -16,7 +16,24 @@
       "Bash(sed:*)",
       "Bash(xxd:*)",
       "Bash(pnpm lint:*)",
-      "Bash(eslint test:*)"
+      "Bash(eslint test:*)",
+      "Bash(cd:*)",
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm build)",
+      "Bash(pnpm build:dev:*)",
+      "Bash(pnpm build:prod:*)",
+      "Bash(pnpm docs:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm typedoc)",
+      "Bash(pnpm:*)",
+      "Bash(find:*)",
+      "Bash(git restore:*)",
+      "WebFetch(domain:typedoc.org)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

@@ -2,8 +2,73 @@
 
 // Simple wrapper to run typedoc in CI environments
 import { execSync } from "child_process"
-import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "fs"
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs"
 import { join } from "path"
+
+// List of markdown files that should be preserved during documentation generation
+const PRESERVE_FILES = [
+  "BUNDLE_OPTIMIZATION.md",
+  "FPromise-Assessment.md",
+  "HKT.md",
+  "ROADMAP.md",
+  "TASK-TODO.md",
+  "TUPLE-EXAMPLES.md",
+  "TaskMigration.md",
+  "ai-guide.md",
+  "examples.md",
+  "quick-reference.md",
+  "task-error-handling.md",
+  "tasks.md",
+  "type-index.md",
+]
+
+// Function to backup important documentation files
+function backupDocsFiles() {
+  const docsDir = join(process.cwd(), "docs")
+  const backupDir = join(process.cwd(), ".docs-backup")
+
+  // Create backup directory if it doesn't exist
+  if (!existsSync(backupDir)) {
+    mkdirSync(backupDir, { recursive: true })
+  }
+
+  // Backup important doc files
+  if (existsSync(docsDir)) {
+    console.log("Backing up documentation files...")
+    PRESERVE_FILES.forEach((file) => {
+      const srcPath = join(docsDir, file)
+      const destPath = join(backupDir, file)
+      if (existsSync(srcPath)) {
+        copyFileSync(srcPath, destPath)
+        console.log(`- Backed up ${file}`)
+      }
+    })
+  }
+}
+
+// Function to restore important documentation files
+function restoreDocsFiles() {
+  const docsDir = join(process.cwd(), "docs")
+  const backupDir = join(process.cwd(), ".docs-backup")
+
+  // Create docs directory if it doesn't exist
+  if (!existsSync(docsDir)) {
+    mkdirSync(docsDir, { recursive: true })
+  }
+
+  // Restore important doc files
+  if (existsSync(backupDir)) {
+    console.log("Restoring documentation files...")
+    PRESERVE_FILES.forEach((file) => {
+      const srcPath = join(backupDir, file)
+      const destPath = join(docsDir, file)
+      if (existsSync(srcPath)) {
+        copyFileSync(srcPath, destPath)
+        console.log(`- Restored ${file}`)
+      }
+    })
+  }
+}
 
 // Ensure required documentation files exist
 function ensureDocsFiles() {
@@ -98,14 +163,29 @@ If you need assistance with optimizing your bundle size further, please open an 
 }
 
 try {
-  // Ensure required documentation files exist
+  // First, ensure required documentation files exist
   ensureDocsFiles()
+
+  // Backup documentation files before running TypeDoc
+  backupDocsFiles()
 
   // Run TypeDoc
   console.log("Building documentation with TypeDoc...")
   execSync("npx typedoc", { stdio: "inherit" })
+
+  // Restore documentation files after TypeDoc runs
+  restoreDocsFiles()
+
   console.log("Documentation generated successfully in ./docs directory")
 } catch (error) {
   console.error("Error building documentation:", error)
+
+  // Try to restore docs even if there was an error
+  try {
+    restoreDocsFiles()
+  } catch (restoreError) {
+    console.error("Error restoring documentation files:", restoreError)
+  }
+
   process.exit(1)
 }
