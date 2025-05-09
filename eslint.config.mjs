@@ -5,6 +5,7 @@ import { FlatCompat } from "@eslint/eslintrc"
 import js from "@eslint/js"
 import typescriptEslint from "@typescript-eslint/eslint-plugin"
 import tsParser from "@typescript-eslint/parser"
+import functionalEslint from "eslint-plugin-functional"
 import prettier from "eslint-plugin-prettier"
 import simpleImportSort from "eslint-plugin-simple-import-sort"
 import globals from "globals"
@@ -36,6 +37,7 @@ export default [
     plugins: {
       "@typescript-eslint": typescriptEslint,
       "simple-import-sort": simpleImportSort,
+      functional: functionalEslint,
       prettier,
     },
 
@@ -73,6 +75,12 @@ export default [
       "@typescript-eslint/explicit-function-return-type": "off",
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
+
+      // Immutability rules
+      "prefer-const": "error",
+      "no-var": "error",
+      "functional/no-let": "warn",
+      "functional/immutable-data": "warn",
     },
   },
 ]

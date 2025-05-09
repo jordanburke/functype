@@ -166,6 +166,9 @@ import type { Collection } from "@/collections"
 
 - **Pure Functions**: Functions should not cause side effects
 - **Immutability**: Never mutate data; create new instances with changes
+  - Always use `const` over `let` for variable declarations
+  - Never use `var`
+  - Avoid reassigning variables; create new variables instead
 - **Function Composition**: Design for composability of operations
 - **Higher-Order Functions**: Embrace functions that take or return other functions
 - **Type-Driven Development**: Let types guide implementation

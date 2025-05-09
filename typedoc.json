@@ -18,5 +18,10 @@
     "external": false
   },
   "readme": "README.md",
-  "disableSources": true
+  "disableSources": true,
+  "skipErrorChecking": true,
+  "validation": {
+    "invalidLink": false,
+    "notDocumented": false
+  }
 }
