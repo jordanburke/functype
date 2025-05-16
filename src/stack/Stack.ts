@@ -1,4 +1,4 @@
-import { Companion } from "@/companion"
+import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import type { Functor } from "@/functor/Functor"
 import { List } from "@/list/List"

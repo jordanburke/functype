@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor, Functor } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
@@ -10,7 +11,7 @@ import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
-import { Companion, Either, Left, List, Right } from "../index"
+import { Either, Left, List, Right } from "../index"
 
 /**
  * Option type module

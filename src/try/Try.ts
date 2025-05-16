@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { Companion } from "@/companion"
+import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either/Either"
 import type { Foldable } from "@/foldable/Foldable"
 import type { Matchable } from "@/matchable"

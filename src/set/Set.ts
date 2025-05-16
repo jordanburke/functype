@@ -1,5 +1,5 @@
 import type { Collection } from "@/collections"
-import { Companion } from "@/companion"
+import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"

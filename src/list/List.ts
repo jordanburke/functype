@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { Companion } from "@/companion"
+import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncFunctor } from "@/functor/Functor"
 import type { IterableType } from "@/iterable"

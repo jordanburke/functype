@@ -168,17 +168,19 @@ This document contains a comprehensive list of potential improvement ideas for t
 
 [x] Add Task.sequence for parallel execution with error handling
 [x] Implement Task.traverse for mapping and sequencing in one operation
-[ ] Create Task.race for racing multiple tasks with timeout support
+[x] Create Task.race for racing multiple tasks with timeout support
 [x] Add Task retry utilities with exponential backoff
-[ ] Implement Task.fromNodeCallback for Node.js style callbacks
+[x] Implement Task.fromNodeCallback for Node.js style callbacks
+[x] Implement cancellation support for Task operations
+[x] Add progress tracking for long-running Task operations
 
 ### FPromise Module
 
 [x] Add timeout support for all FPromise operations
-[ ] Implement cancellation support for FPromise chains
+[x] Implement cancellation support for FPromise chains
 [x] Create FPromise.allSettled equivalent with typed results
 [x] Add FPromise.any with proper typing
-[ ] Implement progress tracking for long-running operations
+[x] Implement progress tracking for long-running operations
 
 ### Collection Modules
 

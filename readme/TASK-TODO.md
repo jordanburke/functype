@@ -14,6 +14,10 @@
 - [x] Add examples showing migration from promise-based to functional patterns
 - [x] Add utilities to simplify Task composition with promise-returning functions
 - [x] Create migration guide for converting promise chains to Task operations
+- [x] Create Task.race for racing multiple tasks with timeout support
+- [x] Implement Task.fromNodeCallback for Node.js style callbacks
+- [x] Implement cancellation support for Task operations
+- [x] Add progress tracking for long-running Task operations
 
 ## Design Considerations
 
@@ -28,3 +32,9 @@
 - Enhanced documentation with clearer descriptions of functionality
 - Created TaskMigration.md guide showing how to migrate from promises to functional Task patterns
 - Added comprehensive tests for the new adapter methods
+- Implemented `Task.race` for racing multiple tasks with timeout support
+- Added `Task.fromNodeCallback` for Node.js-style callback integration
+- Implemented cancellation support with CancellationToken pattern
+- Added progress tracking for long-running operations
+- Created property-based tests verifying monadic laws and edge cases
+- Added comprehensive documentation for all new functionality
