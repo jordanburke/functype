@@ -19,9 +19,24 @@ export type EitherKind<E> = <A>(a: A) => Either<E, A>
 export type TryKind = <A>(a: A) => Try<A>
 
 /**
+ * Generic container types for type-safe operations
+ */
+type Mappable<T> = {
+  map<U>(f: (value: T) => U): unknown
+}
+
+type Flattenable = {
+  flatten(): unknown
+}
+
+type FlatMappable<T> = {
+  flatMap<U>(f: (value: T) => unknown): unknown
+}
+
+/**
  * Type guard to check if a value is an Option
  */
-const isOption = <T extends Type>(value: unknown): value is Option<T> => {
+const isOption = <T extends Type>(value: unknown): value is Option<T> & Mappable<T> & FlatMappable<T> => {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -32,14 +47,16 @@ const isOption = <T extends Type>(value: unknown): value is Option<T> => {
 /**
  * Type guard to check if a value is a List
  */
-const isList = <T extends Type>(value: unknown): value is List<T> => {
+const isList = <T extends Type>(value: unknown): value is List<T> & Mappable<T> & Flattenable & FlatMappable<T> => {
   return value !== null && typeof value === "object" && (value as Record<string, unknown>)._tag === "List"
 }
 
 /**
  * Type guard to check if a value is an Either
  */
-const isEither = <E extends Type, A extends Type>(value: unknown): value is Either<E, A> => {
+const isEither = <E extends Type, A extends Type>(
+  value: unknown,
+): value is Either<E, A> & Mappable<A> & FlatMappable<A> => {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -50,7 +67,7 @@ const isEither = <E extends Type, A extends Type>(value: unknown): value is Eith
 /**
  * Type guard to check if a value is a Try
  */
-const isTry = <T extends Type>(value: unknown): value is Try<T> => {
+const isTry = <T extends Type>(value: unknown): value is Try<T> & Mappable<T> & FlatMappable<T> => {
   return (
     value !== null &&
     typeof value === "object" &&
@@ -75,20 +92,16 @@ export const HKT = () => {
    */
   const map = <F, A, B>(fa: unknown, f: (a: A) => B): unknown => {
     if (isOption<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.map(f as any)
+      return fa.map((value: A & Type) => f(value))
     }
     if (isList<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.map(f as any)
+      return fa.map((value: A & Type) => f(value))
     }
     if (isEither<unknown & Type, A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.map(f as any)
+      return fa.map((value: A & Type) => f(value))
     }
     if (isTry<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.map(f as any)
+      return fa.map((value: A & Type) => f(value))
     }
     throw new Error(`Unsupported functor type: ${JSON.stringify(fa)}`)
   }
@@ -97,11 +110,10 @@ export const HKT = () => {
    * Flattens a nested container (container of container) into a single container
    */
   const flatten = <F, A>(ffa: unknown): unknown => {
-    if (isOption<never>(ffa)) {
+    if (isOption<unknown>(ffa)) {
       return ffa.get()
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (isList<any>(ffa)) {
+    if (isList<unknown>(ffa)) {
       // Special case for nested lists - we need to properly flatten them to match the test's expectation
       const items = ffa.toArray()
       if (items.length > 0 && isList(items[0])) {
@@ -115,7 +127,7 @@ export const HKT = () => {
       }
       return ffa.flatten()
     }
-    if (isEither<never, never>(ffa)) {
+    if (isEither<unknown, unknown>(ffa)) {
       if (ffa.isRight()) {
         return ffa.fold(
           () => null,
@@ -124,8 +136,7 @@ export const HKT = () => {
       }
       return ffa
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (isTry<any>(ffa)) {
+    if (isTry<unknown>(ffa)) {
       if (ffa.isSuccess()) {
         return ffa.get()
       }
@@ -139,20 +150,16 @@ export const HKT = () => {
    */
   const flatMap = <F, A, B>(fa: unknown, f: (a: A) => unknown): unknown => {
     if (isOption<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.flatMap(f as any)
+      return fa.flatMap((value: A & Type) => f(value))
     }
     if (isList<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.flatMap(f as any)
+      return fa.flatMap((value: A & Type) => f(value))
     }
     if (isEither<unknown & Type, A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.flatMap(f as any)
+      return fa.flatMap((value: A & Type) => f(value))
     }
     if (isTry<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return fa.flatMap(f as any)
+      return fa.flatMap((value: A & Type) => f(value))
     }
     throw new Error(`Unsupported functor type for flatMap: ${JSON.stringify(fa)}`)
   }
@@ -162,20 +169,16 @@ export const HKT = () => {
    */
   const ap = <F, A, B>(ff: unknown, fa: unknown): unknown => {
     if (isOption<((a: A) => B) & Type>(ff) && isOption<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ff.flatMap((f: (a: A) => B) => fa.map(f as any)) as unknown
+      return ff.flatMap((f: (a: A) => B) => fa.map((value: A & Type) => f(value)))
     }
     if (isList<((a: A) => B) & Type>(ff) && isList<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ff.flatMap((f: (a: A) => B) => fa.map(f as any)) as unknown
+      return ff.flatMap((f: (a: A) => B) => fa.map((value: A & Type) => f(value)))
     }
     if (isEither<unknown & Type, ((a: A) => B) & Type>(ff) && isEither<unknown & Type, A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ff.flatMap((f: (a: A) => B) => fa.map(f as any)) as unknown
+      return ff.flatMap((f: (a: A) => B) => fa.map((value: A & Type) => f(value)))
     }
     if (isTry<((a: A) => B) & Type>(ff) && isTry<A & Type>(fa)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return ff.flatMap((f: (a: A) => B) => fa.map(f as any)) as unknown
+      return ff.flatMap((f: (a: A) => B) => fa.map((value: A & Type) => f(value)))
     }
     throw new Error(`Unsupported functor type for ap: ${JSON.stringify(ff)}`)
   }
@@ -244,8 +247,7 @@ export const HKT = () => {
    * Transforms each element in a container and then sequences the results
    */
   const traverse = <F, G, A, B>(fa: unknown, f: (a: A) => unknown): unknown => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return sequence(map(fa, f as any))
+    return sequence(map<F, A, unknown>(fa, (value: A) => f(value)))
   }
 
   return {
