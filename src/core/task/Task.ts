@@ -18,10 +18,7 @@ export type TaggedThrowable = Error & {
  */
 export function isTaggedThrowable(error: unknown): error is TaggedThrowable {
   return (
-    error instanceof Error &&
-    typeof error === "object" &&
-    error !== null &&
-    (error as { _tag?: string })._tag === "Throwable"
+    error instanceof Error && typeof error === "object" && true && (error as { _tag?: string })._tag === "Throwable"
   )
 }
 
@@ -421,7 +418,7 @@ const TaskCompanion = {
 
     return chain
       .map((err, index) => {
-        if (!err || !(err instanceof Error)) {
+        if (!err) {
           return `${index > 0 ? "↳ " : ""}Unknown error`
         }
 
@@ -581,7 +578,7 @@ const TaskCompanion = {
   cancellable: <T>(
     task: (token: CancellationToken) => Promise<T>,
     params?: TaskParams,
-  ): { task: Promise<T>; cancel: () => void } => {
+  ): { task: FPromise<T>; cancel: () => void } => {
     const tokenSource = createCancellationTokenSource()
     const taskPromise = Task(params).Async<T>(
       () => task(tokenSource.token),
@@ -590,11 +587,8 @@ const TaskCompanion = {
       tokenSource.token,
     )
 
-    // Convert FPromise to standard Promise
-    const standardPromise = Promise.resolve(taskPromise)
-
     return {
-      task: standardPromise,
+      task: taskPromise,
       cancel: () => tokenSource.cancel(),
     }
   },
@@ -611,7 +605,7 @@ const TaskCompanion = {
     task: (updateProgress: (percent: number) => void, token: CancellationToken) => Promise<T>,
     onProgress: (percent: number) => void = () => {},
     params?: TaskParams,
-  ): { task: Promise<T>; cancel: () => void; currentProgress: () => number } => {
+  ): { task: FPromise<T>; cancel: () => void; currentProgress: () => number } => {
     const tokenSource = createCancellationTokenSource()
     let currentProgressValue = 0
 
@@ -627,11 +621,8 @@ const TaskCompanion = {
       tokenSource.token,
     )
 
-    // Convert FPromise to standard Promise
-    const standardPromise = Promise.resolve(taskPromise)
-
     return {
-      task: standardPromise,
+      task: taskPromise,
       cancel: () => tokenSource.cancel(),
       currentProgress: () => currentProgressValue,
     }
