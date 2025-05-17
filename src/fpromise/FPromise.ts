@@ -36,7 +36,7 @@ export type ErrorContext = {
 /**
  * FPromise type that defines the function signature and methods
  */
-export interface FPromise<T extends Type, E extends Type = unknown> extends PromiseLike<T> {
+export type FPromise<T extends Type, E extends Type = unknown> = PromiseLike<T> & {
   readonly _tag: "FPromise"
 
   // FPromise methods

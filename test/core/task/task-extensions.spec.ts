@@ -61,7 +61,12 @@ describe("Task Extensions", () => {
         await racedTask
         expect.fail("Should throw an error")
       } catch (error) {
-        expect((error as Error).message).toBe("Task 1 failed")
+        // With the new error chaining, the error message includes the task name
+        expect((error as Error).message).toBe("TaskRace: Task 1 failed")
+
+        // The original error is available in the cause
+        expect((error as any).cause).toBeDefined()
+        expect((error as any).cause.message).toBe("Task 1 failed")
       }
 
       // Complete all pending tasks

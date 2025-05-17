@@ -15,11 +15,20 @@ describe("Task Robustness Tests", () => {
         })
         expect.fail("Should throw error")
       } catch (error) {
-        // The innermost error should be propagated
-        expect((error as Error).message).toBe("Nested operation failed")
-        // Note: In the current implementation, the task name from the outer task is preserved
-        // This is actually the correct behavior since the outer task is handling the error
+        // With enhanced error chaining, the error messages are combined
+        expect((error as Error).message).toBe("OuterTask: Nested operation failed")
+
+        // The original error context is preserved in the cause
+        expect((error as any).cause).toBeDefined()
+        expect((error as any).cause.message).toBe("Nested operation failed")
+
+        // Each level maintains its own task context
         expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
+        expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
+
+        // We can get the full error chain
+        const errorChain = Task.getErrorChain(error as Error)
+        expect(errorChain.length).toBe(2)
       }
     })
 
@@ -127,11 +136,29 @@ describe("Task Robustness Tests", () => {
         })
         expect.fail("Should throw error")
       } catch (error) {
-        // The error message is preserved
-        expect((error as Error).message).toBe("Inner error")
-        // Note: In the current implementation, the outermost task's context is preserved
-        // This is the expected behavior as the error bubbles up through the chain
+        // With enhanced error chaining, the error messages are combined
+        expect((error as Error).message).toBe("Outer: Middle: Inner error")
+
+        // The original error context is preserved in the cause chain
+        expect((error as any).cause).toBeDefined()
+        expect((error as any).cause.message).toBe("Middle: Inner error")
+        expect((error as any).cause.cause).toBeDefined()
+        expect((error as any).cause.cause.message).toBe("Inner error")
+
+        // Each level maintains its own task context
         expect((error as unknown as Throwable).taskInfo?.name).toBe("Outer")
+        expect((error as any).cause.taskInfo?.name).toBe("Middle")
+        expect((error as any).cause.cause.taskInfo?.name).toBe("Inner")
+
+        // We can get and format the full error chain
+        const errorChain = Task.getErrorChain(error as Error)
+        expect(errorChain.length).toBe(3)
+
+        // Format the error chain to see the complete path
+        const formattedError = Task.formatErrorChain(error as Error, { includeTasks: true })
+        expect(formattedError).toContain("Outer")
+        expect(formattedError).toContain("Middle")
+        expect(formattedError).toContain("Inner")
       }
     })
   })

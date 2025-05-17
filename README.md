@@ -27,6 +27,7 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **Typeable**: Runtime type identification with compile-time safety
 - **Branded Types**: Nominal typing in TypeScript's structural type system
 - **FPromise**: Enhanced Promise functionality with built-in error handling
+- **Error Formatting**: Utilities for improved error visualization and logging
 
 ## Installation
 
@@ -352,6 +353,51 @@ const option = Option(42)
 const mappedValue = option.map((x) => x.toString())
 // Inferred as string
 ```
+
+## Error Formatting
+
+Functype provides utilities for improved error visualization and logging:
+
+```typescript
+import { formatError, createErrorSerializer } from "functype/error"
+
+// Create a nested task error
+const innerTask = Task({ name: "DbQuery" }).Sync(() => {
+  throw new Error("Database connection failed")
+})
+
+const outerTask = Task({ name: "UserFetch" }).Sync(() => {
+  return innerTask.value
+})
+
+// Format the error for console display
+console.error(
+  formatError(outerTask.value as Error, {
+    includeTasks: true,
+    includeStackTrace: true,
+    colors: true,
+  }),
+)
+
+// Create a serializer for structured logging libraries like Pino
+const errorSerializer = createErrorSerializer()
+
+// Use with Pino
+const logger = pino({
+  serializers: { err: errorSerializer },
+})
+
+// Log the error with full context
+logger.error(
+  {
+    err: outerTask.value,
+    requestId: "req-123",
+  },
+  "Failed to fetch user data",
+)
+```
+
+For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 
 ## Roadmap / TODO
 

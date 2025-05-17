@@ -4,6 +4,27 @@ import { Throwable } from "@/core/throwable/Throwable"
 import { Either, Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
 
+/**
+ * Type definition for errors with a _tag property that identifies them as Throwables
+ */
+export type TaggedThrowable = Error & {
+  _tag: "Throwable"
+  cause?: Error
+  taskInfo?: TaskInfo
+}
+
+/**
+ * Type guard to check if an error is a TaggedThrowable
+ */
+export function isTaggedThrowable(error: unknown): error is TaggedThrowable {
+  return (
+    error instanceof Error &&
+    typeof error === "object" &&
+    error !== null &&
+    (error as { _tag?: string })._tag === "Throwable"
+  )
+}
+
 export type TaskParams = {
   name?: string
   description?: string
@@ -11,6 +32,8 @@ export type TaskParams = {
 
 export type TaskInfo = {
   _task: TaskParams
+  name?: string
+  description?: string
 }
 
 export type TaskException<T> = Either<Throwable, T> & TaskInfo
@@ -48,7 +71,7 @@ export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
  * The CancellationToken is a control structure that allows long-running tasks to be cancelled
  * Cancellation is cooperative, meaning the task must check the token and respond to cancellation requests
  */
-export interface CancellationToken {
+export type CancellationToken = {
   /** Whether the token has been cancelled */
   readonly isCancelled: boolean
   /** Signal that can be used with fetch and other abortable APIs */
@@ -61,7 +84,7 @@ export interface CancellationToken {
  * Create a cancellation token and controller
  * The controller can be used to cancel operations that use the token
  */
-export interface CancellationTokenSource {
+export type CancellationTokenSource = {
   /** The token to be passed to cancellable operations */
   readonly token: CancellationToken
   /** Cancel all operations using this token */
@@ -246,8 +269,26 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
 
           // Process the original error through error handler
           try {
-            const errorResult = await e(error)
-            reject(Throwable.apply(errorResult, undefined, { name, description }))
+            // Check if error is already a Throwable (from an inner task)
+            if (error instanceof Error && isTaggedThrowable(error)) {
+              // Create a new Throwable that wraps the inner error as its cause
+              // This preserves the error chain while adding outer task context
+              const outerError = new Error(`${name}: ${(error as Error).message}`)
+              const enhancedError = Throwable.apply(outerError, undefined, { name, description })
+
+              // Set the original error as the cause
+              Object.defineProperty(enhancedError, "cause", {
+                value: error,
+                writable: false,
+                configurable: false,
+              })
+
+              reject(enhancedError)
+            } else {
+              // Regular error handling for non-Throwable errors
+              const errorResult = await e(error)
+              reject(Throwable.apply(errorResult, undefined, { name, description }))
+            }
           } catch (handlerError) {
             // If error handler throws, use that error
             reject(Throwable.apply(handlerError, undefined, { name, description }))
@@ -331,6 +372,76 @@ const TaskCompanion = {
     TaskException<T>(error, data, params),
 
   /**
+   * Extract the error chain from a Throwable error
+   * Returns an array of errors from outermost to innermost
+   *
+   * @param error - The error to extract the chain from
+   * @returns An array of errors in the chain, from outermost to innermost
+   */
+  getErrorChain: (error: Error | undefined): Error[] => {
+    if (!error) return []
+
+    const chain = [error]
+    let current = error
+
+    // Traverse the cause chain
+    while (current && (current as TaggedThrowable).cause) {
+      const cause = (current as TaggedThrowable).cause
+      if (cause) {
+        chain.push(cause)
+        current = cause
+      } else {
+        break
+      }
+
+      // Prevent infinite loops if circular references exist
+      if (chain.length > 100) break
+    }
+
+    return chain
+  },
+
+  /**
+   * Format the error chain as a string with the option to include task details
+   *
+   * @param error - The error to format
+   * @param options - Formatting options
+   * @returns A formatted string representation of the error chain
+   */
+  formatErrorChain: (
+    error: Error | undefined,
+    options?: {
+      includeTasks?: boolean
+      separator?: string
+      includeStackTrace?: boolean
+    },
+  ): string => {
+    const chain = TaskCompanion.getErrorChain(error)
+    const separator = options?.separator || "\n"
+
+    return chain
+      .map((err, index) => {
+        if (!err || !(err instanceof Error)) {
+          return `${index > 0 ? "↳ " : ""}Unknown error`
+        }
+
+        const taskInfo = (err as TaggedThrowable).taskInfo
+        const taskName = options?.includeTasks && taskInfo?.name ? `[${taskInfo.name}] ` : ""
+        const message = err.message || "No message"
+
+        let result = `${index > 0 ? "↳ " : ""}${taskName}${message}`
+
+        // Add stack trace if requested
+        if (options?.includeStackTrace && err.stack) {
+          result += `\n${err.stack.split("\n").slice(1).join("\n")}`
+        }
+
+        return result
+      })
+      .join(separator)
+  },
+
+  /**
    * Convert a Promise-returning function to a Task-compatible function
    */
   fromPromise: <U, Args extends unknown[]>(
@@ -338,7 +449,8 @@ const TaskCompanion = {
     params?: TaskParams,
   ): ((...args: Args) => FPromise<U>) => {
     return (...args: Args) => {
-      return Task(params).Async<U>(
+      const taskParams = params || { name: "PromiseTask", description: "Task from Promise" }
+      return Task(taskParams).Async<U>(
         () => promiseFn(...args),
         (error) => error,
       )

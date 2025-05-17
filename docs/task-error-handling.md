@@ -122,6 +122,141 @@ try {
 }
 ```
 
+## Context Loss in Nested Tasks
+
+When working with multiple nested `Task` executions, there's a significant issue with error context preservation. Inner task errors lose their context when they propagate through outer tasks. This limits error traceability and makes debugging complex task chains difficult.
+
+### Current Behavior
+
+Consider this example:
+
+```typescript
+// Inner task with specific context
+const innerTask = Task({ name: "InnerTask" }).Async(async () => {
+  throw new Error("Inner failure")
+})
+
+// Outer task that calls the inner task
+const outerTask = Task({ name: "OuterTask" }).Async(async () => await innerTask)
+
+try {
+  await outerTask
+} catch (error) {
+  // error.taskInfo.name will be "OuterTask", not "InnerTask"
+  // The original error context is lost
+}
+```
+
+In this scenario, the error context from the `InnerTask` is lost when it propagates through the `OuterTask`. This makes it difficult to:
+
+1. Identify the actual source of errors
+2. Implement proper error handling strategies
+3. Debug complex nested task chains
+
+### Current Workaround
+
+Until a native solution is implemented, you can manually preserve the error context:
+
+```typescript
+// Outer task with manual error handling
+const outerTask = Task({ name: "OuterTask" }).Async(async () => {
+  try {
+    return await innerTask
+  } catch (innerError) {
+    // Manually reference the inner error
+    throw new Error(`OuterTask failed: ${(innerError as Error).message}`)
+  }
+})
+```
+
+## Implemented Solution: Error Chaining
+
+The `Task` implementation now supports error chaining, preserving the complete error context chain as errors propagate through nested tasks.
+
+### How Error Chaining Works
+
+The `Task` implementation now detects when an error comes from another task and preserves the error chain by:
+
+1. Creating a new error with the outer task's context
+2. Setting the inner task's error as the `cause` property
+3. Preserving the complete error chain for debugging and error handling
+
+```typescript
+// Inner task with specific context
+const innerTask = Task({ name: "InnerTask" }).Async(async () => {
+  throw new Error("Inner failure")
+})
+
+// Outer task that calls the inner task
+const outerTask = Task({ name: "OuterTask" }).Async(async () => await innerTask)
+
+try {
+  await outerTask
+} catch (error) {
+  // error.taskInfo.name will be "OuterTask"
+  // But error.cause.taskInfo.name will be "InnerTask"
+
+  // You can access the full error chain
+  const errorChain = Task.getErrorChain(error)
+
+  // Format the error chain for logging/debugging
+  const formattedError = Task.formatErrorChain(error, { includeTasks: true })
+  console.log(formattedError)
+  // Output:
+  // [OuterTask] OuterTask: Inner failure
+  // ↳ [InnerTask] Inner failure
+}
+```
+
+### Task.getErrorChain
+
+A new utility method allows you to extract the complete error chain from a Throwable error:
+
+```typescript
+// Get array of errors from outer to inner
+const errorChain = Task.getErrorChain(error)
+
+// Access specific task information
+console.log(errorChain[0].taskInfo.name) // "OuterTask"
+console.log(errorChain[1].taskInfo.name) // "InnerTask"
+```
+
+### Task.formatErrorChain
+
+Another utility method formats the error chain as a readable string for logging or debugging:
+
+```typescript
+// Format with task names included
+const formatted = Task.formatErrorChain(error, {
+  includeTasks: true, // Include task names in formatted output
+  separator: "\n", // Separator between error levels (default: "\n")
+  includeStackTrace: false, // Whether to include stack traces (default: false)
+})
+
+console.log(formatted)
+// Output:
+// [OuterTask] OuterTask: Inner failure
+// ↳ [InnerTask] Inner failure
+```
+
+### Benefits
+
+This implementation provides several advantages:
+
+1. **Full Context Preservation**: Every level of the error chain maintains its task context
+2. **Improved Debugging**: Error messages include the full path of the error
+3. **Better Error Handling**: Error handlers can make decisions based on the complete error chain
+4. **Minimal Performance Impact**: The solution adds negligible overhead
+5. **Backwards Compatibility**: Existing code will continue to work as before
+
+An error chain is formatted like this by default:
+
+```
+[OuterTask] Failed to process data
+↳ [MiddleTask] Database query failed
+↳ [InnerTask] Connection timeout
+```
+
 ## See Also
 
 - [Task Module Examples](./examples/task-named-errors.ts)
