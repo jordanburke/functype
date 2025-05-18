@@ -35,7 +35,8 @@
       "WebFetch(domain:typedoc.org)",
       "WebFetch(domain:github.com)",
       "Bash(rg:*)",
-      "Bash(/home/jordanburke/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"import .* Companion .* from \\\"@/companion\\\"\" --type ts /home/jordanburke/WebstormProjects/functype)"
+      "Bash(/home/jordanburke/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"import .* Companion .* from \\\"@/companion\\\"\" --type ts /home/jordanburke/WebstormProjects/functype)",
+      "Bash(npx typedoc:*)"
     ],
     "deny": []
   }

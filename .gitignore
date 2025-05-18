@@ -112,6 +112,7 @@ dist
 # Documentation
 .docusaurus
 docs/*
+typedocs/
 
 # But include markdown files in that directory
 !docs/**/*.md

@@ -27,7 +27,7 @@
     "test:ui": "vitest --ui",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
-    "postdocs": "node -e \"console.log('Documentation generated in ./docs')\"",
+    "postdocs": "node -e \"console.log('Documentation generated in ./typedocs')\"",
     "analyze:size": "pnpm build:prod && node ./scripts/analyze-bundle-size.js"
   },
   "devDependencies": {

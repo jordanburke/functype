@@ -176,7 +176,7 @@ try {
   // Restore documentation files after TypeDoc runs
   restoreDocsFiles()
 
-  console.log("Documentation generated successfully in ./docs directory")
+  console.log("Documentation generated successfully in ./typedocs directory")
 } catch (error) {
   console.error("Error building documentation:", error)
 
