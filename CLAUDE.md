@@ -21,22 +21,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Core Architecture
 
 ### Scala-Inspired Constructor Pattern
+
 All types follow a consistent pattern where constructor functions return objects with methods:
+
 ```typescript
 // Example pattern used throughout:
-const option = Option(value);       // Constructor function
-option.map(x => x + 1);            // Instance methods
-Option.none();                     // Companion methods via Companion utility
+const option = Option(value) // Constructor function
+option.map((x) => x + 1) // Instance methods
+Option.none() // Companion methods via Companion utility
 ```
 
 ### Type System Foundation
+
 - **Base constraint**: Use `Type` from functor module for generic constraints (never `any`)
 - **HKT support**: Higher-kinded types are implemented to enable generic programming
 - **Branded types**: Use `Brand` module for nominal typing when needed
 - **Type classes**: Core interfaces include Functor, Foldable, Traversable, Matchable, Serializable
 
 ### Core Abstractions
+
 Every container type implements these key methods:
+
 - `map`: Transform contained values while preserving structure
 - `flatMap`: Chain operations that return wrapped values
 - `fold`: Extract values via pattern matching
@@ -44,6 +49,7 @@ Every container type implements these key methods:
 - `toString`: Provide readable string representation
 
 ### Error Handling Strategy
+
 - **Throwable**: Wrapper for errors that preserves context and stack traces
 - **Task**: Handles sync/async operations with cancellation and progress tracking
 - **Error patterns**: Use Option/Either/Try for expected failures, Throwable for unexpected

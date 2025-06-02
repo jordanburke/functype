@@ -189,6 +189,37 @@ describe("Option", () => {
     })
   })
 
+  describe("orUndefined", () => {
+    it("should return value for Some", () => {
+      expect(something.orUndefined()).toBe("hello")
+    })
+
+    it("should return undefined for None", () => {
+      expect(nothing.orUndefined()).toBeUndefined()
+    })
+
+    it("should handle Option with number", () => {
+      const numOption = Option(42)
+      expect(numOption.orUndefined()).toBe(42)
+    })
+
+    it("should handle Option with object", () => {
+      const obj = { test: "value" }
+      const objOption = Option(obj)
+      expect(objOption.orUndefined()).toBe(obj)
+    })
+
+    it("should handle Option created from null", () => {
+      const nullOption = Option(null)
+      expect(nullOption.orUndefined()).toBeUndefined()
+    })
+
+    it("should handle Option created from undefined", () => {
+      const undefinedOption = Option(undefined)
+      expect(undefinedOption.orUndefined()).toBeUndefined()
+    })
+  })
+
   describe("Option creation and chaining", () => {
     it("should chain fold and orNull correctly", () => {
       const result = something

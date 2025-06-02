@@ -62,6 +62,11 @@ export type Option<T extends Type> = {
    */
   orNull(): T | null
   /**
+   * Returns the contained value or undefined if None
+   * @returns The contained value or undefined
+   */
+  orUndefined(): T | undefined
+  /**
    * Maps the value inside the Option using the provided function
    * @param f - The mapping function
    * @returns A new Option containing the mapped value, or None if this Option is None
@@ -176,6 +181,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   getOrThrow: () => value,
   orElse: () => Some(value),
   orNull: () => value,
+  orUndefined: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
   filter(predicate: (value: T) => boolean) {
     if (predicate(value)) {
@@ -233,6 +239,7 @@ const NONE: Option<never> = {
   },
   orElse: <T>(alternative: Option<T>) => alternative,
   orNull: () => null,
+  orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
