@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # CLAUDE.md - Project Guidelines for functype
 
 ## Build & Test Commands
@@ -13,6 +17,37 @@
 - Test with UI: `pnpm test:ui`
 - Documentation: `pnpm docs` (generate docs) or `pnpm docs:watch` (watch mode)
 - Bundle analysis: `pnpm analyze:size` (analyze production bundle size)
+
+## Core Architecture
+
+### Scala-Inspired Constructor Pattern
+All types follow a consistent pattern where constructor functions return objects with methods:
+```typescript
+// Example pattern used throughout:
+const option = Option(value);       // Constructor function
+option.map(x => x + 1);            // Instance methods
+Option.none();                     // Companion methods via Companion utility
+```
+
+### Type System Foundation
+- **Base constraint**: Use `Type` from functor module for generic constraints (never `any`)
+- **HKT support**: Higher-kinded types are implemented to enable generic programming
+- **Branded types**: Use `Brand` module for nominal typing when needed
+- **Type classes**: Core interfaces include Functor, Foldable, Traversable, Matchable, Serializable
+
+### Core Abstractions
+Every container type implements these key methods:
+- `map`: Transform contained values while preserving structure
+- `flatMap`: Chain operations that return wrapped values
+- `fold`: Extract values via pattern matching
+- `pipe`: Enable function composition
+- `toString`: Provide readable string representation
+
+### Error Handling Strategy
+- **Throwable**: Wrapper for errors that preserves context and stack traces
+- **Task**: Handles sync/async operations with cancellation and progress tracking
+- **Error patterns**: Use Option/Either/Try for expected failures, Throwable for unexpected
+- **Error formatting**: Use ErrorFormatter for structured error output
 
 ## Code Style
 
@@ -38,6 +73,13 @@
 - **Immutability**: All data structures must be immutable
 - **Composability**: Design for function composition and chaining operations
 
+## Module Organization
+
+- **Index exports**: Each module has an index.ts that re-exports its main type
+- **Selective imports**: Package.json exports field enables importing specific modules
+- **Base pattern**: Use Base function from core/base to add common functionality
+- **Type hierarchy**: Types build on shared abstractions (Functor → Monad → specific types)
+
 ## Documentation Standards
 
 - **API Documentation**: Use TypeDoc for generating API documentation
@@ -50,3 +92,4 @@
 - Optimized for tree-shaking with `"sideEffects": false`
 - Supports selective module imports to minimize bundle size
 - Provides modular exports for different functional types
+- ESM-only for modern bundlers
