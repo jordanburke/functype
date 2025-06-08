@@ -211,4 +211,62 @@ describe("Task Robustness Tests", () => {
       }
     })
   })
+
+  describe("Task error handler invocation", () => {
+    test("should always call error handler even for TaggedThrowable errors", async () => {
+      // Create a mock error handler
+      const errorHandler = vi.fn().mockImplementation((error) => error)
+
+      // Create a TaggedThrowable error
+      const throwableError = Task.fail(new Error("Throwable error"), undefined, { name: "InnerTask" }).value
+
+      try {
+        await Task({ name: "OuterTask" }).Async(
+          async () => {
+            // Directly throw a TaggedThrowable
+            throw throwableError
+          },
+          errorHandler, // Use the mock error handler
+        )
+        expect.fail("Should throw error")
+      } catch (error) {
+        // Verify the error handler was called
+        expect(errorHandler).toHaveBeenCalledTimes(1)
+
+        // Verify it was called with the throwable error
+        expect(errorHandler).toHaveBeenCalledWith(throwableError)
+
+        // Verify error chain is preserved
+        expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
+        expect((error as any).cause).toBeDefined()
+        expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
+      }
+    })
+
+    test("should always call error handler for errors from nested tasks", async () => {
+      // Create a mock error handler
+      const errorHandler = vi.fn().mockImplementation((error) => error)
+
+      try {
+        await Task({ name: "OuterTask" }).Async(
+          async () => {
+            // Return a task that will fail
+            return await Task({ name: "InnerTask" }).Async(async () => {
+              throw new Error("Inner task error")
+            })
+          },
+          errorHandler, // Use the mock error handler
+        )
+        expect.fail("Should throw error")
+      } catch (error) {
+        // Verify the error handler was called
+        expect(errorHandler).toHaveBeenCalledTimes(1)
+
+        // Verify error chain is preserved
+        expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
+        expect((error as any).cause).toBeDefined()
+        expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
+      }
+    })
+  })
 })

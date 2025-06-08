@@ -29,7 +29,7 @@ Each trait interface includes a unique Symbol property that serves as a runtime 
 
 ```typescript
 // Define the trait symbol
-export const SerializableSymbol = Symbol.for('functype.Serializable')
+export const SerializableSymbol = Symbol.for("functype.Serializable")
 
 // Add symbol to the trait interface
 export type Serializable<T> = {
@@ -39,10 +39,7 @@ export type Serializable<T> = {
 
 // Type guard checks for the symbol
 export function isSerializable<T>(value: unknown): value is Serializable<T> {
-  return value != null && 
-         typeof value === 'object' && 
-         SerializableSymbol in value &&
-         value[SerializableSymbol] === true
+  return value != null && typeof value === "object" && SerializableSymbol in value && value[SerializableSymbol] === true
 }
 ```
 
@@ -61,29 +58,29 @@ Symbols provide several key advantages:
 Here's how Option would implement multiple traits:
 
 ```typescript
-import { SerializableSymbol } from '@/serializable'
-import { FunctorSymbol } from '@/functor'
-import { FoldableSymbol } from '@/foldable'
+import { SerializableSymbol } from "@/serializable"
+import { FunctorSymbol } from "@/functor"
+import { FoldableSymbol } from "@/foldable"
 
 export const Some = <T>(value: T): Option<T> => ({
   _tag: "Some",
   value,
   isEmpty: false,
-  
+
   // Trait markers
   [SerializableSymbol]: true,
-  [FunctorSymbol]: true,  
+  [FunctorSymbol]: true,
   [FoldableSymbol]: true,
-  
+
   // Implementations
   map: <U>(f: (value: T) => U) => Some(f(value)),
-  
+
   serialize: () => ({
     toJSON: () => JSON.stringify({ _tag: "Some", value }),
     toYAML: () => `_tag: Some\nvalue: ${stringify(value)}`,
     toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
   }),
-  
+
   // ... other methods
 })
 ```
@@ -97,14 +94,12 @@ function processValue(value: unknown) {
   if (isSerializable(value)) {
     // TypeScript knows value has serialize() method
     const json = value.serialize().toJSON()
-    localStorage.setItem('cache', json)
+    localStorage.setItem("cache", json)
   }
-  
+
   if (isFunctor(value) && isFoldable(value)) {
     // Can safely use both interfaces
-    const result = value
-      .map(x => x * 2)
-      .fold(0, (acc, x) => acc + x)
+    const result = value.map((x) => x * 2).fold(0, (acc, x) => acc + x)
   }
 }
 ```
@@ -115,11 +110,11 @@ function processValue(value: unknown) {
 const traitHandlers = new Map<symbol, (value: any) => void>()
 
 traitHandlers.set(SerializableSymbol, (value) => {
-  console.log('Serializing:', value.serialize().toJSON())
+  console.log("Serializing:", value.serialize().toJSON())
 })
 
 traitHandlers.set(FunctorSymbol, (value) => {
-  console.log('Mapping over functor')
+  console.log("Mapping over functor")
 })
 
 function handleByTraits(value: unknown) {
@@ -136,22 +131,22 @@ function handleByTraits(value: unknown) {
 ```typescript
 // Utility to list all traits an object implements
 export function getTraits(value: unknown): string[] {
-  if (!value || typeof value !== 'object') return []
-  
+  if (!value || typeof value !== "object") return []
+
   const traits: string[] = []
   const traitMap = {
-    [SerializableSymbol]: 'Serializable',
-    [FunctorSymbol]: 'Functor',
-    [FoldableSymbol]: 'Foldable',
+    [SerializableSymbol]: "Serializable",
+    [FunctorSymbol]: "Functor",
+    [FoldableSymbol]: "Foldable",
     // ... other traits
   }
-  
+
   for (const [symbol, name] of Object.entries(traitMap)) {
     if (symbol in value) {
       traits.push(name)
     }
   }
-  
+
   return traits
 }
 
@@ -170,35 +165,35 @@ console.log(getTraits(Option("hello"))) // ['Serializable', 'Functor', 'Foldable
 ## Potential Concerns and Mitigations
 
 ### Memory Overhead
+
 **Concern**: Each object carries extra Symbol properties  
 **Mitigation**: Symbols have minimal memory impact, and the benefits outweigh the cost
 
 ### Maintenance Burden
+
 **Concern**: Developers might forget to add trait markers  
 **Mitigation**: Use factory functions that automatically include required markers
 
 ```typescript
 // Helper to ensure trait markers are included
-function makeSerializable<T extends object>(
-  obj: T, 
-  methods: SerializationMethods<T>
-): T & Serializable<T> {
+function makeSerializable<T extends object>(obj: T, methods: SerializationMethods<T>): T & Serializable<T> {
   return {
     ...obj,
     [SerializableSymbol]: true,
-    serialize: () => methods
+    serialize: () => methods,
   }
 }
 ```
 
 ### TypeScript Philosophy
+
 **Concern**: Moves away from structural typing toward nominal typing  
 **Mitigation**: This is intentional - we want to ensure objects were created through functype's factory functions with proper guarantees
 
 ## Implementation Checklist
 
 - [ ] Define Symbol constants for each trait
-- [ ] Add Symbol properties to trait interfaces  
+- [ ] Add Symbol properties to trait interfaces
 - [ ] Implement type guards for each trait
 - [ ] Update factory functions to include trait markers
 - [ ] Add debugging utilities (getTraits, hasTrait, etc.)

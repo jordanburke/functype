@@ -257,6 +257,27 @@ An error chain is formatted like this by default:
 ↳ [InnerTask] Connection timeout
 ```
 
+## Error Handler Behavior
+
+When using `Task.Async`, error handlers are always called, regardless of the error type:
+
+```typescript
+const task = Task({ name: "DataProcessor" }).Async(
+  async () => {
+    throw new Error("Processing failed")
+  },
+  (error) => {
+    // This handler is always called, even for TaggedThrowable errors
+    console.error(`Error processing data: ${error}`)
+    return "Failed to process data"
+  },
+)
+```
+
+For regular errors, the handler's return value is used as the rejection value. For errors that are already TaggedThrowable (from inner tasks), the handler is still called for side effects (like logging), but the original error chain is preserved to maintain proper error context.
+
+This ensures that error handlers can perform important operations like logging while preserving the error context needed for debugging nested task operations.
+
 ## See Also
 
 - [Task Module Examples](./examples/task-named-errors.ts)

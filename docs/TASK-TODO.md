@@ -28,3 +28,6 @@
 - Enhanced documentation with clearer descriptions of functionality
 - Created TaskMigration.md guide showing how to migrate from promises to functional Task patterns
 - Added comprehensive tests for the new adapter methods
+- Improved error handler behavior to ensure handlers are always called, even for TaggedThrowable errors
+- Enhanced error chaining to preserve context while supporting logging in error handlers
+- Added test coverage to verify error handlers are always called for all error types
