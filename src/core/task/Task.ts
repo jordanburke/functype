@@ -282,12 +282,16 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
 
               // Call the error handler for logging/side effects but don't use its result
               // This allows handlers to be called without changing the error propagation logic
-              try {
-                await e(error)
-              } catch (handlerError) {
-                // Ignore errors from the handler when preserving error chain
-                console.error("Error in error handler:", handlerError)
-              }
+              // Use a non-awaited promise to avoid blocking the error propagation
+              // This improves performance while still ensuring the handler runs
+              Promise.resolve().then(() => {
+                try {
+                  e(error)
+                } catch (handlerError) {
+                  // Ignore errors from the handler when preserving error chain
+                  console.error("Error in error handler:", handlerError)
+                }
+              })
 
               reject(enhancedError)
             } else {

@@ -274,7 +274,7 @@ const task = Task({ name: "DataProcessor" }).Async(
 )
 ```
 
-For regular errors, the handler's return value is used as the rejection value. For errors that are already TaggedThrowable (from inner tasks), the handler is still called for side effects (like logging), but the original error chain is preserved to maintain proper error context.
+For regular errors, the handler's return value is used as the rejection value. For errors that are already TaggedThrowable (from inner tasks), the handler is still called for side effects (like logging) in a non-blocking way, allowing these operations to happen without impacting performance. This ensures the original error chain is preserved while still enabling important operations like logging.
 
 This ensures that error handlers can perform important operations like logging while preserving the error context needed for debugging nested task operations.
 
