@@ -1,4 +1,4 @@
-import { Cond, Either, Match, Option } from "../src"
+import { Cond, Either, Left, Right, Match, Option } from "../src"
 
 // Example 1: Basic conditional expressions without early returns
 function calculateDiscount(amount: number): string {
@@ -23,7 +23,7 @@ function getPaymentMessage(status: PaymentStatus): string {
 
 // Example 3: Lazy evaluation for expensive computations
 function processData(data: unknown) {
-  const result = Cond.lazy<string>()
+  return Cond.lazy<string>()
     .when(
       () => data === null || data === undefined,
       () => "No data provided",
@@ -33,12 +33,10 @@ function processData(data: unknown) {
       () => "Empty array",
     )
     .when(
-      () => typeof data === "object" && Object.keys(data).length === 0,
+      () => typeof data === "object" && data !== null && Object.keys(data).length === 0,
       () => "Empty object",
     )
     .else(() => `Processing ${JSON.stringify(data)}`)
-
-  return result
 }
 
 // Example 4: Integration with Option
@@ -59,24 +57,24 @@ type HttpResponse = {
 }
 
 function handleResponse(response: HttpResponse): Either<string, unknown> {
-  return Match(response)
+  return Match<HttpResponse, Either<string, unknown>>(response)
     .case(
-      (r) => r.status >= 200 && r.status < 300,
-      (r) => Either.right(r.body),
+      (r: HttpResponse) => r.status >= 200 && r.status < 300,
+      (r: HttpResponse) => Right(r.body),
     )
     .case(
-      (r) => r.status === 404,
-      () => Either.left("Resource not found"),
+      (r: HttpResponse) => r.status === 404,
+      () => Left("Resource not found"),
     )
     .case(
-      (r) => r.status >= 400 && r.status < 500,
-      (r) => Either.left(`Client error: ${r.status}`),
+      (r: HttpResponse) => r.status >= 400 && r.status < 500,
+      (r: HttpResponse) => Left(`Client error: ${r.status}`),
     )
     .case(
-      (r) => r.status >= 500,
-      (r) => Either.left(`Server error: ${r.status}`),
+      (r: HttpResponse) => r.status >= 500,
+      (r: HttpResponse) => Left(`Server error: ${r.status}`),
     )
-    .default(() => Either.left("Unknown error"))
+    .default(() => Left("Unknown error"))
 }
 
 // Example 6: State machine with pattern matching
@@ -88,7 +86,7 @@ type Action =
   | { type: "reset" }
 
 function reducer(state: State, action: Action): State {
-  return Match(action.type)
+  return Match<Action["type"], State>(action.type)
     .caseValue(
       "fetch",
       Cond.of<State>()
