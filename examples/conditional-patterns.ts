@@ -1,4 +1,4 @@
-import { Cond, Either, Left, Right, Match, Option } from "../src"
+import { Cond, Either, Left, Match, Option, Right } from "../src"
 
 // Example 1: Basic conditional expressions without early returns
 function calculateDiscount(amount: number): string {

@@ -7,6 +7,20 @@ import { List } from "./List"
 /**
  * LazyList provides lazy evaluation for list operations.
  * Operations are deferred until the list is materialized.
+ *
+ * @example
+ * // Basic lazy evaluation
+ * const result = LazyList([1, 2, 3, 4, 5])
+ *   .map(x => x * 2)
+ *   .filter(x => x > 5)
+ *   .toArray() // [6, 8, 10]
+ *
+ * @example
+ * // Infinite sequences with take
+ * const fibonacci = LazyList.iterate([0, 1], ([a, b]) => [b, a + b])
+ *   .map(([a]) => a)
+ *   .take(10)
+ *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
  */
 export type LazyList<A extends Type> = {
   // Iterator protocol
@@ -213,6 +227,22 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
 
 /**
  * Create a LazyList from an iterable
+ * @example
+ * const lazy = LazyList([1, 2, 3, 4, 5])
+ *   .map(x => x * x)
+ *   .filter(x => x % 2 === 1)
+ *   .toArray() // [1, 9, 25]
+ *
+ * @example
+ * // From generator function
+ * function* naturals() {
+ *   let n = 1
+ *   while (true) yield n++
+ * }
+ * const firstTenSquares = LazyList(naturals())
+ *   .map(x => x * x)
+ *   .take(10)
+ *   .toArray() // [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
  */
 const LazyListConstructor = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
   return LazyListObject(iterable)
@@ -221,6 +251,9 @@ const LazyListConstructor = <A extends Type>(iterable: Iterable<A>): LazyList<A>
 const LazyListCompanion = {
   /**
    * Create an empty LazyList
+   * @example
+   * const empty = LazyList.empty<number>()
+   * empty.toArray() // []
    */
   empty: <A extends Type>(): LazyList<A> => {
     return LazyListObject<A>([])
@@ -228,6 +261,10 @@ const LazyListCompanion = {
 
   /**
    * Create a LazyList from a single value
+   * @example
+   * const single = LazyList.of(42)
+   *   .map(x => x * 2)
+   *   .toArray() // [84]
    */
   of: <A extends Type>(value: A): LazyList<A> => {
     return LazyListObject([value])
@@ -242,6 +279,18 @@ const LazyListCompanion = {
 
   /**
    * Create an infinite LazyList by repeatedly applying a function
+   * @example
+   * // Powers of 2
+   * const powers = LazyList.iterate(1, x => x * 2)
+   *   .take(10)
+   *   .toArray() // [1, 2, 4, 8, 16, 32, 64, 128, 256, 512]
+   *
+   * @example
+   * // Fibonacci sequence
+   * const fib = LazyList.iterate([0, 1], ([a, b]) => [b, a + b])
+   *   .map(([a]) => a)
+   *   .take(8)
+   *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13]
    */
   iterate: <A extends Type>(initial: A, f: (a: A) => A): LazyList<A> => {
     return LazyListObject(
@@ -270,6 +319,16 @@ const LazyListCompanion = {
 
   /**
    * Create a LazyList of numbers from start to end (exclusive)
+   * @example
+   * LazyList.range(1, 6).toArray() // [1, 2, 3, 4, 5]
+   * LazyList.range(0, 10, 2).toArray() // [0, 2, 4, 6, 8]
+   * LazyList.range(10, 0, -1).toArray() // [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+   *
+   * @example
+   * // Sum of squares from 1 to 100
+   * const sum = LazyList.range(1, 101)
+   *   .map(x => x * x)
+   *   .reduce((a, b) => a + b, 0) // 338350
    */
   range: (start: number, end: number, step = 1): LazyList<number> => {
     return LazyListObject(
@@ -323,4 +382,30 @@ const LazyListCompanion = {
   },
 }
 
+/**
+ * Lazy list implementation for efficient deferred computation
+ * @example
+ * // Process large datasets efficiently
+ * const result = LazyList.range(1, 1000000)
+ *   .filter(x => x % 2 === 0)
+ *   .map(x => x * x)
+ *   .take(5)
+ *   .toArray() // [4, 16, 36, 64, 100]
+ *
+ * @example
+ * // Infinite sequences
+ * const primes = LazyList.iterate(2, n => n + 1)
+ *   .filter(isPrime)
+ *   .take(10)
+ *   .toArray() // First 10 prime numbers
+ *
+ * @example
+ * // Combining operations
+ * const evens = LazyList.range(0, 100, 2)
+ * const odds = LazyList.range(1, 100, 2)
+ * const combined = evens.zip(odds)
+ *   .map(([e, o]) => e + o)
+ *   .take(5)
+ *   .toArray() // [1, 5, 9, 13, 17]
+ */
 export const LazyList = Companion(LazyListConstructor, LazyListCompanion)
