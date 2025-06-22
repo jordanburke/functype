@@ -1,6 +1,7 @@
 export * from "@/branded"
 export * from "@/collections"
 export * from "@/companion/Companion"
+export * from "@/conditional"
 export * from "@/core/base/Base"
 export * from "@/core/task/Task"
 export * from "@/core/throwable/Throwable"

@@ -91,6 +91,12 @@
         "default": "./dist/list/index.mjs"
       }
     },
+    "./conditional": {
+      "import": {
+        "types": "./dist/conditional/index.d.ts",
+        "default": "./dist/conditional/index.mjs"
+      }
+    },
     "./task": {
       "import": {
         "types": "./dist/core/task/index.d.ts",

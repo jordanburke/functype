@@ -42,7 +42,8 @@
       "Bash(npx typedoc:*)",
       "mcp__context7__resolve-library-id",
       "mcp__context7__get-library-docs",
-      "mcp__desktop-commander__move_file"
+      "mcp__desktop-commander__move_file",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }
