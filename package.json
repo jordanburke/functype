@@ -25,6 +25,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
+    "bench": "vitest bench",
+    "bench:ui": "vitest bench --ui",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "postdocs": "node -e \"console.log('Documentation generated in ./typedocs')\"",

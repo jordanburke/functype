@@ -38,7 +38,11 @@
       "Bash(/home/jordanburke/.claude/local/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"import .* Companion .* from \\\"@/companion\\\"\" --type ts /home/jordanburke/WebstormProjects/functype)",
       "Bash(npx typedoc:*)",
       "Bash(pnpm compile:*)",
-      "Bash(pnpm test:*)"
+      "Bash(pnpm test:*)",
+      "Bash(npx typedoc:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__get-library-docs",
+      "mcp__desktop-commander__move_file"
     ],
     "deny": []
   }
