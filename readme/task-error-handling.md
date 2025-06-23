@@ -16,7 +16,6 @@ const namedTask = Task({
 When an error occurs within this task, the task name will be referenced in the error:
 
 1. The `Throwable` object created from the error will include:
-
    - The task name as the error's `name` property
    - A `taskInfo` property containing both the name and description
 

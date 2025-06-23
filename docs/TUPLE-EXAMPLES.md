@@ -63,16 +63,13 @@ type First = FirstElement<typeof literalTuple> // Would be 1
 ## When Is This Useful?
 
 1. **Strong typing for heterogeneous collections**:
-
    - When you need to store different types in a fixed structure
    - When you want type safety beyond what arrays provide
 
 2. **APIs returning fixed-length, mixed-type results**:
-
    - When a function returns multiple values of different types
 
 3. **Data transformation pipelines**:
-
    - When you need to transform data while preserving type information
 
 4. **Configuration objects with fixed format**:

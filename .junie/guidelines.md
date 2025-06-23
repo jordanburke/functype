@@ -47,7 +47,6 @@ This document provides essential information for developing and maintaining the 
 The project uses the following build tools:
 
 - **TypeScript**: Configuration in `tsconfig.json`
-
   - Target: ES2020
   - Module: ESNext
   - Strict type checking enabled
@@ -159,7 +158,6 @@ describe("Option - Property-based tests", () => {
 The project uses ESLint and Prettier for code style enforcement:
 
 - **Prettier Configuration** (`.prettierrc`):
-
   - No semicolons
   - Trailing commas in all places
   - Double quotes
