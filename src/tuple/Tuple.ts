@@ -1,4 +1,3 @@
-import type { ArrayFunctor } from "@/functor/Functor"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
@@ -13,8 +12,7 @@ export type Tuple<T extends Type[]> = {
   toArray(): T
 
   [Symbol.iterator](): Iterator<T[number]>
-} & ArrayFunctor<T> &
-  Typeable<"Tuple"> &
+} & Typeable<"Tuple"> &
   Valuable<"Tuple", T>
 
 export const Tuple = <T extends Type[]>(values: T): Tuple<T> => {

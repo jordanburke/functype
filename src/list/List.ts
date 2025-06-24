@@ -2,7 +2,7 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import type { IterableType } from "@/iterable"
 import type { Matchable } from "@/matchable"
 import { None, Option } from "@/option/Option"
@@ -16,6 +16,7 @@ export type List<A> = {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   map: <B>(f: (a: A) => B) => List<B>
+  ap: <B>(ff: List<(value: A) => B>) => List<B>
   flatMap: <B>(f: (a: A) => IterableType<B>) => List<B>
   flatMapAsync: <B>(f: (a: A) => PromiseLike<IterableType<B>>) => PromiseLike<List<B>>
   forEach: (f: (a: A) => void) => void
@@ -54,7 +55,7 @@ export type List<A> = {
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 } & IterableType<A> &
-  AsyncFunctor<A> &
+  AsyncMonad<A> &
   Typeable<"List"> &
   Serializable<A> &
   Pipe<A[]> &
@@ -78,6 +79,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     },
 
     map: <B>(f: (a: A) => B) => ListObject(array.map(f)),
+
+    ap: <B>(ff: List<(value: A) => B>) => ListObject(array.flatMap((a) => Array.from(ff).map((f) => f(a)))),
 
     flatMap: <B>(f: (a: A) => IterableType<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
 

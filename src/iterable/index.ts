@@ -1,9 +1,9 @@
-import type { AsyncFunctor, Functor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import { Option } from "@/option/Option"
 import type { Traversable } from "@/traversable/Traversable"
 import type { Type } from "@/types"
 
-export interface IterableType<A extends Type> extends Iterable<A>, Functor<A>, AsyncFunctor<A>, Traversable<A> {
+export interface IterableType<A extends Type> extends Iterable<A>, AsyncMonad<A>, Traversable<A> {
   count(p: (x: A) => boolean): number
 
   find(p: (a: A) => boolean): Option<A>
@@ -39,6 +39,8 @@ export interface IterableType<A extends Type> extends Iterable<A>, Functor<A>, A
   get isEmpty(): boolean
 
   map<B extends Type>(f: (a: A) => B): IterableType<B>
+
+  ap<B extends Type>(ff: IterableType<(value: A) => B>): IterableType<B>
 
   flatMap<B extends Type>(f: (a: A) => IterableType<B>): IterableType<B>
 

@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor, Functor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { None, Option, Some } from "@/option/Option"
@@ -25,6 +25,7 @@ export type Either<L extends Type, R extends Type> = {
   getOrElse: (defaultValue: R) => R
   getOrThrow: () => R
   map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  ap: <U extends Type>(ff: Either<L, (value: R) => U>) => Either<L, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
@@ -65,13 +66,13 @@ export type Either<L extends Type, R extends Type> = {
 } & Typeable<"Left" | "Right"> &
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
-  AsyncFunctor<R> &
+  AsyncMonad<R> &
   Serializable<R> &
   Pipe<L | R> &
   Foldable<R> &
   Matchable<L | R, "Left" | "Right">
 
-export type TestEither<L extends Type, R extends Type> = Either<L, R> & Functor<R> & AsyncFunctor<R>
+export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
 
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",
@@ -81,6 +82,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   getOrElse: (_defaultValue: R) => value,
   getOrThrow: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
+  ap: <U extends Type>(ff: Either<L, (value: R) => U>): Either<L, U> =>
+    ff._tag === "Right" ? Right((ff.value as (value: R) => U)(value)) : Left(ff.value as L),
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
     f(value)
       .then((result) => Right<L, U>(result))
@@ -154,6 +157,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     throw value
   },
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
+  ap: <U extends Type>(_ff: Either<L, (value: R) => U>): Either<L, U> => Left<L, U>(value),
   mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
     Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
   merge: <L1 extends Type, R1 extends Type>(_other: Either<L1, R1>): Either<L | L1, [R, R1]> =>

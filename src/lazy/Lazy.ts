@@ -3,7 +3,7 @@ import stringify from "safe-stable-stringify"
 import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either"
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor, Functor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
 import { None, Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -59,6 +59,12 @@ export type Lazy<T extends Type> = {
    * @returns A new Lazy containing the mapped value
    */
   map<U extends Type>(f: (value: T) => U): Lazy<U>
+  /**
+   * Applies a wrapped function to a wrapped value (Applicative pattern)
+   * @param ff - A Lazy containing a function from T to U
+   * @returns A new Lazy containing the result
+   */
+  ap<U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U>
   /**
    * Maps the value inside the Lazy using an async function
    * @param f - The async mapping function
@@ -169,8 +175,7 @@ export type Lazy<T extends Type> = {
    * @returns Object representation of the Lazy
    */
   toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
-} & Functor<T> &
-  AsyncFunctor<T> &
+} & AsyncMonad<T> &
   Pipe<T> &
   Serializable<T> &
   Typeable<"Lazy"> &
@@ -232,6 +237,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
       }
     },
     map: <U extends Type>(f: (value: T) => U): Lazy<U> => Lazy(() => f(evaluate())),
+    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.get()(evaluate())),
     mapAsync: async <U extends Type>(f: (value: T) => Promise<U>): Promise<Lazy<U>> => {
       const val = evaluate()
       const result = await f(val)

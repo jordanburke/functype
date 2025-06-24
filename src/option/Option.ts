@@ -2,7 +2,7 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncFunctor, Functor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
@@ -72,6 +72,12 @@ export type Option<T extends Type> = {
    * @returns A new Option containing the mapped value, or None if this Option is None
    */
   map<U extends Type>(f: (value: T) => U): Option<U>
+  /**
+   * Applies a wrapped function to a wrapped value (Applicative pattern)
+   * @param ff - An Option containing a function from T to U
+   * @returns A new Option containing the result of applying the function
+   */
+  ap<U extends Type>(ff: Option<(value: T) => U>): Option<U>
   /**
    * Returns this Option if it contains a value that satisfies the predicate, otherwise returns None
    * @param predicate - The predicate function to test the value
@@ -157,10 +163,9 @@ export type Option<T extends Type> = {
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 } & (Traversable<T> &
-  Functor<T> &
+  AsyncMonad<T> &
   Typeable<"Some" | "None"> &
   Valuable<"Some" | "None", T> &
-  AsyncFunctor<T> &
   Serializable<T> &
   Pipe<T> &
   Foldable<T> &
@@ -183,6 +188,8 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
+  ap: <U extends Type>(ff: Option<(value: T) => U>) =>
+    ff._tag === "Some" && ff.value ? Some(ff.value(value)) : (NONE as unknown as Option<U>),
   filter(predicate: (value: T) => boolean) {
     if (predicate(value)) {
       return Some<T>(value) // type narrowing
@@ -241,6 +248,7 @@ const NONE: Option<never> = {
   orNull: () => null,
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,
+  ap: <U extends Type>(_ff: Option<(value: never) => U>) => NONE as unknown as Option<U>,
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
   },
