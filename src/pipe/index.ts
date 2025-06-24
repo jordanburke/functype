@@ -4,7 +4,7 @@ import type { Type } from "@/types"
  * Pipe interface for functional data structures
  * @typeParam T - The type of value to pipe
  */
-export type Pipe<T extends Type> = {
+export interface Pipe<T extends Type> {
   /**
    * Pipes the value through the provided function
    * @param f - The function to apply to the value

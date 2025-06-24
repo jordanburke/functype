@@ -3,7 +3,7 @@ import { Option } from "@/option/Option"
 import type { Traversable } from "@/traversable/Traversable"
 import type { Type } from "@/types"
 
-export type IterableType<A extends Type> = {
+export interface IterableType<A extends Type> extends Iterable<A>, Functor<A>, AsyncFunctor<A>, Traversable<A> {
   count(p: (x: A) => boolean): number
 
   find(p: (a: A) => boolean): Option<A>
@@ -45,7 +45,4 @@ export type IterableType<A extends Type> = {
   get size(): number
 
   toArray<B = A>(): readonly B[]
-} & Iterable<A> &
-  Functor<A> &
-  AsyncFunctor<A> &
-  Traversable<A>
+}

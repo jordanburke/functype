@@ -4,7 +4,7 @@ import type { Type } from "@/types"
 /**
  * Traversable typeclass for data structures that can be traversed through
  */
-export type Traversable<A extends Type> = Functor<A> & {
+export interface Traversable<A extends Type> extends Functor<A> {
   get size(): number
 
   get isEmpty(): boolean

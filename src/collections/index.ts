@@ -7,7 +7,7 @@ import { Set } from "@/set/Set"
  * @module Collections
  * @category Core
  */
-export type Converters<A> = {
+export interface Converters<A> {
   toList(): List<A>
   toSet(): Set<A>
   toString(): string
@@ -19,4 +19,6 @@ export type Converters<A> = {
  * @module Collections
  * @category Core
  */
-export type Collection<A> = Converters<A>
+// Using type alias here since Collection is just an alias for Converters
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface Collection<A> extends Converters<A> {}

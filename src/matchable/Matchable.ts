@@ -4,7 +4,7 @@
  * @typeParam A - The type of elements in the data structure
  * @typeParam Tags - The type of tags used for pattern matching
  */
-export type Matchable<A, Tags extends string = string> = {
+export interface Matchable<A, Tags extends string = string> {
   /**
    * Pattern matches against this data structure, applying handlers for each variant based on tag.
    * Similar to fold but with stronger type safety for tag-based variants.

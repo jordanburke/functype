@@ -1,12 +1,12 @@
 /**
  * Methods for different serialization formats
  */
-export type SerializationMethods<T> = {
+export interface SerializationMethods<T> {
   toJSON(): string
   toYAML(): string
   toBinary(): string
 }
 
-export type Serializable<T> = {
+export interface Serializable<T> {
   serialize(): SerializationMethods<T>
 }

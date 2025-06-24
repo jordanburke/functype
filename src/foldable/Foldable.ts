@@ -3,7 +3,7 @@
  *
  * @typeParam A - The type of elements in the data structure
  */
-export type Foldable<A> = {
+export interface Foldable<A> {
   /**
    * Pattern matches over the structure, applying specific handlers for each variant
    * @param onEmpty - Function to apply if the structure is empty or has no value
