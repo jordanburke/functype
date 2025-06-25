@@ -199,6 +199,42 @@ For new code that needs a complete FP type class hierarchy, use the new interfac
 - `Monad` for types with `flatMap`
 - `AsyncMonad` for types with async operations
 
+## New Extractable Interface
+
+We've introduced a new `Extractable` interface hierarchy for types that support value extraction:
+
+```typescript
+// Base extraction interface
+export interface Extractable<T extends Type> {
+  getOrElse(defaultValue: T): T
+  getOrThrow(error?: Error): T
+}
+
+// Extended extraction for Option-like types
+export interface ExtractableOption<T extends Type> extends Extractable<T> {
+  get(): T
+  orElse<This>(this: This, alternative: This): This
+  orNull(): T | null
+  orUndefined(): T | undefined
+}
+```
+
+Both `Option` and `Either` now implement `ExtractableOption`, providing a consistent API for value extraction across these types:
+
+```typescript
+// Works with both Option and Either
+function extractValue<T>(container: ExtractableOption<T>): T {
+  return container.getOrElse(defaultValue)
+}
+
+// Example usage
+const opt = Option(42)
+const either = Right<string, number>(42)
+
+extractValue(opt) // 42
+extractValue(either) // 42
+```
+
 ## Examples
 
 ### Implementing a Functor

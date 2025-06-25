@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
+import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncMonad } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
@@ -164,6 +165,7 @@ export type Option<T extends Type> = {
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 } & (Traversable<T> &
   AsyncMonad<T> &
+  Extractable<T> &
   Typeable<"Some" | "None"> &
   Valuable<"Some" | "None", T> &
   Serializable<T> &
@@ -184,7 +186,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   get: () => value,
   getOrElse: () => value,
   getOrThrow: () => value,
-  orElse: () => Some(value),
+  orElse: (_alternative: Option<T>) => Some(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
@@ -244,7 +246,7 @@ const NONE: Option<never> = {
   getOrThrow<T>(error: Error): T {
     throw error
   },
-  orElse: <T>(alternative: Option<T>) => alternative,
+  orElse: (alternative: Option<never>) => alternative,
   orNull: () => null,
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,

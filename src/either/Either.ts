@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncMonad } from "@/functor/Functor"
 import { List } from "@/list/List"
@@ -22,8 +23,12 @@ export type Either<L extends Type, R extends Type> = {
   value: L | R
   isLeft: () => boolean
   isRight: () => boolean
+  get: () => R
   getOrElse: (defaultValue: R) => R
-  getOrThrow: () => R
+  getOrThrow: (error?: Error) => R
+  orElse(alternative: Either<L, R>): Either<L, R>
+  orNull: () => R | null
+  orUndefined: () => R | undefined
   map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   ap: <U extends Type>(ff: Either<L, (value: R) => U>) => Either<L, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
@@ -67,6 +72,7 @@ export type Either<L extends Type, R extends Type> = {
   Valuable<"Left" | "Right", L | R> &
   PromiseLike<R> &
   AsyncMonad<R> &
+  Extractable<R> &
   Serializable<R> &
   Pipe<L | R> &
   Foldable<R> &
@@ -79,8 +85,12 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   value,
   isLeft: () => false,
   isRight: () => true,
+  get: () => value,
   getOrElse: (_defaultValue: R) => value,
   getOrThrow: () => value,
+  orElse: (_alternative: Either<L, R>) => Right<L, R>(value),
+  orNull: () => value,
+  orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
   ap: <U extends Type>(ff: Either<L, (value: R) => U>): Either<L, U> =>
     ff._tag === "Right" ? Right((ff.value as (value: R) => U)(value)) : Left(ff.value as L),
@@ -152,10 +162,16 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   value,
   isLeft: () => true,
   isRight: () => false,
-  getOrElse: (defaultValue: R): R => defaultValue,
-  getOrThrow: () => {
-    throw value
+  get: () => {
+    throw new Error(`Cannot call get() on Left(${stringify(value)})`)
   },
+  getOrElse: (defaultValue: R): R => defaultValue,
+  getOrThrow: (error?: Error) => {
+    throw error || value
+  },
+  orElse: (alternative: Either<L, R>) => alternative,
+  orNull: () => null,
+  orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
   ap: <U extends Type>(_ff: Either<L, (value: R) => U>): Either<L, U> => Left<L, U>(value),
   mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
