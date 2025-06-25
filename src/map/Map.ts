@@ -22,7 +22,9 @@ export type Map<K, V> = {
   add(item: Tuple<[K, V]>): Map<K, V>
   remove(value: K): Map<K, V>
   map<U>(f: (value: V) => U): Map<K, U>
+  ap<U>(ff: Map<K, (value: V) => U>): Map<K, U>
   flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2>
+  flatMapAsync<U>(f: (value: V) => PromiseLike<Map<K, U>>): PromiseLike<Map<K, U>>
   get(key: K): Option<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
@@ -77,6 +79,30 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2> => {
     const list = MapObject(state.values.entries()).toList()
     return MapObject(list.flatMap(f).toArray())
+  }
+
+  const ap = <U>(ff: Map<K, (value: V) => U>): Map<K, U> => {
+    const newEntries: Array<[K, U]> = []
+    for (const [key, value] of state.values.entries()) {
+      const fn = ff.get(key)
+      if (fn._tag === "Some" && fn.value) {
+        newEntries.push([key, fn.value(value)])
+      }
+    }
+    return MapObject(newEntries)
+  }
+
+  const flatMapAsync = async <U>(f: (value: V) => PromiseLike<Map<K, U>>): Promise<Map<K, U>> => {
+    const results = new ESMap<K, U>()
+    for (const [_key, value] of state.values.entries()) {
+      const mappedMap = await f(value)
+      // Merge all entries from the resulting map
+      for (const entry of mappedMap.toList()) {
+        const [k, v] = entry.toArray()
+        results.set(k, v)
+      }
+    }
+    return MapObject(results.entries())
   }
 
   const reduce = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
@@ -144,7 +170,9 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
       return size()
     },
     map,
+    ap,
     flatMap,
+    flatMapAsync,
     reduce,
     reduceRight,
     foldLeft,
