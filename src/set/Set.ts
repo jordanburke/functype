@@ -1,6 +1,6 @@
 import type { Collection } from "@/collections"
 import { Companion } from "@/companion/Companion"
-import type { FunctypeCollection } from "@/functor/Functype"
+import type { FunctypeCollection } from "@/functype"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Typeable } from "@/typeable/Typeable"

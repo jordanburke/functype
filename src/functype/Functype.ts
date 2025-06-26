@@ -1,11 +1,10 @@
 import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
+import type { AsyncMonad } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
-
-import type { AsyncMonad } from "./Functor"
 
 /**
  * Base interface for all functype data structures.
@@ -42,22 +41,6 @@ export interface Functype<A, Tag extends string = string>
     Extractable<A>,
     Pipe<A>,
     Matchable<A, Tag> {
-  toValue(): { _tag: Tag; value: A }
-}
-
-/**
- * A minimal version of Functype for simpler data structures that don't need
- * the full monadic interface but still want core functional operations.
- *
- * @typeParam A - The type of value contained
- * @typeParam Tag - The type tag for pattern matching
- */
-export interface FunctypeMinimal<A, Tag extends string = string>
-  extends Serializable<A>,
-    Pipe<A>,
-    Foldable<A>,
-    Matchable<A, Tag> {
-  readonly _tag: Tag
   toValue(): { _tag: Tag; value: A }
 }
 

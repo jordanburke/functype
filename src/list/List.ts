@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import type { FunctypeCollection } from "@/functor/Functype"
+import type { FunctypeCollection } from "@/functype"
 import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"

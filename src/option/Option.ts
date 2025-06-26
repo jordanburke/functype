@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import type { Functype } from "@/functor"
+import type { Functype } from "@/functype"
 import type { Type } from "@/types"
 
 import { Either, Left, List, Right } from "../index"

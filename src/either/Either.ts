@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
-import type { FunctypeBase } from "@/functor"
 import type { AsyncMonad } from "@/functor/Functor"
+import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
 import type { Type } from "@/types"
