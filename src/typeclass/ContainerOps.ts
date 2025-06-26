@@ -78,5 +78,5 @@ export interface CollectionOps<A extends Type, Self> {
   /**
    * Converts the collection to an array.
    */
-  toArray<B = A>(): readonly B[]
+  toArray<B = A>(): B[]
 }

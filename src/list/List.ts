@@ -93,7 +93,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       return array.length === 0
     },
 
-    toArray: <B = A>(): readonly B[] => [...array] as unknown as readonly B[],
+    toArray: <B = A>(): B[] => [...array] as unknown as B[],
 
     reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
 

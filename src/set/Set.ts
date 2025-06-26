@@ -19,7 +19,7 @@ export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
   fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U) => U
   toList: () => List<A>
   toSet: () => Set<A>
-  toArray: <B = A>() => readonly B[]
+  toArray: <B = A>() => B[]
   toString: () => string
 }
 
@@ -215,7 +215,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     toSet: (): Set<A> => set,
 
-    toArray: <B = A>(): readonly B[] => Array.from(values) as unknown as readonly B[],
+    toArray: <B = A>(): B[] => Array.from(values) as unknown as B[],
 
     toString: (): string => `Set(${Array.from(values).toString()})`,
 
