@@ -7,7 +7,6 @@ import type { FunctypeBase } from "@/functype"
 import { None, Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import { Try } from "@/try"
-import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 /**
@@ -21,7 +20,7 @@ import type { Type } from "@/types"
  * It provides memoization and safe evaluation with integration to Option, Either, and Try.
  * @typeParam T - The type of the value to be computed
  */
-export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T>, Typeable<"Lazy"> {
+export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T> {
   /** Tag identifying this as a Lazy type */
   readonly _tag: "Lazy"
   /** Whether the computation has been evaluated */

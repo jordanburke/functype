@@ -6,7 +6,6 @@ import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
-import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 import { Valuable } from "@/valuable/Valuable"
 
@@ -87,7 +86,6 @@ export type Stack<A extends Type> = {
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 } & Traversable<A> &
-  Typeable<"Stack"> &
   Valuable<"Stack", A[]> &
   Serializable<A> &
   Pipe<A[]> &

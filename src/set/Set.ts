@@ -3,12 +3,11 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
-import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 import { ESSet, type ESSetType } from "./shim"
 
-export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A>, Typeable<"Set"> {
+export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add: (value: A) => Set<A>
   remove: (value: A) => Set<A>
   contains: (value: A) => boolean

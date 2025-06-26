@@ -5,7 +5,6 @@ import { Either, Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
 import type { Pipe } from "@/pipe"
-import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 /**
@@ -13,7 +12,7 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Typeable<TypeNames> {
+export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess: () => boolean

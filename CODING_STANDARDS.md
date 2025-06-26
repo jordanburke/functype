@@ -152,7 +152,8 @@ const promise = FPromise.resolve(42).map((x) => x * 2)
 import stringify from "safe-stable-stringify"
 
 // Internal imports using path aliases
-import { AsyncFunctor, Functor, Type } from "@/functor"
+import { AsyncMonad, Functor } from "@/typeclass"
+import { Type } from "@/types"
 import { List } from "@/list/List"
 
 // Relative imports (only when necessary)

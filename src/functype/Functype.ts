@@ -1,10 +1,11 @@
 import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncMonad } from "@/functor/Functor"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
+import type { Typeable } from "@/typeable"
+import type { AsyncMonad } from "@/typeclass"
 
 /**
  * Base interface for all functype data structures.
@@ -25,7 +26,8 @@ export interface FunctypeBase<A, Tag extends string = string>
   extends AsyncMonad<A>,
     Traversable<A>,
     Serializable<A>,
-    Foldable<A> {
+    Foldable<A>,
+    Typeable<Tag> {
   readonly _tag: Tag
 }
 

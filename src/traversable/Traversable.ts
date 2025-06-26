@@ -1,4 +1,4 @@
-import type { AsyncMonad } from "@/functor/Functor"
+import type { AsyncMonad } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**

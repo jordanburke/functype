@@ -121,10 +121,10 @@
         "default": "./dist/functype/index.mjs"
       }
     },
-    "./functor": {
+    "./typeclass": {
       "import": {
-        "types": "./dist/functor/index.d.ts",
-        "default": "./dist/functor/index.mjs"
+        "types": "./dist/typeclass/index.d.ts",
+        "default": "./dist/typeclass/index.mjs"
       }
     },
     "./map": {

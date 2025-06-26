@@ -1,6 +1,6 @@
-import type { AsyncMonad } from "@/functor/Functor"
 import { Option } from "@/option/Option"
 import type { Traversable } from "@/traversable/Traversable"
+import type { AsyncMonad } from "@/typeclass"
 import type { Type } from "@/types"
 
 export interface IterableType<A extends Type> extends Iterable<A>, AsyncMonad<A>, Traversable<A> {
