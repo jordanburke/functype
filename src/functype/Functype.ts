@@ -32,7 +32,7 @@ export interface FunctypeBase<A, Tag extends string = string>
     Serializable<A>,
     Foldable<A>,
     Typeable<Tag>,
-    ContainerOps<A, FunctypeBase<A, Tag>> {
+    ContainerOps<A> {
   readonly _tag: Tag
 }
 

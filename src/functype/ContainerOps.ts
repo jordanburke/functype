@@ -8,7 +8,7 @@ import type { Type } from "@/types"
  * @typeParam A - The type of value(s) in the container
  * @typeParam Self - The container type itself for proper return types
  */
-export interface ContainerOps<A extends Type, Self> {
+export interface ContainerOps<A extends Type> {
   /**
    * Counts elements that satisfy the predicate.
    * For single-value containers: returns 0 or 1
@@ -64,7 +64,7 @@ export interface CollectionOps<A extends Type, Self> {
   /**
    * Flattens a collection of collections into a single collection.
    */
-  flatten<B>(): Self extends CollectionOps<infer _, infer S> ? S : never
+  flatten<B>(): Self
 
   /**
    * Gets the first element of the collection.
