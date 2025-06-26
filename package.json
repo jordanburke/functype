@@ -154,10 +154,7 @@
     }
   },
   "files": [
-    "dist",
-    "package.json",
-    "README.md",
-    "LICENSE"
+    "dist"
   ],
   "dependencies": {
     "safe-stable-stringify": "^2.5.0"
