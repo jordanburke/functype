@@ -1,13 +1,9 @@
 import stringify from "safe-stable-stringify"
 
-import type { Extractable } from "@/extractable"
-import type { Foldable } from "@/foldable/Foldable"
+import type { FunctypeBase } from "@/functor"
 import type { AsyncMonad } from "@/functor/Functor"
 import { List } from "@/list/List"
 import { None, Option, Some } from "@/option/Option"
-import type { Serializable } from "@/serializable/Serializable"
-import type { Traversable } from "@/traversable/Traversable"
-import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 /**
@@ -16,14 +12,7 @@ import type { Type } from "@/types"
  * @category Core
  */
 
-export interface Either<L extends Type, R extends Type>
-  extends AsyncMonad<R>,
-    Traversable<R>,
-    Extractable<R>,
-    Serializable<R>,
-    Foldable<R>,
-    Typeable<"Left" | "Right">,
-    PromiseLike<R> {
+export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right">, PromiseLike<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft: () => boolean
