@@ -1,0 +1,8 @@
+README.md
+readme/
+docs/
+coverage/
+typedocs/
+*.log
+*.tmp
+.DS_Store
