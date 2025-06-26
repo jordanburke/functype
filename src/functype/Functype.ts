@@ -1,3 +1,4 @@
+import type { Collection } from "@/collections"
 import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
 import type { Matchable } from "@/matchable"
@@ -56,6 +57,7 @@ export interface Functype<A, Tag extends string = string>
 export interface FunctypeCollection<A, Tag extends string = string>
   extends FunctypeBase<A, Tag>,
     Iterable<A>,
-    Pipe<A[]> {
+    Pipe<A[]>,
+    Collection<A> {
   toValue(): { _tag: Tag; value: A[] }
 }
