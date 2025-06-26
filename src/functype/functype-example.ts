@@ -1,3 +1,4 @@
+import { None, Option } from "@/option"
 import type { Type } from "@/types"
 
 import type { Functype } from "./Functype"
@@ -15,6 +16,9 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     public readonly _tag: BoxTag,
     private readonly _value?: T,
   ) {}
+
+  // Typeable property
+  readonly typeable = this._tag
 
   // Functor methods
   map<U extends Type>(f: (value: T) => U): Box<U> {
@@ -131,6 +135,28 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
   // Valuable method
   toValue(): { _tag: BoxTag; value: T } {
     return { _tag: this._tag, value: this._value as T }
+  }
+
+  // ContainerOps methods
+  count(p: (x: T) => boolean): number {
+    return this._tag === "Full" && this._value !== undefined && p(this._value) ? 1 : 0
+  }
+
+  find(p: (a: T) => boolean): Option<T> {
+    if (this._tag === "Full" && this._value !== undefined && p(this._value)) {
+      return Option(this._value) as Option<T>
+    }
+    return None<T>()
+  }
+
+  exists(p: (a: T) => boolean): boolean {
+    return this._tag === "Full" && this._value !== undefined && p(this._value)
+  }
+
+  forEach(f: (a: T) => void): void {
+    if (this._tag === "Full" && this._value !== undefined) {
+      f(this._value)
+    }
   }
 
   // Helper factory methods

@@ -2,7 +2,6 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
-import type { IterableType } from "@/iterable"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
@@ -11,39 +10,22 @@ import type { Type } from "@/types"
 export interface List<A> extends FunctypeCollection<A, "List"> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
+  // Override these to return List instead of FunctypeCollection
   map: <B>(f: (a: A) => B) => List<B>
   ap: <B>(ff: List<(value: A) => B>) => List<B>
-  flatMap: <B>(f: (a: A) => IterableType<B>) => List<B>
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<IterableType<B>>) => PromiseLike<List<B>>
-  forEach: (f: (a: A) => void) => void
-  count: (p: (x: A) => boolean) => number
-  exists: (p: (a: A) => boolean) => boolean
+  flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
+  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>) => PromiseLike<List<B>>
+  // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>
   filterNot: (p: (a: A) => boolean) => List<A>
+  // List-specific methods
   filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
-  find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => Option<T>
-  readonly head: A | undefined
-  readonly headOption: Option<A>
-  readonly isEmpty: boolean
-  toArray: <B = A>() => B[]
-  reduce: (f: (prev: A, curr: A) => A) => A
-  reduceRight: (f: (prev: A, curr: A) => A) => A
-  foldLeft: <B>(z: B) => (op: (b: B, a: A) => B) => B
-  foldRight: <B>(z: B) => (op: (a: A, b: B) => B) => B
   remove: (value: A) => List<A>
   removeAt: (index: number) => List<A>
   add: (item: A) => List<A>
   get: (index: number) => Option<A>
   concat: (other: List<A>) => List<A>
-  toList: () => List<A>
-  toSet: () => Set<A>
-  toString: () => string
-  toValue: () => { _tag: "List"; value: A[] }
-  drop: (n: number) => List<A>
-  dropRight: (n: number) => List<A>
-  dropWhile: (p: (a: A) => boolean) => List<A>
-  flatten: <B>() => List<B>
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -72,9 +54,9 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     ap: <B>(ff: List<(value: A) => B>) => ListObject(array.flatMap((a) => Array.from(ff).map((f) => f(a)))),
 
-    flatMap: <B>(f: (a: A) => IterableType<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
+    flatMap: <B>(f: (a: A) => Iterable<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
 
-    flatMapAsync: async <B>(f: (a: A) => PromiseLike<IterableType<B>>): Promise<List<B>> => {
+    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>): Promise<List<B>> => {
       const results = await Promise.all(array.map(async (a) => await f(a)))
       return ListObject(results.flatMap((iterable) => Array.from(iterable)))
     },
@@ -111,7 +93,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       return array.length === 0
     },
 
-    toArray: <B = A>(): B[] => [...array] as unknown as B[],
+    toArray: <B = A>(): readonly B[] => [...array] as unknown as readonly B[],
 
     reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
 

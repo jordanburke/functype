@@ -250,7 +250,9 @@ describe("List", () => {
     })
 
     it("find with predicate and type _tag", () => {
-      const firstCircle = shapes.find<Circle>((shape) => shape !== undefined && shape.value > 4, "circle")
+      const firstCircle = shapes.find(
+        (shape) => shape !== undefined && shape.value > 4 && shape._tag === "circle",
+      ) as Option<Circle>
       expect(firstCircle.toValue()).toEqual({
         _tag: "Some",
         value: { _tag: "circle", kind: "circle", value: 5 },
@@ -269,7 +271,7 @@ describe("List", () => {
     it("handles empty list", () => {
       const emptyList = List<Shape | undefined>()
       expect(emptyList.filterType<Circle>("circle").toValue()).toEqual({ _tag: "List", value: [] })
-      expect(emptyList.find((_shape) => true, "circle")).toEqual(None())
+      expect(emptyList.find((_shape) => true)).toEqual(None())
     })
 
     it("type narrowing preserves through operations", () => {

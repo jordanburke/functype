@@ -42,13 +42,13 @@ describe("Set", () => {
 
   test("map should correctly map values", () => {
     const set = Set([1, 2, 3])
-    const newSet = set.map((x) => x * 2)
+    const newSet = set.map((x: number) => x * 2)
     expect(newSet.toArray()).toEqual(expect.arrayContaining([2, 4, 6]))
   })
 
   test("flatMap should correctly map and flatten values", () => {
     const set = Set([1, 2, 3])
-    const newSet = set.flatMap((x) => List([x, x * 2]))
+    const newSet = set.flatMap((x: number) => List([x, x * 2]))
     expect(newSet.toArray()).toEqual(expect.arrayContaining([1, 2, 3, 4, 6]))
   })
 

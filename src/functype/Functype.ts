@@ -7,6 +7,9 @@ import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
 import type { Typeable } from "@/typeable"
 import type { AsyncMonad } from "@/typeclass"
+import type { Type } from "@/types"
+
+import type { CollectionOps, ContainerOps } from "./ContainerOps"
 
 /**
  * Base interface for all functype data structures.
@@ -28,7 +31,8 @@ export interface FunctypeBase<A, Tag extends string = string>
     Traversable<A>,
     Serializable<A>,
     Foldable<A>,
-    Typeable<Tag> {
+    Typeable<Tag>,
+    ContainerOps<A, FunctypeBase<A, Tag>> {
   readonly _tag: Tag
 }
 
@@ -55,9 +59,13 @@ export interface Functype<A, Tag extends string = string>
  * @typeParam Tag - The type tag for pattern matching
  */
 export interface FunctypeCollection<A, Tag extends string = string>
-  extends FunctypeBase<A, Tag>,
+  extends Omit<FunctypeBase<A, Tag>, "flatMapAsync" | "flatMap">,
     Iterable<A>,
     Pipe<A[]>,
-    Collection<A> {
+    Collection<A>,
+    CollectionOps<A, FunctypeCollection<A, Tag>> {
   toValue(): { _tag: Tag; value: A[] }
+  // Override to work with Iterable instead of Monad/AsyncMonad
+  flatMap<B extends Type>(f: (value: A) => Iterable<B>): FunctypeCollection<B, Tag>
+  flatMapAsync<B extends Type>(f: (value: A) => PromiseLike<Iterable<B>>): PromiseLike<FunctypeCollection<B, Tag>>
 }

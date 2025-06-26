@@ -1,6 +1,5 @@
 import type { Collection } from "@/collections"
 import { Companion, type Foldable, Typeable } from "@/index"
-import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -30,7 +29,7 @@ export interface Map<K, V>
   remove(value: K): Map<K, V>
   map<U>(f: (value: V) => U): Map<K, U>
   ap<U>(ff: Map<K, (value: V) => U>): Map<K, U>
-  flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2>
+  flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => Iterable<[K2, V2]>): Map<K2, V2>
   flatMapAsync<U>(f: (value: V) => PromiseLike<Map<K, U>>): PromiseLike<Map<K, U>>
   get(key: K): Option<V>
   getOrElse(key: K, defaultValue: V): V
@@ -77,7 +76,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   const map = <U>(f: (value: V) => U): Map<K, U> =>
     MapObject(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
 
-  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => IterableType<[K2, V2]>): Map<K2, V2> => {
+  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => Iterable<[K2, V2]>): Map<K2, V2> => {
     const list = MapObject(state.values.entries()).toList()
     return MapObject(list.flatMap(f).toArray())
   }

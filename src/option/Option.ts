@@ -181,6 +181,10 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
       return NONE as unknown as Option<T>
     }
   },
+  count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
+  find: (p: (a: T) => boolean) => (p(value) ? Some(value) : (NONE as unknown as Option<T>)),
+  exists: (p: (a: T) => boolean) => p(value),
+  forEach: (f: (a: T) => void) => f(value),
   fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
     return onSome(value)
   },
@@ -236,6 +240,10 @@ const NONE: Option<never> = {
   filter(_predicate: (value: never) => boolean): Option<never> {
     return NONE
   },
+  count: (_p: (x: never) => boolean) => 0,
+  find: (_p: (a: never) => boolean) => NONE as unknown as Option<never>,
+  exists: (_p: (a: never) => boolean) => false,
+  forEach: (_f: (a: never) => void) => {},
   flatMap: <U extends Type>(_f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
   flatMapAsync: async <U extends Type>(_f: (value: never) => Promise<Option<U>>) => {
     return NONE as unknown as Option<U>

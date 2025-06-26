@@ -4,6 +4,7 @@ import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
+import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Type } from "@/types"
 
@@ -92,6 +93,10 @@ const Success = <T>(value: T): Try<T> => ({
   contains: (v: T) => value === v,
   reduce: (f: (b: T, a: T) => T) => value,
   reduceRight: (f: (b: T, a: T) => T) => value,
+  count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
+  find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
+  exists: (p: (a: T) => boolean) => p(value),
+  forEach: (f: (a: T) => void) => f(value),
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
@@ -153,6 +158,10 @@ const Failure = <T>(error: Error): Try<T> => ({
   reduceRight: (_f: (b: T, a: T) => T) => {
     throw new Error("Cannot reduceRight a Failure")
   },
+  count: (_p: (x: T) => boolean) => 0,
+  find: (_p: (a: T) => boolean) => Option<T>(null),
+  exists: (_p: (a: T) => boolean) => false,
+  forEach: (_f: (a: T) => void) => {},
 })
 
 const TryConstructor = <T>(f: () => T): Try<T> => {

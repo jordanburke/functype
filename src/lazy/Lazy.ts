@@ -381,6 +381,35 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     },
     reduce: (f: (b: T, a: T) => T): T => evaluate(),
     reduceRight: (f: (b: T, a: T) => T): T => evaluate(),
+    count: (p: (x: T) => boolean): number => {
+      try {
+        return p(evaluate()) ? 1 : 0
+      } catch {
+        return 0
+      }
+    },
+    find: (p: (a: T) => boolean): Option<T> => {
+      try {
+        const val = evaluate()
+        return p(val) ? Some(val) : (None as unknown as Option<T>)
+      } catch {
+        return None as unknown as Option<T>
+      }
+    },
+    exists: (p: (a: T) => boolean): boolean => {
+      try {
+        return p(evaluate())
+      } catch {
+        return false
+      }
+    },
+    forEach: (f: (a: T) => void): void => {
+      try {
+        f(evaluate())
+      } catch {
+        // Ignore errors in forEach
+      }
+    },
     // Pipe
     pipe: <U>(f: (value: T) => U): U => f(evaluate()),
     // Serializable

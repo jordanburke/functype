@@ -5,13 +5,13 @@ import { Set } from "@/set/Set"
 describe("Set pipe", () => {
   it("should pipe set values through function", () => {
     const set = Set([1, 2, 3, 4, 5])
-    const result = set.pipe((values) => values.reduce((a, b) => a + b, 0))
+    const result = set.pipe((values: number[]) => values.reduce((a, b) => a + b, 0))
     expect(result).toBe(15)
   })
 
   it("should pipe empty set through function", () => {
     const emptySet = Set<number>([])
-    const result = emptySet.pipe((values) => {
+    const result = emptySet.pipe((values: number[]) => {
       // values is an empty array
       return values.length === 0 ? "empty" : "not empty"
     })
@@ -20,7 +20,7 @@ describe("Set pipe", () => {
 
   it("should pipe set through complex functions", () => {
     const set = Set(["hello", "world"])
-    const result = set.pipe((values) => values.map((str) => str.toUpperCase()).join("-"))
+    const result = set.pipe((values: string[]) => values.map((str) => str.toUpperCase()).join("-"))
     expect(result).toBe("HELLO-WORLD")
   })
 
@@ -40,7 +40,7 @@ describe("Set pipe", () => {
   it("should enable set analytics", () => {
     const set = Set([1, 2, 3, 4, 5])
 
-    const result = set.pipe((values) => {
+    const result = set.pipe((values: number[]) => {
       return {
         sum: values.reduce((a, b) => a + b, 0),
         average: values.reduce((a, b) => a + b, 0) / values.length,
@@ -60,7 +60,7 @@ describe("Set pipe", () => {
   it("should work with filtering operations", () => {
     const set = Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
 
-    const result = set.pipe((values) => {
+    const result = set.pipe((values: number[]) => {
       const even = values.filter((n) => n % 2 === 0)
       const odd = values.filter((n) => n % 2 !== 0)
 

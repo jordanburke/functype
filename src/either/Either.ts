@@ -160,6 +160,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   contains: (v: R) => value === v,
   reduce: (f: (b: R, a: R) => R) => value,
   reduceRight: (f: (b: R, a: R) => R) => value,
+  count: (p: (x: R) => boolean) => (p(value) ? 1 : 0),
+  find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
+  exists: (p: (a: R) => boolean) => p(value),
+  forEach: (f: (a: R) => void) => f(value),
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -249,6 +253,10 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   reduceRight: (_f: (b: R, a: R) => R) => {
     throw new Error("Cannot reduceRight a Left")
   },
+  count: (_p: (x: R) => boolean) => 0,
+  find: (_p: (a: R) => boolean) => None<R>(),
+  exists: (_p: (a: R) => boolean) => false,
+  forEach: (_f: (a: R) => void) => {},
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)

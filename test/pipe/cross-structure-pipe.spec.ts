@@ -68,8 +68,8 @@ describe("Cross data structure pipe tests", () => {
       { id: 3, name: "Charlie" },
     ])
 
-    const userMapFromSet = userSet.pipe((users) => {
-      return Map(users.map((user) => [user.id, user.name]))
+    const userMapFromSet = userSet.pipe((users: { id: number; name: string }[]) => {
+      return Map(users.map((user) => [user.id, user.name] as [number, string]))
     })
 
     expect(userMapFromSet.get(1).getOrElse("")).toBe("Alice")
@@ -107,7 +107,7 @@ describe("Cross data structure pipe tests", () => {
     const uniqueValuesSet = Set(expandedList)
 
     // Step 4: Calculate statistics from set values
-    const result = uniqueValuesSet.pipe((uniqueSet) => {
+    const result = uniqueValuesSet.pipe((uniqueSet: number[]) => {
       const values = [...uniqueSet]
       return {
         count: values.length,
