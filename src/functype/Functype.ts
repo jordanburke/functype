@@ -6,10 +6,8 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
 import type { Typeable } from "@/typeable"
-import type { AsyncMonad } from "@/typeclass"
+import type { AsyncMonad, CollectionOps, ContainerOps } from "@/typeclass"
 import type { Type } from "@/types"
-
-import type { CollectionOps, ContainerOps } from "./ContainerOps"
 
 /**
  * Base interface for all functype data structures.

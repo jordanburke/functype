@@ -6,7 +6,6 @@ import type { Type } from "@/types"
  * These operations make sense for Option, Either, Try, List, Set, etc.
  *
  * @typeParam A - The type of value(s) in the container
- * @typeParam Self - The container type itself for proper return types
  */
 export interface ContainerOps<A extends Type> {
   /**
@@ -39,7 +38,7 @@ export interface ContainerOps<A extends Type> {
 }
 
 /**
- * Operations specific to collections (List, Set, etc).
+ * Operations specific to collections (List, Set, etc.).
  * These operations don't make sense for single-value containers.
  *
  * @typeParam A - The element type
