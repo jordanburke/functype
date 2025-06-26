@@ -1,18 +1,14 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncMonad } from "@/functor/Functor"
+import type { FunctypeCollection } from "@/functor/Functype"
 import type { IterableType } from "@/iterable"
-import type { Matchable } from "@/matchable"
 import { None, Option } from "@/option/Option"
-import type { Pipe } from "@/pipe"
-import type { Serializable } from "@/serializable/Serializable"
 import { Set } from "@/set/Set"
 import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
-export type List<A> = {
+export interface List<A> extends FunctypeCollection<A, "List"> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   map: <B>(f: (a: A) => B) => List<B>
@@ -54,13 +50,7 @@ export type List<A> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
-} & IterableType<A> &
-  AsyncMonad<A> &
-  Typeable<"List"> &
-  Serializable<A> &
-  Pipe<A[]> &
-  Foldable<A> &
-  Matchable<A[], "Empty" | "NonEmpty">
+}
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values || [])

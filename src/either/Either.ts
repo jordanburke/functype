@@ -4,13 +4,11 @@ import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
 import type { AsyncMonad } from "@/functor/Functor"
 import { List } from "@/list/List"
-import type { Matchable } from "@/matchable"
 import { None, Option, Some } from "@/option/Option"
-import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
+import type { Traversable } from "@/traversable/Traversable"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
 
 /**
  * Either type module
@@ -18,7 +16,14 @@ import { Valuable } from "@/valuable/Valuable"
  * @category Core
  */
 
-export type Either<L extends Type, R extends Type> = {
+export interface Either<L extends Type, R extends Type>
+  extends AsyncMonad<R>,
+    Traversable<R>,
+    Extractable<R>,
+    Serializable<R>,
+    Foldable<R>,
+    Typeable<"Left" | "Right">,
+    PromiseLike<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft: () => boolean
@@ -58,7 +63,7 @@ export type Either<L extends Type, R extends Type> = {
 
   /**
    * Pipes the Either value through the provided function
-   * @param f - The function to apply to the value
+   * @param f - The function to apply to the value (Left or Right)
    * @returns The result of applying the function to the value
    */
   pipe<U extends Type>(f: (value: L | R) => U): U
@@ -68,15 +73,11 @@ export type Either<L extends Type, R extends Type> = {
    * @returns The result of applying the matching handler function
    */
   match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
-} & Typeable<"Left" | "Right"> &
-  Valuable<"Left" | "Right", L | R> &
-  PromiseLike<R> &
-  AsyncMonad<R> &
-  Extractable<R> &
-  Serializable<R> &
-  Pipe<L | R> &
-  Foldable<R> &
-  Matchable<L | R, "Left" | "Right">
+  /**
+   * Returns the value and tag for inspection
+   */
+  toValue(): { _tag: "Left" | "Right"; value: L | R }
+}
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
 
@@ -155,6 +156,15 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "Right", value })).toString("base64"),
     }
   },
+  get size() {
+    return 1
+  },
+  get isEmpty() {
+    return false
+  },
+  contains: (v: R) => value === v,
+  reduce: (f: (b: R, a: R) => R) => value,
+  reduceRight: (f: (b: R, a: R) => R) => value,
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -227,6 +237,19 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
       toYAML: () => `_tag: Left\nvalue: ${stringify(value)}`,
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "Left", value })).toString("base64"),
     }
+  },
+  get size() {
+    return 0
+  },
+  get isEmpty() {
+    return true
+  },
+  contains: (_v: R) => false,
+  reduce: (_f: (b: R, a: R) => R) => {
+    throw new Error("Cannot reduce a Left")
+  },
+  reduceRight: (_f: (b: R, a: R) => R) => {
+    throw new Error("Cannot reduceRight a Left")
   },
 })
 

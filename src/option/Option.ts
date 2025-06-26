@@ -17,9 +17,7 @@ import { Either, Left, List, Right } from "../index"
  * It's used to handle potentially null or undefined values in a type-safe way.
  * @typeParam T - The type of the value contained in the Option
  */
-export type Option<T extends Type> = {
-  /** Tag identifying if this is a Some or None variant */
-  readonly _tag: "Some" | "None"
+export interface Option<T extends Type> extends Functype<T, "Some" | "None"> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -155,7 +153,7 @@ export type Option<T extends Type> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
-} & Functype<T, "Some" | "None">
+}
 
 /**
  * Creates a Some variant of Option containing a value.

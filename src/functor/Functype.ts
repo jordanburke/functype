@@ -8,29 +8,40 @@ import type { Traversable } from "@/traversable/Traversable"
 import type { AsyncMonad } from "./Functor"
 
 /**
- * A unified interface that combines commonly implemented functional programming traits.
- * This provides a standard contract for functype data structures.
+ * Base interface for all functype data structures.
+ * This provides a standard contract with core functional programming traits.
  *
  * @typeParam A - The type of value contained in the functor
  * @typeParam Tag - The type tag for pattern matching (e.g., "Some" | "None" for Option)
  *
  * @example
  * ```typescript
- * // Implementing Functype for a custom data structure
- * class MyContainer<T> implements Functype<T, "Empty" | "Full"> {
+ * // Implementing FunctypeBase for a custom data structure
+ * class MyContainer<T> implements FunctypeBase<T, "Empty" | "Full"> {
  *   // Implementation of all required methods...
  * }
  * ```
  */
-export interface Functype<A, Tag extends string = string>
+export interface FunctypeBase<A, Tag extends string = string>
   extends AsyncMonad<A>,
     Traversable<A>,
-    Extractable<A>,
     Serializable<A>,
-    Pipe<A>,
-    Foldable<A>,
-    Matchable<A, Tag> {
+    Foldable<A> {
   readonly _tag: Tag
+}
+
+/**
+ * Interface for single-value containers like Option, Either, Try.
+ * Extends FunctypeBase with extraction methods and Pipe.
+ *
+ * @typeParam A - The type of value contained
+ * @typeParam Tag - The type tag for pattern matching
+ */
+export interface Functype<A, Tag extends string = string>
+  extends FunctypeBase<A, Tag>,
+    Extractable<A>,
+    Pipe<A>,
+    Matchable<A, Tag> {
   toValue(): { _tag: Tag; value: A }
 }
 
@@ -52,9 +63,14 @@ export interface FunctypeMinimal<A, Tag extends string = string>
 
 /**
  * A version of Functype for collection types that need iteration support.
- * Extends the base Functype with Iterable protocol.
+ * Extends FunctypeBase with Iterable protocol but without Extractable.
  *
  * @typeParam A - The element type of the collection
  * @typeParam Tag - The type tag for pattern matching
  */
-export interface FunctypeCollection<A, Tag extends string = string> extends Functype<A, Tag>, Iterable<A> {}
+export interface FunctypeCollection<A, Tag extends string = string>
+  extends FunctypeBase<A, Tag>,
+    Iterable<A>,
+    Pipe<A[]> {
+  toValue(): { _tag: Tag; value: A[] }
+}
