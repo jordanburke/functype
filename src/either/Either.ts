@@ -11,7 +11,6 @@ import type { Type } from "@/types"
  * @module Either
  * @category Core
  */
-
 export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right">, PromiseLike<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
@@ -66,6 +65,10 @@ export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, 
    * Returns the value and tag for inspection
    */
   toValue(): { _tag: "Left" | "Right"; value: L | R }
+  /**
+   * Custom JSON serialization that excludes getter properties
+   */
+  toJSON(): { _tag: "Left" | "Right"; value: L | R }
 }
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
@@ -95,6 +98,9 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
+  toJSON: function () {
+    return { _tag: "Right", value }
+  },
   toString: () => {
     return `Right(${stringify(value)})`
   },
@@ -182,6 +188,9 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
   toOption: () => None<R>(),
   toList: () => List<R>(),
+  toJSON: function () {
+    return { _tag: "Left", value }
+  },
   toString: () => `Left(${stringify(value)})`,
   [Symbol.iterator]: function* () {
     // Left doesn't yield any values

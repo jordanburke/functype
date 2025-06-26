@@ -2,8 +2,10 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either"
-import type { Functype } from "@/functor/Functype"
+import type { Extractable } from "@/extractable"
+import type { FunctypeBase } from "@/functor/Functype"
 import { None, Option, Some } from "@/option"
+import type { Pipe } from "@/pipe"
 import { Try } from "@/try"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
@@ -19,7 +21,7 @@ import type { Type } from "@/types"
  * It provides memoization and safe evaluation with integration to Option, Either, and Try.
  * @typeParam T - The type of the value to be computed
  */
-export interface Lazy<T extends Type> extends Functype<T, "Lazy">, Typeable<"Lazy"> {
+export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T>, Typeable<"Lazy"> {
   /** Tag identifying this as a Lazy type */
   readonly _tag: "Lazy"
   /** Whether the computation has been evaluated */
@@ -168,10 +170,9 @@ export interface Lazy<T extends Type> extends Functype<T, "Lazy">, Typeable<"Laz
   toString(): string
   /**
    * Converts the Lazy to a value object
-   * Forces evaluation and always returns a value
-   * @returns Object representation of the Lazy with evaluated value
+   * @returns Object representation of the Lazy with evaluation state
    */
-  toValue(): { _tag: "Lazy"; value: T }
+  toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
 }
 
 /**
@@ -348,8 +349,12 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return `Lazy(<not evaluated>)`
       }
     },
-    toValue: (): { _tag: "Lazy"; value: T } => {
-      return { _tag: "Lazy" as const, value: evaluate() }
+    toValue: (): { _tag: "Lazy"; evaluated: boolean; value?: T } => {
+      if (evaluated && !hasError) {
+        return { _tag: "Lazy" as const, evaluated: true, value: value as T }
+      } else {
+        return { _tag: "Lazy" as const, evaluated: false }
+      }
     },
     // Traversable
     get size() {
