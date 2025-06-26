@@ -1,6 +1,5 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import type { Functor } from "@/functor/Functor"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -50,6 +49,20 @@ export type Stack<A extends Type> = {
   flatMap<B extends Type>(f: (a: A) => Stack<B>): Stack<B>
 
   /**
+   * Applies a Stack of functions to this Stack
+   * @param ff - Stack of functions to apply
+   * @returns A new Stack with applied functions
+   */
+  ap<B extends Type>(ff: Stack<(value: A) => B>): Stack<B>
+
+  /**
+   * Maps each element to an async Stack and flattens the result
+   * @param f - The async mapping function returning a Stack
+   * @returns A promise of the new flattened Stack
+   */
+  flatMapAsync<B extends Type>(f: (value: A) => PromiseLike<Stack<B>>): PromiseLike<Stack<B>>
+
+  /**
    * Convert the stack to a List
    * @returns A List containing all elements
    */
@@ -74,7 +87,6 @@ export type Stack<A extends Type> = {
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 } & Traversable<A> &
-  Functor<A> &
   Typeable<"Stack"> &
   Valuable<"Stack", A[]> &
   Serializable<A> &
@@ -150,6 +162,27 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     }, StackObject<B>([]))
   }
 
+  const ap = <B extends Type>(ff: Stack<(value: A) => B>): Stack<B> => {
+    const result: B[] = []
+    items.forEach((a) => {
+      ff.toArray().forEach((f) => {
+        result.push(f(a))
+      })
+    })
+    return StackObject<B>(result)
+  }
+
+  const flatMapAsync = async <B extends Type>(f: (value: A) => PromiseLike<Stack<B>>): Promise<Stack<B>> => {
+    if (isEmpty()) {
+      return StackObject<B>([])
+    }
+
+    const results = await Promise.all(items.map(async (a) => await f(a)))
+    return results.reduce((acc: Stack<B>, current: Stack<B>) => {
+      return current.toArray().reduce((inner, val) => inner.push(val), acc)
+    }, StackObject<B>([]))
+  }
+
   // Conversion methods
   const toList = (): List<A> => List<A>(items)
 
@@ -200,6 +233,8 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     peek,
     map,
     flatMap,
+    ap,
+    flatMapAsync,
     toList,
     toArray,
     toString,

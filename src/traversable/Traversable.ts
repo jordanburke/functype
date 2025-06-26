@@ -1,10 +1,10 @@
-import type { Functor } from "@/functor/Functor"
+import type { AsyncMonad } from "@/functor/Functor"
 import type { Type } from "@/types"
 
 /**
  * Traversable typeclass for data structures that can be traversed through
  */
-export interface Traversable<A extends Type> extends Functor<A> {
+export interface Traversable<A extends Type> extends AsyncMonad<A> {
   get size(): number
 
   get isEmpty(): boolean

@@ -16,7 +16,7 @@ import { ESMap, type ESMapType } from "./shim"
 /**
  * A traversable interface for map that excludes map and flatMap operations
  */
-export type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap">
+export type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap" | "flatMapAsync" | "ap">
 
 export type Map<K, V> = {
   add(item: Tuple<[K, V]>): Map<K, V>
