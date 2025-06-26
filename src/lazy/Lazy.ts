@@ -252,7 +252,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     filter: (predicate: (value: T) => boolean): Lazy<Option<T>> =>
       Lazy(() => {
         const val = evaluate()
-        return predicate(val) ? Some(val) : (None as Option<T>)
+        return predicate(val) ? Some(val) : (None as unknown as Option<T>)
       }),
     recover: (f: (error: unknown) => T): Lazy<T> =>
       Lazy(() => {
@@ -274,7 +274,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
       try {
         return Some(evaluate())
       } catch {
-        return None as Option<T>
+        return None as unknown as Option<T>
       }
     },
     toEither: (): Either<unknown, T> => {

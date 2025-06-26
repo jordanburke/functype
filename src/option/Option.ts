@@ -1,15 +1,8 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import type { Extractable } from "@/extractable"
-import type { Foldable } from "@/foldable/Foldable"
-import type { Matchable } from "@/matchable"
-import type { Pipe } from "@/pipe"
-import type { Serializable } from "@/serializable/Serializable"
-import type { Traversable } from "@/traversable/Traversable"
-import { Typeable } from "@/typeable/Typeable"
+import type { Functype } from "@/functor"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
 
 import { Either, Left, List, Right } from "../index"
 
@@ -162,14 +155,7 @@ export type Option<T extends Type> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
-} & Traversable<T> &
-  Extractable<T> &
-  Typeable<"Some" | "None"> &
-  Valuable<"Some" | "None", T> &
-  Serializable<T> &
-  Pipe<T> &
-  Foldable<T> &
-  Matchable<T, "Some" | "None">
+} & Functype<T, "Some" | "None">
 
 /**
  * Creates a Some variant of Option containing a value.

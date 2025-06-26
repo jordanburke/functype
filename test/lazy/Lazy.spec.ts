@@ -286,7 +286,7 @@ describe("Lazy", () => {
     })
 
     it("should create Lazy from None Option", () => {
-      const option: Option<number> = None as Option<number>
+      const option: Option<number> = None as unknown as Option<number>
       const lazy = Lazy.fromOption(option, () => 0)
       expect(lazy.get()).toBe(0)
     })

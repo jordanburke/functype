@@ -115,6 +115,12 @@
         "default": "./dist/fpromise/index.mjs"
       }
     },
+    "./functor": {
+      "import": {
+        "types": "./dist/functor/index.d.ts",
+        "default": "./dist/functor/index.mjs"
+      }
+    },
     "./map": {
       "import": {
         "types": "./dist/map/index.d.ts",
