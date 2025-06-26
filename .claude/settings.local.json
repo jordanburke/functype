@@ -46,7 +46,8 @@
       "Bash(npx eslint:*)",
       "Bash(npx tsx:*)",
       "Bash(rm:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(npm pack:*)"
     ],
     "deny": []
   }

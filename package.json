@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.8.80",
+  "version": "0.8.81",
   "type": "module",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
@@ -12,10 +12,11 @@
   "homepage": "https://github.com/jordanburke/functype#readme",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
+    "clean": "rimraf dist",
     "compile": "tsc --noEmit",
     "build": "pnpm compile && pnpm lint && pnpm test",
     "build:dev": "tsup --watch",
-    "build:prod": "pnpm compile && pnpm test && cross-env NODE_ENV=production tsup",
+    "build:prod": "pnpm clean && pnpm compile && pnpm test && cross-env NODE_ENV=production tsup",
     "build:watch": "tsup --watch",
     "build:publish": "pnpm build:prod && pnpm publish --access public",
     "lint:fix": "eslint ./src --quiet --fix",

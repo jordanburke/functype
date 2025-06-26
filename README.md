@@ -133,9 +133,9 @@ const withFive = numbers.add(5) // List([1, 2, 3, 4, 5])
 const without3 = numbers.remove(3) // List([1, 2, 4])
 
 // Universal container operations
-const hasEven = numbers.exists(x => x % 2 === 0) // true
-const firstEven = numbers.find(x => x % 2 === 0) // Some(2)
-const evenCount = numbers.count(x => x % 2 === 0) // 2
+const hasEven = numbers.exists((x) => x % 2 === 0) // true
+const firstEven = numbers.find((x) => x % 2 === 0) // Some(2)
+const evenCount = numbers.count((x) => x % 2 === 0) // 2
 ```
 
 ### Try
@@ -179,13 +179,13 @@ const value1 = expensive.get() // Logs "Computing...", returns number
 const value2 = expensive.get() // Returns same number, no log
 
 // Transform lazy values
-const doubled = expensive.map(x => x * 2)
-const formatted = doubled.map(x => `Value: ${x}`)
+const doubled = expensive.map((x) => x * 2)
+const formatted = doubled.map((x) => `Value: ${x}`)
 
 // Chain computations
 const result = Lazy(() => 10)
-  .flatMap(x => Lazy(() => x + 5))
-  .map(x => x * 2)
+  .flatMap((x) => Lazy(() => x + 5))
+  .map((x) => x * 2)
   .get() // 30
 ```
 
@@ -275,10 +275,10 @@ import { Cond } from "functype"
 
 // Replace if-else chains with Cond
 const grade = Cond<number, string>()
-  .case(score => score >= 90, "A")
-  .case(score => score >= 80, "B")
-  .case(score => score >= 70, "C")
-  .case(score => score >= 60, "D")
+  .case((score) => score >= 90, "A")
+  .case((score) => score >= 80, "B")
+  .case((score) => score >= 70, "C")
+  .case((score) => score >= 60, "D")
   .default("F")
 
 console.log(grade(85)) // "B"
@@ -287,16 +287,16 @@ console.log(grade(55)) // "F"
 // With transformation
 const discount = Cond<number, number>()
   .case(
-    qty => qty >= 100,
-    qty => qty * 0.20  // 20% off for 100+
+    (qty) => qty >= 100,
+    (qty) => qty * 0.2, // 20% off for 100+
   )
   .case(
-    qty => qty >= 50,
-    qty => qty * 0.10  // 10% off for 50+
+    (qty) => qty >= 50,
+    (qty) => qty * 0.1, // 10% off for 50+
   )
   .case(
-    qty => qty >= 10,
-    qty => qty * 0.05  // 5% off for 10+
+    (qty) => qty >= 10,
+    (qty) => qty * 0.05, // 5% off for 10+
   )
   .default(0)
 
@@ -323,12 +323,12 @@ console.log(statusMessage("approved")) // "Your request has been approved!"
 // Match with predicates
 const numberType = Match<number, string>()
   .case(0, "zero")
-  .case(n => n > 0, "positive")
-  .case(n => n < 0, "negative")
+  .case((n) => n > 0, "positive")
+  .case((n) => n < 0, "negative")
   .exhaustive()
 
-console.log(numberType(42))   // "positive"
-console.log(numberType(-5))   // "negative"
+console.log(numberType(42)) // "positive"
+console.log(numberType(-5)) // "negative"
 ```
 
 ## Fold
@@ -464,32 +464,28 @@ All data structures implement the `Functype` hierarchy:
 
 ```typescript
 // Base interface for all data structures
-interface FunctypeBase<A, Tag> extends 
-  AsyncMonad<A>,
-  Traversable<A>,
-  Serializable<A>,
-  Foldable<A>,
-  Typeable<Tag>,
-  ContainerOps<A> {
+interface FunctypeBase<A, Tag>
+  extends AsyncMonad<A>,
+    Traversable<A>,
+    Serializable<A>,
+    Foldable<A>,
+    Typeable<Tag>,
+    ContainerOps<A> {
   readonly _tag: Tag
 }
 
 // For single-value containers (Option, Either, Try)
-interface Functype<A, Tag> extends 
-  FunctypeBase<A, Tag>,
-  Extractable<A>,
-  Pipe<A>,
-  Matchable<A, Tag> {
+interface Functype<A, Tag> extends FunctypeBase<A, Tag>, Extractable<A>, Pipe<A>, Matchable<A, Tag> {
   toValue(): { _tag: Tag; value: A }
 }
 
 // For collections (List, Set, Map)
-interface FunctypeCollection<A, Tag> extends 
-  FunctypeBase<A, Tag>,
-  Iterable<A>,
-  Pipe<A[]>,
-  Collection<A>,
-  CollectionOps<A, FunctypeCollection<A, Tag>> {
+interface FunctypeCollection<A, Tag>
+  extends FunctypeBase<A, Tag>,
+    Iterable<A>,
+    Pipe<A[]>,
+    Collection<A>,
+    CollectionOps<A, FunctypeCollection<A, Tag>> {
   toValue(): { _tag: Tag; value: A[] }
   // Collections work with Iterable instead of Monad
   flatMap<B>(f: (value: A) => Iterable<B>): FunctypeCollection<B, Tag>
@@ -507,17 +503,17 @@ const opt = Option(42)
 const list = List([1, 2, 3, 4, 5])
 
 // Universal operations work on both single-value and collections
-opt.count(x => x > 40)    // 1
-list.count(x => x > 3)     // 2
+opt.count((x) => x > 40) // 1
+list.count((x) => x > 3) // 2
 
-opt.find(x => x > 40)      // Some(42)
-list.find(x => x > 3)      // Some(4)
+opt.find((x) => x > 40) // Some(42)
+list.find((x) => x > 3) // Some(4)
 
-opt.exists(x => x === 42)  // true
-list.exists(x => x === 3)  // true
+opt.exists((x) => x === 42) // true
+list.exists((x) => x === 3) // true
 
-opt.forEach(console.log)   // Logs: 42
-list.forEach(console.log)  // Logs: 1, 2, 3, 4, 5
+opt.forEach(console.log) // Logs: 42
+list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 ```
 
 ## Type Safety

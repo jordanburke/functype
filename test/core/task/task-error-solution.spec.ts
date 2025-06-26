@@ -119,17 +119,15 @@ describe("Enhanced Task Error Handling", () => {
     const median = (arr: number[]): number => {
       const sorted = [...arr].sort((a, b) => a - b)
       const mid = Math.floor(sorted.length / 2)
-      return sorted.length % 2 
-        ? sorted[mid]! 
-        : (sorted[mid - 1]! + sorted[mid]!) / 2
+      return sorted.length % 2 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2
     }
 
     const regularMedian = median(regularTimes)
     const enhancedMedian = median(enhancedTimes)
     const ratio = enhancedMedian / regularMedian
 
-    console.log(`Regular task times: ${regularTimes.map(t => t.toFixed(1)).join(', ')}ms`)
-    console.log(`Enhanced task times: ${enhancedTimes.map(t => t.toFixed(1)).join(', ')}ms`)
+    console.log(`Regular task times: ${regularTimes.map((t) => t.toFixed(1)).join(", ")}ms`)
+    console.log(`Enhanced task times: ${enhancedTimes.map((t) => t.toFixed(1)).join(", ")}ms`)
     console.log(`Regular median: ${regularMedian.toFixed(2)}ms`)
     console.log(`Enhanced median: ${enhancedMedian.toFixed(2)}ms`)
     console.log(`Performance ratio: ${ratio.toFixed(2)}x`)
