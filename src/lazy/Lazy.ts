@@ -2,12 +2,8 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either"
-import type { Foldable } from "@/foldable/Foldable"
-import type { AsyncMonad } from "@/functor/Functor"
-import type { Matchable } from "@/matchable"
+import type { Functype } from "@/functor/Functype"
 import { None, Option, Some } from "@/option"
-import type { Pipe } from "@/pipe"
-import type { Serializable } from "@/serializable/Serializable"
 import { Try } from "@/try"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
@@ -23,7 +19,7 @@ import type { Type } from "@/types"
  * It provides memoization and safe evaluation with integration to Option, Either, and Try.
  * @typeParam T - The type of the value to be computed
  */
-export type Lazy<T extends Type> = {
+export interface Lazy<T extends Type> extends Functype<T, "Lazy">, Typeable<"Lazy"> {
   /** Tag identifying this as a Lazy type */
   readonly _tag: "Lazy"
   /** Whether the computation has been evaluated */
@@ -172,15 +168,11 @@ export type Lazy<T extends Type> = {
   toString(): string
   /**
    * Converts the Lazy to a value object
-   * @returns Object representation of the Lazy
+   * Forces evaluation and always returns a value
+   * @returns Object representation of the Lazy with evaluated value
    */
-  toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
-} & AsyncMonad<T> &
-  Pipe<T> &
-  Serializable<T> &
-  Typeable<"Lazy"> &
-  Foldable<T> &
-  Matchable<T, "Lazy">
+  toValue(): { _tag: "Lazy"; value: T }
+}
 
 /**
  * Internal constructor for creating Lazy instances
@@ -229,11 +221,33 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return null
       }
     },
-    getOrThrow: (err: Error): T => {
+    orNull: (): T | null => {
       try {
         return evaluate()
       } catch {
-        throw err
+        return null
+      }
+    },
+    getOrThrow: (err?: Error): T => {
+      try {
+        return evaluate()
+      } catch (e) {
+        throw err || e
+      }
+    },
+    orElse: (alternative: Lazy<T>): Lazy<T> =>
+      Lazy(() => {
+        try {
+          return evaluate()
+        } catch {
+          return alternative.get()
+        }
+      }),
+    orUndefined: (): T | undefined => {
+      try {
+        return evaluate()
+      } catch {
+        return undefined
       }
     },
     map: <U extends Type>(f: (value: T) => U): Lazy<U> => Lazy(() => f(evaluate())),
@@ -334,13 +348,35 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return `Lazy(<not evaluated>)`
       }
     },
-    toValue: (): { _tag: "Lazy"; evaluated: boolean; value?: T } => {
-      if (evaluated && !hasError) {
-        return { _tag: "Lazy" as const, evaluated: true, value: value as T }
-      } else {
-        return { _tag: "Lazy" as const, evaluated: false }
+    toValue: (): { _tag: "Lazy"; value: T } => {
+      return { _tag: "Lazy" as const, value: evaluate() }
+    },
+    // Traversable
+    get size() {
+      try {
+        evaluate()
+        return 1
+      } catch {
+        return 0
       }
     },
+    get isEmpty() {
+      try {
+        evaluate()
+        return false
+      } catch {
+        return true
+      }
+    },
+    contains: (v: T): boolean => {
+      try {
+        return evaluate() === v
+      } catch {
+        return false
+      }
+    },
+    reduce: (f: (b: T, a: T) => T): T => evaluate(),
+    reduceRight: (f: (b: T, a: T) => T): T => evaluate(),
     // Pipe
     pipe: <U>(f: (value: T) => U): U => f(evaluate()),
     // Serializable

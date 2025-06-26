@@ -1,5 +1,5 @@
 import type { Collection } from "@/collections"
-import { Companion, type Foldable, type Matchable, Typeable } from "@/index"
+import { Companion, type Foldable, Typeable } from "@/index"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -9,7 +9,6 @@ import { Set } from "@/set/Set"
 import type { Traversable } from "@/traversable/Traversable"
 import { Tuple } from "@/tuple/Tuple"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
 
 import { ESMap, type ESMapType } from "./shim"
 
@@ -18,7 +17,15 @@ import { ESMap, type ESMapType } from "./shim"
  */
 export type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap" | "flatMapAsync" | "ap">
 
-export type Map<K, V> = {
+export interface Map<K, V>
+  extends SafeTraversable<K, V>,
+    Collection<Tuple<[K, V]>>,
+    Typeable<"Map">,
+    Serializable<[K, V][]>,
+    Pipe<[K, V][]>,
+    Foldable<Tuple<[K, V]>>,
+    Iterable<[K, V]> {
+  readonly _tag: "Map"
   add(item: Tuple<[K, V]>): Map<K, V>
   remove(value: K): Map<K, V>
   map<U>(f: (value: V) => U): Map<K, U>
@@ -37,14 +44,8 @@ export type Map<K, V> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R
-} & SafeTraversable<K, V> &
-  Collection<Tuple<[K, V]>> &
-  Typeable<"Map"> &
-  Valuable<"Map", ESMapType<K, V>> &
-  Serializable<[K, V][]> &
-  Pipe<[K, V][]> &
-  Foldable<Tuple<[K, V]>> &
-  Matchable<Array<Tuple<[K, V]>>, "Empty" | "NonEmpty">
+  toValue(): { _tag: "Map"; value: [K, V][] }
+}
 
 type MapState<K, V> = {
   values: ESMapType<K, V>
@@ -163,6 +164,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   return {
     _tag,
+    [Symbol.iterator]: () => state.values.entries(),
     add,
     remove,
     contains,
@@ -188,7 +190,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toList,
     toSet,
     toString,
-    toValue: () => ({ _tag: "Map", value: state.values }),
+    toValue: () => ({ _tag: "Map" as const, value: Array.from(state.values.entries()) }),
     pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
     serialize: () => {
       return {

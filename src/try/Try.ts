@@ -2,31 +2,34 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import { Either, Left, Right } from "@/either/Either"
-import type { Foldable } from "@/foldable/Foldable"
-import type { Matchable } from "@/matchable"
+import type { Extractable } from "@/extractable"
+import type { FunctypeBase } from "@/functor/Functype"
 import type { Pipe } from "@/pipe"
-import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
 
 /**
  * Possible types of Try instances
  */
 export type TypeNames = "Success" | "Failure"
 
-export type Try<T> = {
+export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Typeable<TypeNames> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess: () => boolean
   isFailure: () => boolean
   get: () => T
   getOrElse: (defaultValue: T) => T
+  getOrThrow: (error?: Error) => T
   orElse: (alternative: Try<T>) => Try<T>
+  orNull: () => T | null
+  orUndefined: () => T | undefined
   orThrow: (error: Error) => T
   toEither: () => Either<Error, T>
   map: <U>(f: (value: T) => U) => Try<U>
+  ap: <U>(ff: Try<(value: T) => U>) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
+  flatMapAsync: <U>(f: (value: T) => Promise<Try<U>>) => Promise<Try<U>>
   /**
    * Pattern matches over the Try, applying onFailure if Failure and onSuccess if Success
    * @param onFailure - Function to apply if the Try is Failure
@@ -41,12 +44,8 @@ export type Try<T> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
-} & Typeable<TypeNames> &
-  Valuable<TypeNames, T | Error> &
-  Serializable<T> &
-  Pipe<T> &
-  Foldable<T> &
-  Matchable<T | Error, "Success" | "Failure">
+  toValue(): { _tag: TypeNames; value: T | Error }
+}
 
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
@@ -55,11 +54,16 @@ const Success = <T>(value: T): Try<T> => ({
   isFailure: () => false,
   get: () => value,
   getOrElse: (_defaultValue: T) => value,
+  getOrThrow: (_error?: Error) => value,
   orElse: (_alternative: Try<T>) => Success(value),
+  orNull: () => value,
+  orUndefined: () => value,
   orThrow: (_error: Error) => value,
   toEither: () => Right<Error, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
+  ap: <U>(ff: Try<(value: T) => U>) => ff.map((f) => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
+  flatMapAsync: async <U>(f: (value: T) => Promise<Try<U>>) => f(value),
   fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
   foldLeft:
@@ -80,6 +84,15 @@ const Success = <T>(value: T): Try<T> => ({
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "Success", value })).toString("base64"),
     }
   },
+  get size() {
+    return 1
+  },
+  get isEmpty() {
+    return false
+  },
+  contains: (v: T) => value === v,
+  reduce: (f: (b: T, a: T) => T) => value,
+  reduceRight: (f: (b: T, a: T) => T) => value,
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
@@ -91,13 +104,20 @@ const Failure = <T>(error: Error): Try<T> => ({
     throw error
   },
   getOrElse: (defaultValue: T) => defaultValue,
+  getOrThrow: (e?: Error) => {
+    throw e || error
+  },
   orElse: (alternative: Try<T>) => alternative,
+  orNull: () => null,
+  orUndefined: () => undefined,
   orThrow: (error: Error) => {
     throw error
   },
   toEither: () => Left<Error, T>(error),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
+  ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
+  flatMapAsync: async <U>(_f: (value: T) => Promise<Try<U>>) => Failure<U>(error),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
   foldLeft:
@@ -120,6 +140,19 @@ const Failure = <T>(error: Error): Try<T> => ({
       toBinary: () =>
         Buffer.from(JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack })).toString("base64"),
     }
+  },
+  get size() {
+    return 0
+  },
+  get isEmpty() {
+    return true
+  },
+  contains: (_v: T) => false,
+  reduce: (_f: (b: T, a: T) => T) => {
+    throw new Error("Cannot reduce a Failure")
+  },
+  reduceRight: (_f: (b: T, a: T) => T) => {
+    throw new Error("Cannot reduceRight a Failure")
   },
 })
 

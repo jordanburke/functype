@@ -1,17 +1,14 @@
 import type { Collection } from "@/collections"
 import { Companion } from "@/companion/Companion"
-import type { Foldable } from "@/foldable/Foldable"
+import type { FunctypeCollection } from "@/functor/Functype"
 import type { IterableType } from "@/iterable"
 import { List } from "@/list/List"
-import type { Pipe } from "@/pipe"
-import type { Serializable } from "@/serializable/Serializable"
 import { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
 
 import { ESSet, type ESSetType } from "./shim"
 
-export type Set<A> = {
+export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A>, Typeable<"Set"> {
   add: (value: A) => Set<A>
   remove: (value: A) => Set<A>
   contains: (value: A) => boolean
@@ -21,14 +18,9 @@ export type Set<A> = {
   fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U) => U
   toList: () => List<A>
   toSet: () => Set<A>
+  toArray: () => A[]
   toString: () => string
-} & IterableType<A> &
-  Collection<A> &
-  Typeable<"Set"> &
-  Valuable<"Set", A[]> &
-  Serializable<A[]> &
-  Pipe<A[]> &
-  Foldable<A>
+}
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: ESSetType<A> = new ESSet<A>(iterable)
@@ -87,6 +79,8 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     toList: (): List<A> => List(values),
 
     toSet: (): Set<A> => set,
+
+    toArray: (): A[] => Array.from(values),
 
     toString: (): string => `Set(${Array.from(values).toString()})`,
 
