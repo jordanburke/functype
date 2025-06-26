@@ -116,10 +116,12 @@ describe("Enhanced Task Error Handling", () => {
     }
 
     // Calculate medians (more stable than averages)
-    const median = (arr: number[]) => {
+    const median = (arr: number[]): number => {
       const sorted = [...arr].sort((a, b) => a - b)
       const mid = Math.floor(sorted.length / 2)
-      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+      return sorted.length % 2 
+        ? sorted[mid]! 
+        : (sorted[mid - 1]! + sorted[mid]!) / 2
     }
 
     const regularMedian = median(regularTimes)
