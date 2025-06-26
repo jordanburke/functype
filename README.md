@@ -15,6 +15,7 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **Type Safety**: Leverages TypeScript's type system to ensure compile-time safety
 - **Composability**: Provides abstractions for building complex programs from simple components
 - **Functional Paradigms**: Embraces concepts like monads, functors, and type classes
+- **Unified Interface**: All data structures implement a common hierarchy of interfaces for consistency
 
 ## Key Features
 
@@ -23,11 +24,13 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **List, Set, Map**: Immutable collection types with functional operators
 - **Try Type**: Safely execute operations that might throw exceptions
 - **Task**: Handle synchronous and asynchronous operations with error handling
+- **Lazy**: Deferred computation with memoization
 - **Tuple**: Type-safe fixed-length arrays
 - **Typeable**: Runtime type identification with compile-time safety
 - **Branded Types**: Nominal typing in TypeScript's structural type system
 - **FPromise**: Enhanced Promise functionality with built-in error handling
 - **Error Formatting**: Utilities for improved error visualization and logging
+- **Unified Type Classes**: Consistent interfaces across all data structures
 
 ## Installation
 
@@ -128,6 +131,11 @@ const sum = numbers.foldLeft(0)((acc, x) => acc + x) // 10
 // Add/remove elements (immutably)
 const withFive = numbers.add(5) // List([1, 2, 3, 4, 5])
 const without3 = numbers.remove(3) // List([1, 2, 4])
+
+// Universal container operations
+const hasEven = numbers.exists(x => x % 2 === 0) // true
+const firstEven = numbers.find(x => x % 2 === 0) // Some(2)
+const evenCount = numbers.count(x => x % 2 === 0) // 2
 ```
 
 ### Try
@@ -153,6 +161,32 @@ const name = result.map((obj) => obj.name)
 
 // Convert to Either
 const either = result.toEither()
+```
+
+### Lazy
+
+```typescript
+import { Lazy } from "functype"
+
+// Create lazy computations
+const expensive = Lazy(() => {
+  console.log("Computing...")
+  return Math.random() * 1000
+})
+
+// Value is computed on first access and memoized
+const value1 = expensive.get() // Logs "Computing...", returns number
+const value2 = expensive.get() // Returns same number, no log
+
+// Transform lazy values
+const doubled = expensive.map(x => x * 2)
+const formatted = doubled.map(x => `Value: ${x}`)
+
+// Chain computations
+const result = Lazy(() => 10)
+  .flatMap(x => Lazy(() => x + 5))
+  .map(x => x * 2)
+  .get() // 30
 ```
 
 ### Task
@@ -230,9 +264,76 @@ getUserByEmail("invalid") // Type error: Argument of type 'string' is not assign
 getUserByEmail(userId) // Type error: Argument of type 'UserId' is not assignable to parameter of type 'Email'
 ```
 
+## Conditional Programming
+
+Functype provides `Cond` and `Match` for functional conditional logic without early returns:
+
+### Cond
+
+```typescript
+import { Cond } from "functype"
+
+// Replace if-else chains with Cond
+const grade = Cond<number, string>()
+  .case(score => score >= 90, "A")
+  .case(score => score >= 80, "B")
+  .case(score => score >= 70, "C")
+  .case(score => score >= 60, "D")
+  .default("F")
+
+console.log(grade(85)) // "B"
+console.log(grade(55)) // "F"
+
+// With transformation
+const discount = Cond<number, number>()
+  .case(
+    qty => qty >= 100,
+    qty => qty * 0.20  // 20% off for 100+
+  )
+  .case(
+    qty => qty >= 50,
+    qty => qty * 0.10  // 10% off for 50+
+  )
+  .case(
+    qty => qty >= 10,
+    qty => qty * 0.05  // 5% off for 10+
+  )
+  .default(0)
+
+console.log(discount(150)) // 30 (20% of 150)
+```
+
+### Match
+
+```typescript
+import { Match } from "functype"
+
+// Pattern matching with Match
+type Status = "pending" | "approved" | "rejected" | "cancelled"
+
+const statusMessage = Match<Status, string>()
+  .case("pending", "Your request is being processed")
+  .case("approved", "Your request has been approved!")
+  .case("rejected", "Sorry, your request was rejected")
+  .case("cancelled", "Your request was cancelled")
+  .exhaustive()
+
+console.log(statusMessage("approved")) // "Your request has been approved!"
+
+// Match with predicates
+const numberType = Match<number, string>()
+  .case(0, "zero")
+  .case(n => n > 0, "positive")
+  .case(n => n < 0, "negative")
+  .exhaustive()
+
+console.log(numberType(42))   // "positive"
+console.log(numberType(-5))   // "negative"
+```
+
 ## Fold
 
-New in v0.8.66, Functype now includes a powerful `fold` operation for its monadic structures:
+Functype includes a powerful `fold` operation for pattern matching and extracting values:
 
 ```typescript
 import { Option, Either, Try, List } from "functype"
@@ -265,7 +366,7 @@ const listResult = list.foldLeft(0)((acc, num) => acc + num) // 6
 
 ## Foldable
 
-New in v0.8.67, Functype includes a proper `Foldable` type class that data structures can implement:
+Functype includes a `Foldable` type class that all data structures implement:
 
 ```typescript
 import { FoldableUtils, Option, List, Try } from "functype"
@@ -296,7 +397,7 @@ const convertedToEither = FoldableUtils.toEither(tryVal, "Error") // Right(10)
 
 ## Matchable
 
-New in v0.8.68, Functype now includes a `Matchable` type class for enhanced pattern matching:
+Functype includes a `Matchable` type class for enhanced pattern matching:
 
 ```typescript
 import { Option, Either, Try, List, MatchableUtils } from "functype"
@@ -340,6 +441,83 @@ const defaultCase = MatchableUtils.default((n: number) => `Default: ${n}`)
 // Using pattern guards in custom matching logic
 const num = 42
 const result = isPositive(num) ?? defaultCase(num) // "Positive: 42"
+```
+
+## Interface Hierarchy
+
+All data structures in Functype implement a unified hierarchy of interfaces, providing consistent behavior across the library:
+
+### Type Classes
+
+Functype leverages type classes to provide common operations:
+
+- **Functor**: Supports `map` operation for transforming wrapped values
+- **Applicative**: Extends Functor with `ap` for applying wrapped functions
+- **Monad**: Extends Applicative with `flatMap` for chaining operations
+- **AsyncMonad**: Extends Monad with `flatMapAsync` for async operations
+- **ContainerOps**: Universal operations for all containers (single-value and collections)
+- **CollectionOps**: Operations specific to collections like List and Set
+
+### Unified Interfaces
+
+All data structures implement the `Functype` hierarchy:
+
+```typescript
+// Base interface for all data structures
+interface FunctypeBase<A, Tag> extends 
+  AsyncMonad<A>,
+  Traversable<A>,
+  Serializable<A>,
+  Foldable<A>,
+  Typeable<Tag>,
+  ContainerOps<A> {
+  readonly _tag: Tag
+}
+
+// For single-value containers (Option, Either, Try)
+interface Functype<A, Tag> extends 
+  FunctypeBase<A, Tag>,
+  Extractable<A>,
+  Pipe<A>,
+  Matchable<A, Tag> {
+  toValue(): { _tag: Tag; value: A }
+}
+
+// For collections (List, Set, Map)
+interface FunctypeCollection<A, Tag> extends 
+  FunctypeBase<A, Tag>,
+  Iterable<A>,
+  Pipe<A[]>,
+  Collection<A>,
+  CollectionOps<A, FunctypeCollection<A, Tag>> {
+  toValue(): { _tag: Tag; value: A[] }
+  // Collections work with Iterable instead of Monad
+  flatMap<B>(f: (value: A) => Iterable<B>): FunctypeCollection<B, Tag>
+}
+```
+
+### Container Operations
+
+All containers (Option, Either, Try, List, Set) support these universal operations:
+
+```typescript
+import { Option, List } from "functype"
+
+const opt = Option(42)
+const list = List([1, 2, 3, 4, 5])
+
+// Universal operations work on both single-value and collections
+opt.count(x => x > 40)    // 1
+list.count(x => x > 3)     // 2
+
+opt.find(x => x > 40)      // Some(42)
+list.find(x => x > 3)      // Some(4)
+
+opt.exists(x => x === 42)  // true
+list.exists(x => x === 3)  // true
+
+opt.forEach(console.log)   // Logs: 42
+list.forEach(console.log)  // Logs: 1, 2, 3, 4, 5
 ```
 
 ## Type Safety
