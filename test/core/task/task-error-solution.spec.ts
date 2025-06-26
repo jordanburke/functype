@@ -85,33 +85,54 @@ describe("Enhanced Task Error Handling", () => {
   test("should demonstrate performance impact is minimal", async () => {
     // Setup test tasks
     const regularTask = Task({ name: "RegularTask" }).Async<string>(async () => "success")
-
     const enhancedTask = EnhancedTask({ name: "EnhancedTask" }).Async<string>(async () => "success")
 
-    // Measure standard task performance
-    const regularStart = performance.now()
-    for (let i = 0; i < 1000; i++) {
-      await regularTask
-    }
-    const regularTime = performance.now() - regularStart
+    // Run multiple iterations to get more stable measurements
+    const iterations = 5
+    const regularTimes: number[] = []
+    const enhancedTimes: number[] = []
 
-    // Measure enhanced task performance
-    const enhancedStart = performance.now()
-    for (let i = 0; i < 1000; i++) {
+    // Warm up JIT
+    for (let i = 0; i < 100; i++) {
+      await regularTask
       await enhancedTask
     }
-    const enhancedTime = performance.now() - enhancedStart
 
-    console.log(`Regular task: ${regularTime.toFixed(2)}ms`)
-    console.log(`Enhanced task: ${enhancedTime.toFixed(2)}ms`)
+    // Run test iterations
+    for (let iter = 0; iter < iterations; iter++) {
+      // Measure standard task performance
+      const regularStart = performance.now()
+      for (let i = 0; i < 1000; i++) {
+        await regularTask
+      }
+      regularTimes.push(performance.now() - regularStart)
 
-    // The performance difference should be acceptable
-    // Skip this assertion as timing can vary significantly based on system load
-    // Just log the results for informational purposes
-    const ratio = enhancedTime / regularTime
+      // Measure enhanced task performance
+      const enhancedStart = performance.now()
+      for (let i = 0; i < 1000; i++) {
+        await enhancedTask
+      }
+      enhancedTimes.push(performance.now() - enhancedStart)
+    }
+
+    // Calculate medians (more stable than averages)
+    const median = (arr: number[]) => {
+      const sorted = [...arr].sort((a, b) => a - b)
+      const mid = Math.floor(sorted.length / 2)
+      return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+    }
+
+    const regularMedian = median(regularTimes)
+    const enhancedMedian = median(enhancedTimes)
+    const ratio = enhancedMedian / regularMedian
+
+    console.log(`Regular task times: ${regularTimes.map(t => t.toFixed(1)).join(', ')}ms`)
+    console.log(`Enhanced task times: ${enhancedTimes.map(t => t.toFixed(1)).join(', ')}ms`)
+    console.log(`Regular median: ${regularMedian.toFixed(2)}ms`)
+    console.log(`Enhanced median: ${enhancedMedian.toFixed(2)}ms`)
     console.log(`Performance ratio: ${ratio.toFixed(2)}x`)
 
-    // Only fail if it's significantly slower (>3x)
-    expect(enhancedTime).toBeLessThan(regularTime * 3)
+    // Only fail if it's significantly slower (>3x) using median times
+    expect(enhancedMedian).toBeLessThan(regularMedian * 3)
   })
 })
