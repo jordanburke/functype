@@ -1,5 +1,7 @@
-import { Option } from "@/option"
 import { List } from "@/list"
+import { Option } from "@/option"
+
+import { compiledPatterns } from "./patterns"
 
 export interface PatternMatch {
   pattern: string
@@ -12,8 +14,12 @@ export interface PatternMatch {
   tags: string[]
 }
 
-// Pattern registry with various matching strategies
-const patterns: PatternMatch[] = [
+// Use compiled patterns that are tested to work
+const patterns: PatternMatch[] = compiledPatterns
+
+// Original hardcoded patterns kept for reference only
+// (Now using compiled patterns from ./patterns/index.ts)
+const _unusedPatterns = [
   // Null/undefined checks
   {
     pattern: "null-check",
@@ -124,6 +130,9 @@ const patterns: PatternMatch[] = [
     tags: ["push", "pop", "shift", "unshift", "splice", "mutate", "mutation"],
   },
 ]
+
+// Suppress unused variable warning
+void _unusedPatterns
 
 interface ScoredPattern {
   pattern: PatternMatch
