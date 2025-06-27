@@ -3,6 +3,7 @@
 This matrix shows which interfaces are supported by each data structure in the functype library.
 
 ## Legend
+
 - ✓ Full support
 - ◐ Partial support (custom implementation)
 - ✗ Not supported
@@ -10,65 +11,73 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Core Interfaces
 
-| Data Structure | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Pipe | Collection | ContainerOps | CollectionOps |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **Option<T>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
-| **Either<L,R>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ |
-| **Try<T>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
-| **List<A>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
-| **Set<A>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ |
-| **Map<K,V>** | ◐ | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ | ◐ | ✗ | ✓ | ✓ | ✗ | ✗ |
-| **Lazy<T>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ |
-| **Stack<A>** | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ |
-| **LazyList<A>** | ◐ | ✗ | ◐ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **FPromise<T,E>** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Tuple<T[]>** | ◐ | ✗ | ◐ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| Data Structure    | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Pipe | Collection | ContainerOps | CollectionOps |
+| ----------------- | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✗   |     ✗      |      ✓       |       ✗       |
+| **Try<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
+| **List<A>**       |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Set<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Map<K,V>**      |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |  ✓   |     ✓      |      ✗       |       ✗       |
+| **Lazy<T>**       |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Stack<A>**      |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |  ✓   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>**   |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
+| **FPromise<T,E>** |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
 
 ## Additional Properties
 
-| Data Structure | Typeable | Valuable | Iterable | PromiseLike |
-|---|:---:|:---:|:---:|:---:|
-| **Option<T>** | ✓ | ✗ | ✗ | ✗ |
-| **Either<L,R>** | ✓ | ✗ | ✗ | ✓ |
-| **Try<T>** | ✓ | ✗ | ✗ | ✗ |
-| **List<A>** | ✓ | ✗ | ✓ | ✗ |
-| **Set<A>** | ✓ | ✗ | ✓ | ✗ |
-| **Map<K,V>** | ✓ | ✗ | ✓ | ✗ |
-| **Lazy<T>** | ✓ | ✗ | ✗ | ✗ |
-| **Stack<A>** | ✓ | ✓ | ✗ | ✗ |
-| **LazyList<A>** | ✗ | ✗ | ✓ | ✗ |
-| **FPromise<T,E>** | ✗ | ✗ | ✗ | ✓ |
-| **Tuple<T[]>** | ✓ | ✓ | ✓ | ✗ |
+| Data Structure    | Typeable | Valuable | Iterable | PromiseLike |
+| ----------------- | :------: | :------: | :------: | :---------: |
+| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |
+| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |
+| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |
+| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |
+| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |
+| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |
+| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |
+| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |
+| **LazyList<A>**   |    ✗     |    ✗     |    ✓     |      ✗      |
+| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |
+| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |
 
 ## Key Methods by Interface
 
 ### Functor
+
 - `map<B>(f: (value: A) => B): Functor<B>`
 
 ### Applicative (extends Functor)
+
 - `ap<B>(ff: Applicative<(value: A) => B>): Applicative<B>`
 
 ### Monad (extends Applicative)
+
 - `flatMap<B>(f: (value: A) => Monad<B>): Monad<B>`
 
 ### AsyncMonad (extends Monad)
+
 - `flatMapAsync<B>(f: (value: A) => PromiseLike<AsyncMonad<B>>): PromiseLike<AsyncMonad<B>>`
 
 ### Foldable
+
 - `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
 - `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
 - `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
 
 ### Matchable
+
 - `match<R>(patterns: Record<Tags, (value: A) => R>): R`
 
 ### Serializable
+
 - `serialize(): SerializationMethods<T>`
   - `toJSON(): string`
   - `toYAML(): string`
   - `toBinary(): Uint8Array`
 
 ### Traversable (extends AsyncMonad)
+
 - `size: number`
 - `isEmpty: boolean`
 - `contains(value: A): boolean`
@@ -76,6 +85,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 - `reduceRight<B>(f: (value: A, acc: B) => B, initial: B): B`
 
 ### Extractable
+
 - `get(): T`
 - `getOrElse(defaultValue: T): T`
 - `getOrThrow(error?: Error): T`
@@ -84,20 +94,24 @@ This matrix shows which interfaces are supported by each data structure in the f
 - `orUndefined(): T | undefined`
 
 ### Pipe
+
 - `pipe<U>(f: (value: T) => U): U`
 
 ### Collection
+
 - `toList(): List<A>`
 - `toSet(): Set<A>`
 - `toString(): string`
 
 ### ContainerOps
+
 - `count(p: (value: A) => boolean): number`
 - `find(p: (value: A) => boolean): A | undefined`
 - `exists(p: (value: A) => boolean): boolean`
 - `forEach(f: (value: A) => void): void`
 
 ### CollectionOps
+
 - `drop(n: number): Self`
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
