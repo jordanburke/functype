@@ -4,6 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # CLAUDE.md - Project Guidelines for functype
 
+## Primary Reference: Feature Matrix
+
+**IMPORTANT**: Always consult the [FUNCTYPE_FEATURE_MATRIX.md](./FUNCTYPE_FEATURE_MATRIX.md) file FIRST when working with functype. This matrix provides:
+- Complete overview of all data structures and interfaces
+- Which interfaces each data structure implements
+- Key methods available for each interface
+- Quick reference for understanding library capabilities
+
 ## Build & Test Commands
 
 - Build: `pnpm build:prod` (production) or `pnpm build:dev` (development)
