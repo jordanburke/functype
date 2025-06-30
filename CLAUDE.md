@@ -4,6 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # CLAUDE.md - Project Guidelines for functype
 
+## Quick Start
+
+- **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.12.1
+- **Install**: `pnpm install`
+- **Build**: `pnpm build:dev` (development) or `pnpm build:prod` (production)
+- **Test**: `pnpm test` or `pnpm vitest run test/specific.spec.ts` for single file
+- **Lint**: `pnpm lint` (formats and fixes)
+
 ## Primary Reference: Feature Matrix
 
 **IMPORTANT**: Always consult the [FUNCTYPE_FEATURE_MATRIX.md](./FUNCTYPE_FEATURE_MATRIX.md) file FIRST when working with functype. This matrix provides:
@@ -26,6 +34,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Test with UI: `pnpm test:ui`
 - Documentation: `pnpm docs` (generate docs) or `pnpm docs:watch` (watch mode)
 - Bundle analysis: `pnpm analyze:size` (analyze production bundle size)
+- Clean build: `pnpm clean` (remove dist and coverage directories)
 
 ## Core Architecture
 
@@ -108,3 +117,101 @@ Every container type implements these key methods:
 - Supports selective module imports to minimize bundle size
 - Provides modular exports for different functional types
 - ESM-only for modern bundlers
+
+## Common Data Structure Patterns
+
+### Creating Instances
+
+```typescript
+// Option
+const some = Option(value)        // Some if value is not null/undefined
+const none = Option.none()         // None
+
+// Either
+const right = Right(value)         // Success
+const left = Left(error)          // Failure
+
+// List
+const list = List([1, 2, 3])      // From array
+const empty = List.empty<number>() // Empty typed list
+
+// Try
+const tryValue = Try(() => risky()) // Wraps exceptions
+```
+
+### Common Operations
+
+```typescript
+// Transform (map)
+option.map(x => x * 2)
+either.map(x => x.toUpperCase())
+list.map(x => x + 1)
+
+// Chain (flatMap)
+option.flatMap(x => Option(x > 0 ? x : null))
+either.flatMap(x => validate(x) ? Right(x) : Left("Invalid"))
+
+// Extract (fold/getOrElse)
+option.fold(() => "empty", x => `value: ${x}`)
+either.getOrElse("default")
+tryValue.getOrThrow()
+```
+
+## Testing Patterns
+
+- **Property Testing**: Use fast-check for property-based tests
+- **Edge Cases**: Always test empty/null/undefined cases
+- **Type Safety**: Verify type inference works correctly
+- **Async Testing**: Use Task for async operation testing
+
+```typescript
+// Example test structure
+describe("Option", () => {
+  it("should map over Some values", () => {
+    const result = Option(5).map(x => x * 2)
+    expect(result.get()).toBe(10)
+  })
+  
+  it("should handle None correctly", () => {
+    const result = Option(null).map(x => x * 2)
+    expect(result.isNone()).toBe(true)
+  })
+})
+```
+
+## Performance Considerations
+
+- **LazyList**: Use for large datasets or infinite sequences
+- **Lazy**: Use for expensive computations that may not be needed
+- **Task**: Use for async operations that need cancellation
+- **Memoization**: Built into Lazy, consider for expensive pure functions
+
+## Development Workflow
+
+### Adding New Features
+
+1. Create module directory under `src/` (e.g., `src/mynewtype/`)
+2. Create `index.ts` that exports the main type and utilities
+3. Add export to `src/index.ts` for main bundle
+4. Add export mapping in `package.json` for selective imports
+5. Create comprehensive tests in `test/mynewtype.spec.ts`
+6. Update FUNCTYPE_FEATURE_MATRIX.md if implementing standard interfaces
+7. Run `pnpm compile && pnpm test` to verify
+
+### Working with Type Classes
+
+When implementing a new data structure that supports standard interfaces:
+
+1. Extend appropriate base type (`FunctypeBase` or `FunctypeCollectionBase`)
+2. Implement required methods for each interface
+3. Use `Base` function from `core/base` to add common functionality
+4. Ensure type inference works correctly without explicit annotations
+5. Add comprehensive tests for all interface methods
+
+### Debugging Tips
+
+- Use `toString()` method for readable output of any data structure
+- Enable source maps in tsconfig for better stack traces
+- Use `ErrorFormatter` for structured error output
+- Run tests with `--reporter=verbose` for detailed output
+- Use `pnpm build:dev` for development with better debugging info
