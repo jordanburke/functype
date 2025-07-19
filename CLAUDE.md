@@ -2,8 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# CLAUDE.md - Project Guidelines for functype
-
 ## Quick Start
 
 - **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.12.1
@@ -23,18 +21,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Test Commands
 
-- Build: `pnpm build:prod` (production) or `pnpm build:dev` (development)
-- Watch mode: `pnpm build:watch`
-- Compile only: `pnpm compile` (runs TypeScript compiler with no emit)
-- Lint: `pnpm lint` (format and fix) or `pnpm lint:fix` (fix only)
-- Test all: `pnpm test`
-- Test single file: `pnpm vitest run test/path/to/file.spec.ts`
-- Test watch mode: `pnpm test:watch`
-- Test with coverage: `pnpm test:coverage`
-- Test with UI: `pnpm test:ui`
-- Documentation: `pnpm docs` (generate docs) or `pnpm docs:watch` (watch mode)
-- Bundle analysis: `pnpm analyze:size` (analyze production bundle size)
-- Clean build: `pnpm clean` (remove dist and coverage directories)
+### Build Commands
+- `pnpm build:prod` - Production build with full validation
+- `pnpm build:dev` - Development build with watch mode
+- `pnpm build:watch` - Watch mode for continuous building
+- `pnpm compile` - TypeScript compilation check (no emit)
+- `pnpm clean` - Remove dist and coverage directories
+
+### Test Commands
+- `pnpm test` - Run all tests
+- `pnpm vitest run test/path/to/file.spec.ts` - Run specific test file
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:coverage` - Run tests with coverage report
+- `pnpm test:ui` - Run tests with Vitest UI
+
+### Lint Commands
+- `pnpm lint` - Format with Prettier and fix with ESLint
+- `pnpm lint:fix` - Only fix ESLint issues
+- `pnpm lint:format` - Only format with Prettier
+
+### Performance & Documentation
+- `pnpm bench` - Run performance benchmarks
+- `pnpm bench:ui` - Run benchmarks with UI
+- `pnpm docs` - Generate TypeDoc documentation
+- `pnpm docs:watch` - Generate docs in watch mode
+- `pnpm analyze:size` - Analyze production bundle size
 
 ## Core Architecture
 
@@ -44,9 +55,9 @@ All types follow a consistent pattern where constructor functions return objects
 
 ```typescript
 // Example pattern used throughout:
-const option = Option(value) // Constructor function
-option.map((x) => x + 1) // Instance methods
-Option.none() // Companion methods via Companion utility
+const option = Option(value)     // Constructor function
+option.map(x => x + 1)          // Instance methods
+Option.none()                   // Companion methods via Companion utility
 ```
 
 ### Type System Foundation
@@ -55,6 +66,16 @@ Option.none() // Companion methods via Companion utility
 - **HKT support**: Higher-kinded types are implemented to enable generic programming
 - **Branded types**: Use `Brand` module for nominal typing when needed
 - **Type classes**: Core interfaces include Functor, Foldable, Traversable, Matchable, Serializable
+
+### Base Pattern
+
+The fundamental `Base` function pattern creates objects with type metadata:
+
+```typescript
+Base<T>(type: string, body: T)
+```
+
+This adds `Typeable` functionality and standard `toString()` methods to all data structures.
 
 ### Core Abstractions
 
@@ -71,7 +92,7 @@ Every container type implements these key methods:
 - **Throwable**: Wrapper for errors that preserves context and stack traces
 - **Task**: Handles sync/async operations with cancellation and progress tracking
 - **Error patterns**: Use Option/Either/Try for expected failures, Throwable for unexpected
-- **Error formatting**: Use ErrorFormatter for structured error output
+- **ErrorFormatter**: Use for structured error output
 
 ## Code Style
 
@@ -85,6 +106,15 @@ Every container type implements these key methods:
 - **Testing**: Use Vitest with describe/it pattern. Test edge cases thoroughly.
 - **TypeScript**: Use strict mode, avoid `any` types, prefer `unknown` where needed.
 - **Property Testing**: Use fast-check for property-based testing where applicable.
+
+## TypeScript Configuration
+
+Key strict settings enabled:
+- `strict: true` - Full strict mode
+- `noUncheckedIndexedAccess: true` - Safer array/object access
+- `strictPropertyInitialization: true` - Ensures properties are initialized
+- `verbatimModuleSyntax: true` - Stricter module syntax
+- `noErrorTruncation: true` - Full error messages
 
 ## API Design Pattern
 
@@ -103,6 +133,8 @@ Every container type implements these key methods:
 - **Selective imports**: Package.json exports field enables importing specific modules
 - **Base pattern**: Use Base function from core/base to add common functionality
 - **Type hierarchy**: Types build on shared abstractions (Functor → Monad → specific types)
+- **Help system**: JSON help files for each module (e.g., `option.help.json`)
+- **Tools directory**: Contains AI integration examples and pattern suggestions
 
 ## Documentation Standards
 
@@ -110,6 +142,7 @@ Every container type implements these key methods:
 - **JSDoc Comments**: Include for all public APIs with examples for non-obvious types
 - **Project Documentation**: Maintain README.md with usage examples
 - **Code Comments**: Document unfinished work with TODOs that include context
+- **Quick Reference**: See `docs/quick-reference.md` for concise usage examples
 
 ## Bundle Optimization
 
@@ -117,6 +150,15 @@ Every container type implements these key methods:
 - Supports selective module imports to minimize bundle size
 - Provides modular exports for different functional types
 - ESM-only for modern bundlers
+
+Example import strategies:
+```typescript
+// Selective module imports (recommended)
+import { Option } from "functype/option"
+
+// Direct constructor imports (smallest bundle)
+import { some, none } from "functype/option"
+```
 
 ## Common Data Structure Patterns
 
@@ -163,6 +205,7 @@ tryValue.getOrThrow()
 - **Edge Cases**: Always test empty/null/undefined cases
 - **Type Safety**: Verify type inference works correctly
 - **Async Testing**: Use Task for async operation testing
+- **Test Structure**: Tests can use `.test.ts` or `.spec.ts` extensions
 
 ```typescript
 // Example test structure
@@ -185,6 +228,28 @@ describe("Option", () => {
 - **Lazy**: Use for expensive computations that may not be needed
 - **Task**: Use for async operations that need cancellation
 - **Memoization**: Built into Lazy, consider for expensive pure functions
+
+## Available Data Structures
+
+### Fully Implemented
+- **Option<T>**: Handle nullable values safely
+- **Either<L,R>**: Express success/failure with values
+- **Try<T>**: Wrap operations that might throw
+- **List<A>**: Immutable array with functional operations
+- **Set<A>**: Immutable set with functional operations
+- **Map<K,V>**: Immutable map (limited functional support)
+- **Lazy<T>**: Deferred computation with memoization
+- **Task<T>**: Sync/async operations with cancellation
+
+### Partially Implemented
+- **Stack<A>**: LIFO collection with Matchable interface
+- **LazyList<A>**: Lazy evaluation for sequences (custom Functor/Monad)
+- **Tuple<T[]>**: Fixed-length arrays (custom Functor/Monad)
+
+### Limited Implementation
+- **FPromise<T,E>**: Enhanced Promise (only PromiseLike interface)
+- **Identity<T>**: Simple wrapper type
+- **Ref<T>**: Mutable reference container
 
 ## Development Workflow
 
@@ -215,3 +280,12 @@ When implementing a new data structure that supports standard interfaces:
 - Use `ErrorFormatter` for structured error output
 - Run tests with `--reporter=verbose` for detailed output
 - Use `pnpm build:dev` for development with better debugging info
+
+## AI Integration Tools
+
+The project includes sophisticated tooling for AI assistance:
+
+- **Pattern Suggestion Tool**: Converts JavaScript patterns to functype equivalents
+- **Functype Lookup Tool**: Fuzzy search for functype methods and patterns
+- **Example Scripts**: Located in `src/tools/examples/`
+- **Pattern Registry**: Compiled transformation patterns for common conversions
