@@ -268,4 +268,103 @@ describe("LazyList", () => {
       expect(processed).toBeLessThan(100) // Should process far fewer than a million
     })
   })
+
+  describe("Foldable interface", () => {
+    it("should implement fold", () => {
+      const list = LazyList([1, 2, 3])
+      const result = list.fold(
+        () => "empty",
+        (value) => `has value: ${value}`,
+      )
+      expect(result).toBe("has value: 1")
+    })
+
+    it("should fold empty list", () => {
+      const list = LazyList.empty<number>()
+      const result = list.fold(
+        () => "empty",
+        (value) => `has value: ${value}`,
+      )
+      expect(result).toBe("empty")
+    })
+
+    it("should implement foldLeft", () => {
+      const list = LazyList([1, 2, 3, 4])
+      const result = list.foldLeft(0)((acc, x) => acc + x)
+      expect(result).toBe(10)
+    })
+
+    it("should implement foldRight", () => {
+      const list = LazyList(["a", "b", "c"])
+      const result = list.foldRight("")((x, acc) => x + acc)
+      expect(result).toBe("abc")
+    })
+  })
+
+  describe("Pipe interface", () => {
+    it("should pipe through functions", () => {
+      const list = LazyList([1, 2, 3])
+      const result = list
+        .pipe((lazy) => lazy.map((x) => x * 2))
+        .pipe((lazy) => lazy.filter((x) => x > 3))
+        .pipe((lazy) => lazy.toArray())
+      expect(result).toEqual([4, 6])
+    })
+  })
+
+  describe("Serializable interface", () => {
+    it("should serialize to JSON", () => {
+      const list = LazyList([1, 2, 3])
+      const json = list.serialize().toJSON()
+      expect(json).toBe('{"_tag":"LazyList","value":[1,2,3]}')
+    })
+
+    it("should serialize to YAML", () => {
+      const list = LazyList(["a", "b", "c"])
+      const yaml = list.serialize().toYAML()
+      expect(yaml).toBe('_tag: LazyList\nvalue: ["a","b","c"]')
+    })
+
+    it("should serialize to binary", () => {
+      const list = LazyList([1, 2])
+      const binary = list.serialize().toBinary()
+      // Should be base64 encoded
+      expect(binary).toMatch(/^[A-Za-z0-9+/=]+$/)
+    })
+
+    it("should serialize infinite list by materializing", () => {
+      const list = LazyList.iterate(1, (x) => x + 1).take(3)
+      const json = list.serialize().toJSON()
+      expect(json).toBe('{"_tag":"LazyList","value":[1,2,3]}')
+    })
+  })
+
+  describe("Typeable interface", () => {
+    it("should have _tag property", () => {
+      const list = LazyList([1, 2, 3])
+      expect(list._tag).toBe("LazyList")
+    })
+  })
+
+  describe("toString", () => {
+    it("should show elements for finite list", () => {
+      const list = LazyList([1, 2, 3])
+      expect(list.toString()).toBe("LazyList(1, 2, 3)")
+    })
+
+    it("should truncate large lists", () => {
+      const list = LazyList.range(1, 20)
+      expect(list.toString()).toBe("LazyList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...)")
+    })
+
+    it("should handle empty list", () => {
+      const list = LazyList.empty()
+      expect(list.toString()).toBe("LazyList()")
+    })
+
+    it("should handle infinite lists", () => {
+      const list = LazyList.iterate(1, (x) => x + 1)
+      expect(list.toString()).toBe("LazyList(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, ...)")
+    })
+  })
 })

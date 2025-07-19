@@ -1,5 +1,11 @@
+import stringify from "safe-stable-stringify"
+
 import { Companion } from "@/companion/Companion"
+import type { Foldable } from "@/foldable/Foldable"
 import { Option } from "@/option"
+import type { Pipe } from "@/pipe"
+import type { Serializable } from "@/serializable/Serializable"
+import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 import { List } from "./List"
@@ -22,7 +28,11 @@ import { List } from "./List"
  *   .take(10)
  *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
  */
-export type LazyList<A extends Type> = {
+export interface LazyList<A extends Type>
+  extends Foldable<A>,
+    Pipe<LazyList<A>>,
+    Serializable<LazyList<A>>,
+    Typeable<"LazyList"> {
   // Iterator protocol
   [Symbol.iterator](): Iterator<A>
 
@@ -48,10 +58,14 @@ export type LazyList<A extends Type> = {
   count(): number
   first(): Option<A>
   last(): Option<A>
+
+  // Additional methods for clarity
+  toString(): string
 }
 
 const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
   const lazyList: LazyList<A> = {
+    _tag: "LazyList" as const,
     [Symbol.iterator]: () => iterable[Symbol.iterator](),
 
     map: <B extends Type>(f: (a: A) => B) =>
@@ -219,6 +233,66 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
         hasValue = true
       }
       return hasValue ? Option(last as A) : Option.none()
+    },
+
+    // Foldable implementation
+    fold: <B extends Type>(onEmpty: () => B, onValue: (value: A) => B): B => {
+      const iter = iterable[Symbol.iterator]()
+      const next = iter.next()
+      return next.done ? onEmpty() : onValue(next.value)
+    },
+
+    foldLeft:
+      <B extends Type>(z: B) =>
+      (op: (b: B, a: A) => B) => {
+        let acc = z
+        for (const item of iterable) {
+          acc = op(acc, item)
+        }
+        return acc
+      },
+
+    foldRight:
+      <B extends Type>(z: B) =>
+      (op: (a: A, b: B) => B) => {
+        // For lazy list, we need to materialize to fold right
+        const arr = Array.from(iterable)
+        return arr.reduceRight((acc, value) => op(value, acc), z)
+      },
+
+    // Pipe implementation
+    pipe: <U extends Type>(f: (value: LazyList<A>) => U): U => f(lazyList),
+
+    // Serializable implementation
+    serialize: () => {
+      // For serialization, we need to materialize the lazy list
+      const array = Array.from(iterable)
+      return {
+        toJSON: () => JSON.stringify({ _tag: "LazyList", value: array }),
+        toYAML: () => `_tag: LazyList\nvalue: ${stringify(array)}`,
+        toBinary: () => Buffer.from(JSON.stringify({ _tag: "LazyList", value: array })).toString("base64"),
+      }
+    },
+
+    // Override toString from Base to show elements (limited for infinite lists)
+    toString: () => {
+      const maxShow = 10
+      const elements: A[] = []
+      let count = 0
+      let hasMore = false
+
+      for (const item of iterable) {
+        if (count < maxShow) {
+          elements.push(item)
+          count++
+        } else {
+          hasMore = true
+          break
+        }
+      }
+
+      const elemStr = elements.map((e) => String(e)).join(", ")
+      return hasMore ? `LazyList(${elemStr}, ...)` : `LazyList(${elemStr})`
     },
   }
 
