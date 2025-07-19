@@ -2,7 +2,7 @@
  * Demo of functype lookup tools for AI agents
  */
 
-import { functypeLookupTool, functypeExamplesTool, functypeSearchTool } from "./functype-lookup"
+import { functypeExamplesTool, functypeLookupTool, functypeSearchTool } from "./functype-lookup"
 
 // Simulate AI agent using the tools
 
@@ -17,13 +17,13 @@ console.log({
   sourcePath: optionInfo.sourcePath,
   interfaces: optionInfo.interfaces.slice(0, 3), // Show first 3
   keyMethods: optionInfo.keyMethods.slice(0, 5), // Show first 5
-  relatedTypes: optionInfo.relatedTypes
+  relatedTypes: optionInfo.relatedTypes,
 })
 
 console.log("\n2. Getting examples for 'List':")
-const listExamples = functypeExamplesTool.execute({ 
-  typeName: "List", 
-  category: "basic" 
+const listExamples = functypeExamplesTool.execute({
+  typeName: "List",
+  category: "basic",
 })
 if (listExamples[0]) {
   console.log(listExamples[0])
@@ -31,7 +31,7 @@ if (listExamples[0]) {
 
 console.log("\n3. Searching for async-related types:")
 const asyncTypes = functypeSearchTool.execute({ query: "async" })
-asyncTypes.forEach(type => {
+asyncTypes.forEach((type) => {
   console.log(`- ${type.name}: ${type.description}`)
 })
 
@@ -39,7 +39,7 @@ console.log("\n4. Looking up a non-existent type:")
 const notFound = functypeLookupTool.execute({ typeName: "NonExistent" })
 console.log({
   found: notFound.found,
-  description: notFound.description
+  description: notFound.description,
 })
 
 // Example AI agent responses using these tools
@@ -56,12 +56,12 @@ Option is ${optionLookup.description}
 **Source**: ${optionLookup.sourcePath}
 **Key Methods**: ${optionLookup.keyMethods.join(", ")}
 **Use Cases**: 
-${optionLookup.commonUseCases.map(use => `• ${use}`).join("\n")}
+${optionLookup.commonUseCases.map((use) => `• ${use}`).join("\n")}
 
 **Related Types**: ${optionLookup.relatedTypes.join(", ")}
 `)
 
-// Scenario 2: User asks for List examples  
+// Scenario 2: User asks for List examples
 console.log("\nUser: 'Show me how to use List'")
 console.log("AI Agent response:")
 const listExample = functypeExamplesTool.execute({ typeName: "List" })
@@ -84,10 +84,14 @@ const errorTypes = functypeSearchTool.execute({ query: "error" })
 console.log(`
 Functype provides several options for error handling:
 
-${errorTypes.map(type => `
+${errorTypes
+  .map(
+    (type) => `
 **${type.name}**: ${type.description}
 Common use cases: ${type.commonUseCases.slice(0, 2).join(", ")}
-`).join("")}
+`,
+  )
+  .join("")}
 
 Would you like examples for any of these?
 `)
@@ -98,7 +102,7 @@ console.log("\n📋 Tool Definitions for AI Systems:\n")
 console.log("Tool 1 - functype_lookup:")
 console.log(JSON.stringify(functypeLookupTool, null, 2))
 
-console.log("\nTool 2 - functype_examples:")  
+console.log("\nTool 2 - functype_examples:")
 console.log(JSON.stringify(functypeExamplesTool, null, 2))
 
 console.log("\nTool 3 - search_functypes:")
@@ -127,8 +131,4 @@ ${listExample2[0] ? listExample2[0].code : "// Example not available"}
 **Source**: ${listInfo.sourcePath}
 `)
 
-export { 
-  functypeLookupTool, 
-  functypeExamplesTool, 
-  functypeSearchTool 
-}
+export { functypeExamplesTool, functypeLookupTool, functypeSearchTool }

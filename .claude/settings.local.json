@@ -47,7 +47,8 @@
       "Bash(npx tsx:*)",
       "Bash(rm:*)",
       "Bash(mv:*)",
-      "Bash(npm pack:*)"
+      "Bash(npm pack:*)",
+      "Bash(chezmoi update:*)"
     ],
     "deny": []
   }

@@ -5,12 +5,14 @@ This directory contains tested TypeScript examples for functype pattern suggesti
 ## Structure
 
 Each pattern has two files:
+
 - `{pattern-name}.before.ts` - Traditional JavaScript/TypeScript code
 - `{pattern-name}.after.ts` - Functype equivalent
 
 ## Metadata
 
 Each file pair includes metadata comments:
+
 ```typescript
 /**
  * @pattern null-check

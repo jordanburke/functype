@@ -1,12 +1,12 @@
 /**
  * Registry of all compilable examples
- * 
+ *
  * This ensures all examples are compile-tested by importing the actual files
  */
 
 // Import working example modules
-import * as setExamples from "./set-examples"
 import * as lazyExamples from "./lazy-examples"
+import * as setExamples from "./set-examples"
 
 // Verify imports exist (compile-time check)
 void [setExamples, lazyExamples]
@@ -26,7 +26,7 @@ const withSix = numbers.add(6)
 const withoutTwo = numbers.remove(2)
 
 return withoutTwo.toArray() // [1, 3, 4, 5, 6]`,
-      category: "basic"
+      category: "basic",
     },
     {
       title: "Remove Duplicates",
@@ -38,8 +38,8 @@ function removeDuplicates<T>(array: T[]): T[] {
 }
 
 const uniqueNumbers = removeDuplicates([1, 2, 2, 3, 3, 4])`,
-      category: "basic"
-    }
+      category: "basic",
+    },
   ],
 
   Lazy: [
@@ -57,10 +57,10 @@ const expensiveComputation = Lazy(() => {
 
 // Computation hasn't run yet
 const result = expensiveComputation.get() // Now it runs`,
-      category: "basic"
+      category: "basic",
     },
     {
-      title: "Lazy Transformations", 
+      title: "Lazy Transformations",
       description: "Chaining operations with Lazy",
       code: `import { Lazy } from "@/lazy"
 
@@ -72,7 +72,7 @@ const formatted = lazyNumber
 
 // None of the computations have run yet
 return formatted.get() // "Result: 84"`,
-      category: "intermediate"
+      category: "intermediate",
     },
     {
       title: "Lazy Memoization",
@@ -90,7 +90,7 @@ const result1 = memoized.get() // Computes
 const result2 = memoized.get() // Uses cached value
 
 return result1 === result2 // true`,
-      category: "intermediate"
-    }
-  ]
+      category: "intermediate",
+    },
+  ],
 }

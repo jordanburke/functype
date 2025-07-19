@@ -17,12 +17,14 @@ We've created three categories of tools to help AI agents work with functype:
 Analyzes JavaScript/TypeScript code and suggests functype alternatives.
 
 ### Features
+
 - **Compile-tested examples**: All pattern examples are loaded from actual TypeScript files
 - **Confidence scoring**: Each pattern has a confidence level (0-1)
 - **Tag-based matching**: Smart pattern detection using keywords
 - **Multiple suggestions**: Can return ranked list of matching patterns
 
 ### AI Tool Definition
+
 ```typescript
 {
   name: "suggest_functype_pattern",
@@ -35,6 +37,7 @@ Analyzes JavaScript/TypeScript code and suggests functype alternatives.
 ```
 
 ### Example Usage
+
 ```typescript
 const suggestions = suggestPatterns(`
   if (user !== null && user !== undefined) {
@@ -52,6 +55,7 @@ const suggestions = suggestPatterns(`
 Looks up functype data structure information, source files, and available methods.
 
 ### Features
+
 - **Complete type registry**: All 14 functype data structures
 - **Source file paths**: Direct links to implementation files
 - **Interface information**: Which interfaces each type implements
@@ -59,6 +63,7 @@ Looks up functype data structure information, source files, and available method
 - **Related types**: Similar or complementary types
 
 ### AI Tool Definition
+
 ```typescript
 {
   name: "functype_lookup",
@@ -70,6 +75,7 @@ Looks up functype data structure information, source files, and available method
 ```
 
 ### Example Usage
+
 ```typescript
 const info = functypeLookup("Option")
 // Returns:
@@ -90,12 +96,14 @@ const info = functypeLookup("Option")
 Provides usage examples and code snippets for functype data structures.
 
 ### Features
+
 - **Difficulty levels**: Basic, intermediate, and advanced examples
 - **Real code examples**: Working TypeScript code snippets
 - **Multiple examples per type**: Various use cases covered
 - **Import statements included**: Copy-paste ready examples
 
 ### AI Tool Definition
+
 ```typescript
 {
   name: "functype_examples",
@@ -108,19 +116,20 @@ Provides usage examples and code snippets for functype data structures.
 ```
 
 ### Example Usage
+
 ```typescript
-const examples = functypeExamples("List")
-// Returns:
-[
-  {
-    title: "Basic List Operations",
-    description: "Creating and transforming Lists",
-    code: `import { List } from "@/list"
+const examples =
+  functypeExamples("List")[
+    // Returns:
+    {
+      title: "Basic List Operations",
+      description: "Creating and transforming Lists",
+      code: `import { List } from "@/list"
 const numbers = List([1, 2, 3, 4, 5])
 const doubled = numbers.filter(n => n > 2).map(n => n * 2).toArray()`,
-    category: "basic"
-  }
-]
+      category: "basic",
+    }
+  ]
 ```
 
 ## Tool 4: Search Functypes
@@ -130,9 +139,10 @@ const doubled = numbers.filter(n => n > 2).map(n => n * 2).toArray()`,
 Search functype data structures by keyword, use case, or method name.
 
 ### AI Tool Definition
+
 ```typescript
 {
-  name: "search_functypes", 
+  name: "search_functypes",
   description: "Search functype data structures by keyword or use case",
   parameters: {
     query: "Search term (e.g., 'async', 'collection', 'error handling')"
@@ -141,6 +151,7 @@ Search functype data structures by keyword, use case, or method name.
 ```
 
 ### Example Usage
+
 ```typescript
 const results = searchFunctypes("error handling")
 // Returns types like Either, Try, Option that handle errors
@@ -151,17 +162,20 @@ const results = searchFunctypes("error handling")
 **Directory**: `src/tools/patterns/`
 
 ### Structure
+
 - `{pattern-name}.before.ts` - Traditional JavaScript/TypeScript code
 - `{pattern-name}.after.ts` - Functype equivalent
 - `index.ts` - Registry that imports all patterns
 
 ### Benefits
+
 1. **Compile-time safety**: All examples are TypeScript-checked
 2. **API correctness**: Functype usage is guaranteed to work
 3. **Easy maintenance**: Add new patterns by creating new file pairs
 4. **No typos**: Examples can't have syntax or API errors
 
 ### Metadata Format
+
 ```typescript
 /**
  * @pattern null-check
@@ -174,6 +188,7 @@ const results = searchFunctypes("error handling")
 ## AI Agent Integration Examples
 
 ### Example 1: Code Review Assistant
+
 ```typescript
 // User provides code
 const userCode = `
@@ -198,12 +213,13 @@ const tryInfo = functypeLookup("Try")
 
 // AI agent provides comprehensive response with:
 // - Pattern suggestions
-// - Type information  
+// - Type information
 // - Code examples
 // - Source file references
 ```
 
 ### Example 2: Learning Assistant
+
 ```typescript
 // User asks: "How do I handle arrays in functype?"
 
@@ -217,6 +233,7 @@ const listExamples = functypeExamples("List", "basic")
 ```
 
 ### Example 3: API Explorer
+
 ```typescript
 // User asks: "What methods does Option have?"
 
@@ -237,6 +254,7 @@ The system covers all 14 functype data structures:
 **Utilities**: Cond, Match, ValidatedBrand
 
 Each type includes:
+
 - Source file path
 - Test file path (where available)
 - Implemented interfaces

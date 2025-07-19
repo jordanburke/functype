@@ -48,18 +48,21 @@ The scoring system calculates relevance through:
 ### Confidence Score Rationale
 
 **High Confidence (0.85-0.9)**
+
 - `null-check` (0.9): Specific keywords (`!== null`, `!== undefined`)
 - `try-catch` (0.9): Unique syntax, clear error handling intent
 - `switch-case` (0.85): Distinctive keywords
 - `array-push` (0.85): Unambiguous mutation methods
 
 **Medium Confidence (0.75-0.8)**
+
 - `promise-then-catch` (0.8): `.then()` might be non-promise
 - `optional-chaining` (0.85): `?.` operator is distinctive
 - `callback-hell` (0.8): `(err, data)` pattern common in Node.js
 - `array-map-filter` (0.75): Methods could be on other objects
 
 **Lower Confidence (0.7)**
+
 - `if-else-chain` (0.7): Generic keywords, harder to detect complexity
 - `early-return` (0.7): Less precise pattern detection
 
@@ -72,31 +75,33 @@ const functypeSuggester = {
   name: "suggest_functype_pattern",
   description: "Suggests functype patterns for JavaScript/TypeScript code",
   parameters: {
-    code: { 
-      type: "string", 
-      description: "Code snippet to analyze" 
+    code: {
+      type: "string",
+      description: "Code snippet to analyze",
     },
-    limit: { 
-      type: "number", 
-      description: "Max suggestions to return", 
-      default: 3 
-    }
+    limit: {
+      type: "number",
+      description: "Max suggestions to return",
+      default: 3,
+    },
   },
   execute: async ({ code, limit }) => {
     const suggestions = suggestPatterns(code, limit)
-    return suggestions.map(p => ({
-      pattern: p.pattern,
-      description: p.description,
-      example: p.example,
-      confidence: p.confidence
-    })).toArray()
-  }
+    return suggestions
+      .map((p) => ({
+        pattern: p.pattern,
+        description: p.description,
+        example: p.example,
+        confidence: p.confidence,
+      }))
+      .toArray()
+  },
 }
 ```
 
 ### Usage Example
 
-```typescript
+````typescript
 // AI agent reviewing code
 const userCode = `
   if (user != null && user.isActive) {
@@ -112,16 +117,16 @@ const userCode = `
 `
 
 // Get suggestions
-const suggestions = await functypeSuggester.execute({ 
-  code: userCode, 
-  limit: 3 
+const suggestions = await functypeSuggester.execute({
+  code: userCode,
+  limit: 3
 })
 
 // AI agent response
 "I notice several patterns that could benefit from functype:
 
 1. **Null checking** → Use Option for null-safe operations
-2. **Try-catch blocks** → Use Try or Either for error handling  
+2. **Try-catch blocks** → Use Try or Either for error handling
 3. **Array operations** → Use List for immutable transformations
 
 Here's how to refactor using functype:
@@ -129,7 +134,7 @@ Here's how to refactor using functype:
 ```typescript
 Option(user)
   .filter(u => u.isActive)
-  .flatMap(u => 
+  .flatMap(u =>
     Try(() => JSON.parse(u.data))
       .map(data => List.from(data.items)
         .filter(x => x.enabled)
@@ -143,7 +148,7 @@ Option(user)
   )
   .getOrElse(null)
 ```"
-```
+````
 
 ## Alternative Approaches
 
@@ -152,30 +157,31 @@ Option(user)
 **Description**: Parse code into TypeScript AST for structural analysis
 
 **Advantages**:
+
 - More accurate pattern detection
 - Can analyze code structure, not just text
 - Handles edge cases better
 - Can detect patterns regardless of formatting
 
 **Disadvantages**:
+
 - Significantly slower (parsing overhead)
 - More complex implementation
 - Requires TypeScript compiler API
 - Larger bundle size
 
 **Implementation sketch**:
+
 ```typescript
-import * as ts from 'typescript'
+import * as ts from "typescript"
 
 function analyzeAST(code: string): PatternMatch[] {
-  const sourceFile = ts.createSourceFile(
-    'temp.ts', code, ts.ScriptTarget.Latest
-  )
-  
+  const sourceFile = ts.createSourceFile("temp.ts", code, ts.ScriptTarget.Latest)
+
   const patterns: PatternMatch[] = []
-  
+
   ts.forEachChild(sourceFile, visit)
-  
+
   function visit(node: ts.Node) {
     // Check for if statements with null checks
     if (ts.isIfStatement(node)) {
@@ -184,15 +190,15 @@ function analyzeAST(code: string): PatternMatch[] {
         patterns.push(NULL_CHECK_PATTERN)
       }
     }
-    
+
     // Check for try-catch blocks
     if (ts.isTryStatement(node)) {
       patterns.push(TRY_CATCH_PATTERN)
     }
-    
+
     ts.forEachChild(node, visit)
   }
-  
+
   return patterns
 }
 ```
@@ -202,54 +208,51 @@ function analyzeAST(code: string): PatternMatch[] {
 **Description**: Use sentence embeddings to find semantically similar patterns
 
 **Advantages**:
+
 - Can identify conceptually similar code
 - Handles variations in coding style
 - Could learn from user feedback
 - Language-agnostic potential
 
 **Disadvantages**:
+
 - Requires embedding model
 - Higher latency
 - Needs training data
 - More resource intensive
 
 **Implementation sketch**:
+
 ```typescript
-import { pipeline } from '@xenova/transformers'
+import { pipeline } from "@xenova/transformers"
 
 class EmbeddingMatcher {
   private embedder
   private patternEmbeddings: Map<string, Float32Array>
-  
+
   async initialize() {
-    this.embedder = await pipeline(
-      'feature-extraction', 
-      'Xenova/all-MiniLM-L6-v2'
-    )
-    
+    this.embedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2")
+
     // Pre-compute pattern embeddings
     for (const pattern of patterns) {
       const embedding = await this.embed(pattern.example.before)
       this.patternEmbeddings.set(pattern.pattern, embedding)
     }
   }
-  
+
   async findSimilar(code: string): Promise<PatternMatch[]> {
     const codeEmbedding = await this.embed(code)
-    
+
     // Calculate cosine similarity with all patterns
-    const similarities = patterns.map(pattern => ({
+    const similarities = patterns.map((pattern) => ({
       pattern,
-      similarity: cosineSimilarity(
-        codeEmbedding,
-        this.patternEmbeddings.get(pattern.pattern)
-      )
+      similarity: cosineSimilarity(codeEmbedding, this.patternEmbeddings.get(pattern.pattern)),
     }))
-    
+
     return similarities
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, 3)
-      .map(s => s.pattern)
+      .map((s) => s.pattern)
   }
 }
 ```
@@ -259,18 +262,21 @@ class EmbeddingMatcher {
 **Description**: Define complex rules with predicates and conditions
 
 **Advantages**:
+
 - Highly customizable rules
 - Can encode complex logic
 - Easy to add domain-specific patterns
 - Explainable decisions
 
 **Disadvantages**:
+
 - Verbose rule definitions
 - Harder to maintain
 - May miss edge cases
 - Performance depends on rule complexity
 
 **Implementation sketch**:
+
 ```typescript
 interface Rule {
   name: string
@@ -285,31 +291,31 @@ const rules: Rule[] = [
   {
     name: "complex-null-check",
     conditions: [
-      code => /if\s*\(/.test(code),
-      code => /!==\s*null|!=\s*null/.test(code),
-      code => /!==\s*undefined|!=\s*undefined/.test(code),
-      code => countOccurrences(code, 'return') >= 2
+      (code) => /if\s*\(/.test(code),
+      (code) => /!==\s*null|!=\s*null/.test(code),
+      (code) => /!==\s*undefined|!=\s*undefined/.test(code),
+      (code) => countOccurrences(code, "return") >= 2,
     ],
     pattern: NULL_CHECK_PATTERN,
-    priority: 10
+    priority: 10,
   },
   {
     name: "promise-chain",
     conditions: [
-      code => /\.then\s*\(/.test(code),
-      code => /\.catch\s*\(/.test(code),
-      code => countOccurrences(code, '.then') >= 2
+      (code) => /\.then\s*\(/.test(code),
+      (code) => /\.catch\s*\(/.test(code),
+      (code) => countOccurrences(code, ".then") >= 2,
     ],
     pattern: PROMISE_PATTERN,
-    priority: 8
-  }
+    priority: 8,
+  },
 ]
 
 function evaluateRules(code: string): PatternMatch[] {
   return rules
-    .filter(rule => rule.conditions.every(cond => cond(code)))
+    .filter((rule) => rule.conditions.every((cond) => cond(code)))
     .sort((a, b) => b.priority - a.priority)
-    .map(rule => rule.pattern)
+    .map((rule) => rule.pattern)
 }
 ```
 
@@ -318,64 +324,60 @@ function evaluateRules(code: string): PatternMatch[] {
 **Description**: Use string similarity algorithms for flexible matching
 
 **Advantages**:
+
 - Handles typos and variations
 - Simple implementation
 - Fast execution
 - Good for similar code structures
 
 **Disadvantages**:
+
 - Less semantic understanding
 - May produce false positives
 - Requires threshold tuning
 - Surface-level matching only
 
 **Implementation sketch**:
+
 ```typescript
-import { distance } from 'fastest-levenshtein'
+import { distance } from "fastest-levenshtein"
 
 function fuzzyMatch(code: string): PatternMatch[] {
-  const candidates = patterns.map(pattern => {
+  const candidates = patterns.map((pattern) => {
     // Normalize code for comparison
     const normalizedCode = normalizeCode(code)
     const normalizedExample = normalizeCode(pattern.example.before)
-    
+
     // Calculate similarity metrics
     const levenshtein = distance(normalizedCode, normalizedExample)
-    const jaccard = jaccardSimilarity(
-      tokenize(normalizedCode),
-      tokenize(normalizedExample)
-    )
-    
+    const jaccard = jaccardSimilarity(tokenize(normalizedCode), tokenize(normalizedExample))
+
     return {
       pattern,
-      score: (jaccard * 0.7) + ((1 - levenshtein / 100) * 0.3)
+      score: jaccard * 0.7 + (1 - levenshtein / 100) * 0.3,
     }
   })
-  
+
   return candidates
-    .filter(c => c.score > 0.6)
+    .filter((c) => c.score > 0.6)
     .sort((a, b) => b.score - a.score)
-    .map(c => c.pattern)
+    .map((c) => c.pattern)
 }
 
 function normalizeCode(code: string): string {
-  return code
-    .replace(/\s+/g, ' ')
-    .replace(/['"]/g, '')
-    .toLowerCase()
-    .trim()
+  return code.replace(/\s+/g, " ").replace(/['"]/g, "").toLowerCase().trim()
 }
 ```
 
 ## Comparison Matrix
 
-| Approach | Speed | Accuracy | Complexity | Bundle Size | Flexibility |
-|----------|-------|----------|------------|-------------|-------------|
-| Current (Tag-based) | ⚡ Fast | ✓ Good | 📊 Low | 📦 Small | ✓ Good |
-| AST-based | 🐌 Slow | ✓✓ Excellent | 📊📊 High | 📦📦 Large | ✓✓ Excellent |
-| ML Embeddings | 🐌 Slow | ✓✓ Excellent | 📊📊📊 Very High | 📦📦📦 Very Large | ✓ Good |
-| Rule Engine | ⚡ Fast | ✓ Good | 📊📊 High | 📦 Small | ✓✓ Excellent |
-| Fuzzy Matching | ⚡⚡ Very Fast | ✓ Good | 📊 Low | 📦 Small | ✓ Good |
+| Approach            | Speed          | Accuracy     | Complexity       | Bundle Size       | Flexibility  |
+| ------------------- | -------------- | ------------ | ---------------- | ----------------- | ------------ |
+| Current (Tag-based) | ⚡ Fast        | ✓ Good       | 📊 Low           | 📦 Small          | ✓ Good       |
+| AST-based           | 🐌 Slow        | ✓✓ Excellent | 📊📊 High        | 📦📦 Large        | ✓✓ Excellent |
+| ML Embeddings       | 🐌 Slow        | ✓✓ Excellent | 📊📊📊 Very High | 📦📦📦 Very Large | ✓ Good       |
+| Rule Engine         | ⚡ Fast        | ✓ Good       | 📊📊 High        | 📦 Small          | ✓✓ Excellent |
+| Fuzzy Matching      | ⚡⚡ Very Fast | ✓ Good       | 📊 Low           | 📦 Small          | ✓ Good       |
 
 ## Recommendations
 

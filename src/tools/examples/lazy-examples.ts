@@ -11,26 +11,26 @@ export function basicLazyUsage() {
     console.log("Computing...") // Only runs when accessed
     return Array.from({ length: 1000000 }, (_, i) => i * i).reduce((a, b) => a + b, 0)
   })
-  
+
   // Computation hasn't run yet
   console.log("Lazy created")
-  
+
   // Now it runs
   const result = expensiveComputation.get()
-  
+
   // Subsequent calls return cached result
   const result2 = expensiveComputation.get() // No recomputation
-  
+
   return result === result2 // true
 }
 
 // Lazy with Transformations
 export function lazyTransformations() {
   const lazyNumber = Lazy(() => 42)
-  
-  const doubled = lazyNumber.map(n => n * 2)
-  const formatted = doubled.map(n => `Result: ${n}`)
-  
+
+  const doubled = lazyNumber.map((n) => n * 2)
+  const formatted = doubled.map((n) => `Result: ${n}`)
+
   // None of the computations have run yet
   return formatted.get() // "Result: 84"
 }
@@ -41,17 +41,19 @@ export function lazyChain() {
     console.log("Step 1")
     return 10
   })
-  
-  const step2 = step1.flatMap(n => Lazy(() => {
-    console.log("Step 2")
-    return n * 3
-  }))
-  
-  const step3 = step2.map(n => {
+
+  const step2 = step1.flatMap((n) =>
+    Lazy(() => {
+      console.log("Step 2")
+      return n * 3
+    }),
+  )
+
+  const step3 = step2.map((n) => {
     console.log("Step 3")
     return n + 5
   })
-  
+
   // Nothing has executed yet
   return step3.get() // Logs: "Step 1", "Step 2", "Step 3", returns 35
 }
@@ -63,35 +65,35 @@ export function circularDependencyExample() {
     console.log("Resolving A")
     return { name: "A", dependsOn: lazyB.get() }
   })
-  
+
   const lazyB = Lazy(() => {
     console.log("Resolving B")
     return { name: "B", value: 42 }
   })
-  
+
   return lazyA.get() // { name: "A", dependsOn: { name: "B", value: 42 } }
 }
 
 // Lazy Memoization
 export function lazyMemoization() {
   let computationCount = 0
-  
+
   const memoizedExpensive = Lazy(() => {
     computationCount++
     console.log(`Computation #${computationCount}`)
     return Math.random() * 1000
   })
-  
+
   // First access
   const result1 = memoizedExpensive.get()
-  
+
   // Second access - uses cached value
   const result2 = memoizedExpensive.get()
-  
+
   return {
     result1,
     result2,
     sameValue: result1 === result2, // true
-    computationCount // 1 - only computed once
+    computationCount, // 1 - only computed once
   }
 }

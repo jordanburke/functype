@@ -29,27 +29,36 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
       "Handling nullable values",
       "Chaining operations on optional data",
       "Avoiding null pointer exceptions",
-      "Optional configuration values"
-    ]
+      "Optional configuration values",
+    ],
   },
-  
+
   List: {
     name: "List",
     description: "Immutable array with functional operations. Better than native arrays for FP.",
     category: "Collection",
     sourcePath: "src/list/List.ts",
     testPath: "test/list/List.spec.ts",
-    implements: ["Functor", "Monad", "Foldable", "Collection", "ContainerOps", "CollectionOps", "Serializable", "Traversable"],
+    implements: [
+      "Functor",
+      "Monad",
+      "Foldable",
+      "Collection",
+      "ContainerOps",
+      "CollectionOps",
+      "Serializable",
+      "Traversable",
+    ],
     keyMethods: ["map", "filter", "flatMap", "fold", "reduce", "append", "prepend", "head", "tail", "take", "drop"],
     relatedTypes: ["LazyList", "Set"],
     commonUseCases: [
       "Immutable array operations",
       "Data transformation pipelines",
       "Functional collection processing",
-      "Safe array manipulation"
-    ]
+      "Safe array manipulation",
+    ],
   },
-  
+
   Either: {
     name: "Either",
     description: "Represents a value with two possible types (Left for errors, Right for success).",
@@ -63,10 +72,10 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
       "Error handling without exceptions",
       "Validation with error accumulation",
       "Railway-oriented programming",
-      "Branching logic"
-    ]
+      "Branching logic",
+    ],
   },
-  
+
   Try: {
     name: "Try",
     description: "Represents a computation that may fail with an exception.",
@@ -80,10 +89,10 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
       "Wrapping operations that may throw",
       "JSON parsing",
       "File operations",
-      "API calls that might fail"
-    ]
+      "API calls that might fail",
+    ],
   },
-  
+
   Map: {
     name: "Map",
     description: "Immutable key-value map with functional operations.",
@@ -93,14 +102,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: ["SafeTraversable", "Collection", "Serializable"],
     keyMethods: ["get", "set", "has", "delete", "map", "filter", "fold", "keys", "values"],
     relatedTypes: ["List", "Set"],
-    commonUseCases: [
-      "Immutable dictionaries",
-      "Configuration objects",
-      "Caching",
-      "Lookup tables"
-    ]
+    commonUseCases: ["Immutable dictionaries", "Configuration objects", "Caching", "Lookup tables"],
   },
-  
+
   Set: {
     name: "Set",
     description: "Immutable set of unique values with functional operations.",
@@ -114,10 +118,10 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
       "Unique value collections",
       "Set operations (union, intersection)",
       "Removing duplicates",
-      "Membership testing"
-    ]
+      "Membership testing",
+    ],
   },
-  
+
   Lazy: {
     name: "Lazy",
     description: "Represents a lazily evaluated value (computed on first access).",
@@ -127,14 +131,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: ["Functor", "Monad", "Foldable", "Extractable", "Serializable", "Traversable"],
     keyMethods: ["map", "flatMap", "get", "fold"],
     relatedTypes: ["LazyList"],
-    commonUseCases: [
-      "Deferred computation",
-      "Expensive calculations",
-      "Circular dependencies",
-      "Memoization"
-    ]
+    commonUseCases: ["Deferred computation", "Expensive calculations", "Circular dependencies", "Memoization"],
   },
-  
+
   LazyList: {
     name: "LazyList",
     description: "Lazily evaluated list for infinite sequences or large datasets.",
@@ -144,14 +143,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: ["Functor", "Monad", "Iterable"],
     keyMethods: ["take", "drop", "map", "filter", "head", "tail", "concat"],
     relatedTypes: ["List", "Lazy"],
-    commonUseCases: [
-      "Infinite sequences",
-      "Stream processing",
-      "Large file processing",
-      "Generator-like behavior"
-    ]
+    commonUseCases: ["Infinite sequences", "Stream processing", "Large file processing", "Generator-like behavior"],
   },
-  
+
   FPromise: {
     name: "FPromise",
     description: "Functional promise with better error handling and cancellation.",
@@ -165,10 +159,10 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
       "Async operations with cancellation",
       "Better Promise error handling",
       "Async data pipelines",
-      "HTTP requests"
-    ]
+      "HTTP requests",
+    ],
   },
-  
+
   Task: {
     name: "Task",
     description: "Represents an async computation with error handling.",
@@ -177,14 +171,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: [],
     keyMethods: ["run", "map", "flatMap", "mapError"],
     relatedTypes: ["FPromise", "Either"],
-    commonUseCases: [
-      "Async workflows",
-      "Side effects management",
-      "Deferred async operations",
-      "Complex async chains"
-    ]
+    commonUseCases: ["Async workflows", "Side effects management", "Deferred async operations", "Complex async chains"],
   },
-  
+
   Cond: {
     name: "Cond",
     description: "Conditional expression builder for avoiding if-else chains.",
@@ -194,14 +183,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: [],
     keyMethods: ["case", "otherwise", "match"],
     relatedTypes: ["Match"],
-    commonUseCases: [
-      "Complex conditional logic",
-      "Avoiding nested if-else",
-      "Pattern-like matching",
-      "Guard clauses"
-    ]
+    commonUseCases: ["Complex conditional logic", "Avoiding nested if-else", "Pattern-like matching", "Guard clauses"],
   },
-  
+
   Match: {
     name: "Match",
     description: "Pattern matching for TypeScript, similar to switch but more powerful.",
@@ -211,14 +195,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: [],
     keyMethods: ["case", "default", "done", "when"],
     relatedTypes: ["Cond"],
-    commonUseCases: [
-      "Pattern matching",
-      "Exhaustive checking",
-      "Type narrowing",
-      "Complex switch logic"
-    ]
+    commonUseCases: ["Pattern matching", "Exhaustive checking", "Type narrowing", "Complex switch logic"],
   },
-  
+
   ValidatedBrand: {
     name: "ValidatedBrand",
     description: "Branded types with runtime validation.",
@@ -228,14 +207,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: [],
     keyMethods: ["create", "validate", "unwrap"],
     relatedTypes: ["Either"],
-    commonUseCases: [
-      "Runtime type validation",
-      "Domain modeling",
-      "Email/URL validation",
-      "Custom type constraints"
-    ]
+    commonUseCases: ["Runtime type validation", "Domain modeling", "Email/URL validation", "Custom type constraints"],
   },
-  
+
   Tuple: {
     name: "Tuple",
     description: "Fixed-size immutable array with type safety for each position.",
@@ -245,14 +219,9 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: ["Typeable", "Valuable", "Iterable"],
     keyMethods: ["first", "second", "map", "toArray"],
     relatedTypes: ["List"],
-    commonUseCases: [
-      "Fixed-size collections",
-      "Multiple return values",
-      "Coordinate pairs",
-      "Key-value pairs"
-    ]
+    commonUseCases: ["Fixed-size collections", "Multiple return values", "Coordinate pairs", "Key-value pairs"],
   },
-  
+
   Stack: {
     name: "Stack",
     description: "Immutable LIFO (Last In, First Out) stack data structure.",
@@ -262,11 +231,6 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     implements: ["Foldable", "Collection", "Serializable", "Traversable"],
     keyMethods: ["push", "pop", "peek", "isEmpty"],
     relatedTypes: ["List"],
-    commonUseCases: [
-      "LIFO operations",
-      "Undo/redo functionality",
-      "Expression evaluation",
-      "Backtracking algorithms"
-    ]
-  }
+    commonUseCases: ["LIFO operations", "Undo/redo functionality", "Expression evaluation", "Backtracking algorithms"],
+  },
 }

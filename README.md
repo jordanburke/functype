@@ -575,16 +575,53 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 
 ## Roadmap / TODO
 
-### Missing Functionality
+### High Priority
 
-- [ ] Add lazy evaluation structures (LazyList/Stream)
-- [ ] Implement Validation type for applicative validation
-- [ ] Add Reader/State/IO monads for more functional patterns
-- [ ] Implement lens/optics for immutable updates
-- [ ] Expand concurrent execution utilities beyond FPromise.all
+- [ ] Complete LazyList Implementation
+  - Add Foldable interface (fold, foldLeft, foldRight)
+  - Add Pipe interface for composition
+  - Add Serializable for persistence
+  - Integrate with Base pattern for consistency
+- [ ] Implement NonEmptyList<A>
+  - List guaranteed to have at least one element
+  - Prevents empty list errors at compile time
+  - Full standard interface implementation
+  - Methods like `head` return `A` instead of `Option<A>`
+
+### Medium Priority
+
+- [ ] Implement ValidatedNel<E, A> for validation with error accumulation
+  - Unlike Either, collects multiple errors
+  - Uses NonEmptyList for error collection
+  - Applicative instance combines errors
+- [ ] Enhance Pattern Matching
+  - Add exhaustiveness checking at compile time
+  - Support nested pattern matching
+  - Add guard clauses (when conditions)
+  - Support destructuring patterns
+- [ ] Implement IO<A> monad for functional side effects
+  - Lazy execution of effects
+  - Composable IO operations
+  - Integration with Task for async IO
+
+### Low Priority
+
+- [ ] Complete Tuple Implementation
+  - Add Foldable for tuple operations
+  - Add Companion pattern with utility methods
+  - Consider specialized Tuple2, Tuple3 with better type inference
+- [ ] Implement Lens<S, A> for immutable updates
+  - Composable property access
+  - Type-safe nested updates
+  - Works with all functype data structures
+- [ ] Add Reader/State monads for dependency injection and state management
+
+### Completed Functionality
+
+- [x] Add lazy evaluation structures (LazyList implemented, needs interface completion)
 - [x] Add a proper Foldable type class interface
 - [x] Implement Matchable type class for pattern matching
-- [ ] Implement Applicative and other functional type classes
+- [x] Implement Applicative and other functional type classes (for most types)
 
 ### Performance Optimizations
 

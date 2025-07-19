@@ -3,8 +3,9 @@
  */
 
 import { List } from "@/list"
-import { functypeRegistry, type FunctypeInfo } from "./functype-registry"
+
 import { compilableExamples } from "./examples"
+import { type FunctypeInfo, functypeRegistry } from "./functype-registry"
 
 export interface FunctypeLookupResult {
   name: string
@@ -32,7 +33,7 @@ export interface FunctypeExample {
 export function functypeLookup(typeName: string): FunctypeLookupResult {
   const normalizedName = typeName.charAt(0).toUpperCase() + typeName.slice(1).toLowerCase()
   const info = functypeRegistry[normalizedName]
-  
+
   if (!info) {
     return {
       name: typeName,
@@ -43,10 +44,10 @@ export function functypeLookup(typeName: string): FunctypeLookupResult {
       keyMethods: [],
       relatedTypes: [],
       commonUseCases: [],
-      found: false
+      found: false,
     }
   }
-  
+
   return {
     name: info.name,
     description: info.description,
@@ -57,7 +58,7 @@ export function functypeLookup(typeName: string): FunctypeLookupResult {
     keyMethods: info.keyMethods,
     relatedTypes: info.relatedTypes || [],
     commonUseCases: info.commonUseCases,
-    found: true
+    found: true,
   }
 }
 
@@ -66,13 +67,13 @@ export function functypeLookup(typeName: string): FunctypeLookupResult {
  */
 export function functypeExamples(typeName: string): List<FunctypeExample> {
   const normalizedName = typeName.charAt(0).toUpperCase() + typeName.slice(1).toLowerCase()
-  
+
   // Use compilable examples first, fall back to generated ones
   const compiledExamples = compilableExamples[normalizedName]
   if (compiledExamples) {
     return List(compiledExamples)
   }
-  
+
   // Fallback to generated examples for types not yet migrated
   const examples = generateExamplesFor(normalizedName)
   return List(examples)
@@ -83,13 +84,14 @@ export function functypeExamples(typeName: string): List<FunctypeExample> {
  */
 export function searchFunctypes(query: string): List<FunctypeInfo> {
   const queryLower = query.toLowerCase()
-  const results = Object.values(functypeRegistry).filter(info => 
-    info.name.toLowerCase().includes(queryLower) ||
-    info.description.toLowerCase().includes(queryLower) ||
-    info.commonUseCases.some(useCase => useCase.toLowerCase().includes(queryLower)) ||
-    info.keyMethods.some(method => method.toLowerCase().includes(queryLower))
+  const results = Object.values(functypeRegistry).filter(
+    (info) =>
+      info.name.toLowerCase().includes(queryLower) ||
+      info.description.toLowerCase().includes(queryLower) ||
+      info.commonUseCases.some((useCase) => useCase.toLowerCase().includes(queryLower)) ||
+      info.keyMethods.some((method) => method.toLowerCase().includes(queryLower)),
   )
-  
+
   return List(results)
 }
 
@@ -121,7 +123,7 @@ const result = Option(user)
   .map(u => u.name)
   .map(name => name.toUpperCase())
   .getOrElse("Anonymous")`,
-          category: "basic"
+          category: "basic",
         },
         {
           title: "Option Chaining",
@@ -134,7 +136,7 @@ const avatarUrl = Option(user)
   .flatMap(p => Option(p.avatar))
   .map(a => a.url)
   .getOrElse("/default-avatar.png")`,
-          category: "intermediate"
+          category: "intermediate",
         },
         {
           title: "Option with Filtering",
@@ -146,10 +148,10 @@ const activeUser = Option(user)
   .filter(u => u.email.includes("@"))
   .map(u => ({ ...u, status: "online" }))
   .getOrElse(null)`,
-          category: "intermediate"
-        }
+          category: "intermediate",
+        },
       ]
-      
+
     case "List":
       return [
         {
@@ -163,7 +165,7 @@ const doubled = numbers
   .filter(n => n > 2)
   .map(n => n * 2)
   .toArray() // [6, 8, 10]`,
-          category: "basic"
+          category: "basic",
         },
         {
           title: "List Reduction",
@@ -178,7 +180,7 @@ const totalLength = words
 
 const concatenated = words
   .reduce((acc, word) => acc + " " + word, "")`,
-          category: "intermediate"
+          category: "intermediate",
         },
         {
           title: "Complex List Processing",
@@ -194,10 +196,10 @@ const allHobbies = users
   .flatMap(user => List(user.hobbies))
   .toSet() // Remove duplicates
   .toArray()`,
-          category: "advanced"
-        }
+          category: "advanced",
+        },
       ]
-      
+
     case "Either":
       return [
         {
@@ -217,7 +219,7 @@ const result = divide(10, 2)
     error => \`Error: \${error}\`,
     value => \`Result: \${value}\`
   )`,
-          category: "basic"
+          category: "basic",
         },
         {
           title: "Either for Validation",
@@ -238,10 +240,10 @@ function validateUser(user: any): Either<string, User> {
       : Left("Must be 18 or older")
     )
 }`,
-          category: "intermediate"
-        }
+          category: "intermediate",
+        },
       ]
-      
+
     case "Try":
       return [
         {
@@ -257,7 +259,7 @@ const parseJson = (str: string) =>
     )
 
 const result = parseJson('{"name": "Alice"}')`,
-          category: "basic"
+          category: "basic",
         },
         {
           title: "Try with Recovery",
@@ -273,10 +275,10 @@ const safeOperation = Try(() => {
   return defaultValue
 })
 .map(result => processResult(result))`,
-          category: "intermediate"
-        }
+          category: "intermediate",
+        },
       ]
-      
+
     case "Map":
       return [
         {
@@ -295,19 +297,19 @@ const alice = userMap
 const names = userMap
   .map((user, key) => user.name)
   .toArray()`,
-          category: "basic"
-        }
+          category: "basic",
+        },
       ]
-      
+
     default:
       return [
         {
           title: "Basic Usage",
           description: `Basic ${typeName} operations`,
           code: `// Check the source file for detailed examples
-// Path: ${functypeRegistry[typeName]?.sourcePath || 'Not found'}`,
-          category: "basic"
-        }
+// Path: ${functypeRegistry[typeName]?.sourcePath || "Not found"}`,
+          category: "basic",
+        },
       ]
   }
 }
@@ -324,65 +326,66 @@ export const functypeLookupTool = {
     properties: {
       typeName: {
         type: "string",
-        description: "Name of the functype data structure (e.g., 'Option', 'List', 'Either')"
-      }
+        description: "Name of the functype data structure (e.g., 'Option', 'List', 'Either')",
+      },
     },
-    required: ["typeName"]
+    required: ["typeName"],
   },
   execute: ({ typeName }: { typeName: string }) => {
     return functypeLookup(typeName)
-  }
+  },
 }
 
 export const functypeExamplesTool = {
-  name: "functype_examples", 
+  name: "functype_examples",
   description: "Get usage examples and code snippets for functype data structures",
   parameters: {
     type: "object",
     properties: {
       typeName: {
         type: "string",
-        description: "Name of the functype data structure (e.g., 'Option', 'List', 'Either')"
+        description: "Name of the functype data structure (e.g., 'Option', 'List', 'Either')",
       },
       category: {
         type: "string",
         enum: ["basic", "intermediate", "advanced", "all"],
         description: "Complexity level of examples to return",
-        default: "all"
-      }
+        default: "all",
+      },
     },
-    required: ["typeName"]
+    required: ["typeName"],
   },
-  execute: ({ typeName, category = "all" }: { 
+  execute: ({
+    typeName,
+    category = "all",
+  }: {
     typeName: string
     category?: "basic" | "intermediate" | "advanced" | "all"
   }) => {
     const examples = functypeExamples(typeName)
-    
+
     if (category === "all") {
       return examples.toArray()
     }
-    
-    return examples
-      .filter(ex => ex.category === category)
-      .toArray()
-  }
+
+    return examples.filter((ex) => ex.category === category).toArray()
+  },
 }
 
 export const functypeSearchTool = {
   name: "search_functypes",
-  description: "Search functype data structures by keyword, use case, or method name", 
+  description: "Search functype data structures by keyword, use case, or method name",
   parameters: {
     type: "object",
     properties: {
       query: {
         type: "string",
-        description: "Search term (e.g., 'async', 'collection', 'error handling')"
-      }
+        description: "Search term (e.g., 'async', 'collection', 'error handling')",
+      },
     },
-    required: ["query"]
+    required: ["query"],
   },
   execute: ({ query }: { query: string }) => {
     return searchFunctypes(query).toArray()
-  }
+  },
 }

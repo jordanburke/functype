@@ -22,6 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Build & Test Commands
 
 ### Build Commands
+
 - `pnpm build:prod` - Production build with full validation
 - `pnpm build:dev` - Development build with watch mode
 - `pnpm build:watch` - Watch mode for continuous building
@@ -29,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm clean` - Remove dist and coverage directories
 
 ### Test Commands
+
 - `pnpm test` - Run all tests
 - `pnpm vitest run test/path/to/file.spec.ts` - Run specific test file
 - `pnpm test:watch` - Run tests in watch mode
@@ -36,11 +38,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm test:ui` - Run tests with Vitest UI
 
 ### Lint Commands
+
 - `pnpm lint` - Format with Prettier and fix with ESLint
 - `pnpm lint:fix` - Only fix ESLint issues
 - `pnpm lint:format` - Only format with Prettier
 
 ### Performance & Documentation
+
 - `pnpm bench` - Run performance benchmarks
 - `pnpm bench:ui` - Run benchmarks with UI
 - `pnpm docs` - Generate TypeDoc documentation
@@ -55,9 +59,9 @@ All types follow a consistent pattern where constructor functions return objects
 
 ```typescript
 // Example pattern used throughout:
-const option = Option(value)     // Constructor function
-option.map(x => x + 1)          // Instance methods
-Option.none()                   // Companion methods via Companion utility
+const option = Option(value) // Constructor function
+option.map((x) => x + 1) // Instance methods
+Option.none() // Companion methods via Companion utility
 ```
 
 ### Type System Foundation
@@ -110,6 +114,7 @@ Every container type implements these key methods:
 ## TypeScript Configuration
 
 Key strict settings enabled:
+
 - `strict: true` - Full strict mode
 - `noUncheckedIndexedAccess: true` - Safer array/object access
 - `strictPropertyInitialization: true` - Ensures properties are initialized
@@ -152,6 +157,7 @@ Key strict settings enabled:
 - ESM-only for modern bundlers
 
 Example import strategies:
+
 ```typescript
 // Selective module imports (recommended)
 import { Option } from "functype/option"
@@ -166,15 +172,15 @@ import { some, none } from "functype/option"
 
 ```typescript
 // Option
-const some = Option(value)        // Some if value is not null/undefined
-const none = Option.none()         // None
+const some = Option(value) // Some if value is not null/undefined
+const none = Option.none() // None
 
 // Either
-const right = Right(value)         // Success
-const left = Left(error)          // Failure
+const right = Right(value) // Success
+const left = Left(error) // Failure
 
 // List
-const list = List([1, 2, 3])      // From array
+const list = List([1, 2, 3]) // From array
 const empty = List.empty<number>() // Empty typed list
 
 // Try
@@ -185,16 +191,19 @@ const tryValue = Try(() => risky()) // Wraps exceptions
 
 ```typescript
 // Transform (map)
-option.map(x => x * 2)
-either.map(x => x.toUpperCase())
-list.map(x => x + 1)
+option.map((x) => x * 2)
+either.map((x) => x.toUpperCase())
+list.map((x) => x + 1)
 
 // Chain (flatMap)
-option.flatMap(x => Option(x > 0 ? x : null))
-either.flatMap(x => validate(x) ? Right(x) : Left("Invalid"))
+option.flatMap((x) => Option(x > 0 ? x : null))
+either.flatMap((x) => (validate(x) ? Right(x) : Left("Invalid")))
 
 // Extract (fold/getOrElse)
-option.fold(() => "empty", x => `value: ${x}`)
+option.fold(
+  () => "empty",
+  (x) => `value: ${x}`,
+)
 either.getOrElse("default")
 tryValue.getOrThrow()
 ```
@@ -211,12 +220,12 @@ tryValue.getOrThrow()
 // Example test structure
 describe("Option", () => {
   it("should map over Some values", () => {
-    const result = Option(5).map(x => x * 2)
+    const result = Option(5).map((x) => x * 2)
     expect(result.get()).toBe(10)
   })
-  
+
   it("should handle None correctly", () => {
-    const result = Option(null).map(x => x * 2)
+    const result = Option(null).map((x) => x * 2)
     expect(result.isNone()).toBe(true)
   })
 })
@@ -232,6 +241,7 @@ describe("Option", () => {
 ## Available Data Structures
 
 ### Fully Implemented
+
 - **Option<T>**: Handle nullable values safely
 - **Either<L,R>**: Express success/failure with values
 - **Try<T>**: Wrap operations that might throw
@@ -242,11 +252,13 @@ describe("Option", () => {
 - **Task<T>**: Sync/async operations with cancellation
 
 ### Partially Implemented
+
 - **Stack<A>**: LIFO collection with Matchable interface
 - **LazyList<A>**: Lazy evaluation for sequences (custom Functor/Monad)
 - **Tuple<T[]>**: Fixed-length arrays (custom Functor/Monad)
 
 ### Limited Implementation
+
 - **FPromise<T,E>**: Enhanced Promise (only PromiseLike interface)
 - **Identity<T>**: Simple wrapper type
 - **Ref<T>**: Mutable reference container
