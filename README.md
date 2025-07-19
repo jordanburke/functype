@@ -331,6 +331,55 @@ console.log(numberType(42)) // "positive"
 console.log(numberType(-5)) // "negative"
 ```
 
+### Advanced Pattern Matching
+
+Match supports exhaustive matching, nested patterns, and guards:
+
+```typescript
+import { Match } from "functype"
+
+// Exhaustive matching with compile-time checking
+type Status = "idle" | "loading" | "success" | "error"
+const result = Match<Status, string>("success")
+  .case("idle", "Waiting...")
+  .case("loading", "Loading...")
+  .case("success", "Done!")
+  .case("error", "Failed!")
+  .exhaustive() // Compile error if any case is missing
+
+// Nested pattern matching
+type User = { 
+  name: string
+  age: number
+  role: "admin" | "user"
+  preferences?: { theme: "light" | "dark" }
+}
+
+const message = Match<User, string>(user)
+  .case(
+    { role: "admin", age: (n) => n >= 18, preferences: { theme: "dark" } },
+    "Adult admin with dark mode"
+  )
+  .case(
+    { role: "user" },
+    u => `Regular user: ${u.name}`
+  )
+  .when(
+    u => u.age < 18,
+    "Minor user - restricted access"
+  )
+  .default("Unknown user type")
+
+// Reusable pattern matchers
+const classifier = Match.builder<Animal, string>()
+  .when(a => a.canFly, "Flying creature")
+  .case({ legs: 0 }, "Legless")
+  .case({ legs: 2 }, "Biped")
+  .case({ legs: 4 }, "Quadruped")
+  .default("Other")
+  .build()
+```
+
 ## Fold
 
 Functype includes a powerful `fold` operation for pattern matching and extracting values:
@@ -594,11 +643,12 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - Unlike Either, collects multiple errors
   - Uses NonEmptyList for error collection
   - Applicative instance combines errors
-- [ ] Enhance Pattern Matching
-  - Add exhaustiveness checking at compile time
-  - Support nested pattern matching
-  - Add guard clauses (when conditions)
-  - Support destructuring patterns
+- [x] Enhance Pattern Matching
+  - ✓ Add exhaustiveness checking at compile time
+  - ✓ Support nested pattern matching
+  - ✓ Add guard clauses (when conditions)
+  - ✓ Support destructuring patterns
+  - ✓ Consolidated into unified Match implementation
 - [ ] Implement IO<A> monad for functional side effects
   - Lazy execution of effects
   - Composable IO operations

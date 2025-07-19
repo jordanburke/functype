@@ -168,7 +168,7 @@ describe("Match", () => {
     it("should throw when no match found", () => {
       const match = Match("unknown").caseValue("known", "found").caseValue("also-known", "found too")
 
-      expect(() => match.getOrThrow()).toThrow("No matching case for value: unknown")
+      expect(() => match.getOrThrow()).toThrow("No matching pattern for value")
     })
   })
 
@@ -246,6 +246,258 @@ describe("Match", () => {
       expect(transition("loading", "succeed")).toBe("success")
       expect(transition("loading", "fail")).toBe("error")
       expect(transition("error", "reset")).toBe("idle")
+    })
+  })
+
+  describe("enhanced pattern matching", () => {
+    describe("nested patterns", () => {
+      type User = {
+        name: string
+        age: number
+        role: "admin" | "user" | "guest"
+        preferences?: {
+          theme: "light" | "dark"
+          notifications: boolean
+        }
+      }
+
+      it("should match nested object patterns", () => {
+        const user: User = {
+          name: "Alice",
+          age: 30,
+          role: "admin",
+          preferences: {
+            theme: "dark",
+            notifications: true
+          }
+        }
+
+        const result = Match<User, string>(user)
+          .case({ role: "admin", preferences: { theme: "dark" } }, "Dark mode admin")
+          .case({ role: "admin" }, "Regular admin")
+          .case({ role: "user" }, u => `User: ${u.name}`)
+          .default("Guest")
+
+        expect(result).toBe("Dark mode admin")
+      })
+
+      it("should match with nested guards", () => {
+        const user: User = {
+          name: "Bob",
+          age: 17,
+          role: "user"
+        }
+
+        const result = Match<User, string>(user)
+          .case({ age: (n: number) => n >= 18, role: "admin" }, "Adult admin")
+          .case({ age: (n: number) => n >= 18, role: "user" }, "Adult user")
+          .case({ age: (n: number) => n < 18 }, u => `Minor: ${u.name}`)
+          .default("Unknown")
+
+        expect(result).toBe("Minor: Bob")
+      })
+
+      it("should handle optional nested properties", () => {
+        const userWithoutPrefs: User = {
+          name: "Charlie",
+          age: 25,
+          role: "user"
+        }
+
+        const result = Match<User, string>(userWithoutPrefs)
+          .case({ preferences: { notifications: true } }, "Has notifications")
+          .case({ role: "user" }, "Regular user")
+          .default("Other")
+
+        expect(result).toBe("Regular user")
+      })
+    })
+
+    describe("when guards", () => {
+      it("should support when method for readable guards", () => {
+        const result = Match(15)
+          .when((n: number) => n > 20, "large")
+          .when((n: number) => n > 10, "medium")
+          .when((n: number) => n > 0, "small")
+          .default("invalid")
+
+        expect(result).toBe("medium")
+      })
+
+      it("should support guard pattern object syntax", () => {
+        const classify = (n: number) =>
+          Match(n)
+            .case({ _: (x: number) => x > 100 }, "huge")
+            .case({ _: (x: number) => x > 50 }, "large")
+            .case({ _: (x: number) => x > 10 }, "medium")
+            .default("small")
+
+        expect(classify(150)).toBe("huge")
+        expect(classify(75)).toBe("large")
+        expect(classify(25)).toBe("medium")
+        expect(classify(5)).toBe("small")
+      })
+    })
+
+    describe("caseAny", () => {
+      it("should match multiple patterns with caseAny", () => {
+        const result = Match("Saturday")
+          .caseAny(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "Weekday")
+          .caseAny(["Saturday", "Sunday"], "Weekend")
+          .default("Invalid")
+
+        expect(result).toBe("Weekend")
+      })
+    })
+
+    describe("exhaustive method", () => {
+      type Status = "idle" | "loading" | "success" | "error"
+
+      it("should enforce exhaustive matching with exhaustive method", () => {
+        const status: Status = "success"
+        
+        const result = Match<Status, string>(status)
+          .case("idle", "Waiting")
+          .case("loading", "In progress")
+          .case("success", "Complete")
+          .case("error", "Failed")
+          .exhaustive()
+
+        expect(result).toBe("Complete")
+      })
+
+      it("should throw on non-exhaustive match when using exhaustive method", () => {
+        const status: Status = "error"
+        
+        expect(() => {
+          Match<Status, string>(status)
+            .case("idle", "Waiting")
+            .case("loading", "In progress")
+            .exhaustive()
+        }).toThrow("Non-exhaustive match")
+      })
+    })
+
+    describe("toOption method", () => {
+      it("should return Some for successful matches", () => {
+        const someResult = Match(42)
+          .case(42, "found")
+          .toOption()
+
+        expect(someResult.isEmpty).toBe(false)
+        expect(someResult.get()).toBe("found")
+      })
+
+      it("should return None for failed matches", () => {
+        const noneResult = Match(99)
+          .case(0, "zero")
+          .toOption()
+
+        expect(noneResult.isEmpty).toBe(true)
+      })
+    })
+
+    describe("struct pattern matching", () => {
+      type Event = 
+        | { type: "click"; x: number; y: number }
+        | { type: "keypress"; key: string; shift?: boolean }
+        | { type: "hover"; element: string }
+
+      it("should match discriminated unions with struct", () => {
+        const events: Event[] = [
+          { type: "click", x: 100, y: 200 },
+          { type: "keypress", key: "Enter" },
+          { type: "hover", element: "button" }
+        ]
+
+        const handler = Match.struct<Event, string>()
+          .case({ type: "click" }, e => `Click at (${(e as { type: "click"; x: number; y: number }).x}, ${(e as { type: "click"; x: number; y: number }).y})`)
+          .case({ type: "keypress", key: "Enter" }, () => "Enter pressed")
+          .case({ type: "keypress" }, e => `Key: ${(e as { type: "keypress"; key: string }).key}`)
+          .case({ type: "hover" }, e => `Hovering: ${(e as { type: "hover"; element: string }).element}`)
+          .build()
+
+        expect(handler(events[0]!)).toBe("Click at (100, 200)")
+        expect(handler(events[1]!)).toBe("Enter pressed")
+        expect(handler(events[2]!)).toBe("Hovering: button")
+      })
+    })
+
+    describe("builder pattern", () => {
+      it("should create reusable matchers with builder", () => {
+        type Animal = { species: string; legs: number; canFly: boolean }
+
+        const classifier = Match.builder<Animal, string>()
+          .when(a => a.canFly, "Flying creature")
+          .case({ legs: 0 }, "Legless creature")
+          .case({ legs: 2 }, "Biped")
+          .case({ legs: 4 }, "Quadruped")
+          .when(a => a.legs > 4, "Multi-legged")
+          .default("Unknown")
+          .build()
+
+        expect(classifier({ species: "bird", legs: 2, canFly: true })).toBe("Flying creature")
+        expect(classifier({ species: "snake", legs: 0, canFly: false })).toBe("Legless creature")
+        expect(classifier({ species: "dog", legs: 4, canFly: false })).toBe("Quadruped")
+        expect(classifier({ species: "spider", legs: 8, canFly: false })).toBe("Multi-legged")
+      })
+    })
+
+    describe("complex real-world patterns", () => {
+      it("should handle Redux-style action matching", () => {
+        type Action = 
+          | { type: "SET_USER"; payload: { id: string; name: string } }
+          | { type: "LOGOUT" }
+          | { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
+          | { type: "API_REQUEST"; payload: { endpoint: string; method: string } }
+
+        type State = {
+          user: { id: string; name: string } | null
+          profile: Record<string, any>
+        }
+
+        const reducer = (state: State, action: Action): State => {
+          return Match<Action, State>(action)
+            .case(
+              { type: "SET_USER" },
+              a => ({ ...state, user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload })
+            )
+            .case(
+              { type: "LOGOUT" },
+              () => ({ ...state, user: null, profile: {} })
+            )
+            .case(
+              { type: "UPDATE_PROFILE" },
+              a => ({
+                ...state,
+                profile: { ...state.profile, [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.value }
+              })
+            )
+            .case(
+              { type: "API_REQUEST", payload: { method: "DELETE" } },
+              () => state // Ignore deletes
+            )
+            .default(state)
+        }
+
+        const initialState: State = { user: null, profile: {} }
+        
+        let state = reducer(initialState, { 
+          type: "SET_USER", 
+          payload: { id: "123", name: "Alice" } 
+        })
+        expect(state.user).toEqual({ id: "123", name: "Alice" })
+
+        state = reducer(state, {
+          type: "UPDATE_PROFILE",
+          payload: { field: "email", value: "alice@example.com" }
+        })
+        expect(state.profile.email).toBe("alice@example.com")
+
+        state = reducer(state, { type: "LOGOUT" })
+        expect(state.user).toBeNull()
+        expect(state.profile).toEqual({})
+      })
     })
   })
 })
