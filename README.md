@@ -348,7 +348,7 @@ const result = Match<Status, string>("success")
   .exhaustive() // Compile error if any case is missing
 
 // Nested pattern matching
-type User = { 
+type User = {
   name: string
   age: number
   role: "admin" | "user"
@@ -356,23 +356,14 @@ type User = {
 }
 
 const message = Match<User, string>(user)
-  .case(
-    { role: "admin", age: (n) => n >= 18, preferences: { theme: "dark" } },
-    "Adult admin with dark mode"
-  )
-  .case(
-    { role: "user" },
-    u => `Regular user: ${u.name}`
-  )
-  .when(
-    u => u.age < 18,
-    "Minor user - restricted access"
-  )
+  .case({ role: "admin", age: (n) => n >= 18, preferences: { theme: "dark" } }, "Adult admin with dark mode")
+  .case({ role: "user" }, (u) => `Regular user: ${u.name}`)
+  .when((u) => u.age < 18, "Minor user - restricted access")
   .default("Unknown user type")
 
 // Reusable pattern matchers
 const classifier = Match.builder<Animal, string>()
-  .when(a => a.canFly, "Flying creature")
+  .when((a) => a.canFly, "Flying creature")
   .case({ legs: 0 }, "Legless")
   .case({ legs: 2 }, "Biped")
   .case({ legs: 4 }, "Quadruped")

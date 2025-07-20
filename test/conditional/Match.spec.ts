@@ -268,14 +268,14 @@ describe("Match", () => {
           role: "admin",
           preferences: {
             theme: "dark",
-            notifications: true
-          }
+            notifications: true,
+          },
         }
 
         const result = Match<User, string>(user)
           .case({ role: "admin", preferences: { theme: "dark" } }, "Dark mode admin")
           .case({ role: "admin" }, "Regular admin")
-          .case({ role: "user" }, u => `User: ${u.name}`)
+          .case({ role: "user" }, (u) => `User: ${u.name}`)
           .default("Guest")
 
         expect(result).toBe("Dark mode admin")
@@ -285,13 +285,13 @@ describe("Match", () => {
         const user: User = {
           name: "Bob",
           age: 17,
-          role: "user"
+          role: "user",
         }
 
         const result = Match<User, string>(user)
           .case({ age: (n: number) => n >= 18, role: "admin" }, "Adult admin")
           .case({ age: (n: number) => n >= 18, role: "user" }, "Adult user")
-          .case({ age: (n: number) => n < 18 }, u => `Minor: ${u.name}`)
+          .case({ age: (n: number) => n < 18 }, (u) => `Minor: ${u.name}`)
           .default("Unknown")
 
         expect(result).toBe("Minor: Bob")
@@ -301,7 +301,7 @@ describe("Match", () => {
         const userWithoutPrefs: User = {
           name: "Charlie",
           age: 25,
-          role: "user"
+          role: "user",
         }
 
         const result = Match<User, string>(userWithoutPrefs)
@@ -355,7 +355,7 @@ describe("Match", () => {
 
       it("should enforce exhaustive matching with exhaustive method", () => {
         const status: Status = "success"
-        
+
         const result = Match<Status, string>(status)
           .case("idle", "Waiting")
           .case("loading", "In progress")
@@ -368,37 +368,30 @@ describe("Match", () => {
 
       it("should throw on non-exhaustive match when using exhaustive method", () => {
         const status: Status = "error"
-        
+
         expect(() => {
-          Match<Status, string>(status)
-            .case("idle", "Waiting")
-            .case("loading", "In progress")
-            .exhaustive()
+          Match<Status, string>(status).case("idle", "Waiting").case("loading", "In progress").exhaustive()
         }).toThrow("Non-exhaustive match")
       })
     })
 
     describe("toOption method", () => {
       it("should return Some for successful matches", () => {
-        const someResult = Match(42)
-          .case(42, "found")
-          .toOption()
+        const someResult = Match(42).case(42, "found").toOption()
 
         expect(someResult.isEmpty).toBe(false)
         expect(someResult.get()).toBe("found")
       })
 
       it("should return None for failed matches", () => {
-        const noneResult = Match(99)
-          .case(0, "zero")
-          .toOption()
+        const noneResult = Match(99).case(0, "zero").toOption()
 
         expect(noneResult.isEmpty).toBe(true)
       })
     })
 
     describe("struct pattern matching", () => {
-      type Event = 
+      type Event =
         | { type: "click"; x: number; y: number }
         | { type: "keypress"; key: string; shift?: boolean }
         | { type: "hover"; element: string }
@@ -407,14 +400,18 @@ describe("Match", () => {
         const events: Event[] = [
           { type: "click", x: 100, y: 200 },
           { type: "keypress", key: "Enter" },
-          { type: "hover", element: "button" }
+          { type: "hover", element: "button" },
         ]
 
         const handler = Match.struct<Event, string>()
-          .case({ type: "click" }, e => `Click at (${(e as { type: "click"; x: number; y: number }).x}, ${(e as { type: "click"; x: number; y: number }).y})`)
+          .case(
+            { type: "click" },
+            (e) =>
+              `Click at (${(e as { type: "click"; x: number; y: number }).x}, ${(e as { type: "click"; x: number; y: number }).y})`,
+          )
           .case({ type: "keypress", key: "Enter" }, () => "Enter pressed")
-          .case({ type: "keypress" }, e => `Key: ${(e as { type: "keypress"; key: string }).key}`)
-          .case({ type: "hover" }, e => `Hovering: ${(e as { type: "hover"; element: string }).element}`)
+          .case({ type: "keypress" }, (e) => `Key: ${(e as { type: "keypress"; key: string }).key}`)
+          .case({ type: "hover" }, (e) => `Hovering: ${(e as { type: "hover"; element: string }).element}`)
           .build()
 
         expect(handler(events[0]!)).toBe("Click at (100, 200)")
@@ -428,11 +425,11 @@ describe("Match", () => {
         type Animal = { species: string; legs: number; canFly: boolean }
 
         const classifier = Match.builder<Animal, string>()
-          .when(a => a.canFly, "Flying creature")
+          .when((a) => a.canFly, "Flying creature")
           .case({ legs: 0 }, "Legless creature")
           .case({ legs: 2 }, "Biped")
           .case({ legs: 4 }, "Quadruped")
-          .when(a => a.legs > 4, "Multi-legged")
+          .when((a) => a.legs > 4, "Multi-legged")
           .default("Unknown")
           .build()
 
@@ -445,7 +442,7 @@ describe("Match", () => {
 
     describe("complex real-world patterns", () => {
       it("should handle Redux-style action matching", () => {
-        type Action = 
+        type Action =
           | { type: "SET_USER"; payload: { id: string; name: string } }
           | { type: "LOGOUT" }
           | { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
@@ -458,39 +455,38 @@ describe("Match", () => {
 
         const reducer = (state: State, action: Action): State => {
           return Match<Action, State>(action)
-            .case(
-              { type: "SET_USER" },
-              a => ({ ...state, user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload })
-            )
-            .case(
-              { type: "LOGOUT" },
-              () => ({ ...state, user: null, profile: {} })
-            )
-            .case(
-              { type: "UPDATE_PROFILE" },
-              a => ({
-                ...state,
-                profile: { ...state.profile, [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.value }
-              })
-            )
+            .case({ type: "SET_USER" }, (a) => ({
+              ...state,
+              user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
+            }))
+            .case({ type: "LOGOUT" }, () => ({ ...state, user: null, profile: {} }))
+            .case({ type: "UPDATE_PROFILE" }, (a) => ({
+              ...state,
+              profile: {
+                ...state.profile,
+                [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (
+                  a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
+                ).payload.value,
+              },
+            }))
             .case(
               { type: "API_REQUEST", payload: { method: "DELETE" } },
-              () => state // Ignore deletes
+              () => state, // Ignore deletes
             )
             .default(state)
         }
 
         const initialState: State = { user: null, profile: {} }
-        
-        let state = reducer(initialState, { 
-          type: "SET_USER", 
-          payload: { id: "123", name: "Alice" } 
+
+        let state = reducer(initialState, {
+          type: "SET_USER",
+          payload: { id: "123", name: "Alice" },
         })
         expect(state.user).toEqual({ id: "123", name: "Alice" })
 
         state = reducer(state, {
           type: "UPDATE_PROFILE",
-          payload: { field: "email", value: "alice@example.com" }
+          payload: { field: "email", value: "alice@example.com" },
         })
         expect(state.profile.email).toBe("alice@example.com")
 
