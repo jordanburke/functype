@@ -5,9 +5,9 @@
  */
 
 // Import working example modules
+import * as brandedExamples from "./branded-examples"
 import * as lazyExamples from "./lazy-examples"
 import * as setExamples from "./set-examples"
-import * as brandedExamples from "./branded-examples"
 
 // Verify imports exist (compile-time check)
 void [setExamples, lazyExamples, brandedExamples]

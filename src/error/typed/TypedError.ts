@@ -272,7 +272,7 @@ const TypedErrorCompanion = {
       "status" in value &&
       "context" in value &&
       "_tag" in value &&
-      (value as any)._tag === "Throwable"
+      (value as { _tag: unknown })._tag === "Throwable"
     )
   },
 

@@ -236,19 +236,19 @@ type Email = Brand<"Email", string>
 
 // Simple branding
 const userId = Brand("UserId", "U123456")
-console.log(userId.unbrand())     // "U123456"
-console.log(userId.toString())    // "UserId(U123456)"
+console.log(userId.unbrand()) // "U123456"
+console.log(userId.toString()) // "UserId(U123456)"
 
 // Runtime-validated branding for safer input handling
 const EmailValidator = ValidatedBrand("Email", (s: string) => /^[^@]+@[^@]+\.[^@]+$/.test(s))
 const UserIdValidator = ValidatedBrand("UserId", (s: string) => /^U\d{6}$/.test(s))
 
 // Safe creation with Option/Either return types
-const email = EmailValidator.of("user@example.com")     // Some(Brand<"Email", string>)
-const invalidEmail = EmailValidator.of("invalid")       // None
+const email = EmailValidator.of("user@example.com") // Some(Brand<"Email", string>)
+const invalidEmail = EmailValidator.of("invalid") // None
 
-const userResult = UserIdValidator.from("U123456")      // Right(Brand<"UserId", string>)
-const userError = UserIdValidator.from("invalid")       // Left("Invalid UserId: validation failed")
+const userResult = UserIdValidator.from("U123456") // Right(Brand<"UserId", string>)
+const userError = UserIdValidator.from("invalid") // Left("Invalid UserId: validation failed")
 
 // Type safety in action
 function getUserByEmail(email: Email): User {

@@ -56,13 +56,13 @@ const quantity = Brand("Quantity", 5) as Quantity
 const price = Brand("Price", 99.99) as Price
 
 // Access the original values using instance methods
-console.log(userId.unbrand())        // "user-123"
-console.log(userId.unwrap())         // "user-123" (alias)
-console.log(userId.toString())       // "UserId(user-123)"
+console.log(userId.unbrand()) // "user-123"
+console.log(userId.unwrap()) // "user-123" (alias)
+console.log(userId.toString()) // "UserId(user-123)"
 
 // Function that only accepts UserId
 function getUserById(id: UserId): string {
-  return `User: ${id.unbrand()}`  // Use unbrand() to get the string
+  return `User: ${id.unbrand()}` // Use unbrand() to get the string
 }
 
 // This works
@@ -90,13 +90,13 @@ const isActive = createIsActive(true)
 
 // Access original values with instance methods
 console.log(userId.unbrand().toUpperCase()) // "USER-123"
-console.log(price.unbrand() * 2)            // 199.98
-console.log(isActive.unbrand() && true)     // true
+console.log(price.unbrand() * 2) // 199.98
+console.log(isActive.unbrand() && true) // true
 
 // Enhanced string representation
-console.log(userId.toString())    // "UserId(user-123)"
-console.log(price.toString())     // "Price(99.99)"
-console.log(isActive.toString())  // "IsActive(true)"
+console.log(userId.toString()) // "UserId(user-123)"
+console.log(price.toString()) // "Price(99.99)"
+console.log(isActive.toString()) // "IsActive(true)"
 ```
 
 ### Creating Custom Branders
@@ -124,11 +124,11 @@ const userId = Brand("UserId", "user-123") as UserId
 // Three ways to remove the brand:
 
 // 1. Instance method (recommended)
-const rawId1 = userId.unbrand()  // Type is string
-const rawId2 = userId.unwrap()   // Type is string (alias)
+const rawId1 = userId.unbrand() // Type is string
+const rawId2 = userId.unwrap() // Type is string (alias)
 
 // 2. Utility function (backward compatibility)
-const rawId3 = unbrand(userId)   // Type is string
+const rawId3 = unbrand(userId) // Type is string
 
 console.log(rawId1, rawId2, rawId3) // All output: "user-123"
 ```
@@ -161,15 +161,15 @@ const Email = ValidatedBrand("Email", (s: string) => /^[^@]+@[^@]+\.[^@]+$/.test
 const PositiveNumber = ValidatedBrand("PositiveNumber", (n: number) => n > 0)
 
 // Safe creation with Option return type
-const email = Email.of("user@example.com")     // Some(Brand<"Email", string>)
-const invalid = Email.of("not-an-email")       // None
+const email = Email.of("user@example.com") // Some(Brand<"Email", string>)
+const invalid = Email.of("not-an-email") // None
 
 // Safe creation with Either return type for error details
-const result = Email.from("user@example.com")  // Right(Brand<"Email", string>)
-const error = Email.from("invalid")            // Left("Invalid Email: validation failed")
+const result = Email.from("user@example.com") // Right(Brand<"Email", string>)
+const error = Email.from("invalid") // Left("Invalid Email: validation failed")
 
 // Unsafe creation (throws on invalid input)
-const validEmail = Email.unsafeOf("user@example.com")  // Brand<"Email", string>
+const validEmail = Email.unsafeOf("user@example.com") // Brand<"Email", string>
 // Email.unsafeOf("invalid")  // throws Error
 
 // Type guard
@@ -181,30 +181,30 @@ if (Email.is(someValue)) {
 ### Pre-built Validators
 
 ```typescript
-import { 
-  PositiveNumber, 
-  NonEmptyString, 
-  EmailAddress, 
+import {
+  PositiveNumber,
+  NonEmptyString,
+  EmailAddress,
   UUID,
   BoundedNumber,
   BoundedString,
-  PatternString 
+  PatternString,
 } from "@/branded"
 
 // Use pre-built validators
-const age = PositiveNumber.of(25)                    // Some(Brand<"PositiveNumber", number>)
-const name = NonEmptyString.of("John")               // Some(Brand<"NonEmptyString", string>)
-const email = EmailAddress.of("user@example.com")   // Some(Brand<"EmailAddress", string>)
-const id = UUID.of("123e4567-e89b-12d3-a456-426614174000")  // Some(Brand<"UUID", string>)
+const age = PositiveNumber.of(25) // Some(Brand<"PositiveNumber", number>)
+const name = NonEmptyString.of("John") // Some(Brand<"NonEmptyString", string>)
+const email = EmailAddress.of("user@example.com") // Some(Brand<"EmailAddress", string>)
+const id = UUID.of("123e4567-e89b-12d3-a456-426614174000") // Some(Brand<"UUID", string>)
 
 // Create custom bounded validators
 const Percentage = BoundedNumber("Percentage", 0, 100)
 const Username = BoundedString("Username", 3, 20)
 const HexColor = PatternString("HexColor", /^#[0-9a-f]{6}$/i)
 
-const percent = Percentage.of(75)     // Some(Brand<"Percentage", number>)
-const user = Username.of("johndoe")   // Some(Brand<"Username", string>)
-const color = HexColor.of("#ff0000")  // Some(Brand<"HexColor", string>)
+const percent = Percentage.of(75) // Some(Brand<"Percentage", number>)
+const user = Username.of("johndoe") // Some(Brand<"Username", string>)
+const color = HexColor.of("#ff0000") // Some(Brand<"HexColor", string>)
 ```
 
 ### Refining Validators
@@ -212,11 +212,11 @@ const color = HexColor.of("#ff0000")  // Some(Brand<"HexColor", string>)
 ```typescript
 // Build more specific validators from existing ones
 const SmallPositiveInteger = PositiveNumber.refine("SmallPositiveInteger", (n) => {
-  const num = n.unbrand()  // Get the actual number
+  const num = n.unbrand() // Get the actual number
   return num < 100 && Number.isInteger(num)
 })
 
-const result = SmallPositiveInteger.of(PositiveNumber.unsafeOf(50))  // Some(refined brand)
+const result = SmallPositiveInteger.of(PositiveNumber.unsafeOf(50)) // Some(refined brand)
 ```
 
 ### ValidatedBrand with Instance Methods
@@ -227,9 +227,9 @@ All ValidatedBrand instances create enhanced Brand objects with instance methods
 const email = EmailAddress.of("user@example.com")
 if (!email.isEmpty) {
   const branded = email.get()
-  console.log(branded.unbrand())     // "user@example.com"
-  console.log(branded.unwrap())      // "user@example.com"  
-  console.log(branded.toString())    // "EmailAddress(user@example.com)"
+  console.log(branded.unbrand()) // "user@example.com"
+  console.log(branded.unwrap()) // "user@example.com"
+  console.log(branded.toString()) // "EmailAddress(user@example.com)"
 }
 ```
 
@@ -240,7 +240,7 @@ if (!email.isEmpty) {
 Branded types now include **instance methods** while maintaining their phantom type nature:
 
 - **Phantom Brand**: The `__brand` property exists only at compile-time for type safety
-- **Instance Methods**: `unbrand()`, `unwrap()`, and `toString()` are added at runtime  
+- **Instance Methods**: `unbrand()`, `unwrap()`, and `toString()` are added at runtime
 - **Object Structure**: Brand objects are enhanced primitive values with attached methods
 - **Performance**: Minimal runtime overhead for significant developer experience improvement
 
@@ -261,7 +261,7 @@ The enhanced Brand implementation maintains backward compatibility:
 // Old way (still works)
 const rawValue = unbrand(brandedValue)
 
-// New way (recommended)  
+// New way (recommended)
 const rawValue = brandedValue.unbrand()
 ```
 

@@ -10,7 +10,7 @@
       "example": "userId.unbrand() // 'user-123'"
     },
     {
-      "name": "unwrap", 
+      "name": "unwrap",
       "description": "Alias for unbrand() - extract the original value",
       "signature": "unwrap(): T",
       "example": "userId.unwrap() // 'user-123'"
@@ -18,7 +18,7 @@
     {
       "name": "toString",
       "description": "Get a readable string representation of the branded value",
-      "signature": "toString(): string", 
+      "signature": "toString(): string",
       "example": "userId.toString() // 'UserId(user-123)'"
     }
   ],
@@ -42,14 +42,14 @@
       "example": "const createUserId = BrandedString('UserId')"
     },
     {
-      "name": "BrandedNumber", 
+      "name": "BrandedNumber",
       "description": "Factory for creating number branded type constructors",
       "signature": "BrandedNumber<K>(brand: K): (value: number) => Brand<K, number>",
       "example": "const createAge = BrandedNumber('Age')"
     },
     {
       "name": "BrandedBoolean",
-      "description": "Factory for creating boolean branded type constructors", 
+      "description": "Factory for creating boolean branded type constructors",
       "signature": "BrandedBoolean<K>(brand: K): (value: boolean) => Brand<K, boolean>",
       "example": "const createIsActive = BrandedBoolean('IsActive')"
     }
@@ -66,7 +66,7 @@
       "example": "type RawUserId = Unbrand<UserId> // string"
     },
     {
-      "name": "ExtractBrand<T>", 
+      "name": "ExtractBrand<T>",
       "description": "Extract the brand identifier from a branded type",
       "example": "type UserBrand = ExtractBrand<UserId> // 'UserId'"
     }
@@ -84,13 +84,10 @@
     },
     {
       "name": "Factory Pattern",
-      "description": "Create reusable branded type constructors", 
+      "description": "Create reusable branded type constructors",
       "code": "const createEmail = BrandedString('Email')\nconst email = createEmail('user@example.com')\nconsole.log(email.toString()) // 'Email(user@example.com)'"
     }
   ],
   "relatedTypes": ["ValidatedBrand"],
-  "seeAlso": [
-    "ValidatedBrand for runtime validation",
-    "Functype design patterns for type safety"
-  ]
+  "seeAlso": ["ValidatedBrand for runtime validation", "Functype design patterns for type safety"]
 }

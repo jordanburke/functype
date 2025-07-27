@@ -1,7 +1,7 @@
 {
   "module": "ValidatedBrand",
   "description": "Branded types with runtime validation using Option/Either for safe value creation",
-  "category": "Utility", 
+  "category": "Utility",
   "keyMethods": [
     {
       "name": "of",
@@ -12,7 +12,7 @@
     {
       "name": "from",
       "description": "Create a validated brand with error details using Either",
-      "signature": "from(value: T): Either<string, Brand<K, T>>", 
+      "signature": "from(value: T): Either<string, Brand<K, T>>",
       "example": "Email.from('invalid') // Left('Invalid Email: validation failed')"
     },
     {
@@ -50,7 +50,7 @@
     {
       "name": "BoundedString",
       "description": "Create a string validator with length constraints",
-      "signature": "BoundedString(brand: string, minLength: number, maxLength: number): ValidatedBrand<string, string>", 
+      "signature": "BoundedString(brand: string, minLength: number, maxLength: number): ValidatedBrand<string, string>",
       "example": "const Username = BoundedString('Username', 3, 20)"
     },
     {
@@ -67,13 +67,13 @@
       "example": "PositiveNumber.of(42) // Some(Brand<'PositiveNumber', number>)"
     },
     {
-      "name": "NonNegativeNumber", 
+      "name": "NonNegativeNumber",
       "description": "Validates numbers greater than or equal to 0",
       "example": "NonNegativeNumber.of(0) // Some(Brand<'NonNegativeNumber', number>)"
     },
     {
       "name": "IntegerNumber",
-      "description": "Validates integer numbers", 
+      "description": "Validates integer numbers",
       "example": "IntegerNumber.of(42) // Some, IntegerNumber.of(42.5) // None"
     },
     {
@@ -130,9 +130,5 @@
     }
   ],
   "relatedTypes": ["Brand", "Option", "Either"],
-  "seeAlso": [
-    "Brand for simple nominal typing", 
-    "Option for safe nullable values",
-    "Either for error handling"
-  ]
+  "seeAlso": ["Brand for simple nominal typing", "Option for safe nullable values", "Either for error handling"]
 }
