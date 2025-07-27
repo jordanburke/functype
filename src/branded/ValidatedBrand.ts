@@ -71,7 +71,7 @@ export function ValidatedBrand<K extends string, T>(brand: K, validate: (value: 
       newBrand: K2,
       refineValidate: (value: Brand<K, T>) => boolean,
     ): ValidatedBrand<K2, Brand<K, T>> =>
-      ValidatedBrand(newBrand, (value: Brand<K, T>) => validate(value as T) && refineValidate(value)),
+      ValidatedBrand(newBrand, (value: Brand<K, T>) => validate(value.unbrand()) && refineValidate(value)),
   }
 }
 

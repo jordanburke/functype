@@ -11,7 +11,7 @@ describe("Validation", () => {
         "test.user@example.com",
         "user+tag@example.co.uk",
         "123@example.com",
-        "a@b.c"
+        "a@b.c",
       ]
 
       for (const email of validEmails) {
@@ -31,7 +31,7 @@ describe("Validation", () => {
         "",
         null,
         undefined,
-        123
+        123,
       ]
 
       for (const email of invalidEmails) {
@@ -40,7 +40,9 @@ describe("Validation", () => {
         if (result.isLeft()) {
           const error = result.fold(
             (e) => e,
-            () => { throw new Error("Should not be right") }
+            () => {
+              throw new Error("Should not be right")
+            },
           )
           expect(error.code).toBe("VALIDATION_FAILED")
           expect(error.context.rule).toBe("must be a valid email")
@@ -59,7 +61,7 @@ describe("Validation", () => {
         "https://example.com/path",
         "https://example.com:8080",
         "ftp://files.example.com",
-        "https://example.com/path?query=value&other=123"
+        "https://example.com/path?query=value&other=123",
       ]
 
       for (const url of validUrls) {
@@ -70,15 +72,7 @@ describe("Validation", () => {
     })
 
     it("should reject invalid URLs", () => {
-      const invalidUrls = [
-        "not a url",
-        "example.com",
-        "//example.com",
-        "https://",
-        "",
-        null,
-        undefined
-      ]
+      const invalidUrls = ["not a url", "example.com", "//example.com", "https://", "", null, undefined]
 
       for (const url of invalidUrls) {
         const result = urlValidator(url)
@@ -96,7 +90,7 @@ describe("Validation", () => {
         "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
         "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
         "6ba7b812-9dad-11d1-80b4-00c04fd430c8",
-        "6ba7b814-9dad-11d1-80b4-00c04fd430c8"
+        "6ba7b814-9dad-11d1-80b4-00c04fd430c8",
       ]
 
       for (const uuid of validUuids) {
@@ -115,7 +109,7 @@ describe("Validation", () => {
         "550e8400-e29b-41d4-z716-446655440000", // Invalid character
         "",
         null,
-        undefined
+        undefined,
       ]
 
       for (const uuid of invalidUuids) {
@@ -132,7 +126,7 @@ describe("Validation", () => {
       expect(numericValidator(123).isRight()).toBe(true)
       expect(numericValidator("123").isRight()).toBe(true)
       expect(numericValidator("456").get()).toBe("456")
-      
+
       expect(numericValidator("abc").isLeft()).toBe(true)
       expect(numericValidator("12.3").isLeft()).toBe(true)
       expect(numericValidator("").isLeft()).toBe(true)
@@ -144,7 +138,7 @@ describe("Validation", () => {
       expect(minValidator(18).isRight()).toBe(true)
       expect(minValidator(19).isRight()).toBe(true)
       expect(minValidator(100).isRight()).toBe(true)
-      
+
       expect(minValidator(17).isLeft()).toBe(true)
       expect(minValidator(0).isLeft()).toBe(true)
       expect(minValidator(-5).isLeft()).toBe(true)
@@ -157,7 +151,7 @@ describe("Validation", () => {
       expect(maxValidator(99).isRight()).toBe(true)
       expect(maxValidator(0).isRight()).toBe(true)
       expect(maxValidator(-10).isRight()).toBe(true)
-      
+
       expect(maxValidator(101).isLeft()).toBe(true)
       expect(maxValidator(200).isLeft()).toBe(true)
     })
@@ -171,7 +165,7 @@ describe("Validation", () => {
       expect(requiredValidator("0").isRight()).toBe(true)
       expect(requiredValidator(0).isRight()).toBe(true)
       expect(requiredValidator(false).isRight()).toBe(true)
-      
+
       expect(requiredValidator("").isLeft()).toBe(true)
       expect(requiredValidator(null).isLeft()).toBe(true)
       expect(requiredValidator(undefined).isLeft()).toBe(true)
@@ -183,7 +177,7 @@ describe("Validation", () => {
       expect(alphaValidator("abc").isRight()).toBe(true)
       expect(alphaValidator("ABC").isRight()).toBe(true)
       expect(alphaValidator("AbCdEf").isRight()).toBe(true)
-      
+
       expect(alphaValidator("abc123").isLeft()).toBe(true)
       expect(alphaValidator("abc ").isLeft()).toBe(true)
       expect(alphaValidator("").isLeft()).toBe(true)
@@ -196,7 +190,7 @@ describe("Validation", () => {
       expect(alphanumericValidator("abc123").isRight()).toBe(true)
       expect(alphanumericValidator("ABC").isRight()).toBe(true)
       expect(alphanumericValidator("123").isRight()).toBe(true)
-      
+
       expect(alphanumericValidator("abc-123").isLeft()).toBe(true)
       expect(alphanumericValidator("abc 123").isLeft()).toBe(true)
       expect(alphanumericValidator("").isLeft()).toBe(true)
@@ -221,7 +215,7 @@ describe("Validation", () => {
 
       expect(phoneValidator("123-456-7890").isRight()).toBe(true)
       expect(phoneValidator("111-222-3333").isRight()).toBe(true)
-      
+
       expect(phoneValidator("1234567890").isLeft()).toBe(true)
       expect(phoneValidator("123-456-789").isLeft()).toBe(true)
       expect(phoneValidator("abc-def-ghij").isLeft()).toBe(true)
@@ -233,7 +227,7 @@ describe("Validation", () => {
       expect(inValidator("small").isRight()).toBe(true)
       expect(inValidator("medium").isRight()).toBe(true)
       expect(inValidator("large").isRight()).toBe(true)
-      
+
       expect(inValidator("xl").isLeft()).toBe(true)
       expect(inValidator("tiny").isLeft()).toBe(true)
       expect(inValidator("").isLeft()).toBe(true)
@@ -245,7 +239,7 @@ describe("Validation", () => {
       expect(notInValidator("user").isRight()).toBe(true)
       expect(notInValidator("guest").isRight()).toBe(true)
       expect(notInValidator("moderator").isRight()).toBe(true)
-      
+
       expect(notInValidator("admin").isLeft()).toBe(true)
       expect(notInValidator("root").isLeft()).toBe(true)
       expect(notInValidator("superuser").isLeft()).toBe(true)
@@ -260,7 +254,7 @@ describe("Validation", () => {
       expect(dateValidator("01/01/2023").isRight()).toBe(true)
       expect(dateValidator("Jan 1, 2023").isRight()).toBe(true)
       expect(dateValidator(new Date().toISOString()).isRight()).toBe(true)
-      
+
       expect(dateValidator("not a date").isLeft()).toBe(true)
       expect(dateValidator("2023-13-01").isLeft()).toBe(true)
       expect(dateValidator("").isLeft()).toBe(true)
@@ -274,7 +268,7 @@ describe("Validation", () => {
       yesterday.setDate(yesterday.getDate() - 1)
 
       expect(futureValidator(tomorrow.toISOString()).isRight()).toBe(true)
-      
+
       expect(futureValidator(yesterday.toISOString()).isLeft()).toBe(true)
       expect(futureValidator(new Date().toISOString()).isLeft()).toBe(true)
     })
@@ -287,7 +281,7 @@ describe("Validation", () => {
       yesterday.setDate(yesterday.getDate() - 1)
 
       expect(pastValidator(yesterday.toISOString()).isRight()).toBe(true)
-      
+
       expect(pastValidator(tomorrow.toISOString()).isLeft()).toBe(true)
       expect(pastValidator(new Date().toISOString()).isLeft()).toBe(true)
     })
@@ -298,28 +292,27 @@ describe("Validation", () => {
       const emailValidator = Validation.combine(
         Validation.rule<string>("required"),
         Validation.rule<string>("email"),
-        Validation.rule<string>("maxLength:50")
+        Validation.rule<string>("maxLength:50"),
       )
 
       expect(emailValidator("user@example.com").isRight()).toBe(true)
-      
+
       expect(emailValidator("").isLeft()).toBe(true) // Fails required
       expect(emailValidator("not-an-email").isLeft()).toBe(true) // Fails email
       expect(emailValidator("very.long.email.address.that.exceeds.fifty.characters@example.com").isLeft()).toBe(true) // Fails maxLength
     })
 
     it("should stop at first validation failure", () => {
-      const validator = Validation.combine(
-        Validation.rule<string>("required"),
-        Validation.rule<string>("email")
-      )
+      const validator = Validation.combine(Validation.rule<string>("required"), Validation.rule<string>("email"))
 
       const result = validator("")
       expect(result.isLeft()).toBe(true)
       if (result.isLeft()) {
         const error = result.fold(
           (e) => e,
-          () => { throw new Error("Should not be right") }
+          () => {
+            throw new Error("Should not be right")
+          },
         )
         expect(error.context.rule).toBe("is required") // Should fail on required, not email
       }
@@ -330,13 +323,13 @@ describe("Validation", () => {
     it("should create custom validators", () => {
       const isEven = Validation.custom<number>(
         (value) => typeof value === "number" && value % 2 === 0,
-        "must be an even number"
+        "must be an even number",
       )
 
       expect(isEven(2).isRight()).toBe(true)
       expect(isEven(4).isRight()).toBe(true)
       expect(isEven(100).isRight()).toBe(true)
-      
+
       expect(isEven(1).isLeft()).toBe(true)
       expect(isEven(3).isLeft()).toBe(true)
       expect(isEven("2").isLeft()).toBe(true)
@@ -345,15 +338,12 @@ describe("Validation", () => {
     it("should compose custom validators", () => {
       const isPositiveEven = Validation.combine(
         Validation.rule<number>("min:0"),
-        Validation.custom<number>(
-          (value) => typeof value === "number" && value % 2 === 0,
-          "must be an even number"
-        )
+        Validation.custom<number>((value) => typeof value === "number" && value % 2 === 0, "must be an even number"),
       )
 
       expect(isPositiveEven(2).isRight()).toBe(true)
       expect(isPositiveEven(100).isRight()).toBe(true)
-      
+
       expect(isPositiveEven(-2).isLeft()).toBe(true) // Fails min:0
       expect(isPositiveEven(3).isLeft()).toBe(true) // Fails even check
     })
@@ -365,14 +355,14 @@ describe("Validation", () => {
         name: Validation.rule<string>("required"),
         email: Validation.rule<string>("email"),
         age: Validation.rule<number>("min:18"),
-        role: Validation.rule<string>("in:user,admin,moderator")
+        role: Validation.rule<string>("in:user,admin,moderator"),
       }
 
       const validData = {
         name: "John Doe",
         email: "john@example.com",
         age: 25,
-        role: "user"
+        role: "user",
       }
 
       const result = Validation.form(userSchema, validData)
@@ -387,13 +377,13 @@ describe("Validation", () => {
       const schema = {
         name: Validation.rule<string>("required"),
         email: Validation.rule<string>("email"),
-        age: Validation.rule<number>("min:18")
+        age: Validation.rule<number>("min:18"),
       }
 
       const invalidData = {
         name: "", // Invalid: required
         email: "not-an-email", // Invalid: email format
-        age: 16 // Invalid: too young
+        age: 16, // Invalid: too young
       }
 
       const result = Validation.form(schema, invalidData)
@@ -401,10 +391,12 @@ describe("Validation", () => {
       if (result.isLeft()) {
         const errors = result.fold(
           (e) => e,
-          () => { throw new Error("Should not be right") }
+          () => {
+            throw new Error("Should not be right")
+          },
         )
         expect(errors.length).toBe(3)
-        
+
         const errorList = errors.toArray()
         expect(errorList[0]!.context.field).toBe("name")
         expect(errorList[1]!.context.field).toBe("email")
@@ -416,12 +408,12 @@ describe("Validation", () => {
       const schema = {
         name: Validation.rule<string>("required"),
         email: Validation.rule<string>("email"),
-        phone: Validation.rule<string>("pattern:^\\d{3}-\\d{3}-\\d{4}$")
+        phone: Validation.rule<string>("pattern:^\\d{3}-\\d{3}-\\d{4}$"),
       }
 
       const partialData = {
         name: "John Doe",
-        email: "john@example.com"
+        email: "john@example.com",
         // phone is missing
       }
 
@@ -430,7 +422,9 @@ describe("Validation", () => {
       if (result.isLeft()) {
         const errors = result.fold(
           (e) => e,
-          () => { throw new Error("Should not be right") }
+          () => {
+            throw new Error("Should not be right")
+          },
         )
         expect(errors.length).toBe(1)
         expect(errors.toArray()[0]!.context.field).toBe("phone")
@@ -447,7 +441,7 @@ describe("Validation", () => {
       expect(Validation.validators.numeric(123).isRight()).toBe(true)
       expect(Validation.validators.positiveNumber(5).isRight()).toBe(true)
       expect(Validation.validators.nonEmptyString("hello").isRight()).toBe(true)
-      
+
       expect(Validation.validators.email("not-email").isLeft()).toBe(true)
       expect(Validation.validators.positiveNumber(-5).isLeft()).toBe(true)
       expect(Validation.validators.nonEmptyString("   ").isLeft()).toBe(true)
@@ -457,16 +451,16 @@ describe("Validation", () => {
   describe("type safety with template literals", () => {
     it("should enforce validation rule types at compile time", () => {
       // These are compile-time tests - TypeScript enforces the template literal patterns
-      
+
       const minRule: ValidationRule = "min:10"
       const emailRule: ValidationRule = "email"
       const patternRule: ValidationRule = "pattern:[A-Z]+"
-      
+
       // These would fail at compile time:
       // const badRule1: ValidationRule = "invalid:rule"
       // const badRule2: ValidationRule = "min:abc" // min requires number
       // const badRule3: ValidationRule = "unknown"
-      
+
       expect(minRule).toBeDefined()
       expect(emailRule).toBeDefined()
       expect(patternRule).toBeDefined()

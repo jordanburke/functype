@@ -1,12 +1,12 @@
 import { Either, Left, Right } from "@/either"
+import { TypedError } from "@/error/typed/TypedError"
 import { List } from "@/list"
 import type { Type } from "@/types"
-import { TypedError } from "@/error/typed/TypedError"
 
 /**
  * Validation rule types using template literal types
  */
-export type ValidationRule = 
+export type ValidationRule =
   | `min:${number}`
   | `max:${number}`
   | `minLength:${number}`
@@ -42,10 +42,7 @@ export type FieldValidation<T> = {
 /**
  * Form validation result
  */
-export type FormValidation<T extends Record<string, Type>> = Either<
-  List<TypedError<"VALIDATION_FAILED">>,
-  T
->
+export type FormValidation<T extends Record<string, Type>> = Either<List<TypedError<"VALIDATION_FAILED">>, T>
 
 /**
  * Create validators from validation rules
@@ -247,10 +244,7 @@ const ValidationConstructor = {
    *   "must be an even number"
    * )
    */
-  custom: <T extends Type>(
-    predicate: (value: unknown) => boolean,
-    errorMessage: string
-  ): Validator<T> => {
+  custom: <T extends Type>(predicate: (value: unknown) => boolean, errorMessage: string): Validator<T> => {
     return (value: unknown): Either<TypedError<"VALIDATION_FAILED">, T> => {
       if (!predicate(value)) {
         return Left(TypedError.validation("value", value, errorMessage))
@@ -271,7 +265,7 @@ const ValidationConstructor = {
    */
   form: <T extends Record<string, Type>>(
     schema: { [K in keyof T]: Validator<T[K]> },
-    data: Record<string, unknown>
+    data: Record<string, unknown>,
   ): FormValidation<T> => {
     const errors: TypedError<"VALIDATION_FAILED">[] = []
     const validated: Partial<T> = {}
@@ -279,11 +273,13 @@ const ValidationConstructor = {
     for (const [field, validator] of Object.entries(schema)) {
       const value = data[field]
       const result = validator(value)
-      
+
       if (result.isLeft()) {
         const error = result.fold(
           (e: TypedError<"VALIDATION_FAILED">) => e,
-          () => { throw new Error("Should not be left") }
+          () => {
+            throw new Error("Should not be left")
+          },
         )
         // Update the error context with the field name
         const fieldError = TypedError.validation(field, value, error.context.rule)
@@ -315,19 +311,16 @@ const ValidationCompanion = {
     numeric: ValidationConstructor.rule<number>("numeric"),
     positiveNumber: ValidationConstructor.combine(
       ValidationConstructor.rule<number>("numeric"),
-      ValidationConstructor.rule<number>("min:0")
+      ValidationConstructor.rule<number>("min:0"),
     ),
     nonEmptyString: ValidationConstructor.combine(
       ValidationConstructor.rule<string>("required"),
       ValidationConstructor.custom<string>(
         (value) => typeof value === "string" && value.trim().length > 0,
-        "must not be empty"
-      )
+        "must not be empty",
+      ),
     ),
   },
 }
 
-export const Validation = Object.assign(
-  ValidationConstructor.rule,
-  ValidationCompanion
-)
+export const Validation = Object.assign(ValidationConstructor.rule, ValidationCompanion)

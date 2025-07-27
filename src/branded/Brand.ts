@@ -4,8 +4,12 @@
  * but considered different by TypeScript's type system
  */
 
-// The brand symbol type
-export type Brand<K extends string, T> = T & { readonly __brand: K }
+// The brand symbol type with instance methods
+export type Brand<K extends string, T> = T & {
+  readonly __brand: K
+  readonly unbrand: () => T
+  readonly unwrap: () => T
+}
 
 // Utility type to extract the underlying type from a branded type
 export type Unbrand<T> = T extends Brand<string, infer U> ? U : never
@@ -14,12 +18,24 @@ export type Unbrand<T> = T extends Brand<string, infer U> ? U : never
 export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
 
 /**
- * Helper to create a branded type
+ * Helper to create a branded type with instance methods
+ * @param brand - The brand name
  * @param value - The value to brand
- * @returns The branded value
+ * @returns The branded value with unbrand/unwrap methods
  */
 export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
-  return value as Brand<K, T>
+  const branded = value as Brand<K, T>
+  return Object.assign(branded, {
+    unbrand(): T {
+      return value
+    },
+    unwrap(): T {
+      return value
+    },
+    toString(): string {
+      return `${brand}(${String(value)})`
+    },
+  })
 }
 
 /**
@@ -28,7 +44,7 @@ export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
  * @returns The original value without the brand
  */
 export function unbrand<T>(branded: Brand<string, T>): T {
-  return branded as T
+  return branded.unbrand()
 }
 
 /**

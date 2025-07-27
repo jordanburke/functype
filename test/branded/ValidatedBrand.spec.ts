@@ -15,7 +15,17 @@ describe("ValidatedBrand", () => {
     it("should accept positive numbers", () => {
       const result = PositiveNumber.of(5)
       expect(result.isEmpty).toBe(false)
-      expect(result.map((_) => _ as number).getOrElse(0)).toBe(5)
+      expect(result.map((_) => _.unbrand()).getOrElse(0)).toBe(5)
+    })
+
+    it("should support unbrand/unwrap methods on validated brands", () => {
+      const result = PositiveNumber.of(42)
+      expect(result.isEmpty).toBe(false)
+
+      const branded = result.get()
+      expect(branded.unbrand()).toBe(42)
+      expect(branded.unwrap()).toBe(42)
+      expect(branded.toString()).toBe("PositiveNumber(42)")
     })
 
     it("should reject zero and negative numbers", () => {
@@ -123,7 +133,7 @@ describe("ValidatedBrand", () => {
   describe("refine", () => {
     it("should allow refining existing brands", () => {
       const SmallPositiveInteger = PositiveNumber.refine("SmallPositiveInteger", (n) => {
-        const num = n as unknown as number
+        const num = n.unbrand()
         return num < 100 && Number.isInteger(num)
       })
 

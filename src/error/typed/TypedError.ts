@@ -3,9 +3,9 @@ import { Throwable } from "@/core/throwable/Throwable"
 /**
  * Type-safe error codes using template literal types
  */
-export type ErrorCode = 
+export type ErrorCode =
   | "VALIDATION_FAILED"
-  | "NETWORK_ERROR" 
+  | "NETWORK_ERROR"
   | "AUTH_REQUIRED"
   | "NOT_FOUND"
   | "PERMISSION_DENIED"
@@ -18,49 +18,75 @@ export type ErrorCode =
 /**
  * Template literal type for error messages based on error code
  */
-export type ErrorMessage<T extends ErrorCode> = 
-  T extends "VALIDATION_FAILED" ? `Validation failed: ${string}`
-  : T extends "NETWORK_ERROR" ? `Network error: ${string}`
-  : T extends "AUTH_REQUIRED" ? `Authentication required: ${string}`
-  : T extends "NOT_FOUND" ? `Not found: ${string}`
-  : T extends "PERMISSION_DENIED" ? `Permission denied: ${string}`
-  : T extends "RATE_LIMITED" ? `Rate limit exceeded: ${string}`
-  : T extends "INTERNAL_ERROR" ? `Internal server error: ${string}`
-  : T extends "BAD_REQUEST" ? `Bad request: ${string}`
-  : T extends "CONFLICT" ? `Conflict: ${string}`
-  : T extends "TIMEOUT" ? `Request timeout: ${string}`
-  : never
+export type ErrorMessage<T extends ErrorCode> = T extends "VALIDATION_FAILED"
+  ? `Validation failed: ${string}`
+  : T extends "NETWORK_ERROR"
+    ? `Network error: ${string}`
+    : T extends "AUTH_REQUIRED"
+      ? `Authentication required: ${string}`
+      : T extends "NOT_FOUND"
+        ? `Not found: ${string}`
+        : T extends "PERMISSION_DENIED"
+          ? `Permission denied: ${string}`
+          : T extends "RATE_LIMITED"
+            ? `Rate limit exceeded: ${string}`
+            : T extends "INTERNAL_ERROR"
+              ? `Internal server error: ${string}`
+              : T extends "BAD_REQUEST"
+                ? `Bad request: ${string}`
+                : T extends "CONFLICT"
+                  ? `Conflict: ${string}`
+                  : T extends "TIMEOUT"
+                    ? `Request timeout: ${string}`
+                    : never
 
 /**
  * HTTP status codes mapped to error codes
  */
-export type ErrorStatus<T extends ErrorCode> = 
-  T extends "VALIDATION_FAILED" | "BAD_REQUEST" ? 400
-  : T extends "AUTH_REQUIRED" ? 401
-  : T extends "PERMISSION_DENIED" ? 403
-  : T extends "NOT_FOUND" ? 404
-  : T extends "CONFLICT" ? 409
-  : T extends "RATE_LIMITED" ? 429
-  : T extends "TIMEOUT" ? 408
-  : T extends "INTERNAL_ERROR" ? 500
-  : T extends "NETWORK_ERROR" ? 503
-  : 500
+export type ErrorStatus<T extends ErrorCode> = T extends "VALIDATION_FAILED" | "BAD_REQUEST"
+  ? 400
+  : T extends "AUTH_REQUIRED"
+    ? 401
+    : T extends "PERMISSION_DENIED"
+      ? 403
+      : T extends "NOT_FOUND"
+        ? 404
+        : T extends "CONFLICT"
+          ? 409
+          : T extends "RATE_LIMITED"
+            ? 429
+            : T extends "TIMEOUT"
+              ? 408
+              : T extends "INTERNAL_ERROR"
+                ? 500
+                : T extends "NETWORK_ERROR"
+                  ? 503
+                  : 500
 
 /**
  * Context type for each error code
  */
-export type TypedErrorContext<T extends ErrorCode> = 
-  T extends "VALIDATION_FAILED" ? { field: string; value: unknown; rule: string }
-  : T extends "NETWORK_ERROR" ? { url: string; method: string; statusCode?: number }
-  : T extends "AUTH_REQUIRED" ? { resource: string; requiredRole?: string }
-  : T extends "NOT_FOUND" ? { resource: string; id: string | number }
-  : T extends "PERMISSION_DENIED" ? { action: string; resource: string; userId?: string }
-  : T extends "RATE_LIMITED" ? { limit: number; window: string; retryAfter?: number }
-  : T extends "INTERNAL_ERROR" ? { errorId: string; timestamp: string }
-  : T extends "BAD_REQUEST" ? { reason: string; expected?: string }
-  : T extends "CONFLICT" ? { resource: string; conflictingValue: string }
-  : T extends "TIMEOUT" ? { duration: number; operation: string }
-  : Record<string, unknown>
+export type TypedErrorContext<T extends ErrorCode> = T extends "VALIDATION_FAILED"
+  ? { field: string; value: unknown; rule: string }
+  : T extends "NETWORK_ERROR"
+    ? { url: string; method: string; statusCode?: number }
+    : T extends "AUTH_REQUIRED"
+      ? { resource: string; requiredRole?: string }
+      : T extends "NOT_FOUND"
+        ? { resource: string; id: string | number }
+        : T extends "PERMISSION_DENIED"
+          ? { action: string; resource: string; userId?: string }
+          : T extends "RATE_LIMITED"
+            ? { limit: number; window: string; retryAfter?: number }
+            : T extends "INTERNAL_ERROR"
+              ? { errorId: string; timestamp: string }
+              : T extends "BAD_REQUEST"
+                ? { reason: string; expected?: string }
+                : T extends "CONFLICT"
+                  ? { resource: string; conflictingValue: string }
+                  : T extends "TIMEOUT"
+                    ? { duration: number; operation: string }
+                    : Record<string, unknown>
 
 /**
  * Type-safe error class with template literal types
@@ -84,14 +110,10 @@ const TypedErrorConstructor = <T extends ErrorCode>(
   options?: {
     cause?: unknown
     traceId?: string
-  }
+  },
 ): TypedError<T> => {
-  const error = Throwable.apply(
-    message,
-    context,
-    { name: code, description: message }
-  ) as TypedError<T>
-  
+  const error = Throwable.apply(message, context, { name: code, description: message }) as TypedError<T>
+
   return Object.assign(error, {
     code,
     message,
@@ -133,11 +155,7 @@ const TypedErrorCompanion = {
    * // Message must match: "Validation failed: ..."
    */
   validation: (field: string, value: unknown, rule: string): TypedError<"VALIDATION_FAILED"> =>
-    TypedErrorConstructor(
-      "VALIDATION_FAILED",
-      `Validation failed: ${field} ${rule}`,
-      { field, value, rule }
-    ),
+    TypedErrorConstructor("VALIDATION_FAILED", `Validation failed: ${field} ${rule}`, { field, value, rule }),
 
   /**
    * Create a network error
@@ -146,11 +164,11 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"NETWORK_ERROR">
    */
   network: (url: string, method: string, statusCode?: number): TypedError<"NETWORK_ERROR"> =>
-    TypedErrorConstructor(
-      "NETWORK_ERROR",
-      `Network error: ${method} ${url}${statusCode ? ` (${statusCode})` : ""}`,
-      { url, method, statusCode }
-    ),
+    TypedErrorConstructor("NETWORK_ERROR", `Network error: ${method} ${url}${statusCode ? ` (${statusCode})` : ""}`, {
+      url,
+      method,
+      statusCode,
+    }),
 
   /**
    * Create an authentication error
@@ -162,7 +180,7 @@ const TypedErrorCompanion = {
     TypedErrorConstructor(
       "AUTH_REQUIRED",
       `Authentication required: ${resource}${requiredRole ? ` (role: ${requiredRole})` : ""}`,
-      { resource, requiredRole }
+      { resource, requiredRole },
     ),
 
   /**
@@ -172,11 +190,7 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"NOT_FOUND">
    */
   notFound: (resource: string, id: string | number): TypedError<"NOT_FOUND"> =>
-    TypedErrorConstructor(
-      "NOT_FOUND",
-      `Not found: ${resource} with id ${id}`,
-      { resource, id }
-    ),
+    TypedErrorConstructor("NOT_FOUND", `Not found: ${resource} with id ${id}`, { resource, id }),
 
   /**
    * Create a permission denied error
@@ -185,11 +199,11 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"PERMISSION_DENIED">
    */
   permission: (action: string, resource: string, userId?: string): TypedError<"PERMISSION_DENIED"> =>
-    TypedErrorConstructor(
-      "PERMISSION_DENIED",
-      `Permission denied: cannot ${action} ${resource}`,
-      { action, resource, userId }
-    ),
+    TypedErrorConstructor("PERMISSION_DENIED", `Permission denied: cannot ${action} ${resource}`, {
+      action,
+      resource,
+      userId,
+    }),
 
   /**
    * Create a rate limit error
@@ -198,11 +212,11 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"RATE_LIMITED">
    */
   rateLimit: (limit: number, window: string, retryAfter?: number): TypedError<"RATE_LIMITED"> =>
-    TypedErrorConstructor(
-      "RATE_LIMITED",
-      `Rate limit exceeded: ${limit} requests per ${window}`,
-      { limit, window, retryAfter }
-    ),
+    TypedErrorConstructor("RATE_LIMITED", `Rate limit exceeded: ${limit} requests per ${window}`, {
+      limit,
+      window,
+      retryAfter,
+    }),
 
   /**
    * Create an internal error
@@ -211,11 +225,10 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"INTERNAL_ERROR">
    */
   internal: (errorId: string): TypedError<"INTERNAL_ERROR"> =>
-    TypedErrorConstructor(
-      "INTERNAL_ERROR",
-      `Internal server error: ${errorId}`,
-      { errorId, timestamp: new Date().toISOString() }
-    ),
+    TypedErrorConstructor("INTERNAL_ERROR", `Internal server error: ${errorId}`, {
+      errorId,
+      timestamp: new Date().toISOString(),
+    }),
 
   /**
    * Create a bad request error
@@ -224,11 +237,7 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"BAD_REQUEST">
    */
   badRequest: (reason: string, expected?: string): TypedError<"BAD_REQUEST"> =>
-    TypedErrorConstructor(
-      "BAD_REQUEST",
-      `Bad request: ${reason}`,
-      { reason, expected }
-    ),
+    TypedErrorConstructor("BAD_REQUEST", `Bad request: ${reason}`, { reason, expected }),
 
   /**
    * Create a conflict error
@@ -237,11 +246,10 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"CONFLICT">
    */
   conflict: (resource: string, conflictingValue: string): TypedError<"CONFLICT"> =>
-    TypedErrorConstructor(
-      "CONFLICT",
-      `Conflict: ${resource} already exists with value ${conflictingValue}`,
-      { resource, conflictingValue }
-    ),
+    TypedErrorConstructor("CONFLICT", `Conflict: ${resource} already exists with value ${conflictingValue}`, {
+      resource,
+      conflictingValue,
+    }),
 
   /**
    * Create a timeout error
@@ -250,11 +258,7 @@ const TypedErrorCompanion = {
    * // Type: TypedError<"TIMEOUT">
    */
   timeout: (duration: number, operation: string): TypedError<"TIMEOUT"> =>
-    TypedErrorConstructor(
-      "TIMEOUT",
-      `Request timeout: ${operation} exceeded ${duration}ms`,
-      { duration, operation }
-    ),
+    TypedErrorConstructor("TIMEOUT", `Request timeout: ${operation} exceeded ${duration}ms`, { duration, operation }),
 
   /**
    * Check if a value is a TypedError

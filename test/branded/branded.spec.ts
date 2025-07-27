@@ -22,13 +22,13 @@ describe("Branded Types", () => {
     const userId = Brand("UserId", "user123") as UserId
     const productId = Brand("ProductId", "prod456") as ProductId
 
-    // These should be different types despite same structure
-    expect(typeof userId).toBe("string")
-    expect(typeof productId).toBe("string")
+    // These are now objects with methods
+    expect(typeof userId).toBe("object")
+    expect(typeof productId).toBe("object")
 
-    // The original values should be preserved
-    expect(userId).toBe("user123")
-    expect(productId).toBe("prod456")
+    // The original values should be accessible via unbrand
+    expect(userId.unbrand()).toBe("user123")
+    expect(productId.unbrand()).toBe("prod456")
   })
 
   it("should work with branded primitive factories", () => {
@@ -38,18 +38,19 @@ describe("Branded Types", () => {
     const userId = createUserId("user123")
     const price = createPrice(99.99)
 
-    // The values should preserve their original behavior
-    expect(userId.toUpperCase()).toBe("USER123")
-    expect(price * 2).toBeCloseTo(199.98)
+    // The values should preserve their original behavior with unbranding
+    expect(userId.unbrand().toUpperCase()).toBe("USER123")
+    expect(price.unbrand() * 2).toBeCloseTo(199.98)
   })
 
   it("should allow branders to be created", () => {
     const UserIdBrander = createBrander<"UserId", string>("UserId")
     const userId = UserIdBrander("user123")
 
-    expect(userId).toBe("user123")
-    // At runtime the brand is a phantom type
+    expect(userId.unbrand()).toBe("user123")
+    // At runtime the brand is a phantom type, but we now have methods
     expect(Object.getOwnPropertyNames(userId)).not.toContain("__brand")
+    expect(Object.getOwnPropertyNames(userId)).toContain("unbrand")
   })
 
   it("should unbrand values", () => {
@@ -58,6 +59,31 @@ describe("Branded Types", () => {
 
     expect(unbranded).toBe("user123")
     expect(typeof unbranded).toBe("string")
+  })
+
+  it("should support instance unbrand and unwrap methods", () => {
+    const userId = Brand("UserId", "user123")
+    const productId = Brand("ProductId", "prod456")
+
+    // Test unbrand method
+    expect(userId.unbrand()).toBe("user123")
+    expect(productId.unbrand()).toBe("prod456")
+
+    // Test unwrap method (alias for unbrand)
+    expect(userId.unwrap()).toBe("user123")
+    expect(productId.unwrap()).toBe("prod456")
+
+    // Verify the methods return the correct types
+    expect(typeof userId.unbrand()).toBe("string")
+    expect(typeof productId.unbrand()).toBe("string")
+  })
+
+  it("should support enhanced toString method", () => {
+    const userId = Brand("UserId", "user123")
+    const price = Brand("Price", 99.99)
+
+    expect(userId.toString()).toBe("UserId(user123)")
+    expect(price.toString()).toBe("Price(99.99)")
   })
 
   it("should detect existence for branded types", () => {
@@ -100,7 +126,7 @@ describe("Branded Types", () => {
 
     // Function that only accepts UserId
     function getUserById(id: UserId): string {
-      return `User: ${id}`
+      return `User: ${id.unbrand()}`
     }
 
     const userId = Brand("UserId", "user123") as UserId
