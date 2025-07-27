@@ -198,15 +198,27 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     commonUseCases: ["Pattern matching", "Exhaustive checking", "Type narrowing", "Complex switch logic"],
   },
 
+  Brand: {
+    name: "Brand",
+    description: "Nominal typing for TypeScript with instance methods for type safety without runtime overhead.",
+    category: "Utility",
+    sourcePath: "src/branded/Brand.ts",
+    testPath: "test/branded/branded.spec.ts",
+    implements: [],
+    keyMethods: ["unbrand", "unwrap", "toString"],
+    relatedTypes: ["ValidatedBrand"],
+    commonUseCases: ["Nominal typing", "Type safety", "Domain modeling", "Preventing type confusion"],
+  },
+
   ValidatedBrand: {
     name: "ValidatedBrand",
-    description: "Branded types with runtime validation.",
+    description: "Branded types with runtime validation using Option/Either for safe value creation.",
     category: "Utility",
-    sourcePath: "src/brand/ValidatedBrand.ts",
-    testPath: "test/brand/ValidatedBrand.spec.ts",
+    sourcePath: "src/branded/ValidatedBrand.ts",
+    testPath: "test/branded/ValidatedBrand.spec.ts",
     implements: [],
-    keyMethods: ["create", "validate", "unwrap"],
-    relatedTypes: ["Either"],
+    keyMethods: ["of", "from", "unsafeOf", "is", "refine"],
+    relatedTypes: ["Brand", "Either", "Option"],
     commonUseCases: ["Runtime type validation", "Domain modeling", "Email/URL validation", "Custom type constraints"],
   },
 

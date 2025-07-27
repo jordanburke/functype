@@ -1,0 +1,138 @@
+{
+  "module": "ValidatedBrand",
+  "description": "Branded types with runtime validation using Option/Either for safe value creation",
+  "category": "Utility", 
+  "keyMethods": [
+    {
+      "name": "of",
+      "description": "Create a validated brand safely, returning Some(Brand) or None",
+      "signature": "of(value: T): Option<Brand<K, T>>",
+      "example": "Email.of('user@example.com') // Some(Brand<'Email', string>)"
+    },
+    {
+      "name": "from",
+      "description": "Create a validated brand with error details using Either",
+      "signature": "from(value: T): Either<string, Brand<K, T>>", 
+      "example": "Email.from('invalid') // Left('Invalid Email: validation failed')"
+    },
+    {
+      "name": "unsafeOf",
+      "description": "Create a validated brand, throwing an error if validation fails",
+      "signature": "unsafeOf(value: T): Brand<K, T>",
+      "example": "Email.unsafeOf('user@example.com') // Brand<'Email', string>"
+    },
+    {
+      "name": "is",
+      "description": "Type guard to check if a value matches the brand validation",
+      "signature": "is(value: unknown): value is Brand<K, T>",
+      "example": "if (Email.is(someValue)) { /* someValue is Brand<'Email', string> */ }"
+    },
+    {
+      "name": "refine",
+      "description": "Create a more specific validator from an existing one",
+      "signature": "refine<K2>(brand: K2, validate: (value: Brand<K, T>) => boolean): ValidatedBrand<K2, Brand<K, T>>",
+      "example": "const SmallInt = PositiveNumber.refine('SmallInt', n => n.unbrand() < 100)"
+    }
+  ],
+  "staticConstructors": [
+    {
+      "name": "ValidatedBrand",
+      "description": "Create a new validated brand with custom validation function",
+      "signature": "ValidatedBrand<K, T>(brand: K, validate: (value: T) => boolean): ValidatedBrand<K, T>",
+      "example": "const Email = ValidatedBrand('Email', s => /^[^@]+@[^@]+\\.[^@]+$/.test(s))"
+    },
+    {
+      "name": "BoundedNumber",
+      "description": "Create a number validator with min/max bounds",
+      "signature": "BoundedNumber(brand: string, min: number, max: number): ValidatedBrand<string, number>",
+      "example": "const Percentage = BoundedNumber('Percentage', 0, 100)"
+    },
+    {
+      "name": "BoundedString",
+      "description": "Create a string validator with length constraints",
+      "signature": "BoundedString(brand: string, minLength: number, maxLength: number): ValidatedBrand<string, string>", 
+      "example": "const Username = BoundedString('Username', 3, 20)"
+    },
+    {
+      "name": "PatternString",
+      "description": "Create a string validator using regex pattern matching",
+      "signature": "PatternString(brand: string, pattern: RegExp): ValidatedBrand<string, string>",
+      "example": "const HexColor = PatternString('HexColor', /^#[0-9a-f]{6}$/i)"
+    }
+  ],
+  "prebuiltValidators": [
+    {
+      "name": "PositiveNumber",
+      "description": "Validates numbers greater than 0",
+      "example": "PositiveNumber.of(42) // Some(Brand<'PositiveNumber', number>)"
+    },
+    {
+      "name": "NonNegativeNumber", 
+      "description": "Validates numbers greater than or equal to 0",
+      "example": "NonNegativeNumber.of(0) // Some(Brand<'NonNegativeNumber', number>)"
+    },
+    {
+      "name": "IntegerNumber",
+      "description": "Validates integer numbers", 
+      "example": "IntegerNumber.of(42) // Some, IntegerNumber.of(42.5) // None"
+    },
+    {
+      "name": "PositiveInteger",
+      "description": "Validates positive integers (refined from PositiveNumber)",
+      "example": "PositiveInteger.of(PositiveNumber.unsafeOf(42)) // Some"
+    },
+    {
+      "name": "NonEmptyString",
+      "description": "Validates non-empty strings",
+      "example": "NonEmptyString.of('hello') // Some(Brand<'NonEmptyString', string>)"
+    },
+    {
+      "name": "EmailAddress",
+      "description": "Validates email address format",
+      "example": "EmailAddress.of('user@example.com') // Some(Brand<'EmailAddress', string>)"
+    },
+    {
+      "name": "UrlString",
+      "description": "Validates URL format",
+      "example": "UrlString.of('https://example.com') // Some(Brand<'UrlString', string>)"
+    },
+    {
+      "name": "UUID",
+      "description": "Validates UUID format",
+      "example": "UUID.of('123e4567-e89b-12d3-a456-426614174000') // Some"
+    },
+    {
+      "name": "ISO8601Date",
+      "description": "Validates ISO 8601 date format",
+      "example": "ISO8601Date.of('2024-01-15T10:30:00Z') // Some"
+    }
+  ],
+  "commonPatterns": [
+    {
+      "name": "Safe Input Validation",
+      "description": "Validate user input safely with Option return",
+      "code": "const Email = ValidatedBrand('Email', s => /^[^@]+@[^@]+\\.[^@]+$/.test(s))\nconst userEmail = Email.of(userInput)\nif (!userEmail.isEmpty) {\n  const email = userEmail.get()\n  console.log(`Valid: ${email.unbrand()}`)\n}"
+    },
+    {
+      "name": "Error Handling with Either",
+      "description": "Get detailed error information when validation fails",
+      "code": "const result = Email.from(userInput)\nresult.fold(\n  error => console.error(`Validation failed: ${error}`),\n  email => console.log(`Success: ${email.unbrand()}`)\n)"
+    },
+    {
+      "name": "Domain Modeling",
+      "description": "Model domain concepts with runtime safety",
+      "code": "interface User {\n  id: Brand<'UserId', string>\n  email: Brand<'EmailAddress', string>\n  age: Brand<'PositiveNumber', number>\n}\n\nconst createUser = (id: string, email: string, age: number): Option<User> => {\n  const validEmail = EmailAddress.of(email)\n  const validAge = PositiveNumber.of(age)\n  \n  return validEmail.flatMap(e => \n    validAge.map(a => ({\n      id: Brand('UserId', id),\n      email: e,\n      age: a\n    }))\n  )\n}"
+    },
+    {
+      "name": "Validator Refinement",
+      "description": "Build specific validators from general ones",
+      "code": "const SmallPositiveInteger = PositiveNumber.refine('SmallPositiveInteger', n => {\n  const num = n.unbrand()\n  return num < 100 && Number.isInteger(num)\n})\n\nconst age = PositiveNumber.unsafeOf(25)\nconst youngAge = SmallPositiveInteger.of(age) // Some"
+    }
+  ],
+  "relatedTypes": ["Brand", "Option", "Either"],
+  "seeAlso": [
+    "Brand for simple nominal typing", 
+    "Option for safe nullable values",
+    "Either for error handling"
+  ]
+}

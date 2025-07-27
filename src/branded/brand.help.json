@@ -1,0 +1,96 @@
+{
+  "module": "Brand",
+  "description": "Nominal typing for TypeScript with instance methods for type safety without runtime overhead",
+  "category": "Utility",
+  "keyMethods": [
+    {
+      "name": "unbrand",
+      "description": "Extract the original value from a branded type",
+      "signature": "unbrand(): T",
+      "example": "userId.unbrand() // 'user-123'"
+    },
+    {
+      "name": "unwrap", 
+      "description": "Alias for unbrand() - extract the original value",
+      "signature": "unwrap(): T",
+      "example": "userId.unwrap() // 'user-123'"
+    },
+    {
+      "name": "toString",
+      "description": "Get a readable string representation of the branded value",
+      "signature": "toString(): string", 
+      "example": "userId.toString() // 'UserId(user-123)'"
+    }
+  ],
+  "staticMethods": [
+    {
+      "name": "Brand",
+      "description": "Create a new branded value with instance methods",
+      "signature": "Brand<K, T>(brand: K, value: T): Brand<K, T>",
+      "example": "const userId = Brand('UserId', 'user-123')"
+    },
+    {
+      "name": "unbrand",
+      "description": "Utility function to extract value from branded type (backward compatibility)",
+      "signature": "unbrand<T>(branded: Brand<string, T>): T",
+      "example": "const raw = unbrand(userId) // 'user-123'"
+    },
+    {
+      "name": "BrandedString",
+      "description": "Factory for creating string branded type constructors",
+      "signature": "BrandedString<K>(brand: K): (value: string) => Brand<K, string>",
+      "example": "const createUserId = BrandedString('UserId')"
+    },
+    {
+      "name": "BrandedNumber", 
+      "description": "Factory for creating number branded type constructors",
+      "signature": "BrandedNumber<K>(brand: K): (value: number) => Brand<K, number>",
+      "example": "const createAge = BrandedNumber('Age')"
+    },
+    {
+      "name": "BrandedBoolean",
+      "description": "Factory for creating boolean branded type constructors", 
+      "signature": "BrandedBoolean<K>(brand: K): (value: boolean) => Brand<K, boolean>",
+      "example": "const createIsActive = BrandedBoolean('IsActive')"
+    }
+  ],
+  "typeUtilities": [
+    {
+      "name": "Brand<K, T>",
+      "description": "Main branded type with phantom brand and instance methods",
+      "example": "type UserId = Brand<'UserId', string>"
+    },
+    {
+      "name": "Unbrand<T>",
+      "description": "Extract the underlying type from a branded type",
+      "example": "type RawUserId = Unbrand<UserId> // string"
+    },
+    {
+      "name": "ExtractBrand<T>", 
+      "description": "Extract the brand identifier from a branded type",
+      "example": "type UserBrand = ExtractBrand<UserId> // 'UserId'"
+    }
+  ],
+  "commonPatterns": [
+    {
+      "name": "Basic Branding",
+      "description": "Create nominal types to prevent confusion between similar types",
+      "code": "type UserId = Brand<'UserId', string>\nconst userId = Brand('UserId', 'user-123')\nconsole.log(userId.unbrand()) // 'user-123'"
+    },
+    {
+      "name": "Type Safety",
+      "description": "Use branded types in functions to prevent type confusion",
+      "code": "function getUserProfile(id: UserId): string {\n  return `Profile: ${id.unbrand()}`\n}\n// getUserProfile('user-123') // Error!\ngetUserProfile(userId) // Works!"
+    },
+    {
+      "name": "Factory Pattern",
+      "description": "Create reusable branded type constructors", 
+      "code": "const createEmail = BrandedString('Email')\nconst email = createEmail('user@example.com')\nconsole.log(email.toString()) // 'Email(user@example.com)'"
+    }
+  ],
+  "relatedTypes": ["ValidatedBrand"],
+  "seeAlso": [
+    "ValidatedBrand for runtime validation",
+    "Functype design patterns for type safety"
+  ]
+}

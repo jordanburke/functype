@@ -228,26 +228,27 @@ const promise = Task().toPromise(taskResult) // Promise<string>
 ### Branded Types
 
 ```typescript
-import { Brand } from "functype/branded"
+import { Brand, ValidatedBrand } from "functype/branded"
 
-// Create branded types for stronger type safety
-type UserId = Brand<string, "UserId">
-type Email = Brand<string, "Email">
+// Create branded types for stronger type safety (with instance methods!)
+type UserId = Brand<"UserId", string>
+type Email = Brand<"Email", string>
 
-// Create factory functions with validation
-const UserId = (id: string): UserId => {
-  if (!/^U\d{6}$/.test(id)) {
-    throw new Error("Invalid user ID format")
-  }
-  return id as UserId
-}
+// Simple branding
+const userId = Brand("UserId", "U123456")
+console.log(userId.unbrand())     // "U123456"
+console.log(userId.toString())    // "UserId(U123456)"
 
-const Email = (email: string): Email => {
-  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) {
-    throw new Error("Invalid email format")
-  }
-  return email as Email
-}
+// Runtime-validated branding for safer input handling
+const EmailValidator = ValidatedBrand("Email", (s: string) => /^[^@]+@[^@]+\.[^@]+$/.test(s))
+const UserIdValidator = ValidatedBrand("UserId", (s: string) => /^U\d{6}$/.test(s))
+
+// Safe creation with Option/Either return types
+const email = EmailValidator.of("user@example.com")     // Some(Brand<"Email", string>)
+const invalidEmail = EmailValidator.of("invalid")       // None
+
+const userResult = UserIdValidator.from("U123456")      // Right(Brand<"UserId", string>)
+const userError = UserIdValidator.from("invalid")       // Left("Invalid UserId: validation failed")
 
 // Type safety in action
 function getUserByEmail(email: Email): User {

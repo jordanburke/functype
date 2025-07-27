@@ -7,13 +7,127 @@
 // Import working example modules
 import * as lazyExamples from "./lazy-examples"
 import * as setExamples from "./set-examples"
+import * as brandedExamples from "./branded-examples"
 
 // Verify imports exist (compile-time check)
-void [setExamples, lazyExamples]
+void [setExamples, lazyExamples, brandedExamples]
 
 import type { FunctypeExample } from "../functype-lookup"
 
 export const compilableExamples: Record<string, FunctypeExample[]> = {
+  Brand: [
+    {
+      title: "Basic Brand Usage",
+      description: "Create branded types with instance methods",
+      code: `import { Brand } from "@/branded"
+
+type UserId = Brand<"UserId", string>
+type Email = Brand<"Email", string>
+
+const userId = Brand("UserId", "user-123")
+const email = Brand("Email", "user@example.com")
+
+// Access original values
+console.log(userId.unbrand())     // "user-123"
+console.log(userId.toString())    // "UserId(user-123)"
+console.log(email.unwrap())       // "user@example.com"`,
+      category: "basic",
+    },
+    {
+      title: "Type Safety with Functions",
+      description: "Prevent mixing up similar types",
+      code: `import { Brand } from "@/branded"
+
+type UserId = Brand<"UserId", string>
+type ProductId = Brand<"ProductId", string>
+
+function getUserProfile(id: UserId): string {
+  return \`Profile for: \${id.unbrand()}\`
+}
+
+const userId = Brand("UserId", "user-123")
+const productId = Brand("ProductId", "prod-456")
+
+getUserProfile(userId)     // Works
+// getUserProfile(productId)  // TypeScript Error!`,
+      category: "intermediate",
+    },
+    {
+      title: "Branded Primitive Factories",
+      description: "Use factory functions for common types",
+      code: `import { BrandedString, BrandedNumber, BrandedBoolean } from "@/branded"
+
+const createEmail = BrandedString("Email")
+const createAge = BrandedNumber("Age")
+const createIsActive = BrandedBoolean("IsActive")
+
+const email = createEmail("user@example.com")
+const age = createAge(25)
+const isActive = createIsActive(true)
+
+// All have instance methods
+console.log(email.toString())     // "Email(user@example.com)"
+console.log(age.unbrand() >= 18)  // true
+console.log(isActive.unwrap())    // true`,
+      category: "basic",
+    },
+  ],
+
+  ValidatedBrand: [
+    {
+      title: "Basic ValidatedBrand Usage",
+      description: "Create validators with runtime checking",
+      code: `import { ValidatedBrand } from "@/branded"
+
+const Email = ValidatedBrand("Email", (s: string) => /^[^@]+@[^@]+\\.[^@]+$/.test(s))
+const PositiveNumber = ValidatedBrand("PositiveNumber", (n: number) => n > 0)
+
+// Safe creation with Option
+const validEmail = Email.of("user@example.com")     // Some(Brand)
+const invalidEmail = Email.of("not-an-email")       // None
+
+// Error details with Either
+const result = Email.from("user@example.com")       // Right(Brand)
+const error = Email.from("invalid")                 // Left("Invalid Email: validation failed")`,
+      category: "basic",
+    },
+    {
+      title: "Pre-built Validators",
+      description: "Use common validation patterns",
+      code: `import { PositiveNumber, NonEmptyString, EmailAddress, UUID } from "@/branded"
+
+const age = PositiveNumber.of(25)                    // Some(Brand<"PositiveNumber", number>)
+const name = NonEmptyString.of("John")               // Some(Brand<"NonEmptyString", string>)
+const email = EmailAddress.of("user@example.com")   // Some(Brand<"EmailAddress", string>)
+const id = UUID.of("123e4567-e89b-12d3-a456-426614174000")  // Some(Brand<"UUID", string>)
+
+// All return enhanced Brand objects with instance methods
+if (!email.isEmpty) {
+  const branded = email.get()
+  console.log(branded.unbrand())     // "user@example.com"
+  console.log(branded.toString())    // "EmailAddress(user@example.com)"
+}`,
+      category: "intermediate",
+    },
+    {
+      title: "Custom Validators",
+      description: "Create domain-specific validation rules",
+      code: `import { BoundedNumber, BoundedString, PatternString } from "@/branded"
+
+// Create custom bounded validators
+const Percentage = BoundedNumber("Percentage", 0, 100)
+const Username = BoundedString("Username", 3, 20)
+const HexColor = PatternString("HexColor", /^#[0-9a-f]{6}$/i)
+
+const percent = Percentage.of(75)        // Some(Brand<"Percentage", number>)
+const username = Username.of("johndoe")  // Some(Brand<"Username", string>)  
+const color = HexColor.of("#ff0000")     // Some(Brand<"HexColor", string>)
+
+const invalid = Percentage.of(150)       // None (out of bounds)`,
+      category: "advanced",
+    },
+  ],
+
   Set: [
     {
       title: "Basic Set Operations",
