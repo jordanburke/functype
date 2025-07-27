@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   Brand,
+  BrandedBoolean,
   BrandedNumber,
   BrandedString,
   createBrander,
@@ -34,13 +35,17 @@ describe("Branded Types", () => {
   it("should work with branded primitive factories", () => {
     const createUserId = BrandedString("UserId")
     const createPrice = BrandedNumber("Price")
+    const createIsActive = BrandedBoolean("IsActive")
 
     const userId = createUserId("user123")
     const price = createPrice(99.99)
+    const isActive = createIsActive(true)
 
     // The values should preserve their original behavior with unbranding
     expect(userId.unbrand().toUpperCase()).toBe("USER123")
     expect(price.unbrand() * 2).toBeCloseTo(199.98)
+    expect(isActive.unbrand() && false).toBe(false)
+    expect(isActive.unbrand() || false).toBe(true)
   })
 
   it("should allow branders to be created", () => {
@@ -81,9 +86,39 @@ describe("Branded Types", () => {
   it("should support enhanced toString method", () => {
     const userId = Brand("UserId", "user123")
     const price = Brand("Price", 99.99)
+    const isActive = Brand("IsActive", true)
 
     expect(userId.toString()).toBe("UserId(user123)")
     expect(price.toString()).toBe("Price(99.99)")
+    expect(isActive.toString()).toBe("IsActive(true)")
+  })
+
+  it("should work with BrandedBoolean specifically", () => {
+    const createIsEnabled = BrandedBoolean("IsEnabled")
+    const createHasPermission = BrandedBoolean("HasPermission")
+
+    const isEnabled = createIsEnabled(true)
+    const hasPermission = createHasPermission(false)
+
+    // Test unbrand/unwrap methods
+    expect(isEnabled.unbrand()).toBe(true)
+    expect(isEnabled.unwrap()).toBe(true)
+    expect(hasPermission.unbrand()).toBe(false)
+    expect(hasPermission.unwrap()).toBe(false)
+
+    // Test boolean operations work correctly
+    expect(isEnabled.unbrand() && hasPermission.unbrand()).toBe(false)
+    expect(isEnabled.unbrand() || hasPermission.unbrand()).toBe(true)
+    expect(!isEnabled.unbrand()).toBe(false)
+    expect(!hasPermission.unbrand()).toBe(true)
+
+    // Test toString
+    expect(isEnabled.toString()).toBe("IsEnabled(true)")
+    expect(hasPermission.toString()).toBe("HasPermission(false)")
+
+    // Test type behavior
+    expect(typeof isEnabled).toBe("object")
+    expect(typeof isEnabled.unbrand()).toBe("boolean")
   })
 
   it("should detect existence for branded types", () => {
