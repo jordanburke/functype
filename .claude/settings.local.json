@@ -48,7 +48,11 @@
       "Bash(rm:*)",
       "Bash(mv:*)",
       "Bash(npm pack:*)",
-      "Bash(chezmoi update:*)"
+      "Bash(chezmoi update:*)",
+      "mcp__desktop-commander__get_config",
+      "mcp__desktop-commander__search_files",
+      "mcp__desktop-commander__read_file",
+      "mcp__desktop-commander__search_code"
     ],
     "deny": []
   }
