@@ -83,14 +83,37 @@ describe("Branded Types", () => {
     expect(typeof productId.unbrand()).toBe("string")
   })
 
-  it("should support enhanced toString method", () => {
+  it("should support toString method for string interpolation", () => {
     const userId = Brand("UserId", "user123")
     const price = Brand("Price", 99.99)
     const isActive = Brand("IsActive", true)
 
-    expect(userId.toString()).toBe("UserId(user123)")
-    expect(price.toString()).toBe("Price(99.99)")
-    expect(isActive.toString()).toBe("IsActive(true)")
+    // Direct toString calls
+    expect(userId.toString()).toBe("user123")
+    expect(price.toString()).toBe("99.99")
+    expect(isActive.toString()).toBe("true")
+
+    // Template literal usage
+    expect(`User ID: ${userId}`).toBe("User ID: user123")
+    expect(`Price: $${price}`).toBe("Price: $99.99")
+    expect(`Active: ${isActive}`).toBe("Active: true")
+  })
+
+  it("should support valueOf for numeric branded types", () => {
+    const price = Brand("Price", 99.99)
+    const quantity = Brand("Quantity", 5)
+
+    // valueOf should allow numeric operations
+    expect(price + 10).toBe(109.99)
+    expect(quantity * 2).toBe(10)
+    expect(price / 2).toBeCloseTo(49.995)
+    expect(quantity - 3).toBe(2)
+
+    // Should work in comparisons
+    expect(price > 50).toBe(true)
+    expect(quantity < 10).toBe(true)
+    expect(price >= 99.99).toBe(true)
+    expect(quantity <= 5).toBe(true)
   })
 
   it("should work with BrandedBoolean specifically", () => {
@@ -113,8 +136,8 @@ describe("Branded Types", () => {
     expect(!hasPermission.unbrand()).toBe(true)
 
     // Test toString
-    expect(isEnabled.toString()).toBe("IsEnabled(true)")
-    expect(hasPermission.toString()).toBe("HasPermission(false)")
+    expect(isEnabled.toString()).toBe("true")
+    expect(hasPermission.toString()).toBe("false")
 
     // Test type behavior
     expect(typeof isEnabled).toBe("object")

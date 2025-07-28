@@ -25,7 +25,7 @@ describe("ValidatedBrand", () => {
       const branded = result.get()
       expect(branded.unbrand()).toBe(42)
       expect(branded.unwrap()).toBe(42)
-      expect(branded.toString()).toBe("PositiveNumber(42)")
+      expect(branded.toString()).toBe("42")
     })
 
     it("should reject zero and negative numbers", () => {
@@ -160,6 +160,72 @@ describe("ValidatedBrand", () => {
       expect(Port.of(0).isEmpty).toBe(true)
       expect(Port.of(70000).isEmpty).toBe(true)
       expect(Port.of(8080.5).isEmpty).toBe(true)
+    })
+  })
+
+  describe("toString behavior", () => {
+    it("should serialize correctly in template literals", () => {
+      const TenantId = ValidatedBrand("TenantId", (s: string) => UUID.validate(s))
+      const id = TenantId.unsafeOf("12345678-1234-4234-9234-123456789012")
+      expect(`prefix-${id}-suffix`).toBe("prefix-12345678-1234-4234-9234-123456789012-suffix")
+    })
+
+    it("should work with String constructor", () => {
+      const BrandedId = ValidatedBrand("BrandedId", (s: string) => s.length > 0)
+      const id = BrandedId.unsafeOf("test-123")
+      expect(String(id)).toBe("test-123")
+    })
+
+    it("should work with explicit toString call", () => {
+      const BrandedId = ValidatedBrand("BrandedId", (s: string) => s.length > 0)
+      const id = BrandedId.unsafeOf("test-123")
+      expect(id.toString()).toBe("test-123")
+    })
+
+    it("should work in path construction", () => {
+      const TenantId = ValidatedBrand("TenantId", (s: string) => UUID.validate(s))
+      const ProjectId = ValidatedBrand("ProjectId", (s: string) => UUID.validate(s))
+      const WorkspaceId = ValidatedBrand("WorkspaceId", (s: string) => UUID.validate(s))
+
+      const tenantId = TenantId.unsafeOf("12345678-1234-4234-9234-123456789012")
+      const projectId = ProjectId.unsafeOf("87654321-4321-4321-4321-098765432109")
+      const workspaceId = WorkspaceId.unsafeOf("abcdef12-3456-7890-abcd-ef1234567890")
+
+      const filePath = `tenants/${tenantId}/projects/${projectId}/workspaces/${workspaceId}/file.txt`
+      expect(filePath).toBe(
+        "tenants/12345678-1234-4234-9234-123456789012/projects/87654321-4321-4321-4321-098765432109/workspaces/abcdef12-3456-7890-abcd-ef1234567890/file.txt",
+      )
+    })
+
+    it("should work with numeric branded types", () => {
+      const port = PositiveNumber.unsafeOf(8080)
+      expect(`http://localhost:${port}`).toBe("http://localhost:8080")
+    })
+
+    it("should work with array join", () => {
+      const ids = [
+        NonEmptyString.unsafeOf("first"),
+        NonEmptyString.unsafeOf("second"),
+        NonEmptyString.unsafeOf("third"),
+      ]
+      expect(ids.join(", ")).toBe("first, second, third")
+    })
+
+    it("should support valueOf for numeric branded types", () => {
+      const Port = BoundedNumber("Port", 1, 65535)
+      const port = Port.unsafeOf(8080)
+
+      // Numeric operations should work
+      expect(port + 10).toBe(8090)
+      expect(port * 2).toBe(16160)
+      expect(port / 2).toBe(4040)
+      expect(port - 80).toBe(8000)
+
+      // Comparisons should work
+      expect(port > 8000).toBe(true)
+      expect(port < 9000).toBe(true)
+      expect(port >= 8080).toBe(true)
+      expect(port <= 8080).toBe(true)
     })
   })
 })

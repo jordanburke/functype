@@ -25,7 +25,7 @@ export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
  */
 export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
   const branded = value as Brand<K, T>
-  return Object.assign(branded, {
+  const methods = {
     unbrand(): T {
       return value
     },
@@ -33,9 +33,20 @@ export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
       return value
     },
     toString(): string {
-      return `${brand}(${String(value)})`
+      return String(value)
     },
-  })
+  }
+
+  // Add valueOf for numeric types to support numeric operations
+  if (typeof value === "number") {
+    Object.assign(methods, {
+      valueOf(): number {
+        return value as number
+      },
+    })
+  }
+
+  return Object.assign(branded, methods)
 }
 
 /**
