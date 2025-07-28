@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { List, None, Option } from "../../src"
-import { isTypeable, Typeable } from "../../src/typeable/Typeable"
+import { isTypeable, List, None, Option, Typeable } from "../../src"
 
 describe("List", () => {
   beforeEach(async () => {

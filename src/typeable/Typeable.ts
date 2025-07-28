@@ -1,6 +1,12 @@
-export type Typeable<Tag extends string, T = object> = T & {
+/**
+ * Base interface for objects with a type tag
+ * @internal
+ */
+interface TypeableBase<Tag extends string> {
   readonly _tag: Tag
 }
+
+export type Typeable<Tag extends string, T = object> = T & TypeableBase<Tag>
 
 /**
  * Parameters for creating a Typeable instance

@@ -29,8 +29,7 @@ export * from "@/stack/Stack"
 export * from "@/traversable/Traversable"
 export * from "@/try/Try"
 export * from "@/tuple/Tuple"
-// Note: Typeable is not exported from main index due to TypeDoc URL routing issues
-// Import directly from "@/typeable/Typeable" if needed
+export * from "@/typeable/Typeable"
 export * from "@/typeclass"
 export * from "@/types"
 export * from "@/valuable/Valuable"
