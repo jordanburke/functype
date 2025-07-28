@@ -1,38 +1,19 @@
 {
   "module": "Brand",
-  "description": "Nominal typing for TypeScript with instance methods for type safety without runtime overhead",
+  "description": "True phantom types for TypeScript - compile-time type safety with zero runtime overhead",
   "category": "Utility",
-  "keyMethods": [
-    {
-      "name": "unbrand",
-      "description": "Extract the original value from a branded type",
-      "signature": "unbrand(): T",
-      "example": "userId.unbrand() // 'user-123'"
-    },
-    {
-      "name": "unwrap",
-      "description": "Alias for unbrand() - extract the original value",
-      "signature": "unwrap(): T",
-      "example": "userId.unwrap() // 'user-123'"
-    },
-    {
-      "name": "toString",
-      "description": "Get a readable string representation of the branded value",
-      "signature": "toString(): string",
-      "example": "userId.toString() // 'UserId(user-123)'"
-    }
-  ],
+  "keyMethods": [],
   "staticMethods": [
     {
       "name": "Brand",
-      "description": "Create a new branded value with instance methods",
+      "description": "Create a phantom-typed value (returns the primitive directly)",
       "signature": "Brand<K, T>(brand: K, value: T): Brand<K, T>",
-      "example": "const userId = Brand('UserId', 'user-123')"
+      "example": "const userId = Brand('UserId', 'user-123') // userId IS 'user-123'"
     },
     {
       "name": "unbrand",
-      "description": "Utility function to extract value from branded type (backward compatibility)",
-      "signature": "unbrand<T>(branded: Brand<string, T>): T",
+      "description": "Utility function for compatibility (rarely needed since branded values ARE primitives)",
+      "signature": "unbrand<K, T>(branded: Brand<K, T>): T",
       "example": "const raw = unbrand(userId) // 'user-123'"
     },
     {
@@ -57,7 +38,7 @@
   "typeUtilities": [
     {
       "name": "Brand<K, T>",
-      "description": "Main branded type with phantom brand and instance methods",
+      "description": "Phantom type brand - exists only at compile time",
       "example": "type UserId = Brand<'UserId', string>"
     },
     {
@@ -74,18 +55,18 @@
   "commonPatterns": [
     {
       "name": "Basic Branding",
-      "description": "Create nominal types to prevent confusion between similar types",
-      "code": "type UserId = Brand<'UserId', string>\nconst userId = Brand('UserId', 'user-123')\nconsole.log(userId.unbrand()) // 'user-123'"
+      "description": "Create phantom types - branded values ARE their primitives",
+      "code": "type UserId = Brand<'UserId', string>\nconst userId = Brand('UserId', 'user-123')\nconsole.log(userId) // 'user-123' - it IS a string!\nconsole.log(typeof userId) // 'string'"
     },
     {
       "name": "Type Safety",
-      "description": "Use branded types in functions to prevent type confusion",
-      "code": "function getUserProfile(id: UserId): string {\n  return `Profile: ${id.unbrand()}`\n}\n// getUserProfile('user-123') // Error!\ngetUserProfile(userId) // Works!"
+      "description": "Use branded types in functions - no unwrapping needed",
+      "code": "function getUserProfile(id: UserId): string {\n  return `Profile: ${id}` // id IS a string!\n}\n// getUserProfile('user-123') // Error!\ngetUserProfile(userId) // Works!"
     },
     {
-      "name": "Factory Pattern",
-      "description": "Create reusable branded type constructors",
-      "code": "const createEmail = BrandedString('Email')\nconst email = createEmail('user@example.com')\nconsole.log(email.toString()) // 'Email(user@example.com)'"
+      "name": "Direct Usage",
+      "description": "Branded values work everywhere primitives are expected",
+      "code": "const userId = Brand('UserId', 'user-123')\n// All string operations work directly\nuserId.toUpperCase() // 'USER-123'\nuserId.length // 8\n`ID: ${userId}` // 'ID: user-123'\nJSON.stringify({ userId }) // '{\"userId\":\"user-123\"}'"
     }
   ],
   "relatedTypes": ["ValidatedBrand"],

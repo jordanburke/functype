@@ -1,25 +1,25 @@
 {
   "module": "ValidatedBrand",
-  "description": "Branded types with runtime validation using Option/Either for safe value creation",
+  "description": "Runtime-validated phantom types using Option/Either for safe value creation",
   "category": "Utility",
   "keyMethods": [
     {
       "name": "of",
-      "description": "Create a validated brand safely, returning Some(Brand) or None",
+      "description": "Create a validated brand safely, returning Some(primitive) or None",
       "signature": "of(value: T): Option<Brand<K, T>>",
-      "example": "Email.of('user@example.com') // Some(Brand<'Email', string>)"
+      "example": "Email.of('user@example.com') // Some('user@example.com') - branded string"
     },
     {
       "name": "from",
       "description": "Create a validated brand with error details using Either",
       "signature": "from(value: T): Either<string, Brand<K, T>>",
-      "example": "Email.from('invalid') // Left('Invalid Email: validation failed')"
+      "example": "Email.from('user@example.com') // Right('user@example.com') - branded string"
     },
     {
       "name": "unsafeOf",
       "description": "Create a validated brand, throwing an error if validation fails",
       "signature": "unsafeOf(value: T): Brand<K, T>",
-      "example": "Email.unsafeOf('user@example.com') // Brand<'Email', string>"
+      "example": "Email.unsafeOf('user@example.com') // 'user@example.com' - branded string"
     },
     {
       "name": "is",
@@ -31,7 +31,13 @@
       "name": "refine",
       "description": "Create a more specific validator from an existing one",
       "signature": "refine<K2>(brand: K2, validate: (value: Brand<K, T>) => boolean): ValidatedBrand<K2, Brand<K, T>>",
-      "example": "const SmallInt = PositiveNumber.refine('SmallInt', n => n.unbrand() < 100)"
+      "example": "const SmallInt = PositiveNumber.refine('SmallInt', n => n < 100) // n IS a number"
+    },
+    {
+      "name": "unwrap",
+      "description": "Extract the primitive value from a branded type (compatibility method)",
+      "signature": "unwrap(branded: Brand<K, T>): T",
+      "example": "const plain = Email.unwrap(emailBrand) // 'user@example.com'"
     }
   ],
   "staticConstructors": [

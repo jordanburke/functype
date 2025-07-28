@@ -23,13 +23,17 @@ describe("Branded Types", () => {
     const userId = Brand("UserId", "user123") as UserId
     const productId = Brand("ProductId", "prod456") as ProductId
 
-    // These are now objects with methods
-    expect(typeof userId).toBe("object")
-    expect(typeof productId).toBe("object")
+    // These are now just primitives with phantom types
+    expect(typeof userId).toBe("string")
+    expect(typeof productId).toBe("string")
 
-    // The original values should be accessible via unbrand
-    expect(userId.unbrand()).toBe("user123")
-    expect(productId.unbrand()).toBe("prod456")
+    // The values ARE the primitives
+    expect(userId).toBe("user123")
+    expect(productId).toBe("prod456")
+
+    // unbrand still works for compatibility
+    expect(unbrand(userId)).toBe("user123")
+    expect(unbrand(productId)).toBe("prod456")
   })
 
   it("should work with branded primitive factories", () => {
@@ -41,21 +45,22 @@ describe("Branded Types", () => {
     const price = createPrice(99.99)
     const isActive = createIsActive(true)
 
-    // The values should preserve their original behavior with unbranding
-    expect(userId.unbrand().toUpperCase()).toBe("USER123")
-    expect(price.unbrand() * 2).toBeCloseTo(199.98)
-    expect(isActive.unbrand() && false).toBe(false)
-    expect(isActive.unbrand() || false).toBe(true)
+    // The values ARE primitives, so methods work directly
+    expect(userId.toUpperCase()).toBe("USER123")
+    expect(price * 2).toBeCloseTo(199.98)
+    expect(isActive && false).toBe(false)
+    expect(isActive || false).toBe(true)
   })
 
   it("should allow branders to be created", () => {
     const UserIdBrander = createBrander<"UserId", string>("UserId")
     const userId = UserIdBrander("user123")
 
-    expect(userId.unbrand()).toBe("user123")
-    // At runtime the brand is a phantom type, but we now have methods
+    expect(userId).toBe("user123")
+    // At runtime the brand is a phantom type
     expect(Object.getOwnPropertyNames(userId)).not.toContain("__brand")
-    expect(Object.getOwnPropertyNames(userId)).toContain("unbrand")
+    // Strings have indexed properties for characters and length
+    expect(typeof userId).toBe("string")
   })
 
   it("should unbrand values", () => {
@@ -66,29 +71,29 @@ describe("Branded Types", () => {
     expect(typeof unbranded).toBe("string")
   })
 
-  it("should support instance unbrand and unwrap methods", () => {
+  it("should work without instance methods (phantom types)", () => {
     const userId = Brand("UserId", "user123")
     const productId = Brand("ProductId", "prod456")
 
-    // Test unbrand method
-    expect(userId.unbrand()).toBe("user123")
-    expect(productId.unbrand()).toBe("prod456")
+    // Values ARE the primitives
+    expect(userId).toBe("user123")
+    expect(productId).toBe("prod456")
 
-    // Test unwrap method (alias for unbrand)
-    expect(userId.unwrap()).toBe("user123")
-    expect(productId.unwrap()).toBe("prod456")
+    // Use the unbrand function if needed
+    expect(unbrand(userId)).toBe("user123")
+    expect(unbrand(productId)).toBe("prod456")
 
-    // Verify the methods return the correct types
-    expect(typeof userId.unbrand()).toBe("string")
-    expect(typeof productId.unbrand()).toBe("string")
+    // Verify they are primitives
+    expect(typeof userId).toBe("string")
+    expect(typeof productId).toBe("string")
   })
 
-  it("should support toString method for string interpolation", () => {
+  it("should support string interpolation natively", () => {
     const userId = Brand("UserId", "user123")
     const price = Brand("Price", 99.99)
     const isActive = Brand("IsActive", true)
 
-    // Direct toString calls
+    // Direct toString calls work on primitives
     expect(userId.toString()).toBe("user123")
     expect(price.toString()).toBe("99.99")
     expect(isActive.toString()).toBe("true")
@@ -123,25 +128,23 @@ describe("Branded Types", () => {
     const isEnabled = createIsEnabled(true)
     const hasPermission = createHasPermission(false)
 
-    // Test unbrand/unwrap methods
-    expect(isEnabled.unbrand()).toBe(true)
-    expect(isEnabled.unwrap()).toBe(true)
-    expect(hasPermission.unbrand()).toBe(false)
-    expect(hasPermission.unwrap()).toBe(false)
+    // Values ARE booleans
+    expect(isEnabled).toBe(true)
+    expect(hasPermission).toBe(false)
 
-    // Test boolean operations work correctly
-    expect(isEnabled.unbrand() && hasPermission.unbrand()).toBe(false)
-    expect(isEnabled.unbrand() || hasPermission.unbrand()).toBe(true)
-    expect(!isEnabled.unbrand()).toBe(false)
-    expect(!hasPermission.unbrand()).toBe(true)
+    // Test boolean operations work directly
+    expect(isEnabled && hasPermission).toBe(false)
+    expect(isEnabled || hasPermission).toBe(true)
+    expect(!isEnabled).toBe(false)
+    expect(!hasPermission).toBe(true)
 
     // Test toString
     expect(isEnabled.toString()).toBe("true")
     expect(hasPermission.toString()).toBe("false")
 
-    // Test type behavior
-    expect(typeof isEnabled).toBe("object")
-    expect(typeof isEnabled.unbrand()).toBe("boolean")
+    // Test type behavior - they are primitives
+    expect(typeof isEnabled).toBe("boolean")
+    expect(typeof hasPermission).toBe("boolean")
   })
 
   it("should detect existence for branded types", () => {
@@ -184,7 +187,7 @@ describe("Branded Types", () => {
 
     // Function that only accepts UserId
     function getUserById(id: UserId): string {
-      return `User: ${id.unbrand()}`
+      return `User: ${id}` // id IS already a string
     }
 
     const userId = Brand("UserId", "user123") as UserId

@@ -15,17 +15,27 @@ describe("ValidatedBrand", () => {
     it("should accept positive numbers", () => {
       const result = PositiveNumber.of(5)
       expect(result.isEmpty).toBe(false)
-      expect(result.map((_) => _.unbrand()).getOrElse(0)).toBe(5)
+      // Use fold for cleaner extraction
+      expect(
+        result.fold(
+          () => 0,
+          (n) => n,
+        ),
+      ).toBe(5)
     })
 
-    it("should support unbrand/unwrap methods on validated brands", () => {
+    it("should return primitive values from validated brands", () => {
       const result = PositiveNumber.of(42)
       expect(result.isEmpty).toBe(false)
 
       const branded = result.get()
-      expect(branded.unbrand()).toBe(42)
-      expect(branded.unwrap()).toBe(42)
+      // Branded value IS the primitive
+      expect(branded).toBe(42)
+      expect(typeof branded).toBe("number")
       expect(branded.toString()).toBe("42")
+
+      // Can use unwrap from ValidatedBrand if needed
+      expect(PositiveNumber.unwrap(branded)).toBe(42)
     })
 
     it("should reject zero and negative numbers", () => {
@@ -133,8 +143,8 @@ describe("ValidatedBrand", () => {
   describe("refine", () => {
     it("should allow refining existing brands", () => {
       const SmallPositiveInteger = PositiveNumber.refine("SmallPositiveInteger", (n) => {
-        const num = n.unbrand()
-        return num < 100 && Number.isInteger(num)
+        // n is already a number (phantom type)
+        return n < 100 && Number.isInteger(n)
       })
 
       // First create PositiveNumber brands, then refine them

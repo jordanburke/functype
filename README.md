@@ -230,14 +230,15 @@ const promise = Task().toPromise(taskResult) // Promise<string>
 ```typescript
 import { Brand, ValidatedBrand } from "functype/branded"
 
-// Create branded types for stronger type safety (with instance methods!)
+// Create branded types for stronger type safety
 type UserId = Brand<"UserId", string>
 type Email = Brand<"Email", string>
 
-// Simple branding
+// Simple branding - branded values ARE primitives!
 const userId = Brand("UserId", "U123456")
-console.log(userId.unbrand()) // "U123456"
-console.log(userId.toString()) // "UserId(U123456)"
+console.log(userId) // "U123456" - it IS a string
+console.log(typeof userId) // "string"
+console.log(userId.toUpperCase()) // "U123456" - string methods work!
 
 // Runtime-validated branding for safer input handling
 const EmailValidator = ValidatedBrand("Email", (s: string) => /^[^@]+@[^@]+\.[^@]+$/.test(s))

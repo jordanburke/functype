@@ -49,20 +49,21 @@ type ProductId = Brand<"ProductId", string>
 type Quantity = Brand<"Quantity", number>
 type Price = Brand<"Price", number>
 
-// Create branded values (now with instance methods!)
+// Create branded values (they ARE the primitive values!)
 const userId = Brand("UserId", "user-123") as UserId
 const productId = Brand("ProductId", "product-456") as ProductId
 const quantity = Brand("Quantity", 5) as Quantity
 const price = Brand("Price", 99.99) as Price
 
-// Access the original values using instance methods
-console.log(userId.unbrand()) // "user-123"
-console.log(userId.unwrap()) // "user-123" (alias)
-console.log(userId.toString()) // "UserId(user-123)"
+// Branded values ARE primitives - use them directly!
+console.log(userId) // "user-123"
+console.log(typeof userId) // "string"
+console.log(userId.toUpperCase()) // "USER-123" - string methods work!
+console.log(price + 10) // 109.99 - numeric operations work!
 
 // Function that only accepts UserId
 function getUserById(id: UserId): string {
-  return `User: ${id.unbrand()}` // Use unbrand() to get the string
+  return `User: ${id}` // id IS a string, use directly!
 }
 
 // This works
@@ -88,15 +89,15 @@ const userId = createUserId("user-123")
 const price = createPrice(99.99)
 const isActive = createIsActive(true)
 
-// Access original values with instance methods
-console.log(userId.unbrand().toUpperCase()) // "USER-123"
-console.log(price.unbrand() * 2) // 199.98
-console.log(isActive.unbrand() && true) // true
+// Branded values ARE primitives - all operations work directly!
+console.log(userId.toUpperCase()) // "USER-123"
+console.log(price * 2) // 199.98
+console.log(isActive && true) // true
 
-// Enhanced string representation
-console.log(userId.toString()) // "UserId(user-123)"
-console.log(price.toString()) // "Price(99.99)"
-console.log(isActive.toString()) // "IsActive(true)"
+// Standard toString() works as expected
+console.log(userId.toString()) // "user-123"
+console.log(price.toString()) // "99.99"
+console.log(String(isActive)) // "true"
 ```
 
 ### Creating Custom Branders
@@ -113,7 +114,7 @@ const UserIdBrander = createBrander<"UserId", string>("UserId")
 const userId = UserIdBrander("user-123")
 ```
 
-### Removing Brands
+### Working with Branded Values
 
 ```typescript
 import { unbrand } from "@/branded"
@@ -121,16 +122,18 @@ import { unbrand } from "@/branded"
 type UserId = Brand<"UserId", string>
 const userId = Brand("UserId", "user-123") as UserId
 
-// Three ways to remove the brand:
+// Branded values ARE their primitive types!
+console.log(userId) // "user-123"
+console.log(typeof userId) // "string"
 
-// 1. Instance method (recommended)
-const rawId1 = userId.unbrand() // Type is string
-const rawId2 = userId.unwrap() // Type is string (alias)
+// Use directly in any context expecting a string
+const uppercased = userId.toUpperCase() // "USER-123"
+const interpolated = `ID: ${userId}` // "ID: user-123"
+const length = userId.length // 8
 
-// 2. Utility function (backward compatibility)
-const rawId3 = unbrand(userId) // Type is string
-
-console.log(rawId1, rawId2, rawId3) // All output: "user-123"
+// The unbrand utility function exists for compatibility
+const rawId = unbrand(userId) // Type is string
+// But it's rarely needed since userId IS already a string!
 ```
 
 ### Type Utilities
@@ -212,57 +215,84 @@ const color = HexColor.of("#ff0000") // Some(Brand<"HexColor", string>)
 ```typescript
 // Build more specific validators from existing ones
 const SmallPositiveInteger = PositiveNumber.refine("SmallPositiveInteger", (n) => {
-  const num = n.unbrand() // Get the actual number
-  return num < 100 && Number.isInteger(num)
+  // n IS already a number (phantom type)
+  return n < 100 && Number.isInteger(n)
 })
 
 const result = SmallPositiveInteger.of(PositiveNumber.unsafeOf(50)) // Some(refined brand)
 ```
 
-### ValidatedBrand with Instance Methods
+### Working with ValidatedBrand Values
 
-All ValidatedBrand instances create enhanced Brand objects with instance methods:
+ValidatedBrand creates phantom-typed primitives:
 
 ```typescript
 const email = EmailAddress.of("user@example.com")
 if (!email.isEmpty) {
   const branded = email.get()
-  console.log(branded.unbrand()) // "user@example.com"
-  console.log(branded.unwrap()) // "user@example.com"
-  console.log(branded.toString()) // "EmailAddress(user@example.com)"
+  console.log(branded) // "user@example.com" - it IS a string
+  console.log(typeof branded) // "string"
+  console.log(branded.includes("@")) // true - string methods work!
+
+  // Use the ValidatedBrand.unwrap method if needed
+  const plain = EmailAddress.unwrap(branded) // "user@example.com"
 }
 ```
 
 ## Implementation Details
 
-### Brand Types (Enhanced)
+### Brand Types (True Phantom Types)
 
-Branded types now include **instance methods** while maintaining their phantom type nature:
+Branded types are now **true phantom types** - they exist only at compile-time:
 
-- **Phantom Brand**: The `__brand` property exists only at compile-time for type safety
-- **Instance Methods**: `unbrand()`, `unwrap()`, and `toString()` are added at runtime
-- **Object Structure**: Brand objects are enhanced primitive values with attached methods
-- **Performance**: Minimal runtime overhead for significant developer experience improvement
+- **Zero Runtime Overhead**: Branded values ARE their primitive types
+- **Phantom Brand**: The `__brand` property exists only in TypeScript's type system
+- **Direct Usage**: No unwrapping needed - use branded values anywhere primitives are expected
+- **Type Safety**: Full compile-time type checking prevents mixing different brands
+
+### Why Phantom Types?
+
+```typescript
+const userId = Brand("UserId", "user-123")
+
+// At compile time: userId has type Brand<"UserId", string>
+// At runtime: userId IS the string "user-123"
+
+console.log(typeof userId) // "string"
+console.log(userId === "user-123") // true
+```
+
+This approach provides:
+
+- **Better Performance**: No object allocation or wrapper overhead
+- **Seamless Integration**: Works with all JavaScript APIs expecting primitives
+- **Natural Behavior**: String interpolation, JSON serialization, equality checks all "just work"
 
 ### ValidatedBrand Types
 
-ValidatedBrand provides **runtime validation** on top of Brand's compile-time safety:
+ValidatedBrand provides **runtime validation** with phantom types:
 
 - **Validation Function**: Custom predicate functions enforce constraints at runtime
 - **Safe Creation**: Methods return `Option` or `Either` types for error handling
 - **Type Guards**: Runtime type checking with `is()` method
 - **Refinement**: Build more specific validators from existing ones
+- **Phantom Results**: Validated values are still primitives, not objects
 
-### Migration from Phantom Types
+### Working with External APIs
 
-The enhanced Brand implementation maintains backward compatibility:
+Since branded values ARE primitives, they work seamlessly with external code:
 
 ```typescript
-// Old way (still works)
-const rawValue = unbrand(brandedValue)
+const tenantId = TenantId.unsafeOf("tenant-123")
+const projectId = ProjectId.unsafeOf("proj-456")
 
-// New way (recommended)
-const rawValue = brandedValue.unbrand()
+// Direct usage with external APIs
+await api.request({
+  tenantId, // No unwrap needed!
+  projectId, // It's already a string!
+})
+
+// JSON serialization works naturally
+JSON.stringify({ tenantId, projectId })
+// {"tenantId":"tenant-123","projectId":"proj-456"}
 ```
-
-Both approaches work, but instance methods provide better IDE support and discoverability.

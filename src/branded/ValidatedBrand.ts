@@ -3,13 +3,14 @@ import { Option } from "@/option"
 
 import { Brand } from "./Brand"
 
-export type ValidatedBrand<K extends string, T> = {
+export interface ValidatedBrand<K extends string, T> {
   readonly brand: K
   readonly validate: (value: T) => boolean
   readonly of: (value: T) => Option<Brand<K, T>>
   readonly from: (value: T) => Either<string, Brand<K, T>>
   readonly unsafeOf: (value: T) => Brand<K, T>
   readonly is: (value: unknown) => value is Brand<K, T>
+  readonly unwrap: (branded: Brand<K, T>) => T
   readonly refine: <K2 extends string>(
     brand: K2,
     validate: (value: Brand<K, T>) => boolean,
@@ -60,11 +61,13 @@ export function ValidatedBrand<K extends string, T>(brand: K, validate: (value: 
       }
     },
 
+    unwrap: (branded: Brand<K, T>): T => branded as unknown as T,
+
     refine: <K2 extends string>(
       newBrand: K2,
       refineValidate: (value: Brand<K, T>) => boolean,
     ): ValidatedBrand<K2, Brand<K, T>> =>
-      ValidatedBrand(newBrand, (value: Brand<K, T>) => validate(value.unbrand()) && refineValidate(value)),
+      ValidatedBrand(newBrand, (value: Brand<K, T>) => validate(value as unknown as T) && refineValidate(value)),
   }
 }
 

@@ -1,49 +1,28 @@
-// The brand symbol type with instance methods
+// Phantom type brand - exists only at compile time
+// Must use type alias (not interface) because we need intersection with primitives
 export type Brand<K extends string, T> = T & {
   readonly __brand: K
-  readonly unbrand: () => T
-  readonly unwrap: () => T
 }
 
 // Utility type to extract the underlying type from a branded type
-export type Unbrand<T> = T extends Brand<string, infer U> ? U : never
+export type Unbrand<T> = T extends Brand<string, infer U> ? U : T
 
 // Utility type to extract the brand from a branded type
 export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
 
 /**
  * Brand is a utility for creating nominal typing in TypeScript.
- * It allows for creating distinct types that are structurally identical
- * but considered different by TypeScript's type system.
+ * It creates phantom types that exist only at compile time.
+ * At runtime, the branded value IS the primitive value.
  *
- * @param brand - The brand name
+ * @param brand - The brand name (unused at runtime, only for type inference)
  * @param value - The value to brand
- * @returns The branded value with unbrand/unwrap methods
+ * @returns The value with phantom type brand
  */
-export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
-  const branded = value as Brand<K, T>
-  const methods = {
-    unbrand(): T {
-      return value
-    },
-    unwrap(): T {
-      return value
-    },
-    toString(): string {
-      return String(value)
-    },
-  }
-
-  // Add valueOf for numeric types to support numeric operations
-  if (typeof value === "number") {
-    Object.assign(methods, {
-      valueOf(): number {
-        return value as number
-      },
-    })
-  }
-
-  return Object.assign(branded, methods)
+export function Brand<K extends string, T>(_brand: K, value: T): Brand<K, T> {
+  // Just return the value with a type assertion
+  // No runtime modification - the brand exists only in TypeScript
+  return value as Brand<K, T>
 }
 
 /**
@@ -51,14 +30,15 @@ export function Brand<K extends string, T>(brand: K, value: T): Brand<K, T> {
  * @param branded - The branded value
  * @returns The original value without the brand
  */
-export function unbrand<T>(branded: Brand<string, T>): T {
-  return branded.unbrand()
+export function unbrand<K extends string, T>(branded: Brand<K, T>): T {
+  // Since branded values ARE their primitives, just return as-is
+  return branded as unknown as T
 }
 
 /**
  * Type guard for checking if a value has a specific brand
  * @param value - The value to check
- * @param brand - The brand to check for
+ * @param _brand - The brand to check for (unused at runtime)
  * @returns True if the value has the specified brand
  *
  * Note: Since brands are phantom types that exist only at compile time,
@@ -66,7 +46,7 @@ export function unbrand<T>(branded: Brand<string, T>): T {
  * for non-null values, as we have no way to actually check the brand at runtime.
  * This function is primarily for API consistency and documentation purposes.
  */
-export function hasBrand<K extends string, T>(value: unknown, brand: K): value is Brand<K, T> {
+export function hasBrand<K extends string, T>(value: unknown, _brand: K): value is Brand<K, T> {
   // In a phantom type system, we can't actually check the brand at runtime
   // We can only verify the value exists
   return value !== null && value !== undefined

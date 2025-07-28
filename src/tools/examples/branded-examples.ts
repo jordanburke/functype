@@ -13,17 +13,22 @@ import { Option } from "@/option"
 // Verify imports work
 void [Brand, ValidatedBrand, BrandedString, BrandedNumber, BrandedBoolean, Option, Either]
 
+// Import unbrand function for examples
+import { unbrand } from "@/branded"
+
 export const brandExamples = {
   basic: () => {
     // Basic branded type creation
     const userId = Brand("UserId", "user-123")
     const productId = Brand("ProductId", "prod-456")
 
-    // Access original values with instance methods
+    // Values ARE primitives - no unbrand needed
     return {
-      userId: userId.unbrand(), // "user-123"
-      userIdStr: userId.toString(), // "UserId(user-123)"
-      productId: productId.unwrap(), // "prod-456"
+      userId: userId, // "user-123" - it IS a string
+      userIdStr: userId.toString(), // "user-123" - standard string method
+      productId: productId, // "prod-456"
+      // Can use unbrand function if needed for clarity
+      userIdUnbranded: unbrand(userId), // "user-123"
     }
   },
 
@@ -38,18 +43,18 @@ export const brandExamples = {
     const isActive = createIsActive(true)
 
     return {
-      email: email.unbrand(), // "user@example.com"
-      emailStr: email.toString(), // "Email(user@example.com)"
-      age: age.unbrand(), // 25
-      canVote: age.unbrand() >= 18, // true
-      status: isActive.unbrand(), // true
+      email: email, // "user@example.com" - it IS a string
+      emailStr: email.toString(), // "user@example.com"
+      age: age, // 25 - it IS a number
+      canVote: age >= 18, // true - numeric operations work directly
+      status: isActive, // true - it IS a boolean
     }
   },
 
   typeSafety: () => {
     // Function that only accepts specific branded type
     function getUserProfile(id: Brand<"UserId", string>): string {
-      return `Profile for user: ${id.unbrand()}`
+      return `Profile for user: ${id}` // id IS a string
     }
 
     const userId = Brand("UserId", "user-123")
@@ -62,7 +67,7 @@ export const brandExamples = {
     // getUserProfile(email)  // Error: Brand<"Email", string> is not assignable to Brand<"UserId", string>
     // getUserProfile("user-123")  // Error: string is not assignable to Brand<"UserId", string>
 
-    return { profile, email: email.unbrand() }
+    return { profile, email: email } // email IS a string
   },
 }
 
@@ -81,9 +86,16 @@ export const validatedBrandExamples = {
     return {
       hasValidEmail: !validEmail.isEmpty,
       hasInvalidEmail: invalidEmail.isEmpty,
-      validEmailValue: validEmail.map((e) => e.unbrand()).getOrElse(""),
+      // Better: use fold to work with branded values naturally
+      validEmailValue: validEmail.fold(
+        () => "",
+        (email) => email, // email IS a string, works directly!
+      ),
       hasValidNumber: !validNumber.isEmpty,
-      validNumberValue: validNumber.map((n) => n.unbrand()).getOrElse(0),
+      validNumberValue: validNumber.fold(
+        () => 0,
+        (num) => num, // num IS a number, works directly!
+      ),
     }
   },
 
@@ -95,12 +107,19 @@ export const validatedBrandExamples = {
     const invalidResult = Email.from("invalid") // Left("Invalid Email: validation failed")
 
     return {
-      validEmail: validResult.map((e) => e.unbrand()).getOrElse(""),
+      // Use fold for clean handling
+      validEmail: validResult.fold(
+        () => "no-email",
+        (email) => email, // email IS a string
+      ),
       validError: validResult.fold(
         () => "none",
         () => "success",
       ),
-      invalidEmail: invalidResult.map((e) => e.unbrand()).getOrElse("fallback"),
+      invalidEmail: invalidResult.fold(
+        () => "fallback",
+        (email) => email, // email IS a string
+      ),
       invalidError: invalidResult.fold(
         (err) => err,
         () => "no error",
@@ -126,7 +145,11 @@ export const validatedBrandExamples = {
 
     return {
       hasValidUser: !user.isEmpty,
-      userEmail: user.map((u) => u.email.unbrand()).getOrElse(""),
+      // Clean extraction with fold
+      userEmail: user.fold(
+        () => "",
+        (u) => u.email, // u.email IS a string!
+      ),
       hasInvalidUser: invalidUser.isEmpty,
     }
   },
