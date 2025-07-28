@@ -11,13 +11,14 @@ export type TypeableParams<Tag extends string, T> = { _tag: Tag; impl: T }
 /**
  * Utility type to extract the Tag from a Typeable type
  * @typeParam T - The Typeable type to extract the tag from
+ * @internal
  */
 export type ExtractTag<T> = T extends Typeable<infer Tag, unknown> ? Tag : never
 
 /**
  * Core utility for creating nominal typing in TypeScript by adding a type tag to any object.
  * This allows for creating distinct types that are structurally identical but considered different by TypeScript's type system.
- * 
+ *
  * @param params - The parameters containing the tag and implementation
  * @returns A Typeable object with the specified tag
  * @typeParam Tag - The string literal type used as the discriminator

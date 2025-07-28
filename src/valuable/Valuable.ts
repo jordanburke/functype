@@ -19,4 +19,6 @@ export function Valuable<Tag extends string, V, T = object>(params: ValuablePara
   }
 }
 
-export type Valuable<Tag extends string, V, T = object> = ReturnType<typeof Valuable<Tag, V, T>>
+export type Valuable<Tag extends string, V, T = object> = Typeable<Tag, T> & {
+  toValue: () => { _tag: Tag; value: V }
+}

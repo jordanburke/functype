@@ -5,6 +5,9 @@ import { Typeable } from "@/typeable/Typeable"
  */
 export const NAME = "Throwable" as const
 
+/**
+ * @internal
+ */
 export type ThrowableType = Error &
   Typeable<typeof NAME> & {
     readonly data?: unknown

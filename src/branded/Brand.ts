@@ -15,7 +15,7 @@ export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
  * Brand is a utility for creating nominal typing in TypeScript.
  * It allows for creating distinct types that are structurally identical
  * but considered different by TypeScript's type system.
- * 
+ *
  * @param brand - The brand name
  * @param value - The value to brand
  * @returns The branded value with unbrand/unwrap methods

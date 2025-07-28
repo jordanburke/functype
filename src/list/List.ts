@@ -20,6 +20,7 @@ export interface List<A> extends FunctypeCollection<A, "List"> {
   filter(predicate: (a: A) => unknown): List<A>
   filterNot: (p: (a: A) => boolean) => List<A>
   // List-specific methods
+  /** @internal */
   filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
   remove: (value: A) => List<A>
   removeAt: (index: number) => List<A>
