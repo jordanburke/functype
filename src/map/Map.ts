@@ -1,5 +1,6 @@
 import type { Collection } from "@/collections"
-import { Companion, type Foldable, Typeable } from "@/index"
+import { Companion, type Foldable } from "@/index"
+import { Typeable } from "@/typeable/Typeable"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
