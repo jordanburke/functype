@@ -6,7 +6,7 @@ import { Typeable } from "@/typeable/Typeable"
 export type ValuableParams<Tag extends string, T, V> = { _tag: Tag; impl: T; value: V }
 
 /**
- * Creates a Valuable wrapper that adds value extraction capabilities
+ * Represents a type that can extract its inner value. Creates a Valuable wrapper that adds value extraction capabilities.
  * @param params - Configuration parameters
  * @module Valuable
  * @category Utilities
@@ -19,10 +19,4 @@ export function Valuable<Tag extends string, V, T = object>(params: ValuablePara
   }
 }
 
-/**
- * Represents a type that can extract its inner value
- * @interface
- * @module Valuable
- * @category Utilities
- */
 export type Valuable<Tag extends string, V, T = object> = ReturnType<typeof Valuable<Tag, V, T>>

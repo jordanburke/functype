@@ -20,15 +20,22 @@ export type TryKind = <A>(a: A) => Try<A>
 
 /**
  * Generic container types for type-safe operations
+ * @internal
  */
 type Mappable<T> = {
   map<U>(f: (value: T) => U): unknown
 }
 
+/**
+ * @internal
+ */
 type Flattenable = {
   flatten(): unknown
 }
 
+/**
+ * @internal
+ */
 type FlatMappable<T> = {
   flatMap<U>(f: (value: T) => unknown): unknown
 }

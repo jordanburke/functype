@@ -1,9 +1,3 @@
-/**
- * Brand is a utility for creating nominal typing in TypeScript
- * It allows for creating distinct types that are structurally identical
- * but considered different by TypeScript's type system
- */
-
 // The brand symbol type with instance methods
 export type Brand<K extends string, T> = T & {
   readonly __brand: K
@@ -18,7 +12,10 @@ export type Unbrand<T> = T extends Brand<string, infer U> ? U : never
 export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
 
 /**
- * Helper to create a branded type with instance methods
+ * Brand is a utility for creating nominal typing in TypeScript.
+ * It allows for creating distinct types that are structurally identical
+ * but considered different by TypeScript's type system.
+ * 
  * @param brand - The brand name
  * @param value - The value to brand
  * @returns The branded value with unbrand/unwrap methods

@@ -3,13 +3,6 @@ import { Option } from "@/option"
 
 import { Brand } from "./Brand"
 
-/**
- * A brand with runtime validation
- * @example
- * const Age = ValidatedBrand("Age", (n: number) => n >= 0 && n <= 150)
- * const myAge = Age.of(25) // Option<Brand<"Age", number>>
- * const invalid = Age.of(-5) // None
- */
 export type ValidatedBrand<K extends string, T> = {
   readonly brand: K
   readonly validate: (value: T) => boolean

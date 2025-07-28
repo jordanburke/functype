@@ -4,21 +4,26 @@ import type { Type } from "@/types"
 
 /**
  * Type-level utilities for exhaustiveness checking
+ * @internal
  */
 type UnionToIntersection<U> = (U extends unknown ? (k: U) => void : never) extends (k: infer I) => void ? I : never
 
+/** @internal */
 type IsUnion<T> = [T] extends [UnionToIntersection<T>] ? false : true
 
+/** @internal */
 type RequireExhaustive<T, Cases> =
   IsUnion<T> extends true ? (keyof Cases extends T ? (T extends keyof Cases ? Cases : never) : never) : Cases
 
 /**
  * Pattern types for nested matching
+ * @internal
  */
 type Pattern<T> = T | { [K in keyof T]?: Pattern<T[K]> } | ((value: T) => boolean) | { _: (value: T) => boolean } // Guard pattern
 
 /**
  * Extract result from pattern
+ * @internal
  */
 type PatternResult<T, R> = R | ((matched: T) => R)
 

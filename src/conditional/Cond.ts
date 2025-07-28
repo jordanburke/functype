@@ -46,6 +46,7 @@ type CondState<T> = {
   value?: T
 }
 
+/** @internal */
 type LazyCondChain<T> = {
   when: (condition: () => boolean, value: () => T) => LazyCondChain<T>
   elseWhen: (condition: () => boolean, value: () => T) => LazyCondChain<T>
