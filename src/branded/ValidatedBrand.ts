@@ -3,18 +3,24 @@ import { Option } from "@/option"
 
 import { Brand } from "./Brand"
 
-export interface ValidatedBrand<K extends string, T> {
+// ValidatedBrand type that extends Brand with a compile-time validation marker
+export type ValidatedBrand<K extends string, T> = Brand<K, T> & {
+  readonly __validated: true
+}
+
+// Companion interface for ValidatedBrand factory
+export interface ValidatedBrandCompanion<K extends string, T> {
   readonly brand: K
   readonly validate: (value: T) => boolean
-  readonly of: (value: T) => Option<Brand<K, T>>
-  readonly from: (value: T) => Either<string, Brand<K, T>>
-  readonly unsafeOf: (value: T) => Brand<K, T>
-  readonly is: (value: unknown) => value is Brand<K, T>
+  readonly of: (value: T) => Option<ValidatedBrand<K, T>>
+  readonly from: (value: T) => Either<string, ValidatedBrand<K, T>>
+  readonly unsafeOf: (value: T) => ValidatedBrand<K, T>
+  readonly is: (value: unknown) => value is ValidatedBrand<K, T>
   readonly unwrap: (branded: Brand<K, T>) => T
   readonly refine: <K2 extends string>(
     brand: K2,
     validate: (value: Brand<K, T>) => boolean,
-  ) => ValidatedBrand<K2, Brand<K, T>>
+  ) => ValidatedBrandCompanion<K2, Brand<K, T>>
 }
 
 /**
@@ -36,24 +42,30 @@ export interface ValidatedBrand<K extends string, T> {
  *   // value is Brand<"Email", string>
  * }
  */
-export function ValidatedBrand<K extends string, T>(brand: K, validate: (value: T) => boolean): ValidatedBrand<K, T> {
+export function ValidatedBrand<K extends string, T>(
+  brand: K,
+  validate: (value: T) => boolean,
+): ValidatedBrandCompanion<K, T> {
   return {
     brand,
     validate,
 
-    of: (value: T): Option<Brand<K, T>> => (validate(value) ? Option(Brand(brand, value)) : Option.none()),
+    of: (value: T): Option<ValidatedBrand<K, T>> =>
+      validate(value) ? Option(Brand(brand, value) as ValidatedBrand<K, T>) : Option.none(),
 
-    from: (value: T): Either<string, Brand<K, T>> =>
-      validate(value) ? Right(Brand(brand, value)) : Left(`Invalid ${brand}: validation failed`),
+    from: (value: T): Either<string, ValidatedBrand<K, T>> =>
+      validate(value)
+        ? Right(Brand(brand, value) as ValidatedBrand<K, T>)
+        : Left(`Invalid ${brand}: validation failed`),
 
-    unsafeOf: (value: T): Brand<K, T> => {
+    unsafeOf: (value: T): ValidatedBrand<K, T> => {
       if (!validate(value)) {
         throw new Error(`Invalid ${brand}: validation failed`)
       }
-      return Brand(brand, value)
+      return Brand(brand, value) as ValidatedBrand<K, T>
     },
 
-    is: (value: unknown): value is Brand<K, T> => {
+    is: (value: unknown): value is ValidatedBrand<K, T> => {
       try {
         return validate(value as T)
       } catch {
@@ -66,7 +78,7 @@ export function ValidatedBrand<K extends string, T>(brand: K, validate: (value: 
     refine: <K2 extends string>(
       newBrand: K2,
       refineValidate: (value: Brand<K, T>) => boolean,
-    ): ValidatedBrand<K2, Brand<K, T>> =>
+    ): ValidatedBrandCompanion<K2, Brand<K, T>> =>
       ValidatedBrand(newBrand, (value: Brand<K, T>) => validate(value as unknown as T) && refineValidate(value)),
   }
 }
@@ -78,10 +90,22 @@ export function ValidatedBrand<K extends string, T>(brand: K, validate: (value: 
  * const invalid = PositiveNumber.of(-5) // None
  * const checked = PositiveNumber.from(0) // Left("Invalid PositiveNumber: validation failed")
  */
-export const PositiveNumber = ValidatedBrand("PositiveNumber", (n: number) => n > 0)
-export const NonNegativeNumber = ValidatedBrand("NonNegativeNumber", (n: number) => n >= 0)
-export const IntegerNumber = ValidatedBrand("IntegerNumber", (n: number) => Number.isInteger(n))
-export const PositiveInteger = PositiveNumber.refine("PositiveInteger", (n) => Number.isInteger(n as number))
+export const PositiveNumber: ValidatedBrandCompanion<"PositiveNumber", number> = ValidatedBrand(
+  "PositiveNumber",
+  (n: number) => n > 0,
+)
+export const NonNegativeNumber: ValidatedBrandCompanion<"NonNegativeNumber", number> = ValidatedBrand(
+  "NonNegativeNumber",
+  (n: number) => n >= 0,
+)
+export const IntegerNumber: ValidatedBrandCompanion<"IntegerNumber", number> = ValidatedBrand(
+  "IntegerNumber",
+  (n: number) => Number.isInteger(n),
+)
+export const PositiveInteger: ValidatedBrandCompanion<
+  "PositiveInteger",
+  Brand<"PositiveNumber", number>
+> = PositiveNumber.refine("PositiveInteger", (n) => Number.isInteger(n as number))
 
 /**
  * Non-empty string brand
@@ -89,7 +113,10 @@ export const PositiveInteger = PositiveNumber.refine("PositiveInteger", (n) => N
  * const name = NonEmptyString.of("John") // Some(Brand<"NonEmptyString", string>)
  * const empty = NonEmptyString.of("") // None
  */
-export const NonEmptyString = ValidatedBrand("NonEmptyString", (s: string) => s.length > 0)
+export const NonEmptyString: ValidatedBrandCompanion<"NonEmptyString", string> = ValidatedBrand(
+  "NonEmptyString",
+  (s: string) => s.length > 0,
+)
 /**
  * Email address brand with basic validation
  * @example
@@ -104,8 +131,11 @@ export const NonEmptyString = ValidatedBrand("NonEmptyString", (s: string) => s.
  *     .getOrElse("Invalid email address")
  * }
  */
-export const EmailAddress = ValidatedBrand("EmailAddress", (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s))
-export const UrlString = ValidatedBrand("UrlString", (s: string) => {
+export const EmailAddress: ValidatedBrandCompanion<"EmailAddress", string> = ValidatedBrand(
+  "EmailAddress",
+  (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s),
+)
+export const UrlString: ValidatedBrandCompanion<"UrlString", string> = ValidatedBrand("UrlString", (s: string) => {
   try {
     new URL(s)
     return true
@@ -115,12 +145,12 @@ export const UrlString = ValidatedBrand("UrlString", (s: string) => {
 })
 
 // UUID validation
-export const UUID = ValidatedBrand("UUID", (s: string) =>
+export const UUID: ValidatedBrandCompanion<"UUID", string> = ValidatedBrand("UUID", (s: string) =>
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s),
 )
 
 // Date/Time brands
-export const ISO8601Date = ValidatedBrand(
+export const ISO8601Date: ValidatedBrandCompanion<"ISO8601Date", string> = ValidatedBrand(
   "ISO8601Date",
   (s: string) => !isNaN(Date.parse(s)) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(s),
 )
@@ -137,7 +167,7 @@ export const ISO8601Date = ValidatedBrand(
  * const httpPort = Port.unsafeOf(80) // Brand<"Port", number>
  * // Port.unsafeOf(70000) // throws Error
  */
-export function BoundedNumber(brand: string, min: number, max: number): ValidatedBrand<string, number> {
+export function BoundedNumber(brand: string, min: number, max: number): ValidatedBrandCompanion<string, number> {
   return ValidatedBrand(brand, (n: number) => n >= min && n <= max)
 }
 
@@ -149,7 +179,11 @@ export function BoundedNumber(brand: string, min: number, max: number): Validate
  * const tooShort = Username.of("jo") // None
  * const tooLong = Username.of("verylongusernamethatexceedslimit") // None
  */
-export function BoundedString(brand: string, minLength: number, maxLength: number): ValidatedBrand<string, string> {
+export function BoundedString(
+  brand: string,
+  minLength: number,
+  maxLength: number,
+): ValidatedBrandCompanion<string, string> {
   return ValidatedBrand(brand, (s: string) => s.length >= minLength && s.length <= maxLength)
 }
 
@@ -166,6 +200,6 @@ export function BoundedString(brand: string, minLength: number, maxLength: numbe
  *   .map(p => formatPhoneNumber(p))
  *   .getOrElse("Invalid phone number")
  */
-export function PatternString(brand: string, pattern: RegExp): ValidatedBrand<string, string> {
+export function PatternString(brand: string, pattern: RegExp): ValidatedBrandCompanion<string, string> {
   return ValidatedBrand(brand, (s: string) => pattern.test(s))
 }

@@ -8,9 +8,54 @@ import {
   BoundedNumber,
   BoundedString,
   PatternString,
+  type Brand,
+  type ValidatedBrand as ValidatedBrandType,
 } from "@/branded"
 
 describe("ValidatedBrand", () => {
+  describe("ValidatedBrand as subtype of Brand", () => {
+    it("should allow ValidatedBrand to be assigned to Brand without casting", () => {
+      const emailValidated: ValidatedBrandType<"EmailAddress", string> = EmailAddress.unsafeOf("test@example.com")
+      const emailBrand: Brand<"EmailAddress", string> = emailValidated // No cast needed!
+
+      expect(emailBrand).toBe(emailValidated)
+      expect(emailBrand).toBe("test@example.com")
+    })
+
+    it("should work with function parameters expecting Brand", () => {
+      // Function that accepts a simple Brand
+      function processEmail(email: Brand<"EmailAddress", string>): string {
+        return `Processing: ${email}`
+      }
+
+      const validatedEmail = EmailAddress.unsafeOf("user@example.com")
+      // Should be able to pass ValidatedBrand where Brand is expected
+      const result = processEmail(validatedEmail)
+
+      expect(result).toBe("Processing: user@example.com")
+    })
+
+    it("should maintain type safety - cannot assign regular string to ValidatedBrand", () => {
+      const regularString = "not-an-email"
+      // @ts-expect-error - Cannot assign string to ValidatedBrand
+      const email: ValidatedBrandType<"EmailAddress", string> = regularString
+    })
+
+    it("should work with arrays of mixed Brand and ValidatedBrand", () => {
+      const SimpleBrand = (value: string): Brand<"UserId", string> => value as Brand<"UserId", string>
+      const ValidatedUserId = ValidatedBrand("UserId", (s: string) => s.length > 0)
+
+      const simpleBrand = SimpleBrand("user1")
+      const validatedBrand = ValidatedUserId.unsafeOf("user2")
+
+      // Array that accepts Brand should accept both
+      const users: Brand<"UserId", string>[] = [simpleBrand, validatedBrand]
+
+      expect(users).toHaveLength(2)
+      expect(users[0]).toBe("user1")
+      expect(users[1]).toBe("user2")
+    })
+  })
   describe("PositiveNumber", () => {
     it("should accept positive numbers", () => {
       const result = PositiveNumber.of(5)
