@@ -41,6 +41,20 @@ export interface ValidatedBrandCompanion<K extends string, T> {
  * if (Email.is(value)) {
  *   // value is Brand<"Email", string>
  * }
+ *
+ * @example
+ * // Best Practice: Use same brand name for seamless conversion
+ * // ValidatedBrand extends Brand, so when using the same brand name,
+ * // no casting is needed for conversion
+ * const ValidatedUserId = ValidatedBrand("UserId", (s: string) => s.length > 0)
+ * type ValidatedUserId = ReturnType<typeof ValidatedUserId.of> extends Option<infer T> ? T : never
+ * type UserId = Brand<"UserId", string>
+ *
+ * const toSimpleUserId = (id: ValidatedUserId): UserId => id // No cast needed!
+ *
+ * // Avoid different brand names which require casting:
+ * // ❌ ValidatedBrand("ValidatedUserId", ...) + Brand<"UserId", string>
+ * // ✅ ValidatedBrand("UserId", ...) + Brand<"UserId", string>
  */
 export function ValidatedBrand<K extends string, T>(
   brand: K,

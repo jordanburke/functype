@@ -1,14 +1,15 @@
-import { describe, it, expect } from "vitest"
+import { describe, expect, it } from "vitest"
+
 import {
-  ValidatedBrand,
-  PositiveNumber,
-  NonEmptyString,
-  EmailAddress,
-  UUID,
   BoundedNumber,
   BoundedString,
-  PatternString,
   type Brand,
+  EmailAddress,
+  NonEmptyString,
+  PatternString,
+  PositiveNumber,
+  UUID,
+  ValidatedBrand,
   type ValidatedBrand as ValidatedBrandType,
 } from "@/branded"
 
@@ -33,6 +34,34 @@ describe("ValidatedBrand", () => {
       const result = processEmail(validatedEmail)
 
       expect(result).toBe("Processing: user@example.com")
+    })
+
+    it("should enable seamless conversion when using same brand names", () => {
+      // Create ValidatedBrand and simple Brand with the SAME brand name
+      const ValidatedUserId = ValidatedBrand("UserId", (s: string) => s.length > 0)
+
+      const validatedId = ValidatedUserId.unsafeOf("user123")
+      const simpleId: Brand<"UserId", string> = validatedId // No cast needed!
+
+      expect(simpleId).toBe(validatedId)
+      expect(simpleId).toBe("user123")
+    })
+
+    it("should work in real-world conversion scenarios", () => {
+      // Simulate the user's use case
+      const ValidatedVideoId = ValidatedBrand("VideoId", (s: string) => /^[a-f0-9-]{36}$/.test(s))
+      type ValidatedVideoId =
+        ReturnType<typeof ValidatedVideoId.of> extends import("@/option").Option<infer T> ? T : never
+      type VideoId = Brand<"VideoId", string>
+
+      // Conversion function without casting
+      const toSimpleVideoId = (id: ValidatedVideoId): VideoId => id
+
+      const validatedId = ValidatedVideoId.unsafeOf("550e8400-e29b-41d4-a716-446655440000")
+      const simpleId = toSimpleVideoId(validatedId)
+
+      expect(simpleId).toBe(validatedId)
+      expect(typeof simpleId).toBe("string")
     })
 
     it("should maintain type safety - cannot assign regular string to ValidatedBrand", () => {
