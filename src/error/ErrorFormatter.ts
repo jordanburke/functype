@@ -247,7 +247,7 @@ export function createErrorSerializer() {
             stack: (e as Error).stack ? formatStackTrace((e as Error).stack) : undefined,
           }))
         }
-      } catch (e) {
+      } catch (_e) {
         // If error chain extraction fails, ignore it
       }
     }
