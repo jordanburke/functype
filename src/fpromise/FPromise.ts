@@ -53,7 +53,7 @@ export type FPromise<T extends Type, E extends Type = unknown> = PromiseLike<T> 
   ) => FPromise<T, E>
   logError: (logger: (error: E, context: ErrorContext) => void) => FPromise<T, E>
   toPromise: () => Promise<T>
-  toEither: () => Promise<T>
+  toEither: () => Promise<Either<E, T>>
   fold: <R extends Type>(onError: (error: E) => R, onSuccess: (value: T) => R) => FPromise<R, never>
 
   // Functor implementation
@@ -458,10 +458,13 @@ const FPromiseImpl = <T extends Type, E = unknown>(
      *   .toEither()
      * // either is Left(Error("Something went wrong"))
      */
-    // Implementation note: This currently returns the raw value, not an Either
-    // This is not the ideal implementation but matches what the tests expect
-    toEither: (): Promise<T> => {
-      return promise
+    toEither: async (): Promise<Either<E, T>> => {
+      try {
+        const value = await promise
+        return Right<E, T>(value)
+      } catch (error) {
+        return Left<E, T>(error as E)
+      }
     },
 
     /**

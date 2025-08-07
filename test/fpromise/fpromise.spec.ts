@@ -425,8 +425,9 @@ describe("FPromise", () => {
       // Make sure we got a value
       expect(either).toBeDefined()
 
-      // Currently our implementation returns the raw value instead of an Either
-      expect(either).toBe(42)
+      // Now our implementation returns an Either
+      expect(either.isRight()).toBe(true)
+      expect(either.get()).toBe(42)
     })
 
     it("should convert a failed promise to a Left", async () => {
@@ -439,8 +440,9 @@ describe("FPromise", () => {
       // Make sure we got a value
       expect(either).toBeDefined()
 
-      // Currently our implementation returns the raw value instead of an Either
-      expect(either).toBe(0)
+      // Now our implementation returns an Either
+      expect(either.isRight()).toBe(true)
+      expect(either.get()).toBe(0)
     })
   })
 
@@ -787,8 +789,9 @@ describe("FPromise", () => {
       // Make sure we got a value
       expect(either).toBeDefined()
 
-      // Currently our implementation returns the raw value instead of an Either
-      expect(either).toBe(84)
+      // Now our implementation returns an Either
+      expect(either.isRight()).toBe(true)
+      expect(either.get()).toBe(84)
     })
   })
 
@@ -953,13 +956,15 @@ describe("FPromise", () => {
       // Success case
       const successEither = await fetchData(42).toEither()
       expect(successEither).toBeDefined()
-      expect(successEither).toBe("Data for ID: 42")
+      expect(successEither.isRight()).toBe(true)
+      expect(successEither.get()).toBe("Data for ID: 42")
 
       // Recovery case
       const recoveredPromise = fetchData(-1).recover("Error recovered")
       const recoveredEither = await recoveredPromise.toEither()
       expect(recoveredEither).toBeDefined()
-      expect(recoveredEither).toBe("Error recovered")
+      expect(recoveredEither.isRight()).toBe(true)
+      expect(recoveredEither.get()).toBe("Error recovered")
     })
   })
 })
