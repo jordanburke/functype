@@ -8,7 +8,7 @@
 export function parseJSON(str: string): object | null {
   try {
     return JSON.parse(str)
-  } catch (e) {
+  } catch (_e) {
     return null
   }
 }

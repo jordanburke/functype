@@ -181,7 +181,7 @@ export const retryWithOptions = <T, E = unknown>(
             try {
               // Call the onRetry callback
               onRetry(error, currentAttempt)
-            } catch (callbackError) {
+            } catch (_callbackError) {
               // Ignore errors in the callback
             }
 

@@ -73,7 +73,18 @@ export default [
       "functional/prefer-immutable-types": "off",
       "functional/no-throw-statements": "off",
       // Project-specific overrides to functype defaults
-      "@typescript-eslint/no-unused-vars": "off", // Override for your existing code TODO Check this
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_", // Only underscore-prefixed parameters
+          "varsIgnorePattern": "^(_|[A-Z]$)", // Allow underscore-prefixed vars and single uppercase letters (interface generics)
+          "caughtErrors": "all", // Require using catch block errors or prefix with _
+          "caughtErrorsIgnorePattern": "^_", // Allow _error, _e, etc. in catch blocks
+          "destructuredArrayIgnorePattern": "^_",
+          "ignoreRestSiblings": true,
+          "args": "after-used"
+        }
+      ],
       "functional/no-let": "warn", // More lenient than functype's default "error"
       "functional/immutable-data": [
         "warn",
@@ -83,4 +94,20 @@ export default [
       ],
     },
   },
+  
+  // HKT-specific overrides for Higher-Kinded Type implementations
+  {
+    files: ["**/hkt/**/*.ts", "**/*HKT*.ts"],
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          "varsIgnorePattern": "^(_|[A-Z])$", // Allow single-letter generics in HKT files
+          "argsIgnorePattern": "^_", // Only underscore-prefixed parameters
+          "caughtErrors": "all",
+          "caughtErrorsIgnorePattern": "^_"
+        }
+      ]
+    }
+  }
 ]

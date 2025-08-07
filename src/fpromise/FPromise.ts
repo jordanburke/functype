@@ -305,7 +305,7 @@ const FPromiseImpl = <T extends Type, E = unknown>(
         promise.then(resolve).catch((error: E) => {
           try {
             resolve(f(error))
-          } catch (recoverError) {
+          } catch (_recoverError) {
             // If recovery fails, we still need to resolve with something
             // In this case, we'll use a default value based on the type
             // This is a design decision - we could also reject with the new error
@@ -335,8 +335,8 @@ const FPromiseImpl = <T extends Type, E = unknown>(
           try {
             const recoveryPromise = f(error)
             recoveryPromise.then(resolve, reject)
-          } catch (recoverError) {
-            reject(recoverError as E2)
+          } catch (_recoverError) {
+            reject(_recoverError as E2)
           }
         })
       })
@@ -403,7 +403,7 @@ const FPromiseImpl = <T extends Type, E = unknown>(
               timestamp: Date.now(),
             }
             logger(error, context)
-          } catch (loggerError) {
+          } catch (_loggerError) {
             // Ignore errors from logger
           } finally {
             reject(error)

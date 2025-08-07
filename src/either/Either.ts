@@ -154,8 +154,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     return false
   },
   contains: (v: R) => value === v,
-  reduce: (f: (b: R, a: R) => R) => value,
-  reduceRight: (f: (b: R, a: R) => R) => value,
+  reduce: (_f: (b: R, a: R) => R) => value,
+  reduceRight: (_f: (b: R, a: R) => R) => value,
   count: (p: (x: R) => boolean) => (p(value) ? 1 : 0),
   find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
   exists: (p: (a: R) => boolean) => p(value),
