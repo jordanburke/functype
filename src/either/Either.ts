@@ -4,7 +4,7 @@ import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
-import type { AsyncMonad } from "@/typeclass"
+import type { AsyncMonad, Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**
@@ -12,7 +12,7 @@ import type { Type } from "@/types"
  * @module Either
  * @category Core
  */
-export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right"> {
+export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right">, Promisable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft: () => boolean
@@ -136,6 +136,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
       op(value, z),
   match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Right(value),
   swap: () => Left<R, L>(value),
+  toPromise: (): Promise<R> => Promise.resolve(value),
   toValue: () => ({ _tag: "Right", value }),
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
@@ -219,6 +220,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
       z,
   match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Left(value),
   swap: () => Right<R, L>(value),
+  toPromise: (): Promise<R> => Promise.reject(value),
   toValue: () => ({ _tag: "Left", value }),
   pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),

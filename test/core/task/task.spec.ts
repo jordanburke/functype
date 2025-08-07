@@ -213,13 +213,14 @@ describe("Sync with finally", () => {
   test("should execute finally block on success", async () => {
     let finallyExecuted = false
     try {
-      const result = await Task().Sync(
+      const taskResult = Task().Sync(
         () => "success",
         (error: unknown) => error,
         () => {
           finallyExecuted = true
         },
       )
+      const result = await taskResult.toPromise()
       expect(result).toBe("success")
       expect(finallyExecuted).toBe(true)
     } catch (error) {
@@ -232,7 +233,7 @@ describe("Sync with finally", () => {
     const error = new Error("Sync failed")
 
     try {
-      await Task().Sync(
+      const taskResult = Task().Sync(
         () => {
           throw error
         },
@@ -241,6 +242,7 @@ describe("Sync with finally", () => {
           finallyExecuted = true
         },
       )
+      await taskResult.toPromise()
       expect.fail("Should throw error")
     } catch (error) {
       expect((error as Throwable)._tag).toBe("Throwable")
