@@ -6,7 +6,7 @@ import js from "@eslint/js"
 import typescriptEslint from "@typescript-eslint/eslint-plugin"
 import tsParser from "@typescript-eslint/parser"
 import functionalEslint from "eslint-plugin-functional"
-import functypePlugin from "eslint-plugin-functype"
+import functypeConfig from "eslint-config-functype"
 import prettier from "eslint-plugin-prettier"
 import simpleImportSort from "eslint-plugin-simple-import-sort"
 import globals from "globals"
@@ -35,7 +35,7 @@ export default [
   },
   ...compat.extends("eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:prettier/recommended"),
   // 🚀 The functype plugin now includes ALL the rules!
-  functypePlugin.configs.recommended,
+  functypeConfig.configs.recommended,
   {
     plugins: {
       "@typescript-eslint": typescriptEslint,
