@@ -1,7 +1,8 @@
 import { Companion } from "@/companion/Companion"
 import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
-import { Either, Left, Right } from "@/either/Either"
+import type { Either } from "@/either/Either"
+import { Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
 
 /**

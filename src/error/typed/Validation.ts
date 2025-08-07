@@ -1,4 +1,5 @@
-import { Either, Left, Right } from "@/either"
+import type { Either } from "@/either"
+import { Left, Right } from "@/either"
 import { TypedError } from "@/error/typed/TypedError"
 import { List } from "@/list"
 import type { Type } from "@/types"

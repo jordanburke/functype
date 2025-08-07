@@ -1,4 +1,5 @@
-import { Either, Left, Right } from "@/either"
+import type { Either } from "@/either"
+import { Left, Right } from "@/either"
 import { Option } from "@/option"
 
 import { Brand } from "./Brand"

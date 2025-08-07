@@ -15,7 +15,7 @@ export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
  * It creates phantom types that exist only at compile time.
  * At runtime, the branded value IS the primitive value.
  *
- * @param brand - The brand name (unused at runtime, only for type inference)
+ * @param _brand
  * @param value - The value to brand
  * @returns The value with phantom type brand
  */

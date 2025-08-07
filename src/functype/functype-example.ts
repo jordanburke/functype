@@ -51,14 +51,14 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._tag === "Full" && this._value === value
   }
 
-  reduce(f: (b: T, a: T) => T): T {
+  reduce(_f: (b: T, a: T) => T): T {
     if (this._tag === "Empty" || this._value === undefined) {
       throw new Error("Cannot reduce an empty Box")
     }
     return this._value
   }
 
-  reduceRight(f: (b: T, a: T) => T): T {
+  reduceRight(_f: (b: T, a: T) => T): T {
     if (this._tag === "Empty" || this._value === undefined) {
       throw new Error("Cannot reduceRight an empty Box")
     }

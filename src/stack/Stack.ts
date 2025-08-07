@@ -7,7 +7,7 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
 import type { Type } from "@/types"
-import { Valuable } from "@/valuable/Valuable"
+import type { Valuable } from "@/valuable/Valuable"
 
 /**
  * Stack data structure - Last In, First Out (LIFO)

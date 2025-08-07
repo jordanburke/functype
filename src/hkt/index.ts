@@ -1,8 +1,8 @@
 import { Base } from "@/core/base/Base"
-import { Either } from "@/either/Either"
+import type { Either } from "@/either/Either"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
-import { Try } from "@/try/Try"
+import type { Try } from "@/try/Try"
 import type { Type } from "@/types"
 
 /**

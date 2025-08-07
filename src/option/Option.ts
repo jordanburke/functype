@@ -4,7 +4,8 @@ import { Companion } from "@/companion/Companion"
 import type { Functype } from "@/functype"
 import type { Type } from "@/types"
 
-import { Either, Left, List, Right } from "../index"
+import type { Either } from "../index"
+import { Left, List, Right } from "../index"
 
 /**
  * Option type module

@@ -1,4 +1,4 @@
-import { Typeable } from "@/typeable/Typeable"
+import type { Typeable } from "@/typeable/Typeable"
 
 /**
  * The identifier name for Throwable type

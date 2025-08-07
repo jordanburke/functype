@@ -4,7 +4,8 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
-import { type ExtractTag, isTypeable, Typeable } from "@/typeable/Typeable"
+import type { Typeable } from "@/typeable/Typeable"
+import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 export interface List<A> extends FunctypeCollection<A, "List"> {

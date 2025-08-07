@@ -1,7 +1,9 @@
-import { Either, Left, Right } from "@/either/Either"
+import type { Either } from "@/either/Either"
+import { Left, Right } from "@/either/Either"
 import type { Foldable } from "@/foldable/Foldable"
 import { List } from "@/list/List"
-import { None, Option, Some } from "@/option/Option"
+import type { Option } from "@/option/Option"
+import { None, Some } from "@/option/Option"
 import type { Type } from "@/types"
 
 /**

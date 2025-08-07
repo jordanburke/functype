@@ -1,7 +1,8 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { Either, Left, Right } from "@/either/Either"
+import type { Either } from "@/either/Either"
+import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
 import { Option } from "@/option"

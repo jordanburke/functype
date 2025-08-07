@@ -1,5 +1,5 @@
-import { List } from "@/list/List"
-import { Set } from "@/set/Set"
+import type { List } from "@/list/List"
+import type { Set } from "@/set/Set"
 
 /**
  * Represents a collection with conversion capabilities
