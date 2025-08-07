@@ -94,8 +94,8 @@ const Success = <T>(value: T): Try<T> => ({
     return false
   },
   contains: (v: T) => value === v,
-  reduce: (f: (b: T, a: T) => T) => value,
-  reduceRight: (f: (b: T, a: T) => T) => value,
+  reduce: (_f: (b: T, a: T) => T) => value,
+  reduceRight: (_f: (b: T, a: T) => T) => value,
   count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
   find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
   exists: (p: (a: T) => boolean) => p(value),

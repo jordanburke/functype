@@ -381,8 +381,8 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return false
       }
     },
-    reduce: (f: (b: T, a: T) => T): T => evaluate(),
-    reduceRight: (f: (b: T, a: T) => T): T => evaluate(),
+    reduce: (_f: (b: T, a: T) => T): T => evaluate(),
+    reduceRight: (_f: (b: T, a: T) => T): T => evaluate(),
     count: (p: (x: T) => boolean): number => {
       try {
         return p(evaluate()) ? 1 : 0
@@ -487,7 +487,7 @@ const LazyCompanion = {
    * @param promise - The Promise to convert
    * @returns A new Lazy instance that throws an error
    */
-  fromPromise: <T extends Type>(promise: Promise<T>): Lazy<T> => {
+  fromPromise: <T extends Type>(_promise: Promise<T>): Lazy<T> => {
     const thunk = () => {
       throw new Error("Promise not yet resolved. Use await on the promise before creating Lazy.")
     }
