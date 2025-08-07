@@ -7,6 +7,7 @@ import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
+import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**
@@ -14,7 +15,7 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T> {
+export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess: () => boolean
@@ -76,6 +77,7 @@ const Success = <T>(value: T): Try<T> => ({
     (op: (a: T, b: B) => B) =>
       op(value, z),
   toString: () => `Success(${stringify(value)})`,
+  toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
   pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => {
@@ -134,6 +136,7 @@ const Failure = <T>(error: Error): Try<T> => ({
     (_op: (a: T, b: B) => B) =>
       z, // No transformation on failure
   toString: () => `Failure(${stringify(error)}))`,
+  toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
   pipe: <U>(_f: (value: T) => U) => {
     throw error
