@@ -2,8 +2,10 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
+import { Counter } from "@/internal/mutation-utils"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
+import { Ref } from "@/ref/Ref"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
@@ -100,11 +102,11 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     take: (n: number) =>
       LazyListObject(
         (function* () {
-          let count = 0
+          const counter = Counter(0)
           for (const item of iterable) {
-            if (count >= n) break
+            if (counter.get() >= n) break
             yield item
-            count++
+            counter.increment()
           }
         })(),
       ),
@@ -112,12 +114,12 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     drop: (n: number) =>
       LazyListObject(
         (function* () {
-          let count = 0
+          const counter = Counter(0)
           for (const item of iterable) {
-            if (count >= n) {
+            if (counter.get() >= n) {
               yield item
             }
-            count++
+            counter.increment()
           }
         })(),
       ),
@@ -135,10 +137,10 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     dropWhile: (predicate: (a: A) => boolean) =>
       LazyListObject(
         (function* () {
-          let dropping = true
+          const dropping = Ref(true)
           for (const item of iterable) {
-            if (dropping && predicate(item)) continue
-            dropping = false
+            if (dropping.get() && predicate(item)) continue
+            dropping.set(false)
             yield item
           }
         })(),
@@ -180,11 +182,11 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     },
 
     reduce: <B extends Type>(f: (acc: B, a: A) => B, initial: B) => {
-      let acc = initial
+      const acc = Ref(initial)
       for (const item of iterable) {
-        acc = f(acc, item)
+        acc.set(f(acc.get(), item))
       }
-      return acc
+      return acc.get()
     },
 
     find: (predicate: (a: A) => boolean) => {
@@ -211,12 +213,12 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     },
 
     count: () => {
-      let count = 0
+      const counter = Counter(0)
 
       for (const _ of iterable) {
-        count++
+        counter.increment()
       }
-      return count
+      return counter.get()
     },
 
     first: () => {
@@ -226,13 +228,13 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     },
 
     last: () => {
-      let last: A | undefined
-      let hasValue = false
+      const lastValue = Ref<A | undefined>(undefined)
+      const hasValue = Ref(false)
       for (const item of iterable) {
-        last = item
-        hasValue = true
+        lastValue.set(item)
+        hasValue.set(true)
       }
-      return hasValue ? Option(last as A) : Option.none()
+      return hasValue.get() ? Option(lastValue.get() as A) : Option.none()
     },
 
     // Foldable implementation
@@ -245,11 +247,11 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     foldLeft:
       <B extends Type>(z: B) =>
       (op: (b: B, a: A) => B) => {
-        let acc = z
+        const acc = Ref(z)
         for (const item of iterable) {
-          acc = op(acc, item)
+          acc.set(op(acc.get(), item))
         }
-        return acc
+        return acc.get()
       },
 
     foldRight:
@@ -278,21 +280,21 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     toString: () => {
       const maxShow = 10
       const elements: A[] = []
-      let count = 0
-      let hasMore = false
+      const counter = Counter(0)
+      const hasMore = Ref(false)
 
       for (const item of iterable) {
-        if (count < maxShow) {
+        if (counter.get() < maxShow) {
           elements.push(item)
-          count++
+          counter.increment()
         } else {
-          hasMore = true
+          hasMore.set(true)
           break
         }
       }
 
       const elemStr = elements.map((e) => String(e)).join(", ")
-      return hasMore ? `LazyList(${elemStr}, ...)` : `LazyList(${elemStr})`
+      return hasMore.get() ? `LazyList(${elemStr}, ...)` : `LazyList(${elemStr})`
     },
   }
 
@@ -369,10 +371,10 @@ const LazyListCompanion = {
   iterate: <A extends Type>(initial: A, f: (a: A) => A): LazyList<A> => {
     return LazyListObject(
       (function* () {
-        let current = initial
+        const current = Ref(initial)
         while (true) {
-          yield current
-          current = f(current)
+          yield current.get()
+          current.set(f(current.get()))
         }
       })(),
     )
@@ -409,13 +411,16 @@ const LazyListCompanion = {
       (function* () {
         if (step === 0) throw new Error("Step cannot be zero")
 
+        const current = Ref(start)
         if (step > 0) {
-          for (let i = start; i < end; i += step) {
-            yield i
+          while (current.get() < end) {
+            yield current.get()
+            current.set(current.get() + step)
           }
         } else {
-          for (let i = start; i > end; i += step) {
-            yield i
+          while (current.get() > end) {
+            yield current.get()
+            current.set(current.get() + step)
           }
         }
       })(),
@@ -431,8 +436,10 @@ const LazyListCompanion = {
         if (n === undefined) {
           while (true) yield value
         } else {
-          for (let i = 0; i < n; i++) {
+          const counter = Counter(0)
+          while (counter.get() < n) {
             yield value
+            counter.increment()
           }
         }
       })(),

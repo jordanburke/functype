@@ -4,6 +4,8 @@ import { Throwable } from "@/core/throwable/Throwable"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
+import { ArrayBuilder } from "@/internal/mutation-utils"
+import { Ref } from "@/ref/Ref"
 
 /**
  * Type definition for errors with a _tag property that identifies them as Throwables
@@ -43,14 +45,12 @@ export type TaskException<T> = Either<Throwable, T> & TaskInfo
  * @param _task - Task parameters
  */
 export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskParams): TaskException<T> => {
-  const name = _task?.name ?? "TaskException"
-  const description = _task?.description ?? "Unspecified TaskException"
+  const name = _task?.name || "TaskException"
+  const description = _task?.description || "Unspecified TaskException"
   const taskInfo = { name, description }
   // Pass task info to the Throwable
   const appError = Throwable.apply(error, data, taskInfo)
-
   return {
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     ...Base("TaskException", Left(appError)),
     _task: taskInfo,
   }
@@ -59,10 +59,9 @@ export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskPar
 export type TaskResult<T> = Either<Throwable, T> & TaskInfo
 
 export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
-  const name = _task?.name ?? "TaskResult"
-  const description = _task?.description ?? "Unspecified TaskResult"
+  const name = _task?.name || "TaskResult"
+  const description = _task?.description || "Unspecified TaskResult"
   return {
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     ...Base("TaskResult", Right(data)),
     _task: { name, description },
   }
@@ -98,7 +97,7 @@ export type CancellationTokenSource = {
  */
 export const createCancellationTokenSource = (): CancellationTokenSource => {
   const controller = new AbortController()
-  const callbacks: Array<() => void> = []
+  const callbacks = ArrayBuilder<() => void>()
 
   const token: CancellationToken = {
     get isCancelled() {
@@ -112,7 +111,7 @@ export const createCancellationTokenSource = (): CancellationTokenSource => {
         // Already cancelled, execute callback immediately
         callback()
       } else {
-        callbacks.push(callback)
+        callbacks.add(callback)
       }
     },
   }
@@ -123,7 +122,7 @@ export const createCancellationTokenSource = (): CancellationTokenSource => {
       if (!controller.signal.aborted) {
         controller.abort()
         // Execute all callbacks
-        callbacks.forEach((callback) => {
+        callbacks.build().forEach((callback) => {
           try {
             callback()
           } catch (e) {
@@ -143,8 +142,8 @@ export type Async<T> = FPromise<Sync<T>>
  * Task adapter for bridging promise-based code with functional error handling patterns
  */
 const TaskConstructor = <T = unknown>(params?: TaskParams) => {
-  const name = params?.name ?? "Task"
-  const description = params?.description ?? ""
+  const name = params?.name || "Task"
+  const description = params?.description || ""
   const body = {
     /**
      * Run an async operation with explicit try/catch/finally semantics
@@ -161,74 +160,53 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
     ): FPromise<U> => {
-      return FPromise<U>((resolve, reject) => {
-        // eslint-disable-next-line no-extra-semi
-        ;(async () => {
-          // Setup cancellation if a token was provided
-          let isCancelled = false
-          let cancelError: Error | null = null
-          let cleanupCancellation = () => {}
+      return FPromise<U>(async (resolve, reject) => {
+        // Setup cancellation if a token was provided
+        const isCancelled = Ref(false)
+        const cancelError = Ref<Error | null>(null)
+        const cleanupCancellation = Ref<() => void>(() => {})
 
-          if (cancellationToken) {
-            // Check if already cancelled
-            if (cancellationToken.isCancelled) {
-              try {
-                // Always run finally before rejecting
-                await f()
-              } catch (finallyError) {
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
-                return
-              }
-
-              reject(
-                Throwable.apply(new Error("Task was cancelled before execution started"), undefined, {
-                  name,
-                  description,
-                }),
-              )
+        if (cancellationToken) {
+          // Check if already cancelled
+          if (cancellationToken.isCancelled) {
+            try {
+              // Always run finally before rejecting
+              await f()
+            } catch (finallyError) {
+              reject(Throwable.apply(finallyError, undefined, { name, description }))
               return
             }
 
-            // Setup cancellation handler
-            const handleCancellation = () => {
-              isCancelled = true
-              cancelError = new Error("Task was cancelled during execution")
-              // We don't reject immediately to allow the finally block to run
-            }
-
-            cancellationToken.onCancel(handleCancellation)
-            cleanupCancellation = () => {
-              // No way to remove the callback, but we can track if cancelled
-            }
+            reject(
+              Throwable.apply(new Error("Task was cancelled before execution started"), undefined, {
+                name,
+                description,
+              }),
+            )
+            return
           }
 
-          try {
-            // Run the main operation
-            const result = await t()
+          // Setup cancellation handler
+          const handleCancellation = () => {
+            isCancelled.set(true)
+            cancelError.set(new Error("Task was cancelled during execution"))
+            // We don't reject immediately to allow the finally block to run
+          }
 
-            // Process cancellation if it occurred during execution
-            if (isCancelled) {
-              try {
-                // Always run finally
-                await f()
-              } catch (finallyError) {
-                // Finally errors take precedence
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
-                return
-              }
+          cancellationToken.onCancel(handleCancellation)
+          cleanupCancellation.set(() => {
+            // No way to remove the callback, but we can track if cancelled
+          })
+        }
 
-              if (cancelError) {
-                reject(Throwable.apply(cancelError, undefined, { name, description }))
-              } else {
-                reject(
-                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-                )
-              }
-              return
-            }
+        try {
+          // Run the main operation
+          const result = await t()
 
+          // Process cancellation if it occurred during execution
+          if (isCancelled.get()) {
             try {
-              // Run finally before resolving
+              // Always run finally
               await f()
             } catch (finallyError) {
               // Finally errors take precedence
@@ -236,83 +214,101 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
               return
             }
 
-            // Success path - resolve with the value directly
-            resolve(result)
-          } catch (error) {
-            // Process cancellation first if it occurred
-            if (isCancelled) {
-              try {
-                // Always run finally
-                await f()
-              } catch (finallyError) {
-                // Finally errors take precedence
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
-                return
-              }
-
-              if (cancelError) {
-                reject(Throwable.apply(cancelError, undefined, { name, description }))
-              } else {
-                reject(
-                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-                )
-              }
-              return
+            if (cancelError.get()) {
+              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
+            } else {
+              reject(
+                Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
+              )
             }
+            return
+          }
 
-            // Handle regular error with finally
+          try {
+            // Run finally before resolving
+            await f()
+          } catch (finallyError) {
+            // Finally errors take precedence
+            reject(Throwable.apply(finallyError, undefined, { name, description }))
+            return
+          }
+
+          // Success path - resolve with the value directly
+          resolve(result)
+        } catch (error) {
+          // Process cancellation first if it occurred
+          if (isCancelled.get()) {
             try {
               // Always run finally
               await f()
             } catch (finallyError) {
-              // Finally errors take precedence over operation errors
+              // Finally errors take precedence
               reject(Throwable.apply(finallyError, undefined, { name, description }))
               return
             }
 
-            // Process the original error through error handler
-            try {
-              // Check if error is already a Throwable (from an inner task)
-              if (error instanceof Error && isTaggedThrowable(error)) {
-                // Create a new Throwable that wraps the inner error as its cause
-                // This preserves the error chain while adding outer task context
-                const outerError = new Error(`${name}: ${(error as Error).message}`)
-                const enhancedError = Throwable.apply(outerError, undefined, { name, description })
-
-                // Set the original error as the cause
-                Object.defineProperty(enhancedError, "cause", {
-                  value: error,
-                  writable: false,
-                  configurable: false,
-                })
-
-                // Call the error handler for logging/side effects but don't use its result
-                // This allows handlers to be called without changing the error propagation logic
-                // Use a non-awaited promise to avoid blocking the error propagation
-                // This improves performance while still ensuring the handler runs
-                await Promise.resolve().then(() => {
-                  try {
-                    e(error)
-                  } catch (handlerError) {
-                    // Ignore errors from the handler when preserving error chain
-                    console.error("Error in error handler:", handlerError)
-                  }
-                })
-
-                reject(enhancedError)
-              } else {
-                // Regular error handling for non-Throwable errors
-                const errorResult = await e(error)
-                reject(Throwable.apply(errorResult, undefined, { name, description }))
-              }
-            } catch (handlerError) {
-              // If error handler throws, use that error
-              reject(Throwable.apply(handlerError, undefined, { name, description }))
+            if (cancelError.get()) {
+              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
+            } else {
+              reject(
+                Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
+              )
             }
-          } finally {
-            cleanupCancellation()
+            return
           }
-        })().catch(reject)
+
+          // Handle regular error with finally
+          try {
+            // Always run finally
+            await f()
+          } catch (finallyError) {
+            // Finally errors take precedence over operation errors
+            reject(Throwable.apply(finallyError, undefined, { name, description }))
+            return
+          }
+
+          // Process the original error through error handler
+          try {
+            // Check if error is already a Throwable (from an inner task)
+            if (error instanceof Error && isTaggedThrowable(error)) {
+              // Create a new Throwable that wraps the inner error as its cause
+              // This preserves the error chain while adding outer task context
+              const outerError = new Error(`${name}: ${(error as Error).message}`)
+              const enhancedError = Throwable.apply(outerError, undefined, { name, description })
+
+              // Set the original error as the cause
+              Object.defineProperty(enhancedError, "cause", {
+                value: error,
+                writable: false,
+                configurable: false,
+              })
+
+              // Call the error handler for logging/side effects but don't use its result
+              // This allows handlers to be called without changing the error propagation logic
+              // Use a non-awaited promise to avoid blocking the error propagation
+              // This improves performance while still ensuring the handler runs
+              Promise.resolve().then(() => {
+                try {
+                  e(error)
+                } catch (handlerError) {
+                  // Ignore errors from the handler when preserving error chain
+                  console.error("Error in error handler:", handlerError)
+                }
+              })
+
+              reject(enhancedError)
+            } else {
+              // Regular error handling for non-Throwable errors
+              const errorResult = await e(error)
+              reject(Throwable.apply(errorResult, undefined, { name, description }))
+            }
+          } catch (handlerError) {
+            // If error handler throws, use that error
+            reject(Throwable.apply(handlerError, undefined, { name, description }))
+          }
+        } finally {
+          cleanupCancellation.get()()
+        }
       })
     },
 
@@ -398,24 +394,25 @@ const TaskCompanion = {
   getErrorChain: (error: Error | undefined): Error[] => {
     if (!error) return []
 
-    const chain = [error]
-    let current = error
+    const chain = ArrayBuilder<Error>()
+    chain.add(error)
+    const current = Ref(error)
 
     // Traverse the cause chain
-    while (current && (current as TaggedThrowable).cause) {
-      const { cause } = current as TaggedThrowable
+    while (current.get() && (current.get() as TaggedThrowable).cause) {
+      const cause = (current.get() as TaggedThrowable).cause
       if (cause) {
-        chain.push(cause)
-        current = cause
+        chain.add(cause)
+        current.set(cause)
       } else {
         break
       }
 
       // Prevent infinite loops if circular references exist
-      if (chain.length > 100) break
+      if (chain.size() > 100) break
     }
 
-    return chain
+    return chain.build()
   },
 
   /**
@@ -434,7 +431,7 @@ const TaskCompanion = {
     },
   ): string => {
     const chain = TaskCompanion.getErrorChain(error)
-    const separator = options?.separator ?? "\n"
+    const separator = options?.separator || "\n"
 
     return chain
       .map((err, index) => {
@@ -442,18 +439,18 @@ const TaskCompanion = {
           return `${index > 0 ? "↳ " : ""}Unknown error`
         }
 
-        const { taskInfo } = err as TaggedThrowable
+        const taskInfo = (err as TaggedThrowable).taskInfo
         const taskName = options?.includeTasks && taskInfo?.name ? `[${taskInfo.name}] ` : ""
         const message = err.message || "No message"
 
-        let result = `${index > 0 ? "↳ " : ""}${taskName}${message}`
+        const result = Ref(`${index > 0 ? "↳ " : ""}${taskName}${message}`)
 
         // Add stack trace if requested
         if (options?.includeStackTrace && err.stack) {
-          result += `\n${err.stack.split("\n").slice(1).join("\n")}`
+          result.set(result.get() + `\n${err.stack.split("\n").slice(1).join("\n")}`)
         }
 
-        return result
+        return result.get()
       })
       .join(separator)
   },
@@ -466,7 +463,7 @@ const TaskCompanion = {
     params?: TaskParams,
   ): ((...args: Args) => FPromise<U>) => {
     return (...args: Args) => {
-      const taskParams = params ?? { name: "PromiseTask", description: "Task from Promise" }
+      const taskParams = params || { name: "PromiseTask", description: "Task from Promise" }
       return Task(taskParams).Async<U>(
         () => promiseFn(...args),
         (error) => error,
@@ -497,25 +494,28 @@ const TaskCompanion = {
    * @returns A promise that resolves with the first task to complete or rejects if all tasks fail
    */
   race: <T>(tasks: Array<FPromise<T>>, timeoutMs?: number, params?: TaskParams): FPromise<T> => {
-    const name = params?.name ?? "TaskRace"
-    const description = params?.description ?? "Race between multiple tasks"
+    const name = params?.name || "TaskRace"
+    const description = params?.description || "Race between multiple tasks"
     const taskParams = { name, description }
 
     return Task(taskParams).Async<T>(
       async () => {
         // Create the race between all tasks
-        const racePromises = [...tasks]
+        const racePromises = ArrayBuilder<FPromise<T>>()
+        tasks.forEach((task) => racePromises.add(task))
 
         // Add timeout promise if timeoutMs is specified
-        let timeoutId: NodeJS.Timeout | undefined
+        const timeoutId = Ref<NodeJS.Timeout | undefined>(undefined)
         if (typeof timeoutMs === "number" && timeoutMs > 0) {
           // Create a timeout promise using FPromise to maintain type compatibility
           const timeoutPromise = FPromise<T>((_, reject) => {
-            timeoutId = setTimeout(() => {
-              reject(new Error(`Task race timed out after ${timeoutMs}ms`))
-            }, timeoutMs)
+            timeoutId.set(
+              setTimeout(() => {
+                reject(new Error(`Task race timed out after ${timeoutMs}ms`))
+              }, timeoutMs),
+            )
           })
-          racePromises.push(timeoutPromise)
+          racePromises.add(timeoutPromise)
         }
 
         try {
@@ -523,7 +523,7 @@ const TaskCompanion = {
           // We can't use Promise.race directly due to typing issues
           return await new Promise<T>((resolve, reject) => {
             // Setup promises to handle their own resolution
-            racePromises.forEach((promise) => {
+            racePromises.build().forEach((promise) => {
               // Handle promise resolution
               promise.then(
                 // Success handler
@@ -535,8 +535,8 @@ const TaskCompanion = {
           })
         } finally {
           // Clear timeout if it was set
-          if (timeoutId) {
-            clearTimeout(timeoutId)
+          if (timeoutId.get()) {
+            clearTimeout(timeoutId.get())
           }
         }
       },
@@ -556,8 +556,8 @@ const TaskCompanion = {
     nodeFn: (...args: [...Args, (error: unknown, result: T) => void]) => void,
     params?: TaskParams,
   ): ((...args: Args) => FPromise<T>) => {
-    const name = params?.name ?? "NodeCallbackTask"
-    const description = params?.description ?? "Task from Node.js callback function"
+    const name = params?.name || "NodeCallbackTask"
+    const description = params?.description || "Task from Node.js callback function"
     const taskParams = { name, description }
 
     return (...args: Args) => {
@@ -627,11 +627,11 @@ const TaskCompanion = {
     params?: TaskParams,
   ): { task: FPromise<T>; cancel: () => void; currentProgress: () => number } => {
     const tokenSource = createCancellationTokenSource()
-    let currentProgressValue = 0
+    const currentProgressValue = Ref(0)
 
     const updateProgress = (percent: number) => {
-      currentProgressValue = Math.max(0, Math.min(100, percent))
-      onProgress(currentProgressValue)
+      currentProgressValue.set(Math.max(0, Math.min(100, percent)))
+      onProgress(currentProgressValue.get())
     }
 
     const taskPromise = Task(params).Async<T>(
@@ -644,7 +644,7 @@ const TaskCompanion = {
     return {
       task: taskPromise,
       cancel: () => tokenSource.cancel(),
-      currentProgress: () => currentProgressValue,
+      currentProgress: () => currentProgressValue.get(),
     }
   },
 }
