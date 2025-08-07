@@ -285,14 +285,11 @@ export const tryCatchAsync = async <L extends Type, R extends Type>(
 
 export const Either = {
   sequence: <L extends Type, R extends Type>(eithers: Either<L, R>[]): Either<L, R[]> => {
-    const rights: R[] = []
-    for (const either of eithers) {
-      if (either.isLeft()) {
-        return Left(either.value as L)
-      }
-      rights.push(either.value as R)
-    }
-    return Right(rights)
+    return eithers.reduce<Either<L, R[]>>((acc, either) => {
+      if (acc.isLeft()) return acc
+      if (either.isLeft()) return Left(either.value as L)
+      return acc.map((rights) => [...rights, either.value as R])
+    }, Right<L, R[]>([]))
   },
 
   traverse: <L extends Type, R extends Type, U extends Type>(
