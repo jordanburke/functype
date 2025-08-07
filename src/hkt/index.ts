@@ -270,22 +270,22 @@ export const HKT = () => {
   }
 }
 
-/**
- * Static methods for HKT operations
- */
-HKT.map = <F = unknown, A = unknown, B = unknown>(fa: unknown, f: (a: A) => B): unknown => HKT().map(fa, f)
+// Static methods for HKT operations
+const instance = HKT()
 
-HKT.flatten = <F = unknown, A = unknown>(ffa: unknown): unknown => HKT().flatten(ffa)
+HKT.map = <F = unknown, A = unknown, B = unknown>(fa: unknown, f: (a: A) => B): unknown => instance.map(fa, f)
+
+HKT.flatten = <F = unknown, A = unknown>(ffa: unknown): unknown => instance.flatten(ffa)
 
 HKT.flatMap = <F = unknown, A = unknown, B = unknown>(fa: unknown, f: (a: A) => unknown): unknown =>
-  HKT().flatMap(fa, f)
+  instance.flatMap(fa, f)
 
-HKT.ap = <F = unknown, A = unknown, B = unknown>(ff: unknown, fa: unknown): unknown => HKT().ap(ff, fa)
+HKT.ap = <F = unknown, A = unknown, B = unknown>(ff: unknown, fa: unknown): unknown => instance.ap(ff, fa)
 
-HKT.sequence = <F = unknown, G = unknown, A = unknown>(fga: unknown): unknown => HKT().sequence(fga)
+HKT.sequence = <F = unknown, G = unknown, A = unknown>(fga: unknown): unknown => instance.sequence(fga)
 
 HKT.traverse = <F = unknown, G = unknown, A = unknown, B = unknown>(fa: unknown, f: (a: A) => unknown): unknown =>
-  HKT().traverse(fa, f)
+  instance.traverse(fa, f)
 
 // Export type guards
 HKT.isOption = isOption
