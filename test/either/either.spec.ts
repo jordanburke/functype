@@ -420,6 +420,11 @@ describe("Either", () => {
     const promise = Promise.reject("Rejected")
     const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
     expect(result.isLeft()).toBe(true)
-    expect(result.fold(err => err, val => val)).toBe("Error: Rejected")
+    expect(
+      result.fold(
+        (err) => err,
+        (val) => val,
+      ),
+    ).toBe("Error: Rejected")
   })
 })

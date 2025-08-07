@@ -6,7 +6,7 @@ describe("Try Promisable", () => {
     it("should resolve with the Success value", async () => {
       const success = Try(() => 42)
       const promise = success.toPromise()
-      
+
       expect(promise).toBeInstanceOf(Promise)
       await expect(promise).resolves.toBe(42)
     })
@@ -15,7 +15,7 @@ describe("Try Promisable", () => {
       const data = { result: "success", count: 5 }
       const success = Try(() => data)
       const promise = success.toPromise()
-      
+
       await expect(promise).resolves.toEqual(data)
     })
   })
@@ -27,7 +27,7 @@ describe("Try Promisable", () => {
         throw error
       })
       const promise = failure.toPromise()
-      
+
       expect(promise).toBeInstanceOf(Promise)
       await expect(promise).rejects.toBe(error)
     })
@@ -37,7 +37,7 @@ describe("Try Promisable", () => {
       const failure = Try(() => {
         throw customError
       })
-      
+
       try {
         await failure.toPromise()
         expect.fail("Should have thrown")
@@ -51,7 +51,7 @@ describe("Try Promisable", () => {
       const failure = Try(() => {
         throw new TypeError("Type error")
       })
-      
+
       await expect(failure.toPromise()).rejects.toThrow("Type error")
     })
   })
