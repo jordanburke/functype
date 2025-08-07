@@ -6,7 +6,7 @@ describe("Option Promisable", () => {
     it("should resolve with the Some value", async () => {
       const some = Some(42)
       const promise = some.toPromise()
-      
+
       expect(promise).toBeInstanceOf(Promise)
       await expect(promise).resolves.toBe(42)
     })
@@ -15,7 +15,7 @@ describe("Option Promisable", () => {
       const data = { id: 1, name: "test" }
       const some = Some(data)
       const promise = some.toPromise()
-      
+
       await expect(promise).resolves.toEqual(data)
     })
   })
@@ -24,14 +24,14 @@ describe("Option Promisable", () => {
     it("should reject with error", async () => {
       const none = None<number>()
       const promise = none.toPromise()
-      
+
       expect(promise).toBeInstanceOf(Promise)
       await expect(promise).rejects.toThrow("Cannot convert None to Promise")
     })
 
     it("should work with try/catch", async () => {
       const none = None<string>()
-      
+
       try {
         await none.toPromise()
         expect.fail("Should have thrown")
