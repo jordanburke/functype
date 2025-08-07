@@ -1,3 +1,5 @@
+import { Counter } from "@/internal/mutation-utils"
+
 import { FPromise } from "./FPromise"
 
 /**
@@ -26,14 +28,14 @@ import { FPromise } from "./FPromise"
  */
 export const retry = <T, E = unknown>(operation: () => FPromise<T, E>, maxRetries: number): FPromise<T, E> => {
   return FPromise<T, E>((resolve, reject) => {
-    let currentAttempt = 0
+    const attempts = Counter(0)
 
     const attemptOperation = () => {
       operation()
         .toPromise()
         .then(resolve)
         .catch((error: E) => {
-          currentAttempt++
+          const currentAttempt = attempts.increment()
           if (currentAttempt <= maxRetries) {
             // Retry the operation
             attemptOperation()
@@ -89,14 +91,14 @@ export const retryWithBackoff = <T, E = unknown>(
   shouldRetry: (error: E, attempt: number) => boolean = () => true,
 ): FPromise<T, E> => {
   return FPromise<T, E>((resolve, reject) => {
-    let currentAttempt = 0
+    const attempts = Counter(0)
 
     const attemptOperation = () => {
       operation()
         .toPromise()
         .then(resolve)
         .catch((error: E) => {
-          currentAttempt++
+          const currentAttempt = attempts.increment()
           if (currentAttempt <= maxRetries && shouldRetry(error, currentAttempt)) {
             // Calculate backoff delay
             const delay = baseDelay * Math.pow(2, currentAttempt - 1)
@@ -167,14 +169,14 @@ export const retryWithOptions = <T, E = unknown>(
   const { maxRetries, delayFn = () => 0, shouldRetry = () => true, onRetry = () => {} } = options
 
   return FPromise<T, E>((resolve, reject) => {
-    let currentAttempt = 0
+    const attempts = Counter(0)
 
     const attemptOperation = () => {
       operation()
         .toPromise()
         .then(resolve)
         .catch((error: E) => {
-          currentAttempt++
+          const currentAttempt = attempts.increment()
           if (currentAttempt <= maxRetries && shouldRetry(error, currentAttempt)) {
             try {
               // Call the onRetry callback
