@@ -82,20 +82,4 @@ export default [
       ],
     },
   },
-
-  // HKT-specific overrides for Higher-Kinded Type implementations
-  {
-    files: ["**/hkt/**/*.ts", "**/*HKT*.ts"],
-    rules: {
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          varsIgnorePattern: "^(_|[A-Z])$", // Allow single-letter generics in HKT files
-          argsIgnorePattern: "^_", // Only underscore-prefixed parameters
-          caughtErrors: "all",
-          caughtErrorsIgnorePattern: "^_",
-        },
-      ],
-    },
-  },
 ]
