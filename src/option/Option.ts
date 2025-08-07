@@ -2,6 +2,7 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import type { Functype } from "@/functype"
+import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Either } from "../index"
@@ -18,7 +19,7 @@ import { Left, List, Right } from "../index"
  * It's used to handle potentially null or undefined values in a type-safe way.
  * @typeParam T - The type of the value contained in the Option
  */
-export interface Option<T extends Type> extends Functype<T, "Some" | "None"> {
+export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Promisable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -222,6 +223,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   contains: (val: T) => val === value,
   size: 1,
   toEither: <E>(_left: E) => Right<E, T>(value),
+  toPromise: (): Promise<T> => Promise.resolve(value),
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
@@ -283,6 +285,7 @@ const NONE: Option<never> = {
   contains: () => false,
   size: 0,
   toEither: <E>(left: E) => Left<E, never>(left),
+  toPromise: <T>(): Promise<T> => Promise.reject(new Error("Cannot convert None to Promise")),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
   pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
