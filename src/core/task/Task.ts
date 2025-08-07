@@ -4,6 +4,8 @@ import { Throwable } from "@/core/throwable/Throwable"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
+import { ArrayBuilder } from "@/internal/mutation-utils"
+import { Ref } from "@/ref/Ref"
 
 /**
  * Type definition for errors with a _tag property that identifies them as Throwables
@@ -95,7 +97,7 @@ export type CancellationTokenSource = {
  */
 export const createCancellationTokenSource = (): CancellationTokenSource => {
   const controller = new AbortController()
-  const callbacks: Array<() => void> = []
+  const callbacks = ArrayBuilder<() => void>()
 
   const token: CancellationToken = {
     get isCancelled() {
@@ -109,7 +111,7 @@ export const createCancellationTokenSource = (): CancellationTokenSource => {
         // Already cancelled, execute callback immediately
         callback()
       } else {
-        callbacks.push(callback)
+        callbacks.add(callback)
       }
     },
   }
@@ -120,7 +122,7 @@ export const createCancellationTokenSource = (): CancellationTokenSource => {
       if (!controller.signal.aborted) {
         controller.abort()
         // Execute all callbacks
-        callbacks.forEach((callback) => {
+        callbacks.build().forEach((callback) => {
           try {
             callback()
           } catch (e) {
@@ -160,9 +162,9 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
     ): FPromise<U> => {
       return FPromise<U>(async (resolve, reject) => {
         // Setup cancellation if a token was provided
-        let isCancelled = false
-        let cancelError: Error | null = null
-        let cleanupCancellation = () => {}
+        const isCancelled = Ref(false)
+        const cancelError = Ref<Error | null>(null)
+        const cleanupCancellation = Ref<() => void>(() => {})
 
         if (cancellationToken) {
           // Check if already cancelled
@@ -186,15 +188,15 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
 
           // Setup cancellation handler
           const handleCancellation = () => {
-            isCancelled = true
-            cancelError = new Error("Task was cancelled during execution")
+            isCancelled.set(true)
+            cancelError.set(new Error("Task was cancelled during execution"))
             // We don't reject immediately to allow the finally block to run
           }
 
           cancellationToken.onCancel(handleCancellation)
-          cleanupCancellation = () => {
+          cleanupCancellation.set(() => {
             // No way to remove the callback, but we can track if cancelled
-          }
+          })
         }
 
         try {
@@ -202,7 +204,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
           const result = await t()
 
           // Process cancellation if it occurred during execution
-          if (isCancelled) {
+          if (isCancelled.get()) {
             try {
               // Always run finally
               await f()
@@ -212,8 +214,8 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
               return
             }
 
-            if (cancelError) {
-              reject(Throwable.apply(cancelError, undefined, { name, description }))
+            if (cancelError.get()) {
+              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
             } else {
               reject(
                 Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
@@ -235,7 +237,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
           resolve(result)
         } catch (error) {
           // Process cancellation first if it occurred
-          if (isCancelled) {
+          if (isCancelled.get()) {
             try {
               // Always run finally
               await f()
@@ -245,8 +247,8 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
               return
             }
 
-            if (cancelError) {
-              reject(Throwable.apply(cancelError, undefined, { name, description }))
+            if (cancelError.get()) {
+              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
             } else {
               reject(
                 Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
@@ -305,7 +307,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
             reject(Throwable.apply(handlerError, undefined, { name, description }))
           }
         } finally {
-          cleanupCancellation()
+          cleanupCancellation.get()()
         }
       })
     },
@@ -392,24 +394,25 @@ const TaskCompanion = {
   getErrorChain: (error: Error | undefined): Error[] => {
     if (!error) return []
 
-    const chain = [error]
-    let current = error
+    const chain = ArrayBuilder<Error>()
+    chain.add(error)
+    const current = Ref(error)
 
     // Traverse the cause chain
-    while (current && (current as TaggedThrowable).cause) {
-      const cause = (current as TaggedThrowable).cause
+    while (current.get() && (current.get() as TaggedThrowable).cause) {
+      const cause = (current.get() as TaggedThrowable).cause
       if (cause) {
-        chain.push(cause)
-        current = cause
+        chain.add(cause)
+        current.set(cause)
       } else {
         break
       }
 
       // Prevent infinite loops if circular references exist
-      if (chain.length > 100) break
+      if (chain.size() > 100) break
     }
 
-    return chain
+    return chain.build()
   },
 
   /**
@@ -440,14 +443,14 @@ const TaskCompanion = {
         const taskName = options?.includeTasks && taskInfo?.name ? `[${taskInfo.name}] ` : ""
         const message = err.message || "No message"
 
-        let result = `${index > 0 ? "↳ " : ""}${taskName}${message}`
+        const result = Ref(`${index > 0 ? "↳ " : ""}${taskName}${message}`)
 
         // Add stack trace if requested
         if (options?.includeStackTrace && err.stack) {
-          result += `\n${err.stack.split("\n").slice(1).join("\n")}`
+          result.set(result.get() + `\n${err.stack.split("\n").slice(1).join("\n")}`)
         }
 
-        return result
+        return result.get()
       })
       .join(separator)
   },
@@ -498,18 +501,21 @@ const TaskCompanion = {
     return Task(taskParams).Async<T>(
       async () => {
         // Create the race between all tasks
-        const racePromises = [...tasks]
+        const racePromises = ArrayBuilder<FPromise<T>>()
+        tasks.forEach((task) => racePromises.add(task))
 
         // Add timeout promise if timeoutMs is specified
-        let timeoutId: NodeJS.Timeout | undefined
+        const timeoutId = Ref<NodeJS.Timeout | undefined>(undefined)
         if (typeof timeoutMs === "number" && timeoutMs > 0) {
           // Create a timeout promise using FPromise to maintain type compatibility
           const timeoutPromise = FPromise<T>((_, reject) => {
-            timeoutId = setTimeout(() => {
-              reject(new Error(`Task race timed out after ${timeoutMs}ms`))
-            }, timeoutMs)
+            timeoutId.set(
+              setTimeout(() => {
+                reject(new Error(`Task race timed out after ${timeoutMs}ms`))
+              }, timeoutMs),
+            )
           })
-          racePromises.push(timeoutPromise)
+          racePromises.add(timeoutPromise)
         }
 
         try {
@@ -517,7 +523,7 @@ const TaskCompanion = {
           // We can't use Promise.race directly due to typing issues
           return await new Promise<T>((resolve, reject) => {
             // Setup promises to handle their own resolution
-            racePromises.forEach((promise) => {
+            racePromises.build().forEach((promise) => {
               // Handle promise resolution
               promise.then(
                 // Success handler
@@ -529,8 +535,8 @@ const TaskCompanion = {
           })
         } finally {
           // Clear timeout if it was set
-          if (timeoutId) {
-            clearTimeout(timeoutId)
+          if (timeoutId.get()) {
+            clearTimeout(timeoutId.get())
           }
         }
       },
@@ -621,11 +627,11 @@ const TaskCompanion = {
     params?: TaskParams,
   ): { task: FPromise<T>; cancel: () => void; currentProgress: () => number } => {
     const tokenSource = createCancellationTokenSource()
-    let currentProgressValue = 0
+    const currentProgressValue = Ref(0)
 
     const updateProgress = (percent: number) => {
-      currentProgressValue = Math.max(0, Math.min(100, percent))
-      onProgress(currentProgressValue)
+      currentProgressValue.set(Math.max(0, Math.min(100, percent)))
+      onProgress(currentProgressValue.get())
     }
 
     const taskPromise = Task(params).Async<T>(
@@ -638,7 +644,7 @@ const TaskCompanion = {
     return {
       task: taskPromise,
       cancel: () => tokenSource.cancel(),
-      currentProgress: () => currentProgressValue,
+      currentProgress: () => currentProgressValue.get(),
     }
   },
 }
