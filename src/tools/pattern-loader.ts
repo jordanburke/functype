@@ -146,8 +146,8 @@ function extractFirstFunction(code: string): string | null {
 /**
  * Validates that pattern examples compile
  */
-export function validatePatterns(): Promise<boolean> {
+export function validatePatterns(): boolean {
   // This would run TypeScript compiler on the pattern files
   // For now, we assume they're valid if they exist
-  return Promise.resolve(true)
+  return true
 }

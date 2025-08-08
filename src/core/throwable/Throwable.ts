@@ -132,7 +132,7 @@ export class Throwable extends Error implements ThrowableType {
 
     // Handle functions
     if (typeof srcError === "function") {
-      const fnName = srcError.name || "anonymous function"
+      const fnName = srcError.name ?? "anonymous function"
       const fnString = srcError.toString().substring(0, 100) + (srcError.toString().length > 100 ? "..." : "")
       return new Throwable(`Function error: ${fnName}`, {
         data: data ?? {

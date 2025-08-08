@@ -188,7 +188,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
   toOption: () => None<R>(),
   toList: () => List<R>(),
-  toJSON: () => {
+  toJSON() {
     return { _tag: "Left", value }
   },
   toString: () => `Left(${stringify(value)})`,
