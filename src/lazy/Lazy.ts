@@ -234,7 +234,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
       try {
         return evaluate()
       } catch (e) {
-        throw err || e
+        throw err ?? e
       }
     },
     orElse: (alternative: Lazy<T>): Lazy<T> =>

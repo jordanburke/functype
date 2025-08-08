@@ -112,7 +112,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   },
   getOrElse: (defaultValue: T) => defaultValue,
   getOrThrow: (e?: Error) => {
-    throw e || error
+    throw e ?? error
   },
   orElse: (alternative: Try<T>) => alternative,
   orNull: () => null,

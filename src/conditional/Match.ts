@@ -236,7 +236,7 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
     getOrThrow: (errorMessage?: string) => {
       const matchResult = tryMatch()
       if (!matchResult.matched) {
-        throw new Error(errorMessage || `No matching pattern for value: ${JSON.stringify(state.value)}`)
+        throw new Error(errorMessage ?? `No matching pattern for value: ${JSON.stringify(state.value)}`)
       }
       return matchResult.result as R
     },
