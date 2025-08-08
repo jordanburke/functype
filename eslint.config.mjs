@@ -80,6 +80,23 @@ export default [
           ignoreAccessorPattern: ["*.push", "*.pop", "*.shift", "*.unshift"],
         },
       ],
+
+      // Disable prefer-immutable-types for functional library development
+      // This rule is valuable for applications but counterproductive for foundational libraries because:
+      // 1. Library vs Application: Infrastructure code has different immutability needs than app code
+      // 2. Design Philosophy: Functype provides immutability through design (immutable data structures,
+      //    pure functions) rather than TypeScript readonly annotations on every parameter
+      // 3. Interoperability: Forcing Readonly<T> breaks compatibility with standard library functions
+      //    and third-party code that expects regular T parameters
+      // 4. Developer Experience: Callback signatures like map((x) => x + 1) don't benefit from
+      //    readonly annotations - they add noise without meaningful safety improvements
+      // 5. False Security: readonly only prevents property assignment, not deep mutations, so the
+      //    safety benefit is limited while the compatibility cost is high
+      //
+      // Applications using functype may choose to enable this rule for their own code if they want
+      // stricter immutability enforcement, but the library itself provides immutability guarantees
+      // through architectural design rather than type-level constraints.
+      "functional/prefer-immutable-types": "off",
     },
   },
 ]
