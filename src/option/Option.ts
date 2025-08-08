@@ -262,7 +262,7 @@ const NONE: Option<never> = {
   exists: (_p: (a: never) => boolean) => false,
   forEach: (_f: (a: never) => void) => {},
   flatMap: <U extends Type>(_f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
-  flatMapAsync: <U extends Type>(_f: (value: never) => Promise<Option<U>>) => {
+  flatMapAsync: <U extends Type>(_f: (value: never) => Promise<Option<U>>): Promise<Option<U>> => {
     return Promise.resolve(NONE as unknown as Option<U>)
   },
   reduce: () => undefined as never,

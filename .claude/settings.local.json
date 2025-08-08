@@ -56,7 +56,8 @@
       "Bash(chezmoi status:*)",
       "WebFetch(domain:www.npmjs.com)",
       "Bash(cp:*)",
-      "Bash(eslint:*)"
+      "Bash(eslint:*)",
+      "Bash(npm ls:*)"
     ],
     "deny": []
   }

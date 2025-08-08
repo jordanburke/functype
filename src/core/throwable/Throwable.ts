@@ -92,8 +92,9 @@ export class Throwable extends Error implements ThrowableType {
       for (const key of Object.keys(srcError)) {
         if (!(key in throwable)) {
           // Use type assertion with Record instead of any
-          const typeThrowable = throwable as unknown as Record<string, unknown>
-          typeThrowable[key] = (srcError as unknown as Record<string, unknown>)[key]
+          const throwableRecord = throwable as unknown as Record<string, unknown>
+          const srcErrorRecord = srcError as unknown as Record<string, unknown>
+          throwableRecord[key] = srcErrorRecord[key]
         }
       }
 
@@ -122,8 +123,8 @@ export class Throwable extends Error implements ThrowableType {
       for (const key of Object.keys(errorObj)) {
         if (!(key in throwable)) {
           // Use type assertion with Record instead of any
-          const typeThrowable = throwable as unknown as Record<string, unknown>
-          typeThrowable[key] = errorObj[key]
+          const throwableRecord = throwable as unknown as Record<string, unknown>
+          throwableRecord[key] = errorObj[key]
         }
       }
 

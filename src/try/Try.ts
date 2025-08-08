@@ -124,7 +124,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
-  flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>) => Promise.resolve(Failure<U>(error)),
+  flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>): Promise<Try<U>> => Promise.resolve(Failure<U>(error)),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
   foldLeft:

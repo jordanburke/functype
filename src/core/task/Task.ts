@@ -160,53 +160,74 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
     ): FPromise<U> => {
-      return FPromise<U>(async (resolve, reject) => {
-        // Setup cancellation if a token was provided
-        const isCancelled = Ref(false)
-        const cancelError = Ref<Error | null>(null)
-        const cleanupCancellation = Ref<() => void>(() => {})
+      return FPromise<U>((resolve, reject) => {
+        // Wrap async logic in IIFE to avoid async executor
+        void (async () => {
+          // Setup cancellation if a token was provided
+          const isCancelled = Ref(false)
+          const cancelError = Ref<Error | null>(null)
+          const cleanupCancellation = Ref<() => void>(() => {})
 
-        if (cancellationToken) {
-          // Check if already cancelled
-          if (cancellationToken.isCancelled) {
-            try {
-              // Always run finally before rejecting
-              await f()
-            } catch (finallyError) {
-              reject(Throwable.apply(finallyError, undefined, { name, description }))
+          if (cancellationToken) {
+            // Check if already cancelled
+            if (cancellationToken.isCancelled) {
+              try {
+                // Always run finally before rejecting
+                await f()
+              } catch (finallyError) {
+                reject(Throwable.apply(finallyError, undefined, { name, description }))
+                return
+              }
+
+              reject(
+                Throwable.apply(new Error("Task was cancelled before execution started"), undefined, {
+                  name,
+                  description,
+                }),
+              )
               return
             }
 
-            reject(
-              Throwable.apply(new Error("Task was cancelled before execution started"), undefined, {
-                name,
-                description,
-              }),
-            )
-            return
+            // Setup cancellation handler
+            const handleCancellation = () => {
+              isCancelled.set(true)
+              cancelError.set(new Error("Task was cancelled during execution"))
+              // We don't reject immediately to allow the finally block to run
+            }
+
+            cancellationToken.onCancel(handleCancellation)
+            cleanupCancellation.set(() => {
+              // No way to remove the callback, but we can track if cancelled
+            })
           }
 
-          // Setup cancellation handler
-          const handleCancellation = () => {
-            isCancelled.set(true)
-            cancelError.set(new Error("Task was cancelled during execution"))
-            // We don't reject immediately to allow the finally block to run
-          }
+          try {
+            // Run the main operation
+            const result = await t()
 
-          cancellationToken.onCancel(handleCancellation)
-          cleanupCancellation.set(() => {
-            // No way to remove the callback, but we can track if cancelled
-          })
-        }
+            // Process cancellation if it occurred during execution
+            if (isCancelled.get()) {
+              try {
+                // Always run finally
+                await f()
+              } catch (finallyError) {
+                // Finally errors take precedence
+                reject(Throwable.apply(finallyError, undefined, { name, description }))
+                return
+              }
 
-        try {
-          // Run the main operation
-          const result = await t()
+              if (cancelError.get()) {
+                reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
+              } else {
+                reject(
+                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
+                )
+              }
+              return
+            }
 
-          // Process cancellation if it occurred during execution
-          if (isCancelled.get()) {
             try {
-              // Always run finally
+              // Run finally before resolving
               await f()
             } catch (finallyError) {
               // Finally errors take precedence
@@ -214,101 +235,83 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
               return
             }
 
-            if (cancelError.get()) {
-              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
-            } else {
-              reject(
-                Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-              )
+            // Success path - resolve with the value directly
+            resolve(result)
+          } catch (error) {
+            // Process cancellation first if it occurred
+            if (isCancelled.get()) {
+              try {
+                // Always run finally
+                await f()
+              } catch (finallyError) {
+                // Finally errors take precedence
+                reject(Throwable.apply(finallyError, undefined, { name, description }))
+                return
+              }
+
+              if (cancelError.get()) {
+                reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
+              } else {
+                reject(
+                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
+                )
+              }
+              return
             }
-            return
-          }
 
-          try {
-            // Run finally before resolving
-            await f()
-          } catch (finallyError) {
-            // Finally errors take precedence
-            reject(Throwable.apply(finallyError, undefined, { name, description }))
-            return
-          }
-
-          // Success path - resolve with the value directly
-          resolve(result)
-        } catch (error) {
-          // Process cancellation first if it occurred
-          if (isCancelled.get()) {
+            // Handle regular error with finally
             try {
               // Always run finally
               await f()
             } catch (finallyError) {
-              // Finally errors take precedence
+              // Finally errors take precedence over operation errors
               reject(Throwable.apply(finallyError, undefined, { name, description }))
               return
             }
 
-            if (cancelError.get()) {
-              reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
-            } else {
-              reject(
-                Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-              )
+            // Process the original error through error handler
+            try {
+              // Check if error is already a Throwable (from an inner task)
+              if (error instanceof Error && isTaggedThrowable(error)) {
+                // Create a new Throwable that wraps the inner error as its cause
+                // This preserves the error chain while adding outer task context
+                const outerError = new Error(`${name}: ${(error as Error).message}`)
+                const enhancedError = Throwable.apply(outerError, undefined, { name, description })
+
+                // Set the original error as the cause
+                Object.defineProperty(enhancedError, "cause", {
+                  value: error,
+                  writable: false,
+                  configurable: false,
+                })
+
+                // Call the error handler for logging/side effects but don't use its result
+                // This allows handlers to be called without changing the error propagation logic
+                // Use a non-awaited promise to avoid blocking the error propagation
+                // This improves performance while still ensuring the handler runs
+                void Promise.resolve().then(() => {
+                  try {
+                    e(error)
+                  } catch (handlerError) {
+                    // Ignore errors from the handler when preserving error chain
+                    console.error("Error in error handler:", handlerError)
+                  }
+                })
+
+                reject(enhancedError)
+              } else {
+                // Regular error handling for non-Throwable errors
+                const errorResult = await e(error)
+                reject(Throwable.apply(errorResult, undefined, { name, description }))
+              }
+            } catch (handlerError) {
+              // If error handler throws, use that error
+              reject(Throwable.apply(handlerError, undefined, { name, description }))
             }
-            return
+          } finally {
+            cleanupCancellation.get()()
           }
-
-          // Handle regular error with finally
-          try {
-            // Always run finally
-            await f()
-          } catch (finallyError) {
-            // Finally errors take precedence over operation errors
-            reject(Throwable.apply(finallyError, undefined, { name, description }))
-            return
-          }
-
-          // Process the original error through error handler
-          try {
-            // Check if error is already a Throwable (from an inner task)
-            if (error instanceof Error && isTaggedThrowable(error)) {
-              // Create a new Throwable that wraps the inner error as its cause
-              // This preserves the error chain while adding outer task context
-              const outerError = new Error(`${name}: ${(error as Error).message}`)
-              const enhancedError = Throwable.apply(outerError, undefined, { name, description })
-
-              // Set the original error as the cause
-              Object.defineProperty(enhancedError, "cause", {
-                value: error,
-                writable: false,
-                configurable: false,
-              })
-
-              // Call the error handler for logging/side effects but don't use its result
-              // This allows handlers to be called without changing the error propagation logic
-              // Use a non-awaited promise to avoid blocking the error propagation
-              // This improves performance while still ensuring the handler runs
-              Promise.resolve().then(() => {
-                try {
-                  e(error)
-                } catch (handlerError) {
-                  // Ignore errors from the handler when preserving error chain
-                  console.error("Error in error handler:", handlerError)
-                }
-              })
-
-              reject(enhancedError)
-            } else {
-              // Regular error handling for non-Throwable errors
-              const errorResult = await e(error)
-              reject(Throwable.apply(errorResult, undefined, { name, description }))
-            }
-          } catch (handlerError) {
-            // If error handler throws, use that error
-            reject(Throwable.apply(handlerError, undefined, { name, description }))
-          }
-        } finally {
-          cleanupCancellation.get()()
-        }
+        })().catch(reject) // Handle any errors from the async IIFE
       })
     },
 
