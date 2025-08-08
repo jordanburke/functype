@@ -33,15 +33,7 @@ export const functypeSuggesterTool = {
   },
 
   // The function that would be called by the AI agent
-  execute: async ({
-    code,
-    limit = 3,
-    format = "json",
-  }: {
-    code: string
-    limit?: number
-    format?: "json" | "markdown"
-  }) => {
+  execute: ({ code, limit = 3, format = "json" }: { code: string; limit?: number; format?: "json" | "markdown" }) => {
     const suggestions = suggestPatterns(code, limit)
 
     if (format === "markdown") {
@@ -117,8 +109,8 @@ Would you like me to show you how to refactor this code using functype?
 }*/
 
 // Example: Getting markdown formatted output for display
-async function getMarkdownSuggestions(code: string) {
-  return await functypeSuggesterTool.execute({
+function getMarkdownSuggestions(code: string) {
+  return functypeSuggesterTool.execute({
     code,
     format: "markdown",
   })
