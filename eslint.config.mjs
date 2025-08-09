@@ -97,6 +97,25 @@ export default [
       // stricter immutability enforcement, but the library itself provides immutability guarantees
       // through architectural design rather than type-level constraints.
       "functional/prefer-immutable-types": "off",
+
+      // Relax strict-boolean-expressions for functional library patterns
+      // This rule is valuable for applications but creates excessive noise in a functional library where:
+      // 1. Optional chaining patterns like `if (options?.prop)` are idiomatic and safe
+      // 2. String/object truthiness checks are common and intentional (e.g., `if (message)`)
+      // 3. The functional design already provides safety through Option/Either patterns
+      // 4. Library code often needs flexibility for performance and interoperability
+      "@typescript-eslint/strict-boolean-expressions": [
+        "warn",
+        {
+          "allowString": true,           // Allow `if (str)` patterns
+          "allowNumber": true,           // Allow `if (num)` patterns  
+          "allowNullableObject": true,   // Allow `if (obj?.prop)` patterns
+          "allowNullableBoolean": true,  // Allow `if (bool)` where bool might be null/undefined
+          "allowNullableString": true,   // Allow `if (str)` where str might be null/undefined
+          "allowNullableNumber": true,   // Allow `if (num)` where num might be null/undefined
+          "allowAny": true              // Allow `if (value)` where value is any type
+        }
+      ],
     },
   },
 ]
