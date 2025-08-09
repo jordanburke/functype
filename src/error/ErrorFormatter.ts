@@ -98,8 +98,7 @@ export function safeStringify(obj: unknown): string {
  * Format a stack trace string for better readability
  */
 export function formatStackTrace(stack: string | undefined): string {
-  if (!stack) return ""
-  if (!stack) return stack
+  if (stack === undefined || stack === "") return ""
 
   // Split the stack trace into lines
   const lines = stack.split("\n")
