@@ -286,4 +286,22 @@ describe("Option", () => {
       expect(result).toEqual({ exists: true, value: "test" })
     })
   })
+
+  describe("isSome and isNone", () => {
+    it("isSome should return true for Some", () => {
+      expect(something.isSome()).toBe(true)
+    })
+
+    it("isSome should return false for None", () => {
+      expect(nothing.isSome()).toBe(false)
+    })
+
+    it("isNone should return false for Some", () => {
+      expect(something.isNone()).toBe(false)
+    })
+
+    it("isNone should return true for None", () => {
+      expect(nothing.isNone()).toBe(true)
+    })
+  })
 })
