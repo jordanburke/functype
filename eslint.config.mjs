@@ -72,6 +72,7 @@ export default [
     rules: {
       // Project-specific overrides to functype defaults
       "functional/no-let": "warn", // More lenient than functype's default "error"
+      "functional/no-classes": "error", // We use classes for providers
       "functional/immutable-data": [
         "warn",
         {
