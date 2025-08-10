@@ -15,6 +15,7 @@ export type ThrowableType = Error &
     readonly taskInfo?: { name: string; description: string }
   }
 
+// eslint-disable-next-line functional/no-classes -- Must extend Error class
 export class Throwable extends Error implements ThrowableType {
   public readonly _tag: typeof NAME = NAME
   public readonly data?: unknown

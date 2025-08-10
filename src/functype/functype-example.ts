@@ -11,6 +11,7 @@ import type { Functype } from "./Functype"
 
 type BoxTag = "Empty" | "Full"
 
+// eslint-disable-next-line functional/no-classes -- Example implementation showing class-based Functype
 class Box<T extends Type> implements Functype<T, BoxTag> {
   constructor(
     public readonly _tag: BoxTag,
