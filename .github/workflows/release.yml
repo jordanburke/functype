@@ -17,34 +17,34 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for semantic-release
-      
+          fetch-depth: 0 # Fetch all history for semantic-release
+
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           run_install: false
-      
+
       - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: 'https://registry.npmjs.org/'
-          cache: 'pnpm'
-      
+          registry-url: "https://registry.npmjs.org/"
+          cache: "pnpm"
+
       - name: Install dependencies
         run: pnpm install
-      
+
       - name: Run tests
         run: pnpm test
-      
+
       - name: Build package
         run: pnpm build:prod
-      
+
       - name: Run semantic-release
         run: npx semantic-release
         env:
