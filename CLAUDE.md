@@ -300,7 +300,7 @@ When implementing a new data structure that supports standard interfaces:
 - Enable source maps in tsconfig for better stack traces
 - Use `ErrorFormatter` for structured error output
 - Run tests with `--reporter=verbose` for detailed output
-- Use `pnpm build:dev` for development with better debugging info
+- Use `pnpm dev` for development with better debugging info
 
 ## AI Integration Tools
 

@@ -290,8 +290,8 @@ Before submitting code for review:
 
 ## Commands
 
-- Build (production): `pnpm build:prod`
-- Build (development): `pnpm build:dev`
+- Build (production): `pnpm build`
+- Build (development): `pnpm dev`
 - Watch mode: `pnpm build:watch`
 - Test all: `pnpm test`
 - Test single file: `pnpm vitest run test/path/to/file.spec.ts`

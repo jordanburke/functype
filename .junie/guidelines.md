@@ -22,13 +22,13 @@ This document provides essential information for developing and maintaining the 
 - **Development Build**:
 
   ```bash
-  pnpm build:dev
+  pnpm dev
   ```
 
 - **Production Build**:
 
   ```bash
-  pnpm build:prod
+  pnpm build
   ```
 
 - **Watch Mode** (for development):
