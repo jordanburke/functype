@@ -21,8 +21,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 'lts/*'
-          cache: 'pnpm'
+          node-version: "lts/*"
+          cache: "pnpm"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -38,18 +38,18 @@ jobs:
           echo "" >> bundle-size-report.md
           echo "| File | Size |" >> bundle-size-report.md
           echo "|------|------|" >> bundle-size-report.md
-          
+
           for file in dist/*.mjs; do
             size=$(du -h "$file" | cut -f1)
             echo "| $(basename $file) | $size |" >> bundle-size-report.md
           done
-          
+
           echo "" >> bundle-size-report.md
           echo "## Gzipped Size (production)" >> bundle-size-report.md
           echo "" >> bundle-size-report.md
           echo "| File | Size |" >> bundle-size-report.md
           echo "|------|------|" >> bundle-size-report.md
-          
+
           for file in dist/*.mjs; do
             gzip -c "$file" > "$file.gz"
             size=$(du -h "$file.gz" | cut -f1)
@@ -71,7 +71,7 @@ jobs:
           script: |
             const fs = require('fs');
             const report = fs.readFileSync('bundle-size-report.md', 'utf8');
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

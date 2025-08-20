@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.12.1
 - **Install**: `pnpm install`
-- **Build**: `pnpm build:dev` (development) or `pnpm build:prod` (production)
+- **Development**: `pnpm dev` (build with watch mode)
+- **Before commit**: `pnpm ci` (format + lint + test + build)
 - **Test**: `pnpm test` or `pnpm vitest run test/specific.spec.ts` for single file
-- **Lint**: `pnpm lint` (formats and fixes)
 
 ## Primary Reference: Feature Matrix
 
@@ -19,17 +19,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Key methods available for each interface
 - Quick reference for understanding library capabilities
 
-## Build & Test Commands
+## Development Commands
 
-### Build Commands
+### Pre-Checkin Command
 
-- `pnpm build:prod` - Production build with full validation
-- `pnpm build:dev` - Development build with watch mode
-- `pnpm build:watch` - Watch mode for continuous building
-- `pnpm compile` - TypeScript compilation check (no emit)
-- `pnpm clean` - Remove dist and coverage directories
+- `pnpm ci` - **Main command**: Format, lint, test, and build everything for checkin
 
-### Test Commands
+### Formatting
+
+- `pnpm format` - Format code with Prettier (write mode)
+- `pnpm format:check` - Check Prettier formatting without writing
+
+### Linting
+
+- `pnpm lint` - Fix ESLint issues (write mode)
+- `pnpm lint:check` - Check ESLint issues without fixing
+
+### Testing
 
 - `pnpm test` - Run all tests
 - `pnpm vitest run test/path/to/file.spec.ts` - Run specific test file
@@ -37,11 +43,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm test:coverage` - Run tests with coverage report
 - `pnpm test:ui` - Run tests with Vitest UI
 
-### Lint Commands
+### Building
 
-- `pnpm lint` - Format with Prettier and fix with ESLint
-- `pnpm lint:fix` - Only fix ESLint issues
-- `pnpm lint:format` - Only format with Prettier
+- `pnpm build` - Production build (outputs to `dist/`)
+- `pnpm build:watch` - Watch mode for continuous building
+- `pnpm dev` - Development build with watch mode (alias for build:watch)
+- `pnpm compile` - TypeScript compilation check (no emit)
+- `pnpm clean` - Remove dist directories
 
 ### Performance & Documentation
 
@@ -273,7 +281,7 @@ describe("Option", () => {
 4. Add export mapping in `package.json` for selective imports
 5. Create comprehensive tests in `test/mynewtype.spec.ts`
 6. Update FUNCTYPE_FEATURE_MATRIX.md if implementing standard interfaces
-7. Run `pnpm compile && pnpm test` to verify
+7. Run `pnpm ci` to verify everything works correctly
 
 ### Working with Type Classes
 
@@ -284,6 +292,7 @@ When implementing a new data structure that supports standard interfaces:
 3. Use `Base` function from `core/base` to add common functionality
 4. Ensure type inference works correctly without explicit annotations
 5. Add comprehensive tests for all interface methods
+6. Run `pnpm ci` to verify everything works correctly
 
 ### Debugging Tips
 
