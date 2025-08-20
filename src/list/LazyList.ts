@@ -212,7 +212,7 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
 
     count: () => {
       let count = 0
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       for (const _ of iterable) {
         count++
       }

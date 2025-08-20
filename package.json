@@ -35,16 +35,16 @@
     "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js"
   },
   "devDependencies": {
-    "@eslint/compat": "^1.3.1",
+    "@eslint/compat": "^1.3.2",
     "@eslint/eslintrc": "^3.3.1",
-    "@eslint/js": "^9.32.0",
-    "@types/node": "^22.17.0",
-    "@typescript-eslint/eslint-plugin": "^8.39.0",
-    "@typescript-eslint/parser": "^8.39.0",
+    "@eslint/js": "^9.33.0",
+    "@types/node": "^22.17.2",
+    "@typescript-eslint/eslint-plugin": "^8.40.0",
+    "@typescript-eslint/parser": "^8.40.0",
     "@vitest/coverage-v8": "^3.2.4",
     "@vitest/ui": "^3.2.4",
     "cross-env": "^10.0.0",
-    "eslint": "^9.32.0",
+    "eslint": "^9.33.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-functional": "^9.0.2",
     "eslint-plugin-functype": "1.1.0",
@@ -56,8 +56,8 @@
     "rimraf": "^6.0.1",
     "ts-node": "^10.9.2",
     "tsup": "^8.5.0",
-    "typedoc": "^0.28.9",
-    "typescript": "5.8.3",
+    "typedoc": "^0.28.10",
+    "typescript": "5.9.2",
     "vitest": "^3.2.4"
   },
   "types": "./dist/index.d.ts",
@@ -161,5 +161,5 @@
     "safe-stable-stringify": "^2.5.0"
   },
   "sideEffects": false,
-  "packageManager": "pnpm@10.14.0-0+sha512.2cd47a0cbf5f1d1de7693a88307a0ede5be94e0d3b34853d800ee775efbea0650cb562b77605ec80bc8d925f5cd27c4dfe8bb04d3a0b76090784c664450d32d6"
+  "packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b"
 }
