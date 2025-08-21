@@ -12,7 +12,7 @@
   "homepage": "https://github.com/jordanburke/functype#readme",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
-    "ci": "pnpm format && pnpm lint:check && pnpm test && pnpm build",
+    "validate": "pnpm format && pnpm lint:check && pnpm test && pnpm build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint ./src --fix",
@@ -26,7 +26,7 @@
     "dev": "tsup --watch",
     "compile": "tsc --noEmit",
     "clean": "rimraf dist",
-    "prepublishOnly": "pnpm ci",
+    "prepublishOnly": "pnpm validate",
     "bench": "vitest bench",
     "bench:ui": "vitest bench --ui",
     "docs": "typedoc",

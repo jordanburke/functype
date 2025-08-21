@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.12.1
 - **Install**: `pnpm install`
 - **Development**: `pnpm dev` (build with watch mode)
-- **Before commit**: `pnpm ci` (format + lint + test + build)
+- **Before commit**: `pnpm validate` (format + lint + test + build)
 - **Test**: `pnpm test` or `pnpm vitest run test/specific.spec.ts` for single file
 
 ## Primary Reference: Feature Matrix
@@ -23,7 +23,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Pre-Checkin Command
 
-- `pnpm ci` - **Main command**: Format, lint, test, and build everything for checkin
+- `pnpm validate` - **Main command**: Format, lint, test, and build everything for checkin
 
 ### Formatting
 
@@ -281,7 +281,7 @@ describe("Option", () => {
 4. Add export mapping in `package.json` for selective imports
 5. Create comprehensive tests in `test/mynewtype.spec.ts`
 6. Update FUNCTYPE_FEATURE_MATRIX.md if implementing standard interfaces
-7. Run `pnpm ci` to verify everything works correctly
+7. Run `pnpm validate` to verify everything works correctly
 
 ### Working with Type Classes
 
@@ -292,7 +292,7 @@ When implementing a new data structure that supports standard interfaces:
 3. Use `Base` function from `core/base` to add common functionality
 4. Ensure type inference works correctly without explicit annotations
 5. Add comprehensive tests for all interface methods
-6. Run `pnpm ci` to verify everything works correctly
+6. Run `pnpm validate` to verify everything works correctly
 
 ### Debugging Tips
 

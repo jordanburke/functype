@@ -28,8 +28,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Lint code
-        run: pnpm lint
-
-      - name: Test package
-        run: pnpm test
+      - name: Run CI Pipeline
+        run: pnpm run validate

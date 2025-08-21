@@ -36,11 +36,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Test package
-        run: pnpm test
-
-      - name: Build package
-        run: pnpm build
+      - name: Run CI Pipeline
+        run: pnpm run validate
 
       - name: Set Token
         run: npm config set //registry.npmjs.org/:_authToken "${{ secrets.NPM_TOKEN }}"
