@@ -43,8 +43,8 @@ export type TaskException<T> = Either<Throwable, T> & TaskInfo
  * @param _task - Task parameters
  */
 export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskParams): TaskException<T> => {
-  const name = _task?.name || "TaskException"
-  const description = _task?.description || "Unspecified TaskException"
+  const name = _task?.name ?? "TaskException"
+  const description = _task?.description ?? "Unspecified TaskException"
   const taskInfo = { name, description }
   // Pass task info to the Throwable
   const appError = Throwable.apply(error, data, taskInfo)
@@ -57,8 +57,8 @@ export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskPar
 export type TaskResult<T> = Either<Throwable, T> & TaskInfo
 
 export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
-  const name = _task?.name || "TaskResult"
-  const description = _task?.description || "Unspecified TaskResult"
+  const name = _task?.name ?? "TaskResult"
+  const description = _task?.description ?? "Unspecified TaskResult"
   return {
     ...Base("TaskResult", Right(data)),
     _task: { name, description },
@@ -140,8 +140,8 @@ export type Async<T> = FPromise<Sync<T>>
  * Task adapter for bridging promise-based code with functional error handling patterns
  */
 const TaskConstructor = <T = unknown>(params?: TaskParams) => {
-  const name = params?.name || "Task"
-  const description = params?.description || ""
+  const name = params?.name ?? "Task"
+  const description = params?.description ?? ""
   const body = {
     /**
      * Run an async operation with explicit try/catch/finally semantics
@@ -285,7 +285,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
               // This allows handlers to be called without changing the error propagation logic
               // Use a non-awaited promise to avoid blocking the error propagation
               // This improves performance while still ensuring the handler runs
-              Promise.resolve().then(() => {
+              await Promise.resolve().then(() => {
                 try {
                   e(error)
                 } catch (handlerError) {
@@ -397,7 +397,7 @@ const TaskCompanion = {
 
     // Traverse the cause chain
     while (current && (current as TaggedThrowable).cause) {
-      const cause = (current as TaggedThrowable).cause
+      const { cause } = current as TaggedThrowable
       if (cause) {
         chain.push(cause)
         current = cause
@@ -428,7 +428,7 @@ const TaskCompanion = {
     },
   ): string => {
     const chain = TaskCompanion.getErrorChain(error)
-    const separator = options?.separator || "\n"
+    const separator = options?.separator ?? "\n"
 
     return chain
       .map((err, index) => {
@@ -436,7 +436,7 @@ const TaskCompanion = {
           return `${index > 0 ? "↳ " : ""}Unknown error`
         }
 
-        const taskInfo = (err as TaggedThrowable).taskInfo
+        const { taskInfo } = err as TaggedThrowable
         const taskName = options?.includeTasks && taskInfo?.name ? `[${taskInfo.name}] ` : ""
         const message = err.message || "No message"
 
@@ -460,7 +460,7 @@ const TaskCompanion = {
     params?: TaskParams,
   ): ((...args: Args) => FPromise<U>) => {
     return (...args: Args) => {
-      const taskParams = params || { name: "PromiseTask", description: "Task from Promise" }
+      const taskParams = params ?? { name: "PromiseTask", description: "Task from Promise" }
       return Task(taskParams).Async<U>(
         () => promiseFn(...args),
         (error) => error,
@@ -491,8 +491,8 @@ const TaskCompanion = {
    * @returns A promise that resolves with the first task to complete or rejects if all tasks fail
    */
   race: <T>(tasks: Array<FPromise<T>>, timeoutMs?: number, params?: TaskParams): FPromise<T> => {
-    const name = params?.name || "TaskRace"
-    const description = params?.description || "Race between multiple tasks"
+    const name = params?.name ?? "TaskRace"
+    const description = params?.description ?? "Race between multiple tasks"
     const taskParams = { name, description }
 
     return Task(taskParams).Async<T>(
@@ -550,8 +550,8 @@ const TaskCompanion = {
     nodeFn: (...args: [...Args, (error: unknown, result: T) => void]) => void,
     params?: TaskParams,
   ): ((...args: Args) => FPromise<T>) => {
-    const name = params?.name || "NodeCallbackTask"
-    const description = params?.description || "Task from Node.js callback function"
+    const name = params?.name ?? "NodeCallbackTask"
+    const description = params?.description ?? "Task from Node.js callback function"
     const taskParams = { name, description }
 
     return (...args: Args) => {

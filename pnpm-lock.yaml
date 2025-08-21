@@ -41,15 +41,15 @@ importers:
       eslint:
         specifier: ^9.33.0
         version: 9.33.0
+      eslint-config-functype:
+        specifier: 1.3.0
+        version: 1.3.0(@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2))(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-functional@9.0.2(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-prettier@5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2))(eslint-plugin-simple-import-sort@12.1.1(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2)
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@9.33.0)
       eslint-plugin-functional:
         specifier: ^9.0.2
         version: 9.0.2(eslint@9.33.0)(typescript@5.9.2)
-      eslint-plugin-functype:
-        specifier: 1.1.0
-        version: 1.1.0(@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2))(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-functional@9.0.2(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-prettier@5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2))(eslint-plugin-simple-import-sort@12.1.1(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2)
       eslint-plugin-prettier:
         specifier: ^5.5.4
         version: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2)
@@ -992,6 +992,20 @@ packages:
       { integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw== }
     engines: { node: ">=12" }
 
+  eslint-config-functype@1.3.0:
+    resolution:
+      { integrity: sha512-Bgtt7Z6ceXmfeT7J17qWY5m4x7F/vfue1gpExUMAcz8mtfw5abKspxt2w3upjnW/5ZR7NZVzO9P66ELumUSzAQ== }
+    engines: { node: ">=22.0.0" }
+    hasBin: true
+    peerDependencies:
+      "@typescript-eslint/eslint-plugin": ^8.38.0 || ^8.39.0 || ^9.0.0
+      "@typescript-eslint/parser": ^8.38.0 || ^8.39.0 || ^9.0.0
+      eslint: ^9.32.0
+      eslint-plugin-functional: ^9.0.2
+      eslint-plugin-prettier: ^5.0.0
+      eslint-plugin-simple-import-sort: ^12.0.0
+      prettier: ^3.0.0
+
   eslint-config-prettier@10.1.8:
     resolution:
       { integrity: sha512-82GZUjRS0p/jganf6q1rEO25VSoHH0hKPCTrgillPjdI/3bgBhAE1QzHrHTizjpRvy6pGAvKjDJtk2pF9NDq8w== }
@@ -1009,19 +1023,6 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
-
-  eslint-plugin-functype@1.1.0:
-    resolution:
-      { integrity: sha512-f4Qn2IjOnYc6BlSMFzFKOteoxURtWqjaF0DoBpDb190HqqBOXR6ERwLwfc0tmNQKLKijSZPW3xymXkV5vd7myg== }
-    hasBin: true
-    peerDependencies:
-      "@typescript-eslint/eslint-plugin": ^8.38.0 || ^8.39.0 || ^9.0.0
-      "@typescript-eslint/parser": ^8.38.0 || ^8.39.0 || ^9.0.0
-      eslint: ^9.32.0
-      eslint-plugin-functional: ^9.0.2
-      eslint-plugin-prettier: ^5.0.0
-      eslint-plugin-simple-import-sort: ^12.0.0
-      prettier: ^3.0.0
 
   eslint-plugin-prettier@5.5.4:
     resolution:
@@ -2697,6 +2698,20 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
+  eslint-config-functype@1.3.0(@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2))(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-functional@9.0.2(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-prettier@5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2))(eslint-plugin-simple-import-sort@12.1.1(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2):
+    dependencies:
+      "@eslint/eslintrc": 3.3.1
+      "@eslint/js": 9.33.0
+      "@typescript-eslint/eslint-plugin": 8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2)
+      "@typescript-eslint/parser": 8.40.0(eslint@9.33.0)(typescript@5.9.2)
+      eslint: 9.33.0
+      eslint-plugin-functional: 9.0.2(eslint@9.33.0)(typescript@5.9.2)
+      eslint-plugin-prettier: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2)
+      eslint-plugin-simple-import-sort: 12.1.1(eslint@9.33.0)
+      prettier: 3.6.2
+    transitivePeerDependencies:
+      - supports-color
+
   eslint-config-prettier@10.1.8(eslint@9.33.0):
     dependencies:
       eslint: 9.33.0
@@ -2712,20 +2727,6 @@ snapshots:
       ts-declaration-location: 1.0.7(typescript@5.9.2)
     optionalDependencies:
       typescript: 5.9.2
-    transitivePeerDependencies:
-      - supports-color
-
-  eslint-plugin-functype@1.1.0(@typescript-eslint/eslint-plugin@8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2))(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-functional@9.0.2(eslint@9.33.0)(typescript@5.9.2))(eslint-plugin-prettier@5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2))(eslint-plugin-simple-import-sort@12.1.1(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2):
-    dependencies:
-      "@eslint/eslintrc": 3.3.1
-      "@eslint/js": 9.33.0
-      "@typescript-eslint/eslint-plugin": 8.40.0(@typescript-eslint/parser@8.40.0(eslint@9.33.0)(typescript@5.9.2))(eslint@9.33.0)(typescript@5.9.2)
-      "@typescript-eslint/parser": 8.40.0(eslint@9.33.0)(typescript@5.9.2)
-      eslint: 9.33.0
-      eslint-plugin-functional: 9.0.2(eslint@9.33.0)(typescript@5.9.2)
-      eslint-plugin-prettier: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.33.0))(eslint@9.33.0)(prettier@3.6.2)
-      eslint-plugin-simple-import-sort: 12.1.1(eslint@9.33.0)
-      prettier: 3.6.2
     transitivePeerDependencies:
       - supports-color
 

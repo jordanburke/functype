@@ -72,7 +72,7 @@ export function safeStringify(obj: unknown): string {
     (key, value) => {
       // Handle BigInt
       if (typeof value === "bigint") {
-        return value.toString() + "n"
+        return `${value.toString()}n`
       }
 
       // Handle circular references
@@ -146,7 +146,7 @@ export function formatError(error: unknown, options?: ErrorFormatterOptions): st
       const prefix = index > 0 ? "↳ " : ""
 
       // Get task information if available
-      const taskInfo = (err as ErrorWithTaskInfo).taskInfo
+      const { taskInfo } = err as ErrorWithTaskInfo
       const taskName =
         opts.includeTasks && taskInfo?.name
           ? opts.colors
@@ -190,7 +190,7 @@ export function formatError(error: unknown, options?: ErrorFormatterOptions): st
 
   // Add error data if requested and available
   if (opts.includeData) {
-    const data = (throwableError as ErrorWithTaskInfo).data
+    const { data } = throwableError as ErrorWithTaskInfo
     if (data) {
       const dataFormatted = opts.colors
         ? `\n\n\x1b[33mContext:\x1b[0m\n${safeStringify(data)}`

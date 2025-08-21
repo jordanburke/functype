@@ -99,23 +99,23 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
-  toJSON: function () {
+  toJSON() {
     return { _tag: "Right", value }
   },
   toString: () => {
     return `Right(${stringify(value)})`
   },
-  [Symbol.iterator]: function* () {
+  *[Symbol.iterator]() {
     yield value
   },
-  yield: function* () {
+  *yield() {
     yield value
   },
   traverse: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U[]> => {
     const result = f(value)
     return result.isLeft() ? Left(result.value as L) : Right([result.value as U])
   },
-  lazyMap: function* <U extends Type>(f: (value: R) => U) {
+  *lazyMap<U extends Type>(f: (value: R) => U) {
     yield Right<L, U>(f(value))
   },
   tap: (f: (value: R) => void) => {
@@ -177,7 +177,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   },
   getOrElse: (defaultValue: R): R => defaultValue,
   getOrThrow: (error?: Error) => {
-    throw error || value
+    throw error ?? value
   },
   orElse: (alternative: Either<L, R>) => alternative,
   orNull: () => null,
@@ -193,18 +193,18 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
   toOption: () => None<R>(),
   toList: () => List<R>(),
-  toJSON: function () {
+  toJSON: () => {
     return { _tag: "Left", value }
   },
   toString: () => `Left(${stringify(value)})`,
-  [Symbol.iterator]: function* () {
+  *[Symbol.iterator]() {
     // Left doesn't yield any values
   },
-  yield: function* () {
+  *yield() {
     // Left doesn't yield any values
   },
   traverse: <U extends Type>(_f: (value: R) => Either<L, U>): Either<L, U[]> => Left(value),
-  lazyMap: function* <U extends Type>(_f: (value: R) => U) {
+  *lazyMap<U extends Type>(_f: (value: R) => U) {
     yield Left<L, U>(value)
   },
   tap: (_f: (value: R) => void) => Left<L, R>(value),

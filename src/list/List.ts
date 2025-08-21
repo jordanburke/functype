@@ -37,7 +37,7 @@ export interface List<A> extends FunctypeCollection<A, "List"> {
 }
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
-  const array: A[] = Array.from(values || [])
+  const array: A[] = Array.from(values ?? [])
 
   const list: List<A> = {
     _tag: "List" as const,

@@ -33,7 +33,7 @@ export type ExtractTag<T> = T extends Typeable<infer Tag, unknown> ? Tag : never
 export function Typeable<Tag extends string, T>({ _tag, impl }: TypeableParams<Tag, T>): Typeable<Tag, T> {
   return {
     ...impl,
-    _tag: _tag,
+    _tag,
   }
 }
 

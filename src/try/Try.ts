@@ -92,8 +92,8 @@ const Success = <T>(value: T): Try<T> => ({
     return false
   },
   contains: (v: T) => value === v,
-  reduce: (f: (b: T, a: T) => T) => value,
-  reduceRight: (f: (b: T, a: T) => T) => value,
+  reduce: (_f: (b: T, a: T) => T) => value,
+  reduceRight: (_f: (b: T, a: T) => T) => value,
   count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
   find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
   exists: (p: (a: T) => boolean) => p(value),
@@ -110,7 +110,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   },
   getOrElse: (defaultValue: T) => defaultValue,
   getOrThrow: (e?: Error) => {
-    throw e || error
+    throw e ?? error
   },
   orElse: (alternative: Try<T>) => alternative,
   orNull: () => null,
@@ -122,7 +122,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
-  flatMapAsync: async <U>(_f: (value: T) => Promise<Try<U>>) => Failure<U>(error),
+  flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>) => Promise.resolve(Failure<U>(error)),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
   foldLeft:

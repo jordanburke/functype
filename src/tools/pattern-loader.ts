@@ -30,7 +30,7 @@ function extractMetadata(content: string): Option<PatternMetadata> {
 
   lines.forEach((line) => {
     const tagMatch = line.match(/@(\w+)\s+(.+)/)
-    if (tagMatch && tagMatch[2]) {
+    if (tagMatch?.[2]) {
       const key = tagMatch[1]
       const value = tagMatch[2]
       switch (key) {
@@ -146,8 +146,8 @@ function extractFirstFunction(code: string): string | null {
 /**
  * Validates that pattern examples compile
  */
-export async function validatePatterns(): Promise<boolean> {
+export function validatePatterns(): Promise<boolean> {
   // This would run TypeScript compiler on the pattern files
   // For now, we assume they're valid if they exist
-  return true
+  return Promise.resolve(true)
 }

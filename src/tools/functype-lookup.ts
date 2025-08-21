@@ -56,7 +56,7 @@ export function functypeLookup(typeName: string): FunctypeLookupResult {
     testPath: info.testPath,
     interfaces: info.implements,
     keyMethods: info.keyMethods,
-    relatedTypes: info.relatedTypes || [],
+    relatedTypes: info.relatedTypes ?? [],
     commonUseCases: info.commonUseCases,
     found: true,
   }
@@ -307,7 +307,7 @@ const names = userMap
           title: "Basic Usage",
           description: `Basic ${typeName} operations`,
           code: `// Check the source file for detailed examples
-// Path: ${functypeRegistry[typeName]?.sourcePath || "Not found"}`,
+// Path: ${functypeRegistry[typeName]?.sourcePath ?? "Not found"}`,
           category: "basic",
         },
       ]

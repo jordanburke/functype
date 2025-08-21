@@ -24,9 +24,9 @@ export const brandExamples = {
 
     // Values ARE primitives - no unbrand needed
     return {
-      userId: userId, // "user-123" - it IS a string
+      userId, // "user-123" - it IS a string
       userIdStr: userId.toString(), // "user-123" - standard string method
-      productId: productId, // "prod-456"
+      productId, // "prod-456"
       // Can use unbrand function if needed for clarity
       userIdUnbranded: unbrand(userId), // "user-123"
     }
@@ -43,9 +43,9 @@ export const brandExamples = {
     const isActive = createIsActive(true)
 
     return {
-      email: email, // "user@example.com" - it IS a string
+      email, // "user@example.com" - it IS a string
       emailStr: email.toString(), // "user@example.com"
-      age: age, // 25 - it IS a number
+      age, // 25 - it IS a number
       canVote: age >= 18, // true - numeric operations work directly
       status: isActive, // true - it IS a boolean
     }
@@ -67,7 +67,7 @@ export const brandExamples = {
     // getUserProfile(email)  // Error: Brand<"Email", string> is not assignable to Brand<"UserId", string>
     // getUserProfile("user-123")  // Error: string is not assignable to Brand<"UserId", string>
 
-    return { profile, email: email } // email IS a string
+    return { profile, email } // email IS a string
   },
 }
 

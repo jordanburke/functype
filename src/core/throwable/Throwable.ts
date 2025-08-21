@@ -33,7 +33,7 @@ export class Throwable extends Error implements ThrowableType {
     super(message, { cause: options?.cause })
 
     // Set name before we capture stack trace
-    this.name = options?.taskInfo?.name || NAME
+    this.name = options?.taskInfo?.name ?? NAME
 
     // Set immutable properties
     Object.defineProperties(this, {
@@ -53,7 +53,7 @@ export class Throwable extends Error implements ThrowableType {
         configurable: false,
       },
       name: {
-        value: options?.taskInfo?.name || NAME,
+        value: options?.taskInfo?.name ?? NAME,
         writable: false,
         configurable: false,
       },
@@ -83,8 +83,8 @@ export class Throwable extends Error implements ThrowableType {
       // For Error instances, preserve the original stack trace and all properties
       const throwable = new Throwable(srcError.message, {
         data,
-        cause: (srcError.cause as Error | undefined) || undefined,
-        stack: srcError.stack || undefined,
+        cause: (srcError.cause as Error | undefined) ?? undefined,
+        stack: srcError.stack ?? undefined,
         taskInfo,
       })
 
@@ -117,7 +117,7 @@ export class Throwable extends Error implements ThrowableType {
                 Object.getOwnPropertyNames(errorObj).filter((key) => errorObj[key] !== undefined),
               )}`
 
-      const throwable = new Throwable(message, { data: data || errorObj, taskInfo })
+      const throwable = new Throwable(message, { data: data ?? errorObj, taskInfo })
 
       // Copy all properties from the source object
       for (const key of Object.keys(errorObj)) {
@@ -135,7 +135,7 @@ export class Throwable extends Error implements ThrowableType {
       const fnName = srcError.name || "anonymous function"
       const fnString = srcError.toString().substring(0, 100) + (srcError.toString().length > 100 ? "..." : "")
       return new Throwable(`Function error: ${fnName}`, {
-        data: data || {
+        data: data ?? {
           functionType: typeof srcError,
           functionName: fnName,
           functionString: fnString,
@@ -158,7 +158,7 @@ export class Throwable extends Error implements ThrowableType {
           : `Number error: ${numValue}`
 
       return new Throwable(message, {
-        data: data || {
+        data: data ?? {
           errorType,
           errorValue: numValue,
           originalError: srcError,
@@ -169,7 +169,7 @@ export class Throwable extends Error implements ThrowableType {
 
     if (errorType === "bigint") {
       return new Throwable(`BigInt error: ${srcError}n`, {
-        data: data || {
+        data: data ?? {
           errorType,
           errorValue: String(srcError),
           originalError: srcError,
@@ -180,7 +180,7 @@ export class Throwable extends Error implements ThrowableType {
 
     if (errorType === "boolean") {
       return new Throwable(`Boolean error: ${srcError}`, {
-        data: data || {
+        data: data ?? {
           errorType,
           errorValue: srcError,
           originalError: srcError,
@@ -190,9 +190,9 @@ export class Throwable extends Error implements ThrowableType {
     }
 
     if (errorType === "symbol") {
-      const symbolDesc = (srcError as symbol).description || "unnamed symbol"
+      const symbolDesc = (srcError as symbol).description ?? "unnamed symbol"
       return new Throwable(`Symbol error: Symbol(${symbolDesc})`, {
-        data: data || {
+        data: data ?? {
           errorType,
           symbolDescription: symbolDesc,
           originalError: srcError,
@@ -207,7 +207,7 @@ export class Throwable extends Error implements ThrowableType {
         : `${errorType.charAt(0).toUpperCase() + errorType.slice(1)} error: ${errorValue}`
 
     return new Throwable(message, {
-      data: data || {
+      data: data ?? {
         errorType,
         errorValue,
         originalError: srcError,
