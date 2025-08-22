@@ -28,12 +28,12 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    * Returns true if this Option is a Some (contains a value)
    * @returns true if this Option contains a value, false otherwise
    */
-  isSome(): boolean
+  isSome(): this is Option<T> & { value: T; isEmpty: false }
   /**
    * Returns true if this Option is a None (contains no value)
    * @returns true if this Option is empty, false otherwise
    */
-  isNone(): boolean
+  isNone(): this is Option<T> & { value: undefined; isEmpty: true }
   /**
    * Extracts the value if present
    * @throws Error if the Option is None
@@ -177,8 +177,12 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   _tag: "Some",
   value,
   isEmpty: false,
-  isSome: () => true,
-  isNone: () => false,
+  isSome(): this is Option<T> & { value: T; isEmpty: false } {
+    return true
+  },
+  isNone(): this is Option<T> & { value: undefined; isEmpty: true } {
+    return false
+  },
   get: () => value,
   getOrElse: () => value,
   getOrThrow: () => value,
@@ -240,8 +244,12 @@ const NONE: Option<never> = {
   _tag: "None",
   value: undefined as never,
   isEmpty: true,
-  isSome: () => false,
-  isNone: () => true,
+  isSome(): this is Option<never> & { value: never; isEmpty: false } {
+    return false
+  },
+  isNone(): this is Option<never> & { value: undefined; isEmpty: true } {
+    return true
+  },
   get: () => {
     throw new Error("Cannot call get() on None")
   },

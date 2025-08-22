@@ -15,8 +15,8 @@ import type { Type } from "@/types"
 export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right">, Promisable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
-  isLeft: () => boolean
-  isRight: () => boolean
+  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
+  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R }
   get: () => R
   getOrElse: (defaultValue: R) => R
   getOrThrow: (error?: Error) => R
@@ -77,8 +77,12 @@ export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMon
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
   _tag: "Right",
   value,
-  isLeft: () => false,
-  isRight: () => true,
+  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {
+    return false
+  },
+  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
+    return true
+  },
   get: () => value,
   getOrElse: (_defaultValue: R) => value,
   getOrThrow: () => value,
@@ -165,8 +169,12 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
   _tag: "Left",
   value,
-  isLeft: () => true,
-  isRight: () => false,
+  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {
+    return true
+  },
+  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
+    return false
+  },
   get: () => {
     throw new Error(`Cannot call get() on Left(${stringify(value)})`)
   },

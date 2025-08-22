@@ -18,8 +18,8 @@ export type TypeNames = "Success" | "Failure"
 export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
-  isSuccess: () => boolean
-  isFailure: () => boolean
+  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
+  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
   get: () => T
   getOrElse: (defaultValue: T) => T
   getOrThrow: (error?: Error) => T
@@ -52,8 +52,12 @@ export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe
 const Success = <T>(value: T): Try<T> => ({
   _tag: "Success",
   error: undefined,
-  isSuccess: () => true,
-  isFailure: () => false,
+  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {
+    return true
+  },
+  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
+    return false
+  },
   get: () => value,
   getOrElse: (_defaultValue: T) => value,
   getOrThrow: (_error?: Error) => value,
@@ -105,8 +109,12 @@ const Success = <T>(value: T): Try<T> => ({
 const Failure = <T>(error: Error): Try<T> => ({
   _tag: "Failure",
   error,
-  isSuccess: () => false,
-  isFailure: () => true,
+  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {
+    return false
+  },
+  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
+    return true
+  },
   get: () => {
     throw error
   },
