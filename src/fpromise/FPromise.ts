@@ -143,6 +143,7 @@ const FPromiseImpl = <T extends Type, E = unknown>(
               const result = f(value)
               if ("_tag" in result && result._tag === "FPromise") {
                 // It's an FPromise
+                // eslint-disable-next-line no-extra-semi
                 ;(result as FPromise<U, E>).then(resolve, reject)
               } else {
                 // It's a PromiseLike

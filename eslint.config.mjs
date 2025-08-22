@@ -71,6 +71,7 @@ export default [
 
     rules: {
       "functional/prefer-immutable-types": "off",
+      "functional/no-throw-statements": "off",
       // Project-specific overrides to functype defaults
       "@typescript-eslint/no-unused-vars": "off", // Override for your existing code TODO Check this
       "functional/no-let": "warn", // More lenient than functype's default "error"
