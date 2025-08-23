@@ -13,7 +13,7 @@ import { Ref } from "@/ref/Ref"
 export type TaggedThrowable = Error & {
   _tag: "Throwable"
   cause?: Error
-  taskInfo?: TaskInfo
+  taskInfo?: { name: string; description: string }
 }
 
 /**
@@ -25,47 +25,107 @@ export function isTaggedThrowable(error: unknown): error is TaggedThrowable {
   )
 }
 
-export type TaskParams = {
-  name?: string
-  description?: string
+// Input parameters for tasks (optional)
+export interface TaskParams {
+  readonly name?: string
+  readonly description?: string
 }
 
-export type TaskInfo = {
-  _task: TaskParams
-  name?: string
-  description?: string
+// Resolved metadata for tasks (required)
+export interface TaskMetadata {
+  readonly name: string
+  readonly description: string
 }
 
-export type TaskException<T> = Either<Throwable, T> & TaskInfo
+// Success case interface - extends Omit to avoid _tag conflict
+export interface TaskSuccess<T> extends Omit<Either<Throwable, T>, "_tag"> {
+  readonly _tag: "TaskSuccess"
+  readonly _meta: TaskMetadata
+  readonly isSuccess: () => this is TaskSuccess<T>
+  readonly isFailure: () => this is TaskFailure<T>
+}
+
+// Failure case interface - extends Omit to avoid _tag conflict
+export interface TaskFailure<T> extends Omit<Either<Throwable, T>, "_tag"> {
+  readonly _tag: "TaskFailure"
+  readonly _meta: TaskMetadata
+  readonly error: Throwable
+  readonly isSuccess: () => this is TaskSuccess<T>
+  readonly isFailure: () => this is TaskFailure<T>
+  // Error-specific methods
+  readonly mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>
+  readonly recover: (value: T) => TaskSuccess<T>
+  readonly recoverWith: (f: (error: Throwable) => T) => TaskSuccess<T>
+}
+
+// Union type for sync operations
+export type TaskOutcome<T> = TaskSuccess<T> | TaskFailure<T>
 
 /**
- * TaskException factory function
+ * TaskFailure factory function
  * @param error - The error object
  * @param data - Additional data related to the error
- * @param _task - Task parameters
+ * @param params - Task parameters
  */
-export const TaskException = <T>(error: unknown, data?: unknown, _task?: TaskParams): TaskException<T> => {
-  const name = _task?.name ?? "TaskException"
-  const description = _task?.description ?? "Unspecified TaskException"
-  const taskInfo = { name, description }
-  // Pass task info to the Throwable
-  const appError = Throwable.apply(error, data, taskInfo)
-  return {
-    ...Base("TaskException", Left(appError)),
-    _task: taskInfo,
+export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => {
+  const meta: TaskMetadata = {
+    name: params?.name ?? "Task",
+    description: params?.description ?? "",
   }
+
+  // Pass metadata to Throwable for error chain tracking
+  const throwable = Throwable.apply(error, data, meta)
+
+  // Create the underlying Either
+  const either = Left<Throwable, T>(throwable)
+
+  return {
+    ...either, // Spread all Either methods (isLeft, isRight, fold, map, flatMap, etc.)
+    _tag: "TaskFailure" as const, // Override the tag
+    _meta: meta,
+    error: throwable,
+    isSuccess(): this is TaskSuccess<T> {
+      return false
+    },
+    isFailure(): this is TaskFailure<T> {
+      return true
+    },
+    // Add Task-specific error methods
+    mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>(f(throwable), data, params),
+    recover: (value: T) => TaskSuccess(value, params),
+    recoverWith: (f: (error: Throwable) => T) => TaskSuccess(f(throwable), params),
+  } as TaskFailure<T>
 }
 
-export type TaskResult<T> = Either<Throwable, T> & TaskInfo
-
-export const TaskResult = <T>(data: T, _task?: TaskParams): TaskResult<T> => {
-  const name = _task?.name ?? "TaskResult"
-  const description = _task?.description ?? "Unspecified TaskResult"
-  return {
-    ...Base("TaskResult", Right(data)),
-    _task: { name, description },
+/**
+ * TaskSuccess factory function
+ * @param data - The successful value
+ * @param params - Task parameters
+ */
+export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => {
+  const meta: TaskMetadata = {
+    name: params?.name ?? "Task",
+    description: params?.description ?? "",
   }
+
+  // Create the underlying Either
+  const either = Right<Throwable, T>(data)
+
+  return {
+    ...either, // Spread all Either methods (isLeft, isRight, fold, map, flatMap, etc.)
+    _tag: "TaskSuccess" as const, // Override the tag
+    _meta: meta,
+    isSuccess(): this is TaskSuccess<T> {
+      return true
+    },
+    isFailure(): this is TaskFailure<T> {
+      return false
+    },
+  } as TaskSuccess<T>
 }
+
+// Promise wrapper for async operations
+export type TaskResult<T> = Promise<TaskOutcome<T>>
 
 /**
  * The CancellationToken is a control structure that allows long-running tasks to be cancelled
@@ -135,8 +195,9 @@ export const createCancellationTokenSource = (): CancellationTokenSource => {
   }
 }
 
-export type Sync<T> = Either<Throwable, T>
-export type Async<T> = FPromise<Sync<T>>
+// Legacy type aliases - can be removed if not needed
+export type Sync<T> = TaskOutcome<T>
+export type Async<T> = TaskResult<T>
 
 /**
  * Task adapter for bridging promise-based code with functional error handling patterns
@@ -317,7 +378,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
 
     /**
      * Run a synchronous operation with explicit try/catch/finally semantics
-     * Returns an Either for functional error handling
+     * Returns a TaskOutcome for functional error handling
      *
      * @param t - The main operation function that returns a value
      * @param e - Optional error handler function
@@ -327,11 +388,11 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       t: () => U,
       e: (error: unknown) => unknown = (error: unknown) => error,
       f: () => void = () => {},
-    ): Sync<U> => {
+    ): TaskOutcome<U> => {
       try {
-        return TaskResult<U>(t(), { name, description })
+        return TaskSuccess<U>(t(), { name, description })
       } catch (error) {
-        return TaskException<U>(e(error), undefined, { name, description })
+        return TaskFailure<U>(e(error), undefined, { name, description })
       } finally {
         f()
       }
@@ -379,13 +440,12 @@ const TaskCompanion = {
   /**
    * Create a successful Task result
    */
-  success: <T>(data: T, params?: TaskParams): TaskResult<T> => TaskResult<T>(data, params),
+  success: <T>(data: T, params?: TaskParams): TaskSuccess<T> => TaskSuccess<T>(data, params),
 
   /**
    * Create a failed Task result
    */
-  fail: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskException<T> =>
-    TaskException<T>(error, data, params),
+  fail: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => TaskFailure<T>(error, data, params),
 
   /**
    * Extract the error chain from a Throwable error
@@ -477,12 +537,14 @@ const TaskCompanion = {
   /**
    * Convert a Task result to a Promise
    */
-  toPromise: <U>(taskResult: TaskResult<U> | TaskException<U>): Promise<U> => {
+  toPromise: <U>(taskOutcome: TaskOutcome<U>): Promise<U> => {
     return new Promise((resolve, reject) => {
-      if (taskResult.isRight()) {
-        resolve(taskResult.value as U)
+      if (taskOutcome.isSuccess()) {
+        // TypeScript now knows this is TaskSuccess<U>
+        resolve(taskOutcome.get())
       } else {
-        reject(taskResult.value)
+        // TypeScript now knows this is TaskFailure<U>
+        reject(taskOutcome.error)
       }
     })
   },

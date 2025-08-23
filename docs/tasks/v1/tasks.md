@@ -198,6 +198,6 @@ This document contains a comprehensive list of potential improvement ideas for t
 
 ## Relationship to Official Roadmap
 
-This document serves as a collection of ideas and potential enhancements for Functype. For the official development plan with prioritized tasks and timeline, please refer to the [ROADMAP.md](ROADMAP.md) file in the project root.
+This document serves as a collection of ideas and potential enhancements for Functype. For the official development plan with prioritized tasks and timeline, please refer to the [ROADMAP.md](../../ROADMAP.md) file in the project root.
 
 The official roadmap represents the committed development path, while this document captures a broader set of possibilities that may be considered for future development cycles based on community feedback and evolving requirements.

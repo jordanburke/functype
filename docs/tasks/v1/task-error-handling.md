@@ -280,4 +280,4 @@ This ensures that error handlers can perform important operations like logging w
 ## See Also
 
 - [Task Module Examples](./examples/task-named-errors.ts)
-- [Task API Documentation](./quick-reference.md#task)
+- [Task API Documentation](../../quick-reference.md#task)

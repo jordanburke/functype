@@ -1,25 +1,25 @@
 import { describe, expect, test } from "vitest"
 
-import { isLeft, isRight, Task, TaskException, TaskResult, Throwable } from "../../../src"
+import { isLeft, isRight, Task, TaskFailure, TaskSuccess, Throwable } from "../../../src"
 
-describe("AppException", () => {
-  test("should create an AppException with error", () => {
+describe("TaskFailure", () => {
+  test("should create a TaskFailure with error", () => {
     const error = new Error("Test error")
-    const result = TaskException<string>(error)
+    const result = TaskFailure<string>(error)
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("TaskException")
+    expect(result._tag).toBe("TaskFailure")
     expect((result.value as Throwable)._tag).toBe("Throwable")
     expect((result.value as Error).message).toBe("Test error")
   })
 
-  test("should create an AppException with error and additional data", () => {
+  test("should create a TaskFailure with error and additional data", () => {
     const error = new Error("Test error")
     const data = { additionalInfo: "extra data" }
-    const result = TaskException<string>(error, data, {})
+    const result = TaskFailure<string>(error, data, {})
 
     expect(isLeft(result)).toBe(true)
-    expect(result._tag).toBe("TaskException")
+    expect(result._tag).toBe("TaskFailure")
     expect(result.value instanceof Throwable).toBe(true)
     expect((result.value as unknown as Throwable).data).toEqual(data)
   })
@@ -27,11 +27,11 @@ describe("AppException", () => {
   test("should include task name in the error", () => {
     const error = new Error("Test error")
     const taskName = "CustomTaskName"
-    const result = TaskException<string>(error, undefined, { name: taskName })
+    const result = TaskFailure<string>(error, undefined, { name: taskName })
 
     expect(isLeft(result)).toBe(true)
-    // TaskException has _task property
-    expect((result as any)._task.name).toBe(taskName)
+    // TaskFailure has _meta property
+    expect((result as any)._meta.name).toBe(taskName)
     // The throwable should have the task name
     expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
     // The Error's name should also be set to the task name
@@ -39,19 +39,19 @@ describe("AppException", () => {
   })
 })
 
-describe("TaskResult", () => {
-  test("should create a successful TaskResult", () => {
+describe("TaskSuccess", () => {
+  test("should create a successful TaskSuccess", () => {
     const data = "test data"
-    const result = TaskResult(data)
+    const result = TaskSuccess(data)
     expect(isRight(result)).toBe(true)
-    expect(result._tag).toBe("TaskResult")
+    expect(result._tag).toBe("TaskSuccess")
     expect(result.value).toBe(data)
   })
 
   test("should work with different data types", () => {
-    const numberResult = TaskResult(42)
-    const objectResult = TaskResult({ key: "value" })
-    const arrayResult = TaskResult([1, 2, 3])
+    const numberResult = TaskSuccess(42)
+    const objectResult = TaskSuccess({ key: "value" })
+    const arrayResult = TaskSuccess([1, 2, 3])
 
     expect(isRight(numberResult)).toBe(true)
     expect(numberResult.value).toBe(42)
@@ -89,8 +89,8 @@ describe("Sync", () => {
     })
 
     expect(isLeft(result)).toBe(true)
-    // TaskException has _task property
-    expect((result as any)._task.name).toBe(taskName)
+    // TaskFailure has _meta property
+    expect((result as any)._meta.name).toBe(taskName)
     expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
     expect((result.value as Error).name).toBe(taskName)
   })
@@ -195,8 +195,8 @@ describe("Async", () => {
     const result = Task.fail(error, undefined, { name: taskName })
 
     expect(isLeft(result)).toBe(true)
-    // TaskException has _task property
-    expect((result as any)._task.name).toBe(taskName)
+    // TaskFailure has _meta property
+    expect((result as any)._meta.name).toBe(taskName)
     expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
     expect((result.value as Error).name).toBe(taskName)
   })
@@ -456,21 +456,21 @@ describe("Promise Adapter Methods", () => {
     expect(result).toEqual(42)
   })
 
-  test("should convert TaskResult to Promise", async () => {
-    const taskResult = Task.success(42)
+  test("should convert TaskSuccess to Promise", async () => {
+    const taskSuccess = Task.success(42)
 
-    const promise = Task.toPromise(taskResult)
+    const promise = Task.toPromise(taskSuccess)
     const result = await promise
 
     expect(result).toEqual(42)
   })
 
-  test("should convert TaskException to rejected Promise", async () => {
+  test("should convert TaskFailure to rejected Promise", async () => {
     const error = new Error("task error")
-    const taskException = Task.fail(error)
+    const taskFailure = Task.fail(error)
 
     try {
-      await Task.toPromise(taskException)
+      await Task.toPromise(taskFailure)
       expect.fail("Should throw error")
     } catch (e) {
       expect((e as Throwable)._tag).toBe("Throwable")
