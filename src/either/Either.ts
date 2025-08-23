@@ -23,7 +23,7 @@ export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, 
   orElse(alternative: Either<L, R>): Either<L, R>
   orNull: () => R | null
   orUndefined: () => R | undefined
-  map: <U extends Type>(f: (value: R) => U) => Either<L, U>
+  readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   ap: <U extends Type>(ff: Either<L, (value: R) => U>) => Either<L, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>

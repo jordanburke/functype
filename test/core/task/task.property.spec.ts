@@ -1,7 +1,7 @@
 import * as fc from "fast-check"
 import { describe, test } from "vitest"
 
-import { isLeft, isRight, Task, Throwable } from "../../../src"
+import { Task, Throwable } from "../../../src"
 
 describe("Task Property Tests", () => {
   describe("Task.success", () => {
@@ -10,7 +10,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.anything(), (value) => {
           const result = Task.success(value)
-          return isRight(result) && result.value === value
+          return result.isSuccess() && result.get() === value
         }),
       )
     })
@@ -20,7 +20,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.string(), (value) => {
           const result = Task.success(value)
-          return result.value === value
+          return result.get() === value
         }),
       )
     })
@@ -33,7 +33,7 @@ describe("Task Property Tests", () => {
         fc.property(fc.string(), (errorMsg) => {
           const error = new Error(errorMsg)
           const result = Task.fail(error)
-          return isLeft(result) && (result.value as Error).message === errorMsg
+          return result.isFailure() && result.error.message === errorMsg
         }),
       )
     })
@@ -44,7 +44,7 @@ describe("Task Property Tests", () => {
         fc.property(fc.string(), (errorMsg) => {
           const error = new Error(errorMsg)
           const result = Task.fail(error)
-          return (result.value as Error).message === errorMsg
+          return result.error.message === errorMsg
         }),
       )
     })
@@ -56,7 +56,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.string(), (value) => {
           const result = Task().Sync(() => value)
-          return isRight(result) && result.value === value
+          return result.isSuccess() && result.get() === value
         }),
       )
     })
@@ -68,7 +68,7 @@ describe("Task Property Tests", () => {
           const result = Task().Sync(() => {
             throw new Error(errorMsg)
           })
-          return isLeft(result) && (result.value as Error).message === errorMsg
+          return result.isFailure() && result.error.message === errorMsg
         }),
       )
     })
@@ -83,7 +83,7 @@ describe("Task Property Tests", () => {
             },
             () => new Error(transformedMsg),
           )
-          return isLeft(result) && (result.value as Error).message === transformedMsg
+          return result.isFailure() && result.error.message === transformedMsg
         }),
       )
     })
@@ -201,9 +201,7 @@ describe("Task Property Tests", () => {
             )
 
             return (
-              isLeft(result) &&
-              result.value instanceof Throwable &&
-              (result.value as Error).message === transformedMessage
+              result.isFailure() && result.error instanceof Throwable && result.error.message === transformedMessage
             )
           },
         ),
@@ -225,9 +223,9 @@ describe("Task Property Tests", () => {
             })
 
             return (
-              isLeft(result) &&
-              (result.value as Throwable).taskInfo?.name === taskName &&
-              (result.value as Error).name === taskName
+              result.isFailure() &&
+              (result.error as Throwable).taskInfo?.name === taskName &&
+              result.error.name === taskName
             )
           },
         ),

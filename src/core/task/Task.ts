@@ -37,21 +37,44 @@ export interface TaskMetadata {
   readonly description: string
 }
 
-// Success case interface - extends Omit to avoid _tag conflict
-export interface TaskSuccess<T> extends Omit<Either<Throwable, T>, "_tag"> {
+// Success case interface - extends Omit to avoid _tag conflict and override transformation methods
+export interface TaskSuccess<T>
+  extends Omit<Either<Throwable, T>, "_tag" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"> {
   readonly _tag: "TaskSuccess"
   readonly _meta: TaskMetadata
+
+  // Override transformation methods to return TaskOutcome
+  readonly map: <U>(f: (value: T) => U) => TaskOutcome<U>
+  readonly flatMap: <U>(f: (value: T) => Either<Throwable, U>) => TaskOutcome<U>
+  readonly ap: <U>(ff: Either<Throwable, (value: T) => U>) => TaskOutcome<U>
+  readonly merge: <T1>(other: Either<Throwable, T1>) => TaskOutcome<[T, T1]>
+  readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
+  readonly flatMapAsync: <U>(f: (value: T) => Promise<Either<Throwable, U>>) => Promise<TaskOutcome<U>>
+
+  // Type guards
   readonly isSuccess: () => this is TaskSuccess<T>
   readonly isFailure: () => this is TaskFailure<T>
 }
 
-// Failure case interface - extends Omit to avoid _tag conflict
-export interface TaskFailure<T> extends Omit<Either<Throwable, T>, "_tag"> {
+// Failure case interface - extends Omit to avoid _tag conflict and override transformation methods
+export interface TaskFailure<T>
+  extends Omit<Either<Throwable, T>, "_tag" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"> {
   readonly _tag: "TaskFailure"
   readonly _meta: TaskMetadata
   readonly error: Throwable
+
+  // Override transformation methods to return TaskOutcome
+  readonly map: <U>(f: (value: T) => U) => TaskOutcome<U>
+  readonly flatMap: <U>(f: (value: T) => Either<Throwable, U>) => TaskOutcome<U>
+  readonly ap: <U>(ff: Either<Throwable, (value: T) => U>) => TaskOutcome<U>
+  readonly merge: <T1>(other: Either<Throwable, T1>) => TaskOutcome<[T, T1]>
+  readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
+  readonly flatMapAsync: <U>(f: (value: T) => Promise<Either<Throwable, U>>) => Promise<TaskOutcome<U>>
+
+  // Type guards
   readonly isSuccess: () => this is TaskSuccess<T>
   readonly isFailure: () => this is TaskFailure<T>
+
   // Error-specific methods
   readonly mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>
   readonly recover: (value: T) => TaskSuccess<T>
@@ -60,6 +83,22 @@ export interface TaskFailure<T> extends Omit<Either<Throwable, T>, "_tag"> {
 
 // Union type for sync operations
 export type TaskOutcome<T> = TaskSuccess<T> | TaskFailure<T>
+
+/**
+ * Helper function to convert Either to TaskOutcome
+ * @param either - The Either to convert
+ * @param params - Task parameters to attach
+ */
+const eitherToTaskOutcome = <T>(either: Either<Throwable, T>, params?: TaskParams): TaskOutcome<T> => {
+  if (either.isRight()) {
+    return TaskSuccess(either.get(), params)
+  } else if (either.isLeft()) {
+    // Access the left value safely
+    return TaskFailure<T>(either, undefined, params)
+  } else {
+    throw new Error("Unrecognized task outcome")
+  }
+}
 
 /**
  * TaskFailure factory function
@@ -80,16 +119,50 @@ export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskPara
   const either = Left<Throwable, T>(throwable)
 
   return {
-    ...either, // Spread all Either methods (isLeft, isRight, fold, map, flatMap, etc.)
+    ...either, // Spread all Either methods (isLeft, isRight, fold, etc.)
     _tag: "TaskFailure" as const, // Override the tag
     _meta: meta,
     error: throwable,
+
+    // Wrap transformation methods to return TaskOutcome
+    map: <U>(f: (value: T) => U) => {
+      const result = either.map(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    flatMap: <U>(f: (value: T) => Either<Throwable, U>) => {
+      const result = either.flatMap(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    ap: <U>(ff: Either<Throwable, (value: T) => U>) => {
+      const result = either.ap(ff)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    merge: <T1>(other: Either<Throwable, T1>) => {
+      const result = either.merge(other)
+      return eitherToTaskOutcome<[T, T1]>(result, params)
+    },
+
+    mapAsync: async <U>(f: (value: T) => Promise<U>) => {
+      const result = await either.mapAsync(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    flatMapAsync: async <U>(f: (value: T) => Promise<Either<Throwable, U>>) => {
+      const result = await either.flatMapAsync(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    // Type guards
     isSuccess(): this is TaskSuccess<T> {
       return false
     },
     isFailure(): this is TaskFailure<T> {
       return true
     },
+
     // Add Task-specific error methods
     mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>(f(throwable), data, params),
     recover: (value: T) => TaskSuccess(value, params),
@@ -112,9 +185,42 @@ export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => 
   const either = Right<Throwable, T>(data)
 
   return {
-    ...either, // Spread all Either methods (isLeft, isRight, fold, map, flatMap, etc.)
+    ...either, // Spread all Either methods (isLeft, isRight, fold, get, getOrElse, etc.)
     _tag: "TaskSuccess" as const, // Override the tag
     _meta: meta,
+
+    // Wrap transformation methods to return TaskOutcome
+    map: <U>(f: (value: T) => U) => {
+      const result = either.map(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    flatMap: <U>(f: (value: T) => Either<Throwable, U>) => {
+      const result = either.flatMap(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    ap: <U>(ff: Either<Throwable, (value: T) => U>) => {
+      const result = either.ap(ff)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    merge: <T1>(other: Either<Throwable, T1>) => {
+      const result = either.merge(other)
+      return eitherToTaskOutcome<[T, T1]>(result, params)
+    },
+
+    mapAsync: async <U>(f: (value: T) => Promise<U>) => {
+      const result = await either.mapAsync(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    flatMapAsync: async <U>(f: (value: T) => Promise<Either<Throwable, U>>) => {
+      const result = await either.flatMapAsync(f)
+      return eitherToTaskOutcome<U>(result, params)
+    },
+
+    // Type guards
     isSuccess(): this is TaskSuccess<T> {
       return true
     },

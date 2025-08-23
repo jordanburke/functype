@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest"
-import { Task } from "../../../src"
+import { Task, TaskSuccess, TaskFailure } from "../../../src"
 
 describe("Task Type Guards", () => {
   test("isSuccess should narrow type to TaskSuccess", () => {
