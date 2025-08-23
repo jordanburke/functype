@@ -57,7 +57,7 @@ describe("Task Type Guards", () => {
     // This should compile without type assertions
     const processed = result.isSuccess()
       ? result.map((v) => v.toUpperCase()) // Can use map on success
-      : result.recover("fallback") // Can use recover on failure
+      : (result as TaskFailure<string>).recover("fallback") // Can use recover on failure
 
     expect(processed).toBeDefined()
   })
@@ -78,7 +78,7 @@ describe("Task Type Guards", () => {
     if (!failResult.isSuccess()) {
       // TypeScript should know this is TaskFailure<string>
       expect(failResult._tag).toBe("TaskFailure")
-      expect(failResult.error).toBeDefined()
+      expect((failResult as TaskFailure<string>).error).toBeDefined()
     }
   })
 })

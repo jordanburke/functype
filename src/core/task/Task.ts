@@ -37,10 +37,10 @@ export interface TaskMetadata {
   readonly description: string
 }
 
-// Success case interface - extends Omit to avoid _tag conflict and override transformation methods
-export interface TaskSuccess<T>
+// Base interface for TaskOutcome - extends Either but overrides transformation methods
+export interface TaskOutcome<T>
   extends Omit<Either<Throwable, T>, "_tag" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"> {
-  readonly _tag: "TaskSuccess"
+  readonly _tag: "TaskSuccess" | "TaskFailure"
   readonly _meta: TaskMetadata
 
   // Override transformation methods to return TaskOutcome
@@ -51,38 +51,31 @@ export interface TaskSuccess<T>
   readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
   readonly flatMapAsync: <U>(f: (value: T) => Promise<Either<Throwable, U>>) => Promise<TaskOutcome<U>>
 
-  // Type guards
-  readonly isSuccess: () => this is TaskSuccess<T>
-  readonly isFailure: () => this is TaskFailure<T>
-}
-
-// Failure case interface - extends Omit to avoid _tag conflict and override transformation methods
-export interface TaskFailure<T>
-  extends Omit<Either<Throwable, T>, "_tag" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"> {
-  readonly _tag: "TaskFailure"
-  readonly _meta: TaskMetadata
-  readonly error: Throwable
-
-  // Override transformation methods to return TaskOutcome
-  readonly map: <U>(f: (value: T) => U) => TaskOutcome<U>
-  readonly flatMap: <U>(f: (value: T) => Either<Throwable, U>) => TaskOutcome<U>
-  readonly ap: <U>(ff: Either<Throwable, (value: T) => U>) => TaskOutcome<U>
-  readonly merge: <T1>(other: Either<Throwable, T1>) => TaskOutcome<[T, T1]>
-  readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
-  readonly flatMapAsync: <U>(f: (value: T) => Promise<Either<Throwable, U>>) => Promise<TaskOutcome<U>>
-
-  // Type guards
-  readonly isSuccess: () => this is TaskSuccess<T>
-  readonly isFailure: () => this is TaskFailure<T>
-
-  // Error-specific methods
-  readonly mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>
+  // Error handling methods (available on all TaskOutcomes for polymorphic usage)
+  readonly mapError: (f: (error: Throwable) => Throwable) => TaskOutcome<T>
   readonly recover: (value: T) => TaskSuccess<T>
   readonly recoverWith: (f: (error: Throwable) => T) => TaskSuccess<T>
+
+  // Type guards - narrow the type of the value
+  readonly isSuccess: () => this is TaskSuccess<T>
+  readonly isFailure: () => this is TaskFailure<T>
 }
 
-// Union type for sync operations
-export type TaskOutcome<T> = TaskSuccess<T> | TaskFailure<T>
+// Success case interface - extends TaskOutcome
+export interface TaskSuccess<T> extends TaskOutcome<T> {
+  readonly _tag: "TaskSuccess"
+  // value is T (inherited from Either, narrowed by type guard)
+}
+
+// Failure case interface - extends TaskOutcome
+export interface TaskFailure<T> extends TaskOutcome<T> {
+  readonly _tag: "TaskFailure"
+  readonly error: Throwable // Alias for value for semantic clarity
+  // value is Throwable (inherited from Either, narrowed by type guard)
+}
+
+// Note: TaskOutcome<T> is now an interface, not a union type
+// Any value that is TaskSuccess<T> or TaskFailure<T> is also TaskOutcome<T>
 
 /**
  * Helper function to convert Either to TaskOutcome
@@ -227,6 +220,11 @@ export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => 
     isFailure(): this is TaskFailure<T> {
       return false
     },
+
+    // Error handling methods (no-ops for success)
+    mapError: (_f: (error: Throwable) => Throwable) => TaskSuccess(data, params),
+    recover: (_value: T) => TaskSuccess(data, params),
+    recoverWith: (_f: (error: Throwable) => T) => TaskSuccess(data, params),
   } as TaskSuccess<T>
 }
 
@@ -650,7 +648,7 @@ const TaskCompanion = {
         resolve(taskOutcome.get())
       } else {
         // TypeScript now knows this is TaskFailure<U>
-        reject(taskOutcome.error)
+        reject((taskOutcome as TaskFailure<U>).error)
       }
     })
   },
