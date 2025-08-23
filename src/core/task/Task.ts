@@ -39,7 +39,10 @@ export interface TaskMetadata {
 
 // Base interface for TaskOutcome - extends Either but overrides transformation methods
 export interface TaskOutcome<T>
-  extends Omit<Either<Throwable, T>, "_tag" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"> {
+  extends Omit<
+    Either<Throwable, T>,
+    "_tag" | "isLeft" | "isRight" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"
+  > {
   readonly _tag: "TaskSuccess" | "TaskFailure"
   readonly _meta: TaskMetadata
 
@@ -111,8 +114,11 @@ export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskPara
   // Create the underlying Either
   const either = Left<Throwable, T>(throwable)
 
+  // Destructure to exclude isLeft and isRight
+  const { isLeft, isRight, ...eitherWithoutTypeGuards } = either
+
   return {
-    ...either, // Spread all Either methods (isLeft, isRight, fold, etc.)
+    ...eitherWithoutTypeGuards, // Spread all Either methods except isLeft/isRight
     _tag: "TaskFailure" as const, // Override the tag
     _meta: meta,
     error: throwable,
@@ -177,8 +183,11 @@ export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => 
   // Create the underlying Either
   const either = Right<Throwable, T>(data)
 
+  // Destructure to exclude isLeft and isRight
+  const { isLeft, isRight, ...eitherWithoutTypeGuards } = either
+
   return {
-    ...either, // Spread all Either methods (isLeft, isRight, fold, get, getOrElse, etc.)
+    ...eitherWithoutTypeGuards, // Spread all Either methods except isLeft/isRight
     _tag: "TaskSuccess" as const, // Override the tag
     _meta: meta,
 
