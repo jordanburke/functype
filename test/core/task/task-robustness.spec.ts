@@ -7,14 +7,19 @@ describe("Task Robustness Tests", () => {
     test("should handle errors in nested async operations", async () => {
       const nestedError = new Error("Nested operation failed")
 
-      try {
-        await Task({ name: "OuterTask" }).Async(async () => {
-          return Task({ name: "InnerTask" }).Async(async () => {
-            throw nestedError
-          })
+      const outerResult = await Task({ name: "OuterTask" }).Async(async () => {
+        const innerResult = await Task({ name: "InnerTask" }).Async(async () => {
+          throw nestedError
         })
-        expect.fail("Should throw error")
-      } catch (error) {
+        if (innerResult.isFailure()) {
+          throw innerResult.value
+        }
+        return innerResult.value
+      })
+
+      expect(outerResult.isFailure()).toBe(true)
+      const error = outerResult.value
+      {
         // With enhanced error chaining, the error messages are combined
         expect((error as Error).message).toBe("OuterTask: Nested operation failed")
 
@@ -36,21 +41,19 @@ describe("Task Robustness Tests", () => {
       const originalError = new Error("Original error")
       const handlerError = new Error("Error handler failed")
 
-      try {
-        await Task({ name: "MainTask" }).Async(
-          async () => {
-            throw originalError
-          },
-          async () => {
-            throw handlerError
-          },
-        )
-        expect.fail("Should throw error")
-      } catch (error) {
-        // The error handler's error should take precedence
-        expect((error as Error).message).toBe("Error handler failed")
-        expect((error as unknown as Throwable).taskInfo?.name).toBe("MainTask")
-      }
+      const result = await Task({ name: "MainTask" }).Async(
+        async () => {
+          throw originalError
+        },
+        async () => {
+          throw handlerError
+        },
+      )
+
+      expect(result.isFailure()).toBe(true)
+      // The error handler's error should take precedence
+      expect((result.value as Error).message).toBe("Error handler failed")
+      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("MainTask")
     })
   })
 
@@ -58,17 +61,18 @@ describe("Task Robustness Tests", () => {
     test("should handle async errors in finally blocks", async () => {
       const finallyError = new Error("Async finally error")
 
-      try {
-        await Task({ name: "ComplexTask" }).Async(
-          async () => "success",
-          async (error: unknown) => error,
-          async () => {
-            await new Promise((resolve) => setTimeout(resolve, 10))
-            throw finallyError
-          },
-        )
-        expect.fail("Should throw error")
-      } catch (error) {
+      const result = await Task({ name: "ComplexTask" }).Async(
+        async () => "success",
+        async (error: unknown) => error,
+        async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          throw finallyError
+        },
+      )
+
+      expect(result.isFailure()).toBe(true)
+      const error = result.value
+      {
         expect((error as Error).message).toBe("Async finally error")
         expect((error as unknown as Throwable).taskInfo?.name).toBe("ComplexTask")
       }
@@ -77,17 +81,15 @@ describe("Task Robustness Tests", () => {
     test("should handle promises that reject in finally", async () => {
       const finallyError = new Error("Finally promise rejected")
 
-      try {
-        await Task({ name: "PromiseTask" }).Async(
-          async () => "success",
-          async (error: unknown) => error,
-          async () => Promise.reject(finallyError),
-        )
-        expect.fail("Should throw error")
-      } catch (error) {
-        expect((error as Error).message).toBe("Finally promise rejected")
-        expect((error as unknown as Throwable).taskInfo?.name).toBe("PromiseTask")
-      }
+      const result = await Task({ name: "PromiseTask" }).Async(
+        async () => "success",
+        async (error: unknown) => error,
+        async () => Promise.reject(finallyError),
+      )
+
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toBe("Finally promise rejected")
+      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("PromiseTask")
     })
   })
 
@@ -102,13 +104,10 @@ describe("Task Robustness Tests", () => {
 
       const taskFn = Task.fromPromise(throwingFn, { name: "SyncErrorTask" })
 
-      try {
-        await taskFn()
-        expect.fail("Should throw error")
-      } catch (error) {
-        expect((error as Error).message).toBe("Synchronous throw in promise function")
-        expect((error as unknown as Throwable).taskInfo?.name).toBe("SyncErrorTask")
-      }
+      const result = await taskFn()
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toBe("Synchronous throw in promise function")
+      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("SyncErrorTask")
     })
   })
 
@@ -119,23 +118,36 @@ describe("Task Robustness Tests", () => {
         const secondResult = await Task({ name: "Second" }).Async(async () => {
           return "success"
         })
-        return secondResult
+        if (secondResult.isSuccess()) {
+          return secondResult.value
+        }
+        throw secondResult.value
       })
 
-      expect(result).toBe("success")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("success")
     })
 
     test("should propagate errors correctly in nested chains", async () => {
-      try {
-        await Task({ name: "Outer" }).Async(async () => {
-          return Task({ name: "Middle" }).Async(async () => {
-            return Task({ name: "Inner" }).Async(async () => {
-              throw new Error("Inner error")
-            })
+      const outerResult = await Task({ name: "Outer" }).Async(async () => {
+        const middleResult = await Task({ name: "Middle" }).Async(async () => {
+          const innerResult = await Task({ name: "Inner" }).Async(async () => {
+            throw new Error("Inner error")
           })
+          if (innerResult.isFailure()) {
+            throw innerResult.value
+          }
+          return innerResult.value
         })
-        expect.fail("Should throw error")
-      } catch (error) {
+        if (middleResult.isFailure()) {
+          throw middleResult.value
+        }
+        return middleResult.value
+      })
+
+      expect(outerResult.isFailure()).toBe(true)
+      const error = outerResult.value
+      {
         // With enhanced error chaining, the error messages are combined
         expect((error as Error).message).toBe("Outer: Middle: Inner error")
 
@@ -166,24 +178,24 @@ describe("Task Robustness Tests", () => {
   describe("Task with nullish values", () => {
     test("should handle null return values", async () => {
       const result = await Task().Async(async () => null)
-      expect(result).toBe(null)
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe(null)
     })
 
     test("should handle undefined return values", async () => {
       const result = await Task().Async(async () => undefined)
-      expect(result).toBe(undefined)
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe(undefined)
     })
 
     test("should handle null errors", async () => {
-      try {
-        await Task().Async(async () => {
-          throw null
-        })
-        expect.fail("Should throw error")
-      } catch (error) {
-        expect(error).toBeTruthy() // Should convert null to a Throwable
-        expect((error as unknown as Throwable)._tag).toBe("Throwable")
-      }
+      const result = await Task().Async(async () => {
+        throw null
+      })
+
+      expect(result.isFailure()).toBe(true)
+      expect(result.value).toBeTruthy() // Should convert null to a Throwable
+      expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
     })
   })
 
@@ -220,53 +232,57 @@ describe("Task Robustness Tests", () => {
       // Create a TaggedThrowable error
       const throwableError = Task.fail(new Error("Throwable error"), undefined, { name: "InnerTask" }).value
 
-      try {
-        await Task({ name: "OuterTask" }).Async(
-          async () => {
-            // Directly throw a TaggedThrowable
-            throw throwableError
-          },
-          errorHandler, // Use the mock error handler
-        )
-        expect.fail("Should throw error")
-      } catch (error) {
-        // Verify the error handler was called
-        expect(errorHandler).toHaveBeenCalledTimes(1)
+      const result = await Task({ name: "OuterTask" }).Async(
+        async () => {
+          // Directly throw a TaggedThrowable
+          throw throwableError
+        },
+        errorHandler, // Use the mock error handler
+      )
 
-        // Verify it was called with the throwable error
-        expect(errorHandler).toHaveBeenCalledWith(throwableError)
+      expect(result.isFailure()).toBe(true)
+      const error = result.value
 
-        // Verify error chain is preserved
-        expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
-        expect((error as any).cause).toBeDefined()
-        expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
-      }
+      // Verify the error handler was called
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+
+      // Verify it was called with the throwable error
+      expect(errorHandler).toHaveBeenCalledWith(throwableError)
+
+      // Verify error chain is preserved
+      expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
+      expect((error as any).cause).toBeDefined()
+      expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
     })
 
     test("should always call error handler for errors from nested tasks", async () => {
       // Create a mock error handler
       const errorHandler = vi.fn().mockImplementation((error) => error)
 
-      try {
-        await Task({ name: "OuterTask" }).Async(
-          async () => {
-            // Return a task that will fail
-            return await Task({ name: "InnerTask" }).Async(async () => {
-              throw new Error("Inner task error")
-            })
-          },
-          errorHandler, // Use the mock error handler
-        )
-        expect.fail("Should throw error")
-      } catch (error) {
-        // Verify the error handler was called
-        expect(errorHandler).toHaveBeenCalledTimes(1)
+      const result = await Task({ name: "OuterTask" }).Async(
+        async () => {
+          // Return a task that will fail
+          const innerResult = await Task({ name: "InnerTask" }).Async(async () => {
+            throw new Error("Inner task error")
+          })
+          if (innerResult.isFailure()) {
+            throw innerResult.value
+          }
+          return innerResult.value
+        },
+        errorHandler, // Use the mock error handler
+      )
 
-        // Verify error chain is preserved
-        expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
-        expect((error as any).cause).toBeDefined()
-        expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
-      }
+      expect(result.isFailure()).toBe(true)
+      const error = result.value
+
+      // Verify the error handler was called
+      expect(errorHandler).toHaveBeenCalledTimes(1)
+
+      // Verify error chain is preserved
+      expect((error as unknown as Throwable).taskInfo?.name).toBe("OuterTask")
+      expect((error as any).cause).toBeDefined()
+      expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
     })
   })
 })

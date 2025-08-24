@@ -53,7 +53,8 @@ describe("Task with Progress Tracking", () => {
       expect(progressCallback).toHaveBeenCalledWith(100)
 
       const result = await task
-      expect(result).toBe("completed")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("completed")
     })
 
     test("should sanitize progress values", async () => {
@@ -77,7 +78,8 @@ describe("Task with Progress Tracking", () => {
       // Values should have been sanitized to 0 and 100
       expect(progressCallback).toHaveBeenCalledWith(0)
       expect(progressCallback).toHaveBeenCalledWith(100)
-      expect(result).toBe("completed")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("completed")
     })
 
     test("should handle errors during progress updates", async () => {
@@ -104,7 +106,8 @@ describe("Task with Progress Tracking", () => {
       const result = await task
 
       expect(progressCallback).toHaveBeenCalledWith(50)
-      expect(result).toBe("completed")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("completed")
     })
   })
 
@@ -139,7 +142,8 @@ describe("Task with Progress Tracking", () => {
       const result = await task
       expect(currentProgress()).toBe(100)
       expect(progressCallback).toHaveBeenCalledWith(100)
-      expect(result).toBe("completed")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("completed")
     })
 
     test.skip("should combine progress tracking with cancellation", async () => {
@@ -215,7 +219,8 @@ describe("Task with Progress Tracking", () => {
 
       const result = await task
       expect(currentProgress()).toBe(100)
-      expect(result).toBe("completed")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("completed")
     })
   })
 })

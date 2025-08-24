@@ -2,13 +2,38 @@
 
 ## Overview
 
-Task v2 introduces cleaner interfaces and better TypeScript support. The main changes are:
+Task v2 introduces the **Ok/Err pattern** for explicit error handling, along with cleaner interfaces and better TypeScript support. The main changes are:
 
+- **New Ok/Err constructors** for explicit success/failure returns
+- **All Task operations now return `TaskOutcome<T>`** (no more mixed returns)
+- **Auto-wrapping** of raw values and thrown errors
+- **Error recovery** via Ok returns in error handlers
 - Renamed types for clarity
 - Proper type guards for type narrowing
 - Interfaces that extend Either for full compatibility
 
 ## Breaking Changes
+
+### New Return Type Behavior
+
+**IMPORTANT**: `Task().Async()` now ALWAYS returns `TaskOutcome<T>`, never throws:
+
+```typescript
+// Before (v1): Could throw or return raw value
+try {
+  const result = await Task().Async(async () => "value") // Returns: string
+} catch (error) {
+  // Handle error
+}
+
+// After (v2): Always returns TaskOutcome
+const result = await Task().Async(async () => "value") // Returns: TaskOutcome<string>
+if (result.isSuccess()) {
+  console.log(result.value) // "value"
+} else {
+  console.error(result.error)
+}
+```
 
 ### Type Renames
 
@@ -18,6 +43,15 @@ Task v2 introduces cleaner interfaces and better TypeScript support. The main ch
 | `TaskResult<T>` (success case) | `TaskSuccess<T>`                                      | Represents a successful task |
 | `TaskResult<T>` (type)         | `TaskResult<T>` = `Promise<TaskOutcome<T>>`           | Async task result            |
 | N/A                            | `TaskOutcome<T>` = `TaskSuccess<T> \| TaskFailure<T>` | Sync task result             |
+
+### New Constructors
+
+| Constructor       | Purpose                      | Example                        |
+| ----------------- | ---------------------------- | ------------------------------ |
+| `Ok<T>(value)`    | Create explicit success      | `return Ok("success")`         |
+| `Err<T>(error)`   | Create explicit failure      | `return Err<string>("failed")` |
+| `Task.ok(value)`  | Companion method for success | `Task.ok(42)`                  |
+| `Task.err(error)` | Companion method for failure | `Task.err("error")`            |
 
 ### Property Changes
 
@@ -30,48 +64,65 @@ Task v2 introduces cleaner interfaces and better TypeScript support. The main ch
 ### 1. Update Imports
 
 ```typescript
-// Before
-import { TaskException, TaskResult } from "functype"
+// Before (v1)
+import { Task } from "functype"
 
-// After
-import { TaskFailure, TaskSuccess, TaskOutcome, TaskResult } from "functype"
+// After (v2) - include Ok/Err for explicit control
+import { Task, Ok, Err, type TaskOutcome } from "functype"
 ```
 
-### 2. Update Type References
+### 2. Update Error Handling Patterns
 
-#### Sync Operations
+#### From try-catch to TaskOutcome checking
 
 ```typescript
-// Before
-function processTask(): TaskResult<string> | TaskException<string> {
-  if (condition) {
-    return TaskResult("success")
-  }
-  return TaskException(new Error("failed"))
+// Before (v1): Used try-catch with Task
+try {
+  const result = await Task().Async(async () => {
+    return await fetchData()
+  })
+  console.log(result) // Raw value
+} catch (error) {
+  console.error("Failed:", error)
 }
 
-// After
-function processTask(): TaskOutcome<string> {
-  if (condition) {
-    return TaskSuccess("success")
-  }
-  return TaskFailure(new Error("failed"))
+// After (v2): Check TaskOutcome
+const result = await Task().Async(async () => {
+  return await fetchData()
+})
+
+if (result.isSuccess()) {
+  console.log(result.value) // Access success value
+} else {
+  console.error("Failed:", result.error) // Access error
 }
 ```
 
-#### Async Operations
+#### Using Ok/Err for explicit control
 
 ```typescript
-// Before
-async function asyncTask(): Promise<TaskResult<string> | TaskException<string>> {
-  // ...
-}
+// New pattern: Explicit Ok/Err returns
+const result = await Task().Async(async (): Promise<TaskOutcome<User>> => {
+  const response = await fetch("/api/user")
 
-// After
-async function asyncTask(): TaskResult<string> {
-  // TaskResult is now Promise<TaskOutcome<T>>
-  // ...
-}
+  if (!response.ok) {
+    return Err<User>(`HTTP ${response.status}`) // Explicit failure
+  }
+
+  const user = await response.json()
+  return Ok(user) // Explicit success
+})
+
+// Error recovery with Ok
+const recovered = await Task().Async(
+  async () => {
+    throw new Error("network error")
+  },
+  async (error) => {
+    // Recover with cached data
+    return Ok(getCachedUser()) // Recovery!
+  },
+)
 ```
 
 ### 3. Update Property Access
@@ -139,89 +190,119 @@ const handleResult = (result: TaskOutcome<string>) => {
 }
 ```
 
-## Complete Migration Example
-
-### Before
+### 6. Handle Nested Tasks
 
 ```typescript
-import { Task, TaskException, TaskResult, isLeft, isRight } from "functype"
+// Before (v1): Nested tasks could throw
+try {
+  const result = await Task().Async(async () => {
+    const innerResult = await Task().Async(async () => {
+      return "inner value"
+    })
+    return innerResult // Could throw if inner failed
+  })
+} catch (error) {
+  // Handle error from either task
+}
 
-async function fetchUser(id: string): Promise<TaskResult<User> | TaskException<User>> {
+// After (v2): Explicitly handle TaskOutcome
+const result = await Task().Async(async () => {
+  const innerResult = await Task().Async(async () => {
+    return "inner value"
+  })
+
+  // Must explicitly handle the inner TaskOutcome
+  if (innerResult.isFailure()) {
+    return innerResult // Propagate failure
+    // OR throw to preserve error chain:
+    // throw innerResult.value
+  }
+
+  return Ok(innerResult.value) // Wrap in Ok
+})
+```
+
+## Complete Migration Example
+
+### Before (v1)
+
+```typescript
+import { Task } from "functype"
+
+async function fetchUser(id: string) {
   try {
-    const response = await fetch(`/api/users/${id}`)
-    if (!response.ok) {
-      return TaskException(new Error("User not found"), undefined, {
-        name: "FetchUser",
-        description: "Failed to fetch user",
-      })
-    }
-    const user = await response.json()
-    return TaskResult(user, {
-      name: "FetchUser",
-      description: "Successfully fetched user",
+    const user = await Task({ name: "FetchUser" }).Async(async () => {
+      const response = await fetch(`/api/users/${id}`)
+      if (!response.ok) {
+        throw new Error("User not found")
+      }
+      return response.json()
     })
+    return user // Raw User object
   } catch (error) {
-    return TaskException(error, undefined, {
-      name: "FetchUser",
-      description: "Network error",
-    })
+    console.error("Failed to fetch user:", error)
+    throw error
   }
 }
 
 // Usage
-const result = await fetchUser("123")
-if (isLeft(result)) {
-  console.error("Error:", result.value)
-  console.log("Task:", result._task.name)
-} else {
-  console.log("User:", result.value)
+try {
+  const user = await fetchUser("123")
+  console.log("User:", user)
+} catch (error) {
+  console.error("Failed:", error)
 }
 ```
 
-### After
+### After (v2)
 
 ```typescript
-import { Task, TaskFailure, TaskSuccess, TaskResult } from "functype"
+import { Task, Ok, Err, type TaskOutcome } from "functype"
 
-async function fetchUser(id: string): TaskResult<User> {
-  try {
+async function fetchUser(id: string): Promise<TaskOutcome<User>> {
+  return Task({ name: "FetchUser" }).Async(async () => {
     const response = await fetch(`/api/users/${id}`)
+
     if (!response.ok) {
-      return TaskFailure(new Error("User not found"), undefined, {
-        name: "FetchUser",
-        description: "Failed to fetch user",
-      })
+      return Err<User>(`User not found: ${response.status}`)
     }
+
     const user = await response.json()
-    return TaskSuccess(user, {
-      name: "FetchUser",
-      description: "Successfully fetched user",
-    })
-  } catch (error) {
-    return TaskFailure(error, undefined, {
-      name: "FetchUser",
-      description: "Network error",
-    })
-  }
+    return Ok(user) // Explicit success
+  })
 }
 
-// Usage - Cleaner with Type Guards
+// Usage
 const result = await fetchUser("123")
-if (result.isFailure()) {
-  // TypeScript knows this is TaskFailure<User>
+if (result.isSuccess()) {
+  console.log("User:", result.value)
+  console.log("Task:", result._meta.name)
+} else {
   console.error("Error:", result.error.message)
   console.log("Task:", result._meta.name)
-
-  // Can use Task-specific recovery methods
-  const fallbackUser = result.recover(defaultUser)
-} else {
-  // TypeScript knows this is TaskSuccess<User>
-  console.log("User:", result.value)
-
-  // Can chain operations safely
-  const userName = result.map((u) => u.name)
 }
 ```
+
+## Key Benefits of v2
+
+1. **Consistent Returns**: `Task().Async()` always returns `TaskOutcome<T>`, no more mixed behaviors
+2. **Explicit Control**: Use `Ok`/`Err` to explicitly return success or failure from any point
+3. **Error Recovery**: Error handlers can return `Ok` to recover from errors
+4. **Better Composition**: Works seamlessly with Either/Option patterns
+5. **Type Safety**: TypeScript always knows whether you're dealing with success or failure
+
+## Quick Reference
+
+| Pattern          | Description                     | Example                           |
+| ---------------- | ------------------------------- | --------------------------------- |
+| Auto-wrap value  | Raw values become `Ok`          | `return "value"` → `Ok("value")`  |
+| Auto-wrap error  | Thrown errors become `Err`      | `throw error` → `Err(error)`      |
+| Explicit success | Return `Ok` directly            | `return Ok(data)`                 |
+| Explicit failure | Return `Err` directly           | `return Err<T>("failed")`         |
+| Error recovery   | Return `Ok` in error handler    | `async (error) => Ok(fallback)`   |
+| Check result     | Use `isSuccess()`/`isFailure()` | `if (result.isSuccess()) { ... }` |
+| Access value     | Use `.value` or `.get()`        | `result.value` or `result.get()`  |
+| Access error     | Use `.error`                    | `result.error.message`            |
 
 ## Compatibility Notes
 
@@ -230,7 +311,7 @@ if (result.isFailure()) {
 Since `TaskSuccess` and `TaskFailure` extend Either, all Either methods are still available:
 
 ```typescript
-const result = Task.success("value")
+const result = Task.ok("value")
 
 // These all still work:
 result.isLeft() // false
@@ -240,7 +321,7 @@ result.fold(
   (value) => `Success: ${value}`,
 )
 result.map((v) => v.toUpperCase())
-result.flatMap((v) => Task.success(v + "!"))
+result.flatMap((v) => Task.ok(v + "!"))
 ```
 
 ### Using with Either Utilities

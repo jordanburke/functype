@@ -51,17 +51,15 @@ describe("Task Cancellation", () => {
       const tokenSource = Task.createCancellationTokenSource()
       tokenSource.cancel()
 
-      try {
-        await Task().Async(
-          () => "success",
-          (error) => error,
-          () => {},
-          tokenSource.token,
-        )
-        expect.fail("Should have been cancelled")
-      } catch (error) {
-        expect((error as Error).message).toContain("cancelled before execution")
-      }
+      const result = await Task().Async(
+        () => "success",
+        (error) => error,
+        () => {},
+        tokenSource.token,
+      )
+
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toContain("cancelled before execution")
     })
 
     test("should reject task when cancelled during execution", async () => {
@@ -89,12 +87,9 @@ describe("Task Cancellation", () => {
       // Now resolve the inner promise
       resolvePromise!()
 
-      try {
-        await taskPromise
-        expect.fail("Should have been cancelled")
-      } catch (error) {
-        expect((error as Error).message).toContain("cancelled")
-      }
+      const result = await taskPromise
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toContain("cancelled")
     })
 
     test.skip("should still execute finally block when cancelled", async () => {
@@ -161,12 +156,9 @@ describe("Task Cancellation", () => {
       // Advance time to trigger cancellation
       vi.advanceTimersByTime(500)
 
-      try {
-        await task
-        expect.fail("Should have been cancelled")
-      } catch (error) {
-        expect((error as Error).message).toContain("cancelled during execution")
-      }
+      const result = await task
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toContain("cancelled during execution")
 
       // Complete all timers
       vi.runAllTimers()
@@ -182,7 +174,8 @@ describe("Task Cancellation", () => {
       vi.advanceTimersByTime(500)
 
       const result = await task
-      expect(result).toBe("success")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("success")
     })
 
     test("should allow custom cancellation behavior", async () => {

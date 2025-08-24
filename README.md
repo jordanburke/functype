@@ -191,38 +191,79 @@ const result = Lazy(() => 10)
 
 ### Task
 
-```typescript
-import { Task } from "functype"
+Task v2 provides structured error handling with the **Ok/Err pattern**, returning `TaskOutcome<T>` for all operations:
 
-// Synchronous operations with error handling
-const syncResult = Task().Sync(
-  () => "success",
-  (error) => new Error(`Failed: ${error}`),
+```typescript
+import { Task, Ok, Err, type TaskOutcome } from "functype"
+
+// Task v2: All operations return TaskOutcome<T>
+const syncResult = Task().Sync(() => "success")
+// Returns: TaskSuccess<string> (extends TaskOutcome<string>)
+
+const asyncResult = await Task().Async(async () => "value")
+// Returns: TaskOutcome<string>
+
+// Explicit Ok/Err returns for precise control
+const explicitResult = await Task().Async(async (): Promise<TaskOutcome<string>> => {
+  if (Math.random() > 0.5) {
+    return Ok("success") // Explicit success
+  }
+  return Err<string>("failed") // Explicit failure
+})
+
+// Auto-wrapping: raw values become Ok, thrown errors become Err
+const autoWrapped = await Task().Async(async () => {
+  if (condition) {
+    return "raw value" // Auto-wrapped as Ok("raw value")
+  }
+  throw new Error("failed") // Auto-wrapped as Err(error)
+})
+
+// Error recovery: error handlers can return Ok
+const recovered = await Task().Async(
+  async () => {
+    throw new Error("initial error")
+  },
+  async (error) => Ok("recovered from error"), // Recovery!
 )
 
-// Asynchronous operations
-const asyncTask = async () => {
-  const result = await Task().Async(
-    async () => await fetchData(),
-    async (error) => new Error(`Fetch failed: ${error}`),
-  )
-  return result
+// Working with results
+if (asyncResult.isSuccess()) {
+  console.log(asyncResult.value) // Access the success value
+} else {
+  console.error(asyncResult.error) // Access the error (Throwable)
 }
+
+// Chaining with TaskOutcome
+const chainedResult = await Task().Async(async () => {
+  const firstResult = await Task().Async(async () => "first")
+  if (firstResult.isFailure()) {
+    return firstResult // Propagate failure
+  }
+
+  const secondResult = await Task().Async(async () => "second")
+  if (secondResult.isFailure()) {
+    return secondResult
+  }
+
+  return Ok(`${firstResult.value} + ${secondResult.value}`)
+})
 
 // Converting promise-based functions to Task
 const fetchUserAPI = (userId: string): Promise<User> => fetch(`/api/users/${userId}`).then((r) => r.json())
 
-// Use the adapter pattern for seamless integration
-const fetchUser = Task({ name: "UserFetch" }).fromPromise(fetchUserAPI)
+const fetchUser = Task.fromPromise(fetchUserAPI)
+// Returns: (userId: string) => FPromise<TaskOutcome<User>>
 
-// Later use it with standard promise patterns
-fetchUser("user123")
-  .then((user) => console.log(user))
-  .catch((error) => console.error(error))
+const userResult = await fetchUser("user123")
+if (userResult.isSuccess()) {
+  console.log(userResult.value) // User object
+}
 
-// Or convert Task results back to promises
-const taskResult = Task().Sync(() => "hello world")
-const promise = Task().toPromise(taskResult) // Promise<string>
+// Convert TaskOutcome back to Promise (for interop)
+const promise = Task.toPromise(asyncResult)
+// Success → resolves with value
+// Failure → rejects with error
 ```
 
 ### Branded Types

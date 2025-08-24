@@ -241,6 +241,24 @@ export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => 
 export type TaskResult<T> = Promise<TaskOutcome<T>>
 
 /**
+ * Ok constructor - Creates a successful TaskOutcome
+ * Alias for TaskSuccess for cleaner, more concise code
+ * @param value - The successful value
+ * @param params - Optional task parameters
+ */
+export const Ok = <T>(value: T, params?: TaskParams): TaskSuccess<T> => TaskSuccess(value, params)
+
+/**
+ * Err constructor - Creates a failed TaskOutcome
+ * Alias for TaskFailure for cleaner, more concise code
+ * @param error - The error value
+ * @param data - Optional additional error data
+ * @param params - Optional task parameters
+ */
+export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> =>
+  TaskFailure(error, data, params)
+
+/**
  * The CancellationToken is a control structure that allows long-running tasks to be cancelled
  * Cancellation is cooperative, meaning the task must check the token and respond to cancellation requests
  */
@@ -329,12 +347,12 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
      * @param cancellationToken - Optional token for cancellation support
      */
     Async: <U = T>(
-      t: () => U | Promise<U>,
-      e: (error: unknown) => unknown = (error: unknown) => error,
+      t: () => U | Promise<U> | TaskOutcome<U> | Promise<TaskOutcome<U>>,
+      e: (error: unknown) => unknown | TaskOutcome<U> = (error: unknown) => error,
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
-    ): FPromise<U> => {
-      return FPromise<U>((resolve, reject) => {
+    ): FPromise<TaskOutcome<U>> => {
+      return FPromise<TaskOutcome<U>>((resolve, _reject) => {
         // Wrap async logic in IIFE to avoid async executor
         void (async () => {
           // Setup cancellation if a token was provided
@@ -349,12 +367,12 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
                 // Always run finally before rejecting
                 await f()
               } catch (finallyError) {
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
+                resolve(Err<U>(finallyError, undefined, { name, description }))
                 return
               }
 
-              reject(
-                Throwable.apply(new Error("Task was cancelled before execution started"), undefined, {
+              resolve(
+                Err<U>(new Error("Task was cancelled before execution started"), undefined, {
                   name,
                   description,
                 }),
@@ -379,67 +397,57 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
             // Run the main operation
             const result = await t()
 
-            // Process cancellation if it occurred during execution
-            if (isCancelled.get()) {
-              try {
-                // Always run finally
-                await f()
-              } catch (finallyError) {
-                // Finally errors take precedence
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
-                return
-              }
-
-              if (cancelError.get()) {
-                reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
-              } else {
-                reject(
-                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-                )
-              }
-              return
-            }
-
+            // Always run finally first
             try {
-              // Run finally before resolving
               await f()
             } catch (finallyError) {
               // Finally errors take precedence
-              reject(Throwable.apply(finallyError, undefined, { name, description }))
+              resolve(Err<U>(finallyError, undefined, { name, description }))
               return
             }
 
-            // Success path - resolve with the value directly
-            resolve(result)
-          } catch (error) {
-            // Process cancellation first if it occurred
+            // Check for cancellation after finally
             if (isCancelled.get()) {
-              try {
-                // Always run finally
-                await f()
-              } catch (finallyError) {
-                // Finally errors take precedence
-                reject(Throwable.apply(finallyError, undefined, { name, description }))
-                return
-              }
-
               if (cancelError.get()) {
-                reject(Throwable.apply(cancelError.get(), undefined, { name, description }))
+                resolve(Err<U>(cancelError.get(), undefined, { name, description }))
               } else {
-                reject(
-                  Throwable.apply(new Error("Task was cancelled during execution"), undefined, { name, description }),
-                )
+                resolve(Err<U>(new Error("Task was cancelled during execution"), undefined, { name, description }))
               }
               return
             }
 
-            // Handle regular error with finally
+            // Check if result is already a TaskOutcome
+            if (result && typeof result === "object" && "_tag" in result) {
+              const outcome = result as TaskOutcome<U>
+              if (outcome._tag === "TaskSuccess" || outcome._tag === "TaskFailure") {
+                // Result is already a TaskOutcome, use it directly
+                resolve(outcome)
+              } else {
+                // Not a TaskOutcome, wrap as success
+                resolve(Ok(result as U, { name, description }))
+              }
+            } else {
+              // Raw value, wrap as success
+              resolve(Ok(result as U, { name, description }))
+            }
+          } catch (error) {
+            // Always run finally first, regardless of cancellation
             try {
-              // Always run finally
               await f()
             } catch (finallyError) {
-              // Finally errors take precedence over operation errors
-              reject(Throwable.apply(finallyError, undefined, { name, description }))
+              // Finally errors take precedence over all other errors
+              resolve(Err<U>(finallyError, undefined, { name, description }))
+              return
+            }
+
+            // Now handle cancellation or regular error
+            if (isCancelled.get()) {
+              // Task was cancelled
+              if (cancelError.get()) {
+                resolve(Err<U>(cancelError.get(), undefined, { name, description }))
+              } else {
+                resolve(Err<U>(new Error("Task was cancelled during execution"), undefined, { name, description }))
+              }
               return
             }
 
@@ -472,20 +480,35 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
                   }
                 })
 
-                reject(enhancedError)
+                // Return the enhanced error as a TaskFailure
+                resolve(Err<U>(enhancedError, undefined, { name, description }))
               } else {
                 // Regular error handling for non-Throwable errors
                 const errorResult = await e(error)
-                reject(Throwable.apply(errorResult, undefined, { name, description }))
+
+                // Check if error handler returned a TaskOutcome
+                if (errorResult && typeof errorResult === "object" && "_tag" in errorResult) {
+                  const outcome = errorResult as TaskOutcome<U>
+                  if (outcome._tag === "TaskSuccess" || outcome._tag === "TaskFailure") {
+                    // Error handler returned a TaskOutcome, use it directly
+                    resolve(outcome)
+                  } else {
+                    // Not a TaskOutcome, wrap as failure
+                    resolve(Err<U>(errorResult, undefined, { name, description }))
+                  }
+                } else {
+                  // Regular error, wrap as failure
+                  resolve(Err<U>(errorResult, undefined, { name, description }))
+                }
               }
             } catch (handlerError) {
-              // If error handler throws, use that error
-              reject(Throwable.apply(handlerError, undefined, { name, description }))
+              // If error handler throws, wrap as failure
+              resolve(Err<U>(handlerError, undefined, { name, description }))
             }
           } finally {
             cleanupCancellation.get()()
           }
-        })().catch(reject) // Handle any errors from the async IIFE
+        })().catch((error) => resolve(Err<U>(error, undefined, { name, description }))) // Handle any errors from the async IIFE
       })
     },
 
@@ -522,12 +545,12 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
      * @param cancellationToken - Optional token for cancellation support
      */
     AsyncWithProgress: <U = T>(
-      t: (updateProgress: (percent: number) => void) => U | Promise<U>,
+      t: (updateProgress: (percent: number) => void) => U | Promise<U> | TaskOutcome<U> | Promise<TaskOutcome<U>>,
       onProgress: (percent: number) => void,
-      e: (error: unknown) => unknown = (error: unknown) => error,
+      e: (error: unknown) => unknown | TaskOutcome<U> = (error: unknown) => error,
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
-    ): FPromise<U> => {
+    ): FPromise<TaskOutcome<U>> => {
       // Create a progress updater that validates and forwards progress
       const updateProgress = (percent: number) => {
         // Validate progress value
@@ -559,6 +582,18 @@ const TaskCompanion = {
    * Create a failed Task result
    */
   fail: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => TaskFailure<T>(error, data, params),
+
+  /**
+   * Create a successful Task result (alias for success)
+   * Preferred for new code
+   */
+  ok: <T>(data: T, params?: TaskParams): TaskSuccess<T> => Ok<T>(data, params),
+
+  /**
+   * Create a failed Task result (alias for fail)
+   * Preferred for new code
+   */
+  err: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => Err<T>(error, data, params),
 
   /**
    * Extract the error chain from a Throwable error
@@ -637,7 +672,7 @@ const TaskCompanion = {
   fromPromise: <U, Args extends unknown[]>(
     promiseFn: (...args: Args) => Promise<U>,
     params?: TaskParams,
-  ): ((...args: Args) => FPromise<U>) => {
+  ): ((...args: Args) => FPromise<TaskOutcome<U>>) => {
     return (...args: Args) => {
       const taskParams = params ?? { name: "PromiseTask", description: "Task from Promise" }
       return Task(taskParams).Async<U>(
@@ -671,15 +706,19 @@ const TaskCompanion = {
    * @param params - Task parameters for the race operation
    * @returns A promise that resolves with the first task to complete or rejects if all tasks fail
    */
-  race: <T>(tasks: Array<FPromise<T>>, timeoutMs?: number, params?: TaskParams): FPromise<T> => {
+  race: <T>(
+    tasks: Array<FPromise<T> | FPromise<TaskOutcome<T>>>,
+    timeoutMs?: number,
+    params?: TaskParams,
+  ): FPromise<TaskOutcome<T>> => {
     const name = params?.name ?? "TaskRace"
     const description = params?.description ?? "Race between multiple tasks"
     const taskParams = { name, description }
 
     return Task(taskParams).Async<T>(
       async () => {
-        // Create the race between all tasks
-        const racePromises = ArrayBuilder<FPromise<T>>()
+        // Create the race between all tasks - need to handle both T and TaskOutcome<T>
+        const racePromises = ArrayBuilder<FPromise<T> | FPromise<TaskOutcome<T>>>()
         tasks.forEach((task) => racePromises.add(task))
 
         // Add timeout promise if timeoutMs is specified
@@ -698,14 +737,32 @@ const TaskCompanion = {
 
         try {
           // Create a compatible race implementation for FPromise
-          // We can't use Promise.race directly due to typing issues
+          // We need to handle both T and TaskOutcome<T> types
           return await new Promise<T>((resolve, reject) => {
             // Setup promises to handle their own resolution
             racePromises.build().forEach((promise) => {
-              // Handle promise resolution
+              // Handle promise resolution - need to check if result is TaskOutcome
               promise.then(
-                // Success handler
-                (result: T) => resolve(result),
+                // Success handler - check if result is already TaskOutcome
+                (result: T | TaskOutcome<T>) => {
+                  // Check if this is a TaskOutcome
+                  if (result && typeof result === "object" && "_tag" in result) {
+                    const outcome = result as TaskOutcome<T>
+                    if (outcome._tag === "TaskSuccess") {
+                      // Extract the value from TaskSuccess
+                      resolve(outcome.get())
+                    } else if (outcome._tag === "TaskFailure") {
+                      // TaskFailure - reject with the error
+                      reject((outcome as TaskFailure<T>).error)
+                    } else {
+                      // Not a TaskOutcome, treat as raw value
+                      resolve(result as T)
+                    }
+                  } else {
+                    // Raw value
+                    resolve(result as T)
+                  }
+                },
                 // Error handler
                 (error: unknown) => reject(error),
               )
@@ -733,7 +790,7 @@ const TaskCompanion = {
   fromNodeCallback: <T, Args extends unknown[]>(
     nodeFn: (...args: [...Args, (error: unknown, result: T) => void]) => void,
     params?: TaskParams,
-  ): ((...args: Args) => FPromise<T>) => {
+  ): ((...args: Args) => FPromise<TaskOutcome<T>>) => {
     const name = params?.name ?? "NodeCallbackTask"
     const description = params?.description ?? "Task from Node.js callback function"
     const taskParams = { name, description }
@@ -774,9 +831,9 @@ const TaskCompanion = {
    * @returns An object with the task and a function to cancel it
    */
   cancellable: <T>(
-    task: (token: CancellationToken) => Promise<T>,
+    task: (token: CancellationToken) => Promise<T> | Promise<TaskOutcome<T>>,
     params?: TaskParams,
-  ): { task: FPromise<T>; cancel: () => void } => {
+  ): { task: FPromise<TaskOutcome<T>>; cancel: () => void } => {
     const tokenSource = createCancellationTokenSource()
     const taskPromise = Task(params).Async<T>(
       () => task(tokenSource.token),
@@ -800,10 +857,10 @@ const TaskCompanion = {
    * @returns An object with the task, cancel function, and current progress
    */
   withProgress: <T>(
-    task: (updateProgress: (percent: number) => void, token: CancellationToken) => Promise<T>,
+    task: (updateProgress: (percent: number) => void, token: CancellationToken) => Promise<T> | Promise<TaskOutcome<T>>,
     onProgress: (percent: number) => void = () => {},
     params?: TaskParams,
-  ): { task: FPromise<T>; cancel: () => void; currentProgress: () => number } => {
+  ): { task: FPromise<TaskOutcome<T>>; cancel: () => void; currentProgress: () => number } => {
     const tokenSource = createCancellationTokenSource()
     const currentProgressValue = Ref(0)
 

@@ -58,7 +58,9 @@
       "Bash(cp:*)",
       "Bash(eslint:*)",
       "Bash(npm ls:*)",
-      "Bash(pntml lint:fix:*)"
+      "Bash(pntml lint:fix:*)",
+      "WebFetch(domain:zio.dev)",
+      "WebSearch"
     ],
     "deny": []
   }

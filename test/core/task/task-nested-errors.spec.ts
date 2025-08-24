@@ -11,31 +11,34 @@ describe("Task Nested Error Handling", () => {
 
     // Create an outer task that calls the inner task
     const outerTask = Task({ name: "OuterTask", description: "This is the outer task" }).Async<string>(async () => {
-      // Awaiting inner task directly loses the inner task context
-      return await innerTask
+      // Awaiting inner task directly - need to handle TaskOutcome
+      const result = await innerTask
+      if (result.isFailure()) {
+        throw result.value // Re-throw to preserve error chain
+      }
+      return result.value
     })
 
-    try {
-      await outerTask
-      expect.fail("Should throw an error")
-    } catch (error) {
-      // With our improved implementation:
-      // The error should have the outer task's context in the main error
-      expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
-      // The message now includes the outer task name
-      expect((error as Error).message).toBe("OuterTask: Inner task failed")
+    const result = await outerTask
+    expect(result.isFailure()).toBe(true)
 
-      // But the inner error context is preserved as the cause
-      expect((error as any).cause).toBeDefined()
-      expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
-      expect((error as any).cause.message).toBe("Inner task failed")
+    const error = result.value
+    // With our improved implementation:
+    // The error should have the outer task's context in the main error
+    expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
+    // The message now includes the outer task name
+    expect((error as Error).message).toBe("OuterTask: Inner task failed")
 
-      // We can also access the full error chain
-      const errorChain = Task.getErrorChain(error as Error)
-      expect(errorChain.length).toBe(2)
-      expect((errorChain[0] as any).taskInfo?.name).toBe("OuterTask")
-      expect((errorChain[1] as any).taskInfo?.name).toBe("InnerTask")
-    }
+    // But the inner error context is preserved as the cause
+    expect((error as any).cause).toBeDefined()
+    expect((error as any).cause.taskInfo?.name).toBe("InnerTask")
+    expect((error as any).cause.message).toBe("Inner task failed")
+
+    // We can also access the full error chain
+    const errorChain = Task.getErrorChain(error as Error)
+    expect(errorChain.length).toBe(2)
+    expect((errorChain[0] as any).taskInfo?.name).toBe("OuterTask")
+    expect((errorChain[1] as any).taskInfo?.name).toBe("InnerTask")
   })
 
   test("should preserve inner error context when using proper error handling", async () => {
@@ -46,23 +49,21 @@ describe("Task Nested Error Handling", () => {
 
     // Create an outer task with proper error handling for the inner task
     const outerTask = Task({ name: "OuterTask", description: "This is the outer task" }).Async<string>(async () => {
-      try {
-        return await innerTask
-      } catch (innerError) {
+      const result = await innerTask
+      if (result.isFailure()) {
         // Properly handle the error to preserve context
-        // Currently, this manual handling is required
-        throw new Error(`Outer task failed because: ${(innerError as Error).message}`)
+        throw new Error(`Outer task failed because: ${(result.value as Error).message}`)
       }
+      return result.value
     })
 
-    try {
-      await outerTask
-      expect.fail("Should throw an error")
-    } catch (error) {
-      // With manual handling, we at least get a reference to the inner error message
-      expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
-      expect((error as Error).message).toBe("Outer task failed because: Inner task failed")
-    }
+    const result = await outerTask
+    expect(result.isFailure()).toBe(true)
+
+    const error = result.value
+    // With manual handling, we at least get a reference to the inner error message
+    expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
+    expect((error as Error).message).toBe("Outer task failed because: Inner task failed")
   })
 
   test("should demonstrate an improved approach with error chaining (proposed solution)", async () => {

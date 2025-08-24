@@ -102,7 +102,7 @@ describe("Task Property Tests", () => {
           const taskResult = await Task().Async(f)
           const directResult = await f()
 
-          return taskResult === directResult
+          return taskResult.isSuccess() && taskResult.value === directResult
         }),
       )
     })

@@ -130,32 +130,27 @@ describe("Async", () => {
   test("should handle successful async operations", async () => {
     const result = await Task().Async(async () => "success")
 
-    expect(result).toBe("success")
+    expect(result.value).toBe("success")
   })
 
   test("should handle async errors", async () => {
     const error = new Error("Async Sync failed")
-    try {
-      await Task().Async(async () => {
-        throw error
-      })
-    } catch (error) {
-      expect((error as unknown as Throwable).message).toBe("Async Sync failed")
-    }
+    const result = await Task().Async(async () => {
+      throw error
+    })
+    expect(result.isFailure()).toBe(true)
+    expect((result as TaskFailure<unknown>).error.message).toBe("Async Sync failed")
   })
 
   test("should include task name in async error when using named task", async () => {
     const error = new Error("Async failed")
     const taskName = "AsyncTaskName"
-    try {
-      await Task({ name: taskName }).Async(async () => {
-        throw error
-      })
-      expect.fail("Should throw error")
-    } catch (error) {
-      expect((error as unknown as Throwable).taskInfo?.name).toBe(taskName)
-      expect((error as Error).name).toBe(taskName)
-    }
+    const result = await Task({ name: taskName }).Async(async () => {
+      throw error
+    })
+    expect(result.isFailure()).toBe(true)
+    const failure = result as TaskFailure<unknown>
+    expect(failure._meta.name).toBe(taskName)
   })
 
   test("should use custom async error handler", async () => {
@@ -205,7 +200,8 @@ describe("Async", () => {
     const successPromise = Promise.resolve("success")
     const result = await Task().Async(async () => successPromise)
 
-    expect(result).toBe("success")
+    expect(result.isSuccess()).toBe(true)
+    expect(result.value).toBe("success")
   })
 })
 
@@ -310,126 +306,109 @@ describe("Sync with finally", () => {
 describe("Async with finally", () => {
   test("should execute finally block on success", async () => {
     let finallyExecuted = false
-    try {
-      const result = await Task().Async(
-        async () => "success",
-        async (error: unknown) => error,
-        () => {
-          finallyExecuted = true
-        },
-      )
-      expect(result).toBe("success")
-      expect(finallyExecuted).toBe(true)
-    } catch (error) {
-      expect.fail("Should not throw error")
-    }
+    const result = await Task().Async(
+      async () => "success",
+      async (error: unknown) => error,
+      () => {
+        finallyExecuted = true
+      },
+    )
+    expect(result.isSuccess()).toBe(true)
+    expect(result.value).toBe("success")
+    expect(finallyExecuted).toBe(true)
   })
 
   test("should execute finally block on error", async () => {
     let finallyExecuted = false
     const error = new Error("Async failed")
 
-    try {
-      await Task().Async(
-        async () => {
-          throw error
-        },
-        async (error: unknown) => error,
-        () => {
-          finallyExecuted = true
-        },
-      )
-      expect.fail("Should throw error")
-    } catch (error) {
-      expect((error as Throwable)._tag).toBe("Throwable")
-      expect((error as Error).message).toBe("Async failed")
-      expect(finallyExecuted).toBe(true)
-    }
+    const result = await Task().Async(
+      () => {
+        throw error
+      },
+      (error: unknown) => error,
+      () => {
+        finallyExecuted = true
+      },
+    )
+    expect(result.isFailure()).toBe(true)
+    const failure = result as unknown as TaskFailure<unknown>
+    expect(failure.error._tag).toBe("Throwable")
+    expect(failure.error.message).toBe("Async failed")
+    expect(finallyExecuted).toBe(true)
   })
 
   test("should execute finally block even if error handler throws", async () => {
     let finallyExecuted = false
     const error = new Error("Async failed")
 
-    try {
-      await Task().Async(
-        async () => {
-          throw error
-        },
-        async (error: unknown) => {
-          throw new Error("Error handler failed")
-        },
-        () => {
-          finallyExecuted = true
-        },
-      )
-      expect.fail("Should throw error")
-    } catch (error) {
-      expect((error as Error).message).toBe("Error handler failed")
-      expect(finallyExecuted).toBe(true)
-    }
+    const result = await Task().Async(
+      async () => {
+        throw error
+      },
+      async (error: unknown) => {
+        throw new Error("Error handler failed")
+      },
+      () => {
+        finallyExecuted = true
+      },
+    )
+
+    expect(result.isFailure()).toBe(true)
+    expect((result.value as Error).message).toBe("Error handler failed")
+    expect(finallyExecuted).toBe(true)
   })
 
   test("should execute finally block with async operations", async () => {
     let finallyExecuted = false
-    try {
-      const result = await Task().Async(
-        async () => "success",
-        async (error: unknown) => error,
-        async () => {
-          await new Promise((resolve) => setTimeout(resolve, 100))
-          finallyExecuted = true
-        },
-      )
-      expect(result).toBe("success")
-      expect(finallyExecuted).toBe(true)
-    } catch (error) {
-      console.log(error)
-      expect.fail("Should not throw error")
-    }
+    const result = await Task().Async(
+      async () => "success",
+      async (error: unknown) => error,
+      async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100))
+        finallyExecuted = true
+      },
+    )
+    expect(result.isSuccess()).toBe(true)
+    expect(result.value).toBe("success")
+    expect(finallyExecuted).toBe(true)
   })
 
   test("should throw error when finally throws", async () => {
-    try {
-      await Task().Async(
-        async () => "success",
-        async (error: unknown) => error,
-        () => {
-          throw new Error("Finally failed")
-        },
-      )
-      expect.fail("Should throw error from finally block")
-    } catch (error) {
-      expect((error as Error).message).toBe("Finally failed")
-    }
+    const result = await Task().Async(
+      async () => "success",
+      async (error: unknown) => error,
+      () => {
+        throw new Error("Finally failed")
+      },
+    )
+    expect(result.isFailure()).toBe(true)
+    expect((result.value as Error).message).toBe("Finally failed")
   })
 
   test("should throw finally error even when operation fails", async () => {
-    try {
-      await Task().Async(
-        async () => {
-          throw new Error("Operation failed")
-        },
-        async (error: unknown) => error,
-        () => {
-          throw new Error("Finally failed")
-        },
-      )
-      expect.fail("Should throw error from finally block")
-    } catch (error) {
-      expect((error as Error).message).toBe("Finally failed")
-    }
+    const result = await Task().Async(
+      () => {
+        throw new Error("Operation failed")
+      },
+      (error: unknown) => error,
+      () => {
+        throw new Error("Finally failed")
+      },
+    )
+    expect(result.isFailure()).toBe(true)
+    expect((result.value as Error).message).toBe("Finally failed")
   })
 })
 
 describe("Promise Adapter Methods", () => {
   test("should convert promise-returning function to Task", async () => {
-    const promiseFn = (value: string): Promise<string> => Promise.resolve(value + " processed")
+    const promiseFn = (value: string): Promise<string> => Promise.resolve(`${value} processed`)
 
     const taskFn = Task.fromPromise(promiseFn)
     const result = await taskFn("test")
 
-    expect(result).toEqual("test processed")
+    expect(result.value).toEqual("test processed")
   })
 
   test("should handle errors in promise adapter", async () => {
@@ -437,14 +416,11 @@ describe("Promise Adapter Methods", () => {
     const promiseFn = (): Promise<string> => Promise.reject(error)
 
     const taskFn = Task.fromPromise(promiseFn)
+    const result = await taskFn()
 
-    try {
-      await taskFn()
-      expect.fail("Should throw error")
-    } catch (e) {
-      expect((e as Throwable)._tag).toBe("Throwable")
-      expect((e as Error).message).toBe("promise error")
-    }
+    expect(result.isFailure()).toBe(true)
+    expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
+    expect((result.value as Error).message).toBe("promise error")
   })
 
   test("should pass through arguments to the promise function", async () => {
@@ -453,7 +429,7 @@ describe("Promise Adapter Methods", () => {
     const taskFn = Task.fromPromise(promiseFn)
     const result = await taskFn(40, 2)
 
-    expect(result).toEqual(42)
+    expect(result.value).toEqual(42)
   })
 
   test("should convert TaskSuccess to Promise", async () => {

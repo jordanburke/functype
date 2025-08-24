@@ -28,14 +28,15 @@ describe("Task Extensions", () => {
         })
 
       // Execute task functions to get FPromises with consistent types
-      const tasks: FPromise<string>[] = [slowTaskFn(), fastTaskFn()]
+      const tasks = [slowTaskFn(), fastTaskFn()]
       const racedTask = Task.race(tasks)
 
       // Fast-forward time to complete the fast task
       vi.advanceTimersByTime(50)
 
       const result = await racedTask
-      expect(result).toBe("fast")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("fast")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -57,17 +58,14 @@ describe("Task Extensions", () => {
       // Fast-forward time to complete the first failing task
       vi.advanceTimersByTime(50)
 
-      try {
-        await racedTask
-        expect.fail("Should throw an error")
-      } catch (error) {
-        // With the new error chaining, the error message includes the task name
-        expect((error as Error).message).toBe("TaskRace: Task 1 failed")
+      const result = await racedTask
+      expect(result.isFailure()).toBe(true)
+      // With the new error chaining, the error message includes the task name
+      expect((result.value as Error).message).toBe("TaskRace: Task 1 failed")
 
-        // The original error is available in the cause
-        expect((error as any).cause).toBeDefined()
-        expect((error as any).cause.message).toBe("Task 1 failed")
-      }
+      // The original error is available in the cause
+      expect((result.value as any).cause).toBeDefined()
+      expect((result.value as any).cause.message).toBe("Task 1 failed")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -84,12 +82,9 @@ describe("Task Extensions", () => {
       // Fast-forward time to complete the failing task
       vi.advanceTimersByTime(50)
 
-      try {
-        await racedTask
-        expect.fail("Should throw an error")
-      } catch (error) {
-        expect((error as Error).name).toBe("CustomRaceTask")
-      }
+      const result = await racedTask
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).name).toBe("CustomRaceTask")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -106,13 +101,10 @@ describe("Task Extensions", () => {
       // Fast-forward time to timeout
       vi.advanceTimersByTime(100)
 
-      try {
-        await racedTask
-        expect.fail("Should throw a timeout error")
-      } catch (error) {
-        expect((error as Error).message).toContain("timed out after 100ms")
-        expect((error as Error).name).toBe("TimeoutRaceTask")
-      }
+      const result = await racedTask
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toContain("timed out after 100ms")
+      expect((result.value as Error).name).toBe("TimeoutRaceTask")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -133,15 +125,15 @@ describe("Task Extensions", () => {
         })
 
       // Execute task functions to get FPromises with consistent types
-      // Cast failTaskFn() to FPromise<string> since runtime behavior takes care of errors
-      const tasks: FPromise<string>[] = [successTaskFn(), failTaskFn() as unknown as FPromise<string>]
+      const tasks = [successTaskFn(), failTaskFn()]
       const racedTask = Task.race(tasks)
 
       // Fast-forward time to complete the successful task
       vi.advanceTimersByTime(50)
 
       const result = await racedTask
-      expect(result).toBe("success")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("success")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -163,15 +155,13 @@ describe("Task Extensions", () => {
 
       // Test success case
       const successResult = await readFileTask("valid-path")
-      expect(successResult).toBe("file contents")
+      expect(successResult.isSuccess()).toBe(true)
+      expect(successResult.value).toBe("file contents")
 
       // Test error case
-      try {
-        await readFileTask("invalid-path")
-        expect.fail("Should throw an error")
-      } catch (error) {
-        expect((error as Error).message).toBe("File not found")
-      }
+      const errorResult = await readFileTask("invalid-path")
+      expect(errorResult.isFailure()).toBe(true)
+      expect((errorResult.value as Error).message).toBe("File not found")
     })
 
     test("should handle synchronous errors in the node function", async () => {
@@ -184,13 +174,10 @@ describe("Task Extensions", () => {
 
       const taskFn = Task.fromNodeCallback<string, [string]>(nodeFunctionWithSyncError, { name: "SyncErrorNodeTask" })
 
-      try {
-        await taskFn("test")
-        expect.fail("Should throw an error")
-      } catch (error) {
-        expect((error as Error).message).toBe("Synchronous error")
-        expect((error as Error).name).toBe("SyncErrorNodeTask")
-      }
+      const result = await taskFn("test")
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toBe("Synchronous error")
+      expect((result.value as Error).name).toBe("SyncErrorNodeTask")
     })
 
     test("should include task name in errors", async () => {
@@ -200,13 +187,10 @@ describe("Task Extensions", () => {
 
       const taskFn = Task.fromNodeCallback<string, [string]>(nodeFunction, { name: "CustomNodeTask" })
 
-      try {
-        await taskFn("test")
-        expect.fail("Should throw an error")
-      } catch (error) {
-        expect((error as Error).message).toBe("Node error")
-        expect((error as Error).name).toBe("CustomNodeTask")
-      }
+      const result = await taskFn("test")
+      expect(result.isFailure()).toBe(true)
+      expect((result.value as Error).message).toBe("Node error")
+      expect((result.value as Error).name).toBe("CustomNodeTask")
     })
 
     test("should pass through multiple arguments", async () => {
@@ -224,7 +208,8 @@ describe("Task Extensions", () => {
       const taskFn = Task.fromNodeCallback<string, [string, number, boolean]>(nodeMultiArgFunction)
 
       const result = await taskFn("test", 42, true)
-      expect(result).toBe("test-42-true")
+      expect(result.isSuccess()).toBe(true)
+      expect(result.value).toBe("test-42-true")
     })
   })
 })
