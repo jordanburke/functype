@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
+import { DO_PROTOCOL, type DoProtocol, type DoResult, EmptyListError } from "@/do"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
@@ -8,7 +9,7 @@ import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
-export interface List<A> extends FunctypeCollection<A, "List"> {
+export interface List<A> extends FunctypeCollection<A, "List">, DoProtocol<A> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   // Override these to return List instead of FunctypeCollection
@@ -158,6 +159,13 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
         toYAML: () => `_tag: List\nvalue: ${stringify(array)}`,
         toBinary: () => Buffer.from(JSON.stringify({ _tag: "List", value: array })).toString("base64"),
       }
+    },
+    // Add Do-notation protocol support
+    [DO_PROTOCOL](): DoResult<A> {
+      if (array.length === 0) {
+        return { ok: false, error: EmptyListError(), recoverable: true }
+      }
+      return { ok: true, value: array[0]! }
     },
   }
 

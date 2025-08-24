@@ -1,5 +1,9 @@
 import { Base } from "@/core/base/Base"
+import { DO_PROTOCOL } from "@/do"
 import type { Identity } from "@/identity/Identity"
+
+// Re-export to satisfy type declaration requirements
+export { DO_PROTOCOL }
 
 type Params = {
   id: string
@@ -16,7 +20,7 @@ type Params = {
  * @param params
  * @constructor
  */
-export function Info<T>(type: string, body: T, params: Params) {
+export function Info<T extends Record<string, unknown>>(type: string, body: T, params: Params) {
   return {
     ...Base(type, body),
     ...params,

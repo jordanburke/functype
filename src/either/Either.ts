@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import { DO_PROTOCOL, type DoProtocol, type DoResult, LeftError } from "@/do"
 import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
@@ -12,7 +13,10 @@ import type { Type } from "@/types"
  * @module Either
  * @category Core
  */
-export interface Either<L extends Type, R extends Type> extends FunctypeBase<R, "Left" | "Right">, Promisable<R> {
+export interface Either<L extends Type, R extends Type>
+  extends FunctypeBase<R, "Left" | "Right">,
+    Promisable<R>,
+    DoProtocol<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
@@ -164,6 +168,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
+  // Add Do-notation protocol support
+  [DO_PROTOCOL](): DoResult<R> {
+    return { ok: true, value }
+  },
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
@@ -256,6 +264,10 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   find: (_p: (a: R) => boolean) => None<R>(),
   exists: (_p: (a: R) => boolean) => false,
   forEach: (_f: (a: R) => void) => {},
+  // Add Do-notation protocol support
+  [DO_PROTOCOL](): DoResult<never> {
+    return { ok: false, error: LeftError(value), recoverable: true }
+  },
 })
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)

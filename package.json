@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "description": "A smallish functional library for TypeScript",
   "author": "jordan.burke@gmail.com",
@@ -102,6 +102,12 @@
       "import": {
         "types": "./dist/conditional/index.d.ts",
         "default": "./dist/conditional/index.mjs"
+      }
+    },
+    "./do": {
+      "import": {
+        "types": "./dist/do/index.d.ts",
+        "default": "./dist/do/index.mjs"
       }
     },
     "./lazy": {

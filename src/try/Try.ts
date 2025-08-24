@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
+import { DO_PROTOCOL, type DoProtocol, type DoResult, FailureError } from "@/do"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
@@ -15,7 +16,7 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T> {
+export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, DoProtocol<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -104,6 +105,10 @@ const Success = <T>(value: T): Try<T> => ({
   find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
   exists: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),
+  // Add Do-notation protocol support
+  [DO_PROTOCOL](): DoResult<T> {
+    return { ok: true, value }
+  },
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
@@ -174,6 +179,10 @@ const Failure = <T>(error: Error): Try<T> => ({
   find: (_p: (a: T) => boolean) => Option<T>(null),
   exists: (_p: (a: T) => boolean) => false,
   forEach: (_f: (a: T) => void) => {},
+  // Add Do-notation protocol support
+  [DO_PROTOCOL](): DoResult<never> {
+    return { ok: false, error: FailureError(error), recoverable: false }
+  },
 })
 
 const TryConstructor = <T>(f: () => T): Try<T> => {

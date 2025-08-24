@@ -1,4 +1,4 @@
-# Task v2 Migration Guide
+\_# Task v2 Migration Guide
 
 ## Overview
 
@@ -397,4 +397,4 @@ If you encounter any issues during migration:
 3. Run your tests to catch any runtime issues
 4. Use `TaskOutcome<T>` for sync, `TaskResult<T>` for async
 
-The new API is designed to be more intuitive while maintaining full backward compatibility with Either methods.
+The new API is designed to be more intuitive while maintaining full backward compatibility with Either methods.\_

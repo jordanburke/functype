@@ -1,6 +1,10 @@
 import { Companion } from "@/companion/Companion"
 import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
+import { DO_PROTOCOL } from "@/do"
+
+// Re-export to satisfy type declaration requirements
+export { DO_PROTOCOL }
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import { FPromise } from "@/fpromise/FPromise"
