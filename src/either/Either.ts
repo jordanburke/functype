@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { DO_PROTOCOL, type DoProtocol, type DoResult, LeftError } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
 import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
@@ -266,7 +266,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   forEach: (_f: (a: R) => void) => {},
   // Add Do-notation protocol support
   [DO_PROTOCOL](): DoResult<never> {
-    return { ok: false, error: LeftError(value), recoverable: true }
+    return { ok: false, empty: false, error: value }
   },
 })
 

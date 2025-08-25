@@ -3,7 +3,7 @@ import { defineConfig } from "tsup"
 const isProduction = process.env.NODE_ENV === "production"
 
 // Define the modules we want to expose as separate entry points
-const modules = ["option", "either", "try", "list", "fpromise", "map", "set", "tuple", "branded"]
+const modules = ["option", "either", "try", "list", "fpromise", "map", "set", "tuple", "branded", "do"]
 
 // Create entry points for each module
 const entries = {
@@ -21,6 +21,10 @@ const entries = {
       // Special case for branded module
       if (module === "branded") {
         return [`${module}/index`, `src/${module}/Brand.ts`]
+      }
+      // Special case for do module (just index.ts)
+      if (module === "do") {
+        return [`${module}/index`, `src/${module}/index.ts`]
       }
       // Handle regular modules
       const path = module.includes("/") ? module : `${module}/${module.charAt(0).toUpperCase() + module.slice(1)}`

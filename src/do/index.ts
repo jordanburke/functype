@@ -4,7 +4,10 @@
  * @module Do
  */
 
+import { Left, Right } from "@/either"
 import { List } from "@/list/List"
+import { Option } from "@/option"
+import { Try } from "@/try"
 
 /**
  * Protocol symbol for Do-notation unwrapping
@@ -16,7 +19,10 @@ export const DO_PROTOCOL = Symbol.for("functype.do.unwrap")
  * Result type for Do-notation unwrapping
  * Indicates whether unwrapping succeeded and provides the value or error
  */
-export type DoResult<T> = { ok: true; value: T } | { ok: false; error: unknown; recoverable?: boolean }
+export type DoResult<T> =
+  | { ok: true; value: T }
+  | { ok: false; empty: true } // None/Nil - no error info
+  | { ok: false; empty: false; error: unknown } // Left/Failure - has error
 
 /**
  * Interface for types that support Do-notation
@@ -27,112 +33,174 @@ export interface DoProtocol<T> {
 }
 
 /**
- * Error thrown when attempting to unwrap a None value in Do-notation
+ * Detects the monad type from the _tag field
  */
-export const NoneError = (message = "Cannot unwrap None in Do-notation"): Error => {
-  const error = new Error(message)
-  // Create new error object to avoid mutation
-  const customError = Object.create(Error.prototype)
-  customError.message = error.message
-  customError.stack = error.stack
-  customError.name = "NoneError"
-  return customError
+function detectMonadType(value: unknown): string {
+  if (!value || typeof value !== "object" || !("_tag" in value)) {
+    return "unknown"
+  }
+
+  switch (value._tag) {
+    case "Some":
+    case "None":
+      return "Option"
+
+    case "Left":
+    case "Right":
+      return "Either"
+
+    case "List":
+      return "List"
+
+    case "Success":
+    case "Failure":
+      return "Try"
+
+    default:
+      return "unknown"
+  }
 }
 
 /**
- * Error thrown when attempting to unwrap a Left value in Do-notation
+ * Type for monad constructors
  */
-export interface LeftErrorType<L> extends Error {
-  value: L
-}
-
-export const LeftError = <L>(value: L, message = "Cannot unwrap Left in Do-notation"): LeftErrorType<L> => {
-  const error = new Error(message)
-  // Create new error object to avoid mutation
-  const customError = Object.create(Error.prototype) as LeftErrorType<L>
-  customError.message = error.message
-  customError.stack = error.stack
-  customError.name = "LeftError"
-  customError.value = value
-  return customError
+type MonadConstructor = {
+  of: (value: unknown) => unknown
+  empty: (error?: unknown) => unknown
 }
 
 /**
- * Error thrown when attempting to unwrap an empty List in Do-notation
+ * Registry of monad constructors for wrapping results
  */
-export const EmptyListError = (message = "Cannot unwrap empty List in Do-notation"): Error => {
-  const error = new Error(message)
-  // Create new error object to avoid mutation
-  const customError = Object.create(Error.prototype)
-  customError.message = error.message
-  customError.stack = error.stack
-  customError.name = "EmptyListError"
-  return customError
-}
-
-/**
- * Error thrown when attempting to unwrap a Failure in Do-notation
- */
-export interface FailureErrorType extends Error {
-  cause: Error
-}
-
-export const FailureError = (cause: Error, message = "Cannot unwrap Failure in Do-notation"): FailureErrorType => {
-  const error = new Error(message)
-  // Create new error object to avoid mutation
-  const customError = Object.create(Error.prototype) as FailureErrorType
-  customError.message = error.message
-  customError.stack = error.stack
-  customError.name = "FailureError"
-  customError.cause = cause
-  return customError
+const MonadConstructors: Record<string, MonadConstructor> = {
+  Option: {
+    of: <T>(value: T) => Option(value),
+    empty: <T>() => Option.none<T>(),
+  },
+  Either: {
+    of: <L, R>(value: R) => Right<L, R>(value),
+    empty: <L, R>(error?: L) => Left<L, R>(error as L),
+  },
+  List: {
+    of: <T>(value: T) => List([value]),
+    empty: <T>() => List<T>([]),
+  },
+  Try: {
+    of: <T>(value: T) => Try(() => value),
+    empty: (error?: unknown) =>
+      Try(() => {
+        throw error ?? new Error("Try failed")
+      }),
+  },
 }
 
 /**
  * Executes a generator-based monadic comprehension
- * Always returns a List containing all possible results from the comprehension
+ * Returns the same monad type as the first yielded monad (Scala semantics)
  *
- * - Lists create cartesian products (all combinations)
- * - Option/Either/Try contribute their single value
- * - Empty Lists or None/Left values throw errors
+ * - Option comprehensions return Option (None on short-circuit)
+ * - Either comprehensions return Either (Left with error on short-circuit)
+ * - List comprehensions return List (empty or cartesian product)
+ * - Try comprehensions return Try (Failure with error on short-circuit)
  *
  * @example
  * ```typescript
- * // Single values create single-element Lists:
+ * // Option comprehension returns Option:
  * const result = Do(function* () {
  *   const x = yield* $(Option(5));
  *   const y = yield* $(Option(10));
  *   return x + y;
  * });
- * // result: List([15])
- * // To get value: result.head or result.get(0)
+ * // result: Option(15)
  *
- * // Lists create cartesian products:
- * const listResult = Do(function* () {
+ * // Either comprehension returns Either:
+ * const result = Do(function* () {
+ *   const x = yield* $(Right(5));
+ *   const y = yield* $(Left("error"));
+ *   return x + y;
+ * });
+ * // result: Left("error") - error is preserved
+ *
+ * // List comprehension returns List with cartesian product:
+ * const result = Do(function* () {
  *   const x = yield* $(List([1, 2]));
  *   const y = yield* $(List([3, 4]));
  *   return x + y;
  * });
- * // listResult: List([4, 5, 5, 6])
+ * // result: List([4, 5, 5, 6])
  * ```
  *
  * @param gen - Generator function that yields monads and returns a result
- * @returns Always returns List<T> containing all results
- * @throws {NoneError} When a None is yielded
- * @throws {LeftError} When a Left is yielded
- * @throws {EmptyListError} When an empty List is yielded
- * @throws {FailureError} When a Failure is yielded
+ * @returns The same monad type as the first yield
  */
-export function Do<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
-  // Always use the List comprehension logic for consistent behavior
-  return doListComprehension(gen)
+export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
+  const iter = gen()
+  let firstMonadType: string | null = null
+
+  function step(value?: unknown): unknown {
+    const result = iter.next(value)
+
+    if (result.done) {
+      // Wrap result in detected monad type
+      if (firstMonadType && firstMonadType in MonadConstructors) {
+        return MonadConstructors[firstMonadType]?.of(result.value)
+      }
+      // Fallback to List for backwards compatibility
+      return List([result.value])
+    }
+
+    const yielded = result.value
+
+    // First yield determines type (using existing _tag!)
+    if (!firstMonadType && yielded && typeof yielded === "object" && "_tag" in yielded) {
+      firstMonadType = detectMonadType(yielded)
+
+      // If first yield is a List, switch to List comprehension mode
+      if (firstMonadType === "List") {
+        // We need to restart with the List comprehension logic
+        return doListComprehension(gen)
+      }
+    }
+
+    // Check DO_PROTOCOL for unwrapping
+    if (yielded && typeof yielded === "object" && DO_PROTOCOL in yielded) {
+      const doResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
+
+      if (!doResult.ok) {
+        // Short-circuit with appropriate empty/error state
+        if (!firstMonadType || !(firstMonadType in MonadConstructors)) {
+          return List([])
+        }
+
+        const constructor = MonadConstructors[firstMonadType]
+
+        // Handle error preservation for Either/Try
+        if ("empty" in doResult && !doResult.empty && "error" in doResult) {
+          if (firstMonadType === "Either") {
+            return constructor?.empty(doResult.error)
+          } else if (firstMonadType === "Try") {
+            return constructor?.empty(
+              doResult.error instanceof Error ? doResult.error : new Error(String(doResult.error)),
+            )
+          }
+        }
+
+        // Regular empty state (None, empty List)
+        return constructor?.empty()
+      }
+
+      return step(doResult.value)
+    }
+
+    // Pass through non-monads
+    return step(yielded)
+  }
+
+  return step()
 }
 
 // Helper for List comprehensions with cartesian products
 function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
-  // State for tracking results (will be used in future iterations)
-  // const state = { allResults: [] as T[] }
-
   // Helper to extract values from a monad
   function extractValues(monad: unknown): unknown[] {
     if (!monad || typeof monad !== "object" || !(DO_PROTOCOL in monad)) {
@@ -145,26 +213,27 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
     if ("toArray" in doCapable && typeof doCapable.toArray === "function") {
       const array = (doCapable as { toArray: () => unknown[] }).toArray()
       if (array.length === 0) {
-        throw EmptyListError()
+        // Return empty array to short-circuit without throwing
+        return []
       }
       return array
     }
 
-    // For Option/Either/Try, extract single value or throw
+    // For Option/Either/Try, extract single value or short-circuit
     const result = doCapable[DO_PROTOCOL]()
     if (result.ok) {
       return [result.value]
     } else {
-      throw result.error
+      // Short-circuit by returning empty array (no throw)
+      return []
     }
   }
 
   // Recursive function to handle cartesian product
-  // previousValues contains the values to return for yields we've already processed
   function runWithValues(previousValues: unknown[]): T[] {
     const iter = gen()
     const localResults: T[] = []
-    const accumulatedValues: unknown[] = [] // Track ALL values as we go
+    const accumulatedValues: unknown[] = []
     let yieldCount = 0
 
     function step(value: unknown | undefined): void {
@@ -177,45 +246,33 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
 
       // Check if we already have a value for this yield from previousValues
       if (yieldCount < previousValues.length) {
-        // We already know what value this yield should get
         const storedValue = previousValues[yieldCount]
-        accumulatedValues.push(storedValue) // Track it
+        accumulatedValues.push(storedValue)
         yieldCount++
-        step(storedValue) // Pass it back to generator
+        step(storedValue)
         return
       }
 
-      // This is a new yield we haven't seen before
-      // Extract its value(s) and potentially branch
-      try {
-        const values = extractValues(result.value)
+      // Extract value(s) from the yielded monad
+      const values = extractValues(result.value)
 
-        if (values.length > 1) {
-          // Multiple values - branch for each
-          // Combine all accumulated values so far with each branch value
-          const branchResults = values.flatMap((val) => {
-            const branchValues = [...accumulatedValues, val]
-            return runWithValues(branchValues)
-          })
-          localResults.push(...branchResults)
-        } else {
-          // Single value - accumulate it and continue
-          accumulatedValues.push(values[0])
-          yieldCount++
-          step(values[0])
-        }
-      } catch (error) {
-        // Try to let the generator handle the error
-        try {
-          const errorResult = iter.throw(error as Error)
-          if (errorResult.done) {
-            localResults.push(errorResult.value)
-            return
-          }
-          step(undefined)
-        } catch {
-          throw error
-        }
+      // If empty (None/Left/empty List), short-circuit
+      if (values.length === 0) {
+        return // Short-circuit without adding to results
+      }
+
+      if (values.length > 1) {
+        // Multiple values - branch for each (cartesian product)
+        const branchResults = values.flatMap((val) => {
+          const branchValues = [...accumulatedValues, val]
+          return runWithValues(branchValues)
+        })
+        localResults.push(...branchResults)
+      } else {
+        // Single value - continue
+        accumulatedValues.push(values[0])
+        yieldCount++
+        step(values[0])
       }
     }
 
@@ -229,66 +286,79 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
 
 /**
  * Executes an async generator-based monadic comprehension
- * Supports both synchronous monads and Promises that resolve to monads
+ * Returns the same monad type as the first yielded monad
  *
  * @example
  * ```typescript
  * const result = await DoAsync(async function* () {
- *   const user = yield fetchUser(id);       // Promise<Option<User>> → User
- *   const profile = yield getProfile(user); // Promise<Either<Error, Profile>> → Profile
- *   const settings = yield Option(profile.settings); // Option<Settings> → Settings
- *   return { user, profile, settings };
+ *   const user = yield* $(await fetchUser(id));       // Promise<Option<User>> → User
+ *   const profile = yield* $(await getProfile(user)); // Promise<Either<Error, Profile>> → Profile
+ *   return { user, profile };
  * });
- * // result is List<{user, profile, settings}>, use result.head for single value
+ * // result type matches first yield
  * ```
  *
  * @param gen - Async generator function that yields monads/promises and returns a result
- * @returns Promise<List<T>> - Always returns a List for consistency with Do
- * @throws {NoneError} When a None is yielded
- * @throws {LeftError} When a Left is yielded
- * @throws {EmptyListError} When an empty List is yielded
- * @throws {FailureError} When a Failure is yielded
+ * @returns Promise of the same monad type as first yield
  */
-export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<List<T>> {
+export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
   const iterator = gen()
+  let firstMonadType: string | null = null
 
-  async function step(value?: unknown): Promise<T> {
+  async function step(value?: unknown): Promise<unknown> {
     const result = await iterator.next(value)
 
     if (result.done) {
-      return result.value
+      // Wrap result in detected monad type
+      if (firstMonadType && firstMonadType in MonadConstructors) {
+        return MonadConstructors[firstMonadType]?.of(result.value)
+      }
+      // Fallback to List for backwards compatibility
+      return List([result.value])
     }
 
     // Await the yielded value in case it's a Promise
     const yielded = await Promise.resolve(result.value)
 
+    // First yield determines type
+    if (!firstMonadType && yielded && typeof yielded === "object" && "_tag" in yielded) {
+      firstMonadType = detectMonadType(yielded)
+    }
+
     // Check if the resolved value implements the Do protocol
     if (yielded && typeof yielded === "object" && DO_PROTOCOL in yielded) {
-      const unwrapResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
+      const doResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
 
-      if (unwrapResult.ok) {
-        return step(unwrapResult.value)
-      } else {
-        // Try to let the generator handle the error
-        try {
-          const errorResult = await iterator.throw(unwrapResult.error)
-          if (errorResult.done) {
-            return errorResult.value
-          }
-          return step()
-        } catch {
-          // Generator didn't handle the error, re-throw it
-          throw unwrapResult.error
+      if (!doResult.ok) {
+        // Short-circuit with appropriate empty/error state
+        if (!firstMonadType || !(firstMonadType in MonadConstructors)) {
+          return List([])
         }
+
+        const constructor = MonadConstructors[firstMonadType]
+
+        // Handle error preservation
+        if ("empty" in doResult && !doResult.empty && "error" in doResult) {
+          if (firstMonadType === "Either") {
+            return constructor?.empty(doResult.error)
+          } else if (firstMonadType === "Try") {
+            return constructor?.empty(
+              doResult.error instanceof Error ? doResult.error : new Error(String(doResult.error)),
+            )
+          }
+        }
+
+        return constructor?.empty()
       }
+
+      return step(doResult.value)
     }
 
     // If the value doesn't implement the protocol, pass it through
     return step(yielded)
   }
 
-  const result = await step()
-  return List([result]) as List<T>
+  return step()
 }
 
 /**
@@ -312,8 +382,10 @@ export function unwrap<T>(monad: DoProtocol<T>): T {
   const result = monad[DO_PROTOCOL]()
   if (result.ok) {
     return result.value
-  } else {
+  } else if ("error" in result) {
     throw result.error
+  } else {
+    throw new Error("Cannot unwrap empty monad")
   }
 }
 
@@ -324,8 +396,8 @@ export function unwrap<T>(monad: DoProtocol<T>): T {
  * @example
  * ```typescript
  * const result = Do(function* (): DoGenerator<number> {
- *   const x = yield List([1, 2])  // x is still unknown but return type is clear
- *   const y = yield List([3, 4])
+ *   const x = yield* $(List([1, 2]))  // x is still unknown but return type is clear
+ *   const y = yield* $(List([3, 4]))
  *   return x + y
  * })
  * ```
@@ -340,16 +412,10 @@ export type DoGenerator<T, TYield = unknown> = Generator<TYield, T, unknown>
  * ```typescript
  * const result = Do(function* () {
  *   const x = yield* $(Option(5))        // x: number
- *   const y = yield* $(List([1, 2, 3]))  // y: number (first element)
+ *   const y = yield* $(List([1, 2, 3]))  // y: number (for cartesian product)
  *   const name = yield* $(Right("Alice")) // name: string
  *   return `${name}: ${x + y}`
  * })
- * ```
- *
- * TypeScript will attempt to infer the type from the monad structure.
- * If type inference fails, you can add an explicit type annotation:
- * ```typescript
- * const value = yield* $(complexMonad) as string
  * ```
  *
  * @param monad - Any monad that can be unwrapped (Option, Either, List, Try, etc.)
@@ -378,3 +444,50 @@ type InferYieldType<M> = M extends { isSome(): boolean; get(): infer T }
         : M extends DoProtocol<infer T>
           ? T // Generic DoProtocol
           : unknown
+
+// Legacy error types (kept for backwards compatibility but not used)
+export const NoneError = (message = "Cannot unwrap None in Do-notation"): Error => {
+  const error = new Error(message)
+  const customError = Object.create(Error.prototype)
+  customError.message = error.message
+  customError.stack = error.stack
+  customError.name = "NoneError"
+  return customError
+}
+
+export interface LeftErrorType<L> extends Error {
+  value: L
+}
+
+export const LeftError = <L>(value: L, message = "Cannot unwrap Left in Do-notation"): LeftErrorType<L> => {
+  const error = new Error(message)
+  const customError = Object.create(Error.prototype) as LeftErrorType<L>
+  customError.message = error.message
+  customError.stack = error.stack
+  customError.name = "LeftError"
+  customError.value = value
+  return customError
+}
+
+export const EmptyListError = (message = "Cannot unwrap empty List in Do-notation"): Error => {
+  const error = new Error(message)
+  const customError = Object.create(Error.prototype)
+  customError.message = error.message
+  customError.stack = error.stack
+  customError.name = "EmptyListError"
+  return customError
+}
+
+export interface FailureErrorType extends Error {
+  cause: Error
+}
+
+export const FailureError = (cause: Error, message = "Cannot unwrap Failure in Do-notation"): FailureErrorType => {
+  const error = new Error(message)
+  const customError = Object.create(Error.prototype) as FailureErrorType
+  customError.message = error.message
+  customError.stack = error.stack
+  customError.name = "FailureError"
+  customError.cause = cause
+  return customError
+}

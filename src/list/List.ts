@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult, EmptyListError } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"
@@ -163,7 +163,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     // Add Do-notation protocol support
     [DO_PROTOCOL](): DoResult<A> {
       if (array.length === 0) {
-        return { ok: false, error: EmptyListError(), recoverable: true }
+        return { ok: false, empty: true }
       }
       return { ok: true, value: array[0]! }
     },

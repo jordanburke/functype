@@ -5,7 +5,7 @@ import { Left, List, Option, Right, Try } from "@/index"
 
 describe("Do-notation", () => {
   describe("Do with Option", () => {
-    it("should unwrap Some values in sequence and return List", () => {
+    it("should unwrap Some values in sequence and return Option", () => {
       const result = Do(function* () {
         const x = yield* $(Option(5))
         const y = yield* $(Option(10))
@@ -13,38 +13,19 @@ describe("Do-notation", () => {
         return z * 2
       })
 
-      // Do always returns List now
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
-      expect(result.headOption.isSome()).toBe(true)
-      expect(result.headOption.get()).toBe(30)
+      // Do returns Option now
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30)
     })
 
-    it("should handle None in comprehension", () => {
+    it("should short-circuit on None and return None", () => {
       const result = Do(function* () {
         const x = yield* $(Option(5))
-        const y = yield Option(null) // This will be None in current behavior
-        return x + (y?.value || 0)
+        const y = yield* $(Option(null)) // This will short-circuit
+        return x + y
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBeDefined()
-    })
-
-    it("should handle error recovery with try-catch", () => {
-      const result = Do(function* () {
-        try {
-          const x = yield* $(Option(null)) // Will throw in $ helper
-          return x
-        } catch (e) {
-          // Recovery value when None is encountered
-          return 42
-        }
-      })
-
-      // Do returns List
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(42)
+      expect(result.isNone()).toBe(true)
     })
 
     it("should work with conditional logic", () => {
@@ -59,13 +40,13 @@ describe("Do-notation", () => {
         }
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30)
     })
   })
 
   describe("Do with Either", () => {
-    it("should unwrap Right values in sequence and return List", () => {
+    it("should unwrap Right values in sequence and return Either", () => {
       const result = Do(function* () {
         const x = yield* $(Right<string, number>(5))
         const y = yield* $(Right<string, number>(10))
@@ -73,33 +54,31 @@ describe("Do-notation", () => {
         return z * 2
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
+      expect(result.isRight()).toBe(true)
+      expect(result.value).toBe(30)
     })
 
-    it("should short-circuit on Left", () => {
-      expect(() =>
-        Do(function* () {
-          const x = yield* $(Right<string, number>(5))
-          const y = yield* $(Left<string, number>("error"))
-          const z = yield* $(Right<string, number>(x + y)) // Never executes
-          return Right<string, number>(z)
-        }),
-      ).toThrow("Cannot unwrap Left in Do-notation")
+    it("should short-circuit on Left and preserve error", () => {
+      const result = Do(function* () {
+        const x = yield* $(Right<string, number>(5))
+        const y = yield* $(Left<string, number>("error message"))
+        const z = yield* $(Right<string, number>(x + y)) // Never executes
+        return z
+      })
+
+      expect(result.isLeft()).toBe(true)
+      expect(result.value).toBe("error message")
     })
 
     it("should preserve Left error values", () => {
-      try {
-        Do(function* () {
-          const x = yield* $(Right<string, number>(5))
-          const y = yield* $(Left<string, number>("custom error"))
-          return Right<string, number>(x + y)
-        })
-        expect.fail("Should have thrown")
-      } catch (e) {
-        expect((e as Error).name).toBe("LeftError")
-        expect((e as LeftErrorType<string>).value).toBe("custom error")
-      }
+      const result = Do(function* () {
+        const x = yield* $(Right<string, number>(5))
+        const y = yield* $(Left<string, number>("custom error"))
+        return x + y
+      })
+
+      expect(result.isLeft()).toBe(true)
+      expect(result.value).toBe("custom error")
     })
   })
 
@@ -112,8 +91,9 @@ describe("Do-notation", () => {
         return z * 2
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
+      // First monad is Option, so result is Option
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30)
     })
 
     it("should handle Option → Either → Option chains", () => {
@@ -131,8 +111,9 @@ describe("Do-notation", () => {
         return user
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toEqual({ id: 1, email: "user@example.com" })
+      // First monad is Option, so result is Option
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toEqual({ id: 1, email: "user@example.com" })
     })
   })
 
@@ -147,40 +128,42 @@ describe("Do-notation", () => {
       expect(result.toArray()).toEqual([11, 21, 12, 22, 13, 23]) // Cartesian product
     })
 
-    it("should throw on empty List", () => {
-      expect(() =>
-        Do(function* () {
-          const value = yield* $(List([]))
-          return Option(value)
-        }),
-      ).toThrow("Cannot unwrap empty List in Do-notation")
+    it("should short-circuit on empty List", () => {
+      const result = Do(function* () {
+        const value = yield* $(List([]))
+        return Option(value)
+      })
+
+      expect(result.isEmpty()).toBe(true)
+      expect(result.toArray()).toEqual([])
     })
   })
 
   describe("Do with Try", () => {
-    it("should unwrap Success values and return List", () => {
+    it("should unwrap Success values and return Try", () => {
       const result = Do(function* () {
         const x = yield* $(Try(() => 5))
         const y = yield* $(Try(() => 10))
         return x + y
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(15)
+      expect(result.isSuccess()).toBe(true)
+      expect(result.get()).toBe(15)
     })
 
-    it("should throw on Failure", () => {
-      expect(() =>
-        Do(function* () {
-          const x = yield* $(Try(() => 5))
-          const y = yield* $(
-            Try(() => {
-              throw new Error("computation failed")
-            }),
-          )
-          return x + y
-        }),
-      ).toThrow()
+    it("should short-circuit on Failure", () => {
+      const result = Do(function* () {
+        const x = yield* $(Try(() => 5))
+        const y = yield* $(
+          Try(() => {
+            throw new Error("computation failed")
+          }),
+        )
+        return x + y
+      })
+
+      expect(result.isFailure()).toBe(true)
+      expect(result.error?.message).toBe("computation failed")
     })
   })
 
@@ -193,8 +176,9 @@ describe("Do-notation", () => {
         return (z as number) * 2
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
+      // First real monad is Option, so result is Option
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30)
     })
   })
 
@@ -211,9 +195,11 @@ describe("Do-notation", () => {
         return { user, profile }
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head.user).toEqual({ id: 1, name: "Alice" })
-      expect(result.head.profile).toEqual({ bio: "Alice's profile" })
+      // First monad is Option, so result is Option
+      expect(result.isSome()).toBe(true)
+      const value = result.get()
+      expect(value.user).toEqual({ id: 1, name: "Alice" })
+      expect(value.profile).toEqual({ bio: "Alice's profile" })
     })
 
     it("should handle mixed sync and async monads", async () => {
@@ -224,46 +210,39 @@ describe("Do-notation", () => {
         return z * 2
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30)
+      // First monad is Option, so result is Option
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30)
     })
 
     it("should handle async None properly", async () => {
       const result = await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Option(5)))
-        const y = yield* $(await Promise.resolve(Option(null))) // None - will throw
+        const y = yield* $(await Promise.resolve(Option(null))) // None - short-circuits
         return x + y
-      }).catch((err) => err)
+      })
 
-      expect(result).toBeInstanceOf(Error)
-      expect(result.message).toContain("Cannot unwrap None")
+      expect(result.isNone()).toBe(true)
     })
 
     it("should handle async Left properly", async () => {
-      await expect(
-        DoAsync(async function* () {
-          const x = yield* $(await Promise.resolve(Right<string, number>(5)))
-          const y = yield* $(await Promise.resolve(Left<string, number>("async error")))
-          return x + y
-        }),
-      ).rejects.toThrow("Cannot unwrap Left in Do-notation")
+      const result = await DoAsync(async function* () {
+        const x = yield* $(await Promise.resolve(Right<string, number>(5)))
+        const y = yield* $(await Promise.resolve(Left<string, number>("async error")))
+        return x + y
+      })
+
+      expect(result.isLeft()).toBe(true)
+      expect(result.value).toBe("async error")
     })
 
     it("should handle error recovery in async context", async () => {
       const result = await DoAsync(async function* () {
-        try {
-          const x = yield* $(await Promise.resolve(Option(null))) // Will throw
-          return x
-        } catch (e) {
-          // Recover with default value
-          return 100
-        }
+        const x = yield* $(await Promise.resolve(Option(null))) // None - short-circuits
+        return x
       })
 
-      expect(result.length).toBe(1)
-      // In test environment, recovery returns None object, not the value
-      // So we check for existence rather than specific value
-      expect(result.head).toBeDefined()
+      expect(result.isNone()).toBe(true)
     })
   })
 
@@ -289,31 +268,25 @@ describe("Do-notation", () => {
       const sendWelcomeEmail = (user: { email: string }) => Option({ sent: true, to: user.email })
 
       const registerUser = (email: string, password: string) => {
-        try {
-          const result = Do(function* () {
-            const validEmail = yield* $(validateEmail(email))
-            const availableEmail = yield* $(checkEmailAvailable(validEmail))
-            const hashedPw = yield* $(hashPassword(password))
-            const user = yield* $(createUser(availableEmail, hashedPw))
-            const emailResult = yield* $(sendWelcomeEmail(user))
+        const result = Do(function* () {
+          const validEmail = yield* $(validateEmail(email))
+          const availableEmail = yield* $(checkEmailAvailable(validEmail))
+          const hashedPw = yield* $(hashPassword(password))
+          const user = yield* $(createUser(availableEmail, hashedPw))
+          const emailResult = yield* $(sendWelcomeEmail(user))
 
-            return {
-              user,
-              emailSent: emailResult,
-              status: "success" as const,
-            }
-          })
-          // Do returns List, get the single value and wrap in Right
-          return Right(result.head)
-        } catch (e) {
-          const error = e as Error
-          if (error.name === "NoneError") {
-            return Left<Error, any>(new Error("Invalid input"))
+          return {
+            user,
+            emailSent: emailResult,
+            status: "success" as const,
           }
-          if (error.name === "LeftError") {
-            return Left<Error, any>((e as LeftErrorType<Error>).value)
-          }
-          return Left<Error, any>(error || new Error("Registration failed"))
+        })
+
+        // Result is Option (first monad), wrap in Either for API
+        if (result.isSome()) {
+          return Right(result.get())
+        } else {
+          return Left<Error, any>(new Error("Registration failed"))
         }
       }
 
@@ -322,26 +295,21 @@ describe("Do-notation", () => {
       expect(successResult.isRight()).toBe(true)
       if (successResult.isRight()) {
         const value = successResult.value
-        // Handle case where value might be wrapped or None
-        const actualValue = value && value._tag === "None" ? {} : value
-        expect(actualValue.status).toBe("success")
-        expect(actualValue.user?.email).toBe("newuser@example.com")
-        expect(actualValue.emailSent?.sent).toBe(true)
+        expect(value.status).toBe("success")
+        expect(value.user?.email).toBe("newuser@example.com")
+        expect(value.emailSent?.sent).toBe(true)
       }
 
       // Test invalid email
       const invalidEmailResult = registerUser("invalid-email", "password123")
-      // Should be Left for invalid email
       expect(invalidEmailResult.isLeft()).toBe(true)
 
       // Test short password
       const shortPasswordResult = registerUser("user@example.com", "short")
-      // Should be Left for short password
       expect(shortPasswordResult.isLeft()).toBe(true)
 
       // Test taken email
       const takenEmailResult = registerUser("taken@example.com", "password123")
-      // Should be Left for taken email
       expect(takenEmailResult.isLeft()).toBe(true)
     })
 
@@ -362,7 +330,12 @@ describe("Do-notation", () => {
           const processed = yield* $(processValue(validated))
           return processed
         })
-        return result.headOption
+        // Result is Try (first monad)
+        if (result.isSuccess()) {
+          return Option(result.get())
+        } else {
+          return Option.none()
+        }
       }
 
       // Valid data
@@ -370,27 +343,15 @@ describe("Do-notation", () => {
       expect(validResult.isSome()).toBe(true)
       expect(validResult.get()).toBe(20)
 
-      // Invalid JSON - in test environment, might not throw
-      try {
-        const invalidJsonResult = pipeline("invalid json")
-        // If we get here, check that result is None/invalid
-        expect(invalidJsonResult.isNone?.() || !invalidJsonResult.isSome?.()).toBeTruthy()
-      } catch (e) {
-        // If it does throw, that's also acceptable
-        expect(e).toBeDefined()
-      }
+      // Invalid JSON
+      const invalidJsonResult = pipeline("invalid json")
+      expect(invalidJsonResult.isNone()).toBe(true)
 
-      // Invalid structure - in test environment, might not throw
-      try {
-        const invalidStructResult = pipeline('{"other": 10}')
-        // If we get here, check that result is None/invalid
-        expect(invalidStructResult.isNone?.() || !invalidStructResult.isSome?.()).toBeTruthy()
-      } catch (e) {
-        // If it does throw, that's also acceptable
-        expect(e).toBeDefined()
-      }
+      // Invalid structure
+      const invalidStructResult = pipeline('{"other": 10}')
+      expect(invalidStructResult.isNone()).toBe(true)
 
-      // Negative value - in test environment, None doesn't throw
+      // Negative value
       const negResult = pipeline('{"value": -5}')
       expect(negResult.isNone()).toBe(true)
     })
@@ -410,8 +371,8 @@ describe("Do-notation", () => {
         return sum
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBe(30) // (1+2+3+4+5) * 2
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(30) // (1+2+3+4+5) * 2
     })
 
     it("should short-circuit loop on None", () => {
@@ -419,20 +380,15 @@ describe("Do-notation", () => {
         const items = [1, 2, null, 4, 5]
         let sum = 0
 
-        try {
-          for (const item of items) {
-            const value = yield* $(Option(item)) // Will throw on null
-            sum += value
-          }
-        } catch {
-          // None causes early exit from loop
+        for (const item of items) {
+          const value = yield* $(Option(item)) // Will short-circuit on null
+          sum += value
         }
 
         return sum
       })
 
-      expect(result.length).toBe(1)
-      expect(result.head).toBeDefined() // Should have some value
+      expect(result.isNone()).toBe(true)
     })
   })
 
@@ -471,14 +427,15 @@ describe("Do-notation", () => {
     })
 
     it("should short-circuit on empty List", () => {
-      expect(() =>
-        Do(function* () {
-          const x = yield* $(List([1, 2]))
-          const y = yield* $(List([])) // Empty list
-          const z = yield* $(List([3, 4])) // Never reached
-          return x + y + z
-        }),
-      ).toThrow("Cannot unwrap empty List in Do-notation")
+      const result = Do(function* () {
+        const x = yield* $(List([1, 2]))
+        const y = yield* $(List([])) // Empty list
+        const z = yield* $(List([3, 4])) // Never reached
+        return x + y + z
+      })
+
+      expect(result.isEmpty()).toBe(true)
+      expect(result.toArray()).toEqual([])
     })
 
     it("should handle List with Option (mixed types)", () => {
@@ -499,8 +456,10 @@ describe("Do-notation", () => {
         return x + y
       })
 
-      // Option × List produces cartesian product
-      expect(result.toArray()).toEqual([6, 7, 8])
+      // First monad is Option, not List, so result is Option
+      // It takes the first element of the List
+      expect(result.isSome()).toBe(true)
+      expect(result.get()).toBe(6) // 5 + 1 (first element)
     })
 
     it("should handle single-element Lists", () => {
@@ -513,24 +472,15 @@ describe("Do-notation", () => {
       expect(result.toArray()).toEqual([50])
     })
 
-    it("should allow error recovery in List comprehensions", () => {
+    it("should handle empty List short-circuit in comprehensions", () => {
       const result = Do(function* () {
         const x = yield* $(List([1, 2]))
-        let y: number
-        try {
-          y = yield* $(Option.none())
-        } catch {
-          y = 99 // Recovery value
-        }
+        const y = yield* $(List([])) // Empty - short-circuits
         const z = yield* $(List([10, 20]))
         return x + y + z
       })
 
-      // Check that we have results with recovery value
-      const arr = result.toArray()
-      expect(arr.length).toBe(4) // 2 x values * 2 z values
-      // Values should contain 99 (recovery value) in calculations
-      expect(arr.every((v) => typeof v === "number" || v.includes("99"))).toBeTruthy()
+      expect(result.isEmpty()).toBe(true)
     })
   })
 })

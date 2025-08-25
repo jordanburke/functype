@@ -1,15 +1,15 @@
+import type { Either } from "../src"
 import {
-  Cond,
-  Match,
-  LazyList,
-  ValidatedBrand,
-  PositiveNumber,
-  EmailAddress,
   BoundedNumber,
-  PatternString,
-  Either,
+  Cond,
+  EmailAddress,
+  LazyList,
   Left,
+  Match,
+  PatternString,
+  PositiveNumber,
   Right,
+  ValidatedBrand,
 } from "../src"
 
 // ============================================
@@ -299,10 +299,10 @@ console.log("Fibonacci < 1000:", fibonacci)
 console.log("Date report:", generateReport(new Date("2024-01-01"), new Date("2024-01-31")))
 
 // Dummy helper functions
-function isBannedUser(id: string): boolean {
+function isBannedUser(_id: string): boolean {
   return false
 }
-function hasValidSubscription(id: string): boolean {
+function hasValidSubscription(_id: string): boolean {
   return true
 }
 function fetchUserData(id: string): string {
@@ -311,14 +311,14 @@ function fetchUserData(id: string): string {
 
 // Export functions to prevent unused warnings
 export {
+  analyzeTransactions,
+  calculateArea,
   calculateShipping,
   categorizeNumber,
-  calculateArea,
-  getUserTier,
-  processPayment,
   createServerConfig,
-  analyzeTransactions,
-  processFeatureRequest,
   generateReport,
+  getUserTier,
+  processFeatureRequest,
+  processPayment,
   processUserData,
 }

@@ -1,4 +1,4 @@
-import { DO_PROTOCOL, type DoResult, EmptyListError, FailureError, LeftError, NoneError } from "@/do"
+import { DO_PROTOCOL, type DoResult } from "@/do"
 import { Typeable } from "@/typeable/Typeable"
 
 /**
@@ -25,7 +25,7 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
         }
         if (typeof body.isNone === "function" && body.isNone()) {
           // It's None - return error
-          return { ok: false, error: NoneError(), recoverable: true }
+          return { ok: false, empty: true }
         }
       }
 
@@ -40,7 +40,7 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
         if (typeof body.isLeft === "function" && body.isLeft()) {
           // It's Left - return the left value as error
           if ("value" in body) {
-            return { ok: false, error: LeftError(body.value), recoverable: true }
+            return { ok: false, empty: false, error: body.value }
           }
         }
       }
@@ -56,7 +56,7 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
         if (typeof body.isFailure === "function" && body.isFailure()) {
           // It's Failure - return the error
           if ("getError" in body && typeof body.getError === "function") {
-            return { ok: false, error: FailureError(body.getError()), recoverable: false }
+            return { ok: false, empty: false, error: body.getError() }
           }
         }
       }
@@ -65,7 +65,7 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
       if ("isEmpty" in body && "head" in body) {
         if (typeof body.isEmpty === "function" && body.isEmpty()) {
           // Empty list - return error
-          return { ok: false, error: EmptyListError(), recoverable: true }
+          return { ok: false, empty: true }
         }
         if (typeof body.head === "function") {
           // Non-empty list - return first element

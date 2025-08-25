@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult, FailureError } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
@@ -181,7 +181,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   forEach: (_f: (a: T) => void) => {},
   // Add Do-notation protocol support
   [DO_PROTOCOL](): DoResult<never> {
-    return { ok: false, error: FailureError(error), recoverable: false }
+    return { ok: false, empty: false, error }
   },
 })
 

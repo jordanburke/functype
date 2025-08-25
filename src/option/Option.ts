@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult, NoneError } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
 import type { Functype } from "@/functype"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
@@ -311,7 +311,7 @@ const NONE: Option<never> = {
   },
   // Add Do-notation protocol support
   [DO_PROTOCOL](): DoResult<never> {
-    return { ok: false, error: NoneError(), recoverable: true }
+    return { ok: false, empty: true }
   },
 }
 
