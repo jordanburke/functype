@@ -7,9 +7,9 @@ describe("Do-notation", () => {
   describe("Do with Option", () => {
     it("should unwrap Some values in sequence and return List", () => {
       const result = Do(function* () {
-        const x = yield Option(5)
-        const y = yield Option(10)
-        const z = yield Option(x + y)
+        const x = yield* $(Option(5))
+        const y = yield* $(Option(10))
+        const z = yield* $(Option(x + y))
         return z * 2
       })
 
@@ -33,12 +33,13 @@ describe("Do-notation", () => {
 
     it("should handle error recovery with try-catch", () => {
       const result = Do(function* () {
-        const x = yield Option(null) // Returns None object in test environment
-        // Check if x is None and handle recovery
-        if (x && x._tag === "None") {
-          return 42 // Recovery value
+        try {
+          const x = yield* $(Option(null)) // Will throw in $ helper
+          return x
+        } catch (e) {
+          // Recovery value when None is encountered
+          return 42
         }
-        return x
       })
 
       // Do returns List
@@ -48,10 +49,10 @@ describe("Do-notation", () => {
 
     it("should work with conditional logic", () => {
       const result = Do(function* () {
-        const x = yield Option(10)
+        const x = yield* $(Option(10))
 
         if (x > 5) {
-          const y = yield Option(20)
+          const y = yield* $(Option(20))
           return x + y
         } else {
           return x * 2
@@ -66,9 +67,9 @@ describe("Do-notation", () => {
   describe("Do with Either", () => {
     it("should unwrap Right values in sequence and return List", () => {
       const result = Do(function* () {
-        const x = yield Right<string, number>(5)
-        const y = yield Right<string, number>(10)
-        const z = yield Right<string, number>(x + y)
+        const x = yield* $(Right<string, number>(5))
+        const y = yield* $(Right<string, number>(10))
+        const z = yield* $(Right<string, number>(x + y))
         return z * 2
       })
 
@@ -79,9 +80,9 @@ describe("Do-notation", () => {
     it("should short-circuit on Left", () => {
       expect(() =>
         Do(function* () {
-          const x = yield Right<string, number>(5)
-          const y = yield Left<string, number>("error")
-          const z = yield Right<string, number>(x + y) // Never executes
+          const x = yield* $(Right<string, number>(5))
+          const y = yield* $(Left<string, number>("error"))
+          const z = yield* $(Right<string, number>(x + y)) // Never executes
           return Right<string, number>(z)
         }),
       ).toThrow("Cannot unwrap Left in Do-notation")
@@ -90,8 +91,8 @@ describe("Do-notation", () => {
     it("should preserve Left error values", () => {
       try {
         Do(function* () {
-          const x = yield Right<string, number>(5)
-          const y = yield Left<string, number>("custom error")
+          const x = yield* $(Right<string, number>(5))
+          const y = yield* $(Left<string, number>("custom error"))
           return Right<string, number>(x + y)
         })
         expect.fail("Should have thrown")
@@ -105,9 +106,9 @@ describe("Do-notation", () => {
   describe("Do with mixed monad types", () => {
     it("should work with Option and Either together", () => {
       const result = Do(function* () {
-        const x = yield Option(5)
-        const y = yield Right<string, number>(10)
-        const z = yield Option(x + y)
+        const x = yield* $(Option(5))
+        const y = yield* $(Right<string, number>(10))
+        const z = yield* $(Option(x + y))
         return z * 2
       })
 
@@ -124,9 +125,9 @@ describe("Do-notation", () => {
       const createUser = (email: string) => Option({ id: 1, email })
 
       const result = Do(function* () {
-        const validEmail = yield validateEmail("user@example.com")
-        const availableEmail = yield checkAvailable(validEmail)
-        const user = yield createUser(availableEmail)
+        const validEmail = yield* $(validateEmail("user@example.com"))
+        const availableEmail = yield* $(checkAvailable(validEmail))
+        const user = yield* $(createUser(availableEmail))
         return user
       })
 
@@ -138,8 +139,8 @@ describe("Do-notation", () => {
   describe("Do with List", () => {
     it("should produce cartesian product with Lists", () => {
       const result = Do(function* () {
-        const first = yield List([1, 2, 3])
-        const second = yield List([10, 20])
+        const first = yield* $(List([1, 2, 3]))
+        const second = yield* $(List([10, 20]))
         return first + second
       })
 
@@ -149,7 +150,7 @@ describe("Do-notation", () => {
     it("should throw on empty List", () => {
       expect(() =>
         Do(function* () {
-          const value = yield List([])
+          const value = yield* $(List([]))
           return Option(value)
         }),
       ).toThrow("Cannot unwrap empty List in Do-notation")
@@ -159,8 +160,8 @@ describe("Do-notation", () => {
   describe("Do with Try", () => {
     it("should unwrap Success values and return List", () => {
       const result = Do(function* () {
-        const x = yield Try(() => 5)
-        const y = yield Try(() => 10)
+        const x = yield* $(Try(() => 5))
+        const y = yield* $(Try(() => 10))
         return x + y
       })
 
@@ -171,10 +172,12 @@ describe("Do-notation", () => {
     it("should throw on Failure", () => {
       expect(() =>
         Do(function* () {
-          const x = yield Try(() => 5)
-          const y = yield Try(() => {
-            throw new Error("computation failed")
-          })
+          const x = yield* $(Try(() => 5))
+          const y = yield* $(
+            Try(() => {
+              throw new Error("computation failed")
+            }),
+          )
           return x + y
         }),
       ).toThrow()
@@ -185,9 +188,9 @@ describe("Do-notation", () => {
     it("should pass through non-monad values", () => {
       const result = Do(function* () {
         const x = yield 5 // Regular value
-        const y = yield Option(10) // Monad
-        const z = yield x + y // Regular value
-        return z * 2
+        const y = yield* $(Option(10)) // Monad
+        const z = yield (x as number) + y // Regular value with type assertion
+        return (z as number) * 2
       })
 
       expect(result.length).toBe(1)
@@ -203,8 +206,8 @@ describe("Do-notation", () => {
         Promise.resolve(Right<string, { bio: string }>({ bio: `${user.name}'s profile` }))
 
       const result = await DoAsync(async function* () {
-        const user = yield fetchUser(1)
-        const profile = yield fetchProfile(user)
+        const user = yield* $(await fetchUser(1))
+        const profile = yield* $(await fetchProfile(user))
         return { user, profile }
       })
 
@@ -215,9 +218,9 @@ describe("Do-notation", () => {
 
     it("should handle mixed sync and async monads", async () => {
       const result = await DoAsync(async function* () {
-        const x = yield Option(5) // Sync monad
-        const y = yield Promise.resolve(Option(10)) // Async monad
-        const z = yield Right<string, number>(x + y) // Sync monad
+        const x = yield* $(Option(5)) // Sync monad
+        const y = yield* $(await Promise.resolve(Option(10))) // Async monad
+        const z = yield* $(Right<string, number>(x + y)) // Sync monad
         return z * 2
       })
 
@@ -227,12 +230,8 @@ describe("Do-notation", () => {
 
     it("should handle async None properly", async () => {
       const result = await DoAsync(async function* () {
-        const x = yield Promise.resolve(Option(5))
-        const y = yield Promise.resolve(Option(null)) // None
-        // In test environment, None doesn't throw, so handle it
-        if (y && y._tag === "None") {
-          throw new Error("Cannot unwrap None in Do-notation")
-        }
+        const x = yield* $(await Promise.resolve(Option(5)))
+        const y = yield* $(await Promise.resolve(Option(null))) // None - will throw
         return x + y
       }).catch((err) => err)
 
@@ -243,9 +242,9 @@ describe("Do-notation", () => {
     it("should handle async Left properly", async () => {
       await expect(
         DoAsync(async function* () {
-          const x = yield Promise.resolve(Right<string, number>(5))
-          const y = yield Promise.resolve(Left<string, number>("async error"))
-          return Right<string, number>(x + y)
+          const x = yield* $(await Promise.resolve(Right<string, number>(5)))
+          const y = yield* $(await Promise.resolve(Left<string, number>("async error")))
+          return x + y
         }),
       ).rejects.toThrow("Cannot unwrap Left in Do-notation")
     })
@@ -253,7 +252,7 @@ describe("Do-notation", () => {
     it("should handle error recovery in async context", async () => {
       const result = await DoAsync(async function* () {
         try {
-          const x = yield Promise.resolve(Option(null)) // Will throw
+          const x = yield* $(await Promise.resolve(Option(null))) // Will throw
           return x
         } catch (e) {
           // Recover with default value
@@ -292,26 +291,11 @@ describe("Do-notation", () => {
       const registerUser = (email: string, password: string) => {
         try {
           const result = Do(function* () {
-            const validEmail = yield validateEmail(email)
-            // Check for None (invalid email) in test environment
-            if (validEmail && validEmail._tag === "None") {
-              throw new Error("Invalid input")
-            }
-
-            const availableEmail = yield checkEmailAvailable(validEmail)
-            // Check for Left (taken email) in test environment
-            if (availableEmail && availableEmail._tag === "Left") {
-              throw availableEmail.value
-            }
-
-            const hashedPw = yield hashPassword(password)
-            // Check for None (short password) in test environment
-            if (hashedPw && hashedPw._tag === "None") {
-              throw new Error("Invalid input")
-            }
-
-            const user = yield createUser(availableEmail, hashedPw)
-            const emailResult = yield sendWelcomeEmail(user)
+            const validEmail = yield* $(validateEmail(email))
+            const availableEmail = yield* $(checkEmailAvailable(validEmail))
+            const hashedPw = yield* $(hashPassword(password))
+            const user = yield* $(createUser(availableEmail, hashedPw))
+            const emailResult = yield* $(sendWelcomeEmail(user))
 
             return {
               user,
@@ -373,21 +357,12 @@ describe("Do-notation", () => {
 
       const pipeline = (jsonString: string) => {
         const result = Do(function* () {
-          const parsed = yield parseJSON(jsonString)
-          const validated = yield validateData(parsed)
-          const processed = yield processValue(validated)
-          // In test environment, check if processed is None
-          if (processed && processed._tag === "None") {
-            return null // Return null so headOption becomes None
-          }
+          const parsed = yield* $(parseJSON(jsonString))
+          const validated = yield* $(validateData(parsed))
+          const processed = yield* $(processValue(validated))
           return processed
         })
-        // Get headOption, but if the head is None, return None
-        const headOpt = result.headOption
-        if (headOpt.isSome() && headOpt.get()?._tag === "None") {
-          return Option.none()
-        }
-        return headOpt
+        return result.headOption
       }
 
       // Valid data
@@ -428,7 +403,7 @@ describe("Do-notation", () => {
         let sum = 0
 
         for (const item of items) {
-          const doubled = yield Option(item * 2)
+          const doubled = yield* $(Option(item * 2))
           sum += doubled
         }
 
@@ -444,13 +419,13 @@ describe("Do-notation", () => {
         const items = [1, 2, null, 4, 5]
         let sum = 0
 
-        for (const item of items) {
-          const value = yield Option(item) // Will fail on null
-          // In test environment, check for None and break
-          if (value && value._tag === "None") {
-            break
+        try {
+          for (const item of items) {
+            const value = yield* $(Option(item)) // Will throw on null
+            sum += value
           }
-          sum += value && typeof value === "object" ? value.value || 0 : value
+        } catch {
+          // None causes early exit from loop
         }
 
         return sum
@@ -464,8 +439,8 @@ describe("Do-notation", () => {
   describe("List comprehensions with cartesian products", () => {
     it("should produce cartesian product for multiple Lists", () => {
       const result = Do(function* () {
-        const x = yield List([1, 2])
-        const y = yield List([3, 4])
+        const x = yield* $(List([1, 2]))
+        const y = yield* $(List([3, 4]))
         return x + y
       })
 
@@ -474,9 +449,9 @@ describe("Do-notation", () => {
 
     it("should handle three Lists with cartesian product", () => {
       const result = Do(function* () {
-        const x = yield List([1, 2])
-        const y = yield List([10, 20])
-        const z = yield List([100])
+        const x = yield* $(List([1, 2]))
+        const y = yield* $(List([10, 20]))
+        const z = yield* $(List([100]))
         return x + y + z
       })
 
@@ -485,9 +460,9 @@ describe("Do-notation", () => {
 
     it("should work with pure assignments between yields", () => {
       const result = Do(function* () {
-        const x = yield List([1, 2])
+        const x = yield* $(List([1, 2]))
         const doubled = x * 2 // Pure assignment, no yield
-        const y = yield List([10, 20])
+        const y = yield* $(List([10, 20]))
         const sum = doubled + y // Another pure assignment
         return sum * 10
       })
@@ -498,9 +473,9 @@ describe("Do-notation", () => {
     it("should short-circuit on empty List", () => {
       expect(() =>
         Do(function* () {
-          const x = yield List([1, 2])
-          const y = yield List([]) // Empty list
-          const z = yield List([3, 4]) // Never reached
+          const x = yield* $(List([1, 2]))
+          const y = yield* $(List([])) // Empty list
+          const z = yield* $(List([3, 4])) // Never reached
           return x + y + z
         }),
       ).toThrow("Cannot unwrap empty List in Do-notation")
@@ -508,8 +483,8 @@ describe("Do-notation", () => {
 
     it("should handle List with Option (mixed types)", () => {
       const result = Do(function* () {
-        const x = yield List([1, 2, 3])
-        const y = yield Option(10)
+        const x = yield* $(List([1, 2, 3]))
+        const y = yield* $(Option(10))
         return x + y
       })
 
@@ -519,8 +494,8 @@ describe("Do-notation", () => {
 
     it("should handle Option with List (Option first)", () => {
       const result = Do(function* () {
-        const x = yield Option(5)
-        const y = yield List([1, 2, 3])
+        const x = yield* $(Option(5))
+        const y = yield* $(List([1, 2, 3]))
         return x + y
       })
 
@@ -530,8 +505,8 @@ describe("Do-notation", () => {
 
     it("should handle single-element Lists", () => {
       const result = Do(function* () {
-        const x = yield List([5])
-        const y = yield List([10])
+        const x = yield* $(List([5]))
+        const y = yield* $(List([10]))
         return x * y
       })
 
@@ -540,15 +515,14 @@ describe("Do-notation", () => {
 
     it("should allow error recovery in List comprehensions", () => {
       const result = Do(function* () {
-        const x = yield List([1, 2])
+        const x = yield* $(List([1, 2]))
         let y: number
         try {
-          const noneOpt = yield Option.none()
-          y = noneOpt && noneOpt._tag === "None" ? 99 : noneOpt
+          y = yield* $(Option.none())
         } catch {
           y = 99 // Recovery value
         }
-        const z = yield List([10, 20])
+        const z = yield* $(List([10, 20]))
         return x + y + z
       })
 
