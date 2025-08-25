@@ -132,15 +132,14 @@ describe("Do-notation", () => {
   })
 
   describe("Do with List", () => {
-    it("should unwrap non-empty List to first element", () => {
+    it("should produce cartesian product with Lists", () => {
       const result = Do(function* () {
         const first = yield List([1, 2, 3])
         const second = yield List([10, 20])
-        return Option(first + second)
+        return first + second
       })
 
-      expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(11) // 1 + 10
+      expect(result.toArray()).toEqual([11, 21, 12, 22, 13, 23]) // Cartesian product
     })
 
     it("should throw on empty List", () => {
@@ -396,6 +395,101 @@ describe("Do-notation", () => {
           return Option(sum)
         }),
       ).toThrow("Cannot unwrap None in Do-notation")
+    })
+  })
+
+  describe("List comprehensions with cartesian products", () => {
+    it("should produce cartesian product for multiple Lists", () => {
+      const result = Do(function* () {
+        const x = yield List([1, 2])
+        const y = yield List([3, 4])
+        return x + y
+      })
+
+      expect(result.toArray()).toEqual([4, 5, 5, 6])
+    })
+
+    it("should handle three Lists with cartesian product", () => {
+      const result = Do(function* () {
+        const x = yield List([1, 2])
+        const y = yield List([10, 20])
+        const z = yield List([100])
+        return x + y + z
+      })
+
+      expect(result.toArray()).toEqual([111, 121, 112, 122])
+    })
+
+    it("should work with pure assignments between yields", () => {
+      const result = Do(function* () {
+        const x = yield List([1, 2])
+        const doubled = x * 2 // Pure assignment, no yield
+        const y = yield List([10, 20])
+        const sum = doubled + y // Another pure assignment
+        return sum * 10
+      })
+
+      expect(result.toArray()).toEqual([120, 220, 140, 240])
+    })
+
+    it("should short-circuit on empty List", () => {
+      expect(() =>
+        Do(function* () {
+          const x = yield List([1, 2])
+          const y = yield List([]) // Empty list
+          const z = yield List([3, 4]) // Never reached
+          return x + y + z
+        }),
+      ).toThrow("Cannot unwrap empty List in Do-notation")
+    })
+
+    it("should handle List with Option (mixed types)", () => {
+      const result = Do(function* () {
+        const x = yield List([1, 2, 3])
+        const y = yield Option(10)
+        return x + y
+      })
+
+      // First yield is List, so result should be a List
+      expect(result.toArray()).toEqual([11, 12, 13])
+    })
+
+    it("should handle Option with List (Option first)", () => {
+      const result = Do(function* () {
+        const x = yield Option(5)
+        const y = yield List([1, 2, 3])
+        return Option(x + y)
+      })
+
+      // First yield is Option, so comprehension returns single value
+      // List is treated as having first element only
+      expect(result.get()).toBe(6)
+    })
+
+    it("should handle single-element Lists", () => {
+      const result = Do(function* () {
+        const x = yield List([5])
+        const y = yield List([10])
+        return x * y
+      })
+
+      expect(result.toArray()).toEqual([50])
+    })
+
+    it("should allow error recovery in List comprehensions", () => {
+      const result = Do(function* () {
+        const x = yield List([1, 2])
+        let y: number
+        try {
+          y = yield Option.none()
+        } catch {
+          y = 99 // Recovery value
+        }
+        const z = yield List([10, 20])
+        return x + y + z
+      })
+
+      expect(result.toArray()).toEqual([110, 120, 111, 121])
     })
   })
 })
