@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Do, DoAsync, $, type LeftErrorType } from "@/do"
-import { Left, List, Option, Right, Try } from "@/index"
+import { Left, List, None, Option, Right, Try } from "@/index"
 
 describe("Do-notation", () => {
   describe("Do with Option", () => {
@@ -19,12 +19,14 @@ describe("Do-notation", () => {
     })
 
     it("should short-circuit on None and return None", () => {
+      const val = None<number>()
       const result = Do(function* () {
         const x = yield* $(Option(5))
-        const y = yield* $(Option(null)) // This will short-circuit
+        const y = yield* $(val) // This will short-circuit
         return x + y
       })
 
+      // Test type inference - this should work if inference is successful
       expect(result.isNone()).toBe(true)
     })
 
@@ -134,7 +136,7 @@ describe("Do-notation", () => {
         return Option(value)
       })
 
-      expect(result.isEmpty()).toBe(true)
+      expect(result.isEmpty).toBe(true)
       expect(result.toArray()).toEqual([])
     })
   })
@@ -434,7 +436,7 @@ describe("Do-notation", () => {
         return x + y + z
       })
 
-      expect(result.isEmpty()).toBe(true)
+      expect(result.isEmpty).toBe(true)
       expect(result.toArray()).toEqual([])
     })
 
@@ -480,7 +482,7 @@ describe("Do-notation", () => {
         return x + y + z
       })
 
-      expect(result.isEmpty()).toBe(true)
+      expect(result.isEmpty).toBe(true)
     })
   })
 })

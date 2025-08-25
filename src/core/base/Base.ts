@@ -1,4 +1,4 @@
-import { DO_PROTOCOL, type DoResult } from "@/do"
+import { DO_PROTOCOL, type DoResult } from "@/do/protocol"
 import { Typeable } from "@/typeable/Typeable"
 
 /**

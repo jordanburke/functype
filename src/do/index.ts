@@ -4,33 +4,14 @@
  * @module Do
  */
 
-import { Left, Right } from "@/either"
+import { type Either, Left, Right } from "@/either"
 import { List } from "@/list/List"
 import { Option } from "@/option"
 import { Try } from "@/try"
 
-/**
- * Protocol symbol for Do-notation unwrapping
- * All monads that support Do-notation should implement this protocol
- */
-export const DO_PROTOCOL = Symbol.for("functype.do.unwrap")
-
-/**
- * Result type for Do-notation unwrapping
- * Indicates whether unwrapping succeeded and provides the value or error
- */
-export type DoResult<T> =
-  | { ok: true; value: T }
-  | { ok: false; empty: true } // None/Nil - no error info
-  | { ok: false; empty: false; error: unknown } // Left/Failure - has error
-
-/**
- * Interface for types that support Do-notation
- * Implementing this interface allows a type to be yielded in Do-comprehensions
- */
-export interface DoProtocol<T> {
-  [DO_PROTOCOL](): DoResult<T>
-}
+// Re-export protocol definitions
+export { DO_PROTOCOL, type DoProtocol, type DoResult } from "./protocol"
+import { DO_PROTOCOL, type DoProtocol } from "./protocol"
 
 /**
  * Detects the monad type from the _tag field
@@ -94,6 +75,12 @@ const MonadConstructors: Record<string, MonadConstructor> = {
   },
 }
 
+// Structural types for better overload matching
+type OptionLike = { _tag: "Some" | "None"; isSome(): boolean; get(): unknown }
+type EitherLike = { _tag: "Left" | "Right"; isLeft(): boolean; isRight(): boolean; value: unknown }
+type ListLike = { _tag: "List"; toArray(): unknown[] }
+type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unknown }
+
 /**
  * Executes a generator-based monadic comprehension
  * Returns the same monad type as the first yielded monad (Scala semantics)
@@ -133,6 +120,13 @@ const MonadConstructors: Record<string, MonadConstructor> = {
  * @param gen - Generator function that yields monads and returns a result
  * @returns The same monad type as the first yield
  */
+// Structural type overloads for better TypeScript inference
+export function Do<T>(gen: () => Generator<OptionLike, T, unknown>): Option<T>
+export function Do<L, R>(gen: () => Generator<EitherLike, R, unknown>): Either<L, R>
+export function Do<T>(gen: () => Generator<ListLike, T, unknown>): List<T>
+export function Do<T>(gen: () => Generator<TryLike, T, unknown>): Try<T>
+export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown
+// Implementation
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
   const iter = gen()
   let firstMonadType: string | null = null
@@ -301,6 +295,13 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
  * @param gen - Async generator function that yields monads/promises and returns a result
  * @returns Promise of the same monad type as first yield
  */
+// Structural type overloads for better TypeScript inference
+export function DoAsync<T>(gen: () => AsyncGenerator<OptionLike, T, unknown>): Promise<Option<T>>
+export function DoAsync<L, R>(gen: () => AsyncGenerator<EitherLike, R, unknown>): Promise<Either<L, R>>
+export function DoAsync<T>(gen: () => AsyncGenerator<ListLike, T, unknown>): Promise<List<T>>
+export function DoAsync<T>(gen: () => AsyncGenerator<TryLike, T, unknown>): Promise<Try<T>>
+export function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown>
+// Implementation
 export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
   const iterator = gen()
   let firstMonadType: string | null = null
@@ -422,11 +423,11 @@ export type DoGenerator<T, TYield = unknown> = Generator<TYield, T, unknown>
  * @returns A generator that yields the monad and returns its extracted value
  */
 // Overloads for specific types to improve type inference
-export function $<T>(monad: { _tag: "Some" | "None"; get(): T }): Generator<unknown, T, T>
-export function $<L, R>(monad: { _tag: "Left" | "Right"; isRight(): boolean; value: R }): Generator<unknown, R, R>
-export function $<T>(monad: List<T>): Generator<unknown, T, T>
-export function $<T>(monad: { _tag: "Success" | "Failure"; get(): T }): Generator<unknown, T, T>
-export function $<T>(monad: DoProtocol<T>): Generator<unknown, T, T>
+export function $<T>(monad: Option<T>): Generator<Option<T>, T, T>
+export function $<L, R>(monad: Either<L, R>): Generator<Either<L, R>, R, R>
+export function $<T>(monad: List<T>): Generator<List<T>, T, T>
+export function $<T>(monad: Try<T>): Generator<Try<T>, T, T>
+export function $<T>(monad: DoProtocol<T>): Generator<DoProtocol<T>, T, T>
 export function $<M>(monad: M): Generator<M, InferYieldType<M>, InferYieldType<M>>
 export function* $<M>(monad: M): Generator<M, unknown, unknown> {
   return (yield monad) as unknown

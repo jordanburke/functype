@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
 import { Set } from "@/set/Set"

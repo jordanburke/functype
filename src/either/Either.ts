@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do"
+import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
 import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
