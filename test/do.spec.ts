@@ -19,7 +19,7 @@ describe("Do-notation", () => {
     })
 
     it("should short-circuit on None and return None", () => {
-      const val = None<number>()
+      const val = Option<number>(null)
       const result = Do(function* () {
         const x = yield* $(Option(5))
         const y = yield* $(val) // This will short-circuit
@@ -92,6 +92,8 @@ describe("Do-notation", () => {
         const z = yield* $(Option(x + y))
         return z * 2
       })
+
+      result.isEmpty()
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)

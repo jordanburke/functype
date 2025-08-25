@@ -90,6 +90,11 @@ type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unkno
  * - List comprehensions return List (empty or cartesian product)
  * - Try comprehensions return Try (Failure with error on short-circuit)
  *
+ * Type Inference Notes:
+ * - TypeScript infers the correct return type for homogeneous comprehensions
+ * - For mixed monad types, TypeScript returns a union type
+ * - Use DoTyped<T> or type assertions for mixed scenarios
+ *
  * @example
  * ```typescript
  * // Option comprehension returns Option:
@@ -115,6 +120,14 @@ type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unkno
  *   return x + y;
  * });
  * // result: List([4, 5, 5, 6])
+ *
+ * // Mixed types - use type assertion or DoTyped:
+ * const result = Do(function* () {
+ *   const x = yield* $(Option(5));
+ *   const y = yield* $(Right<string, number>(10));
+ *   return x + y;
+ * }) as Option<number>;
+ * // result: Option(15)
  * ```
  *
  * @param gen - Generator function that yields monads and returns a result
@@ -125,6 +138,10 @@ export function Do<T>(gen: () => Generator<OptionLike, T, unknown>): Option<T>
 export function Do<L, R>(gen: () => Generator<EitherLike, R, unknown>): Either<L, R>
 export function Do<T>(gen: () => Generator<ListLike, T, unknown>): List<T>
 export function Do<T>(gen: () => Generator<TryLike, T, unknown>): Try<T>
+// For mixed types - first monad wins but type inference is limited
+export function Do<T>(
+  gen: () => Generator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>,
+): Option<T> | Either<unknown, T> | List<T> | Try<T>
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown
 // Implementation
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
@@ -300,6 +317,10 @@ export function DoAsync<T>(gen: () => AsyncGenerator<OptionLike, T, unknown>): P
 export function DoAsync<L, R>(gen: () => AsyncGenerator<EitherLike, R, unknown>): Promise<Either<L, R>>
 export function DoAsync<T>(gen: () => AsyncGenerator<ListLike, T, unknown>): Promise<List<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<TryLike, T, unknown>): Promise<Try<T>>
+// For mixed types - first monad wins but type inference is limited
+export function DoAsync<T>(
+  gen: () => AsyncGenerator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>,
+): Promise<Option<T> | Either<unknown, T> | List<T> | Try<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown>
 // Implementation
 export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
@@ -404,6 +425,25 @@ export function unwrap<T>(monad: DoProtocol<T>): T {
  * ```
  */
 export type DoGenerator<T, TYield = unknown> = Generator<TYield, T, unknown>
+
+/**
+ * Type-annotated Do function for mixed monad scenarios.
+ * Use when TypeScript can't infer the return type automatically.
+ *
+ * @example
+ * ```typescript
+ * // When mixing Option and Either, explicitly specify Option return:
+ * const result = DoTyped<Option<number>>(function* () {
+ *   const x = yield* $(Option(5))
+ *   const y = yield* $(Right<string, number>(10))
+ *   return x + y
+ * })
+ * // result: Option<number>
+ * ```
+ */
+export function DoTyped<R>(gen: () => Generator<unknown, unknown, unknown>): R {
+  return Do(gen) as R
+}
 
 /**
  * Extracts values from monads in Do-notation with type inference.

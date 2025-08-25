@@ -9,10 +9,12 @@ describe("Do-notation type helpers", () => {
       const x = yield* $(Option(5)) // x: number
       const z = yield* $(List([10, 20])) // z: number
       return x + z
-    })
+    }) as Option<number> // Type assertion needed for mixed types
 
-    expect(result.length).toBe(2) // Option(5) × List([10, 20]) = 2 results
-    expect(result.toArray()).toEqual([15, 25]) // 5+10, 5+20
+    // First monad wins - Option(5) makes this an Option comprehension
+    // List([10, 20]) is treated as having value 10 (head)
+    expect(result.isSome()).toBe(true)
+    expect(result.get()).toBe(15) // 5 + 10 (first element of list)
   })
 
   it("should work with $ helper for different monad types", () => {
@@ -25,9 +27,11 @@ describe("Do-notation type helpers", () => {
       // Note: In practice, TypeScript may still show 'unknown' in IDE
       // but the runtime behavior is correct
       return (x as number) + (y as string).length
-    })
+    }) as Option<number> // Type assertion for mixed types
 
-    expect(result.head).toBe(10) // 5 + 5 (length of "hello")
+    // First monad wins - Option makes this an Option comprehension
+    expect(result.isSome()).toBe(true)
+    expect(result.get()).toBe(10) // 5 + 5 (length of "hello")
   })
 
   it("should work with type assertions for simpler cases", () => {
@@ -37,9 +41,11 @@ describe("Do-notation type helpers", () => {
       const y = yield List(["a", "b", "c"]) as unknown as string
 
       return x + y.length
-    })
+    }) as Option<number>
 
-    expect(result.head).toBe(6) // 5 + 1 (length of "a")
+    // First monad wins - Option comprehension
+    expect(result.isSome()).toBe(true)
+    expect(result.get()).toBe(6) // 5 + 1 (length of "a")
   })
 
   it("demonstrates the typing challenge", () => {
@@ -51,9 +57,11 @@ describe("Do-notation type helpers", () => {
 
       // Must use type assertions or helpers
       return (x as number) + (y as number)
-    })
+    }) as Option<number>
 
-    expect(result.head).toBe(6) // 5 + 1
+    // First monad wins - Option comprehension
+    expect(result.isSome()).toBe(true)
+    expect(result.get()).toBe(6) // 5 + 1
   })
 })
 
