@@ -1,4 +1,4 @@
-import { Task, Ok, Err, type TaskOutcome } from "./src"
+import { Task, Ok, Err, type TaskOutcome } from "../src"
 
 async function testOkErr() {
   console.log("Testing Ok/Err pattern...")

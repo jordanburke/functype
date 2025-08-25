@@ -10,7 +10,12 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.anything(), (value) => {
           const result = Task.success(value)
-          return result.isSuccess() && result.get() === value
+          const retrievedValue = result.get()
+          // Handle NaN case since NaN !== NaN
+          if (Number.isNaN(value) && Number.isNaN(retrievedValue)) {
+            return result.isSuccess()
+          }
+          return result.isSuccess() && retrievedValue === value
         }),
       )
     })

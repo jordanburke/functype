@@ -1,4 +1,4 @@
-import { Base } from "@/core/base/Base"
+// import { Base } from "@/core/base/Base" // Temporarily commented to fix circular dependency
 import { DO_PROTOCOL } from "@/do"
 import type { Either } from "@/either/Either"
 import { List } from "@/list/List"
@@ -262,14 +262,15 @@ export const HKT = () => {
   }
 
   return {
-    ...Base("HKT", {
-      map,
-      flatten,
-      flatMap,
-      ap,
-      sequence,
-      traverse,
-    }),
+    // ...Base("HKT", { // Temporarily replaced to fix circular dependency
+    _tag: "HKT",
+    map,
+    flatten,
+    flatMap,
+    ap,
+    sequence,
+    traverse,
+    // }),
     _type: "HKT",
   }
 }

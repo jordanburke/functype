@@ -86,13 +86,16 @@ export function listComprehensionExample() {
   })
   // threeWay is List([135, 136, 145, 146, 235, 236, 245, 246])
 
-  // Example that returns List of objects
+  // Example that returns List of objects (full cartesian product)
   const pairs = Do(function* () {
-    const x = yield* $(List([1, 2, 3]))
-    const y = yield* $(List([10, 20]))
+    const x = yield* $(List([1, 2, 3])) // 3 values
+    const y = yield* $(List([10, 20])) // 2 values
     return { x, y, product: x * y }
   })
-  // pairs is List of all combinations: [{x:1,y:10,product:10}, {x:1,y:20,product:20}, ...]
+  // pairs is List with ALL 6 combinations (3 * 2):
+  // [{x:1,y:10,product:10}, {x:1,y:20,product:20},
+  //  {x:2,y:10,product:20}, {x:2,y:20,product:40},
+  //  {x:3,y:10,product:30}, {x:3,y:20,product:60}]
 
   return { traditional, withDo, threeWay, pairs }
 }
@@ -100,6 +103,7 @@ export function listComprehensionExample() {
 /**
  * Example 4: Mixed monad types
  * Shows how different monad types can be combined in a single comprehension
+ * Note: Always returns List, even with mixed types
  */
 export function mixedMonadsExample(data: { userId?: number; multiplier: number }) {
   const result = Do(function* () {
@@ -120,7 +124,8 @@ export function mixedMonadsExample(data: { userId?: number; multiplier: number }
     return userId * validated
   })
 
-  return result
+  // For single values from mixed monads, use .head
+  return result.head
 }
 
 /**
@@ -149,7 +154,7 @@ export function errorRecoveryExample() {
     return multiplied
   })
 
-  return result // Returns 0 (recovered from None)
+  return result.head // Returns 0 (recovered from None)
 }
 
 /**
@@ -179,54 +184,50 @@ export async function asyncExample() {
 }
 
 /**
- * Example 7: Filtering in List comprehensions
- * Shows how to filter elements in a comprehension
+ * Example 7: Cartesian product with conditional results
+ * Shows that Do always produces cartesian products, even with conditions
  */
-export function filteringExample() {
-  // This returns a List of filtered pairs!
+export function cartesianWithConditionExample() {
+  // Do always produces the full cartesian product
   const result = Do(function* () {
     const x = yield* $(List([1, 2, 3, 4, 5])) // x: number (inferred!)
     const y = yield* $(List([1, 2, 3, 4, 5])) // y: number (inferred!)
 
-    // Manual filtering by returning wrapped result conditionally
+    // Conditional logic affects the returned value, NOT the iteration
     if (x < y) {
       return { x, y, sum: x + y }
+    } else {
+      return { x, y, sum: 0 } // Still returns a value for every combination
     }
-
-    // Skip this combination by yielding an empty List
-    yield* $(List<number>([]))
-    return null as never // This won't be reached
   })
 
-  // result is a List containing only pairs where x < y:
-  // List([{x:1,y:2,sum:3}, {x:1,y:3,sum:4}, {x:1,y:4,sum:5}, ...])
+  // result contains ALL 25 combinations (5x5), not filtered!
+  // List([{x:1,y:1,sum:0}, {x:1,y:2,sum:3}, {x:1,y:3,sum:4}, ...])
 
   return result
 }
 
 /**
- * Example 7b: Pythagorean triples using List comprehensions
- * Classic example showing the power of List comprehensions
+ * Example 7b: Pythagorean triples attempt (shows limitation)
+ * Do-notation always produces full cartesian product - cannot filter during iteration
  */
-export function pythagoreanTriplesExample() {
-  // Find all Pythagorean triples where a² + b² = c² for values up to 20
-  const triples = Do(function* () {
+export function pythagoreanTriplesAttempt() {
+  // This will check ALL combinations (10 * 10 * 15 = 1500 results!)
+  const allCombinations = Do(function* () {
     const a = yield* $(List([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
     const b = yield* $(List([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
     const c = yield* $(List([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]))
 
-    // Only return valid Pythagorean triples
-    if (a * a + b * b === c * c && a < b) {
-      return { a, b, c }
-    }
-
-    // Skip invalid combinations
-    yield* $(List<{ a: number; b: number; c: number }>([]))
-    return null as never
+    // This returns a value for EVERY combination, not just Pythagorean triples
+    const isPythagorean = a * a + b * b === c * c && a < b
+    return { a, b, c, valid: isPythagorean }
   })
 
-  // Returns List([{a:3,b:4,c:5}, {a:6,b:8,c:10}])
-  return triples
+  // Returns List with 1500 items, most with valid: false
+  // To get actual Pythagorean triples, you'd need to filter afterwards:
+  // const triples = allCombinations.filter(t => t.valid)
+
+  return allCombinations
 }
 
 /**
@@ -277,18 +278,18 @@ export function nestedDoExample() {
   const outer = Do(function* () {
     const x = yield* $(Option(5))
 
-    // Nested Do for inner computation
+    // Nested Do for inner computation (returns List)
     const inner = Do(function* () {
       const y = yield* $(Option(10))
       const z = yield* $(Option(15))
       return y + z
-    })
+    }).head // Get single value from inner Do
 
     const innerResult = yield* $(Option(inner))
     return x + innerResult
   })
 
-  return outer // Returns 30
+  return outer.head // Returns 30
 }
 
 /**
@@ -303,13 +304,14 @@ export function customMonadExample() {
     // All functype monads work out of the box
     const opt = yield* $(Option(42))
     const either = yield* $(Right("hello"))
-    const list = yield* $(List([1, 2, 3])) // Gets first element (inferred!)
+    const list = yield* $(List([1, 2, 3])) // Creates cartesian product with all 3 values!
     const tryVal = yield* $(Try(() => 100))
 
     return `${either}: ${opt + list + tryVal}`
   })
+  // Returns List(["hello: 143", "hello: 144", "hello: 145"])
 
-  return result // Returns "hello: 143"
+  return result // Returns List of 3 strings
 }
 
 // ============================================================

@@ -90,100 +90,46 @@ export const FailureError = (cause: Error, message = "Cannot unwrap Failure in D
 
 /**
  * Executes a generator-based monadic comprehension
- * Automatically unwraps yielded monads and threads values through the computation
- * For Lists, iterates over all elements producing cartesian products
+ * Always returns a List containing all possible results from the comprehension
+ *
+ * - Lists create cartesian products (all combinations)
+ * - Option/Either/Try contribute their single value
+ * - Empty Lists or None/Left values throw errors
  *
  * @example
  * ```typescript
- * // Due to TypeScript limitations, yielded values are typed as unknown
- * // You can use type assertions for better type safety:
+ * // Single values create single-element Lists:
  * const result = Do(function* () {
- *   const x = yield List([1, 2]) as any as number;  // Type assertion
- *   const y = yield List([3, 4]) as any as number;  // Type assertion
- *   return x + y;                                   // Returns List([4, 5, 5, 6])
+ *   const x = yield* $(Option(5));
+ *   const y = yield* $(Option(10));
+ *   return x + y;
  * });
+ * // result: List([15])
+ * // To get value: result.head or result.get(0)
+ *
+ * // Lists create cartesian products:
+ * const listResult = Do(function* () {
+ *   const x = yield* $(List([1, 2]));
+ *   const y = yield* $(List([3, 4]));
+ *   return x + y;
+ * });
+ * // listResult: List([4, 5, 5, 6])
  * ```
  *
- * Note: Due to TypeScript limitations with generators, yielded values are typed as unknown.
- * Consider using type assertions or yield* for better type inference.
- *
  * @param gen - Generator function that yields monads and returns a result
- * @returns The result of the generator computation (type determined by first yield)
+ * @returns Always returns List<T> containing all results
  * @throws {NoneError} When a None is yielded
  * @throws {LeftError} When a Left is yielded
  * @throws {EmptyListError} When an empty List is yielded
  * @throws {FailureError} When a Failure is yielded
  */
-export function Do<T>(gen: () => Generator<unknown, T, unknown>): T {
-  // Peek at first yield to determine if it's a List comprehension
-  // We need to create a test generator to peek without consuming
-  const testGen = gen()
-  const firstYieldResult = testGen.next()
-
-  if (!firstYieldResult.done) {
-    const firstYield = firstYieldResult.value
-
-    // Check if any yield is a List (need to scan all yields for accuracy)
-    // For now, use simple heuristic: if first yield is a List, treat as List comprehension
-    const isListComprehension =
-      firstYield &&
-      typeof firstYield === "object" &&
-      "toArray" in firstYield &&
-      typeof (firstYield as { toArray?: unknown }).toArray === "function"
-
-    if (isListComprehension) {
-      // List comprehension path - handle cartesian products
-      return doListComprehension(gen)
-    }
-  }
-
-  // Regular monadic path - simple chaining
-  return doSimpleMonadic(gen)
-}
-
-// Helper for simple monadic chaining (Option, Either, Try)
-function doSimpleMonadic<T>(gen: () => Generator<unknown, T, unknown>): T {
-  const iter = gen()
-
-  function step(value?: unknown): T {
-    const result = iter.next(value)
-
-    if (result.done) {
-      return result.value
-    }
-
-    const yielded = result.value
-
-    // Check if the yielded value implements the Do protocol
-    if (yielded && typeof yielded === "object" && DO_PROTOCOL in yielded) {
-      const unwrapResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
-
-      if (unwrapResult.ok) {
-        return step(unwrapResult.value)
-      } else {
-        // Try to let the generator handle the error
-        try {
-          const errorResult = iter.throw(unwrapResult.error)
-          if (errorResult.done) {
-            return errorResult.value
-          }
-          return step()
-        } catch {
-          // Generator didn't handle the error, re-throw it
-          throw unwrapResult.error
-        }
-      }
-    }
-
-    // If the value doesn't implement the protocol, pass it through
-    return step(yielded)
-  }
-
-  return step()
+export function Do<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
+  // Always use the List comprehension logic for consistent behavior
+  return doListComprehension(gen)
 }
 
 // Helper for List comprehensions with cartesian products
-function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): T {
+function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
   // State for tracking results (will be used in future iterations)
   // const state = { allResults: [] as T[] }
 
@@ -214,11 +160,14 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): T {
   }
 
   // Recursive function to handle cartesian product
+  // previousValues contains the values to return for yields we've already processed
   function runWithValues(previousValues: unknown[]): T[] {
     const iter = gen()
     const localResults: T[] = []
+    const accumulatedValues: unknown[] = [] // Track ALL values as we go
+    let yieldCount = 0
 
-    function step(value: unknown | undefined, yieldIndex: number): void {
+    function step(value: unknown | undefined): void {
       const result = iter.next(value)
 
       if (result.done) {
@@ -226,23 +175,34 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): T {
         return
       }
 
-      // If we already have a value for this yield, use it
-      if (yieldIndex < previousValues.length) {
-        step(previousValues[yieldIndex], yieldIndex + 1)
+      // Check if we already have a value for this yield from previousValues
+      if (yieldCount < previousValues.length) {
+        // We already know what value this yield should get
+        const storedValue = previousValues[yieldCount]
+        accumulatedValues.push(storedValue) // Track it
+        yieldCount++
+        step(storedValue) // Pass it back to generator
         return
       }
 
-      // Extract values and potentially branch
+      // This is a new yield we haven't seen before
+      // Extract its value(s) and potentially branch
       try {
         const values = extractValues(result.value)
 
         if (values.length > 1) {
           // Multiple values - branch for each
-          const branchResults = values.flatMap((val) => runWithValues([...previousValues, val]))
+          // Combine all accumulated values so far with each branch value
+          const branchResults = values.flatMap((val) => {
+            const branchValues = [...accumulatedValues, val]
+            return runWithValues(branchValues)
+          })
           localResults.push(...branchResults)
         } else {
-          // Single value
-          step(values[0], yieldIndex + 1)
+          // Single value - accumulate it and continue
+          accumulatedValues.push(values[0])
+          yieldCount++
+          step(values[0])
         }
       } catch (error) {
         // Try to let the generator handle the error
@@ -252,19 +212,19 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): T {
             localResults.push(errorResult.value)
             return
           }
-          step(undefined, yieldIndex + 1)
+          step(undefined)
         } catch {
           throw error
         }
       }
     }
 
-    step(undefined, 0)
+    step(undefined)
     return localResults
   }
 
   const results = runWithValues([])
-  return List(results) as T
+  return List(results)
 }
 
 /**
@@ -277,18 +237,19 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): T {
  *   const user = yield fetchUser(id);       // Promise<Option<User>> → User
  *   const profile = yield getProfile(user); // Promise<Either<Error, Profile>> → Profile
  *   const settings = yield Option(profile.settings); // Option<Settings> → Settings
- *   return Right({ user, profile, settings });
+ *   return { user, profile, settings };
  * });
+ * // result is List<{user, profile, settings}>, use result.head for single value
  * ```
  *
  * @param gen - Async generator function that yields monads/promises and returns a result
- * @returns Promise of the result of the generator computation
+ * @returns Promise<List<T>> - Always returns a List for consistency with Do
  * @throws {NoneError} When a None is yielded
  * @throws {LeftError} When a Left is yielded
  * @throws {EmptyListError} When an empty List is yielded
  * @throws {FailureError} When a Failure is yielded
  */
-export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<T> {
+export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<List<T>> {
   const iterator = gen()
 
   async function step(value?: unknown): Promise<T> {
@@ -326,7 +287,8 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
     return step(yielded)
   }
 
-  return step()
+  const result = await step()
+  return List([result]) as List<T>
 }
 
 /**

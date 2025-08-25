@@ -8,11 +8,11 @@ describe("Do-notation type helpers", () => {
       // Using $ helper - provides type inference
       const x = yield* $(Option(5)) // x: number
       const z = yield* $(List([10, 20])) // z: number
-      return Option(x + z)
+      return x + z
     })
 
-    expect(result.isSome()).toBe(true)
-    expect(result.get()).toBe(15) // 5 + 10 (first element of list)
+    expect(result.length).toBe(2) // Option(5) × List([10, 20]) = 2 results
+    expect(result.toArray()).toEqual([15, 25]) // 5+10, 5+20
   })
 
   it("should work with $ helper for different monad types", () => {
@@ -27,7 +27,7 @@ describe("Do-notation type helpers", () => {
       return (x as number) + (y as string).length
     })
 
-    expect(result).toBe(10) // 5 + 5 (length of "hello")
+    expect(result.head).toBe(10) // 5 + 5 (length of "hello")
   })
 
   it("should work with type assertions for simpler cases", () => {
@@ -39,7 +39,7 @@ describe("Do-notation type helpers", () => {
       return x + y.length
     })
 
-    expect(result).toBe(6) // 5 + 1 (length of "a")
+    expect(result.head).toBe(6) // 5 + 1 (length of "a")
   })
 
   it("demonstrates the typing challenge", () => {
@@ -53,7 +53,7 @@ describe("Do-notation type helpers", () => {
       return (x as number) + (y as number)
     })
 
-    expect(result).toBe(6) // 5 + 1
+    expect(result.head).toBe(6) // 5 + 1
   })
 })
 
