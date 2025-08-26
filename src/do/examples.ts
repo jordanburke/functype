@@ -105,27 +105,58 @@ export function listComprehensionExample() {
  * Shows how different monad types can be combined in a single comprehension
  * Note: Always returns List, even with mixed types
  */
-export function mixedMonadsExample(data: { userId?: number; multiplier: number }) {
+export function mixedMonadsExample(data: { userId?: number; multiplier: number }): number | undefined {
+  // When mixing different monad types, we need to help TypeScript understand the return type
+  // First, let's use a single monad type for consistency
   const result = Do(function* () {
-    // Extract optional user ID
-    const userId = yield* $(Option(data.userId)) // userId: number (inferred!)
+    // Start with Option and convert others to Option for consistency
+    const userId = yield* $(Option(data.userId))
 
-    // Try to parse something that might fail
+    // Convert Try to Option
     const parsed = yield* $(
       Try(() => {
         if (data.multiplier === 0) throw new Error("Invalid multiplier")
         return 100 / data.multiplier
       }),
-    ) // parsed: number
+    )
 
-    // Use Either for business logic
-    const validated = (yield* $(parsed > 0 ? Right(parsed) : Left("Negative result"))) as number // Complex conditional needs hint
+    // Use Option for validation logic
+    const validated = yield* $(parsed > 0 ? Option(parsed) : Option<number>(null))
+
+    return userId * validated
+  }).toOption()
+
+  // Now result is properly typed as Option<number>
+  return result.orUndefined()
+}
+
+/**
+ * Example 4b: Truly mixed monad types with Reshapeable
+ * Shows how Reshapeable allows working with mixed monads
+ */
+export function mixedMonadsWithReshapeableExample(data: { userId?: number; multiplier: number }): number | undefined {
+  // When truly mixing different monad types, TypeScript returns unknown
+  // We use type assertion to Reshapeable<number> which is safe because we know the return type
+  const result = Do(function* () {
+    // Extract optional user ID - Option monad
+    const userId = yield* $(Option(data.userId))
+
+    // Try to parse something that might fail - Try monad
+    const parsed = yield* $(
+      Try(() => {
+        if (data.multiplier === 0) throw new Error("Invalid multiplier")
+        return 100 / data.multiplier
+      }),
+    )
+
+    // Use Either for business logic - Either monad
+    const validated = yield* $(parsed > 0 ? Right<string, number>(parsed) : Left<string, number>("Negative result"))
 
     return userId * validated
   })
 
-  // For single values from mixed monads, use .head
-  return result.head
+  // Now we can convert to any monad type we need
+  return result.toOption().orUndefined()
 }
 
 /**

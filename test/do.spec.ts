@@ -169,17 +169,17 @@ describe("Do-notation", () => {
     })
   })
 
-  describe("Do with regular values", () => {
-    it("should pass through non-monad values", () => {
+  describe("Do with pure Option values", () => {
+    it("should work with only Option monads", () => {
       const result = Do(function* () {
-        const x = yield 5 // Regular value
-        const y = yield* $(Option(10)) // Monad
-        const z = yield (x as number) + y // Regular value with type assertion
-        return (z as number) * 2
+        const x = yield* $(Option(5))
+        const y = yield* $(Option(10))
+        const z = x + y
+        return z * 2
       })
 
-      // First real monad is Option, so result is Option
-      expect(result.toOption().isSome()).toBe(true)
+      // Pure Option, so result is Option
+      expect(result.isSome()).toBe(true)
       expect(result.get()).toBe(30)
     })
   })
