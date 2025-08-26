@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { Do, DoAsync, $, type LeftErrorType } from "@/do"
+import { $, Do, DoAsync, DoTyped } from "@/do"
 import { Left, List, None, Option, Right, Try } from "@/index"
 
 describe("Do-notation", () => {
@@ -101,7 +101,7 @@ describe("Do-notation", () => {
     })
 
     it("should handle Option → Either → Option chains", () => {
-      const validateEmail = (email: string) => (email.includes("@") ? Option(email) : Option.none())
+      const validateEmail = (email: string) => (email.includes("@") ? Option(email) : None<string>())
 
       const checkAvailable = (email: string) =>
         email !== "taken@example.com" ? Right<string, string>(email) : Left<string, string>("Email already taken")
@@ -134,7 +134,7 @@ describe("Do-notation", () => {
 
     it("should short-circuit on empty List", () => {
       const result = Do(function* () {
-        const value = yield* $(List<>([]))
+        const value = yield* $(List<string>([]))
         return Option(value)
       })
 
@@ -159,7 +159,7 @@ describe("Do-notation", () => {
       const result = Do(function* () {
         const x = yield* $(Try(() => 5))
         const y = yield* $(
-          Try(() => {
+          Try<number>(() => {
             throw new Error("computation failed")
           }),
         )
@@ -242,7 +242,7 @@ describe("Do-notation", () => {
 
     it("should handle error recovery in async context", async () => {
       const result = await DoAsync(async function* () {
-        const x = yield* $(await Promise.resolve(Option(null))) // None - short-circuits
+        const x = yield* $(await Promise.resolve(Option<number>(null))) // None - short-circuits
         return x
       })
 
@@ -253,7 +253,7 @@ describe("Do-notation", () => {
   describe("Real-world scenarios", () => {
     it("should handle user registration flow", () => {
       const validateEmail = (email: string) =>
-        email.includes("@") && email.includes(".") ? Option(email) : Option.none()
+        email.includes("@") && email.includes(".") ? Option(email) : None<string>()
 
       const checkEmailAvailable = (email: string) =>
         email !== "taken@example.com"
@@ -323,7 +323,7 @@ describe("Do-notation", () => {
       const validateData = (data: any) =>
         data && typeof data === "object" && "value" in data
           ? Right<string, { value: number }>(data)
-          : Left<string, any>("Invalid data structure")
+          : Left<string, { value: number }>("Invalid data structure")
 
       const processValue = (data: { value: number }) => Option(data.value > 0 ? data.value * 2 : null)
 
@@ -433,7 +433,7 @@ describe("Do-notation", () => {
     it("should short-circuit on empty List", () => {
       const result = Do(function* () {
         const x = yield* $(List([1, 2]))
-        const y = yield* $(List([])) // Empty list
+        const y = yield* $(List<number>([])) // Empty list
         const z = yield* $(List([3, 4])) // Never reached
         return x + y + z
       })
@@ -479,7 +479,7 @@ describe("Do-notation", () => {
     it("should handle empty List short-circuit in comprehensions", () => {
       const result = Do(function* () {
         const x = yield* $(List([1, 2]))
-        const y = yield* $(List([])) // Empty - short-circuits
+        const y = yield* $(List<number>([])) // Empty - short-circuits
         const z = yield* $(List([10, 20]))
         return x + y + z
       })
