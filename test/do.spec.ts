@@ -134,7 +134,7 @@ describe("Do-notation", () => {
 
     it("should short-circuit on empty List", () => {
       const result = Do(function* () {
-        const value = yield* $(List([]))
+        const value = yield* $(List<>([]))
         return Option(value)
       })
 
