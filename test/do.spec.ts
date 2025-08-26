@@ -220,7 +220,7 @@ describe("Do-notation", () => {
     it("should handle async None properly", async () => {
       const result = await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Option(5)))
-        const y = yield* $(await Promise.resolve(Option(null))) // None - short-circuits
+        const y = yield* $(await Promise.resolve(Option<number>(null))) // None - short-circuits
         return x + y
       })
 
@@ -318,9 +318,9 @@ describe("Do-notation", () => {
     it("should handle data processing pipeline", () => {
       const parseJSON = (json: string) => Try(() => JSON.parse(json))
 
-      const validateData = (data: any) =>
+      const validateData = (data: unknown) =>
         data && typeof data === "object" && "value" in data
-          ? Right<string, { value: number }>(data)
+          ? Right<string, { value: number }>(data as { value: number })
           : Left<string, { value: number }>("Invalid data structure")
 
       const processValue = (data: { value: number }) => Option(data.value > 0 ? data.value * 2 : null)
