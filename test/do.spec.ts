@@ -298,7 +298,7 @@ describe("Do-notation", () => {
       const successResult = registerUser("newuser@example.com", "password123")
       expect(successResult.isRight()).toBe(true)
       if (successResult.isRight()) {
-        const value = successResult.value
+        const { value } = successResult
         expect(value.status).toBe("success")
         expect(value.user?.email).toBe("newuser@example.com")
         expect(value.emailSent?.sent).toBe(true)
@@ -479,7 +479,7 @@ describe("Do-notation", () => {
     it("should handle empty List short-circuit in comprehensions", () => {
       const result = Do(function* () {
         const x = yield* $(List([1, 2]))
-        const y = yield* $(List<number>([])) // Empty - short-circuits
+        const y = yield* $(List<number>([])) // Empty-short-circuits
         const z = yield* $(List([10, 20]))
         return x + y + z
       })
