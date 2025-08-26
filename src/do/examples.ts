@@ -154,7 +154,7 @@ export function errorRecoveryExample() {
     return multiplied
   })
 
-  return result.head // Returns 0 (recovered from None)
+  return result.getOrElse(0) // Returns 0 (recovered from None)
 }
 
 /**
@@ -283,13 +283,13 @@ export function nestedDoExample() {
       const y = yield* $(Option(10))
       const z = yield* $(Option(15))
       return y + z
-    }).head // Get single value from inner Do
+    }).getOrElse(0) // Get single value from inner Do
 
     const innerResult = yield* $(Option(inner))
     return x + innerResult
   })
 
-  return outer.head // Returns 30
+  return outer.getOrElse(0) // Returns 30
 }
 
 /**

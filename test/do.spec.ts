@@ -288,7 +288,14 @@ describe("Do-notation", () => {
         if (result.isSome()) {
           return Right(result.get())
         } else {
-          return Left<Error, any>(new Error("Registration failed"))
+          return Left<
+            Error,
+            {
+              user: { id: number; email: string; password: string }
+              emailSent: { sent: boolean; to: string }
+              status: "success"
+            }
+          >(new Error("Registration failed"))
         }
       }
 
