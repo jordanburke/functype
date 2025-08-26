@@ -6,6 +6,7 @@
 import { $, Do, DoAsync } from "@/do"
 import type { Either } from "@/index"
 import { Left, List, None, Option, Right, Try } from "@/index"
+import type { Reshapeable } from "@/reshapeable"
 
 // ============================================================
 // Basic Do-notation Examples
@@ -101,15 +102,14 @@ export function listComprehensionExample() {
 }
 
 /**
- * Example 4: Mixed monad types
- * Shows how different monad types can be combined in a single comprehension
- * Note: Always returns List, even with mixed types
+ * Example 4: Mixed monad types - convert to consistent type
+ * Shows how to work with mixed monads by converting to a consistent type
  */
 export function mixedMonadsExample(data: { userId?: number; multiplier: number }): number | undefined {
-  // When mixing different monad types, we need to help TypeScript understand the return type
-  // First, let's use a single monad type for consistency
+  // When mixing different monad types, convert them to a consistent type first
+  // Here we convert everything to Option for consistency
   const result = Do(function* () {
-    // Start with Option and convert others to Option for consistency
+    // Start with Option
     const userId = yield* $(Option(data.userId))
 
     // Convert Try to Option
@@ -124,10 +124,12 @@ export function mixedMonadsExample(data: { userId?: number; multiplier: number }
     const validated = yield* $(parsed > 0 ? Option(parsed) : Option<number>(null))
 
     return userId * validated
-  }).toOption()
+  })
+    .toOption()
+    .get()
 
   // Now result is properly typed as Option<number>
-  return result.orUndefined()
+  return result
 }
 
 /**
@@ -153,7 +155,7 @@ export function mixedMonadsWithReshapeableExample(data: { userId?: number; multi
     const validated = yield* $(parsed > 0 ? Right<string, number>(parsed) : Left<string, number>("Negative result"))
 
     return userId * validated
-  })
+  }) as Reshapeable<number>
 
   // Now we can convert to any monad type we need
   return result.toOption().orUndefined()

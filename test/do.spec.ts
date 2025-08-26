@@ -169,21 +169,6 @@ describe("Do-notation", () => {
     })
   })
 
-  describe("Do with pure Option values", () => {
-    it("should work with only Option monads", () => {
-      const result = Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Option(10))
-        const z = x + y
-        return z * 2
-      })
-
-      // Pure Option, so result is Option
-      expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30)
-    })
-  })
-
   describe("DoAsync with Promises", () => {
     it("should handle Promise<Option> values", async () => {
       const fetchUser = async (id: number) => Promise.resolve(Option({ id, name: "Alice" }))

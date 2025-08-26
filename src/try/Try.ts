@@ -36,7 +36,10 @@ export interface Try<T>
   orNull: () => T | null
   orUndefined: () => T | undefined
   orThrow: (error: Error) => T
+  toOption: () => Option<T>
   toEither: <E extends Type>(leftValue: E) => Either<E, T>
+  toList: () => List<T>
+  toTry: () => Try<T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>

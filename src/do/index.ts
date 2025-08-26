@@ -1,6 +1,27 @@
 /**
  * Generator-based Do-notation for monadic comprehensions
  * Provides Scala-like for-comprehension syntax using JavaScript generators
+ *
+ * IMPORTANT: All yielded values MUST be monadic (Option, Either, List, Try).
+ * Use the $ helper for proper type inference: yield* $(Option(value))
+ * Raw values should be assigned directly without yielding.
+ *
+ * @example
+ * // Correct usage - all yields are monadic
+ * const result = Do(function* () {
+ *   const x = yield* $(Option(5))        // x: number
+ *   const y = yield* $(Right(10))        // y: number
+ *   const z = x + y                      // Regular assignment, no yield
+ *   return yield* $(Option(z))           // Return monadic value
+ * })
+ *
+ * @example
+ * // Incorrect - will throw error
+ * const result = Do(function* () {
+ *   const x = yield 5  // ERROR: Raw values cannot be yielded
+ *   return x
+ * })
+ *
  * @module Do
  */
 
@@ -203,8 +224,12 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
       return step(doResult.value)
     }
 
-    // Pass through non-monads
-    return step(yielded)
+    // Reject non-monadic yields - all values must be wrapped with $()
+    throw new Error(
+      "Do-notation error: All yielded values must be monadic. " +
+        "Use yield* $(Option(value)), yield* $(Right(value)), etc. " +
+        "Raw values should be assigned directly without yielding.",
+    )
   }
 
   return step()
