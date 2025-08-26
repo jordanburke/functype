@@ -2,14 +2,17 @@ import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
 import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
+import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
+import type { Reshapeable } from "@/reshapeable"
 import { Set } from "@/set/Set"
+import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
-export interface List<A> extends FunctypeCollection<A, "List">, DoProtocol<A> {
+export interface List<A> extends FunctypeCollection<A, "List">, DoProtocol<A>, Reshapeable<A> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   // Override these to return List instead of FunctypeCollection
@@ -146,6 +149,17 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     toList: () => list,
 
     toSet: () => Set(array),
+
+    toOption: () => (array.length > 0 ? Option(array[0]) : None<A>()),
+
+    toEither: <E extends Type>(leftValue: E) => (array.length > 0 ? Right<E, A>(array[0]!) : Left<E, A>(leftValue)),
+
+    toTry: () =>
+      array.length > 0
+        ? Try<A>(() => array[0]!)
+        : Try<A>(() => {
+            throw new Error("Empty list")
+          }),
 
     toString: () => `List(${stringify(array)})`,
 

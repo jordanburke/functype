@@ -3,11 +3,12 @@ import stringify from "safe-stable-stringify"
 import { Companion } from "@/companion/Companion"
 import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
+import type { Reshapeable } from "@/reshapeable"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Either } from "../index"
-import { Left, List, Right } from "../index"
+import { Left, List, Right, Try } from "../index"
 
 /**
  * Option type module
@@ -20,7 +21,11 @@ import { Left, List, Right } from "../index"
  * It's used to handle potentially null or undefined values in a type-safe way.
  * @typeParam T - The type of the value contained in the Option
  */
-export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Promisable<T>, DoProtocol<T> {
+export interface Option<T extends Type>
+  extends Functype<T, "Some" | "None">,
+    Promisable<T>,
+    DoProtocol<T>,
+    Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -227,7 +232,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toList: () => List<T>([value]),
   contains: (val: T) => val === value,
   size: 1,
+  toOption: () => Some(value),
   toEither: <E>(_left: E) => Right<E, T>(value),
+  toTry: () => Try(() => value),
   toPromise: (): Promise<T> => Promise.resolve(value),
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
@@ -297,7 +304,12 @@ const NONE: Option<never> = {
   toList: () => List([]),
   contains: () => false,
   size: 0,
+  toOption: <T>() => NONE as unknown as Option<T>,
   toEither: <E>(left: E) => Left<E, never>(left),
+  toTry: <T>() =>
+    Try<T>(() => {
+      throw new Error("None")
+    }),
   toPromise: <T>(): Promise<T> => Promise.reject(new Error("Cannot convert None to Promise")),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),

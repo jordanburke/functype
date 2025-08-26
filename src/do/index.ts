@@ -11,6 +11,8 @@ import { Try } from "@/try"
 
 // Re-export protocol definitions
 export { DO_PROTOCOL, type DoProtocol, type DoResult } from "./protocol"
+import type { Reshapeable } from "@/reshapeable"
+
 import { DO_PROTOCOL, type DoProtocol } from "./protocol"
 
 /**
@@ -139,9 +141,7 @@ export function Do<L, R>(gen: () => Generator<EitherLike, R, unknown>): Either<L
 export function Do<T>(gen: () => Generator<ListLike, T, unknown>): List<T>
 export function Do<T>(gen: () => Generator<TryLike, T, unknown>): Try<T>
 // For mixed types - first monad wins but type inference is limited
-export function Do<T>(
-  gen: () => Generator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>,
-): Option<T> | Either<unknown, T> | List<T> | Try<T>
+export function Do<T>(gen: () => Generator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>): Reshapeable<T>
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown
 // Implementation
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
@@ -320,7 +320,7 @@ export function DoAsync<T>(gen: () => AsyncGenerator<TryLike, T, unknown>): Prom
 // For mixed types - first monad wins but type inference is limited
 export function DoAsync<T>(
   gen: () => AsyncGenerator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>,
-): Promise<Option<T> | Either<unknown, T> | List<T> | Try<T>>
+): Promise<Reshapeable<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown>
 // Implementation
 export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
@@ -425,25 +425,6 @@ export function unwrap<T>(monad: DoProtocol<T>): T {
  * ```
  */
 export type DoGenerator<T, TYield = unknown> = Generator<TYield, T, unknown>
-
-/**
- * Type-annotated Do function for mixed monad scenarios.
- * Use when TypeScript can't infer the return type automatically.
- *
- * @example
- * ```typescript
- * // When mixing Option and Either, explicitly specify Option return:
- * const result = DoTyped<Option<number>>(function* () {
- *   const x = yield* $(Option(5))
- *   const y = yield* $(Right<string, number>(10))
- *   return x + y
- * })
- * // result: Option<number>
- * ```
- */
-export function DoTyped<R>(gen: () => Generator<unknown, unknown, unknown>): R {
-  return Do(gen) as R
-}
 
 /**
  * Extracts values from monads in Do-notation with type inference.

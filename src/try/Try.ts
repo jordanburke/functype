@@ -6,8 +6,10 @@ import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
-import { Option } from "@/option"
+import { List } from "@/list"
+import { None, Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
+import type { Reshapeable } from "@/reshapeable"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -16,7 +18,13 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, DoProtocol<T> {
+export interface Try<T>
+  extends FunctypeBase<T, TypeNames>,
+    Extractable<T>,
+    Pipe<T>,
+    Promisable<T>,
+    DoProtocol<T>,
+    Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -28,7 +36,7 @@ export interface Try<T> extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe
   orNull: () => T | null
   orUndefined: () => T | undefined
   orThrow: (error: Error) => T
-  toEither: () => Either<Error, T>
+  toEither: <E extends Type>(leftValue: E) => Either<E, T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>
   flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
@@ -66,7 +74,7 @@ const Success = <T>(value: T): Try<T> => ({
   orNull: () => value,
   orUndefined: () => value,
   orThrow: (_error: Error) => value,
-  toEither: () => Right<Error, T>(value),
+  toEither: <E extends Type>(_leftValue: E) => Right<E, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   ap: <U>(ff: Try<(value: T) => U>) => ff.map((f) => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
@@ -84,6 +92,9 @@ const Success = <T>(value: T): Try<T> => ({
   toString: () => `Success(${stringify(value)})`,
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
+  toOption: () => Some(value),
+  toList: () => List([value]),
+  toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => {
     return {
@@ -133,7 +144,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   orThrow: (error: Error) => {
     throw error
   },
-  toEither: () => Left<Error, T>(error),
+  toEither: <E extends Type>(_leftValue: E) => Left<E, T>(error as E),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
@@ -151,6 +162,9 @@ const Failure = <T>(error: Error): Try<T> => ({
   toString: () => `Failure(${stringify(error)}))`,
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
+  toOption: () => None<T>(),
+  toList: () => List<T>([]),
+  toTry: () => Failure<T>(error),
   pipe: <U>(_f: (value: T) => U) => {
     throw error
   },

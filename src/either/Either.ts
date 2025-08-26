@@ -5,6 +5,8 @@ import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
+import type { Reshapeable } from "@/reshapeable"
+import { Try } from "@/try"
 import type { AsyncMonad, Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -16,7 +18,8 @@ import type { Type } from "@/types"
 export interface Either<L extends Type, R extends Type>
   extends FunctypeBase<R, "Left" | "Right">,
     Promisable<R>,
-    DoProtocol<R> {
+    DoProtocol<R>,
+    Reshapeable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
@@ -107,6 +110,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
+  toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
+  toTry: () => Try(() => value),
   toJSON() {
     return { _tag: "Right", value }
   },
@@ -204,6 +209,11 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
     Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
   toOption: () => None<R>(),
   toList: () => List<R>(),
+  toEither: <E extends Type>(leftValue: E) => Left<E, R>(leftValue),
+  toTry: () =>
+    Try<R>(() => {
+      throw new Error(String(value))
+    }),
   toJSON() {
     return { _tag: "Left", value }
   },

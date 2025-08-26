@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { $, Do, DoAsync, DoTyped } from "@/do"
+import { $, Do, DoAsync } from "@/do"
 import { Left, List, None, Option, Right, Try } from "@/index"
 
 describe("Do-notation", () => {
@@ -64,8 +64,8 @@ describe("Do-notation", () => {
       const result = Do(function* () {
         const x = yield* $(Right<string, number>(5))
         const y = yield* $(Left<string, number>("error message"))
-        const z = yield* $(Right<string, number>(x + y)) // Never executes
-        return z
+        // Never executes
+        return yield* $(Right<string, number>(x + y))
       })
 
       expect(result.isLeft()).toBe(true)
@@ -91,9 +91,7 @@ describe("Do-notation", () => {
         const y = yield* $(Right<string, number>(10))
         const z = yield* $(Option(x + y))
         return z * 2
-      })
-
-      result.isEmpty()
+      }).toOption()
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -113,7 +111,7 @@ describe("Do-notation", () => {
         const availableEmail = yield* $(checkAvailable(validEmail))
         const user = yield* $(createUser(availableEmail))
         return user
-      })
+      }).toOption()
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -181,7 +179,7 @@ describe("Do-notation", () => {
       })
 
       // First real monad is Option, so result is Option
-      expect(result.isSome()).toBe(true)
+      expect(result.toOption().isSome()).toBe(true)
       expect(result.get()).toBe(30)
     })
   })
@@ -197,7 +195,7 @@ describe("Do-notation", () => {
         const user = yield* $(await fetchUser(1))
         const profile = yield* $(await fetchProfile(user))
         return { user, profile }
-      })
+      }).then((f) => f.toOption())
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -212,7 +210,7 @@ describe("Do-notation", () => {
         const y = yield* $(await Promise.resolve(Option(10))) // Async monad
         const z = yield* $(Right<string, number>(x + y)) // Sync monad
         return z * 2
-      })
+      }).then((f) => f.toOption())
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -260,7 +258,7 @@ describe("Do-notation", () => {
           ? Right<Error, string>(email)
           : Left<Error, string>(new Error("Email already taken"))
 
-      const hashPassword = (password: string) => (password.length >= 8 ? Option(`hashed_${password}`) : Option.none())
+      const hashPassword = (password: string) => (password.length >= 8 ? Option(`hashed_${password}`) : None<string>())
 
       const createUser = (email: string, hashedPw: string) =>
         Right<Error, { id: number; email: string; password: string }>({
@@ -284,7 +282,7 @@ describe("Do-notation", () => {
             emailSent: emailResult,
             status: "success" as const,
           }
-        })
+        }).toOption()
 
         // Result is Option (first monad), wrap in Either for API
         if (result.isSome()) {
@@ -331,9 +329,8 @@ describe("Do-notation", () => {
         const result = Do(function* () {
           const parsed = yield* $(parseJSON(jsonString))
           const validated = yield* $(validateData(parsed))
-          const processed = yield* $(processValue(validated))
-          return processed
-        })
+          return yield* $(processValue(validated))
+        }).toTry()
         // Result is Try (first monad)
         if (result.isSuccess()) {
           return Option(result.get())
@@ -447,7 +444,7 @@ describe("Do-notation", () => {
         const x = yield* $(List([1, 2, 3]))
         const y = yield* $(Option(10))
         return x + y
-      })
+      }).toList()
 
       // First yield is List, so result should be a List
       expect(result.toArray()).toEqual([11, 12, 13])
@@ -458,7 +455,7 @@ describe("Do-notation", () => {
         const x = yield* $(Option(5))
         const y = yield* $(List([1, 2, 3]))
         return x + y
-      })
+      }).toOption()
 
       // First monad is Option, not List, so result is Option
       // It takes the first element of the List
