@@ -22,8 +22,3 @@ export type DoResult<T> =
 export interface Doable<T> {
   doUnwrap(): DoResult<T>
 }
-
-/**
- * @deprecated Use Doable interface instead
- */
-export type DoProtocol<T> = Doable<T>

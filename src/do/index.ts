@@ -63,7 +63,7 @@ import { Option } from "@/option"
 import { Try } from "@/try"
 
 // Re-export protocol definitions
-export { type Doable, type DoProtocol, type DoResult } from "./protocol"
+export { type Doable, type DoResult } from "./protocol"
 
 import type { Reshapeable } from "@/reshapeable"
 
