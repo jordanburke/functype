@@ -137,16 +137,6 @@ type EitherLike = { _tag: "Left" | "Right"; isLeft(): boolean; isRight(): boolea
 type ListLike = { _tag: "List"; toArray(): unknown[] }
 type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unknown }
 
-// Helper to check if value implements Doable (inline for performance)
-const isDoable = (value: unknown): value is Doable<unknown> => {
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    "doUnwrap" in value &&
-    typeof (value as { doUnwrap?: unknown }).doUnwrap === "function"
-  )
-}
-
 /**
  * Executes a generator-based monadic comprehension
  * Returns the same monad type as the first yielded monad (Scala semantics)
@@ -227,27 +217,34 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 
     const yielded = result.value
 
+    // Optimized: Quick bailout for null/undefined/primitives
+    if (yielded === null || yielded === undefined || typeof yielded !== "object") {
+      throw new Error(
+        "Do-notation error: All yielded values must be monadic. " +
+          "Use yield* $(Option(value)), yield* $(Right(value)), etc. " +
+          "Raw values should be assigned directly without yielding.",
+      )
+    }
+
     // Combined type detection and first yield check
-    if (!firstMonadType && yielded && typeof yielded === "object") {
-      if ("_tag" in yielded) {
-        firstMonadType = detectMonadType(yielded)
+    if (!firstMonadType && "_tag" in yielded) {
+      firstMonadType = detectMonadType(yielded)
 
-        // Cache the constructor for later use
-        if (firstMonadType !== "unknown" && firstMonadType in MonadConstructors) {
-          cachedConstructor = MonadConstructors[firstMonadType]
-        }
+      // Cache the constructor for later use
+      if (firstMonadType !== "unknown" && firstMonadType in MonadConstructors) {
+        cachedConstructor = MonadConstructors[firstMonadType]
+      }
 
-        // If first yield is a List, switch to List comprehension mode
-        if (firstMonadType === "List") {
-          // We need to restart with the List comprehension logic
-          return doListComprehension(gen)
-        }
+      // If first yield is a List, switch to List comprehension mode
+      if (firstMonadType === "List") {
+        // We need to restart with the List comprehension logic
+        return doListComprehension(gen)
       }
     }
 
-    // Check if object implements Doable interface (using inline helper)
-    if (isDoable(yielded)) {
-      const doResult = yielded.doUnwrap()
+    // Optimized: Direct doUnwrap check without helper function overhead
+    if ("doUnwrap" in yielded) {
+      const doResult = (yielded as Doable<unknown>).doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
@@ -286,32 +283,30 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 
 // Helper for List comprehensions with cartesian products
 function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
-  // Helper to extract values from a monad
+  // Optimized: Inline helper to extract values from a monad
   function extractValues(monad: unknown): unknown[] {
-    if (!isDoable(monad)) {
+    // Quick check for non-objects
+    if (monad === null || monad === undefined || typeof monad !== "object") {
       return [monad]
     }
 
-    const doCapable = monad
+    // Optimized: Direct property check without isDoable
+    if (!("doUnwrap" in monad)) {
+      return [monad]
+    }
 
-    // Check if it's a List
-    if ("toArray" in doCapable && typeof doCapable.toArray === "function") {
+    const doCapable = monad as Doable<unknown>
+
+    // Check if it's a List (optimized: single property check)
+    if ("toArray" in doCapable) {
       const array = (doCapable as { toArray: () => unknown[] }).toArray()
-      if (array.length === 0) {
-        // Return empty array to short-circuit without throwing
-        return []
-      }
-      return array
+      // Optimized: direct length check
+      return array.length === 0 ? [] : array
     }
 
     // For Option/Either/Try, extract single value or short-circuit
     const result = doCapable.doUnwrap()
-    if (result.ok) {
-      return [result.value]
-    } else {
-      // Short-circuit by returning empty array (no throw)
-      return []
-    }
+    return result.ok ? [result.value] : []
   }
 
   // Recursive function to handle cartesian product
@@ -417,8 +412,14 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
     // Await the yielded value in case it's a Promise
     const yielded = await Promise.resolve(result.value)
 
+    // Optimized: Early bailout for non-objects
+    if (yielded === null || yielded === undefined || typeof yielded !== "object") {
+      // Pass through non-monadic values
+      return step(yielded)
+    }
+
     // Combined type detection and first yield check
-    if (!firstMonadType && yielded && typeof yielded === "object" && "_tag" in yielded) {
+    if (!firstMonadType && "_tag" in yielded) {
       firstMonadType = detectMonadType(yielded)
 
       // Cache the constructor for later use
@@ -427,9 +428,9 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
       }
     }
 
-    // Check if the resolved value implements the Doable interface (using inline helper)
-    if (isDoable(yielded)) {
-      const doResult = yielded.doUnwrap()
+    // Optimized: Direct doUnwrap check without helper
+    if ("doUnwrap" in yielded) {
+      const doResult = (yielded as Doable<unknown>).doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
