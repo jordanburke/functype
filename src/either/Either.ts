@@ -1,6 +1,6 @@
 import stringify from "safe-stable-stringify"
 
-import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
+import { type Doable, type DoResult } from "@/do/protocol"
 import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
@@ -18,7 +18,7 @@ import type { Type } from "@/types"
 export interface Either<L extends Type, R extends Type>
   extends FunctypeBase<R, "Left" | "Right">,
     Promisable<R>,
-    DoProtocol<R>,
+    Doable<R>,
     Reshapeable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
@@ -173,8 +173,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<R> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<R> {
     return { ok: true, value }
   },
 })
@@ -274,8 +274,8 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   find: (_p: (a: R) => boolean) => None<R>(),
   exists: (_p: (a: R) => boolean) => false,
   forEach: (_f: (a: R) => void) => {},
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<never> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<never> {
     return { ok: false, empty: false, error: value }
   },
 })

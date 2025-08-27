@@ -4,17 +4,6 @@
  */
 
 /**
- * Protocol symbol for Do-notation unwrapping
- * All monads that support Do-notation should implement this protocol
- */
-export const DO_PROTOCOL = Symbol("functype.do.unwrap")
-
-/**
- * Type for the DO_PROTOCOL symbol
- */
-export type DO_PROTOCOL_TYPE = typeof DO_PROTOCOL
-
-/**
  * Result type for Do-notation unwrapping
  * Indicates whether unwrapping succeeded and provides the value or error
  */
@@ -27,9 +16,14 @@ export type DoResult<T> =
  * Interface for types that support Do-notation
  * Implementing this interface allows a type to be yielded in Do-comprehensions
  *
- * Using a mapped type with 'as const' assertion to work around TypeScript's
- * limitation with unique symbols in declaration files (TS4023)
+ * The doUnwrap method should return a DoResult indicating success/failure
+ * and the contained value or error information
  */
-export interface DoProtocol<T> {
-  readonly [DO_PROTOCOL]: () => DoResult<T>
+export interface Doable<T> {
+  doUnwrap(): DoResult<T>
 }
+
+/**
+ * @deprecated Use Doable interface instead
+ */
+export type DoProtocol<T> = Doable<T>

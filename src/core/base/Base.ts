@@ -1,9 +1,9 @@
-import { DO_PROTOCOL, type DoResult } from "@/do/protocol"
+import { type DoResult } from "@/do/protocol"
 import { Typeable } from "@/typeable/Typeable"
 
 /**
  * Base Object from which most other objects inherit
- * Now includes automatic Do-notation support via DO_PROTOCOL
+ * Now includes automatic Do-notation support via doUnwrap method
  * @param type - The type name for the object
  * @param body - The implementation body
  */
@@ -13,8 +13,8 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
     toString() {
       return `${type}()`
     },
-    // Add Do-notation protocol support
-    [DO_PROTOCOL](): DoResult<unknown> {
+    // Implement Doable interface for Do-notation
+    doUnwrap(): DoResult<unknown> {
       // Check for Option pattern
       if ("isSome" in body && "isNone" in body) {
         if (typeof body.isSome === "function" && body.isSome()) {

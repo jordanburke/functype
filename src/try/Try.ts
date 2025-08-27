@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
+import { type Doable, type DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
@@ -23,7 +23,7 @@ export interface Try<T>
     Extractable<T>,
     Pipe<T>,
     Promisable<T>,
-    DoProtocol<T>,
+    Doable<T>,
     Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
@@ -119,8 +119,8 @@ const Success = <T>(value: T): Try<T> => ({
   find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
   exists: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<T> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<T> {
     return { ok: true, value }
   },
 })
@@ -196,8 +196,8 @@ const Failure = <T>(error: Error): Try<T> => ({
   find: (_p: (a: T) => boolean) => Option<T>(null),
   exists: (_p: (a: T) => boolean) => false,
   forEach: (_f: (a: T) => void) => {},
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<never> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<never> {
     return { ok: false, empty: false, error }
   },
 })

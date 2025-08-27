@@ -1,7 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { Companion } from "@/companion/Companion"
-import { DO_PROTOCOL, type DoProtocol, type DoResult } from "@/do/protocol"
+import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
 import type { Reshapeable } from "@/reshapeable"
 import type { Promisable } from "@/typeclass"
@@ -21,11 +21,7 @@ import { Left, List, Right, Try } from "../index"
  * It's used to handle potentially null or undefined values in a type-safe way.
  * @typeParam T - The type of the value contained in the Option
  */
-export interface Option<T extends Type>
-  extends Functype<T, "Some" | "None">,
-    Promisable<T>,
-    DoProtocol<T>,
-    Reshapeable<T> {
+export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -246,8 +242,8 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
     }
   },
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<T> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<T> {
     return { ok: true, value }
   },
 })
@@ -321,8 +317,8 @@ const NONE: Option<never> = {
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "None", value: null })).toString("base64"),
     }
   },
-  // Add Do-notation protocol support
-  [DO_PROTOCOL](): DoResult<never> {
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<never> {
     return { ok: false, empty: true }
   },
 }

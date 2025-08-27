@@ -1,13 +1,11 @@
 // import { Base } from "@/core/base/Base" // Temporarily commented to fix circular dependency
-import { DO_PROTOCOL } from "@/do"
 import type { Either } from "@/either/Either"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Try } from "@/try/Try"
 import type { Type } from "@/types"
 
-// Re-export to satisfy type declaration requirements
-export { DO_PROTOCOL }
+// No longer need to export DO_PROTOCOL since we're using Doable interface
 
 /**
  * Type function for representing higher-kinded types

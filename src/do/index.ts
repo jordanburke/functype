@@ -63,11 +63,11 @@ import { Option } from "@/option"
 import { Try } from "@/try"
 
 // Re-export protocol definitions
-export { DO_PROTOCOL, type DO_PROTOCOL_TYPE, type DoProtocol, type DoResult } from "./protocol"
+export { type Doable, type DoProtocol, type DoResult } from "./protocol"
 
 import type { Reshapeable } from "@/reshapeable"
 
-import { DO_PROTOCOL, type DoProtocol } from "./protocol"
+import { type Doable } from "./protocol"
 
 /**
  * Detects the monad type from the _tag field
@@ -227,9 +227,14 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
       }
     }
 
-    // Check DO_PROTOCOL for unwrapping
-    if (yielded && typeof yielded === "object" && DO_PROTOCOL in yielded) {
-      const doResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
+    // Check if object implements Doable interface
+    if (
+      yielded &&
+      typeof yielded === "object" &&
+      "doUnwrap" in yielded &&
+      typeof (yielded as Doable<unknown>).doUnwrap === "function"
+    ) {
+      const doResult = (yielded as Doable<unknown>).doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
@@ -272,11 +277,16 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
   // Helper to extract values from a monad
   function extractValues(monad: unknown): unknown[] {
-    if (!monad || typeof monad !== "object" || !(DO_PROTOCOL in monad)) {
+    if (
+      !monad ||
+      typeof monad !== "object" ||
+      !("doUnwrap" in monad) ||
+      typeof (monad as Doable<unknown>).doUnwrap !== "function"
+    ) {
       return [monad]
     }
 
-    const doCapable = monad as DoProtocol<unknown>
+    const doCapable = monad as Doable<unknown>
 
     // Check if it's a List
     if ("toArray" in doCapable && typeof doCapable.toArray === "function") {
@@ -289,7 +299,7 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
     }
 
     // For Option/Either/Try, extract single value or short-circuit
-    const result = doCapable[DO_PROTOCOL]()
+    const result = doCapable.doUnwrap()
     if (result.ok) {
       return [result.value]
     } else {
@@ -405,9 +415,14 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
       firstMonadType = detectMonadType(yielded)
     }
 
-    // Check if the resolved value implements the Do protocol
-    if (yielded && typeof yielded === "object" && DO_PROTOCOL in yielded) {
-      const doResult = (yielded as DoProtocol<unknown>)[DO_PROTOCOL]()
+    // Check if the resolved value implements the Doable interface
+    if (
+      yielded &&
+      typeof yielded === "object" &&
+      "doUnwrap" in yielded &&
+      typeof (yielded as Doable<unknown>).doUnwrap === "function"
+    ) {
+      const doResult = (yielded as Doable<unknown>).doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
@@ -442,24 +457,29 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
 }
 
 /**
- * Helper function to check if a value implements the Do protocol
+ * Helper function to check if a value implements the Doable interface
  * @param value - Value to check
- * @returns True if the value implements DoProtocol
+ * @returns True if the value implements Doable
  */
-export function isDoCapable<T>(value: unknown): value is DoProtocol<T> {
-  return value !== null && typeof value === "object" && DO_PROTOCOL in value
+export function isDoCapable<T>(value: unknown): value is Doable<T> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "doUnwrap" in value &&
+    typeof (value as Doable<T>).doUnwrap === "function"
+  )
 }
 
 /**
- * Manually unwrap a monad using the Do protocol
+ * Manually unwrap a monad using the Doable interface
  * Useful for testing or when you need to unwrap outside of a Do-comprehension
  *
  * @param monad - Monad to unwrap
  * @returns The unwrapped value
  * @throws Error if the monad cannot be unwrapped
  */
-export function unwrap<T>(monad: DoProtocol<T>): T {
-  const result = monad[DO_PROTOCOL]()
+export function unwrap<T>(monad: Doable<T>): T {
+  const result = monad.doUnwrap()
   if (result.ok) {
     return result.value
   } else if ("error" in result) {
@@ -506,7 +526,7 @@ export function $<T>(monad: Option<T>): Generator<Option<T>, T, T>
 export function $<L, R>(monad: Either<L, R>): Generator<Either<L, R>, R, R>
 export function $<T>(monad: List<T>): Generator<List<T>, T, T>
 export function $<T>(monad: Try<T>): Generator<Try<T>, T, T>
-export function $<T>(monad: DoProtocol<T>): Generator<DoProtocol<T>, T, T>
+export function $<T>(monad: Doable<T>): Generator<Doable<T>, T, T>
 export function $<M>(monad: M): Generator<M, InferYieldType<M>, InferYieldType<M>>
 export function* $<M>(monad: M): Generator<M, unknown, unknown> {
   return (yield monad) as unknown
@@ -521,8 +541,8 @@ type InferYieldType<M> = M extends { isSome(): boolean; get(): infer T }
       ? T // List
       : M extends { isSuccess(): boolean; get(): infer T }
         ? T // Try
-        : M extends DoProtocol<infer T>
-          ? T // Generic DoProtocol
+        : M extends Doable<infer T>
+          ? T // Generic Doable
           : unknown
 
 // Legacy error types (kept for backwards compatibility but not used)

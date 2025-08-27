@@ -1,9 +1,5 @@
 import { Base } from "@/core/base/Base"
-import { DO_PROTOCOL } from "@/do"
 import type { Identity } from "@/identity/Identity"
-
-// Re-export to satisfy type declaration requirements
-export { DO_PROTOCOL }
 
 type Params = {
   id: string

@@ -64,7 +64,9 @@
       "mcp__ide__getDiagnostics",
       "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/src/core/**)",
       "Bash(npx tsup:*)",
-      "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/**)"
+      "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/**)",
+      "Bash(npm publish:*)",
+      "Bash(npm link:*)"
     ],
     "deny": []
   }
