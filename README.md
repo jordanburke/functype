@@ -23,6 +23,7 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 - **Either Type**: Express computation results with potential failures using `Left` and `Right`
 - **List, Set, Map**: Immutable collection types with functional operators
 - **Try Type**: Safely execute operations that might throw exceptions
+- **Do-notation**: Scala-like for-comprehensions using JavaScript generators for monadic composition
 - **Task**: Handle synchronous and asynchronous operations with error handling
 - **Lazy**: Deferred computation with memoization
 - **Tuple**: Type-safe fixed-length arrays
@@ -188,6 +189,67 @@ const result = Lazy(() => 10)
   .map((x) => x * 2)
   .get() // 30
 ```
+
+### Do-notation (Scala-like For-Comprehensions)
+
+Functype provides generator-based Do-notation for monadic composition, similar to Scala's for-comprehensions:
+
+```typescript
+import { Do, DoAsync, $ } from "functype"
+import { Option, Right, Left, List, Try } from "functype"
+
+// Chain multiple Option operations
+const result = Do(function* () {
+  const x = yield* $(Option(5)) // Extract value from Option
+  const y = yield* $(Option(10)) // Extract value from another Option
+  const z = x + y // Regular computation
+  return z * 2 // Return final result
+})
+// result: Option<number> with value 30
+
+// Mix different monad types (with Reshapeable)
+const mixed = Do(function* () {
+  const a = yield* $(Option(5)) // From Option
+  const b = yield* $(Right<string, number>(10)) // From Either
+  const c = yield* $(List([15])) // From List
+  const d = yield* $(Try(() => 20)) // From Try
+  return a + b + c + d
+})
+// Convert result to desired type
+const asOption = mixed.toOption() // Option<number> with value 50
+
+// Error propagation - short-circuits on failure
+const validation = Do(function* () {
+  const email = yield* $(validateEmail("user@example.com")) // Returns Option
+  const user = yield* $(fetchUser(email)) // Returns Either
+  const profile = yield* $(loadProfile(user.id)) // Returns Try
+  return profile
+})
+// If any step fails, the entire computation short-circuits
+
+// List comprehensions (cartesian products)
+const pairs = Do(function* () {
+  const x = yield* $(List([1, 2, 3]))
+  const y = yield* $(List([10, 20]))
+  return { x, y, product: x * y }
+})
+// pairs: List with 6 elements (all combinations)
+
+// Async operations with DoAsync
+const asyncResult = await DoAsync(async function* () {
+  const user = yield* $(await fetchUserAsync(userId)) // Async Option
+  const score = yield* $(await getScoreAsync(user.id)) // Async Either
+  const bonus = yield* $(await calculateBonus(score)) // Async Try
+  return score + bonus
+})
+```
+
+**Key Differences from Scala:**
+
+- Uses `yield* $(monad)` instead of `x <- monad`
+- No native guard syntax (use conditions with early return)
+- Always returns the type of the first yielded monad
+- Mixed types supported via Reshapeable interface
 
 ### Task
 

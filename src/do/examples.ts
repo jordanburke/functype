@@ -1,6 +1,7 @@
 /**
  * Comprehensive examples of Do-notation usage in functype
  * Shows different patterns for working with monadic comprehensions
+ * Each example includes Scala equivalents for comparison
  */
 
 import { $, Do, DoAsync } from "@/do"
@@ -15,6 +16,14 @@ import type { Reshapeable } from "@/reshapeable"
 /**
  * Example 1: Simple Option chaining
  * Shows how Do-notation eliminates nested flatMap calls
+ *
+ * Scala equivalent:
+ * ```scala
+ * for {
+ *   x <- Some(5)
+ *   y <- Some(10)
+ * } yield x + y
+ * ```
  */
 export function optionExample() {
   // Traditional nested approach
@@ -40,6 +49,14 @@ export function optionExample() {
 /**
  * Example 2: Either error handling
  * Shows how Do-notation propagates errors automatically
+ *
+ * Scala equivalent:
+ * ```scala
+ * for {
+ *   user <- getUser(userId)
+ *   profile <- getProfile(user)
+ * } yield (user, profile)
+ * ```
  */
 export function eitherExample(userId: number) {
   type User = { id: number; name: string; email: string }
@@ -64,6 +81,15 @@ export function eitherExample(userId: number) {
 /**
  * Example 3: List comprehensions with cartesian products
  * Shows how Do-notation handles multiple Lists like Scala for-comprehensions
+ *
+ * Scala equivalent:
+ * ```scala
+ * for {
+ *   x <- List(1, 2, 3)
+ *   y <- List(10, 20)
+ *   z <- List(5, 6)
+ * } yield x * 100 + y * 10 + z
+ * ```
  */
 export function listComprehensionExample() {
   // Traditional approach with nested flatMaps

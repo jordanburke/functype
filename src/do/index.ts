@@ -2,26 +2,58 @@
  * Generator-based Do-notation for monadic comprehensions
  * Provides Scala-like for-comprehension syntax using JavaScript generators
  *
- * IMPORTANT: All yielded values MUST be monadic (Option, Either, List, Try).
- * Use the $ helper for proper type inference: yield* $(Option(value))
- * Raw values should be assigned directly without yielding.
+ * ## Scala Equivalents
+ *
+ * Functype:  `const x = yield* $(Option(5))`
+ * Scala:     `x <- Some(5)`
+ *
+ * Functype:  `return x + y`
+ * Scala:     `yield x + y`
+ *
+ * ## Core Concepts
+ *
+ * - **Generators**: Use `yield* $(monad)` to extract values from monads
+ * - **Short-circuiting**: None/Left/Failure automatically propagates
+ * - **Type inference**: The $ helper provides proper TypeScript types
+ * - **First monad wins**: Return type matches the first yielded monad
+ * - **Cartesian products**: Multiple List yields create all combinations
+ *
+ * ## Usage Rules
+ *
+ * 1. All yielded values MUST be monadic (Option, Either, List, Try)
+ * 2. Use the $ helper for type inference: `yield* $(Option(value))`
+ * 3. Raw values should be assigned directly without yielding
+ * 4. Mixed monad types are supported via Reshapeable interface
  *
  * @example
- * // Correct usage - all yields are monadic
+ * // Basic Option chaining (Scala: for { x <- Some(5); y <- Some(10) } yield x + y)
  * const result = Do(function* () {
- *   const x = yield* $(Option(5))        // x: number
- *   const y = yield* $(Right(10))        // y: number
- *   const z = x + y                      // Regular assignment, no yield
- *   return yield* $(Option(z))           // Return monadic value
+ *   const x = yield* $(Option(5))        // Extract from Option
+ *   const y = yield* $(Option(10))       // Extract from another Option
+ *   return x + y                         // Return final value
  * })
+ * // result: Option<number> with value 15
  *
  * @example
- * // Incorrect - will throw error
- * const result = Do(function* () {
- *   const x = yield 5  // ERROR: Raw values cannot be yielded
- *   return x
+ * // List comprehension (Scala: for { x <- List(1,2); y <- List(10,20) } yield (x,y))
+ * const pairs = Do(function* () {
+ *   const x = yield* $(List([1, 2]))     // Iterates: 1, 2
+ *   const y = yield* $(List([10, 20]))   // Iterates: 10, 20
+ *   return { x, y }                      // All combinations
  * })
+ * // pairs: List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, {x:2,y:20}])
  *
+ * @example
+ * // Error propagation with Either
+ * const validate = Do(function* () {
+ *   const email = yield* $(validateEmail(input))  // Either<string, Email>
+ *   const user = yield* $(fetchUser(email))       // Either<string, User>
+ *   const saved = yield* $(saveUser(user))        // Either<string, Result>
+ *   return saved
+ * })
+ * // If any step returns Left, entire chain short-circuits with that error
+ *
+ * @see {@link https://github.com/jordanburke/functype/blob/main/docs/do-notation.md} Full documentation
  * @module Do
  */
 

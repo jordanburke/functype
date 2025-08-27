@@ -27,19 +27,19 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Additional Properties
 
-| Data Structure    | Typeable | Valuable | Iterable | PromiseLike |
-| ----------------- | :------: | :------: | :------: | :---------: |
-| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |
-| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |
-| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |
-| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |
-| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |
-| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |
-| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |
-| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |
-| **LazyList<A>**   |    ✗     |    ✗     |    ✓     |      ✗      |
-| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |
-| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |
+| Data Structure    | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable |
+| ----------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: |
+| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |
+| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |
+| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |
+| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |
+| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
+| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
+| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |
+| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |
+| **LazyList<A>**   |    ✗     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
+| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |
+| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |
 
 ## Key Methods by Interface
 
@@ -120,6 +120,23 @@ This matrix shows which interfaces are supported by each data structure in the f
 - `headOption: Option<A>`
 - `toArray(): A[]`
 
+### Do-notation Support
+
+Enables Scala-like for-comprehensions using JavaScript generators:
+
+- `Do(function* () { ... })`: Synchronous monadic comprehensions
+- `DoAsync(async function* () { ... })`: Async monadic comprehensions
+- `$(monad)`: Helper for type inference with `yield*`
+
+### Reshapeable
+
+Provides type conversion between monadic types:
+
+- `toOption(): Option<T>`
+- `toEither<E>(leftValue: E): Either<E, T>`
+- `toList(): List<T>`
+- `toTry(): Try<T>`
+
 ## Notes
 
 1. **Functype<A, Tag>**: Implemented by single-value containers (Option, Try, Lazy). Provides full functional programming support.
@@ -134,7 +151,11 @@ This matrix shows which interfaces are supported by each data structure in the f
    - **FPromise**: Promise-like with functional methods
    - **Tuple**: Simple container with Typeable and Valuable
 
-4. **Utility Types** (not in matrix):
+4. **Do-notation**: Provides generator-based monadic comprehensions similar to Scala's for-comprehensions. Supports Option, Either, Try, and List with automatic short-circuiting and cartesian products.
+
+5. **Reshapeable**: Enables conversion between different monad types, allowing flexible composition in Do-notation when mixing types.
+
+6. **Utility Types** (not in matrix):
    - **Cond**: Conditional expression builder
    - **Match**: Pattern matching utility
    - **ValidatedBrand**: Branded types with validation

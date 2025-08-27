@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest"
-import { Do, $ } from "@/do"
-import { Option, List } from "@/index"
+import { describe, expect, it } from "vitest"
+
+import { $, Do } from "@/do"
+import { List, Option } from "@/index"
 
 describe("Do-notation type helpers", () => {
   it("should work with $ helper for type inference", () => {
@@ -40,7 +41,7 @@ describe("Do-notation type helpers", () => {
       const x = yield Option(5) as unknown as number
       const y = yield List(["a", "b", "c"]) as unknown as string
 
-      return x + y.length
+      return (x as number) + (y as string).length
     }) as Option<number>
 
     // First monad wins - Option comprehension
