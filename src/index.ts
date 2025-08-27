@@ -6,6 +6,8 @@ export * from "@/core/base/Base"
 export * from "@/core/task/Task"
 export * from "@/core/throwable/Throwable"
 export * from "@/do"
+// Explicitly re-export DO_PROTOCOL to fix TypeScript declaration issues
+export { DO_PROTOCOL } from "@/do"
 export * from "@/either/Either"
 export * from "@/error"
 export * from "@/extractable"
