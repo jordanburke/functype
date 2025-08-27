@@ -7,7 +7,7 @@
  * Protocol symbol for Do-notation unwrapping
  * All monads that support Do-notation should implement this protocol
  */
-export const DO_PROTOCOL = Symbol.for("functype.do.unwrap")
+export const DO_PROTOCOL = Symbol("functype.do.unwrap")
 
 /**
  * Type for the DO_PROTOCOL symbol

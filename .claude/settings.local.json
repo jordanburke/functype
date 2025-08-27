@@ -63,7 +63,8 @@
       "WebSearch",
       "mcp__ide__getDiagnostics",
       "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/src/core/**)",
-      "Bash(npx tsup:*)"
+      "Bash(npx tsup:*)",
+      "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/**)"
     ],
     "deny": []
   }
