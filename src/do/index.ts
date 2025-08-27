@@ -137,6 +137,16 @@ type EitherLike = { _tag: "Left" | "Right"; isLeft(): boolean; isRight(): boolea
 type ListLike = { _tag: "List"; toArray(): unknown[] }
 type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unknown }
 
+// Helper to check if value implements Doable (inline for performance)
+const isDoable = (value: unknown): value is Doable<unknown> => {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    "doUnwrap" in value &&
+    typeof (value as { doUnwrap?: unknown }).doUnwrap === "function"
+  )
+}
+
 /**
  * Executes a generator-based monadic comprehension
  * Returns the same monad type as the first yielded monad (Scala semantics)
@@ -201,14 +211,15 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
   const iter = gen()
   let firstMonadType: string | null = null
+  let cachedConstructor: MonadConstructor | undefined = undefined
 
   function step(value?: unknown): unknown {
     const result = iter.next(value)
 
     if (result.done) {
       // Wrap result in detected monad type
-      if (firstMonadType && firstMonadType in MonadConstructors) {
-        return MonadConstructors[firstMonadType]?.of(result.value)
+      if (cachedConstructor) {
+        return cachedConstructor.of(result.value)
       }
       // Fallback to List for backwards compatibility
       return List([result.value])
@@ -216,47 +227,47 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 
     const yielded = result.value
 
-    // First yield determines type (using existing _tag!)
-    if (!firstMonadType && yielded && typeof yielded === "object" && "_tag" in yielded) {
-      firstMonadType = detectMonadType(yielded)
+    // Combined type detection and first yield check
+    if (!firstMonadType && yielded && typeof yielded === "object") {
+      if ("_tag" in yielded) {
+        firstMonadType = detectMonadType(yielded)
 
-      // If first yield is a List, switch to List comprehension mode
-      if (firstMonadType === "List") {
-        // We need to restart with the List comprehension logic
-        return doListComprehension(gen)
+        // Cache the constructor for later use
+        if (firstMonadType !== "unknown" && firstMonadType in MonadConstructors) {
+          cachedConstructor = MonadConstructors[firstMonadType]
+        }
+
+        // If first yield is a List, switch to List comprehension mode
+        if (firstMonadType === "List") {
+          // We need to restart with the List comprehension logic
+          return doListComprehension(gen)
+        }
       }
     }
 
-    // Check if object implements Doable interface
-    if (
-      yielded &&
-      typeof yielded === "object" &&
-      "doUnwrap" in yielded &&
-      typeof (yielded as Doable<unknown>).doUnwrap === "function"
-    ) {
-      const doResult = (yielded as Doable<unknown>).doUnwrap()
+    // Check if object implements Doable interface (using inline helper)
+    if (isDoable(yielded)) {
+      const doResult = yielded.doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
-        if (!firstMonadType || !(firstMonadType in MonadConstructors)) {
+        if (!cachedConstructor) {
           return List([])
         }
 
-        const constructor = MonadConstructors[firstMonadType]
-
-        // Handle error preservation for Either/Try
-        if ("empty" in doResult && !doResult.empty && "error" in doResult) {
+        // Handle error preservation for Either/Try with single property check
+        if (!doResult.empty && "error" in doResult) {
           if (firstMonadType === "Either") {
-            return constructor?.empty(doResult.error)
+            return cachedConstructor.empty(doResult.error)
           } else if (firstMonadType === "Try") {
-            return constructor?.empty(
+            return cachedConstructor.empty(
               doResult.error instanceof Error ? doResult.error : new Error(String(doResult.error)),
             )
           }
         }
 
         // Regular empty state (None, empty List)
-        return constructor?.empty()
+        return cachedConstructor.empty()
       }
 
       return step(doResult.value)
@@ -277,16 +288,11 @@ export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List<T> {
   // Helper to extract values from a monad
   function extractValues(monad: unknown): unknown[] {
-    if (
-      !monad ||
-      typeof monad !== "object" ||
-      !("doUnwrap" in monad) ||
-      typeof (monad as Doable<unknown>).doUnwrap !== "function"
-    ) {
+    if (!isDoable(monad)) {
       return [monad]
     }
 
-    const doCapable = monad as Doable<unknown>
+    const doCapable = monad
 
     // Check if it's a List
     if ("toArray" in doCapable && typeof doCapable.toArray === "function") {
@@ -394,14 +400,15 @@ export function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Prom
 export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
   const iterator = gen()
   let firstMonadType: string | null = null
+  let cachedConstructor: MonadConstructor | undefined = undefined
 
   async function step(value?: unknown): Promise<unknown> {
     const result = await iterator.next(value)
 
     if (result.done) {
       // Wrap result in detected monad type
-      if (firstMonadType && firstMonadType in MonadConstructors) {
-        return MonadConstructors[firstMonadType]?.of(result.value)
+      if (cachedConstructor) {
+        return cachedConstructor.of(result.value)
       }
       // Fallback to List for backwards compatibility
       return List([result.value])
@@ -410,40 +417,38 @@ export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>)
     // Await the yielded value in case it's a Promise
     const yielded = await Promise.resolve(result.value)
 
-    // First yield determines type
+    // Combined type detection and first yield check
     if (!firstMonadType && yielded && typeof yielded === "object" && "_tag" in yielded) {
       firstMonadType = detectMonadType(yielded)
+
+      // Cache the constructor for later use
+      if (firstMonadType !== "unknown" && firstMonadType in MonadConstructors) {
+        cachedConstructor = MonadConstructors[firstMonadType]
+      }
     }
 
-    // Check if the resolved value implements the Doable interface
-    if (
-      yielded &&
-      typeof yielded === "object" &&
-      "doUnwrap" in yielded &&
-      typeof (yielded as Doable<unknown>).doUnwrap === "function"
-    ) {
-      const doResult = (yielded as Doable<unknown>).doUnwrap()
+    // Check if the resolved value implements the Doable interface (using inline helper)
+    if (isDoable(yielded)) {
+      const doResult = yielded.doUnwrap()
 
       if (!doResult.ok) {
         // Short-circuit with appropriate empty/error state
-        if (!firstMonadType || !(firstMonadType in MonadConstructors)) {
+        if (!cachedConstructor) {
           return List([])
         }
 
-        const constructor = MonadConstructors[firstMonadType]
-
-        // Handle error preservation
-        if ("empty" in doResult && !doResult.empty && "error" in doResult) {
+        // Handle error preservation with single property check
+        if (!doResult.empty && "error" in doResult) {
           if (firstMonadType === "Either") {
-            return constructor?.empty(doResult.error)
+            return cachedConstructor.empty(doResult.error)
           } else if (firstMonadType === "Try") {
-            return constructor?.empty(
+            return cachedConstructor.empty(
               doResult.error instanceof Error ? doResult.error : new Error(String(doResult.error)),
             )
           }
         }
 
-        return constructor?.empty()
+        return cachedConstructor.empty()
       }
 
       return step(doResult.value)
