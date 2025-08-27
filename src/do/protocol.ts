@@ -10,6 +10,11 @@
 export const DO_PROTOCOL = Symbol.for("functype.do.unwrap")
 
 /**
+ * Type for the DO_PROTOCOL symbol
+ */
+export type DO_PROTOCOL_TYPE = typeof DO_PROTOCOL
+
+/**
  * Result type for Do-notation unwrapping
  * Indicates whether unwrapping succeeded and provides the value or error
  */
@@ -23,5 +28,5 @@ export type DoResult<T> =
  * Implementing this interface allows a type to be yielded in Do-comprehensions
  */
 export interface DoProtocol<T> {
-  [DO_PROTOCOL](): DoResult<T>
+  [DO_PROTOCOL]: () => DoResult<T>
 }
