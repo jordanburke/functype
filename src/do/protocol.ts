@@ -26,7 +26,10 @@ export type DoResult<T> =
 /**
  * Interface for types that support Do-notation
  * Implementing this interface allows a type to be yielded in Do-comprehensions
+ *
+ * Using a mapped type with 'as const' assertion to work around TypeScript's
+ * limitation with unique symbols in declaration files (TS4023)
  */
 export interface DoProtocol<T> {
-  [DO_PROTOCOL]: () => DoResult<T>
+  readonly [DO_PROTOCOL]: () => DoResult<T>
 }

@@ -61,7 +61,9 @@
       "Bash(pntml lint:fix:*)",
       "WebFetch(domain:zio.dev)",
       "WebSearch",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/src/core/**)",
+      "Bash(npx tsup:*)"
     ],
     "deny": []
   }
