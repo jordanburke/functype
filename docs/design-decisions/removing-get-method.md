@@ -22,6 +22,7 @@ In functional programming libraries like Scala, the `get()` method on containers
 ### Why get() Exists in Scala
 
 Research shows that `Option.get` exists primarily for historical reasons:
+
 - **Java Migration**: Easing transition from Java's imperative style
 - **REPL Convenience**: Quick value extraction during interactive development
 - **Imperative Support**: Supporting non-functional programming styles
@@ -52,7 +53,7 @@ Each data structure provides meaningful default errors when no custom error is p
 
 ```typescript
 // Option provides descriptive default
-Option.none().getOrThrow() 
+Option.none().getOrThrow()
 // throws: Error("Cannot extract value from None")
 
 // Either uses Left value as error
@@ -60,24 +61,28 @@ Left("validation failed").getOrThrow()
 // throws: Error("validation failed")
 
 // Try uses caught exception
-Try(() => { throw new Error("oops") }).getOrThrow()
+Try(() => {
+  throw new Error("oops")
+}).getOrThrow()
 // throws: Error("oops")
 ```
 
 ### 3. Cleaner API Design
 
 **Before (with both methods):**
+
 ```typescript
 interface Option<T> {
-  get(): T          // unsafe, throws on None
-  getOrThrow(error?: Error): T  // also unsafe, better errors
+  get(): T // unsafe, throws on None
+  getOrThrow(error?: Error): T // also unsafe, better errors
 }
 ```
 
 **After (single unsafe method):**
+
 ```typescript
 interface Unsafe<T> {
-  getOrThrow(error?: Error): T  // only unsafe method
+  getOrThrow(error?: Error): T // only unsafe method
 }
 ```
 
@@ -86,6 +91,7 @@ This reduces cognitive overhead and eliminates decision paralysis about which un
 ### 4. TypeScript Context Benefits
 
 TypeScript developers are less familiar with Scala conventions. The explicit `getOrThrow()` naming:
+
 - Is more intuitive for JavaScript/TypeScript developers
 - Follows TypeScript community patterns
 - Reduces confusion about method safety
@@ -93,6 +99,7 @@ TypeScript developers are less familiar with Scala conventions. The explicit `ge
 ### 5. Functional Programming Alignment
 
 This design actively discourages unsafe operations by:
+
 - Making the danger explicit in the method name
 - Requiring developers to think about error handling
 - Promoting functional alternatives like `getOrElse()`, `fold()`, and `map()`
@@ -126,37 +133,47 @@ Each data structure implements intelligent default error behavior:
 ## Benefits Achieved
 
 ### 1. Better Error Messages
+
 Instead of generic `NoSuchElementException`, developers get contextual errors that help with debugging.
 
 ### 2. Reduced API Surface
+
 One unsafe method instead of two eliminates confusion and reduces documentation burden.
 
 ### 3. Explicit Safety Model
+
 The `Unsafe` interface clearly marks dangerous operations, making the type system more expressive about safety guarantees.
 
 ### 4. Functional Programming Encouragement
+
 By making unsafe operations explicitly dangerous, developers are naturally guided toward safe functional alternatives.
 
 ### 5. TypeScript Ecosystem Alignment
+
 The approach feels natural to TypeScript developers and follows modern JavaScript error handling patterns.
 
 ## Alternatives Considered
 
 ### 1. Keep Both Methods
+
 **Rejected** because it creates confusion and doesn't solve the fundamental problem of having an unsafe method with a safe-sounding name.
 
 ### 2. Remove All Unsafe Methods
+
 **Rejected** because there are legitimate use cases where developers need to extract values and are certain they exist (e.g., after type guards or in test code).
 
 ### 3. Use Scala's Exact API
+
 **Rejected** because it perpetuates known design problems from Scala and doesn't take advantage of TypeScript's strengths.
 
 ## Migration Impact
 
 ### Breaking Change
+
 This is a breaking change for existing code using `get()` methods.
 
 ### Migration Path
+
 ```typescript
 // Before
 const value = option.get()
@@ -166,31 +183,38 @@ const value = option.getOrThrow()
 ```
 
 ### Tooling Support
+
 The change is mechanically straightforward and can be automated with find-and-replace operations.
 
 ## Comparison with Other Libraries
 
 ### Scala
+
 - **Problem**: Has both `get()` (dangerous) and community discourages its use
 - **Our Solution**: Eliminates the dangerous method entirely
 
 ### Java Optional
+
 - **Problem**: Has `get()` method that throws `NoSuchElementException`
 - **Our Solution**: Better method naming and smart default errors
 
 ### Rust Option
+
 - **Approach**: Uses `unwrap()` which panics, or `expect(msg)` for custom messages
 - **Our Solution**: Similar to `expect()` but with smart defaults when no message provided
 
 ## Future Considerations
 
 ### 1. Linting Rules
+
 Consider adding ESLint rules to catch any accidental reintroduction of `get()` methods.
 
 ### 2. Documentation Updates
+
 Ensure all examples and tutorials use the new `getOrThrow()` pattern.
 
 ### 3. Community Education
+
 Emphasize the reasoning behind this decision in migration guides and API documentation.
 
 ## Conclusion
