@@ -28,13 +28,6 @@ export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractab
   /** Whether the computation has been evaluated */
   readonly isEvaluated: boolean
   /**
-   * Forces evaluation of the lazy value and returns the result.
-   * The result is memoized after first evaluation.
-   * @returns The computed value
-   * @throws Any error thrown by the computation
-   */
-  get(): T
-  /**
    * Returns the computed value or a default value if computation fails
    * @param defaultValue - The value to return if computation fails
    * @returns The computed value or defaultValue
@@ -46,12 +39,12 @@ export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractab
    */
   getOrNull(): T | null
   /**
-   * Returns the computed value or throws a specified error if computation fails
-   * @param error - The error to throw if computation fails
+   * Returns the computed value or throws an error if computation fails
+   * @param error - Optional custom error to throw. If not provided, throws the computation error or a default error
    * @returns The computed value
-   * @throws The specified error if computation fails
+   * @throws The specified error, computation error, or a default error
    */
-  getOrThrow(error: Error): T
+  getOrThrow(error?: Error): T
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function
@@ -242,7 +235,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         try {
           return evaluate()
         } catch {
-          return alternative.get()
+          return alternative.getOrThrow()
         }
       }),
     orUndefined: (): T | undefined => {
@@ -253,17 +246,17 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
       }
     },
     map: <U extends Type>(f: (value: T) => U): Lazy<U> => Lazy(() => f(evaluate())),
-    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.get()(evaluate())),
+    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.getOrThrow()(evaluate())),
     mapAsync: async <U extends Type>(f: (value: T) => Promise<U>): Promise<Lazy<U>> => {
       const val = evaluate()
       const result = await f(val)
       return Lazy(() => result) as Lazy<U>
     },
-    flatMap: <U extends Type>(f: (value: T) => Lazy<U>): Lazy<U> => Lazy(() => f(evaluate()).get()),
+    flatMap: <U extends Type>(f: (value: T) => Lazy<U>): Lazy<U> => Lazy(() => f(evaluate()).getOrThrow()),
     flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Lazy<U>>): Promise<Lazy<U>> => {
       const val = evaluate()
       const lazyResult = await f(val)
-      return Lazy(() => lazyResult.get()) as Lazy<U>
+      return Lazy(() => lazyResult.getOrThrow()) as Lazy<U>
     },
     filter: (predicate: (value: T) => boolean): Lazy<Option<T>> =>
       Lazy(() => {
@@ -283,7 +276,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         try {
           return evaluate()
         } catch (e) {
-          return f(e).get()
+          return f(e).getOrThrow()
         }
       }),
     toOption: (): Option<T> => {
@@ -467,7 +460,7 @@ const LazyCompanion = {
    * @param tryValue - The Try to convert
    * @returns A new Lazy instance
    */
-  fromTry: <T extends Type>(tryValue: Try<T>): Lazy<T> => LazyConstructor(() => tryValue.get()),
+  fromTry: <T extends Type>(tryValue: Try<T>): Lazy<T> => LazyConstructor(() => tryValue.getOrThrow()),
   /**
    * Creates a Lazy from an Either
    * @param either - The Either to convert
@@ -517,8 +510,8 @@ const LazyCompanion = {
  *   return 42
  * })
  * // Nothing printed yet
- * const result = expensive.get() // Prints "Computing..." and returns 42
- * const cached = expensive.get() // Returns 42 without printing
+ * const result = expensive.getOrThrow() // Prints "Computing..." and returns 42
+ * const cached = expensive.getOrThrow() // Returns 42 without printing
  *
  * @example
  * // Error handling
@@ -536,13 +529,13 @@ const LazyCompanion = {
  *   .map(x => x * 2)
  *   .flatMap(x => Lazy(() => x + 5))
  *   .recover(err => 0)
- *   .get() // 25
+ *   .getOrThrow() // 25
  *
  * @example
  * // Integration with functype
  * const userOption = Option({ id: 1, name: "Alice" })
  * const userName = Lazy.fromOption(userOption, () => ({ id: 0, name: "Anonymous" }))
  *   .map(user => user.name)
- *   .get() // "Alice"
+ *   .getOrThrow() // "Alice"
  */
 export const Lazy = Companion(LazyConstructor, LazyCompanion)

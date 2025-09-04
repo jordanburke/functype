@@ -15,7 +15,7 @@ describe("Do-notation", () => {
 
       // Do returns Option now
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30)
+      expect(result.getOrThrow()).toBe(30)
     })
 
     it("should short-circuit on None and return None", () => {
@@ -43,7 +43,7 @@ describe("Do-notation", () => {
       })
 
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30)
+      expect(result.getOrThrow()).toBe(30)
     })
   })
 
@@ -95,7 +95,7 @@ describe("Do-notation", () => {
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30)
+      expect(result.getOrThrow()).toBe(30)
     })
 
     it("should handle Option → Either → Option chains", () => {
@@ -115,7 +115,7 @@ describe("Do-notation", () => {
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toEqual({ id: 1, email: "user@example.com" })
+      expect(result.getOrThrow()).toEqual({ id: 1, email: "user@example.com" })
     })
   })
 
@@ -150,7 +150,7 @@ describe("Do-notation", () => {
       })
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe(15)
+      expect(result.getOrThrow()).toBe(15)
     })
 
     it("should short-circuit on Failure", () => {
@@ -184,7 +184,7 @@ describe("Do-notation", () => {
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
-      const value = result.get()
+      const value = result.getOrThrow()
       expect(value.user).toEqual({ id: 1, name: "Alice" })
       expect(value.profile).toEqual({ bio: "Alice's profile" })
     })
@@ -199,7 +199,7 @@ describe("Do-notation", () => {
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30)
+      expect(result.getOrThrow()).toBe(30)
     })
 
     it("should handle async None properly", async () => {
@@ -271,7 +271,7 @@ describe("Do-notation", () => {
 
         // Result is Option (first monad), wrap in Either for API
         if (result.isSome()) {
-          return Right(result.get())
+          return Right(result.getOrThrow())
         } else {
           return Left<
             Error,
@@ -325,7 +325,7 @@ describe("Do-notation", () => {
         }).toTry()
         // Result is Try (first monad)
         if (result.isSuccess()) {
-          return Option(result.get())
+          return Option(result.getOrThrow())
         } else {
           return Option.none()
         }
@@ -334,7 +334,7 @@ describe("Do-notation", () => {
       // Valid data
       const validResult = pipeline('{"value": 10}')
       expect(validResult.isSome()).toBe(true)
-      expect(validResult.get()).toBe(20)
+      expect(validResult.getOrThrow()).toBe(20)
 
       // Invalid JSON
       const invalidJsonResult = pipeline("invalid json")
@@ -365,7 +365,7 @@ describe("Do-notation", () => {
       })
 
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(30) // (1+2+3+4+5) * 2
+      expect(result.getOrThrow()).toBe(30) // (1+2+3+4+5) * 2
     })
 
     it("should short-circuit loop on None", () => {
@@ -452,7 +452,7 @@ describe("Do-notation", () => {
       // First monad is Option, not List, so result is Option
       // It takes the first element of the List
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(6) // 5 + 1 (first element)
+      expect(result.getOrThrow()).toBe(6) // 5 + 1 (first element)
     })
 
     it("should handle single-element Lists", () => {

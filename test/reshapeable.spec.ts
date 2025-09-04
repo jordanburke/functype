@@ -11,7 +11,7 @@ describe("Reshapeable interface", () => {
       // toOption - for Some, returns a new Some with same value
       const optAgain = opt.toOption()
       expect(optAgain.isSome()).toBe(true)
-      expect(optAgain.get()).toBe(5)
+      expect(optAgain.getOrThrow()).toBe(5)
 
       // toEither
       const either = opt.toEither("none")
@@ -25,7 +25,7 @@ describe("Reshapeable interface", () => {
       // toTry
       const tryVal = opt.toTry()
       expect(tryVal.isSuccess()).toBe(true)
-      expect(tryVal.get()).toBe(5)
+      expect(tryVal.getOrThrow()).toBe(5)
     })
 
     it("should convert None to other types", () => {
@@ -57,7 +57,7 @@ describe("Reshapeable interface", () => {
       // toOption
       const opt = either.toOption()
       expect(opt.isSome()).toBe(true)
-      expect(opt.get()).toBe(10)
+      expect(opt.getOrThrow()).toBe(10)
 
       // toEither - creates new Either with different left type
       const newEither = either.toEither(42)
@@ -71,7 +71,7 @@ describe("Reshapeable interface", () => {
       // toTry
       const tryVal = either.toTry()
       expect(tryVal.isSuccess()).toBe(true)
-      expect(tryVal.get()).toBe(10)
+      expect(tryVal.getOrThrow()).toBe(10)
     })
 
     it("should convert Left to other types", () => {
@@ -103,7 +103,7 @@ describe("Reshapeable interface", () => {
       // toOption - returns first element
       const opt = list.toOption()
       expect(opt.isSome()).toBe(true)
-      expect(opt.get()).toBe(1)
+      expect(opt.getOrThrow()).toBe(1)
 
       // toEither - returns Right with first element
       const either = list.toEither("empty")
@@ -116,7 +116,7 @@ describe("Reshapeable interface", () => {
       // toTry - returns Success with first element
       const tryVal = list.toTry()
       expect(tryVal.isSuccess()).toBe(true)
-      expect(tryVal.get()).toBe(1)
+      expect(tryVal.getOrThrow()).toBe(1)
     })
 
     it("should convert empty List to other types", () => {
@@ -147,7 +147,7 @@ describe("Reshapeable interface", () => {
       // toOption
       const opt = tryVal.toOption()
       expect(opt.isSome()).toBe(true)
-      expect(opt.get()).toBe(42)
+      expect(opt.getOrThrow()).toBe(42)
 
       // toEither
       const either = tryVal.toEither("failed")
@@ -161,7 +161,7 @@ describe("Reshapeable interface", () => {
       // toTry - returns new Success with same value
       const tryAgain = tryVal.toTry()
       expect(tryAgain.isSuccess()).toBe(true)
-      expect(tryAgain.get()).toBe(42)
+      expect(tryAgain.getOrThrow()).toBe(42)
     })
 
     it("should convert Failure to other types", () => {
@@ -202,7 +202,7 @@ describe("Reshapeable interface", () => {
       // Convert to Option for proper chaining
       const asOption = result.toOption()
       const doubled = asOption.map((x) => x * 2)
-      expect(doubled.get()).toBe(60)
+      expect(doubled.getOrThrow()).toBe(60)
 
       // Convert to Either
       const asEither = result.toEither("error")
@@ -217,7 +217,7 @@ describe("Reshapeable interface", () => {
       // Convert to Try
       const asTry = result.toTry()
       const quintupled = asTry.map((x) => x * 5)
-      expect(quintupled.get()).toBe(150)
+      expect(quintupled.getOrThrow()).toBe(150)
     })
 
     it("should handle failure cases in Do comprehension", () => {
@@ -243,7 +243,7 @@ describe("Reshapeable interface", () => {
 
       // Convert and use
       const asOption = result.toOption()
-      expect(asOption.get()).toBe(15)
+      expect(asOption.getOrThrow()).toBe(15)
     })
   })
 
@@ -295,7 +295,7 @@ describe("Reshapeable interface", () => {
 
       // Can work with result as any monad type we need
       const asOption = result.toOption()
-      expect(asOption.get()).toEqual({
+      expect(asOption.getOrThrow()).toEqual({
         id: 1,
         name: "Alice",
         email: "alice@example.com",

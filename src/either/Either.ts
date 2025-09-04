@@ -1,6 +1,7 @@
 import stringify from "safe-stable-stringify"
 
 import { type Doable, type DoResult } from "@/do/protocol"
+import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
@@ -19,12 +20,12 @@ export interface Either<L extends Type, R extends Type>
   extends FunctypeBase<R, "Left" | "Right">,
     Promisable<R>,
     Doable<R>,
-    Reshapeable<R> {
+    Reshapeable<R>,
+    Extractable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R }
-  get: () => R
   getOrElse: (defaultValue: R) => R
   getOrThrow: (error?: Error) => R
   orElse(alternative: Either<L, R>): Either<L, R>
@@ -90,7 +91,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
     return true
   },
-  get: () => value,
   getOrElse: (_defaultValue: R) => value,
   getOrThrow: () => value,
   orElse: (_alternative: Either<L, R>) => Right<L, R>(value),
@@ -187,9 +187,6 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   },
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
     return false
-  },
-  get: () => {
-    throw new Error(`Cannot call get() on Left(${stringify(value)})`)
   },
   getOrElse: (defaultValue: R): R => defaultValue,
   getOrThrow: (error?: Error) => {

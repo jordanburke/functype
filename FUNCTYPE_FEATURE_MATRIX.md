@@ -11,19 +11,20 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Core Interfaces
 
-| Data Structure    | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Pipe | Collection | ContainerOps | CollectionOps |
-| ----------------- | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :--: | :--------: | :----------: | :-----------: |
-| **Option<T>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Either<L,R>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✗   |     ✗      |      ✓       |       ✗       |
-| **Try<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
-| **List<A>**       |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Set<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Map<K,V>**      |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |  ✓   |     ✓      |      ✗       |       ✗       |
-| **Lazy<T>**       |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Stack<A>**      |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |  ✓   |     ✗      |      ✗       |       ✗       |
-| **LazyList<A>**   |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
-| **FPromise<T,E>** |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
-| **Tuple<T[]>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |  ✗   |     ✗      |      ✗       |       ✗       |
+| Data Structure     | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
+| ------------------ | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✗   |     ✗      |      ✓       |       ✗       |
+| **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
+| **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **FPromise<T,E>**  |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
 
 ## Additional Properties
 
@@ -84,11 +85,13 @@ This matrix shows which interfaces are supported by each data structure in the f
 - `reduce<B>(f: (acc: B, value: A) => B, initial: B): B`
 - `reduceRight<B>(f: (value: A, acc: B) => B, initial: B): B`
 
-### Extractable
+### Unsafe
 
-- `get(): T`
-- `getOrElse(defaultValue: T): T`
 - `getOrThrow(error?: Error): T`
+
+### Extractable (extends Unsafe)
+
+- `getOrElse(defaultValue: T): T`
 - `orElse(alternative: Extractable<T>): Extractable<T>`
 - `orNull(): T | null`
 - `orUndefined(): T | undefined`

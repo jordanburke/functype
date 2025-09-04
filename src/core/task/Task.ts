@@ -4,6 +4,7 @@ import { Throwable } from "@/core/throwable/Throwable"
 // No longer need to import or export DO_PROTOCOL since we're using Doable interface
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import type { Extractable } from "@/extractable/Extractable"
 import { FPromise } from "@/fpromise/FPromise"
 import { ArrayBuilder } from "@/internal/mutation-utils"
 import { Ref } from "@/ref/Ref"
@@ -41,9 +42,10 @@ export interface TaskMetadata {
 // Base interface for TaskOutcome - extends Either but overrides transformation methods
 export interface TaskOutcome<T>
   extends Omit<
-    Either<Throwable, T>,
-    "_tag" | "isLeft" | "isRight" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync"
-  > {
+      Either<Throwable, T>,
+      "_tag" | "isLeft" | "isRight" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync" | "orElse"
+    >,
+    Extractable<T> {
   readonly _tag: "TaskSuccess" | "TaskFailure"
   readonly _meta: TaskMetadata
 
@@ -88,7 +90,7 @@ export interface TaskFailure<T> extends TaskOutcome<T> {
  */
 const eitherToTaskOutcome = <T>(either: Either<Throwable, T>, params?: TaskParams): TaskOutcome<T> => {
   if (either.isRight()) {
-    return TaskSuccess(either.get(), params)
+    return TaskSuccess(either.getOrThrow(), params)
   } else if (either.isLeft()) {
     // Access the left value safely
     return TaskFailure<T>(either, undefined, params)
@@ -167,6 +169,17 @@ export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskPara
     mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>(f(throwable), data, params),
     recover: (value: T) => TaskSuccess(value, params),
     recoverWith: (f: (error: Throwable) => T) => TaskSuccess(f(throwable), params),
+
+    // Extractable methods - Unsafe operations
+    getOrThrow: (error?: Error) => {
+      throw error ?? throwable
+    },
+
+    // Extractable methods - Safe operations
+    getOrElse: (defaultValue: T) => defaultValue,
+    orElse: (alternative: TaskOutcome<T>) => alternative,
+    orNull: () => null as T | null,
+    orUndefined: () => undefined as T | undefined,
   } as TaskFailure<T>
 }
 
@@ -235,6 +248,15 @@ export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => 
     mapError: (_f: (error: Throwable) => Throwable) => TaskSuccess(data, params),
     recover: (_value: T) => TaskSuccess(data, params),
     recoverWith: (_f: (error: Throwable) => T) => TaskSuccess(data, params),
+
+    // Unsafe methods
+    getOrThrow: (_error?: Error) => data,
+
+    // Extractable methods - Safe operations
+    getOrElse: (_defaultValue: T) => data,
+    orElse: (_alternative: TaskOutcome<T>) => TaskSuccess(data, params),
+    orNull: () => data as T | null,
+    orUndefined: () => data as T | undefined,
   } as TaskSuccess<T>
 }
 
@@ -690,7 +712,7 @@ const TaskCompanion = {
     return new Promise((resolve, reject) => {
       if (taskOutcome.isSuccess()) {
         // TypeScript now knows this is TaskSuccess<U>
-        resolve(taskOutcome.get())
+        resolve(taskOutcome.getOrThrow())
       } else {
         // TypeScript now knows this is TaskFailure<U>
         reject((taskOutcome as TaskFailure<U>).error)
@@ -751,7 +773,7 @@ const TaskCompanion = {
                     const outcome = result as TaskOutcome<T>
                     if (outcome._tag === "TaskSuccess") {
                       // Extract the value from TaskSuccess
-                      resolve(outcome.get())
+                      resolve(outcome.getOrThrow())
                     } else if (outcome._tag === "TaskFailure") {
                       // TaskFailure - reject with the error
                       reject((outcome as TaskFailure<T>).error)

@@ -37,24 +37,18 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    */
   isNone(): this is Option<T> & { value: undefined; isEmpty: true }
   /**
-   * Extracts the value if present
-   * @throws Error if the Option is None
-   * @returns The contained value
-   */
-  get(): T
-  /**
    * Returns the contained value or a default value if None
    * @param defaultValue - The value to return if this Option is None
    * @returns The contained value or defaultValue
    */
   getOrElse(defaultValue: T): T
   /**
-   * Returns the contained value or throws a specified error if None
-   * @param error - The error to throw if this Option is None
+   * Returns the contained value or throws an error if None
+   * @param error - Optional custom error to throw. If not provided, throws a default error
    * @returns The contained value
-   * @throws The specified error if the Option is None
+   * @throws The specified error or a default error if the Option is None
    */
-  getOrThrow(error: Error): T
+  getOrThrow(error?: Error): T
   /**
    * Returns this Option if it contains a value, otherwise returns the alternative
    * @param alternative - The alternative Option to return if this is None
@@ -185,7 +179,6 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   isNone(): this is Option<T> & { value: undefined; isEmpty: true } {
     return false
   },
-  get: () => value,
   getOrElse: () => value,
   getOrThrow: () => value,
   orElse: (_alternative: Option<T>) => Some(value),
@@ -258,12 +251,9 @@ const NONE: Option<never> = {
   isNone(): this is Option<never> & { value: undefined; isEmpty: true } {
     return true
   },
-  get: () => {
-    throw new Error("Cannot call get() on None")
-  },
   getOrElse: <T>(defaultValue: T) => defaultValue,
-  getOrThrow<T>(error: Error): T {
-    throw error
+  getOrThrow<T>(error?: Error): T {
+    throw error ?? new Error("Cannot extract value from None")
   },
   orElse: (alternative: Option<never>) => alternative,
   orNull: () => null,

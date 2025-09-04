@@ -9,7 +9,7 @@ describe("Either without PromiseLike", () => {
     // const result = await either  // <- This should NOT compile
 
     // This should work - explicit methods
-    const result = either.get()
+    const result = either.getOrThrow()
     expect(result).toBe(42)
   })
 
@@ -18,10 +18,10 @@ describe("Either without PromiseLike", () => {
 
     expect(either.isRight()).toBe(true)
     expect(either.isLeft()).toBe(false)
-    expect(either.get()).toBe(42)
+    expect(either.getOrThrow()).toBe(42)
 
     const mapped = either.map((x) => x * 2)
-    expect(mapped.get()).toBe(84)
+    expect(mapped.getOrThrow()).toBe(84)
 
     const folded = either.fold(
       (err) => 0,

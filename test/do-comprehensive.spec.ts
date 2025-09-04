@@ -15,7 +15,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       })
 
       expect(result.isSome()).toBe(true)
-      expect(result.get()).toBe(15)
+      expect(result.getOrThrow()).toBe(15)
 
       // Guard fails case
       const filtered = Do(function* () {
@@ -65,7 +65,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return z
       })
 
-      expect(result.get()).toBe(11)
+      expect(result.getOrThrow()).toBe(11)
     })
 
     it("should handle complex cartesian products like Scala", () => {
@@ -115,7 +115,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
 
       const rightSide = f(a)
 
-      expect(leftSide.get()).toBe(rightSide.get())
+      expect(leftSide.getOrThrow()).toBe(rightSide.getOrThrow())
     })
 
     // Right identity: m.flatMap(M.unit) == m
@@ -127,7 +127,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return yield* $(Option(x))
       })
 
-      expect(leftSide.get()).toBe(m.get())
+      expect(leftSide.getOrThrow()).toBe(m.getOrThrow())
     })
 
     // Associativity: m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))
@@ -152,7 +152,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         )
       })
 
-      expect(leftSide.get()).toBe(rightSide.get())
+      expect(leftSide.getOrThrow()).toBe(rightSide.getOrThrow())
     })
   })
 
@@ -294,7 +294,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         timestamp: "2024-01-01T00:00:00Z",
       })
       expect(validData.toOption().isSome()).toBe(true)
-      expect(validData.toOption().get().value).toBe(45.67)
+      expect(validData.toOption().getOrThrow().value).toBe(45.67)
 
       // Invalid ID
       const invalidId = processData({
@@ -326,7 +326,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return isPythagorean ? Option({ a, b, c }) : None<{ a: number; b: number; c: number }>()
       })
         .filter((opt) => opt.isSome())
-        .map((opt) => opt.get())
+        .map((opt) => opt.getOrThrow())
 
       expect(result.toArray()).toContainEqual({ a: 3, b: 4, c: 5 })
     })
@@ -355,7 +355,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return sum > 5 ? Option(sum) : None<number>()
       })
         .filter((opt) => opt.isSome())
-        .map((opt) => opt.get())
+        .map((opt) => opt.getOrThrow())
 
       expect(result.toArray()).toEqual([7, 7, 9, 7, 9, 11])
     })
@@ -378,7 +378,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       })
 
       expect(result.toOption().isSome()).toBe(true)
-      expect(result.toOption().get().value).toBe(50)
+      expect(result.toOption().getOrThrow().value).toBe(50)
     })
 
     it("should handle parallel async operations", async () => {
@@ -396,7 +396,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return v1 + v2 + v3
       })
 
-      expect(result.toOption().get()).toBe(60)
+      expect(result.toOption().getOrThrow()).toBe(60)
     })
 
     it("should handle async error recovery", async () => {
@@ -409,7 +409,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return value * 2
       })
 
-      expect(result.toOption().get()).toBe(84)
+      expect(result.toOption().getOrThrow()).toBe(84)
     })
   })
 
@@ -479,7 +479,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return inner + outer
       })
 
-      expect(result.get()).toBe(16) // (5*2+1) + 5
+      expect(result.getOrThrow()).toBe(16) // (5*2+1) + 5
     })
 
     it("should handle recursive patterns", () => {
@@ -494,7 +494,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         })
       }
 
-      expect(fibonacci(6).get()).toBe(8)
+      expect(fibonacci(6).getOrThrow()).toBe(8)
       expect(fibonacci(0).isNone()).toBe(true)
     })
 
@@ -508,10 +508,10 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       })
 
       // Convert to different types
-      expect(result.toOption().get()).toBe(50)
+      expect(result.toOption().getOrThrow()).toBe(50)
       expect(result.toEither("error").value).toBe(50)
       expect(result.toList().toArray()[0]).toBe(50)
-      expect(result.toTry().get()).toBe(50)
+      expect(result.toTry().getOrThrow()).toBe(50)
     })
   })
 
@@ -530,8 +530,8 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return x + y + z
       })
 
-      expect(traditional.get()).toBe(withDo.get())
-      expect(withDo.get()).toBe(30)
+      expect(traditional.getOrThrow()).toBe(withDo.getOrThrow())
+      expect(withDo.getOrThrow()).toBe(30)
     })
 
     it("should handle complex error flows better than nested chains", () => {

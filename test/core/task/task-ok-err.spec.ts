@@ -8,13 +8,13 @@ describe("Task Ok/Err pattern", () => {
       const result = Ok("success")
       expect(result.isSuccess()).toBe(true)
       expect(result.isFailure()).toBe(false)
-      expect(result.get()).toBe("success")
+      expect(result.getOrThrow()).toBe("success")
     })
 
     it("should work with Task companion", () => {
       const result = Task.ok("value")
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe("value")
+      expect(result.getOrThrow()).toBe("value")
     })
   })
 
@@ -40,7 +40,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe("success")
+      expect(result.getOrThrow()).toBe("success")
     })
 
     it("should handle explicit Err return", async () => {
@@ -62,7 +62,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(successTask.isSuccess()).toBe(true)
-      expect(successTask.get()).toBe(10)
+      expect(successTask.getOrThrow()).toBe(10)
 
       const failureTask = await Task().Async(async (): Promise<TaskOutcome<number>> => {
         const value = 3
@@ -84,7 +84,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe("raw value")
+      expect(result.getOrThrow()).toBe("raw value")
     })
 
     it("should auto-wrap thrown errors as Err", async () => {
@@ -110,7 +110,7 @@ describe("Task Ok/Err pattern", () => {
       )
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe("recovered")
+      expect(result.getOrThrow()).toBe("recovered")
     })
 
     it("should allow error handler to return Err to transform error", async () => {
@@ -135,8 +135,8 @@ describe("Task Ok/Err pattern", () => {
 
       if (result.isSuccess()) {
         // TypeScript should know the type here
-        expect(result.get().id).toBe(1)
-        expect(result.get().name).toBe("test")
+        expect(result.getOrThrow().id).toBe(1)
+        expect(result.getOrThrow().name).toBe("test")
       }
     })
 
@@ -157,7 +157,7 @@ describe("Task Ok/Err pattern", () => {
         .map((x) => x + 1)
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe(11)
+      expect(result.getOrThrow()).toBe(11)
     })
 
     it("should chain operations with flatMap", () => {
@@ -166,7 +166,7 @@ describe("Task Ok/Err pattern", () => {
         .flatMap((x) => Right(x + 1))
 
       expect(result.isSuccess()).toBe(true)
-      expect(result.get()).toBe(11)
+      expect(result.getOrThrow()).toBe(11)
     })
 
     it("should short-circuit on Err", () => {

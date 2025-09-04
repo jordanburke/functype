@@ -120,7 +120,7 @@ export const HKT = () => {
    */
   const flatten = <F, A>(ffa: unknown): unknown => {
     if (isOption<unknown>(ffa)) {
-      return ffa.get()
+      return ffa.getOrThrow()
     }
     if (isList<unknown>(ffa)) {
       // Special case for nested lists - we need to properly flatten them to match the test's expectation
@@ -147,7 +147,7 @@ export const HKT = () => {
     }
     if (isTry<unknown>(ffa)) {
       if (ffa.isSuccess()) {
-        return ffa.get()
+        return ffa.getOrThrow()
       }
       return ffa
     }
@@ -208,7 +208,7 @@ export const HKT = () => {
       }
 
       // Option is Some
-      const inner = optionValue.get()
+      const inner = optionValue.getOrThrow()
       if (isList<unknown>(inner)) {
         return inner.map((a) => Option(a))
       }
@@ -240,7 +240,7 @@ export const HKT = () => {
         // All options are Some, transform to Option of List
         const values = items.map((item) => {
           const opt = item as Option<unknown>
-          return opt.get()
+          return opt.getOrThrow()
         })
 
         return Option(List(values))

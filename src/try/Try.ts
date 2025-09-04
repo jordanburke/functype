@@ -29,7 +29,6 @@ export interface Try<T>
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
-  get: () => T
   getOrElse: (defaultValue: T) => T
   getOrThrow: (error?: Error) => T
   orElse: (alternative: Try<T>) => Try<T>
@@ -70,7 +69,6 @@ const Success = <T>(value: T): Try<T> => ({
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return false
   },
-  get: () => value,
   getOrElse: (_defaultValue: T) => value,
   getOrThrow: (_error?: Error) => value,
   orElse: (_alternative: Try<T>) => Success(value),
@@ -133,9 +131,6 @@ const Failure = <T>(error: Error): Try<T> => ({
   },
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return true
-  },
-  get: () => {
-    throw error
   },
   getOrElse: (defaultValue: T) => defaultValue,
   getOrThrow: (e?: Error) => {

@@ -68,7 +68,7 @@ describe("Try", () => {
   describe("get()", () => {
     it("should return the value on success", () => {
       const myTry = Try(() => 1 + 1)
-      expect(myTry.get()).toBe(2)
+      expect(myTry.getOrThrow()).toBe(2)
     })
 
     it("should throw the error on failure", () => {
@@ -76,7 +76,7 @@ describe("Try", () => {
       const myTry = Try(() => {
         throw new Error(errorMessage)
       })
-      expect(() => myTry.get()).toThrow(errorMessage)
+      expect(() => myTry.getOrThrow()).toThrow(errorMessage)
     })
   })
 

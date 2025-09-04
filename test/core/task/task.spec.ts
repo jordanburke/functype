@@ -37,6 +37,21 @@ describe("TaskFailure", () => {
     // The Error's name should also be set to the task name
     expect((result.value as Error).name).toBe(taskName)
   })
+
+  test("should throw own error on getOrThrow without parameter", () => {
+    const error = new Error("Test error")
+    const result = TaskFailure<string>(error)
+
+    expect(() => result.getOrThrow()).toThrow("Test error")
+  })
+
+  test("should throw provided Error on getOrThrow with parameter", () => {
+    const originalError = new Error("Original error")
+    const customError = new Error("Custom error")
+    const result = TaskFailure<string>(originalError)
+
+    expect(() => result.getOrThrow(customError)).toThrow("Custom error")
+  })
 })
 
 describe("TaskSuccess", () => {
@@ -54,11 +69,20 @@ describe("TaskSuccess", () => {
     const arrayResult = TaskSuccess([1, 2, 3])
 
     expect(numberResult.isSuccess()).toBe(true)
-    expect(numberResult.get()).toBe(42)
+    expect(numberResult.getOrThrow()).toBe(42)
     expect(objectResult.isSuccess()).toBe(true)
-    expect(objectResult.get()).toEqual({ key: "value" })
+    expect(objectResult.getOrThrow()).toEqual({ key: "value" })
     expect(arrayResult.isSuccess()).toBe(true)
-    expect(arrayResult.get()).toEqual([1, 2, 3])
+    expect(arrayResult.getOrThrow()).toEqual([1, 2, 3])
+  })
+
+  test("should return value on getOrThrow", () => {
+    const data = "test data"
+    const result = TaskSuccess(data)
+    const customError = new Error("Should not be thrown")
+
+    expect(result.getOrThrow()).toBe(data)
+    expect(result.getOrThrow(customError)).toBe(data)
   })
 })
 

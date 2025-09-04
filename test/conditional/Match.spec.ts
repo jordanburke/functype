@@ -380,7 +380,7 @@ describe("Match", () => {
         const someResult = Match(42).case(42, "found").toOption()
 
         expect(someResult.isEmpty).toBe(false)
-        expect(someResult.get()).toBe("found")
+        expect(someResult.getOrThrow()).toBe("found")
       })
 
       it("should return None for failed matches", () => {

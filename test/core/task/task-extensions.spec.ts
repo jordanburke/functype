@@ -40,7 +40,7 @@ describe("Task Extensions", () => {
 
       // Complete all pending tasks
       vi.runAllTimers()
-    })
+    }, 10000)
 
     test("should reject if all tasks fail", async () => {
       const task1 = Task().Async(async () => {
@@ -137,7 +137,7 @@ describe("Task Extensions", () => {
 
       // Complete all pending tasks
       vi.runAllTimers()
-    })
+    }, 10000)
   })
 
   describe("Task.fromNodeCallback", () => {

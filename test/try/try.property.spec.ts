@@ -11,7 +11,7 @@ describe("Try - Property-based tests", () => {
           const tryResult = Try(() => value)
           expect(tryResult.isSuccess()).toBe(true)
           expect(tryResult.isFailure()).toBe(false)
-          expect(tryResult.get()).toBe(value)
+          expect(tryResult.getOrThrow()).toBe(value)
         }),
       )
     })
@@ -24,7 +24,7 @@ describe("Try - Property-based tests", () => {
           })
           expect(tryResult.isFailure()).toBe(true)
           expect(tryResult.isSuccess()).toBe(false)
-          expect(() => tryResult.get()).toThrow()
+          expect(() => tryResult.getOrThrow()).toThrow()
           expect(tryResult.error?.message).toBe(errorMessage)
         }),
       )
@@ -41,7 +41,7 @@ describe("Try - Property-based tests", () => {
 
           expect(mapped.isSuccess()).toEqual(tryResult.isSuccess())
           if (tryResult.isSuccess()) {
-            expect(mapped.get()).toEqual(tryResult.get())
+            expect(mapped.getOrThrow()).toEqual(tryResult.getOrThrow())
           }
         }),
       )
@@ -64,7 +64,7 @@ describe("Try - Property-based tests", () => {
 
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
-            expect(result1.get()).toEqual(result2.get())
+            expect(result1.getOrThrow()).toEqual(result2.getOrThrow())
           }
         }),
       )
@@ -88,7 +88,7 @@ describe("Try - Property-based tests", () => {
 
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
-            expect(result1.get()).toEqual(result2.get())
+            expect(result1.getOrThrow()).toEqual(result2.getOrThrow())
           }
         }),
       )
@@ -119,7 +119,7 @@ describe("Try - Property-based tests", () => {
           const success = Try(() => value)
           let successResult = ""
           if (success.isSuccess()) {
-            successResult = `success: ${success.get()}`
+            successResult = `success: ${success.getOrThrow()}`
           } else {
             successResult = `error: ${success.error?.message || ""}`
           }
@@ -137,7 +137,7 @@ describe("Try - Property-based tests", () => {
           // Now construct the result string
           let failureResult = ""
           if (failure.isSuccess()) {
-            failureResult = `success: ${failure.get()}`
+            failureResult = `success: ${failure.getOrThrow()}`
           } else {
             failureResult = `error: ${failure.error?.message}`
           }
@@ -153,7 +153,7 @@ describe("Try - Property-based tests", () => {
           const transform = (n: number) => n * 2
 
           const success = Try(() => value)
-          expect(success.map(transform).get()).toBe(transform(value))
+          expect(success.map(transform).getOrThrow()).toBe(transform(value))
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
@@ -171,12 +171,12 @@ describe("Try - Property-based tests", () => {
         fc.property(fc.string(), fc.integer(), (errorMsg, fallbackValue) => {
           const success = Try(() => 42)
           const alternative = Try(() => fallbackValue)
-          expect(success.orElse(alternative).get()).toBe(42)
+          expect(success.orElse(alternative).getOrThrow()).toBe(42)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
-          expect(failure.orElse(alternative).get()).toBe(fallbackValue)
+          expect(failure.orElse(alternative).getOrThrow()).toBe(fallbackValue)
         }),
       )
     })

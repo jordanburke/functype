@@ -9,7 +9,7 @@ describe("Pattern Suggester", () => {
       const suggestion = suggestPattern(code)
 
       expect(suggestion._tag === "Some").toBe(true)
-      expect(suggestion.get().pattern).toBe("null-check")
+      expect(suggestion.getOrThrow().pattern).toBe("null-check")
     })
 
     it("should suggest Try for try-catch blocks", () => {
@@ -17,7 +17,7 @@ describe("Pattern Suggester", () => {
       const suggestion = suggestPattern(code)
 
       expect(suggestion._tag === "Some").toBe(true)
-      expect(suggestion.get().pattern).toBe("try-catch")
+      expect(suggestion.getOrThrow().pattern).toBe("try-catch")
     })
 
     it("should suggest Match for switch statements", () => {
@@ -25,7 +25,7 @@ describe("Pattern Suggester", () => {
       const suggestion = suggestPattern(code)
 
       expect(suggestion._tag === "Some").toBe(true)
-      expect(suggestion.get().pattern).toBe("switch-case")
+      expect(suggestion.getOrThrow().pattern).toBe("switch-case")
     })
 
     it("should return None for code without patterns", () => {
@@ -73,7 +73,7 @@ describe("Pattern Suggester", () => {
 
   describe("formatSuggestion", () => {
     it("should format pattern nicely", () => {
-      const pattern = suggestPattern("try { } catch { }").get()
+      const pattern = suggestPattern("try { } catch { }").getOrThrow()
       const formatted = formatSuggestion(pattern)
 
       expect(formatted).toContain("### ")

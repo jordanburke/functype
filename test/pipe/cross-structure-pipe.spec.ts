@@ -135,7 +135,7 @@ describe("Cross data structure pipe tests", () => {
     const tryValue = some.pipe((value) => Try(() => value * 2))
 
     // Step 2: Convert Try back to Option
-    const result = tryValue.isSuccess() ? Some(tryValue.get()) : None<number>()
+    const result = tryValue.isSuccess() ? Some(tryValue.getOrThrow()) : None<number>()
 
     expect(result.isEmpty).toBe(false)
     expect(result.value).toBe(84)
@@ -151,7 +151,7 @@ describe("Cross data structure pipe tests", () => {
     })
 
     // Step 2: Convert Try back to Option
-    const noneResult = tryFromNone.isFailure() ? None<number>() : Some(tryFromNone.get())
+    const noneResult = tryFromNone.isFailure() ? None<number>() : Some(tryFromNone.getOrThrow())
 
     expect(noneResult.isEmpty).toBe(true)
   })
@@ -282,7 +282,7 @@ describe("Cross data structure pipe tests", () => {
     // Step 2: Process the result if successful, handle error if not
     let validUserResult: List<string>
     if (validUserTry.isSuccess()) {
-      validUserResult = processResult(validUserTry.get())
+      validUserResult = processResult(validUserTry.getOrThrow())
     } else {
       validUserResult = List<string>([`Error: ${validUserTry.error?.message ?? "Unknown error"}`])
     }
@@ -296,7 +296,7 @@ describe("Cross data structure pipe tests", () => {
     // Step 2: Process the result if successful, handle error if not
     let invalidUserResult: List<string>
     if (invalidUserTry.isSuccess()) {
-      invalidUserResult = processResult(invalidUserTry.get())
+      invalidUserResult = processResult(invalidUserTry.getOrThrow())
     } else {
       invalidUserResult = List<string>([`Error: ${invalidUserTry.error?.message ?? "Unknown error"}`])
     }

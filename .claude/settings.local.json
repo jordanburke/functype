@@ -66,7 +66,8 @@
       "Bash(npx tsup:*)",
       "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/**)",
       "Bash(npm publish:*)",
-      "Bash(npm link:*)"
+      "Bash(npm link:*)",
+      "Read(//home/jordanburke/.claude/**)"
     ],
     "deny": []
   }

@@ -413,7 +413,7 @@ describe("Either", () => {
     const promise = Promise.resolve(5)
     const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
     expect(result.isRight()).toBe(true)
-    expect(result.get()).toBe(5)
+    expect(result.getOrThrow()).toBe(5)
   })
 
   it("should create Left from rejected promise", async () => {
