@@ -162,5 +162,5 @@ Provides type conversion between monadic types:
    - **Cond**: Conditional expression builder
    - **Match**: Pattern matching utility
    - **ValidatedBrand**: Branded types with validation
-   - **Task**: Error handling with TaskException
+   - **Task**: Sync/async operation orchestrator returning TaskOutcome<T> with Ok/Err constructors. Includes conversion methods: toEither(), toTry(), toOption(), fromEither(), fromTry().
    - **Throwable**: Enhanced error type

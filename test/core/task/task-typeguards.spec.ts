@@ -1,45 +1,45 @@
 import { describe, expect, test } from "vitest"
-import { Task, TaskSuccess, TaskFailure } from "../../../src"
+
+import type { Err } from "@/core"
+import { Task, type TaskOutcome } from "@/core"
 
 describe("Task Type Guards", () => {
-  test("isSuccess should narrow type to TaskSuccess", () => {
+  test("isSuccess should narrow type to Ok", () => {
     const result = Task().Sync(() => "success value")
 
     if (result.isSuccess()) {
-      // TypeScript should know this is TaskSuccess<string>
-      expect(result._tag).toBe("TaskSuccess")
+      // TypeScript should know this is Ok<string>
+      expect(result._tag).toBe("Ok")
       expect(result.value).toBe("success value")
-      // @ts-expect-error - error property doesn't exist on TaskSuccess
       expect(result.error).toBeUndefined()
     } else {
       expect.fail("Should be success")
     }
   })
 
-  test("isFailure should narrow type to TaskFailure", () => {
+  test("isFailure should narrow type to Err", () => {
     const result = Task().Sync(() => {
       throw new Error("failure")
     })
 
     if (result.isFailure()) {
-      // TypeScript should know this is TaskFailure<never>
-      expect(result._tag).toBe("TaskFailure")
+      // TypeScript should know this is Err<never>
+      expect(result._tag).toBe("Err")
       expect(result.error).toBeDefined()
       expect(result.error.message).toBe("failure")
-      // @ts-expect-error - value property exists but is Throwable, not the success type
-      const val: string = result.value
-      expect(val).toBeDefined() // This line won't actually run due to type error
+      // error property should be defined and not the value
+      expect(result.value).toBeUndefined()
     } else {
       expect.fail("Should be failure")
     }
   })
 
   test("type guards work in conditional expressions", () => {
-    const processResult = <T>(outcome: TaskSuccess<T> | TaskFailure<T>) => {
+    const processResult = <T>(outcome: TaskOutcome<T>) => {
       // Using type guard in ternary
       const message = outcome.isSuccess()
-        ? `Success: ${outcome.getOrThrow()}` // TypeScript knows this is TaskSuccess
-        : `Error: ${outcome.error.message}` // TypeScript knows outcome.error exists here
+        ? `Success: ${outcome.getOrThrow()}` // TypeScript knows this is Ok
+        : `Error: ${outcome.error?.message}` // TypeScript knows outcome.error exists here
 
       return message
     }
@@ -57,7 +57,7 @@ describe("Task Type Guards", () => {
     // This should compile without type assertions
     const processed = result.isSuccess()
       ? result.map((v) => v.toUpperCase()) // Can use map on success
-      : (result as TaskFailure<string>).recover("fallback") // Can use recover on failure
+      : (result as Err<string>).recover("fallback") // Can use recover on failure
 
     expect(processed).toBeDefined()
   })
@@ -66,8 +66,8 @@ describe("Task Type Guards", () => {
     const result = Task().Sync(() => "value")
 
     if (!result.isFailure()) {
-      // TypeScript should know this is TaskSuccess<string>
-      expect(result._tag).toBe("TaskSuccess")
+      // TypeScript should know this is Ok<string>
+      expect(result._tag).toBe("Ok")
       expect(result.getOrThrow()).toBe("value")
     }
 
@@ -76,9 +76,9 @@ describe("Task Type Guards", () => {
     })
 
     if (!failResult.isSuccess()) {
-      // TypeScript should know this is TaskFailure<string>
-      expect(failResult._tag).toBe("TaskFailure")
-      expect((failResult as TaskFailure<string>).error).toBeDefined()
+      // TypeScript should know this is Err<string>
+      expect(failResult._tag).toBe("Err")
+      expect((failResult as Err<string>).error).toBeDefined()
     }
   })
 })

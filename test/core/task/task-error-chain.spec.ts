@@ -15,15 +15,15 @@ describe("Task Error Chain Tests", () => {
     const outerTask = Task({ name: "OuterTask", description: "This is the outer task" }).Async<string>(async () => {
       const result = await innerTask
       if (result.isFailure()) {
-        throw result.value // Re-throw the error to preserve chain
+        throw result.error // Re-throw the error to preserve chain
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await outerTask
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // The error should have the outer task's context
     expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
 
@@ -53,23 +53,23 @@ describe("Task Error Chain Tests", () => {
     const level2Task = Task({ name: "Level2Task" }).Async<string>(async () => {
       const result = await level3Task
       if (result.isFailure()) {
-        throw result.value
+        throw result.error
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const level1Task = Task({ name: "Level1Task" }).Async<string>(async () => {
       const result = await level2Task
       if (result.isFailure()) {
-        throw result.value
+        throw result.error
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await level1Task
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // Get the full error chain
     const errorChain = Task.getErrorChain(error as Error)
 
@@ -109,15 +109,15 @@ describe("Task Error Chain Tests", () => {
     const wrapperTask = Task({ name: "WrapperTask" }).Async<string>(async () => {
       const result = await dataTask
       if (result.isFailure()) {
-        throw result.value
+        throw result.error
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await wrapperTask
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // The cause should have the custom data
     expect((error as any).cause).toBeDefined()
     expect((error as any).cause.customData).toBeDefined()
@@ -146,15 +146,15 @@ describe("Task Error Chain Tests", () => {
     const wrapperTask = Task({ name: "WrapperTask" }).Async<string>(async () => {
       const result = await regularErrorTask
       if (result.isFailure()) {
-        throw result.value
+        throw result.error
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await wrapperTask
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // The error chain should still work
     const errorChain = Task.getErrorChain(error as Error)
     expect(errorChain.length).toBeGreaterThanOrEqual(1)

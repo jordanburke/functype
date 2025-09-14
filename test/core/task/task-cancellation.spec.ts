@@ -59,7 +59,7 @@ describe("Task Cancellation", () => {
       )
 
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toContain("cancelled before execution")
+      expect((result.error as Error).message).toContain("cancelled before execution")
     })
 
     test("should reject task when cancelled during execution", async () => {
@@ -89,7 +89,7 @@ describe("Task Cancellation", () => {
 
       const result = await taskPromise
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toContain("cancelled")
+      expect((result.error as Error).message).toContain("cancelled")
     })
 
     test.skip("should still execute finally block when cancelled", async () => {
@@ -158,7 +158,7 @@ describe("Task Cancellation", () => {
 
       const result = await task
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toContain("cancelled during execution")
+      expect((result.error as Error).message).toContain("cancelled during execution")
 
       // Complete all timers
       vi.runAllTimers()

@@ -14,15 +14,15 @@ describe("Task Nested Error Handling", () => {
       // Awaiting inner task directly - need to handle TaskOutcome
       const result = await innerTask
       if (result.isFailure()) {
-        throw result.value // Re-throw to preserve error chain
+        throw result.error // Re-throw to preserve error chain
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await outerTask
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // With our improved implementation:
     // The error should have the outer task's context in the main error
     expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
@@ -52,15 +52,15 @@ describe("Task Nested Error Handling", () => {
       const result = await innerTask
       if (result.isFailure()) {
         // Properly handle the error to preserve context
-        throw new Error(`Outer task failed because: ${(result.value as Error).message}`)
+        throw new Error(`Outer task failed because: ${(result.error as Error).message}`)
       }
-      return result.value
+      return result.getOrThrow()
     })
 
     const result = await outerTask
     expect(result.isFailure()).toBe(true)
 
-    const error = result.value
+    const error = result.error
     // With manual handling, we at least get a reference to the inner error message
     expect((error as Throwable).taskInfo?.name).toBe("OuterTask")
     expect((error as Error).message).toBe("Outer task failed because: Inner task failed")

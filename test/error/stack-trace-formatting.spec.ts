@@ -84,7 +84,7 @@ describe("Stack Trace Formatting", () => {
     // Create a task error to format
     const taskError = Task({ name: "ExampleTask" }).Sync(() => {
       throw new Error("Task failed with an error")
-    }).value as Error
+    }).error as Error
 
     // Format the error with stack trace
     const formattedError = formatError(taskError, {

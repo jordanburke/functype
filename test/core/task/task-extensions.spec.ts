@@ -61,11 +61,11 @@ describe("Task Extensions", () => {
       const result = await racedTask
       expect(result.isFailure()).toBe(true)
       // With the new error chaining, the error message includes the task name
-      expect((result.value as Error).message).toBe("TaskRace: Task 1 failed")
+      expect((result.error as Error).message).toBe("TaskRace: Task 1 failed")
 
       // The original error is available in the cause
-      expect((result.value as any).cause).toBeDefined()
-      expect((result.value as any).cause.message).toBe("Task 1 failed")
+      expect((result.error as any).cause).toBeDefined()
+      expect((result.error as any).cause.message).toBe("Task 1 failed")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -84,7 +84,7 @@ describe("Task Extensions", () => {
 
       const result = await racedTask
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).name).toBe("CustomRaceTask")
+      expect((result.error as Error).name).toBe("CustomRaceTask")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -103,8 +103,8 @@ describe("Task Extensions", () => {
 
       const result = await racedTask
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toContain("timed out after 100ms")
-      expect((result.value as Error).name).toBe("TimeoutRaceTask")
+      expect((result.error as Error).message).toContain("timed out after 100ms")
+      expect((result.error as Error).name).toBe("TimeoutRaceTask")
 
       // Complete all pending tasks
       vi.runAllTimers()
@@ -161,7 +161,7 @@ describe("Task Extensions", () => {
       // Test error case
       const errorResult = await readFileTask("invalid-path")
       expect(errorResult.isFailure()).toBe(true)
-      expect((errorResult.value as Error).message).toBe("File not found")
+      expect((errorResult.error as Error).message).toBe("File not found")
     })
 
     test("should handle synchronous errors in the node function", async () => {
@@ -176,8 +176,8 @@ describe("Task Extensions", () => {
 
       const result = await taskFn("test")
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toBe("Synchronous error")
-      expect((result.value as Error).name).toBe("SyncErrorNodeTask")
+      expect((result.error as Error).message).toBe("Synchronous error")
+      expect((result.error as Error).name).toBe("SyncErrorNodeTask")
     })
 
     test("should include task name in errors", async () => {
@@ -189,8 +189,8 @@ describe("Task Extensions", () => {
 
       const result = await taskFn("test")
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toBe("Node error")
-      expect((result.value as Error).name).toBe("CustomNodeTask")
+      expect((result.error as Error).message).toBe("Node error")
+      expect((result.error as Error).name).toBe("CustomNodeTask")
     })
 
     test("should pass through multiple arguments", async () => {

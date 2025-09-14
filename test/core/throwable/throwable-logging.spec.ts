@@ -102,7 +102,7 @@ describe("Throwable Logging Display", () => {
         // Throw inside a task
         throw Task({ name: "UserService", description: "Handles user operations" }).Sync(() => {
           throw new Error("User validation failed")
-        }).value
+        }).error
       } catch (error) {
         console.log("Task Error object:", error)
         console.log("Task Error toString:", (error as Error).toString())
@@ -123,16 +123,16 @@ describe("Throwable Logging Display", () => {
       })
 
       const outerTask = Task({ name: "UserFetch", description: "Fetch user data" }).Sync(() => {
-        return innerTask.value
+        return innerTask.getOrThrow()
       })
 
       // Raw error output
-      console.log("Raw nested error:", JSON.stringify(outerTask.value))
-      console.log("Error message:", (outerTask.value as Error).message)
-      console.log("Error name:", (outerTask.value as Error).name)
+      console.log("Raw nested error:", JSON.stringify(outerTask.error))
+      console.log("Error message:", (outerTask.error as Error).message)
+      console.log("Error name:", (outerTask.error as Error).name)
 
       // Use the error chain formatter
-      const formattedError = Task.formatErrorChain(outerTask.value as Error, {
+      const formattedError = Task.formatErrorChain(outerTask.error as Error, {
         includeTasks: true,
         includeStackTrace: false,
       })
@@ -156,18 +156,18 @@ describe("Throwable Logging Display", () => {
       })
 
       const level2Task = Task({ name: "DbQuery" }).Sync(() => {
-        return level3Task.value
+        return level3Task.getOrThrow()
       })
 
       const level1Task = Task({ name: "UserService" }).Sync(() => {
-        return level2Task.value
+        return level2Task.getOrThrow()
       })
 
       const mainTask = Task({ name: "ApiHandler" }).Sync(() => {
-        return level1Task.value
+        return level1Task.getOrThrow()
       })
 
-      const error = mainTask.value as Error
+      const error = mainTask.error as Error
 
       // Log with standard console
       console.log("Standard error display:", error)
@@ -188,7 +188,7 @@ describe("Throwable Logging Display", () => {
 
     expect(output.some((line) => line.includes("Improved error display"))).toBe(true)
     expect(output.some((line) => line.includes("API Error"))).toBe(true)
-    expect(output.some((line) => line.includes("DbConnection"))).toBe(true)
+    expect(output.some((line) => line.includes("ApiHandler"))).toBe(true)
     console.log("\nImproved Error Display Format:")
     console.log(output.join("\n"))
   })
@@ -227,10 +227,10 @@ describe("Throwable Logging Display", () => {
     })
 
     const outerTask = Task({ name: "UserService" }).Sync(() => {
-      return innerTask.value
+      return innerTask.getOrThrow()
     })
 
-    const error = outerTask.value as Error
+    const error = outerTask.error as Error
 
     // Standard Pino error logging
     pinoLogger.error({ err: error }, "Failed to fetch user data")
@@ -265,17 +265,17 @@ describe("Throwable Logging Display", () => {
     })
 
     const level2 = Task({ name: "UserFetch" }).Sync(() => {
-      return level3.value
+      return level3.getOrThrow()
     })
 
     // Create level1 and get its error for testing
     Task({ name: "ApiRequest" }).Sync(() => {
-      return level2.value
+      return level2.getOrThrow()
     })
 
     // Get serialized error using the provided serializer
     const errorSerializer = createErrorSerializer()
-    const error = level2.value as Error
+    const error = level2.error as Error
     const serialized = errorSerializer(error)
 
     // Output the serialized error
@@ -285,6 +285,6 @@ describe("Throwable Logging Display", () => {
     expect(serialized).toHaveProperty("message")
     // The single-level error won't have errorChain populated
     expect(serialized).toHaveProperty("stack")
-    expect(serialized).toHaveProperty("name", "DbConnection")
+    expect(serialized).toHaveProperty("name", "UserFetch")
   })
 })

@@ -1,13 +1,22 @@
+import stringify from "safe-stable-stringify"
+
 import { Companion } from "@/companion/Companion"
 import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
-// No longer need to import or export DO_PROTOCOL since we're using Doable interface
+import type { Doable, DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable/Extractable"
 import { FPromise } from "@/fpromise/FPromise"
+import type { FunctypeBase } from "@/functype"
 import { ArrayBuilder } from "@/internal/mutation-utils"
+import { List } from "@/list/List"
+import type { Option } from "@/option/Option"
+import { None, Some } from "@/option/Option"
 import { Ref } from "@/ref/Ref"
+import type { Try } from "@/try/Try"
+import { Try as TryConstructor } from "@/try/Try"
+import type { AsyncMonad, Promisable } from "@/typeclass"
 
 /**
  * Type definition for errors with a _tag property that identifies them as Throwables
@@ -39,49 +48,66 @@ export interface TaskMetadata {
   readonly description: string
 }
 
-// Base interface for TaskOutcome - extends Either but overrides transformation methods
+// Standalone TaskOutcome interface - no longer extends Either
 export interface TaskOutcome<T>
-  extends Omit<
-      Either<Throwable, T>,
-      "_tag" | "isLeft" | "isRight" | "map" | "flatMap" | "ap" | "merge" | "mapAsync" | "flatMapAsync" | "orElse"
-    >,
-    Extractable<T> {
-  readonly _tag: "TaskSuccess" | "TaskFailure"
+  extends FunctypeBase<T, "Ok" | "Err">,
+    Extractable<T>,
+    AsyncMonad<T>,
+    Promisable<T>,
+    Doable<T> {
+  readonly _tag: "Ok" | "Err"
   readonly _meta: TaskMetadata
 
-  // Override transformation methods to return TaskOutcome
+  // Value access
+  readonly value?: T
+  readonly error?: Throwable
+
+  // Functional methods
   readonly map: <U>(f: (value: T) => U) => TaskOutcome<U>
-  readonly flatMap: <U>(f: (value: T) => Either<Throwable, U>) => TaskOutcome<U>
-  readonly ap: <U>(ff: Either<Throwable, (value: T) => U>) => TaskOutcome<U>
-  readonly merge: <T1>(other: Either<Throwable, T1>) => TaskOutcome<[T, T1]>
+  readonly flatMap: <U>(f: (value: T) => TaskOutcome<U> | Either<Throwable, U>) => TaskOutcome<U>
+  readonly ap: <U>(ff: TaskOutcome<(value: T) => U>) => TaskOutcome<U>
   readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
-  readonly flatMapAsync: <U>(f: (value: T) => Promise<Either<Throwable, U>>) => Promise<TaskOutcome<U>>
+  readonly flatMapAsync: <U>(f: (value: T) => Promise<TaskOutcome<U>>) => Promise<TaskOutcome<U>>
 
-  // Error handling methods (available on all TaskOutcomes for polymorphic usage)
+  // Error handling methods
   readonly mapError: (f: (error: Throwable) => Throwable) => TaskOutcome<T>
-  readonly recover: (value: T) => TaskSuccess<T>
-  readonly recoverWith: (f: (error: Throwable) => T) => TaskSuccess<T>
+  readonly recover: (value: T) => Ok<T>
+  readonly recoverWith: (f: (error: Throwable) => T) => Ok<T>
 
-  // Type guards - narrow the type of the value
-  readonly isSuccess: () => this is TaskSuccess<T>
-  readonly isFailure: () => this is TaskFailure<T>
+  // Type guards
+  readonly isSuccess: () => this is Ok<T>
+  readonly isFailure: () => this is Err<T>
+  readonly isOk: () => this is Ok<T>
+  readonly isErr: () => this is Err<T>
+
+  // Conversion methods
+  readonly toEither: () => Either<Throwable, T>
+  readonly toTry: () => Try<T>
+  readonly toOption: () => Option<T>
+  readonly toList: () => List<T>
+
+  // Pattern matching
+  readonly fold: <U>(onErr: (error: Throwable) => U, onOk: (value: T) => U) => U
+  readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
 }
 
 // Success case interface - extends TaskOutcome
-export interface TaskSuccess<T> extends TaskOutcome<T> {
-  readonly _tag: "TaskSuccess"
-  // value is T (inherited from Either, narrowed by type guard)
+export interface Ok<T> extends TaskOutcome<T> {
+  readonly _tag: "Ok"
+  readonly value: T
+  readonly error: undefined
 }
 
 // Failure case interface - extends TaskOutcome
-export interface TaskFailure<T> extends TaskOutcome<T> {
-  readonly _tag: "TaskFailure"
-  readonly error: Throwable // Alias for value for semantic clarity
-  // value is Throwable (inherited from Either, narrowed by type guard)
+export interface Err<T> extends TaskOutcome<T> {
+  readonly _tag: "Err"
+  readonly value: undefined
+  readonly error: Throwable
 }
 
-// Note: TaskOutcome<T> is now an interface, not a union type
-// Any value that is TaskSuccess<T> or TaskFailure<T> is also TaskOutcome<T>
+// Legacy type aliases for backwards compatibility
+export type TaskSuccess<T> = Ok<T>
+export type TaskFailure<T> = Err<T>
 
 /**
  * Helper function to convert Either to TaskOutcome
@@ -90,22 +116,28 @@ export interface TaskFailure<T> extends TaskOutcome<T> {
  */
 const eitherToTaskOutcome = <T>(either: Either<Throwable, T>, params?: TaskParams): TaskOutcome<T> => {
   if (either.isRight()) {
-    return TaskSuccess(either.getOrThrow(), params)
+    return Ok(either.getOrThrow(), params)
   } else if (either.isLeft()) {
-    // Access the left value safely
-    return TaskFailure<T>(either, undefined, params)
+    return Err<T>(
+      either.fold(
+        (left) => left,
+        () => new Error("Unexpected right value"),
+      ),
+      undefined,
+      params,
+    )
   } else {
     throw new Error("Unrecognized task outcome")
   }
 }
 
 /**
- * TaskFailure factory function
+ * Err constructor - Creates a failed TaskOutcome
  * @param error - The error object
  * @param data - Additional data related to the error
  * @param params - Task parameters
  */
-export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => {
+export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err<T> => {
   const meta: TaskMetadata = {
     name: params?.name ?? "Task",
     description: params?.description ?? "",
@@ -114,172 +146,228 @@ export const TaskFailure = <T>(error: unknown, data?: unknown, params?: TaskPara
   // Pass metadata to Throwable for error chain tracking
   const throwable = Throwable.apply(error, data, meta)
 
-  // Create the underlying Either
-  const either = Left<Throwable, T>(throwable)
-
-  // Destructure to exclude isLeft and isRight
-  const { isLeft, isRight, ...eitherWithoutTypeGuards } = either
-
-  return {
-    ...eitherWithoutTypeGuards, // Spread all Either methods except isLeft/isRight
-    _tag: "TaskFailure" as const, // Override the tag
+  const errResult = {
+    ...Base("Err", { error: throwable, meta }),
+    _tag: "Err" as const,
     _meta: meta,
+    value: undefined,
     error: throwable,
 
-    // Wrap transformation methods to return TaskOutcome
-    map: <U>(f: (value: T) => U) => {
-      const result = either.map(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    flatMap: <U>(f: (value: T) => Either<Throwable, U>) => {
-      const result = either.flatMap(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    ap: <U>(ff: Either<Throwable, (value: T) => U>) => {
-      const result = either.ap(ff)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    merge: <T1>(other: Either<Throwable, T1>) => {
-      const result = either.merge(other)
-      return eitherToTaskOutcome<[T, T1]>(result, params)
-    },
-
-    mapAsync: async <U>(f: (value: T) => Promise<U>) => {
-      const result = await either.mapAsync(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    flatMapAsync: async <U>(f: (value: T) => Promise<Either<Throwable, U>>) => {
-      const result = await either.flatMapAsync(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
     // Type guards
-    isSuccess(): this is TaskSuccess<T> {
+    isSuccess(): this is Ok<T> {
       return false
     },
-    isFailure(): this is TaskFailure<T> {
+    isFailure(): this is Err<T> {
+      return true
+    },
+    isOk(): this is Ok<T> {
+      return false
+    },
+    isErr(): this is Err<T> {
       return true
     },
 
-    // Add Task-specific error methods
-    mapError: (f: (error: Throwable) => Throwable) => TaskFailure<T>(f(throwable), data, params),
-    recover: (value: T) => TaskSuccess(value, params),
-    recoverWith: (f: (error: Throwable) => T) => TaskSuccess(f(throwable), params),
+    // Functional methods (no-ops for Err)
+    map: <U>(_f: (value: T) => U) => Err<U>(throwable, data, params),
+    flatMap: <U>(_f: (value: T) => TaskOutcome<U> | Either<Throwable, U>) => Err<U>(throwable, data, params),
+    ap: <U>(_ff: TaskOutcome<(value: T) => U>) => Err<U>(throwable, data, params),
+    mapAsync: <U>(_f: (value: T) => Promise<U>) => Promise.resolve(Err<U>(throwable, data, params)),
+    flatMapAsync: <U>(_f: (value: T) => Promise<TaskOutcome<U>>) => Promise.resolve(Err<U>(throwable, data, params)),
 
-    // Extractable methods - Unsafe operations
+    // Error handling methods
+    mapError: (f: (error: Throwable) => Throwable) => Err<T>(f(throwable), data, params),
+    recover: (value: T) => Ok(value, params),
+    recoverWith: (f: (error: Throwable) => T) => Ok(f(throwable), params),
+
+    // Extractable methods
     getOrThrow: (error?: Error) => {
       throw error ?? throwable
     },
-
-    // Extractable methods - Safe operations
     getOrElse: (defaultValue: T) => defaultValue,
     orElse: (alternative: TaskOutcome<T>) => alternative,
     orNull: () => null as T | null,
     orUndefined: () => undefined as T | undefined,
-  } as TaskFailure<T>
+
+    // Conversion methods
+    toEither: () => Left<Throwable, T>(throwable),
+    toTry: () =>
+      TryConstructor<T>(() => {
+        throw throwable
+      }),
+    toOption: () => None<T>(),
+    toList: () => List<T>([]),
+
+    // Pattern matching
+    fold: <U>(onErr: (error: Throwable) => U, _onOk: (value: T) => U) => onErr(throwable),
+    match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => patterns.Err(throwable),
+
+    // Foldable methods
+    foldLeft:
+      <B>(z: B) =>
+      (_op: (b: B, a: T) => B) =>
+        z,
+    foldRight:
+      <B>(z: B) =>
+      (_op: (a: T, b: B) => B) =>
+        z,
+
+    // Traversable methods
+    size: 0,
+    isEmpty: true,
+    contains: (_value: T) => false,
+    reduce: (_f: (b: T, a: T) => T) => {
+      throw new Error("Cannot reduce empty Err")
+    },
+    reduceRight: (_f: (b: T, a: T) => T) => {
+      throw new Error("Cannot reduceRight empty Err")
+    },
+    count: (_p: (value: T) => boolean) => 0,
+    find: (_p: (value: T) => boolean) => None<T>(),
+    exists: (_p: (value: T) => boolean) => false,
+    forEach: (_f: (value: T) => void) => {},
+
+    // Promise methods
+    toPromise: () => Promise.reject(throwable),
+
+    // Do-notation support
+    doUnwrap(): DoResult<T> {
+      return { ok: false, empty: false, error: throwable }
+    },
+
+    // Serializable methods
+    serialize: () => ({
+      toJSON: () => stringify({ _tag: "Err", error: throwable.message ?? throwable.toString() }) ?? "{}",
+      toYAML: () => `_tag: Err\nerror: ${throwable.message ?? throwable.toString()}`,
+      toBinary: () =>
+        Buffer.from(JSON.stringify({ _tag: "Err", error: throwable.message ?? throwable.toString() })).toString(
+          "base64",
+        ),
+    }),
+
+    // Pipe method
+    pipe: <U>(f: (value: TaskOutcome<T>) => U) => f(errResult as TaskOutcome<T>),
+  }
+
+  return errResult
 }
 
 /**
- * TaskSuccess factory function
+ * Ok constructor - Creates a successful TaskOutcome
  * @param data - The successful value
  * @param params - Task parameters
  */
-export const TaskSuccess = <T>(data: T, params?: TaskParams): TaskSuccess<T> => {
+export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
   const meta: TaskMetadata = {
     name: params?.name ?? "Task",
     description: params?.description ?? "",
   }
 
-  // Create the underlying Either
-  const either = Right<Throwable, T>(data)
-
-  // Destructure to exclude isLeft and isRight
-  const { isLeft, isRight, ...eitherWithoutTypeGuards } = either
-
-  return {
-    ...eitherWithoutTypeGuards, // Spread all Either methods except isLeft/isRight
-    _tag: "TaskSuccess" as const, // Override the tag
+  const okResult = {
+    ...Base("Ok", { value: data, meta }),
+    _tag: "Ok" as const,
     _meta: meta,
-
-    // Wrap transformation methods to return TaskOutcome
-    map: <U>(f: (value: T) => U) => {
-      const result = either.map(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    flatMap: <U>(f: (value: T) => Either<Throwable, U>) => {
-      const result = either.flatMap(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    ap: <U>(ff: Either<Throwable, (value: T) => U>) => {
-      const result = either.ap(ff)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    merge: <T1>(other: Either<Throwable, T1>) => {
-      const result = either.merge(other)
-      return eitherToTaskOutcome<[T, T1]>(result, params)
-    },
-
-    mapAsync: async <U>(f: (value: T) => Promise<U>) => {
-      const result = await either.mapAsync(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
-
-    flatMapAsync: async <U>(f: (value: T) => Promise<Either<Throwable, U>>) => {
-      const result = await either.flatMapAsync(f)
-      return eitherToTaskOutcome<U>(result, params)
-    },
+    value: data,
+    error: undefined,
 
     // Type guards
-    isSuccess(): this is TaskSuccess<T> {
+    isSuccess(): this is Ok<T> {
       return true
     },
-    isFailure(): this is TaskFailure<T> {
+    isFailure(): this is Err<T> {
+      return false
+    },
+    isOk(): this is Ok<T> {
+      return true
+    },
+    isErr(): this is Err<T> {
       return false
     },
 
+    // Functional methods
+    map: <U>(f: (value: T) => U) => Ok<U>(f(data), params),
+    flatMap: <U>(f: (value: T) => TaskOutcome<U> | Either<Throwable, U>) => {
+      const result = f(data)
+      // Check if it's an Either
+      if (result && typeof result === "object" && "isLeft" in result && "isRight" in result) {
+        return eitherToTaskOutcome(result as Either<Throwable, U>, params)
+      }
+      // It's already a TaskOutcome
+      return result as TaskOutcome<U>
+    },
+    ap: <U>(ff: TaskOutcome<(value: T) => U>) =>
+      ff.isOk() ? Ok<U>(ff.value!(data), params) : Err<U>(ff.error!, undefined, params),
+    mapAsync: async <U>(f: (value: T) => Promise<U>) => Ok<U>(await f(data), params),
+    flatMapAsync: async <U>(f: (value: T) => Promise<TaskOutcome<U>>) => await f(data),
+
     // Error handling methods (no-ops for success)
-    mapError: (_f: (error: Throwable) => Throwable) => TaskSuccess(data, params),
-    recover: (_value: T) => TaskSuccess(data, params),
-    recoverWith: (_f: (error: Throwable) => T) => TaskSuccess(data, params),
+    mapError: (_f: (error: Throwable) => Throwable) => Ok(data, params),
+    recover: (_value: T) => Ok(data, params),
+    recoverWith: (_f: (error: Throwable) => T) => Ok(data, params),
 
-    // Unsafe methods
+    // Extractable methods
     getOrThrow: (_error?: Error) => data,
-
-    // Extractable methods - Safe operations
     getOrElse: (_defaultValue: T) => data,
-    orElse: (_alternative: TaskOutcome<T>) => TaskSuccess(data, params),
+    orElse: (_alternative: TaskOutcome<T>) => Ok(data, params),
     orNull: () => data as T | null,
     orUndefined: () => data as T | undefined,
-  } as TaskSuccess<T>
+
+    // Conversion methods
+    toEither: () => Right<Throwable, T>(data),
+    toTry: () => TryConstructor<T>(() => data),
+    toOption: () => Some(data),
+    toList: () => List<T>([data]),
+
+    // Pattern matching
+    fold: <U>(_onErr: (error: Throwable) => U, onOk: (value: T) => U) => onOk(data),
+    match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => patterns.Ok(data),
+
+    // Foldable methods
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: T) => B) =>
+        op(z, data),
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: T, b: B) => B) =>
+        op(data, z),
+
+    // Traversable methods
+    size: 1,
+    isEmpty: false,
+    contains: (value: T) => data === value,
+    reduce: (_f: (b: T, a: T) => T) => data,
+    reduceRight: (_f: (b: T, a: T) => T) => data,
+    count: (p: (value: T) => boolean) => (p(data) ? 1 : 0),
+    find: (p: (value: T) => boolean) => (p(data) ? Some(data) : None<T>()),
+    exists: (p: (value: T) => boolean) => p(data),
+    forEach: (f: (value: T) => void) => f(data),
+
+    // Promise methods
+    toPromise: () => Promise.resolve(data),
+
+    // Do-notation support
+    doUnwrap(): DoResult<T> {
+      return { ok: true, value: data }
+    },
+
+    // Serializable methods
+    serialize: () => ({
+      toJSON: () => stringify({ _tag: "Ok", value: data }) ?? "{}",
+      toYAML: () => `_tag: Ok\nvalue: ${stringify(data) ?? "undefined"}`,
+      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Ok", value: data })).toString("base64"),
+    }),
+
+    // Pipe method
+    pipe: <U>(f: (value: TaskOutcome<T>) => U) => f(okResult as TaskOutcome<T>),
+  }
+
+  return okResult
 }
 
 // Promise wrapper for async operations
 export type TaskResult<T> = Promise<TaskOutcome<T>>
 
-/**
- * Ok constructor - Creates a successful TaskOutcome
- * Alias for TaskSuccess for cleaner, more concise code
- * @param value - The successful value
- * @param params - Optional task parameters
- */
-export const Ok = <T>(value: T, params?: TaskParams): TaskSuccess<T> => TaskSuccess(value, params)
-
-/**
- * Err constructor - Creates a failed TaskOutcome
- * Alias for TaskFailure for cleaner, more concise code
- * @param error - The error value
- * @param data - Optional additional error data
- * @param params - Optional task parameters
- */
-export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> =>
-  TaskFailure(error, data, params)
+// Legacy aliases removed - Ok and Err are now the primary constructors
 
 /**
  * The CancellationToken is a control structure that allows long-running tasks to be cancelled
@@ -442,7 +530,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
             // Check if result is already a TaskOutcome
             if (result && typeof result === "object" && "_tag" in result) {
               const outcome = result as TaskOutcome<U>
-              if (outcome._tag === "TaskSuccess" || outcome._tag === "TaskFailure") {
+              if (outcome._tag === "Ok" || outcome._tag === "Err") {
                 // Result is already a TaskOutcome, use it directly
                 resolve(outcome)
               } else {
@@ -512,7 +600,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
                 // Check if error handler returned a TaskOutcome
                 if (errorResult && typeof errorResult === "object" && "_tag" in errorResult) {
                   const outcome = errorResult as TaskOutcome<U>
-                  if (outcome._tag === "TaskSuccess" || outcome._tag === "TaskFailure") {
+                  if (outcome._tag === "Ok" || outcome._tag === "Err") {
                     // Error handler returned a TaskOutcome, use it directly
                     resolve(outcome)
                   } else {
@@ -549,9 +637,9 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       f: () => void = () => {},
     ): TaskOutcome<U> => {
       try {
-        return TaskSuccess<U>(t(), { name, description })
+        return Ok<U>(t(), { name, description })
       } catch (error) {
-        return TaskFailure<U>(e(error), undefined, { name, description })
+        return Err<U>(e(error), undefined, { name, description })
       } finally {
         f()
       }
@@ -599,24 +687,49 @@ const TaskCompanion = {
   /**
    * Create a successful Task result
    */
-  success: <T>(data: T, params?: TaskParams): TaskSuccess<T> => TaskSuccess<T>(data, params),
+  success: <T>(data: T, params?: TaskParams): Ok<T> => Ok<T>(data, params),
 
   /**
    * Create a failed Task result
    */
-  fail: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => TaskFailure<T>(error, data, params),
+  fail: <T>(error: unknown, data?: unknown, params?: TaskParams): Err<T> => Err<T>(error, data, params),
 
   /**
    * Create a successful Task result (alias for success)
    * Preferred for new code
    */
-  ok: <T>(data: T, params?: TaskParams): TaskSuccess<T> => Ok<T>(data, params),
+  ok: <T>(data: T, params?: TaskParams): Ok<T> => Ok<T>(data, params),
 
   /**
    * Create a failed Task result (alias for fail)
    * Preferred for new code
    */
-  err: <T>(error: unknown, data?: unknown, params?: TaskParams): TaskFailure<T> => Err<T>(error, data, params),
+  err: <T>(error: unknown, data?: unknown, params?: TaskParams): Err<T> => Err<T>(error, data, params),
+
+  /**
+   * Create TaskOutcome from Either
+   * @param either - Either to convert
+   * @param params - Task parameters
+   */
+  fromEither: <T>(either: Either<Throwable, T>, params?: TaskParams): TaskOutcome<T> =>
+    eitherToTaskOutcome(either, params),
+
+  /**
+   * Create TaskOutcome from Try
+   * @param tryValue - Try to convert
+   * @param params - Task parameters
+   */
+  fromTry: <T>(tryValue: Try<T>, params?: TaskParams): TaskOutcome<T> =>
+    tryValue.isSuccess()
+      ? Ok<T>(tryValue.getOrThrow(), params)
+      : Err<T>(
+          tryValue.fold(
+            (error) => error,
+            () => new Error("Unexpected success"),
+          ),
+          undefined,
+          params,
+        ),
 
   /**
    * Extract the error chain from a Throwable error
@@ -711,11 +824,11 @@ const TaskCompanion = {
   toPromise: <U>(taskOutcome: TaskOutcome<U>): Promise<U> => {
     return new Promise((resolve, reject) => {
       if (taskOutcome.isSuccess()) {
-        // TypeScript now knows this is TaskSuccess<U>
+        // TypeScript now knows this is Ok<U>
         resolve(taskOutcome.getOrThrow())
       } else {
-        // TypeScript now knows this is TaskFailure<U>
-        reject((taskOutcome as TaskFailure<U>).error)
+        // TypeScript now knows this is Err<U>
+        reject((taskOutcome as Err<U>).error)
       }
     })
   },
@@ -771,12 +884,12 @@ const TaskCompanion = {
                   // Check if this is a TaskOutcome
                   if (result && typeof result === "object" && "_tag" in result) {
                     const outcome = result as TaskOutcome<T>
-                    if (outcome._tag === "TaskSuccess") {
-                      // Extract the value from TaskSuccess
+                    if (outcome._tag === "Ok") {
+                      // Extract the value from Ok
                       resolve(outcome.getOrThrow())
-                    } else if (outcome._tag === "TaskFailure") {
-                      // TaskFailure - reject with the error
-                      reject((outcome as TaskFailure<T>).error)
+                    } else if (outcome._tag === "Err") {
+                      // Err - reject with the error
+                      reject((outcome as Err<T>).error)
                     } else {
                       // Not a TaskOutcome, treat as raw value
                       resolve(result as T)

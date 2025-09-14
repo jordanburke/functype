@@ -1,25 +1,25 @@
 import { describe, expect, test } from "vitest"
 
-import { Task, TaskFailure, TaskSuccess, Throwable } from "../../../src"
+import { Task, Ok, Err, Throwable } from "../../../src"
 
-describe("TaskFailure", () => {
-  test("should create a TaskFailure with error", () => {
+describe("Err", () => {
+  test("should create an Err with error", () => {
     const error = new Error("Test error")
-    const result = TaskFailure<string>(error)
+    const result = Err<string>(error)
 
     expect(result.isFailure()).toBe(true)
-    expect(result._tag).toBe("TaskFailure")
+    expect(result._tag).toBe("Err")
     expect(result.error._tag).toBe("Throwable")
     expect(result.error.message).toBe("Test error")
   })
 
-  test("should create a TaskFailure with error and additional data", () => {
+  test("should create an Err with error and additional data", () => {
     const error = new Error("Test error")
     const data = { additionalInfo: "extra data" }
-    const result = TaskFailure<string>(error, data, {})
+    const result = Err<string>(error, data, {})
 
     expect(result.isFailure()).toBe(true)
-    expect(result._tag).toBe("TaskFailure")
+    expect(result._tag).toBe("Err")
     expect(result.error instanceof Throwable).toBe(true)
     expect(result.error.data).toEqual(data)
   })
@@ -27,20 +27,20 @@ describe("TaskFailure", () => {
   test("should include task name in the error", () => {
     const error = new Error("Test error")
     const taskName = "CustomTaskName"
-    const result = TaskFailure<string>(error, undefined, { name: taskName })
+    const result = Err<string>(error, undefined, { name: taskName })
 
     expect(result.isFailure()).toBe(true)
-    // TaskFailure has _meta property
+    // Err has _meta property
     expect((result as any)._meta.name).toBe(taskName)
     // The throwable should have the task name
-    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    expect((result.error as unknown as Throwable).taskInfo?.name).toBe(taskName)
     // The Error's name should also be set to the task name
-    expect((result.value as Error).name).toBe(taskName)
+    expect((result.error as Error).name).toBe(taskName)
   })
 
   test("should throw own error on getOrThrow without parameter", () => {
     const error = new Error("Test error")
-    const result = TaskFailure<string>(error)
+    const result = Err<string>(error)
 
     expect(() => result.getOrThrow()).toThrow("Test error")
   })
@@ -48,25 +48,25 @@ describe("TaskFailure", () => {
   test("should throw provided Error on getOrThrow with parameter", () => {
     const originalError = new Error("Original error")
     const customError = new Error("Custom error")
-    const result = TaskFailure<string>(originalError)
+    const result = Err<string>(originalError)
 
     expect(() => result.getOrThrow(customError)).toThrow("Custom error")
   })
 })
 
-describe("TaskSuccess", () => {
-  test("should create a successful TaskSuccess", () => {
+describe("Ok", () => {
+  test("should create a successful Ok", () => {
     const data = "test data"
-    const result = TaskSuccess(data)
+    const result = Ok(data)
     expect(result.isSuccess()).toBe(true)
-    expect(result._tag).toBe("TaskSuccess")
+    expect(result._tag).toBe("Ok")
     expect(result.value).toBe(data)
   })
 
   test("should work with different data types", () => {
-    const numberResult = TaskSuccess(42)
-    const objectResult = TaskSuccess({ key: "value" })
-    const arrayResult = TaskSuccess([1, 2, 3])
+    const numberResult = Ok(42)
+    const objectResult = Ok({ key: "value" })
+    const arrayResult = Ok([1, 2, 3])
 
     expect(numberResult.isSuccess()).toBe(true)
     expect(numberResult.getOrThrow()).toBe(42)
@@ -78,7 +78,7 @@ describe("TaskSuccess", () => {
 
   test("should return value on getOrThrow", () => {
     const data = "test data"
-    const result = TaskSuccess(data)
+    const result = Ok(data)
     const customError = new Error("Should not be thrown")
 
     expect(result.getOrThrow()).toBe(data)
@@ -101,8 +101,8 @@ describe("Sync", () => {
     })
 
     expect(result.isFailure()).toBe(true)
-    expect(result.value._tag).toBe("Throwable")
-    expect((result.value as Error).message).toBe("Sync failed")
+    expect(result.error._tag).toBe("Throwable")
+    expect((result.error as Error).message).toBe("Sync failed")
   })
 
   test("should include task name in error when using named task", () => {
@@ -115,8 +115,8 @@ describe("Sync", () => {
     expect(result.isFailure()).toBe(true)
     // TaskFailure has _meta property
     expect((result as any)._meta.name).toBe(taskName)
-    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
-    expect((result.value as Error).name).toBe(taskName)
+    expect((result.error as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    expect((result.error as Error).name).toBe(taskName)
   })
 
   test("should use custom error handler", () => {
@@ -130,7 +130,7 @@ describe("Sync", () => {
     )
 
     expect(result.isFailure()).toBe(true)
-    expect(result.value.message).toBe(customError)
+    expect(result.error.message).toBe(customError)
   })
 
   test("Sync.success should create successful result", () => {
@@ -146,7 +146,7 @@ describe("Sync", () => {
 
     expect(result.isFailure()).toBe(true)
     expect(result.error._tag).toBe("Throwable")
-    expect((result.value as Error).message).toBe("Failed")
+    expect((result.error as Error).message).toBe("Failed")
   })
 })
 
@@ -163,7 +163,7 @@ describe("Async", () => {
       throw error
     })
     expect(result.isFailure()).toBe(true)
-    expect((result as TaskFailure<unknown>).error.message).toBe("Async Sync failed")
+    expect(result.error.message).toBe("Async Sync failed")
   })
 
   test("should include task name in async error when using named task", async () => {
@@ -173,8 +173,7 @@ describe("Async", () => {
       throw error
     })
     expect(result.isFailure()).toBe(true)
-    const failure = result as TaskFailure<unknown>
-    expect(failure._meta.name).toBe(taskName)
+    expect((result as any)._meta.name).toBe(taskName)
   })
 
   test("should use custom async error handler", async () => {
@@ -204,8 +203,8 @@ describe("Async", () => {
     const result = Task.fail(error)
 
     expect(result.isFailure()).toBe(true)
-    expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
-    expect((result.value as Error).message).toBe("Failed")
+    expect((result.error as unknown as Throwable)._tag).toBe("Throwable")
+    expect((result.error as Error).message).toBe("Failed")
   })
 
   test("Task.fail should include task name in the error", () => {
@@ -216,8 +215,8 @@ describe("Async", () => {
     expect(result.isFailure()).toBe(true)
     // TaskFailure has _meta property
     expect((result as any)._meta.name).toBe(taskName)
-    expect((result.value as unknown as Throwable).taskInfo?.name).toBe(taskName)
-    expect((result.value as Error).name).toBe(taskName)
+    expect((result.error as unknown as Throwable).taskInfo?.name).toBe(taskName)
+    expect((result.error as Error).name).toBe(taskName)
   })
 
   test("should handle promises", async () => {
@@ -356,9 +355,8 @@ describe("Async with finally", () => {
       },
     )
     expect(result.isFailure()).toBe(true)
-    const failure = result as unknown as TaskFailure<unknown>
-    expect(failure.error._tag).toBe("Throwable")
-    expect(failure.error.message).toBe("Async failed")
+    expect(result.error._tag).toBe("Throwable")
+    expect(result.error.message).toBe("Async failed")
     expect(finallyExecuted).toBe(true)
   })
 
@@ -379,7 +377,7 @@ describe("Async with finally", () => {
     )
 
     expect(result.isFailure()).toBe(true)
-    expect((result.value as Error).message).toBe("Error handler failed")
+    expect((result.error as Error).message).toBe("Error handler failed")
     expect(finallyExecuted).toBe(true)
   })
 
@@ -407,7 +405,7 @@ describe("Async with finally", () => {
       },
     )
     expect(result.isFailure()).toBe(true)
-    expect((result.value as Error).message).toBe("Finally failed")
+    expect((result.error as Error).message).toBe("Finally failed")
   })
 
   test("should throw finally error even when operation fails", async () => {
@@ -421,7 +419,7 @@ describe("Async with finally", () => {
       },
     )
     expect(result.isFailure()).toBe(true)
-    expect((result.value as Error).message).toBe("Finally failed")
+    expect((result.error as Error).message).toBe("Finally failed")
   })
 })
 
@@ -443,8 +441,8 @@ describe("Promise Adapter Methods", () => {
     const result = await taskFn()
 
     expect(result.isFailure()).toBe(true)
-    expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
-    expect((result.value as Error).message).toBe("promise error")
+    expect((result.error as unknown as Throwable)._tag).toBe("Throwable")
+    expect((result.error as Error).message).toBe("promise error")
   })
 
   test("should pass through arguments to the promise function", async () => {

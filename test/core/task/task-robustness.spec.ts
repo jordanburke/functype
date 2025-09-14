@@ -12,13 +12,13 @@ describe("Task Robustness Tests", () => {
           throw nestedError
         })
         if (innerResult.isFailure()) {
-          throw innerResult.value
+          throw innerResult.error
         }
-        return innerResult.value
+        return innerResult.getOrThrow()
       })
 
       expect(outerResult.isFailure()).toBe(true)
-      const error = outerResult.value
+      const error = outerResult.error
       {
         // With enhanced error chaining, the error messages are combined
         expect((error as Error).message).toBe("OuterTask: Nested operation failed")
@@ -52,8 +52,8 @@ describe("Task Robustness Tests", () => {
 
       expect(result.isFailure()).toBe(true)
       // The error handler's error should take precedence
-      expect((result.value as Error).message).toBe("Error handler failed")
-      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("MainTask")
+      expect((result.error as Error).message).toBe("Error handler failed")
+      expect((result.error as unknown as Throwable).taskInfo?.name).toBe("MainTask")
     })
   })
 
@@ -71,7 +71,7 @@ describe("Task Robustness Tests", () => {
       )
 
       expect(result.isFailure()).toBe(true)
-      const error = result.value
+      const error = result.error
       {
         expect((error as Error).message).toBe("Async finally error")
         expect((error as unknown as Throwable).taskInfo?.name).toBe("ComplexTask")
@@ -88,8 +88,8 @@ describe("Task Robustness Tests", () => {
       )
 
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toBe("Finally promise rejected")
-      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("PromiseTask")
+      expect((result.error as Error).message).toBe("Finally promise rejected")
+      expect((result.error as unknown as Throwable).taskInfo?.name).toBe("PromiseTask")
     })
   })
 
@@ -106,8 +106,8 @@ describe("Task Robustness Tests", () => {
 
       const result = await taskFn()
       expect(result.isFailure()).toBe(true)
-      expect((result.value as Error).message).toBe("Synchronous throw in promise function")
-      expect((result.value as unknown as Throwable).taskInfo?.name).toBe("SyncErrorTask")
+      expect((result.error as Error).message).toBe("Synchronous throw in promise function")
+      expect((result.error as unknown as Throwable).taskInfo?.name).toBe("SyncErrorTask")
     })
   })
 
@@ -121,7 +121,7 @@ describe("Task Robustness Tests", () => {
         if (secondResult.isSuccess()) {
           return secondResult.value
         }
-        throw secondResult.value
+        throw secondResult.error
       })
 
       expect(result.isSuccess()).toBe(true)
@@ -135,18 +135,18 @@ describe("Task Robustness Tests", () => {
             throw new Error("Inner error")
           })
           if (innerResult.isFailure()) {
-            throw innerResult.value
+            throw innerResult.error
           }
-          return innerResult.value
+          return innerResult.getOrThrow()
         })
         if (middleResult.isFailure()) {
-          throw middleResult.value
+          throw middleResult.error
         }
-        return middleResult.value
+        return middleResult.getOrThrow()
       })
 
       expect(outerResult.isFailure()).toBe(true)
-      const error = outerResult.value
+      const error = outerResult.error
       {
         // With enhanced error chaining, the error messages are combined
         expect((error as Error).message).toBe("Outer: Middle: Inner error")
@@ -194,8 +194,8 @@ describe("Task Robustness Tests", () => {
       })
 
       expect(result.isFailure()).toBe(true)
-      expect(result.value).toBeTruthy() // Should convert null to a Throwable
-      expect((result.value as unknown as Throwable)._tag).toBe("Throwable")
+      expect(result.error).toBeTruthy() // Should convert null to a Throwable
+      expect((result.error as unknown as Throwable)._tag).toBe("Throwable")
     })
   })
 
@@ -230,7 +230,7 @@ describe("Task Robustness Tests", () => {
       const errorHandler = vi.fn().mockImplementation((error) => error)
 
       // Create a TaggedThrowable error
-      const throwableError = Task.fail(new Error("Throwable error"), undefined, { name: "InnerTask" }).value
+      const throwableError = Task.fail(new Error("Throwable error"), undefined, { name: "InnerTask" }).error
 
       const result = await Task({ name: "OuterTask" }).Async(
         async () => {
@@ -241,7 +241,7 @@ describe("Task Robustness Tests", () => {
       )
 
       expect(result.isFailure()).toBe(true)
-      const error = result.value
+      const error = result.error
 
       // Verify the error handler was called
       expect(errorHandler).toHaveBeenCalledTimes(1)
@@ -266,15 +266,15 @@ describe("Task Robustness Tests", () => {
             throw new Error("Inner task error")
           })
           if (innerResult.isFailure()) {
-            throw innerResult.value
+            throw innerResult.error
           }
-          return innerResult.value
+          return innerResult.getOrThrow()
         },
         errorHandler, // Use the mock error handler
       )
 
       expect(result.isFailure()).toBe(true)
-      const error = result.value
+      const error = result.error
 
       // Verify the error handler was called
       expect(errorHandler).toHaveBeenCalledTimes(1)
