@@ -1,0 +1,40 @@
+import { OptionDefaults } from "typedoc"
+
+/**
+ * @type {Partial<import('typedoc').TypeDocOptions>}
+ */
+const config = {
+  entryPoints: ["./src/index.ts"],
+  out: "typedocs",
+  name: "FuncType",
+  includeVersion: true,
+  excludePrivate: true,
+  excludeProtected: true,
+  excludeExternals: true,
+  excludeInternal: true,
+  categoryOrder: ["Core", "Collections", "Monads", "Utilities", "*"],
+  navigationLinks: {
+    GitHub: "https://github.com/jordanburke/functype",
+  },
+  visibilityFilters: {
+    protected: false,
+    private: false,
+    inherited: true,
+    external: false,
+    "@internal": false,
+  },
+  readme: "README.md",
+  disableSources: true,
+  skipErrorChecking: true,
+  cleanOutputDir: false,
+  validation: {
+    invalidLink: false,
+    notDocumented: false,
+  },
+  treatValidationWarningsAsErrors: false,
+  treatWarningsAsErrors: false,
+  // Extend default block tags instead of replacing them
+  blockTags: [...OptionDefaults.blockTags, "@includeCode"],
+}
+
+export default config
