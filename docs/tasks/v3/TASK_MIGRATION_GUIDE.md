@@ -38,11 +38,11 @@ if (result.isFailure()) {
 
 ### 2. New Type Structure
 
-| Component | Type | Purpose |
-|-----------|------|---------|
-| `TaskOutcome<T>` | `Ok<T> \| Err<T>` | Union type for task results |
-| `Ok<T>` | Success constructor | Represents successful task completion |
-| `Err<T>` | Failure constructor | Represents failed task completion |
+| Component        | Type                | Purpose                               |
+| ---------------- | ------------------- | ------------------------------------- |
+| `TaskOutcome<T>` | `Ok<T> \| Err<T>`   | Union type for task results           |
+| `Ok<T>`          | Success constructor | Represents successful task completion |
+| `Err<T>`         | Failure constructor | Represents failed task completion     |
 
 ### 3. New Constructors Available
 
@@ -265,14 +265,14 @@ The new Task implementation maintains full compatibility with Either methods:
 const result = Task.ok("value")
 
 // All of these still work:
-result.isLeft()    // false
-result.isRight()   // true
+result.isLeft() // false
+result.isRight() // true
 result.fold(
   (error) => `Error: ${error}`,
-  (value) => `Success: ${value}`
+  (value) => `Success: ${value}`,
 )
-result.map(v => v.toUpperCase())
-result.flatMap(v => Right(v + "!"))
+result.map((v) => v.toUpperCase())
+result.flatMap((v) => Right(v + "!"))
 ```
 
 ### New Type Guards Are Preferred
