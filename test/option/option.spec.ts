@@ -15,6 +15,12 @@ describe("Option", () => {
   })
 
   it("map on Some", () => {
+    //#region option-map-example
+    const option = Option("hello")
+    const length = option.map((s) => s.length)
+    expect(length.getOrElse(0)).toBe(5)
+    //#endregion option-map-example
+
     expect(something.map((s) => s.length).getOrElse(0)).toBe(5)
   })
 
@@ -27,6 +33,12 @@ describe("Option", () => {
   })
 
   it("filter on Some with predicate returning true", () => {
+    //#region option-filter-example
+    const option = Option("hello")
+    const filtered = option.filter((s) => s.length > 3)
+    expect(filtered.getOrElse("")).toBe("hello")
+    //#endregion option-filter-example
+
     expect(something.filter((s) => s.length === 5).getOrElse("nope")).toBe("hello")
   })
 

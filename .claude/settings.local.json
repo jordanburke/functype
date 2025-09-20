@@ -67,7 +67,8 @@
       "Read(//Users/jordanburke/IdeaProjects/cq-ts-lib/**)",
       "Bash(npm publish:*)",
       "Bash(npm link:*)",
-      "Read(//home/jordanburke/.claude/**)"
+      "Read(//home/jordanburke/.claude/**)",
+      "Bash(tsx scripts/preprocess-docs.ts:*)"
     ],
     "deny": []
   }

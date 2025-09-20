@@ -28,5 +28,6 @@
     "notDocumented": false
   },
   "treatValidationWarningsAsErrors": false,
-  "treatWarningsAsErrors": false
+  "treatWarningsAsErrors": false,
+  "blockTags": ["@includeCode"]
 }

@@ -23,6 +23,6 @@
     "verbatimModuleSyntax": true,
     "noErrorTruncation": true
   },
-  "include": ["src/**/*", "test/**/*", "examples/**/*", "bench/**/*"],
+  "include": ["src/**/*", "test/**/*", "examples/**/*", "bench/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "lib"]
 }

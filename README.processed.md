@@ -68,11 +68,53 @@ For detailed optimization strategies, see the [Bundle Optimization Guide](docs/B
 
 ### Option
 
-{@includeCode test/docs/documentation-examples.spec.ts#readme-option-basic}
+```typescript
+// Create options
+const value = Option("hello") // Some("hello")
+const empty = Option(null) // None
+
+// Transform values
+const upper = value.map((s) => s.toUpperCase()) // Some("HELLO")
+const _nothing = empty.map((s) => s.toUpperCase()) // None
+
+// Chain operations
+const result = value
+  .map((s) => s.length)
+  .filter((len) => len > 3)
+  .getOrElse(0) // 5
+
+// Pattern matching
+const message = value.fold(
+  () => "No value",
+  (s) => `Value: ${s}`,
+) // "Value: hello"
+```
 
 ### Either
 
-{@includeCode test/docs/documentation-examples.spec.ts#readme-either-basic}
+```typescript
+// Success case
+const success = Right<string, number>(42)
+// Error case
+const failure = Left<string, number>("Error occurred")
+
+// Transform success values only
+const doubled = success.map((n) => n * 2) // Right(84)
+const _failed = failure.map((n) => n * 2) // Left("Error occurred")
+
+// Handle both cases
+const result = success.fold(
+  (error) => `Failed: ${error}`,
+  (value) => `Success: ${value}`,
+) // "Success: 42"
+
+// Chain operations that might fail
+const divide = (a: number, b: number) => (b === 0 ? Left("Division by zero") : Right(a / b))
+
+const calculation = Right(10)
+  .flatMap((n) => divide(n, 2))
+  .flatMap((n) => divide(n, 5)) // Right(1)
+```
 
 ### List
 
