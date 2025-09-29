@@ -22,25 +22,26 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
 | **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 | **FPromise<T,E>**  |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
-| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 
 ## Additional Properties
 
-| Data Structure    | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable |
-| ----------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: |
-| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |
-| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |
-| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |
-| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |
-| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
-| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
-| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |
-| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |
-| **LazyList<A>**   |    ✗     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |
-| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |
-| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |
+| Data Structure    | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
+| ----------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
+| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
+| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
+| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **LazyList<A>**   |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |     ✗      |
+| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
 
 ## Key Methods by Interface
 
@@ -140,6 +141,12 @@ Provides type conversion between monadic types:
 - `toList(): List<T>`
 - `toTry(): Try<T>`
 
+### Promisable
+
+Provides conversion to Promise for async interop:
+
+- `toPromise(): Promise<T>`
+
 ## Notes
 
 1. **Functype<A, Tag>**: Implemented by single-value containers (Option, Try, Lazy). Provides full functional programming support.
@@ -150,15 +157,17 @@ Provides type conversion between monadic types:
    - **Either**: Implements FunctypeBase but not full Functype (no Extractable/Matchable)
    - **Map**: Custom implementation with SafeTraversable instead of standard Traversable
    - **Stack**: Implements individual interfaces without FunctypeBase
-   - **LazyList**: Standalone implementation with lazy evaluation
+   - **LazyList**: Lazy evaluation with support for Foldable, Serializable, Pipe, and Typeable interfaces
    - **FPromise**: Promise-like with functional methods
-   - **Tuple**: Simple container with Typeable and Valuable
+   - **Tuple**: Enhanced container with Foldable, Serializable, Pipe, Typeable, and Valuable support
 
 4. **Do-notation**: Provides generator-based monadic comprehensions similar to Scala's for-comprehensions. Supports Option, Either, Try, and List with automatic short-circuiting and cartesian products.
 
 5. **Reshapeable**: Enables conversion between different monad types, allowing flexible composition in Do-notation when mixing types.
 
-6. **Utility Types** (not in matrix):
+6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either, Try, and TaskOutcome.
+
+7. **Utility Types** (not in matrix):
    - **Cond**: Conditional expression builder
    - **Match**: Pattern matching utility
    - **ValidatedBrand**: Branded types with validation
