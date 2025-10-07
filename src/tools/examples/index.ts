@@ -28,9 +28,9 @@ const userId = Brand("UserId", "user-123")
 const email = Brand("Email", "user@example.com")
 
 // Access original values
-console.log(userId.unbrand())     // "user-123"
-console.log(userId.toString())    // "UserId(user-123)"
-console.log(email.unwrap())       // "user@example.com"`,
+console.log(unwrap(userId))       // "user-123"
+console.log(userId.toString())    // "user-123"
+console.log(unwrap(email))        // "user@example.com"`,
       category: "basic",
     },
     {
@@ -42,7 +42,7 @@ type UserId = Brand<"UserId", string>
 type ProductId = Brand<"ProductId", string>
 
 function getUserProfile(id: UserId): string {
-  return \`Profile for: \${id.unbrand()}\`
+  return \`Profile for: \${id}\`
 }
 
 const userId = Brand("UserId", "user-123")
@@ -66,9 +66,9 @@ const age = createAge(25)
 const isActive = createIsActive(true)
 
 // All have instance methods
-console.log(email.toString())     // "Email(user@example.com)"
-console.log(age.unbrand() >= 18)  // true
-console.log(isActive.unwrap())    // true`,
+console.log(email.toString())     // "user@example.com"
+console.log(age >= 18)            // true
+console.log(isActive)             // true`,
       category: "basic",
     },
   ],
@@ -104,8 +104,8 @@ const id = UUID.of("123e4567-e89b-12d3-a456-426614174000")  // Some(Brand<"UUID"
 // All return enhanced Brand objects with instance methods
 if (!email.isEmpty) {
   const branded = email.get()
-  console.log(branded.unbrand())     // "user@example.com"
-  console.log(branded.toString())    // "EmailAddress(user@example.com)"
+  console.log(branded)               // "user@example.com"
+  console.log(branded.toString())    // "user@example.com"
 }`,
       category: "intermediate",
     },

@@ -39,7 +39,7 @@ describe("Branded Types - External API Compatibility", () => {
     const tenantId = TenantId.unsafeOf("tenant-123")
     const projectId = ProjectId.unsafeOf("123e4567-e89b-12d3-a456-426614174000")
 
-    // Should work without unbrand
+    // Should work without unwrap
     const result = await mockR2Service.upload({
       tenantId,
       projectId,

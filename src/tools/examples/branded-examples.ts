@@ -13,8 +13,8 @@ import { Option } from "@/option"
 // Verify imports work
 void [Brand, ValidatedBrand, BrandedString, BrandedNumber, BrandedBoolean, Option, Either]
 
-// Import unbrand function for examples
-import { unbrand } from "@/branded"
+// Import unwrap function for examples
+import { unwrap } from "@/branded"
 
 export const brandExamples = {
   basic: () => {
@@ -22,13 +22,13 @@ export const brandExamples = {
     const userId = Brand("UserId", "user-123")
     const productId = Brand("ProductId", "prod-456")
 
-    // Values ARE primitives - no unbrand needed
+    // Values ARE primitives - no unwrap needed
     return {
       userId, // "user-123" - it IS a string
       userIdStr: userId.toString(), // "user-123" - standard string method
       productId, // "prod-456"
-      // Can use unbrand function if needed for clarity
-      userIdUnbranded: unbrand(userId), // "user-123"
+      // Can use unwrap function if needed for clarity
+      userIdUnwrapped: unwrap(userId), // "user-123"
     }
   },
 

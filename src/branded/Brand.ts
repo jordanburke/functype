@@ -5,7 +5,8 @@ export type Brand<K extends string, T> = T & {
 }
 
 // Utility type to extract the underlying type from a branded type
-export type Unbrand<T> = T extends Brand<string, infer U> ? U : T
+// Handles both Brand and ValidatedBrand
+export type Unwrap<T> = T extends Brand<string, infer U> ? U : T
 
 // Utility type to extract the brand from a branded type
 export type ExtractBrand<T> = T extends Brand<infer K, unknown> ? K : never
@@ -26,14 +27,28 @@ export function Brand<K extends string, T>(_brand: K, value: T): Brand<K, T> {
 }
 
 /**
- * Helper to remove a brand from a value
- * @param branded - The branded value
+ * Helper to unwrap a branded value to its underlying type
+ * Works with both Brand and ValidatedBrand
+ * @param branded - The branded value (can be null or undefined)
  * @returns The original value without the brand
+ *
+ * Note: Also exported as 'unwrap' from 'functype/branded' for convenience
  */
-export function unbrand<K extends string, T>(branded: Brand<K, T>): T {
-  // Since branded values ARE their primitives, just return as-is
+export function unwrapBrand<K extends string, T>(branded: Brand<K, T>): T
+export function unwrapBrand<K extends string, T>(branded: Brand<K, T> | null): T | null
+export function unwrapBrand<K extends string, T>(branded: Brand<K, T> | undefined): T | undefined
+export function unwrapBrand<K extends string, T>(branded: Brand<K, T> | null | undefined): T | null | undefined
+export function unwrapBrand<K extends string, T>(branded: Brand<K, T> | null | undefined): T | null | undefined {
+  // Handle null/undefined
+  if (branded === null || branded === undefined) {
+    return branded
+  }
+  // Since branded values (both Brand and ValidatedBrand) ARE their primitives, just return as-is
   return branded as unknown as T
 }
+
+// Convenience alias for branded module users
+export { unwrapBrand as unwrap }
 
 /**
  * Type guard for checking if a value has a specific brand

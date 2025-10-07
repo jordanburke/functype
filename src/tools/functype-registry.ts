@@ -205,7 +205,7 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     sourcePath: "src/branded/Brand.ts",
     testPath: "test/branded/branded.spec.ts",
     implements: [],
-    keyMethods: ["unbrand", "unwrap", "toString"],
+    keyMethods: ["unwrap", "toString"],
     relatedTypes: ["ValidatedBrand"],
     commonUseCases: ["Nominal typing", "Type safety", "Domain modeling", "Preventing type confusion"],
   },

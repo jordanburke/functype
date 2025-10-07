@@ -1,4 +1,33 @@
-export * from "@/branded"
+// Export branded types (exclude 'unwrap' alias to avoid conflict with do/unwrap)
+export {
+  BoundedNumber,
+  BoundedString,
+  Brand,
+  BrandedBoolean,
+  type BrandedBoolean as BrandedBooleanType,
+  BrandedNumber,
+  type BrandedNumber as BrandedNumberType,
+  BrandedString,
+  type BrandedString as BrandedStringType,
+  createBrander,
+  EmailAddress,
+  type ExtractBrand,
+  hasBrand,
+  IntegerNumber,
+  ISO8601Date,
+  NonEmptyString,
+  NonNegativeNumber,
+  PatternString,
+  PositiveInteger,
+  PositiveNumber,
+  type Unwrap,
+  unwrapBrand,
+  UrlString,
+  UUID,
+  ValidatedBrand,
+  type ValidatedBrandCompanion,
+  type ValidatedBrand as ValidatedBrandType,
+} from "@/branded"
 export * from "@/collections"
 export * from "@/companion/Companion"
 export * from "@/conditional"

@@ -6,10 +6,11 @@ import {
   BrandedNumber,
   BrandedString,
   createBrander,
+  EmailAddress,
   type ExtractBrand,
   hasBrand,
-  type Unbrand,
-  unbrand,
+  type Unwrap,
+  unwrap,
 } from "@/branded"
 
 describe("Branded Types", () => {
@@ -31,9 +32,9 @@ describe("Branded Types", () => {
     expect(userId).toBe("user123")
     expect(productId).toBe("prod456")
 
-    // unbrand still works for compatibility
-    expect(unbrand(userId)).toBe("user123")
-    expect(unbrand(productId)).toBe("prod456")
+    // unwrap extracts the underlying value
+    expect(unwrap(userId)).toBe("user123")
+    expect(unwrap(productId)).toBe("prod456")
   })
 
   it("should work with branded primitive factories", () => {
@@ -63,12 +64,38 @@ describe("Branded Types", () => {
     expect(typeof userId).toBe("string")
   })
 
-  it("should unbrand values", () => {
+  it("should unwrap values", () => {
     const userId = Brand("UserId", "user123") as UserId
-    const unbranded = unbrand(userId)
+    const unwrapped = unwrap(userId)
 
-    expect(unbranded).toBe("user123")
-    expect(typeof unbranded).toBe("string")
+    expect(unwrapped).toBe("user123")
+    expect(typeof unwrapped).toBe("string")
+  })
+
+  it("should handle null and undefined in unwrap", () => {
+    const userId = Brand("UserId", "user123") as UserId
+
+    // Test with regular value
+    expect(unwrap(userId)).toBe("user123")
+
+    // Test with null
+    const nullValue: UserId | null = null
+    expect(unwrap(nullValue)).toBe(null)
+
+    // Test with undefined
+    const undefinedValue: UserId | undefined = undefined
+    expect(unwrap(undefinedValue)).toBe(undefined)
+  })
+
+  it("should unwrap ValidatedBrand values", () => {
+    const email = EmailAddress.unsafeOf("test@example.com")
+
+    // unwrap should work with ValidatedBrand
+    expect(unwrap(email)).toBe("test@example.com")
+
+    // Test with nullable ValidatedBrand
+    const nullEmail: typeof email | null = null
+    expect(unwrap(nullEmail)).toBe(null)
   })
 
   it("should work without instance methods (phantom types)", () => {
@@ -79,9 +106,9 @@ describe("Branded Types", () => {
     expect(userId).toBe("user123")
     expect(productId).toBe("prod456")
 
-    // Use the unbrand function if needed
-    expect(unbrand(userId)).toBe("user123")
-    expect(unbrand(productId)).toBe("prod456")
+    // Use the unwrap function if needed
+    expect(unwrap(userId)).toBe("user123")
+    expect(unwrap(productId)).toBe("prod456")
 
     // Verify they are primitives
     expect(typeof userId).toBe("string")
@@ -168,13 +195,13 @@ describe("Branded Types", () => {
   it("should extract types via utility types", () => {
     // These checks are compile-time only and don't have runtime behavior
     // The test is mainly to verify the types exist
-    type UnbrandedUserId = Unbrand<UserId>
+    type UnwrappedUserId = Unwrap<UserId>
     type UserBrand = ExtractBrand<UserId>
 
     // Just verifying the code compiles correctly
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
-    const _test1: UnbrandedUserId = "test"
+    const _test1: UnwrappedUserId = "test"
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     const _test2: UserBrand = "UserId"
