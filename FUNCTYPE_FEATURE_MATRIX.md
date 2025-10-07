@@ -28,19 +28,19 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Additional Properties
 
-| Data Structure    | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
-| ----------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
-| **Option<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **Either<L,R>**   |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
-| **Try<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **List<A>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
-| **Set<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Map<K,V>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Lazy<T>**       |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Stack<A>**      |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **LazyList<A>**   |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **FPromise<T,E>** |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |     ✗      |
-| **Tuple<T[]>**    |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| Data Structure     | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
+| ------------------ | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
+| **Option<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
+| **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
+| **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **LazyList<A>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **FPromise<T,E>**  |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |     ✗      |
+| **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
 
 ## Key Methods by Interface
