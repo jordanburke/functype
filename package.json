@@ -34,7 +34,10 @@
     "docs:watch": "typedoc --watch",
     "docs:validate": "tsx scripts/validate-docs.ts",
     "postdocs": "node -e \"console.log('Documentation generated in ./typedocs')\"",
-    "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js"
+    "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js",
+    "landing:dev": "cd landing && pnpm dev",
+    "landing:build": "cd landing && pnpm build",
+    "landing:preview": "cd landing && pnpm preview"
   },
   "devDependencies": {
     "@eslint/compat": "^1.4.0",

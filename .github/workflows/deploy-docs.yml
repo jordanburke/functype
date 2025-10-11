@@ -41,16 +41,29 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Install dependencies
+      - name: Install dependencies (root)
         run: pnpm install
 
-      - name: Build with TypeDoc
+      - name: Install dependencies (landing)
+        run: cd landing && pnpm install
+
+      - name: Build landing page
+        run: cd landing && pnpm build
+
+      - name: Build TypeDoc
         run: node docs-ci.js
+
+      - name: Prepare combined deployment
+        run: |
+          mkdir -p dist-combined
+          cp -r dist-landing/* dist-combined/
+          mkdir -p dist-combined/api-docs
+          cp -r typedocs/* dist-combined/api-docs/
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./typedocs
+          path: ./dist-combined
 
   # Deployment job
   deploy:
