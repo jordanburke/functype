@@ -2,9 +2,7 @@ export default function Hero() {
   return (
     <section className="px-6 py-20 text-center max-w-6xl mx-auto">
       <div className="space-y-6">
-        <h1 className="text-5xl md:text-7xl font-bold text-gray-900">
-          Functype
-        </h1>
+        <h1 className="text-5xl md:text-7xl font-bold text-gray-900">Functype</h1>
         <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
           Scala-Inspired Functional Programming for TypeScript
         </p>
@@ -42,43 +40,30 @@ export default function Hero() {
             <pre className="text-sm md:text-base overflow-x-auto">
               <code className="text-gray-100 font-mono">
                 <span className="text-purple-400">import</span>{" "}
-                <span className="text-blue-300">{'{ Option, Either }'}</span>{" "}
-                <span className="text-purple-400">from</span>{" "}
-                <span className="text-green-400">"functype"</span>
+                <span className="text-blue-300">{"{ Option, Either }"}</span>{" "}
+                <span className="text-purple-400">from</span> <span className="text-green-400">"functype"</span>
                 {"\n\n"}
                 <span className="text-gray-500">// Handle null safety with Option</span>
                 {"\n"}
-                <span className="text-purple-400">const</span>{" "}
-                <span className="text-blue-300">user</span> ={" "}
-                <span className="text-yellow-300">Option</span>(
-                <span className="text-blue-300">maybeUser</span>)
+                <span className="text-purple-400">const</span> <span className="text-blue-300">user</span> ={" "}
+                <span className="text-yellow-300">Option</span>(<span className="text-blue-300">maybeUser</span>)
                 {"\n  ."}
-                <span className="text-blue-300">map</span>(
-                <span className="text-orange-300">u</span>{" "}
-                <span className="text-purple-400">=&gt;</span>{" "}
-                <span className="text-orange-300">u</span>.
-                <span className="text-blue-300">name</span>)
-                {"\n  ."}
-                <span className="text-blue-300">getOrElse</span>(
-                <span className="text-green-400">"Guest"</span>)
+                <span className="text-blue-300">map</span>(<span className="text-orange-300">u</span>{" "}
+                <span className="text-purple-400">=&gt;</span> <span className="text-orange-300">u</span>.
+                <span className="text-blue-300">name</span>){"\n  ."}
+                <span className="text-blue-300">getOrElse</span>(<span className="text-green-400">"Guest"</span>)
                 {"\n\n"}
                 <span className="text-gray-500">// Elegant error handling with Either</span>
                 {"\n"}
-                <span className="text-purple-400">const</span>{" "}
-                <span className="text-blue-300">result</span> ={" "}
+                <span className="text-purple-400">const</span> <span className="text-blue-300">result</span> ={" "}
                 <span className="text-yellow-300">Either</span>
                 {"\n  ."}
-                <span className="text-blue-300">fromTry</span>(
-                <span className="text-purple-400">()</span>{" "}
-                <span className="text-purple-400">=&gt;</span>{" "}
-                <span className="text-yellow-300">JSON</span>.
-                <span className="text-blue-300">parse</span>(
-                <span className="text-blue-300">data</span>))
+                <span className="text-blue-300">fromTry</span>(<span className="text-purple-400">()</span>{" "}
+                <span className="text-purple-400">=&gt;</span> <span className="text-yellow-300">JSON</span>.
+                <span className="text-blue-300">parse</span>(<span className="text-blue-300">data</span>))
                 {"\n  ."}
-                <span className="text-blue-300">map</span>(
-                <span className="text-orange-300">obj</span>{" "}
-                <span className="text-purple-400">=&gt;</span>{" "}
-                <span className="text-orange-300">obj</span>.
+                <span className="text-blue-300">map</span>(<span className="text-orange-300">obj</span>{" "}
+                <span className="text-purple-400">=&gt;</span> <span className="text-orange-300">obj</span>.
                 <span className="text-blue-300">value</span>)
               </code>
             </pre>

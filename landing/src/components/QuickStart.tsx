@@ -2,12 +2,8 @@ export default function QuickStart() {
   return (
     <section id="quick-start" className="px-6 py-20 bg-gray-50">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-          Quick Start
-        </h2>
-        <p className="text-xl text-gray-600 text-center mb-12">
-          Get up and running with functype in minutes
-        </p>
+        <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">Quick Start</h2>
+        <p className="text-xl text-gray-600 text-center mb-12">Get up and running with functype in minutes</p>
 
         <div className="space-y-8">
           {/* Step 1: Install */}
@@ -38,14 +34,13 @@ export default function QuickStart() {
                   <pre className="text-sm font-mono">
                     <code>
                       <span className="text-purple-400">import</span>{" "}
-                      <span className="text-blue-300">{'{ Option, Either, List }'}</span>{" "}
-                      <span className="text-purple-400">from</span>{" "}
-                      <span className="text-green-400">"functype"</span>
+                      <span className="text-blue-300">{"{ Option, Either, List }"}</span>{" "}
+                      <span className="text-purple-400">from</span> <span className="text-green-400">"functype"</span>
                       {"\n\n"}
                       <span className="text-gray-500">// Or use selective imports for smaller bundles</span>
                       {"\n"}
                       <span className="text-purple-400">import</span>{" "}
-                      <span className="text-blue-300">{'{ Option }'}</span>{" "}
+                      <span className="text-blue-300">{"{ Option }"}</span>{" "}
                       <span className="text-purple-400">from</span>{" "}
                       <span className="text-green-400">"functype/option"</span>
                     </code>
@@ -66,23 +61,15 @@ export default function QuickStart() {
                 <div className="bg-gray-900 rounded-lg p-4">
                   <pre className="text-sm font-mono overflow-x-auto">
                     <code>
-                      <span className="text-purple-400">const</span>{" "}
-                      <span className="text-blue-300">result</span> ={" "}
-                      <span className="text-yellow-300">Option</span>(
-                      <span className="text-blue-300">user</span>)
+                      <span className="text-purple-400">const</span> <span className="text-blue-300">result</span> ={" "}
+                      <span className="text-yellow-300">Option</span>(<span className="text-blue-300">user</span>)
                       {"\n  ."}
-                      <span className="text-blue-300">map</span>(
-                      <span className="text-orange-300">u</span>{" "}
-                      <span className="text-purple-400">=&gt;</span>{" "}
-                      <span className="text-orange-300">u</span>.
-                      <span className="text-blue-300">email</span>)
-                      {"\n  ."}
-                      <span className="text-blue-300">filter</span>(
-                      <span className="text-orange-300">email</span>{" "}
-                      <span className="text-purple-400">=&gt;</span>{" "}
-                      <span className="text-orange-300">email</span>.
-                      <span className="text-blue-300">includes</span>(
-                      <span className="text-green-400">"@"</span>))
+                      <span className="text-blue-300">map</span>(<span className="text-orange-300">u</span>{" "}
+                      <span className="text-purple-400">=&gt;</span> <span className="text-orange-300">u</span>.
+                      <span className="text-blue-300">email</span>){"\n  ."}
+                      <span className="text-blue-300">filter</span>(<span className="text-orange-300">email</span>{" "}
+                      <span className="text-purple-400">=&gt;</span> <span className="text-orange-300">email</span>.
+                      <span className="text-blue-300">includes</span>(<span className="text-green-400">"@"</span>))
                       {"\n  ."}
                       <span className="text-blue-300">getOrElse</span>(
                       <span className="text-green-400">"no-email@example.com"</span>)

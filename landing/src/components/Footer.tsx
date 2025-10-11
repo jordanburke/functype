@@ -6,12 +6,14 @@ export default function Footer() {
           {/* About */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Functype</h3>
-            <p className="text-sm text-gray-400">
-              Scala-inspired functional programming for TypeScript
-            </p>
+            <p className="text-sm text-gray-400">Scala-inspired functional programming for TypeScript</p>
             <div className="mt-4 flex gap-2">
               <img src="https://img.shields.io/npm/v/functype?style=flat-square" alt="npm version" className="h-5" />
-              <img src="https://img.shields.io/github/stars/jordanburke/functype?style=flat-square" alt="GitHub stars" className="h-5" />
+              <img
+                src="https://img.shields.io/github/stars/jordanburke/functype?style=flat-square"
+                alt="GitHub stars"
+                className="h-5"
+              />
             </div>
           </div>
 
@@ -19,10 +21,41 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Documentation</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="/api-docs" className="hover:text-white transition-colors">API Reference</a></li>
-              <li><a href="https://github.com/jordanburke/functype#readme" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Getting Started</a></li>
-              <li><a href="https://github.com/jordanburke/functype/tree/main/examples" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Examples</a></li>
-              <li><a href="https://github.com/jordanburke/functype/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Changelog</a></li>
+              <li>
+                <a href="/api-docs" className="hover:text-white transition-colors">
+                  API Reference
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype#readme"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Getting Started
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/tree/main/examples"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Examples
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/CHANGELOG.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Changelog
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -30,10 +63,46 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Community</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="https://github.com/jordanburke/functype" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">GitHub</a></li>
-              <li><a href="https://www.npmjs.com/package/functype" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">npm Package</a></li>
-              <li><a href="https://github.com/jordanburke/functype/issues" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Issues</a></li>
-              <li><a href="https://github.com/jordanburke/functype/discussions" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discussions</a></li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  GitHub
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.npmjs.com/package/functype"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  npm Package
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/issues"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Issues
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/discussions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Discussions
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -41,21 +110,60 @@ export default function Footer() {
           <div>
             <h4 className="text-white font-semibold mb-4">Resources</h4>
             <ul className="space-y-2 text-sm">
-              <li><a href="https://github.com/jordanburke/functype/blob/main/docs/quick-reference.md" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Quick Reference</a></li>
-              <li><a href="https://github.com/jordanburke/functype/blob/main/FUNCTYPE_FEATURE_MATRIX.md" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Feature Matrix</a></li>
-              <li><a href="https://github.com/jordanburke/functype/blob/main/docs/do-notation.md" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Do-Notation Guide</a></li>
-              <li><a href="https://github.com/jordanburke/functype/blob/main/LICENSE" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">MIT License</a></li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/docs/quick-reference.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Quick Reference
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/FUNCTYPE_FEATURE_MATRIX.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Feature Matrix
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/docs/do-notation.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  Do-Notation Guide
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/LICENSE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white transition-colors"
+                >
+                  MIT License
+                </a>
+              </li>
             </ul>
           </div>
         </div>
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-400">
-            © 2025 Jordan Burke. Open source under the MIT License.
-          </p>
+          <p className="text-sm text-gray-400">© 2025 Jordan Burke. Open source under the MIT License.</p>
           <div className="flex gap-4 text-sm">
-            <a href="https://github.com/jordanburke" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">
+            <a
+              href="https://github.com/jordanburke"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
               @jordanburke
             </a>
           </div>
