@@ -69,7 +69,8 @@
       "Bash(npm link:*)",
       "Read(//home/jordanburke/.claude/**)",
       "Bash(tsx scripts/preprocess-docs.ts:*)",
-      "Read(//Users/jordanburke/.claude/**)"
+      "Read(//Users/jordanburke/.claude/**)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }
