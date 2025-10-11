@@ -65,7 +65,7 @@ import { Try } from "@/try"
 // Re-export protocol definitions
 export { type Doable, type DoResult } from "./protocol"
 
-import type { Reshapeable } from "@/reshapeable"
+import type { Reshapeable } from "@/reshapeable/Reshapeable"
 
 import { type Doable } from "./protocol"
 
