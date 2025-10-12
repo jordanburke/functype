@@ -1,0 +1,148 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer';
+---
+
+<Layout title="Match & Cond - Functype">
+  <div class="min-h-screen bg-white">
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Match & Cond</h1>
+      <p class="text-2xl text-gray-600 mb-4">Powerful pattern matching and conditional expressions</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        Exhaustive pattern matching and functional conditionals without early returns
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/modules/conditional.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/conditional" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What are Match & Cond?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          Match provides exhaustive pattern matching for Scala-style case expressions, while Cond offers
+          functional conditional evaluation without early returns or if-else chains.
+        </p>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of switch statements:</span>
+<span class="text-purple-400">switch</span> <span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
+  <span class="text-purple-400">case</span> <span class="text-green-400">"a"</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">1</span>
+  <span class="text-purple-400">case</span> <span class="text-green-400">"b"</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">2</span>
+  <span class="text-purple-400">default</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">0</span>
+<span class="text-gray-100">}</span>
+
+<span class="text-gray-500">// Use Match:</span>
+<span class="text-yellow-300">Match</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"a"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">1</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"b"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">2</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">0</span><span class="text-gray-100">)</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Exhaustive Matching</h3>
+            <p class="text-gray-700">Type-safe pattern matching with default case enforcement</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">No Early Returns</h3>
+            <p class="text-gray-700">Functional style without breaking out of expressions</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Type Inference</h3>
+            <p class="text-gray-700">Full TypeScript type inference for all branches</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Composable</h3>
+            <p class="text-gray-700">Chain multiple conditions and patterns together</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
+
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Match on Values</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Match</span><span class="text-gray-100">(</span><span class="text-blue-300">status</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"pending"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"⏳ Pending"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"success"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"✓ Success"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"error"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"✗ Error"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Unknown"</span><span class="text-gray-100">)</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Cond for Predicates</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Cond</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&lt;</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"negative"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">===</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"zero"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&gt;</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"positive"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"unknown"</span><span class="text-gray-100">)</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Built-in Pattern Matching</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">option</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
+  <span class="text-blue-300">Some</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Found: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">None</span><span class="text-gray-100">:</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Not found"</span>
+<span class="text-gray-100">})</span>
+
+<span class="text-blue-300">either</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
+  <span class="text-blue-300">Right</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Success: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">Left</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Error: </span><span class="text-purple-400">${</span><span class="text-orange-300">error</span><span class="text-purple-400">}</span><span class="text-green-400">`</span>
+<span class="text-gray-100">})</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Match & Cond</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Complex conditional logic with multiple cases</h3>
+              <p class="text-gray-700">Status codes, state machines, command handlers</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Avoiding if-else chains and early returns</h3>
+              <p class="text-gray-700">Functional programming style, expression-based code</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Pattern matching on monadic types</h3>
+              <p class="text-gray-700">Option, Either, Try, List - built-in match methods</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>

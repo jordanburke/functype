@@ -1,0 +1,152 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer';
+---
+
+<Layout title="Task<T> - Functype">
+  <div class="min-h-screen bg-white">
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Task&lt;T&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Async operations with cancellation and error handling</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        Enhanced async/await with cancellation support, progress tracking, and structured error handling
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/classes/Task.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/core/task" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is Task&lt;T&gt;?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          Task provides structured async operations with built-in cancellation, progress tracking, and error handling.
+          Unlike Promises, Tasks can be cancelled and provide detailed error context.
+        </p>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Named tasks for better debugging:</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">fetchUser</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-100">:</span> <span class="text-green-400">"UserFetch"</span> <span class="text-gray-100">})</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">Async</span><span class="text-gray-100">(</span>
+    <span class="text-purple-400">async</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">await</span> <span class="text-blue-300">fetch</span><span class="text-gray-100">(</span><span class="text-green-400">"/api/user"</span><span class="text-gray-100">).</span><span class="text-blue-300">then</span><span class="text-gray-100">(</span><span class="text-orange-300">r</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">r</span><span class="text-gray-100">.</span><span class="text-blue-300">json</span><span class="text-gray-100">()),</span>
+    <span class="text-purple-400">async</span> <span class="text-gray-100">(</span><span class="text-orange-300">err</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">new</span> <span class="text-yellow-300">Error</span><span class="text-gray-100">(</span><span class="text-green-400">`Fetch failed: </span><span class="text-purple-400">${</span><span class="text-orange-300">err</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">)</span>
+
+<span class="text-gray-500">// Error includes task name:</span>
+<span class="text-purple-400">try</span> <span class="text-gray-100">{</span>
+  <span class="text-purple-400">await</span> <span class="text-blue-300">fetchUser</span>
+<span class="text-gray-100">}</span> <span class="text-purple-400">catch</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
+  <span class="text-blue-300">console</span><span class="text-gray-100">.</span><span class="text-blue-300">log</span><span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// "UserFetch"</span>
+<span class="text-gray-100">}</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Named Tasks</h3>
+            <p class="text-gray-700">Debug async operations easily with named task contexts</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Cancellation</h3>
+            <p class="text-gray-700">Cancel ongoing operations gracefully when they're no longer needed</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Progress Tracking</h3>
+            <p class="text-gray-700">Monitor long-running operations with progress callbacks</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Error Context</h3>
+            <p class="text-gray-700">Rich error information including task name and stack traces</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
+
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Sync and Async Tasks</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Synchronous task</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">sync</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">().</span><span class="text-blue-300">Sync</span><span class="text-gray-100">(</span>
+  <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">42</span><span class="text-gray-100">,</span>
+  <span class="text-gray-100">(</span><span class="text-orange-300">err</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">new</span> <span class="text-yellow-300">Error</span><span class="text-gray-100">(</span><span class="text-green-400">"Failed"</span><span class="text-gray-100">)</span>
+<span class="text-gray-100">)</span>
+
+<span class="text-gray-500">// Asynchronous task</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">async</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">().</span><span class="text-blue-300">Async</span><span class="text-gray-100">(</span>
+  <span class="text-purple-400">async</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">await</span> <span class="text-blue-300">fetchData</span><span class="text-gray-100">(),</span>
+  <span class="text-purple-400">async</span> <span class="text-gray-100">(</span><span class="text-orange-300">err</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">new</span> <span class="text-yellow-300">Error</span><span class="text-gray-100">(</span><span class="text-green-400">"Fetch error"</span><span class="text-gray-100">)</span>
+<span class="text-gray-100">)</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Error Handling with Context</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">try</span> <span class="text-gray-100">{</span>
+  <span class="text-purple-400">await</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-100">:</span> <span class="text-green-400">"DataProcessor"</span> <span class="text-gray-100">}).</span><span class="text-blue-300">Async</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-gray-100">{</span>
+    <span class="text-purple-400">throw</span> <span class="text-purple-400">new</span> <span class="text-yellow-300">Error</span><span class="text-gray-100">(</span><span class="text-green-400">"Processing failed"</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">})</span>
+<span class="text-gray-100">}</span> <span class="text-purple-400">catch</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
+  <span class="text-blue-300">console</span><span class="text-gray-100">.</span><span class="text-blue-300">log</span><span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">.</span><span class="text-blue-300">taskInfo</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// "DataProcessor"</span>
+<span class="text-gray-100">}</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Converting Promises</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">getUser</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">.</span><span class="text-blue-300">fromPromise</span><span class="text-gray-100">(</span>
+  <span class="text-blue-300">fetchAPI</span><span class="text-gray-100">,</span>
+  <span class="text-gray-100">{</span> <span class="text-blue-300">name</span><span class="text-gray-100">:</span> <span class="text-green-400">"UserFetch"</span> <span class="text-gray-100">}</span>
+<span class="text-gray-100">)</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Task</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Long-running async operations that might be cancelled</h3>
+              <p class="text-gray-700">File uploads, downloads, expensive computations</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Operations that need progress tracking</h3>
+              <p class="text-gray-700">Batch processing, migrations, data imports</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">When you need better error context than Promises provide</h3>
+              <p class="text-gray-700">Complex workflows, debugging production issues</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>

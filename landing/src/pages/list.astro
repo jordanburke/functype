@@ -1,0 +1,132 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer';
+---
+
+<Layout title="List<A> - Functype">
+  <div class="min-h-screen bg-white">
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">List&lt;A&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Immutable arrays with functional operations</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        Transform collections with map, filter, reduce without mutating the original data
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/classes/List.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/list" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is List&lt;A&gt;?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          List is an immutable collection that wraps arrays and provides functional operations.
+          Every transformation creates a new List, preserving the original data.
+        </p>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Mutable array approach (bad):</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">numbers</span> <span class="text-gray-100">=</span> <span class="text-gray-100">[</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">]</span>
+<span class="text-blue-300">numbers</span><span class="text-gray-100">.</span><span class="text-blue-300">push</span><span class="text-gray-100">(</span><span class="text-green-400">4</span><span class="text-gray-100">)</span>   <span class="text-gray-500">// Mutates!</span>
+
+<span class="text-gray-500">// Functional approach (good):</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">numbers</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">])</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">extended</span> <span class="text-gray-100">=</span> <span class="text-blue-300">numbers</span><span class="text-gray-100">.</span><span class="text-blue-300">add</span><span class="text-gray-100">(</span><span class="text-green-400">4</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// Returns new List!</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Immutable</h3>
+            <p class="text-gray-700">All operations return new Lists - original data never changes</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Optimized Performance</h3>
+            <p class="text-gray-700">12x faster than nested flatMaps for complex operations</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Functional Methods</h3>
+            <p class="text-gray-700">map, filter, fold, groupBy, and 40+ more operations</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Type-Safe</h3>
+            <p class="text-gray-700">Full TypeScript inference for all transformations</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
+
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Transforming Data</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">,</span> <span class="text-green-400">4</span><span class="text-gray-100">])</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">filter</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">%</span> <span class="text-green-400">2</span> <span class="text-purple-400">===</span> <span class="text-green-400">0</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// [2, 4]</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">*</span> <span class="text-green-400">10</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// [20, 40]</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">toArray</span><span class="text-gray-100">()</span>                  <span class="text-gray-500">// [20, 40]</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Aggregating Values</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">sum</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">])</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">foldLeft</span><span class="text-gray-100">(</span><span class="text-green-400">0</span><span class="text-gray-100">)((</span><span class="text-orange-300">acc</span><span class="text-gray-100">,</span> <span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">acc</span> <span class="text-purple-400">+</span> <span class="text-orange-300">x</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// 6</span></code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Safe Access</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">first</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">]).</span><span class="text-blue-300">head</span><span class="text-gray-100">()</span>    <span class="text-gray-500">// Option.Some(1)</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">empty</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([]).</span><span class="text-blue-300">head</span><span class="text-gray-100">()</span>           <span class="text-gray-500">// Option.None</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use List</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Data transformations that need to preserve originals</h3>
+              <p class="text-gray-700">UI state, user inputs, historical data</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Functional pipelines with map/filter/fold</h3>
+              <p class="text-gray-700">Data processing, analytics, transformations</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Cartesian products with Do-notation</h3>
+              <p class="text-gray-700">Generating combinations, test data, permutations</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>

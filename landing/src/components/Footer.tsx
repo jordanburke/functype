@@ -17,43 +17,38 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Documentation */}
+          {/* Core Types */}
           <div>
-            <h4 className="text-white font-semibold mb-4">Documentation</h4>
+            <h4 className="text-white font-semibold mb-4">Core Types</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/api-docs" className="hover:text-white transition-colors">
-                  API Reference
+                <a href="/option" className="hover:text-white transition-colors">
+                  Option&lt;T&gt;
                 </a>
               </li>
               <li>
-                <a
-                  href="https://github.com/jordanburke/functype#readme"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  Getting Started
+                <a href="/either" className="hover:text-white transition-colors">
+                  Either&lt;L,R&gt;
                 </a>
               </li>
               <li>
-                <a
-                  href="https://github.com/jordanburke/functype/tree/main/examples"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  Examples
+                <a href="/list" className="hover:text-white transition-colors">
+                  List&lt;A&gt;
                 </a>
               </li>
               <li>
-                <a
-                  href="https://github.com/jordanburke/functype/blob/main/CHANGELOG.md"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
-                  Changelog
+                <a href="/task" className="hover:text-white transition-colors">
+                  Task&lt;T&gt;
+                </a>
+              </li>
+              <li>
+                <a href="/do-notation" className="hover:text-white transition-colors">
+                  Do-Notation
+                </a>
+              </li>
+              <li>
+                <a href="/match" className="hover:text-white transition-colors">
+                  Match & Cond
                 </a>
               </li>
             </ul>

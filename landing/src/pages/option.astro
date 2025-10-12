@@ -1,0 +1,147 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer';
+---
+
+<Layout title="Option<T> - Functype">
+  <div class="min-h-screen bg-white">
+    <!-- Hero Section -->
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Option&lt;T&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Safe handling of nullable values</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        Replace null/undefined checks with a type-safe container that forces explicit handling
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/classes/Option.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/option" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <!-- What is it? -->
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is Option&lt;T&gt;?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          Option is a container that either holds a value (Some) or represents the absence of a value (None).
+          It eliminates null pointer exceptions by making nullable values explicit in the type system.
+        </p>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of this:</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">user</span> <span class="text-gray-100">=</span> <span class="text-blue-300">users</span><span class="text-gray-100">.</span><span class="text-blue-300">find</span><span class="text-gray-100">(</span><span class="text-orange-300">u</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">u</span><span class="text-gray-100">.</span><span class="text-blue-300">id</span> <span class="text-purple-400">===</span> <span class="text-green-400">5</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// user might be undefined!</span>
+<span class="text-purple-400">if</span> <span class="text-gray-100">(</span><span class="text-blue-300">user</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
+  <span class="text-blue-300">console</span><span class="text-gray-100">.</span><span class="text-blue-300">log</span><span class="text-gray-100">(</span><span class="text-blue-300">user</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">)</span>
+<span class="text-gray-100">}</span>
+
+<span class="text-gray-500">// Do this:</span>
+<span class="text-purple-400">const</span> <span class="text-blue-300">user</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-blue-300">users</span><span class="text-gray-100">.</span><span class="text-blue-300">find</span><span class="text-gray-100">(</span><span class="text-orange-300">u</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">u</span><span class="text-gray-100">.</span><span class="text-blue-300">id</span> <span class="text-purple-400">===</span> <span class="text-green-400">5</span><span class="text-gray-100">))</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">u</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">u</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">getOrElse</span><span class="text-gray-100">(</span><span class="text-green-400">"Guest"</span><span class="text-gray-100">)</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Features -->
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Type Safety</h3>
+            <p class="text-gray-700">TypeScript enforces explicit handling of empty cases, preventing runtime null errors</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Chainable Operations</h3>
+            <p class="text-gray-700">map, flatMap, filter - transform values without null checks</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Pattern Matching</h3>
+            <p class="text-gray-700">Explicit Some/None handling with fold() and match()</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Composable</h3>
+            <p class="text-gray-700">Works seamlessly with Do-notation for complex workflows</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Common Patterns -->
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
+
+        <div class="space-y-8">
+          <!-- Pattern 1: Creation -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Creating Options</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">42</span><span class="text-gray-100">)</span>           <span class="text-gray-500">// Some(42)</span>
+<span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-purple-400">null</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// None</span>
+<span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-purple-400">undefined</span><span class="text-gray-100">)</span>    <span class="text-gray-500">// None</span>
+<span class="text-yellow-300">Option</span><span class="text-gray-100">.</span><span class="text-blue-300">none</span><span class="text-gray-100">()</span>        <span class="text-gray-500">// Explicitly create None</span></code></pre>
+            </div>
+          </div>
+
+          <!-- Pattern 2: Transforming -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Transforming Values</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">doubled</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">5</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">*</span> <span class="text-green-400">2</span><span class="text-gray-100">)</span>        <span class="text-gray-500">// Some(10)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">filter</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&gt;</span> <span class="text-green-400">5</span><span class="text-gray-100">)</span>     <span class="text-gray-500">// Some(10)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">getOrElse</span><span class="text-gray-100">(</span><span class="text-green-400">0</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// 10</span></code></pre>
+            </div>
+          </div>
+
+          <!-- Pattern 3: Pattern Matching -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Pattern Matching</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">option</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
+  <span class="text-blue-300">Some</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Found: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">None</span><span class="text-gray-100">:</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Not found"</span>
+<span class="text-gray-100">})</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- When to Use -->
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Option</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Function return values that might not exist</h3>
+              <p class="text-gray-700">Database queries, array searches, user input parsing</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Optional configuration or parameters</h3>
+              <p class="text-gray-700">Default values, optional fields in objects</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Chaining operations where any step might fail</h3>
+              <p class="text-gray-700">Validation pipelines, data transformations</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>

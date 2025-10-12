@@ -1,0 +1,149 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Footer from '../components/Footer';
+---
+
+<Layout title="Either<L,R> - Functype">
+  <div class="min-h-screen bg-white">
+    <!-- Hero Section -->
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Either&lt;L, R&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Express success/failure with values</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        Elegant error handling that preserves error information without throwing exceptions
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/classes/Either.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/either" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <!-- What is it? -->
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is Either&lt;L, R&gt;?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          Either represents a value that can be one of two types: Left (typically for errors) or Right (for success values).
+          It's perfect for operations that can fail with meaningful error information.
+        </p>
+        <div class="bg-white rounded-xl p-6 shadow-sm">
+          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of try-catch:</span>
+<span class="text-purple-400">try</span> <span class="text-gray-100">{</span>
+  <span class="text-purple-400">const</span> <span class="text-blue-300">data</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">JSON</span><span class="text-gray-100">.</span><span class="text-blue-300">parse</span><span class="text-gray-100">(</span><span class="text-blue-300">input</span><span class="text-gray-100">)</span>
+  <span class="text-purple-400">return</span> <span class="text-blue-300">data</span><span class="text-gray-100">.</span><span class="text-blue-300">value</span>
+<span class="text-gray-100">}</span> <span class="text-purple-400">catch</span> <span class="text-gray-100">(</span><span class="text-blue-300">err</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
+  <span class="text-purple-400">return</span> <span class="text-green-400">"Invalid JSON"</span>
+<span class="text-gray-100">}</span>
+
+<span class="text-gray-500">// Do this:</span>
+<span class="text-yellow-300">Either</span><span class="text-gray-100">.</span><span class="text-blue-300">fromTry</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">JSON</span><span class="text-gray-100">.</span><span class="text-blue-300">parse</span><span class="text-gray-100">(</span><span class="text-blue-300">input</span><span class="text-gray-100">))</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">data</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">data</span><span class="text-gray-100">.</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
+  <span class="text-gray-100">.</span><span class="text-blue-300">getOrElse</span><span class="text-gray-100">(</span><span class="text-green-400">"Invalid JSON"</span><span class="text-gray-100">)</span></code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Features -->
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Error Information</h3>
+            <p class="text-gray-700">Preserve detailed error context instead of losing it with try-catch</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Railway Oriented</h3>
+            <p class="text-gray-700">Operations automatically short-circuit on Left, like a railway switch</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Composable Errors</h3>
+            <p class="text-gray-700">Chain operations with mapLeft to transform errors at each step</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Type-Safe</h3>
+            <p class="text-gray-700">Both success and error types are known at compile time</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Common Patterns -->
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
+
+        <div class="space-y-8">
+          <!-- Pattern 1: Creation -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Creating Either Values</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Right</span><span class="text-gray-100">(</span><span class="text-green-400">42</span><span class="text-gray-100">)</span>                           <span class="text-gray-500">// Success with value</span>
+<span class="text-yellow-300">Left</span><span class="text-gray-100">(</span><span class="text-green-400">"error"</span><span class="text-gray-100">)</span>                      <span class="text-gray-500">// Failure with error</span>
+<span class="text-yellow-300">Either</span><span class="text-gray-100">.</span><span class="text-blue-300">fromNullable</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">,</span> <span class="text-green-400">"was null"</span><span class="text-gray-100">)</span> <span class="text-gray-500">// Left if null</span></code></pre>
+            </div>
+          </div>
+
+          <!-- Pattern 2: Validation Chain -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Validation Pipeline</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">validateUser</span> <span class="text-gray-100">=</span> <span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span>
+  <span class="text-yellow-300">validateEmail</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">email</span><span class="text-gray-100">)</span>
+    <span class="text-gray-100">.</span><span class="text-blue-300">flatMap</span><span class="text-gray-100">(</span><span class="text-orange-300">email</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">validateAge</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">age</span><span class="text-gray-100">))</span>
+    <span class="text-gray-100">.</span><span class="text-blue-300">flatMap</span><span class="text-gray-100">(</span><span class="text-orange-300">age</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">validateName</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">))</span>
+    <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">name</span> <span class="text-purple-400">=&gt;</span> <span class="text-gray-100">({</span> <span class="text-orange-300">...</span><span class="text-blue-300">input</span><span class="text-gray-100">,</span> <span class="text-blue-300">validated</span><span class="text-gray-100">:</span> <span class="text-purple-400">true</span> <span class="text-gray-100">}))</span></code></pre>
+            </div>
+          </div>
+
+          <!-- Pattern 3: Error Recovery -->
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Error Handling</h3>
+            <div class="bg-gray-900 rounded-xl p-6">
+              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">result</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
+  <span class="text-blue-300">Right</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Success: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
+  <span class="text-blue-300">Left</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Error: </span><span class="text-purple-400">${</span><span class="text-orange-300">error</span><span class="text-purple-400">}</span><span class="text-green-400">`</span>
+<span class="text-gray-100">})</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- When to Use -->
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Either</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Operations that can fail with detailed error info</h3>
+              <p class="text-gray-700">Validation, parsing, API calls with error responses</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Multiple validation steps in a pipeline</h3>
+              <p class="text-gray-700">Each step can fail independently with its own error</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Railway-oriented programming</h3>
+              <p class="text-gray-700">Happy path and error path handled separately</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>
