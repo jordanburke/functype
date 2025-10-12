@@ -66,25 +66,30 @@ export default function QuickStart() {
                       <span className="text-gray-100">(</span>
                       <span className="text-blue-300">user</span>
                       <span className="text-gray-100">)</span>
-                      {"\n  ."}
+                      {"\n  "}
+                      <span className="text-gray-100">.</span>
                       <span className="text-blue-300">map</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-orange-300">u</span>{" "}
                       <span className="text-purple-400">=&gt;</span>{" "}
-                      <span className="text-orange-300">u</span>.
+                      <span className="text-orange-300">u</span>
+                      <span className="text-gray-100">.</span>
                       <span className="text-blue-300">email</span>
                       <span className="text-gray-100">)</span>
-                      {"\n  ."}
+                      {"\n  "}
+                      <span className="text-gray-100">.</span>
                       <span className="text-blue-300">filter</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-orange-300">email</span>{" "}
                       <span className="text-purple-400">=&gt;</span>{" "}
-                      <span className="text-orange-300">email</span>.
+                      <span className="text-orange-300">email</span>
+                      <span className="text-gray-100">.</span>
                       <span className="text-blue-300">includes</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-green-400">"@"</span>
                       <span className="text-gray-100">))</span>
-                      {"\n  ."}
+                      {"\n  "}
+                      <span className="text-gray-100">.</span>
                       <span className="text-blue-300">getOrElse</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-green-400">"no-email@example.com"</span>
