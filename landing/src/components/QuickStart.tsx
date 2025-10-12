@@ -70,8 +70,7 @@ export default function QuickStart() {
                       <span className="text-gray-100">.</span>
                       <span className="text-blue-300">map</span>
                       <span className="text-gray-100">(</span>
-                      <span className="text-orange-300">u</span>{" "}
-                      <span className="text-purple-400">=&gt;</span>{" "}
+                      <span className="text-orange-300">u</span> <span className="text-purple-400">=&gt;</span>{" "}
                       <span className="text-orange-300">u</span>
                       <span className="text-gray-100">.</span>
                       <span className="text-blue-300">email</span>
@@ -80,8 +79,7 @@ export default function QuickStart() {
                       <span className="text-gray-100">.</span>
                       <span className="text-blue-300">filter</span>
                       <span className="text-gray-100">(</span>
-                      <span className="text-orange-300">email</span>{" "}
-                      <span className="text-purple-400">=&gt;</span>{" "}
+                      <span className="text-orange-300">email</span> <span className="text-purple-400">=&gt;</span>{" "}
                       <span className="text-orange-300">email</span>
                       <span className="text-gray-100">.</span>
                       <span className="text-blue-300">includes</span>
