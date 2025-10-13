@@ -10,7 +10,7 @@
     "validate": "pnpm format && pnpm check && pnpm build",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "astro-check"
+    "check": "npx -y @astrojs/check"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.0",
