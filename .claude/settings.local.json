@@ -75,7 +75,8 @@
       "Bash(dig:*)",
       "Bash(curl:*)",
       "Bash(git push:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(timeout 600 pnpm validate)"
     ],
     "deny": []
   }

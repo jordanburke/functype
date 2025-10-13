@@ -6,7 +6,11 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "validate": "pnpm format && pnpm check && pnpm build",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "astro check"
   },
   "dependencies": {
     "@astrojs/react": "^4.4.0",
@@ -18,5 +22,10 @@
     "react-dom": "^19.2.0",
     "shiki": "^3.13.0",
     "tailwindcss": "^4.1.14"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.4",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
   }
 }

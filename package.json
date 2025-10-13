@@ -12,7 +12,9 @@
   "homepage": "https://github.com/jordanburke/functype#readme",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
-    "validate": "pnpm format && pnpm lint && pnpm test && pnpm build",
+    "validate": "pnpm validate:core && pnpm validate:landing",
+    "validate:core": "pnpm format && pnpm lint && pnpm test && pnpm build",
+    "validate:landing": "cd landing && pnpm validate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint ./src --fix",
