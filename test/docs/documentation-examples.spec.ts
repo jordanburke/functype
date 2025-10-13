@@ -418,4 +418,292 @@ describe("Documentation Examples", () => {
       expect(contains).toBe(true)
     })
   })
+
+  describe("Landing Page Pattern Examples", () => {
+    it("should demonstrate Option creation patterns", () => {
+      //#region landing-option-creation
+      Option(42) // Some(42)
+      Option(null) // None
+      Option(undefined) // None
+      Option.none() // Explicitly create None
+      //#endregion landing-option-creation
+
+      expect(Option(42).isSome()).toBe(true)
+      expect(Option(null).isNone()).toBe(true)
+      expect(Option(undefined).isNone()).toBe(true)
+      expect(Option.none().isNone()).toBe(true)
+    })
+
+    it("should demonstrate Option transformation patterns", () => {
+      //#region landing-option-transform
+      const doubled = Option(5)
+        .map((x) => x * 2) // Some(10)
+        .filter((x) => x > 5) // Some(10)
+        .getOrElse(0) // 10
+      //#endregion landing-option-transform
+
+      expect(doubled).toBe(10)
+    })
+
+    it("should demonstrate Option pattern matching", () => {
+      //#region landing-option-match
+      const option = Option("test")
+      option.match({
+        Some: (value) => `Found: ${value}`,
+        None: () => "Not found",
+      })
+      //#endregion landing-option-match
+
+      const result = option.match({
+        Some: (value) => `Found: ${value}`,
+        None: () => "Not found",
+      })
+      expect(result).toBe("Found: test")
+    })
+
+    it("should demonstrate Either creation patterns", () => {
+      //#region landing-either-creation
+      // Success and failure
+      const success = Right<string, number>(42)
+      const failure = Left<string, number>("Error message")
+
+      // Transform success only
+      const doubled = success.map((n) => n * 2) // Right(84)
+      const unchanged = failure.map((n) => n * 2) // Left("Error message")
+      //#endregion landing-either-creation
+
+      expect(success.isRight()).toBe(true)
+      expect(failure.isLeft()).toBe(true)
+      expect(doubled.getOrElse(0)).toBe(84)
+      expect(unchanged.isLeft()).toBe(true)
+    })
+
+    it("should demonstrate Either validation patterns", () => {
+      //#region landing-either-validation
+      const validateEmail = (email: string) => (email.includes("@") ? Right(email) : Left("Invalid email"))
+
+      const validateAge = (age: number) => (age >= 18 ? Right(age) : Left("Must be 18+"))
+
+      const result = Do(function* () {
+        const email = yield* $(validateEmail("user@example.com"))
+        const age = yield* $(validateAge(25))
+        return { email, age }
+      })
+      //#endregion landing-either-validation
+
+      expect(result.isRight()).toBe(true)
+    })
+
+    it("should demonstrate Either error handling patterns", () => {
+      //#region landing-either-error
+      const parseJSON = (json: string) => {
+        try {
+          return Right(JSON.parse(json))
+        } catch (error) {
+          return Left(`Parse error: ${error}`)
+        }
+      }
+
+      const result = parseJSON('{"name": "Alice"}')
+        .map((data) => data.name)
+        .fold(
+          (error) => `Error: ${error}`,
+          (name) => `Hello, ${name}!`,
+        )
+      //#endregion landing-either-error
+
+      expect(result).toBe("Hello, Alice!")
+    })
+
+    it("should demonstrate List creation patterns", () => {
+      //#region landing-list-creation
+      const numbers = List([1, 2, 3, 4, 5])
+      const empty = List<number>([])
+      const range = List([...Array(5).keys()]) // List([0, 1, 2, 3, 4])
+      //#endregion landing-list-creation
+
+      expect(numbers.toArray()).toEqual([1, 2, 3, 4, 5])
+      expect(empty.toArray()).toEqual([])
+      expect(range.toArray()).toEqual([0, 1, 2, 3, 4])
+    })
+
+    it("should demonstrate List transformation patterns", () => {
+      //#region landing-list-transform
+      const numbers = List([1, 2, 3, 4])
+      const result = numbers
+        .filter((n) => n > 1)
+        .map((n) => n * 2)
+        .reduce((acc, n) => acc + n, 0) // 18
+      //#endregion landing-list-transform
+
+      expect(result).toBe(18)
+    })
+
+    it("should demonstrate List flatMap patterns", () => {
+      //#region landing-list-flatmap
+      const pairs = List([1, 2, 3]).flatMap((x) => List([x, x * 10]))
+      // List([1, 10, 2, 20, 3, 30])
+      //#endregion landing-list-flatmap
+
+      expect(pairs.toArray()).toEqual([1, 10, 2, 20, 3, 30])
+    })
+
+    it("should demonstrate Task sync and async patterns", () => {
+      //#region landing-task-sync-async
+      // Synchronous task
+      const sync = Task().Sync(
+        () => 42,
+        (err) => new Error("Failed"),
+      )
+
+      // Asynchronous task
+      const async = Task().Async(
+        async () => await fetchData(),
+        async (err) => new Error("Fetch error"),
+      )
+      //#endregion landing-task-sync-async
+
+      expect(sync.isSuccess()).toBe(true)
+      async function fetchData() {
+        return "data"
+      }
+    })
+
+    it("should demonstrate Task error handling patterns", async () => {
+      //#region landing-task-error
+      try {
+        await Task({ name: "DataProcessor" }).Async(() => {
+          throw new Error("Processing failed")
+        })
+      } catch (error) {
+        console.log(error.taskInfo.name) // "DataProcessor"
+      }
+      //#endregion landing-task-error
+
+      expect(true).toBe(true)
+    })
+
+    it("should demonstrate Task conversion patterns", () => {
+      //#region landing-task-conversion
+      const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
+      //#endregion landing-task-conversion
+
+      expect(getUser).toBeDefined()
+      async function fetchAPI() {
+        return { id: 1, name: "User" }
+      }
+    })
+
+    it("should demonstrate Do Option chaining patterns", () => {
+      //#region landing-do-option
+      const result = Do(function* () {
+        const x = yield* $(Option(5))
+        const y = yield* $(Option(10))
+        return x + y
+      }) // Option(15)
+      //#endregion landing-do-option
+
+      expect(result.getOrElse(0)).toBe(15)
+    })
+
+    it("should demonstrate Do List comprehension patterns", () => {
+      //#region landing-do-list
+      const pairs = Do(function* () {
+        const x = yield* $(List([1, 2]))
+        const y = yield* $(List([10, 20]))
+        return { x, y }
+      })
+      // List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, {x:2,y:20}])
+      //#endregion landing-do-list
+
+      expect(pairs.toArray()).toEqual([
+        { x: 1, y: 10 },
+        { x: 1, y: 20 },
+        { x: 2, y: 10 },
+        { x: 2, y: 20 },
+      ])
+    })
+
+    it("should demonstrate Do Either error handling patterns", () => {
+      const input = "test@example.com"
+      const validateEmail = (email: string) => Right(email)
+      const fetchUser = (email: string) => Right({ email, id: 1 })
+      const saveUser = (user: { email: string; id: number }) => Right(user)
+
+      //#region landing-do-either
+      const validated = Do(function* () {
+        const email = yield* $(validateEmail(input))
+        const user = yield* $(fetchUser(email))
+        const saved = yield* $(saveUser(user))
+        return saved
+      })
+      // If any step returns Left, chain short-circuits
+      //#endregion landing-do-either
+
+      expect(validated.isRight()).toBe(true)
+    })
+
+    it("should demonstrate Match value patterns", () => {
+      //#region landing-match-value
+      const status = "pending"
+      Match(status)
+        .when("pending", () => "⏳ Pending")
+        .when("success", () => "✓ Success")
+        .when("error", () => "✗ Error")
+        .default(() => "Unknown")
+      //#endregion landing-match-value
+
+      const result = Match(status)
+        .when("pending", () => "⏳ Pending")
+        .when("success", () => "✓ Success")
+        .when("error", () => "✗ Error")
+        .default(() => "Unknown")
+      expect(result).toBe("⏳ Pending")
+    })
+
+    it("should demonstrate Cond predicate patterns", () => {
+      //#region landing-cond-predicate
+      const value = 5
+      Cond.of<string>()
+        .when(value < 0, "negative")
+        .elseWhen(value === 0, "zero")
+        .elseWhen(value > 0, "positive")
+        .else("unknown")
+      //#endregion landing-cond-predicate
+
+      const result = Cond.of<string>()
+        .when(value < 0, "negative")
+        .elseWhen(value === 0, "zero")
+        .elseWhen(value > 0, "positive")
+        .else("unknown")
+      expect(result).toBe("positive")
+    })
+
+    it("should demonstrate builtin match patterns", () => {
+      //#region landing-match-builtin
+      const option = Option("value")
+      option.match({
+        Some: (value) => `Found: ${value}`,
+        None: () => "Not found",
+      })
+
+      const either = Right<string, string>("success")
+      either.match({
+        Right: (value) => `Success: ${value}`,
+        Left: (error) => `Error: ${error}`,
+      })
+      //#endregion landing-match-builtin
+
+      const optionResult = option.match({
+        Some: (value) => `Found: ${value}`,
+        None: () => "Not found",
+      })
+      const eitherResult = either.match({
+        Right: (value) => `Success: ${value}`,
+        Left: (error) => `Error: ${error}`,
+      })
+      expect(optionResult).toBe("Found: value")
+      expect(eitherResult).toBe("Success: success")
+    })
+  })
 })

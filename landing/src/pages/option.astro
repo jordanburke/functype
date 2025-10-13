@@ -69,34 +69,19 @@ import CodeExample from '../components/CodeExample.astro';
           <!-- Pattern 1: Creation -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Creating Options</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">42</span><span class="text-gray-100">)</span>           <span class="text-gray-500">// Some(42)</span>
-<span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-purple-400">null</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// None</span>
-<span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-purple-400">undefined</span><span class="text-gray-100">)</span>    <span class="text-gray-500">// None</span>
-<span class="text-yellow-300">Option</span><span class="text-gray-100">.</span><span class="text-blue-300">none</span><span class="text-gray-100">()</span>        <span class="text-gray-500">// Explicitly create None</span></code></pre>
-            </div>
+            <CodeExample region="landing-option-creation" />
           </div>
 
           <!-- Pattern 2: Transforming -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Transforming Values</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">doubled</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">5</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">*</span> <span class="text-green-400">2</span><span class="text-gray-100">)</span>        <span class="text-gray-500">// Some(10)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">filter</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&gt;</span> <span class="text-green-400">5</span><span class="text-gray-100">)</span>     <span class="text-gray-500">// Some(10)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">getOrElse</span><span class="text-gray-100">(</span><span class="text-green-400">0</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// 10</span></code></pre>
-            </div>
+            <CodeExample region="landing-option-transform" />
           </div>
 
           <!-- Pattern 3: Pattern Matching -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Pattern Matching</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">option</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
-  <span class="text-blue-300">Some</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Found: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
-  <span class="text-blue-300">None</span><span class="text-gray-100">:</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Not found"</span>
-<span class="text-gray-100">})</span></code></pre>
-            </div>
+            <CodeExample region="landing-option-match" />
           </div>
         </div>
       </div>

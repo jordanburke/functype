@@ -64,39 +64,17 @@ import CodeExample from '../components/CodeExample.astro';
         <div class="space-y-8">
           <div>
             <h3 class="text-xl font-semibold mb-4">Match on Values</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Match</span><span class="text-gray-100">(</span><span class="text-blue-300">status</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"pending"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"⏳ Pending"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"success"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"✓ Success"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"error"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"✗ Error"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Unknown"</span><span class="text-gray-100">)</span></code></pre>
-            </div>
+            <CodeExample region="landing-match-value" />
           </div>
 
           <div>
             <h3 class="text-xl font-semibold mb-4">Cond for Predicates</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Cond</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&lt;</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"negative"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">===</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"zero"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">((</span><span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">&gt;</span> <span class="text-green-400">0</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"positive"</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"unknown"</span><span class="text-gray-100">)</span></code></pre>
-            </div>
+            <CodeExample region="landing-cond-predicate" />
           </div>
 
           <div>
             <h3 class="text-xl font-semibold mb-4">Built-in Pattern Matching</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">option</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
-  <span class="text-blue-300">Some</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Found: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
-  <span class="text-blue-300">None</span><span class="text-gray-100">:</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">"Not found"</span>
-<span class="text-gray-100">})</span>
-
-<span class="text-blue-300">either</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
-  <span class="text-blue-300">Right</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Success: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
-  <span class="text-blue-300">Left</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Error: </span><span class="text-purple-400">${</span><span class="text-orange-300">error</span><span class="text-purple-400">}</span><span class="text-green-400">`</span>
-<span class="text-gray-100">})</span></code></pre>
-            </div>
+            <CodeExample region="landing-match-builtin" />
           </div>
         </div>
       </div>

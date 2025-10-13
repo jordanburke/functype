@@ -63,29 +63,18 @@ import CodeExample from '../components/CodeExample.astro';
 
         <div class="space-y-8">
           <div>
+            <h3 class="text-xl font-semibold mb-4">Creating Lists</h3>
+            <CodeExample region="landing-list-creation" />
+          </div>
+
+          <div>
             <h3 class="text-xl font-semibold mb-4">Transforming Data</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">,</span> <span class="text-green-400">4</span><span class="text-gray-100">])</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">filter</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">%</span> <span class="text-green-400">2</span> <span class="text-purple-400">===</span> <span class="text-green-400">0</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// [2, 4]</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">x</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">x</span> <span class="text-purple-400">*</span> <span class="text-green-400">10</span><span class="text-gray-100">)</span>         <span class="text-gray-500">// [20, 40]</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">toArray</span><span class="text-gray-100">()</span>                  <span class="text-gray-500">// [20, 40]</span></code></pre>
-            </div>
+            <CodeExample region="landing-list-transform" />
           </div>
 
           <div>
-            <h3 class="text-xl font-semibold mb-4">Aggregating Values</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">sum</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">])</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">foldLeft</span><span class="text-gray-100">(</span><span class="text-green-400">0</span><span class="text-gray-100">)((</span><span class="text-orange-300">acc</span><span class="text-gray-100">,</span> <span class="text-orange-300">x</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">acc</span> <span class="text-purple-400">+</span> <span class="text-orange-300">x</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// 6</span></code></pre>
-            </div>
-          </div>
-
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Safe Access</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">first</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">,</span> <span class="text-green-400">3</span><span class="text-gray-100">]).</span><span class="text-blue-300">head</span><span class="text-gray-100">()</span>    <span class="text-gray-500">// Option.Some(1)</span>
-<span class="text-purple-400">const</span> <span class="text-blue-300">empty</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">List</span><span class="text-gray-100">([]).</span><span class="text-blue-300">head</span><span class="text-gray-100">()</span>           <span class="text-gray-500">// Option.None</span></code></pre>
-            </div>
+            <h3 class="text-xl font-semibold mb-4">FlatMap Operations</h3>
+            <CodeExample region="landing-list-flatmap" />
           </div>
         </div>
       </div>

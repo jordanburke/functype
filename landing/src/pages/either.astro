@@ -69,34 +69,19 @@ import CodeExample from '../components/CodeExample.astro';
           <!-- Pattern 1: Creation -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Creating Either Values</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-yellow-300">Right</span><span class="text-gray-100">(</span><span class="text-green-400">42</span><span class="text-gray-100">)</span>                           <span class="text-gray-500">// Success with value</span>
-<span class="text-yellow-300">Left</span><span class="text-gray-100">(</span><span class="text-green-400">"error"</span><span class="text-gray-100">)</span>                      <span class="text-gray-500">// Failure with error</span>
-<span class="text-yellow-300">Either</span><span class="text-gray-100">.</span><span class="text-blue-300">fromNullable</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">,</span> <span class="text-green-400">"was null"</span><span class="text-gray-100">)</span> <span class="text-gray-500">// Left if null</span></code></pre>
-            </div>
+            <CodeExample region="landing-either-creation" />
           </div>
 
           <!-- Pattern 2: Validation Chain -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Validation Pipeline</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">validateUser</span> <span class="text-gray-100">=</span> <span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span>
-  <span class="text-yellow-300">validateEmail</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">email</span><span class="text-gray-100">)</span>
-    <span class="text-gray-100">.</span><span class="text-blue-300">flatMap</span><span class="text-gray-100">(</span><span class="text-orange-300">email</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">validateAge</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">age</span><span class="text-gray-100">))</span>
-    <span class="text-gray-100">.</span><span class="text-blue-300">flatMap</span><span class="text-gray-100">(</span><span class="text-orange-300">age</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">validateName</span><span class="text-gray-100">(</span><span class="text-orange-300">input</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">))</span>
-    <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">name</span> <span class="text-purple-400">=&gt;</span> <span class="text-gray-100">({</span> <span class="text-orange-300">...</span><span class="text-blue-300">input</span><span class="text-gray-100">,</span> <span class="text-blue-300">validated</span><span class="text-gray-100">:</span> <span class="text-purple-400">true</span> <span class="text-gray-100">}))</span></code></pre>
-            </div>
+            <CodeExample region="landing-either-validation" />
           </div>
 
           <!-- Pattern 3: Error Recovery -->
           <div>
             <h3 class="text-xl font-semibold mb-4">Error Handling</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-blue-300">result</span><span class="text-gray-100">.</span><span class="text-blue-300">match</span><span class="text-gray-100">({</span>
-  <span class="text-blue-300">Right</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">value</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Success: </span><span class="text-purple-400">${</span><span class="text-orange-300">value</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">,</span>
-  <span class="text-blue-300">Left</span><span class="text-gray-100">:</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">`Error: </span><span class="text-purple-400">${</span><span class="text-orange-300">error</span><span class="text-purple-400">}</span><span class="text-green-400">`</span>
-<span class="text-gray-100">})</span></code></pre>
-            </div>
+            <CodeExample region="landing-either-error" />
           </div>
         </div>
       </div>

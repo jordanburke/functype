@@ -64,38 +64,17 @@ import CodeExample from '../components/CodeExample.astro';
         <div class="space-y-8">
           <div>
             <h3 class="text-xl font-semibold mb-4">Option Chaining</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">result</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Do</span><span class="text-gray-100">(</span><span class="text-purple-400">function*</span> <span class="text-gray-100">()</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">x</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">5</span><span class="text-gray-100">))</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">y</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-yellow-300">Option</span><span class="text-gray-100">(</span><span class="text-green-400">10</span><span class="text-gray-100">))</span>
-  <span class="text-purple-400">return</span> <span class="text-blue-300">x</span> <span class="text-purple-400">+</span> <span class="text-blue-300">y</span>
-<span class="text-gray-100">})</span>  <span class="text-gray-500">// Option(15)</span></code></pre>
-            </div>
+            <CodeExample region="landing-do-option" />
           </div>
 
           <div>
             <h3 class="text-xl font-semibold mb-4">List Comprehensions (Cartesian Products)</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">pairs</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Do</span><span class="text-gray-100">(</span><span class="text-purple-400">function*</span> <span class="text-gray-100">()</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">x</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">1</span><span class="text-gray-100">,</span> <span class="text-green-400">2</span><span class="text-gray-100">]))</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">y</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-yellow-300">List</span><span class="text-gray-100">([</span><span class="text-green-400">10</span><span class="text-gray-100">,</span> <span class="text-green-400">20</span><span class="text-gray-100">]))</span>
-  <span class="text-purple-400">return</span> <span class="text-gray-100">{</span> <span class="text-blue-300">x</span><span class="text-gray-100">,</span> <span class="text-blue-300">y</span> <span class="text-gray-100">}</span>
-<span class="text-gray-100">})</span>
-<span class="text-gray-500">{'// List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, {x:2,y:20}])'}</span></code></pre>
-            </div>
+            <CodeExample region="landing-do-list" />
           </div>
 
           <div>
             <h3 class="text-xl font-semibold mb-4">Error Handling with Either</h3>
-            <div class="bg-gray-900 rounded-xl p-6">
-              <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-purple-400">const</span> <span class="text-blue-300">validated</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Do</span><span class="text-gray-100">(</span><span class="text-purple-400">function*</span> <span class="text-gray-100">()</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">email</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-blue-300">validateEmail</span><span class="text-gray-100">(</span><span class="text-blue-300">input</span><span class="text-gray-100">))</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">user</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-blue-300">fetchUser</span><span class="text-gray-100">(</span><span class="text-blue-300">email</span><span class="text-gray-100">))</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">saved</span> <span class="text-gray-100">=</span> <span class="text-purple-400">yield*</span> <span class="text-yellow-300">$</span><span class="text-gray-100">(</span><span class="text-blue-300">saveUser</span><span class="text-gray-100">(</span><span class="text-blue-300">user</span><span class="text-gray-100">))</span>
-  <span class="text-purple-400">return</span> <span class="text-blue-300">saved</span>
-<span class="text-gray-100">})</span>
-<span class="text-gray-500">// If any step returns Left, chain short-circuits</span></code></pre>
-            </div>
+            <CodeExample region="landing-do-either" />
           </div>
         </div>
       </div>
