@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Footer from '../components/Footer';
+import CodeExample from '../components/CodeExample.astro';
 ---
 
 <Layout title="Match & Cond - Functype">
@@ -28,20 +29,7 @@ import Footer from '../components/Footer';
           Match provides exhaustive pattern matching for Scala-style case expressions, while Cond offers
           functional conditional evaluation without early returns or if-else chains.
         </p>
-        <div class="bg-gray-900 rounded-xl p-6 shadow-sm">
-          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of switch statements:</span>
-<span class="text-purple-400">switch</span> <span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">case</span> <span class="text-green-400">"a"</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">1</span>
-  <span class="text-purple-400">case</span> <span class="text-green-400">"b"</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">2</span>
-  <span class="text-purple-400">default</span><span class="text-gray-100">:</span> <span class="text-purple-400">return</span> <span class="text-green-400">0</span>
-<span class="text-gray-100">}</span>
-
-<span class="text-gray-500">// Use Match:</span>
-<span class="text-yellow-300">Match</span><span class="text-gray-100">(</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"a"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">1</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">when</span><span class="text-gray-100">(</span><span class="text-green-400">"b"</span><span class="text-gray-100">,</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">2</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">default</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-green-400">0</span><span class="text-gray-100">)</span></code></pre>
-        </div>
+        <CodeExample region="readme-match-basic" />
       </div>
     </section>
 

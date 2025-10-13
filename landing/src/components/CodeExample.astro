@@ -1,0 +1,59 @@
+---
+import { readFileSync } from "fs"
+import { join } from "path"
+import { codeToHtml } from "shiki"
+
+interface Props {
+  region: string
+  language?: string
+  title?: string
+}
+
+const { region, language = "typescript", title } = Astro.props
+
+// Read the test file that contains validated examples
+const testFilePath = join(process.cwd(), "../test/docs/documentation-examples.spec.ts")
+const testFileContent = readFileSync(testFilePath, "utf-8")
+
+// Extract code between region tags
+const regionStart = `//#region ${region}`
+const regionEnd = `//#endregion ${region}`
+
+const startIndex = testFileContent.indexOf(regionStart)
+const endIndex = testFileContent.indexOf(regionEnd)
+
+if (startIndex === -1 || endIndex === -1) {
+  throw new Error(`Region "${region}" not found in documentation-examples.spec.ts`)
+}
+
+// Extract the code between the region markers
+const codeWithMarker = testFileContent.substring(startIndex, endIndex)
+// Remove the region start line and any leading whitespace
+const codeLines = codeWithMarker.split("\n").slice(1)
+
+// Find the minimum indentation to preserve relative indentation
+const nonEmptyLines = codeLines.filter((line) => line.trim().length > 0)
+const minIndent = Math.min(
+  ...nonEmptyLines.map((line) => {
+    const match = line.match(/^(\s*)/)
+    return match ? match[1].length : 0
+  }),
+)
+
+// Remove the common indentation from all lines
+const code = codeLines
+  .map((line) => (line.trim().length === 0 ? "" : line.substring(minIndent)))
+  .join("\n")
+  .trim()
+
+// Generate syntax-highlighted HTML using Shiki
+const html = await codeToHtml(code, {
+  lang: language,
+  theme: "github-dark",
+})
+---
+
+<div class="bg-gray-900 rounded-xl p-6 shadow-sm">
+  {title && <div class="text-gray-400 text-sm mb-2 font-semibold">{title}</div>}
+  <div class="text-sm font-mono overflow-x-auto" set:html={html} />
+</div>

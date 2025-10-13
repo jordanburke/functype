@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Footer from '../components/Footer';
+import CodeExample from '../components/CodeExample.astro';
 ---
 
 <Layout title="Either<L,R> - Functype">
@@ -30,20 +31,7 @@ import Footer from '../components/Footer';
           Either represents a value that can be one of two types: Left (typically for errors) or Right (for success values).
           It's perfect for operations that can fail with meaningful error information.
         </p>
-        <div class="bg-gray-900 rounded-xl p-6 shadow-sm">
-          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of try-catch:</span>
-<span class="text-purple-400">try</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">const</span> <span class="text-blue-300">data</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">JSON</span><span class="text-gray-100">.</span><span class="text-blue-300">parse</span><span class="text-gray-100">(</span><span class="text-blue-300">input</span><span class="text-gray-100">)</span>
-  <span class="text-purple-400">return</span> <span class="text-blue-300">data</span><span class="text-gray-100">.</span><span class="text-blue-300">value</span>
-<span class="text-gray-100">}</span> <span class="text-purple-400">catch</span> <span class="text-gray-100">(</span><span class="text-blue-300">err</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">return</span> <span class="text-green-400">"Invalid JSON"</span>
-<span class="text-gray-100">}</span>
-
-<span class="text-gray-500">// Do this:</span>
-<span class="text-yellow-300">Either</span><span class="text-gray-100">.</span><span class="text-blue-300">fromTry</span><span class="text-gray-100">(()</span> <span class="text-purple-400">=&gt;</span> <span class="text-yellow-300">JSON</span><span class="text-gray-100">.</span><span class="text-blue-300">parse</span><span class="text-gray-100">(</span><span class="text-blue-300">input</span><span class="text-gray-100">))</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">map</span><span class="text-gray-100">(</span><span class="text-orange-300">data</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">data</span><span class="text-gray-100">.</span><span class="text-blue-300">value</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">getOrElse</span><span class="text-gray-100">(</span><span class="text-green-400">"Invalid JSON"</span><span class="text-gray-100">)</span></code></pre>
-        </div>
+        <CodeExample region="readme-either-basic" />
       </div>
     </section>
 

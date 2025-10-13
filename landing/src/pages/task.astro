@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Footer from '../components/Footer';
+import CodeExample from '../components/CodeExample.astro';
 ---
 
 <Layout title="Task<T> - Functype">
@@ -28,21 +29,7 @@ import Footer from '../components/Footer';
           Task provides structured async operations with built-in cancellation, progress tracking, and error handling.
           Unlike Promises, Tasks can be cancelled and provide detailed error context.
         </p>
-        <div class="bg-gray-900 rounded-xl p-6 shadow-sm">
-          <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Named tasks for better debugging:</span>
-<span class="text-purple-400">const</span> <span class="text-blue-300">fetchUser</span> <span class="text-gray-100">=</span> <span class="text-yellow-300">Task</span><span class="text-gray-100">({</span> <span class="text-blue-300">name</span><span class="text-gray-100">:</span> <span class="text-green-400">"UserFetch"</span> <span class="text-gray-100">})</span>
-  <span class="text-gray-100">.</span><span class="text-blue-300">Async</span><span class="text-gray-100">(</span>
-    <span class="text-purple-400">async</span> <span class="text-gray-100">()</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">await</span> <span class="text-blue-300">fetch</span><span class="text-gray-100">(</span><span class="text-green-400">"/api/user"</span><span class="text-gray-100">).</span><span class="text-blue-300">then</span><span class="text-gray-100">(</span><span class="text-orange-300">r</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">r</span><span class="text-gray-100">.</span><span class="text-blue-300">json</span><span class="text-gray-100">()),</span>
-    <span class="text-purple-400">async</span> <span class="text-gray-100">(</span><span class="text-orange-300">err</span><span class="text-gray-100">)</span> <span class="text-purple-400">=&gt;</span> <span class="text-purple-400">new</span> <span class="text-yellow-300">Error</span><span class="text-gray-100">(</span><span class="text-green-400">`Fetch failed: </span><span class="text-purple-400">${</span><span class="text-orange-300">err</span><span class="text-purple-400">}</span><span class="text-green-400">`</span><span class="text-gray-100">)</span>
-  <span class="text-gray-100">)</span>
-
-<span class="text-gray-500">// Error includes task name:</span>
-<span class="text-purple-400">try</span> <span class="text-gray-100">{</span>
-  <span class="text-purple-400">await</span> <span class="text-blue-300">fetchUser</span>
-<span class="text-gray-100">}</span> <span class="text-purple-400">catch</span> <span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
-  <span class="text-blue-300">console</span><span class="text-gray-100">.</span><span class="text-blue-300">log</span><span class="text-gray-100">(</span><span class="text-orange-300">error</span><span class="text-gray-100">.</span><span class="text-blue-300">name</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// "UserFetch"</span>
-<span class="text-gray-100">}</span></code></pre>
-        </div>
+        <CodeExample region="readme-task-basic" />
       </div>
     </section>
 
