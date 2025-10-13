@@ -30,7 +30,7 @@ import Footer from '../components/Footer';
           Option is a container that either holds a value (Some) or represents the absence of a value (None).
           It eliminates null pointer exceptions by making nullable values explicit in the type system.
         </p>
-        <div class="bg-white rounded-xl p-6 shadow-sm">
+        <div class="bg-gray-900 rounded-xl p-6 shadow-sm">
           <pre class="text-sm font-mono overflow-x-auto"><code><span class="text-gray-500">// Instead of this:</span>
 <span class="text-purple-400">const</span> <span class="text-blue-300">user</span> <span class="text-gray-100">=</span> <span class="text-blue-300">users</span><span class="text-gray-100">.</span><span class="text-blue-300">find</span><span class="text-gray-100">(</span><span class="text-orange-300">u</span> <span class="text-purple-400">=&gt;</span> <span class="text-orange-300">u</span><span class="text-gray-100">.</span><span class="text-blue-300">id</span> <span class="text-purple-400">===</span> <span class="text-green-400">5</span><span class="text-gray-100">)</span>  <span class="text-gray-500">// user might be undefined!</span>
 <span class="text-purple-400">if</span> <span class="text-gray-100">(</span><span class="text-blue-300">user</span><span class="text-gray-100">)</span> <span class="text-gray-100">{</span>
