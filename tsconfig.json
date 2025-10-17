@@ -21,7 +21,13 @@
     "strictPropertyInitialization": true,
     "moduleDetection": "force",
     "verbatimModuleSyntax": true,
-    "noErrorTruncation": true
+    "noErrorTruncation": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true
   },
   "include": ["src/**/*", "test/**/*", "examples/**/*", "bench/**/*", "scripts/**/*"],
   "exclude": ["node_modules", "lib"]

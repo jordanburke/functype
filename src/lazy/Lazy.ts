@@ -201,7 +201,6 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     get isEvaluated() {
       return evaluated
     },
-    get: evaluate,
     getOrElse: (defaultValue: T): T => {
       try {
         return evaluate()

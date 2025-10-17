@@ -46,9 +46,11 @@ export function doNotationTransformer(): ts.TransformerFactory<ts.SourceFile> {
           const arg = node.arguments[0]
           if (arg && ts.isArrowFunction(arg)) {
             // Convert to generator function
+            // Note: In modern TypeScript API, generator functions use undefined modifiers
+            // and the asterisk is indicated separately
             const genFunc = ts.factory.createFunctionExpression(
-              [ts.factory.createModifier(ts.SyntaxKind.AsteriskToken)],
-              undefined, // asterisk
+              undefined, // modifiers
+              ts.factory.createToken(ts.SyntaxKind.AsteriskToken), // asterisk token
               undefined, // name
               undefined, // type params
               arg.parameters,
@@ -74,7 +76,8 @@ export function doNotationTransformer(): ts.TransformerFactory<ts.SourceFile> {
           return stmt
         }
 
-        return ts.factory.createBlock(body.statements.map(transformStatement), body.multiLine)
+        // Note: createBlock takes statements and optional multiline flag (boolean)
+        return ts.factory.createBlock(body.statements.map(transformStatement), true)
       }
 
       return ts.visitNode(sourceFile, visit) as ts.SourceFile

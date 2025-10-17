@@ -168,8 +168,8 @@ describe("Documentation Examples", () => {
       })
 
       // Value is not computed yet
-      const _firstAccess = expensive.get() // Logs "Computing..." and returns result
-      const _secondAccess = expensive.get() // Returns cached result (no log)
+      const _firstAccess = expensive.getOrThrow() // Logs "Computing..." and returns result
+      const _secondAccess = expensive.getOrThrow() // Returns cached result (no log)
 
       // Transform lazy values
       const doubled = expensive.map((n) => n * 2)
@@ -179,9 +179,9 @@ describe("Documentation Examples", () => {
       const combined = Lazy.of(() => 10).flatMap((a) => Lazy.of(() => 20).map((b) => a + b))
       //#endregion readme-lazy-basic
 
-      expect(typeof expensive.get()).toBe("number")
-      expect(typeof doubled.get()).toBe("number")
-      expect(combined.get()).toBe(30)
+      expect(typeof expensive.getOrThrow()).toBe("number")
+      expect(typeof doubled.getOrThrow()).toBe("number")
+      expect(combined.getOrThrow()).toBe(30)
     })
 
     it("should demonstrate Do notation", () => {

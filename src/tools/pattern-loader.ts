@@ -89,7 +89,7 @@ export function loadPatternsFromFiles(patternsDir: string): List<PatternMatch> {
         const metadataOpt = extractMetadata(beforeContent)
 
         if (metadataOpt._tag === "Some") {
-          const metadata = metadataOpt.get()
+          const metadata = metadataOpt.value!
           const beforeExample = extractExample(beforeContent)
           const afterExample = extractExample(afterContent)
 

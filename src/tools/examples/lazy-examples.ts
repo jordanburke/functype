@@ -16,10 +16,10 @@ export function basicLazyUsage() {
   console.log("Lazy created")
 
   // Now it runs
-  const result = expensiveComputation.get()
+  const result = expensiveComputation.getOrThrow()
 
   // Subsequent calls return cached result
-  const result2 = expensiveComputation.get() // No recomputation
+  const result2 = expensiveComputation.getOrThrow() // No recomputation
 
   return result === result2 // true
 }
@@ -32,7 +32,7 @@ export function lazyTransformations() {
   const formatted = doubled.map((n) => `Result: ${n}`)
 
   // None of the computations have run yet
-  return formatted.get() // "Result: 84"
+  return formatted.getOrThrow() // "Result: 84"
 }
 
 // Lazy Chain
@@ -55,7 +55,7 @@ export function lazyChain() {
   })
 
   // Nothing has executed yet
-  return step3.get() // Logs: "Step 1", "Step 2", "Step 3", returns 35
+  return step3.getOrThrow() // Logs: "Step 1", "Step 2", "Step 3", returns 35
 }
 
 // Lazy for Circular Dependencies
@@ -63,7 +63,7 @@ export function circularDependencyExample() {
   // Simulate resolving circular dependencies
   const lazyA = Lazy(() => {
     console.log("Resolving A")
-    return { name: "A", dependsOn: lazyB.get() }
+    return { name: "A", dependsOn: lazyB.getOrThrow() }
   })
 
   const lazyB = Lazy(() => {
@@ -71,7 +71,7 @@ export function circularDependencyExample() {
     return { name: "B", value: 42 }
   })
 
-  return lazyA.get() // { name: "A", dependsOn: { name: "B", value: 42 } }
+  return lazyA.getOrThrow() // { name: "A", dependsOn: { name: "B", value: 42 } }
 }
 
 // Lazy Memoization
@@ -85,10 +85,10 @@ export function lazyMemoization() {
   })
 
   // First access
-  const result1 = memoizedExpensive.get()
+  const result1 = memoizedExpensive.getOrThrow()
 
   // Second access - uses cached value
-  const result2 = memoizedExpensive.get()
+  const result2 = memoizedExpensive.getOrThrow()
 
   return {
     result1,

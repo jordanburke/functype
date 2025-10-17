@@ -21,7 +21,7 @@ function getName(user) {
 const suggestion1 = suggestPattern(nullCheckCode)
 if (suggestion1._tag === "Some") {
   console.log("\nNull check pattern suggestion:")
-  console.log(formatSuggestion(suggestion1.get()))
+  console.log(formatSuggestion(suggestion1.value!))
 }
 
 // Example 2: Try-catch pattern
@@ -40,7 +40,7 @@ function loadConfig() {
 const suggestion2 = suggestPattern(errorHandlingCode)
 if (suggestion2._tag === "Some") {
   console.log("\nError handling pattern suggestion:")
-  console.log(formatSuggestion(suggestion2.get()))
+  console.log(formatSuggestion(suggestion2.value!))
 }
 
 // Show how patterns are compile-tested

@@ -134,27 +134,29 @@ export function listComprehensionExample() {
 export function mixedMonadsExample(data: { userId?: number; multiplier: number }): number | undefined {
   // When mixing different monad types, convert them to a consistent type first
   // Here we convert everything to Option for consistency
-  const result = Do(function* () {
-    // Start with Option
-    const userId = yield* $(Option(data.userId))
+  const result = (
+    Do(function* () {
+      // Start with Option
+      const userId = yield* $(Option(data.userId))
 
-    // Convert Try to Option
-    const parsed = yield* $(
-      Try(() => {
-        if (data.multiplier === 0) throw new Error("Invalid multiplier")
-        return 100 / data.multiplier
-      }),
-    )
+      // Convert Try to Option
+      const parsed = yield* $(
+        Try(() => {
+          if (data.multiplier === 0) throw new Error("Invalid multiplier")
+          return 100 / data.multiplier
+        }),
+      )
 
-    // Use Option for validation logic
-    const validated = yield* $(parsed > 0 ? Option(parsed) : Option<number>(null))
+      // Use Option for validation logic
+      const validated = yield* $(parsed > 0 ? Option(parsed) : Option<number>(null))
 
-    return userId * validated
-  })
+      return userId * validated
+    }) as Reshapeable<number>
+  )
     .toOption()
-    .get()
+    .orUndefined()
 
-  // Now result is properly typed as Option<number>
+  // Now result is properly typed as number | undefined
   return result
 }
 
@@ -194,15 +196,12 @@ export function mixedMonadsWithReshapeableExample(data: { userId?: number; multi
 export function errorRecoveryExample() {
   const result = Do(function* () {
     // Try to get value, catch error if None
-    const valueOrDefault = (() => {
+    const valueOrDefault: number = (() => {
       try {
         // This might fail if None - we'll handle it outside IIFE
         const temp = Option(null as number | null)
-        // Check if it's None before yielding
-        if (temp.isNone()) {
-          return 0
-        }
-        return temp.get()
+        // Use getOrElse to safely extract value
+        return temp.getOrElse(0)
       } catch {
         return 0
       }
@@ -211,7 +210,7 @@ export function errorRecoveryExample() {
     // Continue with computation
     const multiplied = yield* $(Option(valueOrDefault * 2))
     return multiplied
-  })
+  }) as Option<number>
 
   return result.getOrElse(0) // Returns 0 (recovered from None)
 }
@@ -337,16 +336,18 @@ export function nestedDoExample() {
   const outer = Do(function* () {
     const x = yield* $(Option(5))
 
-    // Nested Do for inner computation (returns List)
-    const inner = Do(function* () {
-      const y = yield* $(Option(10))
-      const z = yield* $(Option(15))
-      return y + z
-    }).getOrElse(0) // Get single value from inner Do
+    // Nested Do for inner computation (returns Option)
+    const inner = (
+      Do(function* () {
+        const y = yield* $(Option(10))
+        const z = yield* $(Option(15))
+        return y + z
+      }) as Option<number>
+    ).getOrElse(0) // Get single value from inner Do
 
     const innerResult = yield* $(Option(inner))
     return x + innerResult
-  })
+  }) as Option<number>
 
   return outer.getOrElse(0) // Returns 30
 }
