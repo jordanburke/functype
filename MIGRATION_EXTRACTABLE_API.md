@@ -7,11 +7,11 @@
 
 We've simplified and standardized the API for extracting values from containers (Option, Either, Try, Lazy, TaskOutcome).
 
-| Old Method | New Method | Purpose |
-|------------|------------|---------|
-| `getOrElse(value)` | `orElse(value)` | Extract with default value |
-| `getOrThrow(error?)` | `orThrow(error?)` | Extract or throw error |
-| `orElse(container)` | `or(container)` | Return this or alternative container |
+| Old Method           | New Method        | Purpose                              |
+| -------------------- | ----------------- | ------------------------------------ |
+| `getOrElse(value)`   | `orElse(value)`   | Extract with default value           |
+| `getOrThrow(error?)` | `orThrow(error?)` | Extract or throw error               |
+| `orElse(container)`  | `or(container)`   | Return this or alternative container |
 
 **Note:** `orNull()` and `orUndefined()` remain unchanged.
 
@@ -96,7 +96,7 @@ const value = lazy.getOrNull()
 // After
 const value = lazy.orElse(0)
 const value = lazy.orThrow()
-const value = lazy.orNull()  // Unchanged!
+const value = lazy.orNull() // Unchanged!
 ```
 
 #### TaskOutcome
@@ -130,13 +130,13 @@ const opt: Option<number> = option.or(Option(42))
 ```typescript
 // Before
 option
-  .map(x => x * 2)
+  .map((x) => x * 2)
   .orElse(fallbackOption)
   .getOrElse(0)
 
 // After
 option
-  .map(x => x * 2)
+  .map((x) => x * 2)
   .or(fallbackOption)
   .orElse(0)
 ```
@@ -163,6 +163,7 @@ echo "Migration complete. Please review container fallback cases manually."
 ```
 
 **Important:** The script cannot automatically detect container fallback cases. After running, search for:
+
 ```typescript
 // Pattern to manually review
 \.orElse\(.*Option\(
@@ -179,7 +180,7 @@ After migration, TypeScript will catch type mismatches:
 
 ```typescript
 // This will now fail to compile (good!)
-const value: number = option.orElse(Option(42))  // Type error!
+const value: number = option.orElse(Option(42)) // Type error!
 
 // Fix by using .or()
 const value: Option<number> = option.or(Option(42))
