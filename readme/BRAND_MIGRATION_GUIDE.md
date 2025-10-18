@@ -127,14 +127,14 @@ When extracting branded values from Option or Either, you may need to adjust def
 
 ```typescript
 const email = EmailAddress.of(input)
-const value = email.map((e) => e.unbrand()).getOrElse("")
+const value = email.map((e) => e.unbrand()).orElse("")
 ```
 
 **After (Option 1 - Keep branded type):**
 
 ```typescript
 const email = EmailAddress.of(input)
-const value = email.getOrElse("" as Brand<"EmailAddress", string>)
+const value = email.orElse("" as Brand<"EmailAddress", string>)
 ```
 
 **After (Option 2 - Use fold for clean extraction):**

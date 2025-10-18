@@ -42,7 +42,7 @@ describe("Err", () => {
     const error = new Error("Test error")
     const result = Err<string>(error)
 
-    expect(() => result.getOrThrow()).toThrow("Test error")
+    expect(() => result.orThrow()).toThrow("Test error")
   })
 
   test("should throw provided Error on getOrThrow with parameter", () => {
@@ -50,7 +50,7 @@ describe("Err", () => {
     const customError = new Error("Custom error")
     const result = Err<string>(originalError)
 
-    expect(() => result.getOrThrow(customError)).toThrow("Custom error")
+    expect(() => result.orThrow(customError)).toThrow("Custom error")
   })
 })
 
@@ -69,11 +69,11 @@ describe("Ok", () => {
     const arrayResult = Ok([1, 2, 3])
 
     expect(numberResult.isSuccess()).toBe(true)
-    expect(numberResult.getOrThrow()).toBe(42)
+    expect(numberResult.orThrow()).toBe(42)
     expect(objectResult.isSuccess()).toBe(true)
-    expect(objectResult.getOrThrow()).toEqual({ key: "value" })
+    expect(objectResult.orThrow()).toEqual({ key: "value" })
     expect(arrayResult.isSuccess()).toBe(true)
-    expect(arrayResult.getOrThrow()).toEqual([1, 2, 3])
+    expect(arrayResult.orThrow()).toEqual([1, 2, 3])
   })
 
   test("should return value on getOrThrow", () => {
@@ -81,8 +81,8 @@ describe("Ok", () => {
     const result = Ok(data)
     const customError = new Error("Should not be thrown")
 
-    expect(result.getOrThrow()).toBe(data)
-    expect(result.getOrThrow(customError)).toBe(data)
+    expect(result.orThrow()).toBe(data)
+    expect(result.orThrow(customError)).toBe(data)
   })
 })
 

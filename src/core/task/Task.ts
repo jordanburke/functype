@@ -116,7 +116,7 @@ export type TaskFailure<T> = Err<T>
  */
 const eitherToTaskOutcome = <T>(either: Either<Throwable, T>, params?: TaskParams): TaskOutcome<T> => {
   if (either.isRight()) {
-    return Ok(either.getOrThrow(), params)
+    return Ok(either.orThrow(), params)
   } else if (either.isLeft()) {
     return Err<T>(
       either.fold(
@@ -180,11 +180,11 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
     recoverWith: (f: (error: Throwable) => T) => Ok(f(throwable), params),
 
     // Extractable methods
-    getOrThrow: (error?: Error) => {
+    orThrow: (error?: Error) => {
       throw error ?? throwable
     },
-    getOrElse: (defaultValue: T) => defaultValue,
-    orElse: (alternative: TaskOutcome<T>) => alternative,
+    orElse: (defaultValue: T) => defaultValue,
+    or: (alternative: TaskOutcome<T>) => alternative,
     orNull: () => null as T | null,
     orUndefined: () => undefined as T | undefined,
 
@@ -305,9 +305,9 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
     recoverWith: (_f: (error: Throwable) => T) => Ok(data, params),
 
     // Extractable methods
-    getOrThrow: (_error?: Error) => data,
-    getOrElse: (_defaultValue: T) => data,
-    orElse: (_alternative: TaskOutcome<T>) => Ok(data, params),
+    orThrow: (_error?: Error) => data,
+    orElse: (_defaultValue: T) => data,
+    or: (_alternative: TaskOutcome<T>) => Ok(data, params),
     orNull: () => data as T | null,
     orUndefined: () => data as T | undefined,
 
@@ -721,7 +721,7 @@ const TaskCompanion = {
    */
   fromTry: <T>(tryValue: Try<T>, params?: TaskParams): TaskOutcome<T> =>
     tryValue.isSuccess()
-      ? Ok<T>(tryValue.getOrThrow(), params)
+      ? Ok<T>(tryValue.orThrow(), params)
       : Err<T>(
           tryValue.fold(
             (error) => error,
@@ -825,7 +825,7 @@ const TaskCompanion = {
     return new Promise((resolve, reject) => {
       if (taskOutcome.isSuccess()) {
         // TypeScript now knows this is Ok<U>
-        resolve(taskOutcome.getOrThrow())
+        resolve(taskOutcome.orThrow())
       } else {
         // TypeScript now knows this is Err<U>
         reject((taskOutcome as Err<U>).error)
@@ -886,7 +886,7 @@ const TaskCompanion = {
                     const outcome = result as TaskOutcome<T>
                     if (outcome._tag === "Ok") {
                       // Extract the value from Ok
-                      resolve(outcome.getOrThrow())
+                      resolve(outcome.orThrow())
                     } else if (outcome._tag === "Err") {
                       // Err - reject with the error
                       reject((outcome as Err<T>).error)

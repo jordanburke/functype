@@ -44,7 +44,7 @@ describe("Try pipe", () => {
 
     // Using map
     const mapResult = success.map((x) => x * 3)
-    expect(mapResult.getOrThrow()).toBe(30)
+    expect(mapResult.orThrow()).toBe(30)
 
     // Using pipe
     const pipeResult = success.pipe((x) => x * 3)

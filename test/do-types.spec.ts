@@ -15,7 +15,7 @@ describe("Do-notation type helpers", () => {
     // First monad wins - Option(5) makes this an Option comprehension
     // List([10, 20]) is treated as having value 10 (head)
     expect(result.isSome()).toBe(true)
-    expect(result.getOrThrow()).toBe(15) // 5 + 10 (first element of list)
+    expect(result.orThrow()).toBe(15) // 5 + 10 (first element of list)
   })
 
   it("should work with $ helper for different monad types", () => {
@@ -32,7 +32,7 @@ describe("Do-notation type helpers", () => {
 
     // First monad wins - Option makes this an Option comprehension
     expect(result.isSome()).toBe(true)
-    expect(result.getOrThrow()).toBe(10) // 5 + 5 (length of "hello")
+    expect(result.orThrow()).toBe(10) // 5 + 5 (length of "hello")
   })
 
   it("should work with type assertions for simpler cases", () => {
@@ -46,7 +46,7 @@ describe("Do-notation type helpers", () => {
 
     // First monad wins - Option comprehension
     expect(result.isSome()).toBe(true)
-    expect(result.getOrThrow()).toBe(6) // 5 + 1 (length of "a")
+    expect(result.orThrow()).toBe(6) // 5 + 1 (length of "a")
   })
 
   it("demonstrates the typing challenge", () => {
@@ -62,7 +62,7 @@ describe("Do-notation type helpers", () => {
 
     // First monad wins - Option comprehension
     expect(result.isSome()).toBe(true)
-    expect(result.getOrThrow()).toBe(6) // 5 + 1
+    expect(result.orThrow()).toBe(6) // 5 + 1
   })
 })
 

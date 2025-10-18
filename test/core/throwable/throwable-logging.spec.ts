@@ -123,7 +123,7 @@ describe("Throwable Logging Display", () => {
       })
 
       const outerTask = Task({ name: "UserFetch", description: "Fetch user data" }).Sync(() => {
-        return innerTask.getOrThrow()
+        return innerTask.orThrow()
       })
 
       // Raw error output
@@ -156,15 +156,15 @@ describe("Throwable Logging Display", () => {
       })
 
       const level2Task = Task({ name: "DbQuery" }).Sync(() => {
-        return level3Task.getOrThrow()
+        return level3Task.orThrow()
       })
 
       const level1Task = Task({ name: "UserService" }).Sync(() => {
-        return level2Task.getOrThrow()
+        return level2Task.orThrow()
       })
 
       const mainTask = Task({ name: "ApiHandler" }).Sync(() => {
-        return level1Task.getOrThrow()
+        return level1Task.orThrow()
       })
 
       const error = mainTask.error as Error
@@ -227,7 +227,7 @@ describe("Throwable Logging Display", () => {
     })
 
     const outerTask = Task({ name: "UserService" }).Sync(() => {
-      return innerTask.getOrThrow()
+      return innerTask.orThrow()
     })
 
     const error = outerTask.error as Error
@@ -265,12 +265,12 @@ describe("Throwable Logging Display", () => {
     })
 
     const level2 = Task({ name: "UserFetch" }).Sync(() => {
-      return level3.getOrThrow()
+      return level3.orThrow()
     })
 
     // Create level1 and get its error for testing
     Task({ name: "ApiRequest" }).Sync(() => {
-      return level2.getOrThrow()
+      return level2.orThrow()
     })
 
     // Get serialized error using the provided serializer

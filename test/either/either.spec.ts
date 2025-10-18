@@ -31,12 +31,12 @@ describe("Either", () => {
   it("should contain all items in list on Right", () => {
     const list = List([1, 2, 3, 4])
     const result = Right(list)
-    expect(result.getOrElse(List()).toArray()).toEqual([1, 2, 3, 4])
+    expect(result.orElse(List()).toArray()).toEqual([1, 2, 3, 4])
   })
 
   it("map over Right containing a list", () => {
     const result = Right(List([1, 2, 3, 4])).map((list) => list.map((x) => x * 2))
-    expect(result.getOrElse(List()).toArray()).toEqual([2, 4, 6, 8])
+    expect(result.orElse(List()).toArray()).toEqual([2, 4, 6, 8])
   })
 
   it("merge two Rights", () => {
@@ -65,22 +65,22 @@ describe("Either", () => {
 
   it("getOrElse on Right", () => {
     const right = Right<string, number>(5)
-    expect(right.getOrElse(10)).toBe(5)
+    expect(right.orElse(10)).toBe(5)
   })
 
   it("getOrElse on Left", () => {
     const left = Left<string, number>("error")
-    expect(left.getOrElse(10)).toBe(10)
+    expect(left.orElse(10)).toBe(10)
   })
 
   it("getOrThrow on Right", () => {
     const right = Right<string, number>(5)
-    expect(right.getOrThrow()).toBe(5)
+    expect(right.orThrow()).toBe(5)
   })
 
   it("getOrThrow on Left", () => {
     const left = Left<string, number>("error")
-    expect(() => left.getOrThrow()).toThrow("error")
+    expect(() => left.orThrow()).toThrow("error")
   })
 
   it("flatMap on Right", () => {
@@ -101,7 +101,7 @@ describe("Either", () => {
     const right = Right<string, number>(5)
     const option = right.toOption()
     expect(!option.isEmpty).toBe(true)
-    expect(option.getOrElse(0)).toBe(5)
+    expect(option.orElse(0)).toBe(5)
   })
 
   it("toOption on Left", () => {
@@ -413,7 +413,7 @@ describe("Either", () => {
     const promise = Promise.resolve(5)
     const result = await Either.fromPromise(promise, (err) => `Error: ${err}`)
     expect(result.isRight()).toBe(true)
-    expect(result.getOrThrow()).toBe(5)
+    expect(result.orThrow()).toBe(5)
   })
 
   it("should create Left from rejected promise", async () => {

@@ -124,11 +124,11 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   const get = (key: K): Option<V> => Option(state.values.get(key))
 
-  const getOrElse = (key: K, defaultValue: V): V => Option(state.values.get(key)).getOrElse(defaultValue)
+  const getOrElse = (key: K, defaultValue: V): V => Option(state.values.get(key)).orElse(defaultValue)
 
   const isEmpty = (): boolean => state.values.size === 0
 
-  const orElse = (key: K, alternative: Option<V>): Option<V> => Option(state.values.get(key)).orElse(alternative)
+  const orElse = (key: K, alternative: Option<V>): Option<V> => Option(state.values.get(key)).or(alternative)
 
   const fold = <U extends Type>(onEmpty: () => U, onValue: (value: Tuple<[K, V]>) => U): U => {
     if (isEmpty()) return onEmpty()

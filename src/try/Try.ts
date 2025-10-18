@@ -29,12 +29,11 @@ export interface Try<T>
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
-  getOrElse: (defaultValue: T) => T
-  getOrThrow: (error?: Error) => T
-  orElse: (alternative: Try<T>) => Try<T>
+  orElse: (defaultValue: T) => T
+  orThrow: (error?: Error) => T
+  or: (alternative: Try<T>) => Try<T>
   orNull: () => T | null
   orUndefined: () => T | undefined
-  orThrow: (error: Error) => T
   toOption: () => Option<T>
   toEither: <E extends Type>(leftValue: E) => Either<E, T>
   toList: () => List<T>
@@ -69,12 +68,11 @@ const Success = <T>(value: T): Try<T> => ({
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return false
   },
-  getOrElse: (_defaultValue: T) => value,
-  getOrThrow: (_error?: Error) => value,
-  orElse: (_alternative: Try<T>) => Success(value),
+  orElse: (_defaultValue: T) => value,
+  orThrow: (_error?: Error) => value,
+  or: (_alternative: Try<T>) => Success(value),
   orNull: () => value,
   orUndefined: () => value,
-  orThrow: (_error: Error) => value,
   toEither: <E extends Type>(_leftValue: E) => Right<E, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   ap: <U>(ff: Try<(value: T) => U>) => ff.map((f) => f(value)),
@@ -132,16 +130,13 @@ const Failure = <T>(error: Error): Try<T> => ({
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return true
   },
-  getOrElse: (defaultValue: T) => defaultValue,
-  getOrThrow: (e?: Error) => {
+  orElse: (defaultValue: T) => defaultValue,
+  orThrow: (e?: Error) => {
     throw e ?? error
   },
-  orElse: (alternative: Try<T>) => alternative,
+  or: (alternative: Try<T>) => alternative,
   orNull: () => null,
   orUndefined: () => undefined,
-  orThrow: (error: Error) => {
-    throw error
-  },
   toEither: <E extends Type>(_leftValue: E) => Left<E, T>(error as E),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),

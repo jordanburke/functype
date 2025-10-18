@@ -16,7 +16,7 @@ describe("Task Nested Error Handling", () => {
       if (result.isFailure()) {
         throw result.error // Re-throw to preserve error chain
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await outerTask
@@ -54,7 +54,7 @@ describe("Task Nested Error Handling", () => {
         // Properly handle the error to preserve context
         throw new Error(`Outer task failed because: ${(result.error as Error).message}`)
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await outerTask

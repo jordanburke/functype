@@ -102,7 +102,7 @@ describe("ValidatedBrand", () => {
       const result = PositiveNumber.of(42)
       expect(result.isEmpty).toBe(false)
 
-      const branded = result.getOrThrow()
+      const branded = result.orThrow()
       // Branded value IS the primitive
       expect(branded).toBe(42)
       expect(typeof branded).toBe("number")

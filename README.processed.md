@@ -81,7 +81,7 @@ const _nothing = empty.map((s) => s.toUpperCase()) // None
 const result = value
   .map((s) => s.length)
   .filter((len) => len > 3)
-  .getOrElse(0) // 5
+  .orElse(0) // 5
 
 // Pattern matching
 const message = value.fold(

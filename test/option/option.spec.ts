@@ -11,21 +11,21 @@ describe("Option", () => {
   const nothing: Option<string> = Option<string>(undefined)
 
   it("parse valid number", () => {
-    expect(something.getOrElse("world")).toBe("hello")
+    expect(something.orElse("world")).toBe("hello")
   })
 
   it("map on Some", () => {
     //#region option-map-example
     const option = Option("hello")
     const length = option.map((s) => s.length)
-    expect(length.getOrElse(0)).toBe(5)
+    expect(length.orElse(0)).toBe(5)
     //#endregion option-map-example
 
-    expect(something.map((s) => s.length).getOrElse(0)).toBe(5)
+    expect(something.map((s) => s.length).orElse(0)).toBe(5)
   })
 
   it("parse invalid number", () => {
-    expect(nothing.getOrElse("world")).toBe("world")
+    expect(nothing.orElse("world")).toBe("world")
   })
 
   it("map on None", () => {
@@ -36,10 +36,10 @@ describe("Option", () => {
     //#region option-filter-example
     const option = Option("hello")
     const filtered = option.filter((s) => s.length > 3)
-    expect(filtered.getOrElse("")).toBe("hello")
+    expect(filtered.orElse("")).toBe("hello")
     //#endregion option-filter-example
 
-    expect(something.filter((s) => s.length === 5).getOrElse("nope")).toBe("hello")
+    expect(something.filter((s) => s.length === 5).orElse("nope")).toBe("hello")
   })
 
   it("filter on Some with predicate returning false", () => {
@@ -53,18 +53,18 @@ describe("Option", () => {
   describe("getOrThrow", () => {
     it("should return the value when Option is Some", () => {
       const error = new Error("Should not throw")
-      expect(something.getOrThrow(error)).toBe("hello")
+      expect(something.orThrow(error)).toBe("hello")
     })
 
     it("should throw the provided error when Option is None", () => {
       const error = new Error("Custom error message")
-      expect(() => nothing.getOrThrow(error)).toThrow("Custom error message")
+      expect(() => nothing.orThrow(error)).toThrow("Custom error message")
     })
 
     it("should preserve the error instance when throwing", () => {
       const customError = new Error("Custom error")
       try {
-        nothing.getOrThrow(customError)
+        nothing.orThrow(customError)
         expect.fail("Should have thrown")
       } catch (e) {
         expect(e).toBe(customError) // Ensure it's the exact same error instance
@@ -80,7 +80,7 @@ describe("Option", () => {
       }
 
       const customError = new CustomError()
-      expect(() => nothing.getOrThrow(customError)).toThrow("Custom error type")
+      expect(() => nothing.orThrow(customError)).toThrow("Custom error type")
     })
   })
 
@@ -91,7 +91,7 @@ describe("Option", () => {
       }
 
       const result = await something.flatMapAsync(asyncFunction)
-      expect(result.getOrElse("default")).toBe("hello world")
+      expect(result.orElse("default")).toBe("hello world")
     })
 
     it("should handle None with async function", async () => {
@@ -118,7 +118,7 @@ describe("Option", () => {
       }
 
       const result = await something.flatMapAsync(delayedAsyncFunction)
-      expect(result.getOrElse("default")).toBe("hello delayed")
+      expect(result.orElse("default")).toBe("hello delayed")
     })
 
     it("should preserve the original state when using None", async () => {

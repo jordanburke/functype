@@ -143,7 +143,7 @@ export const NonEmptyString: ValidatedBrandCompanion<"NonEmptyString", string> =
  * const processEmail = (input: string) => {
  *   return EmailAddress.from(input)
  *     .map(email => sendWelcomeEmail(email))
- *     .getOrElse("Invalid email address")
+ *     .orElse("Invalid email address")
  * }
  */
 export const EmailAddress: ValidatedBrandCompanion<"EmailAddress", string> = ValidatedBrand(
@@ -213,7 +213,7 @@ export function BoundedString(
  * const PhoneNumber = PatternString("PhoneNumber", /^\+?[1-9]\d{1,14}$/)
  * const phone = PhoneNumber.from("+1234567890")
  *   .map(p => formatPhoneNumber(p))
- *   .getOrElse("Invalid phone number")
+ *   .orElse("Invalid phone number")
  */
 export function PatternString(brand: string, pattern: RegExp): ValidatedBrandCompanion<string, string> {
   return ValidatedBrand(brand, (s: string) => pattern.test(s))

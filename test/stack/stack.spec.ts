@@ -19,15 +19,15 @@ describe("Stack", () => {
     expect(stack3.size).toBe(3)
 
     const [stack4, value1] = stack3.pop()
-    expect(value1.getOrThrow()).toBe(3)
+    expect(value1.orThrow()).toBe(3)
     expect(stack4.size).toBe(2)
 
     const [stack5, value2] = stack4.pop()
-    expect(value2.getOrThrow()).toBe(2)
+    expect(value2.orThrow()).toBe(2)
     expect(stack5.size).toBe(1)
 
     const [stack6, value3] = stack5.pop()
-    expect(value3.getOrThrow()).toBe(1)
+    expect(value3.orThrow()).toBe(1)
     expect(stack6.size).toBe(0)
     expect(stack6.isEmpty).toBe(true)
 
@@ -38,7 +38,7 @@ describe("Stack", () => {
 
   it("should peek the top value without removing it", () => {
     const stack = Stack([1, 2, 3])
-    expect(stack.peek().getOrThrow()).toBe(3)
+    expect(stack.peek().orThrow()).toBe(3)
     expect(stack.size).toBe(3) // Size remains unchanged
   })
 

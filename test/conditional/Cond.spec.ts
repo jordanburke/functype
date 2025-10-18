@@ -180,13 +180,13 @@ describe("Cond", () => {
     it("should return value when condition matches", () => {
       const cond = Cond.of<number>().when(true, 42).when(false, 0)
 
-      expect(cond.getOrThrow()).toBe(42)
+      expect(cond.orThrow()).toBe(42)
     })
 
     it("should throw when no condition matches", () => {
       const cond = Cond.of<number>().when(false, 42).elseWhen(false, 0)
 
-      expect(() => cond.getOrThrow()).toThrow("Conditional expression has no matching condition")
+      expect(() => cond.orThrow()).toThrow("Conditional expression has no matching condition")
     })
   })
 

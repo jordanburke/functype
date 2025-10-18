@@ -38,7 +38,7 @@ export type Cond<T extends Type> = {
   /**
    * Get the result if a condition was met, throws if no condition met
    */
-  getOrThrow: () => T
+  orThrow: () => T
 }
 
 type CondState<T> = {
@@ -80,7 +80,7 @@ const CondObject = <T extends Type>(state: CondState<T>): Cond<T> => {
       return getValue(value)
     },
 
-    getOrThrow: () => {
+    orThrow: () => {
       if (!state.resolved) {
         throw new Error("Conditional expression has no matching condition")
       }

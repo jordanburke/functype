@@ -14,7 +14,7 @@ export interface Unsafe<T extends Type> {
    * @throws {Error} The specified error, container's error, or a sensible default
    * @returns The contained value
    */
-  getOrThrow(error?: Error): T
+  orThrow(error?: Error): T
 }
 
 /**
@@ -32,14 +32,14 @@ export interface Extractable<T extends Type> extends Unsafe<T> {
    * @param defaultValue - The value to return if extraction fails
    * @returns The contained value or defaultValue
    */
-  getOrElse(defaultValue: T): T
+  orElse(defaultValue: T): T
 
   /**
-   * Returns this container if it has a value, otherwise returns the alternative
+   * Returns this container if it has a value, otherwise returns the alternative container
    * @param alternative - The alternative container
    * @returns This container or the alternative
    */
-  orElse(alternative: Extractable<T>): Extractable<T>
+  or(alternative: Extractable<T>): Extractable<T>
 
   /**
    * Returns the contained value or null
@@ -58,7 +58,7 @@ export interface Extractable<T extends Type> extends Unsafe<T> {
  * Type guard to check if a value implements Unsafe
  */
 export function isUnsafe<T extends Type>(value: unknown): value is Unsafe<T> {
-  return value != null && typeof value === "object" && "getOrThrow" in value && typeof value.getOrThrow === "function"
+  return value != null && typeof value === "object" && "orThrow" in value && typeof value.orThrow === "function"
 }
 
 /**
@@ -67,10 +67,10 @@ export function isUnsafe<T extends Type>(value: unknown): value is Unsafe<T> {
 export function isExtractable<T extends Type>(value: unknown): value is Extractable<T> {
   return (
     isUnsafe<T>(value) &&
-    "getOrElse" in value &&
-    typeof value.getOrElse === "function" &&
     "orElse" in value &&
     typeof value.orElse === "function" &&
+    "or" in value &&
+    typeof value.or === "function" &&
     "orNull" in value &&
     typeof value.orNull === "function" &&
     "orUndefined" in value &&

@@ -17,7 +17,7 @@ describe("Task Error Chain Tests", () => {
       if (result.isFailure()) {
         throw result.error // Re-throw the error to preserve chain
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await outerTask
@@ -55,7 +55,7 @@ describe("Task Error Chain Tests", () => {
       if (result.isFailure()) {
         throw result.error
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const level1Task = Task({ name: "Level1Task" }).Async<string>(async () => {
@@ -63,7 +63,7 @@ describe("Task Error Chain Tests", () => {
       if (result.isFailure()) {
         throw result.error
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await level1Task
@@ -111,7 +111,7 @@ describe("Task Error Chain Tests", () => {
       if (result.isFailure()) {
         throw result.error
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await wrapperTask
@@ -148,7 +148,7 @@ describe("Task Error Chain Tests", () => {
       if (result.isFailure()) {
         throw result.error
       }
-      return result.getOrThrow()
+      return result.orThrow()
     })
 
     const result = await wrapperTask

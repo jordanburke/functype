@@ -212,8 +212,8 @@ option.fold(
   () => "empty",
   (x) => `value: ${x}`,
 )
-either.getOrElse("default")
-tryValue.getOrThrow()
+either.orElse("default")
+tryValue.orThrow()
 ```
 
 ## Testing Patterns

@@ -122,7 +122,7 @@ const none = Option(null)
 const result = Option(user)
   .map(u => u.name)
   .map(name => name.toUpperCase())
-  .getOrElse("Anonymous")`,
+  .orElse("Anonymous")`,
           category: "basic",
         },
         {
@@ -135,7 +135,7 @@ const avatarUrl = Option(user)
   .flatMap(u => Option(u.profile))
   .flatMap(p => Option(p.avatar))
   .map(a => a.url)
-  .getOrElse("/default-avatar.png")`,
+  .orElse("/default-avatar.png")`,
           category: "intermediate",
         },
         {
@@ -147,7 +147,7 @@ const activeUser = Option(user)
   .filter(u => u.isActive)
   .filter(u => u.email.includes("@"))
   .map(u => ({ ...u, status: "online" }))
-  .getOrElse(null)`,
+  .orElse(null)`,
           category: "intermediate",
         },
       ]
@@ -292,7 +292,7 @@ const userMap = Map<string, User>()
 
 const alice = userMap
   .get("alice")
-  .getOrElse(null)
+  .orElse(null)
 
 const names = userMap
   .map((user, key) => user.name)

@@ -84,7 +84,7 @@ Replace unsafe value access with `getOrThrow()`:
 return result.value
 
 // After (safe)
-return result.getOrThrow()
+return result.orThrow()
 ```
 
 ### Step 3: Use New Type Guards
@@ -115,7 +115,7 @@ const outerTask = Task().Sync(() => {
   const innerTask = Task().Sync(() => {
     throw new Error("Inner error")
   })
-  return innerTask.getOrThrow() // This would throw
+  return innerTask.orThrow() // This would throw
 })
 
 // After: Handle TaskOutcome explicitly
@@ -193,7 +193,7 @@ describe("User Service", () => {
       const inner = Task().Sync(() => {
         throw new Error("Inner failure")
       })
-      return inner.getOrThrow() // Could throw
+      return inner.orThrow() // Could throw
     })
 
     expect(result.isFailure()).toBe(true)
@@ -311,13 +311,13 @@ expect(result.error.message).toBe("expected")
 
 ```typescript
 // Find: return result.value (where result might be success)
-// Replace: return result.getOrThrow()
+// Replace: return result.orThrow()
 
 // Before (unsafe)
 return result.value
 
 // After (safe)
-return result.getOrThrow()
+return result.orThrow()
 ```
 
 ### Pattern 3: Error Propagation
@@ -343,7 +343,7 @@ After migration, verify:
 
 - [ ] All tests pass
 - [ ] Error access uses `.error` instead of `.value`
-- [ ] Success value access uses `.value` or `.getOrThrow()`
+- [ ] Success value access uses `.value` or `.orThrow()`
 - [ ] TypeScript compilation succeeds without errors
 - [ ] No runtime exceptions from incorrect property access
 
@@ -366,7 +366,7 @@ Replace: $1.error
 
 # Pattern 2: Update safe value access
 Find:    return\s+(result|task|outcome)\.value(?!\s*as\s*Error)
-Replace: return $1.getOrThrow()
+Replace: return $1.orThrow()
 
 # Pattern 3: Update error throwing
 Find:    throw\s+(result|task|outcome)\.value
@@ -380,7 +380,7 @@ Replace: throw $1.error
 If you encounter issues during migration:
 
 1. Check that error access uses `.error` instead of `.value`
-2. Ensure value access uses `.value` or `.getOrThrow()`
+2. Ensure value access uses `.value` or `.orThrow()`
 3. Verify that nested task error handling is explicit
 4. Run tests to catch any remaining issues
 5. Use TypeScript strict mode to catch type errors

@@ -93,7 +93,7 @@ export type Match<T extends Type, R extends Type> = {
   /**
    * Get result if matched, throws if no match
    */
-  getOrThrow: (errorMessage?: string) => R
+  orThrow: (errorMessage?: string) => R
 
   /**
    * Get result wrapped in Option
@@ -233,7 +233,7 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
       return matchResult.result as R
     },
 
-    getOrThrow: (errorMessage?: string) => {
+    orThrow: (errorMessage?: string) => {
       const matchResult = tryMatch()
       if (!matchResult.matched) {
         throw new Error(errorMessage ?? `No matching pattern for value: ${JSON.stringify(state.value)}`)

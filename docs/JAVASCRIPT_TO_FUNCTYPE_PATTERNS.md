@@ -38,7 +38,7 @@ function getUserName(user: User | null | undefined): string {
     .flatMap((u) => Option(u.profile))
     .flatMap((p) => Option(p.name))
     .map((name) => name.toUpperCase())
-    .getOrElse("Anonymous")
+    .orElse("Anonymous")
 }
 ```
 
@@ -60,7 +60,7 @@ if (zipCode) {
 const city = Option(user)
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .getOrElse("Unknown")
+  .orElse("Unknown")
 
 Option(user)
   .flatMap((u) => Option(u.address))
@@ -91,9 +91,9 @@ function getConfig(config?: Partial<Config>): Config {
 function getConfig(config?: Partial<Config>): Config {
   const configOpt = Option(config)
   return {
-    host: configOpt.flatMap((c) => Option(c.host)).getOrElse("localhost"),
-    port: configOpt.flatMap((c) => Option(c.port)).getOrElse(8080),
-    debug: configOpt.flatMap((c) => Option(c.debug)).getOrElse(false),
+    host: configOpt.flatMap((c) => Option(c.host)).orElse("localhost"),
+    port: configOpt.flatMap((c) => Option(c.port)).orElse(8080),
+    debug: configOpt.flatMap((c) => Option(c.debug)).orElse(false),
   }
 }
 ```
@@ -551,7 +551,7 @@ function countByCategory(items: Item[]): Record<string, number> {
 function countByCategory(items: Item[]): Map<string, number> {
   return List(items)
     .flatMap((item) => Option(item.category).toList())
-    .foldLeft(Map<string, number>())((acc, category) => acc.add(category, acc.getOrElse(category, 0) + 1))
+    .foldLeft(Map<string, number>())((acc, category) => acc.add(category, acc.orElse(category, 0) + 1))
 }
 ```
 
@@ -753,8 +753,8 @@ function processOrders(orders: Order[]): Summary {
   return {
     totalOrders: validOrders.size(),
     totalRevenue: customerTotals.values().foldLeft(0)((a, b) => a + b),
-    topCustomer: topCustomer.map((t) => t.customerId).getOrElse(null),
-    topCustomerRevenue: topCustomer.map((t) => t.total).getOrElse(0),
+    topCustomer: topCustomer.map((t) => t.customerId).orElse(null),
+    topCustomerRevenue: topCustomer.map((t) => t.total).orElse(0),
   }
 }
 ```

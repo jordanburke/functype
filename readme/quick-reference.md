@@ -20,8 +20,8 @@ option.isEmpty() // true if None, false if Some
 
 // Accessing
 option.get() // Gets value or throws if None
-option.getOrElse(defaultValue) // Gets value or returns default
-option.getOrElseThrow(new Error("No value")) // Gets value or throws custom error
+option.orElse(defaultValue) // Gets value or returns default
+option.orThrow(new Error("No value")) // Gets value or throws custom error
 
 // Transforming
 option.map((x) => x * 2) // Transforms inner value
@@ -58,7 +58,7 @@ either.isLeft() // true if Left, false if Right
 
 // Accessing
 either.get() // Gets Right value or throws if Left
-either.getOrElse(defaultValue) // Gets Right value or returns default
+either.orElse(defaultValue) // Gets Right value or returns default
 either.getLeft() // Gets Left value or throws if Right
 
 // Transforming
@@ -104,7 +104,7 @@ tryVal.isFailure() // true if Failure, false if Success
 
 // Accessing
 tryVal.get() // Gets value or throws original error
-tryVal.getOrElse(defaultValue) // Gets value or returns default
+tryVal.orElse(defaultValue) // Gets value or returns default
 tryVal.error // Gets error for Failure
 
 // Error handling
@@ -200,7 +200,7 @@ map.has("a") // true if key exists
 
 // Accessing
 map.get("a") // Option.Some with value or None
-map.getOrElse("a", 0) // Value or default
+map.orElse("a", 0) // Value or default
 map.keys() // List of keys
 map.values() // List of values
 map.entries() // List of [key, value] tuples
@@ -496,7 +496,7 @@ const result = pipe(
   (opt) => opt.map((s) => parseInt(s, 10)),
   (opt) => opt.filter((n) => !isNaN(n)),
   (opt) => opt.map((n) => n * 2),
-  (opt) => opt.getOrElse(0),
+  (opt) => opt.orElse(0),
 ) // 84
 
 // Cross-type transformations

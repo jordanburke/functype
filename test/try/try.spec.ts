@@ -22,22 +22,22 @@ describe("Try", () => {
   describe("getOrElse()", () => {
     it("should return the value on success", () => {
       const myTry = Try(() => 1 + 1)
-      expect(myTry.getOrElse(0)).toBe(2)
+      expect(myTry.orElse(0)).toBe(2)
     })
 
     it("should return the default value on failure", () => {
       const myTry = Try<number>(() => {
         throw new Error("Something went wrong")
       })
-      expect(myTry.getOrElse(0)).toBe(0)
+      expect(myTry.orElse(0)).toBe(0)
     })
   })
 
-  describe("orElse()", () => {
+  describe("or()", () => {
     it("should return itself if successful", () => {
       const myTry = Try(() => 1 + 1)
       const alternative = Try(() => 2 + 2)
-      expect(myTry.orElse(alternative).getOrElse(0)).toBe(2)
+      expect(myTry.or(alternative).orElse(0)).toBe(2)
     })
 
     it("should return the alternative if failed", () => {
@@ -45,7 +45,7 @@ describe("Try", () => {
         throw new Error("Something went wrong")
       })
       const alternative = Try(() => 2 + 2)
-      expect(myTry.orElse(alternative).getOrElse(0)).toBe(4)
+      expect(myTry.or(alternative).orElse(0)).toBe(4)
     })
   })
 
@@ -68,7 +68,7 @@ describe("Try", () => {
   describe("get()", () => {
     it("should return the value on success", () => {
       const myTry = Try(() => 1 + 1)
-      expect(myTry.getOrThrow()).toBe(2)
+      expect(myTry.orThrow()).toBe(2)
     })
 
     it("should throw the error on failure", () => {
@@ -76,7 +76,7 @@ describe("Try", () => {
       const myTry = Try(() => {
         throw new Error(errorMessage)
       })
-      expect(() => myTry.getOrThrow()).toThrow(errorMessage)
+      expect(() => myTry.orThrow()).toThrow(errorMessage)
     })
   })
 

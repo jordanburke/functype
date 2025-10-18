@@ -10,7 +10,7 @@ import { Option } from "@/option"
 export function processValue(value: string | null | undefined): string {
   return Option(value)
     .map((v) => v.toUpperCase())
-    .getOrElse("")
+    .orElse("")
 }
 
 export function getUserName(user: { name?: string } | null): string | null {

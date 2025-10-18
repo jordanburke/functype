@@ -26,7 +26,7 @@ export const compiledPatterns: PatternMatch[] = [
 return ""`,
       after: `Option(value)
   .map(v => v.toUpperCase())
-  .getOrElse("")`,
+  .orElse("")`,
     },
     confidence: 0.9,
     tags: ["null", "undefined", "optional", "?.", "!==", "!=", "== null"],
@@ -136,7 +136,7 @@ return user.data`,
       after: `Option(user)
   .filter(u => u.isActive)
   .map(u => u.data)
-  .getOrElse(null)`,
+  .orElse(null)`,
     },
     confidence: 0.7,
     tags: ["return", "early return", "guard clause", "if return"],

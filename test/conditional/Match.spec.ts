@@ -162,13 +162,13 @@ describe("Match", () => {
         .case((x) => x > 5, "matched")
         .case((x) => x <= 5, "not this one")
 
-      expect(match.getOrThrow()).toBe("matched")
+      expect(match.orThrow()).toBe("matched")
     })
 
     it("should throw when no match found", () => {
       const match = Match("unknown").caseValue("known", "found").caseValue("also-known", "found too")
 
-      expect(() => match.getOrThrow()).toThrow("No matching pattern for value")
+      expect(() => match.orThrow()).toThrow("No matching pattern for value")
     })
   })
 
@@ -380,7 +380,7 @@ describe("Match", () => {
         const someResult = Match(42).case(42, "found").toOption()
 
         expect(someResult.isEmpty).toBe(false)
-        expect(someResult.getOrThrow()).toBe("found")
+        expect(someResult.orThrow()).toBe("found")
       })
 
       it("should return None for failed matches", () => {

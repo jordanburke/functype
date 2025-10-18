@@ -23,7 +23,7 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     sourcePath: "src/option/Option.ts",
     testPath: "test/option/Option.spec.ts",
     implements: ["Functor", "Monad", "Foldable", "Extractable", "Matchable", "Serializable", "Traversable"],
-    keyMethods: ["map", "flatMap", "fold", "getOrElse", "filter", "orElse"],
+    keyMethods: ["map", "flatMap", "fold", "orElse", "orThrow", "filter", "or"],
     relatedTypes: ["Either", "Try"],
     commonUseCases: [
       "Handling nullable values",
@@ -66,7 +66,7 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     sourcePath: "src/either/Either.ts",
     testPath: "test/either/Either.spec.ts",
     implements: ["Functor", "Monad", "Foldable", "Traversable", "PromiseLike"],
-    keyMethods: ["map", "flatMap", "fold", "mapLeft", "swap", "isRight", "isLeft"],
+    keyMethods: ["map", "flatMap", "fold", "mapLeft", "swap", "isRight", "isLeft", "orElse", "orThrow", "or"],
     relatedTypes: ["Option", "Try"],
     commonUseCases: [
       "Error handling without exceptions",
@@ -83,7 +83,7 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     sourcePath: "src/try/Try.ts",
     testPath: "test/try/Try.spec.ts",
     implements: ["Functor", "Monad", "Foldable", "Extractable", "Matchable", "Serializable", "Traversable"],
-    keyMethods: ["map", "flatMap", "fold", "recover", "recoverWith", "toOption", "toEither"],
+    keyMethods: ["map", "flatMap", "fold", "recover", "recoverWith", "toOption", "toEither", "orElse", "orThrow", "or"],
     relatedTypes: ["Option", "Either"],
     commonUseCases: [
       "Wrapping operations that may throw",
@@ -129,7 +129,7 @@ export const functypeRegistry: Record<string, FunctypeInfo> = {
     sourcePath: "src/lazy/Lazy.ts",
     testPath: "test/lazy/Lazy.spec.ts",
     implements: ["Functor", "Monad", "Foldable", "Extractable", "Serializable", "Traversable"],
-    keyMethods: ["map", "flatMap", "get", "fold"],
+    keyMethods: ["map", "flatMap", "fold", "orElse", "orThrow", "or"],
     relatedTypes: ["LazyList"],
     commonUseCases: ["Deferred computation", "Expensive calculations", "Circular dependencies", "Memoization"],
   },

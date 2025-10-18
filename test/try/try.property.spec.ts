@@ -11,7 +11,7 @@ describe("Try - Property-based tests", () => {
           const tryResult = Try(() => value)
           expect(tryResult.isSuccess()).toBe(true)
           expect(tryResult.isFailure()).toBe(false)
-          expect(tryResult.getOrThrow()).toBe(value)
+          expect(tryResult.orThrow()).toBe(value)
         }),
       )
     })
@@ -24,7 +24,7 @@ describe("Try - Property-based tests", () => {
           })
           expect(tryResult.isFailure()).toBe(true)
           expect(tryResult.isSuccess()).toBe(false)
-          expect(() => tryResult.getOrThrow()).toThrow()
+          expect(() => tryResult.orThrow()).toThrow()
           expect(tryResult.error?.message).toBe(errorMessage)
         }),
       )
@@ -41,7 +41,7 @@ describe("Try - Property-based tests", () => {
 
           expect(mapped.isSuccess()).toEqual(tryResult.isSuccess())
           if (tryResult.isSuccess()) {
-            expect(mapped.getOrThrow()).toEqual(tryResult.getOrThrow())
+            expect(mapped.orThrow()).toEqual(tryResult.orThrow())
           }
         }),
       )
@@ -64,7 +64,7 @@ describe("Try - Property-based tests", () => {
 
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
-            expect(result1.getOrThrow()).toEqual(result2.getOrThrow())
+            expect(result1.orThrow()).toEqual(result2.orThrow())
           }
         }),
       )
@@ -88,7 +88,7 @@ describe("Try - Property-based tests", () => {
 
           expect(result1.isSuccess()).toEqual(result2.isSuccess())
           if (result1.isSuccess() && result2.isSuccess()) {
-            expect(result1.getOrThrow()).toEqual(result2.getOrThrow())
+            expect(result1.orThrow()).toEqual(result2.orThrow())
           }
         }),
       )
@@ -101,12 +101,12 @@ describe("Try - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), fc.string(), (value, defaultValue) => {
           const success = Try(() => value)
-          expect(success.getOrElse(defaultValue)).toBe(value)
+          expect(success.orElse(defaultValue)).toBe(value)
 
           const failure = Try<string>(() => {
             throw new Error("Test error")
           })
-          expect(failure.getOrElse(defaultValue)).toBe(defaultValue)
+          expect(failure.orElse(defaultValue)).toBe(defaultValue)
         }),
       )
     })
@@ -119,7 +119,7 @@ describe("Try - Property-based tests", () => {
           const success = Try(() => value)
           let successResult = ""
           if (success.isSuccess()) {
-            successResult = `success: ${success.getOrThrow()}`
+            successResult = `success: ${success.orThrow()}`
           } else {
             successResult = `error: ${success.error?.message || ""}`
           }
@@ -137,7 +137,7 @@ describe("Try - Property-based tests", () => {
           // Now construct the result string
           let failureResult = ""
           if (failure.isSuccess()) {
-            failureResult = `success: ${failure.getOrThrow()}`
+            failureResult = `success: ${failure.orThrow()}`
           } else {
             failureResult = `error: ${failure.error?.message}`
           }
@@ -153,7 +153,7 @@ describe("Try - Property-based tests", () => {
           const transform = (n: number) => n * 2
 
           const success = Try(() => value)
-          expect(success.map(transform).getOrThrow()).toBe(transform(value))
+          expect(success.map(transform).orThrow()).toBe(transform(value))
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
@@ -165,18 +165,18 @@ describe("Try - Property-based tests", () => {
   })
 
   describe("Try error handling properties", () => {
-    // orElse should return the original Try for Success and the alternative for Failure
-    it("should properly handle orElse", () => {
+    // or should return the original Try for Success and the alternative for Failure
+    it("should properly handle or", () => {
       fc.assert(
         fc.property(fc.string(), fc.integer(), (errorMsg, fallbackValue) => {
           const success = Try(() => 42)
           const alternative = Try(() => fallbackValue)
-          expect(success.orElse(alternative).getOrThrow()).toBe(42)
+          expect(success.or(alternative).orThrow()).toBe(42)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
-          expect(failure.orElse(alternative).getOrThrow()).toBe(fallbackValue)
+          expect(failure.or(alternative).orThrow()).toBe(fallbackValue)
         }),
       )
     })
@@ -204,14 +204,14 @@ describe("Try - Property-based tests", () => {
           const success = Try(() => value)
           const successEither = success.toEither()
           expect(successEither.isRight()).toBe(true)
-          expect(successEither.getOrElse(0)).toBe(value)
+          expect(successEither.orElse(0)).toBe(value)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
           const failureEither = failure.toEither()
           expect(failureEither.isLeft()).toBe(true)
-          expect(failureEither.getOrElse(0)).toBe(0)
+          expect(failureEither.orElse(0)).toBe(0)
         }),
       )
     })

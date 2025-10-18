@@ -286,7 +286,7 @@ const ValidationConstructor = {
         const fieldError = TypedError.validation(field, value, error.context.rule)
         errors.push(fieldError)
       } else {
-        validated[field as keyof T] = result.getOrThrow()
+        validated[field as keyof T] = result.orThrow()
       }
     }
 

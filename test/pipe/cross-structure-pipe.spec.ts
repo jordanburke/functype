@@ -72,9 +72,9 @@ describe("Cross data structure pipe tests", () => {
       return Map(users.map((user) => [user.id, user.name] as [number, string]))
     })
 
-    expect(userMapFromSet.get(1).getOrElse("")).toBe("Alice")
-    expect(userMapFromSet.get(2).getOrElse("")).toBe("Bob")
-    expect(userMapFromSet.get(3).getOrElse("")).toBe("Charlie")
+    expect(userMapFromSet.get(1).orElse("")).toBe("Alice")
+    expect(userMapFromSet.get(2).orElse("")).toBe("Bob")
+    expect(userMapFromSet.get(3).orElse("")).toBe("Charlie")
 
     // Map -> Set
     const scoreMap = Map([
@@ -135,7 +135,7 @@ describe("Cross data structure pipe tests", () => {
     const tryValue = some.pipe((value) => Try(() => value * 2))
 
     // Step 2: Convert Try back to Option
-    const result = tryValue.isSuccess() ? Some(tryValue.getOrThrow()) : None<number>()
+    const result = tryValue.isSuccess() ? Some(tryValue.orThrow()) : None<number>()
 
     expect(result.isEmpty).toBe(false)
     expect(result.value).toBe(84)
@@ -151,7 +151,7 @@ describe("Cross data structure pipe tests", () => {
     })
 
     // Step 2: Convert Try back to Option
-    const noneResult = tryFromNone.isFailure() ? None<number>() : Some(tryFromNone.getOrThrow())
+    const noneResult = tryFromNone.isFailure() ? None<number>() : Some(tryFromNone.orThrow())
 
     expect(noneResult.isEmpty).toBe(true)
   })
@@ -282,7 +282,7 @@ describe("Cross data structure pipe tests", () => {
     // Step 2: Process the result if successful, handle error if not
     let validUserResult: List<string>
     if (validUserTry.isSuccess()) {
-      validUserResult = processResult(validUserTry.getOrThrow())
+      validUserResult = processResult(validUserTry.orThrow())
     } else {
       validUserResult = List<string>([`Error: ${validUserTry.error?.message ?? "Unknown error"}`])
     }
@@ -296,7 +296,7 @@ describe("Cross data structure pipe tests", () => {
     // Step 2: Process the result if successful, handle error if not
     let invalidUserResult: List<string>
     if (invalidUserTry.isSuccess()) {
-      invalidUserResult = processResult(invalidUserTry.getOrThrow())
+      invalidUserResult = processResult(invalidUserTry.orThrow())
     } else {
       invalidUserResult = List<string>([`Error: ${invalidUserTry.error?.message ?? "Unknown error"}`])
     }

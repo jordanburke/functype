@@ -146,7 +146,7 @@ Option(user)
         return []
       })
   )
-  .getOrElse(null)
+  .orElse(null)
 ```"
 ````
 

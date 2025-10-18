@@ -39,7 +39,7 @@ However, the Scala community widely acknowledges "there is no good reason for th
 
 ```typescript
 // Clear that this operation can throw
-const value = option.getOrThrow()
+const value = option.orThrow()
 
 // vs. deceptively safe-looking
 const value = option.get()
@@ -53,17 +53,17 @@ Each data structure provides meaningful default errors when no custom error is p
 
 ```typescript
 // Option provides descriptive default
-Option.none().getOrThrow()
+Option.none().orThrow()
 // throws: Error("Cannot extract value from None")
 
 // Either uses Left value as error
-Left("validation failed").getOrThrow()
+Left("validation failed").orThrow()
 // throws: Error("validation failed")
 
 // Try uses caught exception
 Try(() => {
   throw new Error("oops")
-}).getOrThrow()
+}).orThrow()
 // throws: Error("oops")
 ```
 
@@ -179,7 +179,7 @@ This is a breaking change for existing code using `get()` methods.
 const value = option.get()
 
 // After
-const value = option.getOrThrow()
+const value = option.orThrow()
 ```
 
 ### Tooling Support

@@ -148,7 +148,7 @@ describe("Foldable", () => {
     it("should convert a Foldable to an Option", () => {
       const option = Some(5)
       const result = FoldableUtils.toOption(option)
-      expect(result.getOrElse(0)).toBe(5)
+      expect(result.orElse(0)).toBe(5)
 
       const none = None<number>()
       const noneResult = FoldableUtils.toOption(none)
@@ -169,7 +169,7 @@ describe("Foldable", () => {
       const option = Some(5)
       const result = FoldableUtils.toEither(option, "empty")
       expect(result.isRight()).toBe(true)
-      expect(result.getOrElse(0)).toBe(5)
+      expect(result.orElse(0)).toBe(5)
 
       const none = None<number>()
       const noneResult = FoldableUtils.toEither(none, "empty")

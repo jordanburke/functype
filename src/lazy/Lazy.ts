@@ -32,19 +32,25 @@ export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractab
    * @param defaultValue - The value to return if computation fails
    * @returns The computed value or defaultValue
    */
-  getOrElse(defaultValue: T): T
+  orElse(defaultValue: T): T
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
    */
-  getOrNull(): T | null
+  orNull(): T | null
   /**
    * Returns the computed value or throws an error if computation fails
    * @param error - Optional custom error to throw. If not provided, throws the computation error or a default error
    * @returns The computed value
    * @throws The specified error, computation error, or a default error
    */
-  getOrThrow(error?: Error): T
+  orThrow(error?: Error): T
+  /**
+   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy
+   * @param alternative - The alternative Lazy to use if computation fails
+   * @returns This Lazy or the alternative
+   */
+  or(alternative: Lazy<T>): Lazy<T>
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function
@@ -201,18 +207,11 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     get isEvaluated() {
       return evaluated
     },
-    getOrElse: (defaultValue: T): T => {
+    orElse: (defaultValue: T): T => {
       try {
         return evaluate()
       } catch {
         return defaultValue
-      }
-    },
-    getOrNull: (): T | null => {
-      try {
-        return evaluate()
-      } catch {
-        return null
       }
     },
     orNull: (): T | null => {
@@ -222,19 +221,19 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return null
       }
     },
-    getOrThrow: (err?: Error): T => {
+    orThrow: (err?: Error): T => {
       try {
         return evaluate()
       } catch (e) {
         throw err ?? e
       }
     },
-    orElse: (alternative: Lazy<T>): Lazy<T> =>
+    or: (alternative: Lazy<T>): Lazy<T> =>
       Lazy(() => {
         try {
           return evaluate()
         } catch {
-          return alternative.getOrThrow()
+          return alternative.orThrow()
         }
       }),
     orUndefined: (): T | undefined => {
@@ -245,17 +244,17 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
       }
     },
     map: <U extends Type>(f: (value: T) => U): Lazy<U> => Lazy(() => f(evaluate())),
-    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.getOrThrow()(evaluate())),
+    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.orThrow()(evaluate())),
     mapAsync: async <U extends Type>(f: (value: T) => Promise<U>): Promise<Lazy<U>> => {
       const val = evaluate()
       const result = await f(val)
       return Lazy(() => result) as Lazy<U>
     },
-    flatMap: <U extends Type>(f: (value: T) => Lazy<U>): Lazy<U> => Lazy(() => f(evaluate()).getOrThrow()),
+    flatMap: <U extends Type>(f: (value: T) => Lazy<U>): Lazy<U> => Lazy(() => f(evaluate()).orThrow()),
     flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Lazy<U>>): Promise<Lazy<U>> => {
       const val = evaluate()
       const lazyResult = await f(val)
-      return Lazy(() => lazyResult.getOrThrow()) as Lazy<U>
+      return Lazy(() => lazyResult.orThrow()) as Lazy<U>
     },
     filter: (predicate: (value: T) => boolean): Lazy<Option<T>> =>
       Lazy(() => {
@@ -275,7 +274,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         try {
           return evaluate()
         } catch (e) {
-          return f(e).getOrThrow()
+          return f(e).orThrow()
         }
       }),
     toOption: (): Option<T> => {
@@ -459,7 +458,7 @@ const LazyCompanion = {
    * @param tryValue - The Try to convert
    * @returns A new Lazy instance
    */
-  fromTry: <T extends Type>(tryValue: Try<T>): Lazy<T> => LazyConstructor(() => tryValue.getOrThrow()),
+  fromTry: <T extends Type>(tryValue: Try<T>): Lazy<T> => LazyConstructor(() => tryValue.orThrow()),
   /**
    * Creates a Lazy from an Either
    * @param either - The Either to convert
@@ -509,8 +508,8 @@ const LazyCompanion = {
  *   return 42
  * })
  * // Nothing printed yet
- * const result = expensive.getOrThrow() // Prints "Computing..." and returns 42
- * const cached = expensive.getOrThrow() // Returns 42 without printing
+ * const result = expensive.orThrow() // Prints "Computing..." and returns 42
+ * const cached = expensive.orThrow() // Returns 42 without printing
  *
  * @example
  * // Error handling
@@ -518,7 +517,7 @@ const LazyCompanion = {
  *   if (Math.random() > 0.5) throw new Error("Failed")
  *   return "Success"
  * })
- * const safe = risky.getOrElse("Default") // Returns "Success" or "Default"
+ * const safe = risky.orElse("Default") // Returns "Success" or "Default"
  * const option = risky.toOption() // Some("Success") or None
  * const either = risky.toEither() // Right("Success") or Left(Error)
  *
@@ -528,13 +527,13 @@ const LazyCompanion = {
  *   .map(x => x * 2)
  *   .flatMap(x => Lazy(() => x + 5))
  *   .recover(err => 0)
- *   .getOrThrow() // 25
+ *   .orThrow() // 25
  *
  * @example
  * // Integration with functype
  * const userOption = Option({ id: 1, name: "Alice" })
  * const userName = Lazy.fromOption(userOption, () => ({ id: 0, name: "Anonymous" }))
  *   .map(user => user.name)
- *   .getOrThrow() // "Alice"
+ *   .orThrow() // "Alice"
  */
 export const Lazy = Companion(LazyConstructor, LazyCompanion)

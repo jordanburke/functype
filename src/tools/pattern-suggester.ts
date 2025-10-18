@@ -26,7 +26,7 @@ const _unusedPatterns = [
     description: "Use Option instead of null/undefined checks",
     example: {
       before: "if (value !== null && value !== undefined) { return value.toUpperCase() }",
-      after: "Option(value).map(v => v.toUpperCase()).getOrElse('')",
+      after: "Option(value).map(v => v.toUpperCase()).orElse('')",
     },
     confidence: 0.9,
     tags: ["null", "undefined", "optional", "?.", "!==", "!=", "== null"],
@@ -47,7 +47,7 @@ const _unusedPatterns = [
     description: "Use Try or Either for error handling",
     example: {
       before: "try { return JSON.parse(str) } catch (e) { return null }",
-      after: "Try(() => JSON.parse(str)).toOption().getOrElse(null)",
+      after: "Try(() => JSON.parse(str)).toOption().orElse(null)",
     },
     confidence: 0.9,
     tags: ["try", "catch", "error", "exception", "throw"],
@@ -102,7 +102,7 @@ const _unusedPatterns = [
     description: "Use Option or Either to avoid early returns",
     example: {
       before: "if (!user) return null; if (!user.isActive) return null; return user.data;",
-      after: "Option(user).filter(u => u.isActive).map(u => u.data).getOrElse(null)",
+      after: "Option(user).filter(u => u.isActive).map(u => u.data).orElse(null)",
     },
     confidence: 0.7,
     tags: ["return", "early return", "guard clause", "if return"],

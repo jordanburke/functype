@@ -10,7 +10,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.anything(), (value) => {
           const result = Task.success(value)
-          const retrievedValue = result.getOrThrow()
+          const retrievedValue = result.orThrow()
           // Handle NaN case since NaN !== NaN
           if (Number.isNaN(value) && Number.isNaN(retrievedValue)) {
             return result.isSuccess()
@@ -25,7 +25,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.string(), (value) => {
           const result = Task.success(value)
-          return result.getOrThrow() === value
+          return result.orThrow() === value
         }),
       )
     })
@@ -61,7 +61,7 @@ describe("Task Property Tests", () => {
       fc.assert(
         fc.property(fc.string(), (value) => {
           const result = Task().Sync(() => value)
-          return result.isSuccess() && result.getOrThrow() === value
+          return result.isSuccess() && result.orThrow() === value
         }),
       )
     })

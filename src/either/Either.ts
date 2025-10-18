@@ -26,9 +26,9 @@ export interface Either<L extends Type, R extends Type>
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R }
-  getOrElse: (defaultValue: R) => R
-  getOrThrow: (error?: Error) => R
-  orElse(alternative: Either<L, R>): Either<L, R>
+  orElse: (defaultValue: R) => R
+  orThrow: (error?: Error) => R
+  or(alternative: Either<L, R>): Either<L, R>
   orNull: () => R | null
   orUndefined: () => R | undefined
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
@@ -91,9 +91,9 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
     return true
   },
-  getOrElse: (_defaultValue: R) => value,
-  getOrThrow: () => value,
-  orElse: (_alternative: Either<L, R>) => Right<L, R>(value),
+  orElse: (_defaultValue: R) => value,
+  orThrow: () => value,
+  or: (_alternative: Either<L, R>) => Right<L, R>(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
@@ -188,11 +188,11 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
     return false
   },
-  getOrElse: (defaultValue: R): R => defaultValue,
-  getOrThrow: (error?: Error) => {
+  orElse: (defaultValue: R): R => defaultValue,
+  orThrow: (error?: Error) => {
     throw error ?? value
   },
-  orElse: (alternative: Either<L, R>) => alternative,
+  or: (alternative: Either<L, R>) => alternative,
   orNull: () => null,
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),

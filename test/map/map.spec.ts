@@ -15,24 +15,24 @@ describe("Map", () => {
 
   test("map should transform values", () => {
     const newMap = map.add(Tuple(["d", 4]))
-    expect(newMap.get("a").getOrElse(0)).toBe(1)
-    expect(newMap.get("b").getOrElse(0)).toBe(2)
-    expect(newMap.get("c").getOrElse(0)).toBe(3)
-    expect(newMap.get("d").getOrElse(0)).toBe(4)
-    expect(newMap.get("e").getOrElse(0)).toBe(0)
+    expect(newMap.get("a").orElse(0)).toBe(1)
+    expect(newMap.get("b").orElse(0)).toBe(2)
+    expect(newMap.get("c").orElse(0)).toBe(3)
+    expect(newMap.get("d").orElse(0)).toBe(4)
+    expect(newMap.get("e").orElse(0)).toBe(0)
   })
 
   test("map should transform values", () => {
     const newMap = map.map((value) => value * 2)
-    expect(newMap.get("a").getOrElse(0)).toBe(2)
-    expect(newMap.get("b").getOrElse(0)).toBe(4)
-    expect(newMap.get("c").getOrElse(0)).toBe(6)
-    expect(newMap.get("d").getOrElse(0)).toBe(0)
+    expect(newMap.get("a").orElse(0)).toBe(2)
+    expect(newMap.get("b").orElse(0)).toBe(4)
+    expect(newMap.get("c").orElse(0)).toBe(6)
+    expect(newMap.get("d").orElse(0)).toBe(0)
   })
 
   test("flatMap should transform values and flatten", () => {
     const newMap = map.flatMap((value) => List([["a", value.get(1) * 2]]))
-    expect(newMap.get("a").getOrElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
+    expect(newMap.get("a").orElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
 
   test("reduce should accumulate values", () => {
@@ -60,7 +60,7 @@ describe("Map", () => {
   })
 
   test("getOrElse should return default value if key does not exist", () => {
-    expect(map.getOrElse("z", 10)).toBe(10)
+    expect(map.orElse("z", 10)).toBe(10)
   })
 
   test("isEmpty should return true for an empty map", () => {

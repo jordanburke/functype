@@ -17,7 +17,7 @@ describe("Validation", () => {
       for (const email of validEmails) {
         const result = emailValidator(email)
         expect(result.isRight()).toBe(true)
-        expect(result.getOrThrow()).toBe(email)
+        expect(result.orThrow()).toBe(email)
       }
     })
 
@@ -67,7 +67,7 @@ describe("Validation", () => {
       for (const url of validUrls) {
         const result = urlValidator(url)
         expect(result.isRight()).toBe(true)
-        expect(result.getOrThrow()).toBe(url)
+        expect(result.orThrow()).toBe(url)
       }
     })
 
@@ -96,7 +96,7 @@ describe("Validation", () => {
       for (const uuid of validUuids) {
         const result = uuidValidator(uuid)
         expect(result.isRight()).toBe(true)
-        expect(result.getOrThrow()).toBe(uuid)
+        expect(result.orThrow()).toBe(uuid)
       }
     })
 
@@ -125,7 +125,7 @@ describe("Validation", () => {
 
       expect(numericValidator(123).isRight()).toBe(true)
       expect(numericValidator("123").isRight()).toBe(true)
-      expect(numericValidator("456").getOrThrow()).toBe("456")
+      expect(numericValidator("456").orThrow()).toBe("456")
 
       expect(numericValidator("abc").isLeft()).toBe(true)
       expect(numericValidator("12.3").isLeft()).toBe(true)
@@ -368,7 +368,7 @@ describe("Validation", () => {
       const result = Validation.form(userSchema, validData)
       expect(result.isRight()).toBe(true)
       if (result.isRight()) {
-        const data = result.getOrThrow()
+        const data = result.orThrow()
         expect(data).toEqual(validData)
       }
     })

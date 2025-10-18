@@ -38,7 +38,7 @@ describe("Task Type Guards", () => {
     const processResult = <T>(outcome: TaskOutcome<T>) => {
       // Using type guard in ternary
       const message = outcome.isSuccess()
-        ? `Success: ${outcome.getOrThrow()}` // TypeScript knows this is Ok
+        ? `Success: ${outcome.orThrow()}` // TypeScript knows this is Ok
         : `Error: ${outcome.error?.message}` // TypeScript knows outcome.error exists here
 
       return message
@@ -68,7 +68,7 @@ describe("Task Type Guards", () => {
     if (!result.isFailure()) {
       // TypeScript should know this is Ok<string>
       expect(result._tag).toBe("Ok")
-      expect(result.getOrThrow()).toBe("value")
+      expect(result.orThrow()).toBe("value")
     }
 
     const failResult = Task().Sync<string>(() => {

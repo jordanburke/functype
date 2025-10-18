@@ -8,7 +8,7 @@ describe("FPromise.toEither", () => {
 
     expect(either.isRight()).toBe(true)
     expect(either.isLeft()).toBe(false)
-    expect(either.getOrThrow()).toBe(42)
+    expect(either.orThrow()).toBe(42)
   })
 
   it("should handle errors properly", async () => {
@@ -48,7 +48,7 @@ describe("FPromise.toEither", () => {
     const either = await fpromise.toEither()
 
     expect(either.isRight()).toBe(true)
-    expect(either.getOrThrow()).toBe(85)
+    expect(either.orThrow()).toBe(85)
   })
 
   it("should work with async operations", async () => {
@@ -61,6 +61,6 @@ describe("FPromise.toEither", () => {
     const either = await fpromise.toEither()
 
     expect(either.isRight()).toBe(true)
-    expect(either.getOrThrow()).toBe("async result")
+    expect(either.orThrow()).toBe("async result")
   })
 })

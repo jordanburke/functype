@@ -22,13 +22,13 @@ describe("Lazy", () => {
     it("should create a lazy value from immediate value", () => {
       const lazy = Lazy.fromValue(42)
       expect(lazy._tag).toBe("Lazy")
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
 
     it("should create a lazy value that throws", () => {
       const error = new Error("boom")
       const lazy = Lazy.fail<number>(error)
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
     })
   })
 
@@ -40,7 +40,7 @@ describe("Lazy", () => {
       expect(spy).not.toHaveBeenCalled()
       expect(lazy.isEvaluated).toBe(false)
 
-      const result = lazy.getOrThrow()
+      const result = lazy.orThrow()
 
       expect(result).toBe(42)
       expect(spy).toHaveBeenCalledTimes(1)
@@ -51,9 +51,9 @@ describe("Lazy", () => {
       const spy = vi.fn(() => 42)
       const lazy = Lazy(spy)
 
-      const result1 = lazy.getOrThrow()
-      const result2 = lazy.getOrThrow()
-      const result3 = lazy.getOrThrow()
+      const result1 = lazy.orThrow()
+      const result2 = lazy.orThrow()
+      const result3 = lazy.orThrow()
 
       expect(result1).toBe(42)
       expect(result2).toBe(42)
@@ -68,9 +68,9 @@ describe("Lazy", () => {
       })
       const lazy = Lazy(spy)
 
-      expect(() => lazy.getOrThrow()).toThrow(error)
-      expect(() => lazy.getOrThrow()).toThrow(error)
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
       expect(spy).toHaveBeenCalledTimes(1)
       expect(lazy.isEvaluated).toBe(true)
     })
@@ -79,31 +79,31 @@ describe("Lazy", () => {
   describe("safe access methods", () => {
     it("should return value with getOrElse when successful", () => {
       const lazy = Lazy(() => 42)
-      expect(lazy.getOrElse(0)).toBe(42)
+      expect(lazy.orElse(0)).toBe(42)
     })
 
     it("should return default with getOrElse when computation fails", () => {
       const lazy = Lazy<number>(() => {
         throw new Error("boom")
       })
-      expect(lazy.getOrElse(0)).toBe(0)
+      expect(lazy.orElse(0)).toBe(0)
     })
 
-    it("should return value with getOrNull when successful", () => {
+    it("should return value with orNull when successful", () => {
       const lazy = Lazy(() => 42)
-      expect(lazy.getOrNull()).toBe(42)
+      expect(lazy.orNull()).toBe(42)
     })
 
-    it("should return null with getOrNull when computation fails", () => {
+    it("should return null with orNull when computation fails", () => {
       const lazy = Lazy(() => {
         throw new Error("boom")
       })
-      expect(lazy.getOrNull()).toBeNull()
+      expect(lazy.orNull()).toBeNull()
     })
 
     it("should return value with getOrThrow when successful", () => {
       const lazy = Lazy(() => 42)
-      expect(lazy.getOrThrow(new Error("custom"))).toBe(42)
+      expect(lazy.orThrow(new Error("custom"))).toBe(42)
     })
 
     it("should throw custom error with getOrThrow when computation fails", () => {
@@ -111,7 +111,7 @@ describe("Lazy", () => {
       const lazy = Lazy(() => {
         throw new Error("boom")
       })
-      expect(() => lazy.getOrThrow(customError)).toThrow(customError)
+      expect(() => lazy.orThrow(customError)).toThrow(customError)
     })
   })
 
@@ -121,7 +121,7 @@ describe("Lazy", () => {
         .map((x) => x * 2)
         .map((x) => x + 1)
 
-      expect(lazy.getOrThrow()).toBe(85)
+      expect(lazy.orThrow()).toBe(85)
     })
 
     it("should propagate errors through map", () => {
@@ -130,13 +130,13 @@ describe("Lazy", () => {
         throw error
       }).map((x) => x * 2)
 
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
     })
 
     it("should handle async map", async () => {
       const lazy = await Lazy(() => 42).mapAsync(async (x) => x * 2)
 
-      expect(lazy.getOrThrow()).toBe(84)
+      expect(lazy.orThrow()).toBe(84)
     })
   })
 
@@ -146,7 +146,7 @@ describe("Lazy", () => {
         .flatMap((x) => Lazy(() => x * 2))
         .flatMap((x) => Lazy(() => x + 1))
 
-      expect(lazy.getOrThrow()).toBe(85)
+      expect(lazy.orThrow()).toBe(85)
     })
 
     it("should propagate errors through flatMap", () => {
@@ -157,20 +157,20 @@ describe("Lazy", () => {
         }),
       )
 
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
     })
 
     it("should handle async flatMap", async () => {
       const lazy = await Lazy(() => 42).flatMapAsync(async (x) => Lazy(() => x * 2))
 
-      expect(lazy.getOrThrow()).toBe(84)
+      expect(lazy.orThrow()).toBe(84)
     })
   })
 
   describe("filter", () => {
     it("should return Some when predicate is satisfied", () => {
       const lazy = Lazy(() => 42).filter((x) => x > 40)
-      const option = lazy.getOrThrow()
+      const option = lazy.orThrow()
 
       expect(option._tag).toBe("Some")
       expect(option.value).toBe(42)
@@ -178,7 +178,7 @@ describe("Lazy", () => {
 
     it("should return None when predicate is not satisfied", () => {
       const lazy = Lazy(() => 42).filter((x) => x < 40)
-      const option = lazy.getOrThrow()
+      const option = lazy.orThrow()
 
       expect(option).toEqual(None)
     })
@@ -190,7 +190,7 @@ describe("Lazy", () => {
         throw new Error("boom")
       }).recover((err) => 42)
 
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
 
     it("should not use recovery when computation succeeds", () => {
@@ -200,7 +200,7 @@ describe("Lazy", () => {
         return 0
       })
 
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
       expect(spy).not.toHaveBeenCalled()
     })
 
@@ -209,7 +209,7 @@ describe("Lazy", () => {
         throw new Error("boom")
       }).recoverWith((err) => Lazy(() => 42))
 
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
   })
 
@@ -263,7 +263,7 @@ describe("Lazy", () => {
         const lazy = Lazy(() => 42)
         const tryValue = lazy.toTry()
         expect(tryValue.isSuccess()).toBe(true)
-        expect(tryValue.getOrThrow()).toBe(42)
+        expect(tryValue.orThrow()).toBe(42)
       })
 
       it("should return Failure for failed computation", () => {
@@ -273,7 +273,7 @@ describe("Lazy", () => {
         })
         const tryValue = lazy.toTry()
         expect(tryValue.isFailure()).toBe(true)
-        expect(() => tryValue.getOrThrow()).toThrow(error)
+        expect(() => tryValue.orThrow()).toThrow(error)
       })
     })
   })
@@ -282,19 +282,19 @@ describe("Lazy", () => {
     it("should create Lazy from Some Option", () => {
       const option: Option<number> = Some(42)
       const lazy = Lazy.fromOption(option, () => 0)
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
 
     it("should create Lazy from None Option", () => {
       const option: Option<number> = None as unknown as Option<number>
       const lazy = Lazy.fromOption(option, () => 0)
-      expect(lazy.getOrThrow()).toBe(0)
+      expect(lazy.orThrow()).toBe(0)
     })
 
     it("should create Lazy from successful Try", () => {
       const tryValue = Try(() => 42)
       const lazy = Lazy.fromTry(tryValue)
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
 
     it("should create Lazy from failed Try", () => {
@@ -303,19 +303,19 @@ describe("Lazy", () => {
         throw error
       })
       const lazy = Lazy.fromTry(tryValue)
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
     })
 
     it("should create Lazy from Right Either", () => {
       const either: Either<string, number> = Right(42)
       const lazy = Lazy.fromEither(either)
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
     })
 
     it("should create Lazy from Left Either", () => {
       const either: Either<string, number> = Left("error")
       const lazy = Lazy.fromEither(either)
-      expect(() => lazy.getOrThrow()).toThrow("error")
+      expect(() => lazy.orThrow()).toThrow("error")
     })
   })
 
@@ -324,7 +324,7 @@ describe("Lazy", () => {
       const spy = vi.fn()
       const lazy = Lazy(() => 42).tap(spy)
 
-      const result = lazy.getOrThrow()
+      const result = lazy.orThrow()
 
       expect(result).toBe(42)
       expect(spy).toHaveBeenCalledWith(42)
@@ -336,7 +336,7 @@ describe("Lazy", () => {
         throw new Error("boom")
       }).tap(spy)
 
-      expect(() => lazy.getOrThrow()).toThrow()
+      expect(() => lazy.orThrow()).toThrow()
       expect(spy).not.toHaveBeenCalled()
     })
 
@@ -347,7 +347,7 @@ describe("Lazy", () => {
         throw error
       }).tapError(spy)
 
-      expect(() => lazy.getOrThrow()).toThrow(error)
+      expect(() => lazy.orThrow()).toThrow(error)
       expect(spy).toHaveBeenCalledWith(error)
     })
 
@@ -355,7 +355,7 @@ describe("Lazy", () => {
       const spy = vi.fn()
       const lazy = Lazy(() => 42).tapError(spy)
 
-      expect(lazy.getOrThrow()).toBe(42)
+      expect(lazy.orThrow()).toBe(42)
       expect(spy).not.toHaveBeenCalled()
     })
   })
@@ -426,7 +426,7 @@ describe("Lazy", () => {
 
     it("should show value for evaluated lazy", () => {
       const lazy = Lazy(() => 42)
-      lazy.getOrThrow()
+      lazy.orThrow()
       expect(lazy.toString()).toBe("Lazy(42)")
     })
 
@@ -435,7 +435,7 @@ describe("Lazy", () => {
         throw new Error("boom")
       })
       try {
-        lazy.getOrThrow()
+        lazy.orThrow()
       } catch {}
       expect(lazy.toString()).toContain("Lazy(<error:")
       expect(lazy.toString()).toContain("boom")
@@ -453,7 +453,7 @@ describe("Lazy", () => {
 
     it("should return evaluated state with value", () => {
       const lazy = Lazy(() => 42)
-      lazy.getOrThrow()
+      lazy.orThrow()
       expect(lazy.toValue()).toEqual({
         _tag: "Lazy",
         evaluated: true,
@@ -466,7 +466,7 @@ describe("Lazy", () => {
         throw new Error("boom")
       })
       try {
-        lazy.getOrThrow()
+        lazy.orThrow()
       } catch {}
       expect(lazy.toValue()).toEqual({
         _tag: "Lazy",
@@ -486,7 +486,7 @@ describe("Lazy", () => {
 
     it("should serialize evaluated lazy", () => {
       const lazy = Lazy(() => 42)
-      lazy.getOrThrow()
+      lazy.orThrow()
       const serialized = lazy.serialize()
 
       expect(serialized.toJSON()).toBe('{"_tag":"Lazy","evaluated":true,"value":42}')

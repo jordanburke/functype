@@ -7,7 +7,7 @@ describe("HKT", () => {
     const option = Option(42)
     const result = HKT.map(option, (x: number) => x * 2)
     expect(HKT.isOption(result)).toBe(true)
-    expect((result as Option<number>).getOrThrow()).toBe(84)
+    expect((result as Option<number>).orThrow()).toBe(84)
   })
 
   test("should map over List", () => {
@@ -35,14 +35,14 @@ describe("HKT", () => {
     const result = HKT.map(tryValue, (x: number) => x * 2)
     expect(HKT.isTry(result)).toBe(true)
     expect((result as Try<number>).isSuccess()).toBe(true)
-    expect((result as Try<number>).getOrThrow()).toBe(84)
+    expect((result as Try<number>).orThrow()).toBe(84)
   })
 
   test("should flatten nested Options", () => {
     const nestedOption = Option(Option(42))
     const result = HKT.flatten(nestedOption)
     expect(HKT.isOption(result)).toBe(true)
-    expect((result as Option<number>).getOrThrow()).toBe(42)
+    expect((result as Option<number>).orThrow()).toBe(42)
   })
 
   test("should flatten nested Lists", () => {
@@ -56,7 +56,7 @@ describe("HKT", () => {
     const option = Option(42)
     const result = HKT.flatMap(option, (x: number) => Option(x * 2))
     expect(HKT.isOption(result)).toBe(true)
-    expect((result as Option<number>).getOrThrow()).toBe(84)
+    expect((result as Option<number>).orThrow()).toBe(84)
   })
 
   test("should sequence Option of List to List of Option", () => {
@@ -67,9 +67,9 @@ describe("HKT", () => {
     const resultArray = (result as List<Option<number>>).toArray()
     expect(resultArray.length).toBe(3)
     expect(HKT.isOption(resultArray[0])).toBe(true)
-    expect((resultArray[0] as Option<number>)?.getOrThrow()).toBe(1)
-    expect((resultArray[1] as Option<number>)?.getOrThrow()).toBe(2)
-    expect((resultArray[2] as Option<number>)?.getOrThrow()).toBe(3)
+    expect((resultArray[0] as Option<number>)?.orThrow()).toBe(1)
+    expect((resultArray[1] as Option<number>)?.orThrow()).toBe(2)
+    expect((resultArray[2] as Option<number>)?.orThrow()).toBe(3)
   })
 
   test("should handle None case in sequence", () => {
@@ -91,7 +91,7 @@ describe("HKT", () => {
     expect(HKT.isOption(result)).toBe(true)
     expect((result as Option<unknown>).isEmpty).toBe(false)
 
-    const innerList = (result as Option<List<number>>).getOrThrow()
+    const innerList = (result as Option<List<number>>).orThrow()
     expect(HKT.isList(innerList)).toBe(true)
     expect(innerList.toArray()).toEqual([1, 2, 3])
   })
@@ -111,7 +111,7 @@ describe("HKT", () => {
     expect(HKT.isOption(result)).toBe(true)
     expect((result as Option<unknown>).isEmpty).toBe(false)
 
-    const innerList = (result as Option<List<number>>).getOrThrow()
+    const innerList = (result as Option<List<number>>).orThrow()
     expect(HKT.isList(innerList)).toBe(true)
     expect(innerList.toArray()).toEqual([2, 4, 6])
   })
@@ -132,6 +132,6 @@ describe("HKT", () => {
     const result = HKT.ap(optionFn, optionValue)
 
     expect(HKT.isOption(result)).toBe(true)
-    expect((result as Option<number>).getOrThrow()).toBe(42)
+    expect((result as Option<number>).orThrow()).toBe(42)
   })
 })

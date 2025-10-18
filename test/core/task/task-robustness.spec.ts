@@ -14,7 +14,7 @@ describe("Task Robustness Tests", () => {
         if (innerResult.isFailure()) {
           throw innerResult.error
         }
-        return innerResult.getOrThrow()
+        return innerResult.orThrow()
       })
 
       expect(outerResult.isFailure()).toBe(true)
@@ -137,12 +137,12 @@ describe("Task Robustness Tests", () => {
           if (innerResult.isFailure()) {
             throw innerResult.error
           }
-          return innerResult.getOrThrow()
+          return innerResult.orThrow()
         })
         if (middleResult.isFailure()) {
           throw middleResult.error
         }
-        return middleResult.getOrThrow()
+        return middleResult.orThrow()
       })
 
       expect(outerResult.isFailure()).toBe(true)
@@ -268,7 +268,7 @@ describe("Task Robustness Tests", () => {
           if (innerResult.isFailure()) {
             throw innerResult.error
           }
-          return innerResult.getOrThrow()
+          return innerResult.orThrow()
         },
         errorHandler, // Use the mock error handler
       )

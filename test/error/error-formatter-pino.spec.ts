@@ -101,11 +101,11 @@ describe("Pino Error Logging with Functype", () => {
     })
 
     const level2Task = Task({ name: "DbQuery" }).Sync(() => {
-      return level3Task.getOrThrow()
+      return level3Task.orThrow()
     })
 
     const level1Task = Task({ name: "UserService" }).Sync(() => {
-      return level2Task.getOrThrow()
+      return level2Task.orThrow()
     })
 
     const error = level1Task.error as Error
@@ -181,11 +181,11 @@ describe("Pino Error Logging with Functype", () => {
     })
 
     const userTask = Task({ name: "UserService", description: "User registration service" }).Sync(() => {
-      return dbTask.getOrThrow()
+      return dbTask.orThrow()
     })
 
     const apiTask = Task({ name: "UserController", description: "User registration endpoint" }).Sync(() => {
-      return userTask.getOrThrow()
+      return userTask.orThrow()
     })
 
     const error = apiTask.error as Error

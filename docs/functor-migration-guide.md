@@ -224,7 +224,7 @@ Both `Option` and `Either` now implement `ExtractableOption`, providing a consis
 ```typescript
 // Works with both Option and Either
 function extractValue<T>(container: ExtractableOption<T>): T {
-  return container.getOrElse(defaultValue)
+  return container.orElse(defaultValue)
 }
 
 // Example usage

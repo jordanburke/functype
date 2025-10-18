@@ -15,7 +15,7 @@ describe("Either - Property-based tests", () => {
           const either = createRight<string, string>(value)
           expect(either.isRight()).toBe(true)
           expect(either.isLeft()).toBe(false)
-          expect(either.getOrElse("default")).toBe(value)
+          expect(either.orElse("default")).toBe(value)
         }),
       )
     })
@@ -26,7 +26,7 @@ describe("Either - Property-based tests", () => {
           const either = createLeft<string, string>(error)
           expect(either.isLeft()).toBe(true)
           expect(either.isRight()).toBe(false)
-          expect(either.getOrElse("default")).toBe("default")
+          expect(either.orElse("default")).toBe("default")
         }),
       )
     })
@@ -41,7 +41,7 @@ describe("Either - Property-based tests", () => {
           const mapped = either.map((x) => x)
 
           // Check that the mapped either has the same value
-          expect(mapped.getOrElse("default")).toBe(either.getOrElse("default"))
+          expect(mapped.orElse("default")).toBe(either.orElse("default"))
           expect(mapped.isRight()).toBe(either.isRight())
         }),
       )
@@ -81,7 +81,7 @@ describe("Either - Property-based tests", () => {
           // Second approach: map(x => g(f(x)))
           const result2 = either.map((x) => g(f(x)))
 
-          expect(result1.getOrElse(0)).toBe(result2.getOrElse(0))
+          expect(result1.orElse(0)).toBe(result2.orElse(0))
         }),
       )
     })
@@ -102,7 +102,7 @@ describe("Either - Property-based tests", () => {
           // Second approach: flatMap(x => f(x).flatMap(g))
           const result2 = either.flatMap((x) => f(x).flatMap(g))
 
-          expect(result1.getOrElse(0)).toBe(result2.getOrElse(0))
+          expect(result1.orElse(0)).toBe(result2.orElse(0))
         }),
       )
     })
@@ -114,10 +114,10 @@ describe("Either - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), fc.string(), (value, defaultValue) => {
           const right = createRight<string, string>(value)
-          expect(right.getOrElse(defaultValue)).toBe(value)
+          expect(right.orElse(defaultValue)).toBe(value)
 
           const left = createLeft<string, string>("error")
-          expect(left.getOrElse(defaultValue)).toBe(defaultValue)
+          expect(left.orElse(defaultValue)).toBe(defaultValue)
         }),
       )
     })
@@ -150,11 +150,11 @@ describe("Either - Property-based tests", () => {
           const transform = (n: number) => n * 2
 
           const right = createRight<string, number>(value)
-          expect(right.map(transform).getOrElse(0)).toBe(transform(value))
+          expect(right.map(transform).orElse(0)).toBe(transform(value))
 
           const left = createLeft<string, number>(errorMsg)
           expect(left.map(transform).isLeft()).toBe(true)
-          expect(left.map(transform).getOrElse(0)).toBe(0)
+          expect(left.map(transform).orElse(0)).toBe(0)
         }),
       )
     })
@@ -196,7 +196,7 @@ describe("Either - Property-based tests", () => {
 
           const right = createRight<string, number>(value)
           expect(right.mapLeft(transform).isRight()).toBe(true)
-          expect(right.mapLeft(transform).getOrElse(0)).toBe(value)
+          expect(right.mapLeft(transform).orElse(0)).toBe(value)
 
           const left = createLeft<string, number>(errorMsg)
           const mappedLeft = left.mapLeft(transform)

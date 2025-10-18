@@ -88,12 +88,12 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ### Unsafe
 
-- `getOrThrow(error?: Error): T`
+- `orThrow(error?: Error): T`
 
 ### Extractable (extends Unsafe)
 
-- `getOrElse(defaultValue: T): T`
-- `orElse(alternative: Extractable<T>): Extractable<T>`
+- `orElse(defaultValue: T): T`
+- `or(alternative: Extractable<T>): Extractable<T>`
 - `orNull(): T | null`
 - `orUndefined(): T | undefined`
 
