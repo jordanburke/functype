@@ -11,7 +11,19 @@
       "Bash(pnpm validate)",
       "Bash(awk '{print $2}')",
       "Bash(chezmoi status)",
-      "Bash(chezmoi update)"
+      "Bash(chezmoi update)",
+      "Read(//Users/jordanburke/.claude/**)",
+      "Skill(skill-creator)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/init_skill.py functype-user --path .claude/skills)",
+      "Bash(python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/init_skill.py functype-developer --path .claude/skills)",
+      "Bash(ln -s ../../../docs/FUNCTYPE_FEATURE_MATRIX.md .claude/skills/functype-user/references/feature-matrix.md)",
+      "Bash(ln -s ../../../../docs/FUNCTYPE_FEATURE_MATRIX.md feature-matrix.md)",
+      "Bash(python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/init_skill.py functype-user --path /Users/jordanburke/IdeaProjects/functype/.claude/skills)",
+      "Bash(chmod +x .claude/skills/functype-developer/scripts/*.sh)",
+      "Bash(python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/package_skill.py .claude/skills/functype-user dist/skills)",
+      "Bash(python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/package_skill.py .claude/skills/functype-developer dist/skills)",
+      "Bash(tree -L 3 .claude/)"
     ],
     "deny": [],
     "ask": []

@@ -800,6 +800,28 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 - [ ] Implement more type-level utilities (conditional types, template literals)
 - [ ] Leverage newer TypeScript features (const type parameters, tuple manipulation)
 
+## Claude Code Skills
+
+Functype provides two specialized Claude Code skills to enhance your development experience:
+
+### Functype User Guide
+Help for developers using functype in their projects:
+- Pattern conversion (imperative → functional)
+- API lookup and examples
+- Common use cases and debugging tips
+
+**Install**: Download from [dist/skills/functype-user.zip](./dist/skills/functype-user.zip)
+
+### Functype Library Developer
+Guide for contributors developing functype itself:
+- Architecture patterns and development workflow
+- Creating new data structures
+- Testing strategies and interface implementation
+
+**Install**: Download from [dist/skills/functype-developer.zip](./dist/skills/functype-developer.zip)
+
+See [.claude/skills/README.md](./.claude/skills/README.md) for complete installation and usage instructions.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.

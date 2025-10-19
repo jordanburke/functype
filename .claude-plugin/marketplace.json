@@ -1,0 +1,29 @@
+{
+  "name": "functype",
+  "version": "1.0.0",
+  "description": "Skills for working with the functype functional programming library for TypeScript",
+  "author": "Jordan Burke",
+  "homepage": "https://github.com/jordanburke/functype",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/functype"
+  },
+  "skills": [
+    {
+      "id": "functype-user",
+      "name": "Functype User Guide",
+      "description": "Help developers use functype patterns in their TypeScript projects. This skill should be used when converting imperative code to functional patterns, looking up functype APIs, or handling nulls and errors with Option, Either, Try, and other functype types.",
+      "version": "1.0.0",
+      "path": ".claude/skills/functype-user",
+      "tags": ["typescript", "functional-programming", "option", "either", "monad"]
+    },
+    {
+      "id": "functype-developer",
+      "name": "Functype Library Developer",
+      "description": "Assist contributors working on the functype library codebase. This skill should be used when creating new data structures, implementing functional interfaces, adding tests, or understanding the library's architecture patterns.",
+      "version": "1.0.0",
+      "path": ".claude/skills/functype-developer",
+      "tags": ["typescript", "library-development", "functional-programming", "scala-patterns"]
+    }
+  ]
+}
