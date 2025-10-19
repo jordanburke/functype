@@ -15,7 +15,7 @@
       "source": "./",
       "strict": false,
       "skills": [
-        ".claude/skills/functype-user"
+        "./.claude/skills/functype-user"
       ]
     },
     {
@@ -24,7 +24,7 @@
       "source": "./",
       "strict": false,
       "skills": [
-        ".claude/skills/functype-developer"
+        "./.claude/skills/functype-developer"
       ]
     }
   ]
