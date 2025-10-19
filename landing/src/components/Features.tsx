@@ -45,10 +45,7 @@ export default function Features() {
           </div>
 
           {/* Unified Interfaces */}
-          <a
-            href="/feature-matrix"
-            className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors block"
-          >
+          <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors">
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -63,8 +60,7 @@ export default function Features() {
             <p className="text-gray-600">
               All types implement the same hierarchy of interfaces. Learn once, use everywhere.
             </p>
-            <p className="text-sm text-blue-600 mt-2 font-medium">View Feature Matrix →</p>
-          </a>
+          </div>
 
           {/* Tree-Shakeable */}
           <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors">
@@ -85,34 +81,29 @@ export default function Features() {
           </div>
         </div>
 
-        {/* Core Data Structures */}
-        <div className="mt-20">
-          <h3 className="text-2xl font-bold text-center text-gray-900 mb-12">Core Data Structures</h3>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">Option&lt;T&gt;</h4>
-              <p className="text-sm text-gray-600">Safe handling of nullable values with Some and None</p>
+        {/* Feature Matrix CTA */}
+        <div className="mt-16">
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 md:p-12 text-center text-white shadow-xl">
+            <div className="flex justify-center mb-4">
+              <svg className="w-16 h-16 text-white opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"
+                ></path>
+              </svg>
             </div>
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">Either&lt;L,R&gt;</h4>
-              <p className="text-sm text-gray-600">Express success/failure with Left and Right values</p>
-            </div>
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">List&lt;A&gt;</h4>
-              <p className="text-sm text-gray-600">Immutable arrays with functional operations</p>
-            </div>
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">Task&lt;T&gt;</h4>
-              <p className="text-sm text-gray-600">Async operations with cancellation and error handling</p>
-            </div>
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">Do-notation</h4>
-              <p className="text-sm text-gray-600">Scala-like for-comprehensions for monadic composition</p>
-            </div>
-            <div className="p-6 bg-gray-50 rounded-lg">
-              <h4 className="font-mono text-lg font-semibold text-blue-600 mb-2">Match/Cond</h4>
-              <p className="text-sm text-gray-600">Powerful pattern matching and conditional expressions</p>
-            </div>
+            <h3 className="text-3xl md:text-4xl font-bold mb-4">Explore the Complete Feature Matrix</h3>
+            <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+              See at a glance which functional programming interfaces are supported by each data structure
+            </p>
+            <a
+              href="/feature-matrix"
+              className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg hover:shadow-xl"
+            >
+              View Feature Matrix →
+            </a>
           </div>
         </div>
       </div>

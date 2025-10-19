@@ -8,7 +8,8 @@
       "Bash(pnpm check)",
       "Bash(pnpm add -D @astrojs/mdx@^4.3.7 --filter=landing)",
       "Bash(pnpm build)",
-      "Bash(pnpm validate)"
+      "Bash(pnpm validate)",
+      "Bash(awk '{print $2}')"
     ],
     "deny": [],
     "ask": []
