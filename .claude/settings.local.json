@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(git mv:*)",
+      "Bash(ln -s ../../../docs/FUNCTYPE_FEATURE_MATRIX.md /Users/jordanburke/IdeaProjects/functype/landing/src/content/feature-matrix.md)",
+      "Bash(pnpm install)",
+      "Bash(pnpm check)",
+      "Bash(pnpm add -D @astrojs/mdx@^4.3.7 --filter=landing)",
+      "Bash(pnpm build)",
+      "Bash(pnpm validate)"
     ],
     "deny": [],
     "ask": []

@@ -648,6 +648,10 @@ opt.forEach(console.log) // Logs: 42
 list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 ```
 
+## Feature Matrix
+
+For a comprehensive overview of which interfaces are supported by each data structure, see the [Functype Feature Matrix](docs/FUNCTYPE_FEATURE_MATRIX.md).
+
 ## Type Safety
 
 Functype leverages TypeScript's advanced type system to provide compile-time safety for functional patterns, ensuring that your code is both robust and maintainable.

@@ -45,7 +45,10 @@ export default function Features() {
           </div>
 
           {/* Unified Interfaces */}
-          <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors">
+          <a
+            href="/feature-matrix"
+            className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors block"
+          >
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -60,7 +63,8 @@ export default function Features() {
             <p className="text-gray-600">
               All types implement the same hierarchy of interfaces. Learn once, use everywhere.
             </p>
-          </div>
+            <p className="text-sm text-blue-600 mt-2 font-medium">View Feature Matrix →</p>
+          </a>
 
           {/* Tree-Shakeable */}
           <div className="p-6 rounded-xl border border-gray-200 hover:border-blue-500 transition-colors">

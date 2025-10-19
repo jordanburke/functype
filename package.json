@@ -9,7 +9,7 @@
     "type": "git",
     "url": "git+https://github.com/jordanburke/functype.git"
   },
-  "homepage": "https://github.com/jordanburke/functype#readme",
+  "homepage": "https://functype.org/",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "validate": "pnpm validate:core && pnpm validate:landing",
