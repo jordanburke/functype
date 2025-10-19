@@ -116,12 +116,7 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a
-                  href="https://github.com/jordanburke/functype/blob/main/FUNCTYPE_FEATURE_MATRIX.md"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-white transition-colors"
-                >
+                <a href="/feature-matrix" className="hover:text-white transition-colors">
                   Feature Matrix
                 </a>
               </li>

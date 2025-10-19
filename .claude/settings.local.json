@@ -9,7 +9,9 @@
       "Bash(pnpm add -D @astrojs/mdx@^4.3.7 --filter=landing)",
       "Bash(pnpm build)",
       "Bash(pnpm validate)",
-      "Bash(awk '{print $2}')"
+      "Bash(awk '{print $2}')",
+      "Bash(chezmoi status)",
+      "Bash(chezmoi update)"
     ],
     "deny": [],
     "ask": []
