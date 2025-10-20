@@ -9,6 +9,7 @@ This directory contains Claude Code skills for working with the functype library
 **Purpose**: Help developers use functype patterns in their TypeScript projects
 
 **Use when**:
+
 - Converting imperative/OOP code to functional patterns
 - Looking up functype APIs and methods
 - Handling nulls with Option
@@ -17,6 +18,7 @@ This directory contains Claude Code skills for working with the functype library
 - Debugging functype code
 
 **Installation**:
+
 ```bash
 # From the distributed zip
 claude-code install dist/skills/functype-user.zip
@@ -30,6 +32,7 @@ cp -r .claude/skills/functype-user ~/.claude/skills/
 **Purpose**: Assist contributors developing the functype library itself
 
 **Use when**:
+
 - Creating new data structures
 - Implementing functional interfaces (Functor, Monad, Foldable)
 - Adding tests
@@ -38,6 +41,7 @@ cp -r .claude/skills/functype-user ~/.claude/skills/
 - Following the Base pattern and Companion utilities
 
 **Installation**:
+
 ```bash
 # From the distributed zip
 claude-code install dist/skills/functype-developer.zip
@@ -60,6 +64,7 @@ functype-user/
 ```
 
 **Key features**:
+
 - Pattern conversion examples (imperative → functional)
 - Common use cases (validation, error handling, collections)
 - API lookup by type
@@ -81,6 +86,7 @@ functype-developer/
 ```
 
 **Key features**:
+
 - Complete development workflow
 - Architecture patterns (Base, Companion, HKT)
 - Interface implementation guide
@@ -127,11 +133,13 @@ The `.claude-plugin/marketplace.json` file enables marketplace distribution:
 Once installed, Claude Code will automatically suggest these skills when:
 
 **functype-user** triggers:
+
 - Code contains null checks, optional chaining, or try-catch
 - User asks about functype patterns or APIs
 - Working with Option, Either, Try, List types
 
 **functype-developer** triggers:
+
 - Creating new functype types
 - Implementing functional interfaces
 - Adding tests to functype
@@ -153,6 +161,45 @@ To improve these skills:
 2. Test the skill locally
 3. Repackage and verify
 4. Commit changes to the repository
+
+## Skill Validation Checklist
+
+Before packaging or updating skills, verify the following to prevent errors:
+
+### Content Validation
+
+- [ ] **YAML frontmatter**: Properly formatted with `---` delimiters (no extra characters)
+- [ ] **Import statements**: All imports verified against `package.json` exports
+- [ ] **Code examples**: All code compiles and type-checks correctly
+- [ ] **File paths**: All referenced files exist in the repository
+- [ ] **URLs**: All links point to valid, accessible URLs
+- [ ] **Skill description**: Accurately describes when to trigger the skill
+
+### Import Verification Process
+
+1. Open `package.json` and review the `exports` section
+2. Compare all `import` statements in skill files against available exports
+3. Remove or update any imports that aren't exported
+4. For internal development examples (functype-developer), use `@/` imports
+5. For user-facing examples (functype-user), only use published package imports
+
+### Common Import Mistakes to Avoid
+
+- ❌ `import { suggestPattern } from "functype/tools/pattern-suggester"` (tools not exported)
+- ❌ `import { Base } from "functype/core/base"` (internal paths not exported)
+- ❌ `import { Option } from "functype/option"` (subpath imports don't work)
+- ✅ `import { Option } from "functype"` (correct - use main bundle)
+- ✅ `import { Base } from "@/core/base"` (valid for functype-developer only)
+
+### Package Validation
+
+```bash
+# Validate before packaging
+python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/quick_validate.py .claude/skills/functype-user
+
+# Package after validation passes
+python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/package_skill.py .claude/skills/functype-user dist/skills
+```
 
 ## Resources
 

@@ -12,6 +12,7 @@ Guide for contributing to the functype TypeScript library. This skill provides a
 ## When to Use This Skill
 
 Trigger this skill when:
+
 - Creating new data structures or types
 - Implementing functional interfaces (Functor, Monad, Foldable, etc.)
 - Adding or fixing tests
@@ -53,11 +54,13 @@ pnpm compile
 ### Pre-Commit Checklist
 
 **Always run before committing:**
+
 ```bash
 pnpm validate
 ```
 
 This runs:
+
 1. **Format**: Prettier formatting
 2. **Lint**: ESLint checks
 3. **Test**: All Vitest tests
@@ -71,12 +74,13 @@ All types follow this pattern:
 
 ```typescript
 // Constructor function returns object with methods
-const option = Option(value)  // Constructor
-option.map(x => x + 1)         // Instance methods
-Option.none()                  // Companion methods
+const option = Option(value) // Constructor
+option.map((x) => x + 1) // Instance methods
+Option.none() // Companion methods
 ```
 
 **NOT class-based:**
+
 ```typescript
 // ❌ Don't do this
 class Option<T> {
@@ -114,6 +118,7 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ```
 
 **Base provides:**
+
 - `Typeable` interface (type metadata)
 - Standard `toString()` method
 - Consistent object structure
@@ -121,6 +126,7 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ### Type System Foundation
 
 **Base constraint:**
+
 ```typescript
 import type { Type } from "@/functor"
 
@@ -131,6 +137,7 @@ function process<T extends Type>(value: T): void {
 ```
 
 **Never use `any`**:
+
 - Use `unknown` for uncertain types
 - Use `Type` for generic constraints
 - Use proper type definitions
@@ -140,6 +147,7 @@ function process<T extends Type>(value: T): void {
 Every container type should implement these when applicable:
 
 **Core interfaces** (see `references/architecture.md` for details):
+
 - `Functor` - map over values
 - `Applicative` - apply wrapped functions
 - `Monad` - flatMap for sequencing
@@ -155,12 +163,14 @@ Check `docs/FUNCTYPE_FEATURE_MATRIX.md` to see which interfaces each type implem
 ### Step-by-Step Guide
 
 **1. Research existing patterns**
+
 ```bash
 # Use the Explore agent to understand the codebase
 # Look at Option, Either, or Try as reference implementations
 ```
 
 **2. Create module structure**
+
 ```bash
 mkdir -p src/mynewtype
 touch src/mynewtype/index.ts
@@ -168,12 +178,14 @@ touch test/mynewtype.spec.ts
 ```
 
 **3. Use the template script**
+
 ```bash
 # Run the new-type-template script
 ./claude/skills/functype-developer/scripts/new-type-template.sh MyNewType
 ```
 
 This generates:
+
 - Basic type structure
 - Required interface implementations
 - Test file boilerplate
@@ -181,6 +193,7 @@ This generates:
 **4. Implement the type**
 
 Follow the constructor pattern:
+
 ```typescript
 // src/mynewtype/index.ts
 import { Base } from "@/core/base"
@@ -215,12 +228,14 @@ MyNew.empty = <T>() => MyNew<T>(null as any)
 **5. Add exports**
 
 Update `src/index.ts`:
+
 ```typescript
 export { MyNew } from "./mynewtype"
 export type { MyNewType } from "./mynewtype"
 ```
 
 Update `package.json` exports:
+
 ```json
 {
   "exports": {
@@ -250,7 +265,7 @@ describe("MyNewType", () => {
 
   describe("Functor", () => {
     it("should map over values", () => {
-      const result = MyNew(5).map(x => x * 2)
+      const result = MyNew(5).map((x) => x * 2)
       expect(result.getValue()).toBe(10)
     })
   })
@@ -264,6 +279,7 @@ describe("MyNewType", () => {
 Add your type to `docs/FUNCTYPE_FEATURE_MATRIX.md` showing which interfaces it implements.
 
 **8. Validate**
+
 ```bash
 pnpm validate
 ```
@@ -273,15 +289,19 @@ pnpm validate
 When implementing interfaces, refer to this checklist:
 
 **Functor:**
+
 - [ ] `map<B>(f: (value: A) => B): Functor<B>`
 
 **Applicative (extends Functor):**
+
 - [ ] `ap<B>(ff: Applicative<(value: A) => B>): Applicative<B>`
 
 **Monad (extends Applicative):**
+
 - [ ] `flatMap<B>(f: (value: A) => Monad<B>): Monad<B>`
 
 **Foldable:**
+
 - [ ] `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
 - [ ] `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
 - [ ] `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
@@ -327,6 +347,7 @@ test.prop([fc.integer()])("should always return positive", (n) => {
 ### Edge Cases to Test
 
 Always test:
+
 - Empty/null/undefined inputs
 - Type inference correctness
 - Method chaining
@@ -393,7 +414,7 @@ function double(x: number): number {
 
 // ❌ Side effects
 function double(x: number): number {
-  console.log(x)  // side effect
+  console.log(x) // side effect
   return x * 2
 }
 ```
@@ -453,10 +474,11 @@ export function MyType<T>(value: T): MyType<T> {
   return Base("MyType", {
     // other methods...
 
-    serialize: () => createSerializable({
-      type: "MyType",
-      value: value,
-    }),
+    serialize: () =>
+      createSerializable({
+        type: "MyType",
+        value: value,
+      }),
   })
 }
 ```
@@ -479,11 +501,13 @@ export const MyType = Object.assign(MyTypeConstructor, MyTypeCompanion)
 ### TypeScript Errors
 
 **"Type instantiation is excessively deep"**
+
 - Check for circular type references
 - Simplify nested generic types
 - Use type aliases to break up complex types
 
 **"Property 'X' does not exist on type 'Y'"**
+
 - Ensure all interfaces are properly implemented
 - Check that types are correctly exported
 - Verify Base pattern includes all required methods
@@ -517,15 +541,18 @@ pnpm analyze:size
 ## Resources
 
 ### scripts/
+
 - `new-type-template.sh` - Generate boilerplate for new types
 - `validate.sh` - Run the full validation workflow
 
 ### references/
+
 - `architecture.md` - Detailed architecture and patterns
 - `adding-types.md` - Complete guide for adding new data structures
 - `testing-patterns.md` - Testing strategies and examples
 
 ### External Links
+
 - **GitHub**: https://github.com/jordanburke/functype
 - **Docs**: https://jordanburke.github.io/functype/
 - **Feature Matrix**: `docs/FUNCTYPE_FEATURE_MATRIX.md`

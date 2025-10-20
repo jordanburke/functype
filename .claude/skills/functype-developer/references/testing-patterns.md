@@ -57,7 +57,7 @@ describe("Functor Laws", () => {
     const g = (x: number) => x + 1
 
     const left = fa.map(f).map(g)
-    const right = fa.map(x => g(f(x)))
+    const right = fa.map((x) => g(f(x)))
 
     expect(left).toEqual(right)
   })
@@ -78,7 +78,7 @@ describe("Monad Laws", () => {
   it("should satisfy right identity", () => {
     const m = MyType(5)
 
-    expect(m.flatMap(x => MyType(x))).toEqual(m)
+    expect(m.flatMap((x) => MyType(x))).toEqual(m)
   })
 
   it("should satisfy associativity", () => {
@@ -87,7 +87,7 @@ describe("Monad Laws", () => {
     const g = (x: number) => MyType(x + 1)
 
     const left = m.flatMap(f).flatMap(g)
-    const right = m.flatMap(x => f(x).flatMap(g))
+    const right = m.flatMap((x) => f(x).flatMap(g))
 
     expect(left).toEqual(right)
   })
@@ -126,7 +126,7 @@ import { fc, test } from "@fast-check/vitest"
 
 test.prop([fc.integer()])("map preserves structure", (n) => {
   const opt = Option(n)
-  const result = opt.map(x => x * 2)
+  const result = opt.map((x) => x * 2)
 
   if (opt.isSome()) {
     expect(result.isSome()).toBe(true)
@@ -141,7 +141,7 @@ test.prop([fc.integer(), fc.integer()])("flatMap is associative", (a, b) => {
   const g = (x: number) => List([x + 1])
 
   const left = m.flatMap(f).flatMap(g)
-  const right = m.flatMap(x => f(x).flatMap(g))
+  const right = m.flatMap((x) => f(x).flatMap(g))
 
   expect(left.toArray()).toEqual(right.toArray())
 })
@@ -156,12 +156,11 @@ import { fc } from "@fast-check/vitest"
 const optionArb = <T>(valueArb: fc.Arbitrary<T>): fc.Arbitrary<Option<T>> =>
   fc.oneof(
     fc.constant(Option.none()),
-    valueArb.map(v => Option(v))
+    valueArb.map((v) => Option(v)),
   )
 
 // Generate Lists
-const listArb = <T>(valueArb: fc.Arbitrary<T>): fc.Arbitrary<List<T>> =>
-  fc.array(valueArb).map(arr => List(arr))
+const listArb = <T>(valueArb: fc.Arbitrary<T>): fc.Arbitrary<List<T>> => fc.array(valueArb).map((arr) => List(arr))
 
 // Usage
 test.prop([optionArb(fc.integer())])("option property", (opt) => {
@@ -203,7 +202,7 @@ describe("Edge Cases", () => {
 describe("Type Inference", () => {
   it("should infer correct types", () => {
     const num: Option<number> = Option(5)
-    const str: Option<string> = num.map(x => x.toString())
+    const str: Option<string> = num.map((x) => x.toString())
 
     // TypeScript should not error
     const _check: string = str.orElse("")
@@ -232,14 +231,13 @@ describe("Immutability", () => {
 ```typescript
 describe("Type Composition", () => {
   it("should compose Option and Either", () => {
-    const validate = (x: number): Either<string, number> =>
-      x > 0 ? Right(x) : Left("Must be positive")
+    const validate = (x: number): Either<string, number> => (x > 0 ? Right(x) : Left("Must be positive"))
 
     const result = Option(5)
       .map(validate)
       .fold(
         () => Left("No value"),
-        either => either
+        (either) => either,
       )
 
     expect(result.isRight()).toBe(true)
@@ -253,11 +251,11 @@ describe("Type Composition", () => {
 describe("Pipelines", () => {
   it("should compose operations", () => {
     const result = List([1, 2, 3, 4, 5])
-      .filter(x => x > 2)
-      .map(x => x * 2)
+      .filter((x) => x > 2)
+      .map((x) => x * 2)
       .foldLeft(0)((sum, x) => sum + x)
 
-    expect(result).toBe(24)  // (3 + 4 + 5) * 2 = 24
+    expect(result).toBe(24) // (3 + 4 + 5) * 2 = 24
   })
 })
 ```
@@ -278,7 +276,7 @@ describe("Performance", () => {
 
   bench("List operations", () => {
     const list = List(Array.from({ length: 1000 }, (_, i) => i))
-    list.filter(x => x % 2 === 0).map(x => x * 2)
+    list.filter((x) => x % 2 === 0).map((x) => x * 2)
   })
 })
 ```
@@ -386,7 +384,11 @@ it.skip("should do something else", () => {
 ### Test Timeout
 
 ```typescript
-it("should handle slow operation", async () => {
-  // ...
-}, { timeout: 10000 })  // 10 second timeout
+it(
+  "should handle slow operation",
+  async () => {
+    // ...
+  },
+  { timeout: 10000 },
+) // 10 second timeout
 ```

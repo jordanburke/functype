@@ -805,7 +805,9 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 Functype provides two specialized Claude Code skills to enhance your development experience:
 
 ### Functype User Guide
+
 Help for developers using functype in their projects:
+
 - Pattern conversion (imperative → functional)
 - API lookup and examples
 - Common use cases and debugging tips
@@ -813,7 +815,9 @@ Help for developers using functype in their projects:
 **Install**: Download from [dist/skills/functype-user.zip](./dist/skills/functype-user.zip)
 
 ### Functype Library Developer
+
 Guide for contributors developing functype itself:
+
 - Architecture patterns and development workflow
 - Creating new data structures
 - Testing strategies and interface implementation

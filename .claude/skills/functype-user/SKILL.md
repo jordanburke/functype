@@ -12,6 +12,7 @@ Transform TypeScript code to use functype - a Scala-inspired functional programm
 ## When to Use This Skill
 
 Trigger this skill when users:
+
 - Convert imperative code to functional patterns
 - Look up functype APIs or methods
 - Handle nullable values or optional chaining
@@ -32,14 +33,8 @@ pnpm add functype
 ### Core Imports
 
 ```typescript
-// Selective imports (recommended for smaller bundles)
-import { Option } from "functype/option"
-import { Either, Left, Right } from "functype/either"
-import { Try } from "functype/try"
-import { List } from "functype/list"
-
-// Or import from main bundle
-import { Option, Either, List } from "functype"
+// Import from main bundle
+import { Option, Either, Left, Right, Try, List } from "functype"
 ```
 
 ## Pattern Conversion Guide
@@ -47,39 +42,44 @@ import { Option, Either, List } from "functype"
 ### Null/Undefined Checks → Option
 
 **Before (Imperative):**
+
 ```typescript
 if (value !== null && value !== undefined) {
   return value.toUpperCase()
 }
-return ''
+return ""
 ```
 
 **After (Functype):**
+
 ```typescript
 Option(value)
-  .map(v => v.toUpperCase())
-  .orElse('')
+  .map((v) => v.toUpperCase())
+  .orElse("")
 ```
 
 ### Optional Chaining → Option Chain
 
 **Before:**
+
 ```typescript
 const url = user?.profile?.avatar?.url
 ```
 
 **After:**
+
 ```typescript
 const url = Option(user)
-  .flatMap(u => Option(u.profile))
-  .flatMap(p => Option(p.avatar))
-  .map(a => a.url)
-  .orElse('/default-avatar.png')
+  .flatMap((u) => Option(u.profile))
+  .flatMap((p) => Option(p.avatar))
+  .map((a) => a.url)
+  .orElse("/default-avatar.png")
 ```
 
 ### Try-Catch → Try or Either
 
 **Before:**
+
 ```typescript
 try {
   return JSON.parse(str)
@@ -89,6 +89,7 @@ try {
 ```
 
 **After (with Try):**
+
 ```typescript
 Try(() => JSON.parse(str))
   .toOption()
@@ -96,73 +97,81 @@ Try(() => JSON.parse(str))
 ```
 
 **After (with Either):**
+
 ```typescript
 Try(() => JSON.parse(str))
   .toEither()
   .fold(
-    error => `Parse failed: ${error.message}`,
-    data => data
+    (error) => `Parse failed: ${error.message}`,
+    (data) => data,
   )
 ```
 
 ### Array Operations → List
 
 **Before:**
+
 ```typescript
-array
-  .filter(x => x > 0)
-  .map(x => x * 2)
+array.filter((x) => x > 0).map((x) => x * 2)
 ```
 
 **After:**
+
 ```typescript
 List(array)
-  .filter(x => x > 0)
-  .map(x => x * 2)
+  .filter((x) => x > 0)
+  .map((x) => x * 2)
   .toArray()
 ```
 
 ### If-Else Chains → Cond
 
 **Before:**
+
 ```typescript
 if (x > 10) {
-  return 'big'
+  return "big"
 } else if (x > 5) {
-  return 'medium'
+  return "medium"
 } else {
-  return 'small'
+  return "small"
 }
 ```
 
 **After:**
+
 ```typescript
-import { Cond } from "functype/cond"
+import { Cond } from "functype"
 
 Cond.start<string>()
-  .case(x > 10, 'big')
-  .case(x > 5, 'medium')
-  .otherwise('small')
+  .case(x > 10, "big")
+  .case(x > 5, "medium")
+  .otherwise("small")
 ```
 
 ### Switch Statements → Match
 
 **Before:**
+
 ```typescript
-switch(status) {
-  case 'success': return data
-  case 'error': return null
-  default: return undefined
+switch (status) {
+  case "success":
+    return data
+  case "error":
+    return null
+  default:
+    return undefined
 }
 ```
 
 **After:**
+
 ```typescript
-import { Match } from "functype/match"
+import { Match } from "functype"
 
 Match(status)
-  .case('success', () => data)
-  .case('error', () => null)
+  .case("success", () => data)
+  .case("error", () => null)
   .done()
 ```
 
@@ -171,34 +180,28 @@ Match(status)
 ### Validation with Either
 
 ```typescript
-import { Either, Left, Right } from "functype/either"
+import { Either, Left, Right } from "functype"
 
 function validateEmail(email: string): Either<string, string> {
-  return email.includes("@")
-    ? Right(email)
-    : Left("Invalid email format")
+  return email.includes("@") ? Right(email) : Left("Invalid email format")
 }
 
 function validateUser(user: any): Either<string, User> {
   return validateEmail(user.email)
-    .map(email => ({ ...user, email }))
-    .flatMap(u => u.age >= 18
-      ? Right(u)
-      : Left("Must be 18 or older")
-    )
+    .map((email) => ({ ...user, email }))
+    .flatMap((u) => (u.age >= 18 ? Right(u) : Left("Must be 18 or older")))
 }
 
-const result = validateUser({ email: "test@example.com", age: 20 })
-  .fold(
-    error => console.error(error),
-    user => console.log("Valid user:", user)
-  )
+const result = validateUser({ email: "test@example.com", age: 20 }).fold(
+  (error) => console.error(error),
+  (user) => console.log("Valid user:", user),
+)
 ```
 
 ### Safe API Calls with Option
 
 ```typescript
-import { Option } from "functype/option"
+import { Option } from "functype"
 
 interface User {
   id: string
@@ -208,40 +211,39 @@ interface User {
 
 function getUserEmail(userId: string): Option<string> {
   return Option(fetchUser(userId))
-    .flatMap(user => Option(user.email))
-    .filter(email => email.includes("@"))
+    .flatMap((user) => Option(user.email))
+    .filter((email) => email.includes("@"))
 }
 
-const email = getUserEmail("123")
-  .orElse("no-reply@example.com")
+const email = getUserEmail("123").orElse("no-reply@example.com")
 ```
 
 ### Error Recovery with Try
 
 ```typescript
-import { Try } from "functype/try"
+import { Try } from "functype"
 
 const parseConfig = Try(() => JSON.parse(configStr))
-  .recover(error => {
+  .recover((error) => {
     console.warn("Using default config:", error)
     return defaultConfig
   })
-  .map(config => validateConfig(config))
+  .map((config) => validateConfig(config))
 ```
 
 ### Collection Pipeline with List
 
 ```typescript
-import { List } from "functype/list"
+import { List } from "functype"
 
 const users = List([
   { name: "Alice", hobbies: ["reading", "coding"] },
-  { name: "Bob", hobbies: ["gaming", "music"] }
+  { name: "Bob", hobbies: ["gaming", "music"] },
 ])
 
 const allHobbies = users
-  .flatMap(user => List(user.hobbies))
-  .toSet()  // Remove duplicates
+  .flatMap((user) => List(user.hobbies))
+  .toSet() // Remove duplicates
   .toArray()
 ```
 
@@ -250,6 +252,7 @@ const allHobbies = users
 ### Feature Matrix Reference
 
 For a complete overview of which methods are available on each data structure, consult the **Feature Matrix** at:
+
 - `references/feature-matrix.md` (included with this skill)
 - Or in the functype repo: `docs/FUNCTYPE_FEATURE_MATRIX.md`
 
@@ -258,87 +261,81 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 ### Common Methods by Type
 
 **Option<T>**
+
 - `map`, `flatMap`, `filter`, `fold`
 - `orElse`, `or`, `orNull`, `orUndefined`, `orThrow`
 - `isSome`, `isNone`, `contains`
 
 **Either<L, R>**
+
 - `map`, `flatMap`, `fold`
 - `orElse`, `or`, `swap`
 - `isLeft`, `isRight`
 
 **Try<T>**
+
 - `map`, `flatMap`, `fold`
 - `recover`, `recoverWith`
 - `toOption`, `toEither`
 - `isSuccess`, `isFailure`
 
 **List<A>**
+
 - `map`, `flatMap`, `filter`, `reduce`
 - `foldLeft`, `foldRight`
 - `append`, `prepend`, `concat`
 - `head`, `tail`, `isEmpty`
 - `toArray`, `toSet`
 
-## Functype Tools Reference
+## Additional Resources
 
-The functype library includes AI integration tools located in `src/tools/`:
+For pattern conversion help, examples, and API reference:
 
-### Pattern Suggester
-Analyzes code and suggests functype patterns:
-```typescript
-import { suggestPattern } from "functype/tools/pattern-suggester"
-
-const code = "if (value !== null) { return value.toUpperCase() }"
-const suggestion = suggestPattern(code)
-// Suggests: Use Option instead of null checks
-```
-
-### Functype Lookup
-Look up type information and examples:
-```typescript
-import { functypeLookup, functypeExamples } from "functype/tools/functype-lookup"
-
-const info = functypeLookup("Option")
-// Returns: description, methods, source path, use cases
-
-const examples = functypeExamples("Option")
-// Returns: List of code examples by category
-```
+- **Feature Matrix**: See `references/feature-matrix.md` for complete interface/method reference
+- **API Documentation**: https://jordanburke.github.io/functype/
+- **GitHub Repository**: https://github.com/jordanburke/functype
+- **Pattern Examples**: Browse `src/tools/` directory in the repository for pattern conversion examples
 
 ## Debugging Tips
 
 ### Understanding Error Messages
 
 **"Type 'X' is not assignable to type 'Y'"**
+
 - Ensure proper type parameters: `Option<string>` not `Option<any>`
 - Check that chains maintain type consistency
 
 **"Cannot read property 'map' of undefined"**
+
 - Remember to construct the type: `Option(value)` not just `value`
 - Some types require explicit constructors: `List([...])`, `Right(value)`
 
 ### Common Pitfalls
 
 1. **Forgetting to extract values**
+
    ```typescript
    // Wrong - returns Option<string>
-   const name = Option(user).map(u => u.name)
+   const name = Option(user).map((u) => u.name)
 
    // Correct - returns string
-   const name = Option(user).map(u => u.name).orElse("Unknown")
+   const name = Option(user)
+     .map((u) => u.name)
+     .orElse("Unknown")
    ```
 
 2. **Using map instead of flatMap**
+
    ```typescript
    // Wrong - returns Option<Option<string>>
-   Option(user).map(u => Option(u.email))
+   Option(user).map((u) => Option(u.email))
 
    // Correct - returns Option<string>
-   Option(user).flatMap(u => Option(u.email))
+   Option(user).flatMap((u) => Option(u.email))
    ```
 
 3. **Mutating instead of transforming**
+
    ```typescript
    // Wrong - mutates original array
    const list = List([1, 2, 3])
@@ -351,10 +348,12 @@ const examples = functypeExamples("Option")
 ## Resources
 
 ### references/
+
 - `feature-matrix.md` - Complete interface and method reference
 - `common-patterns.md` - Additional pattern examples and recipes
 - `quick-reference.md` - Cheat sheet for functype APIs
 
 For more examples and detailed documentation, visit:
+
 - **GitHub**: https://github.com/jordanburke/functype
 - **Docs**: https://jordanburke.github.io/functype/

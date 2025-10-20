@@ -14,18 +14,14 @@
       "description": "Help developers use functype patterns in their TypeScript projects - pattern conversion, API lookup, common use cases",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./.claude/skills/functype-user"
-      ]
+      "skills": ["./.claude/skills/functype-user"]
     },
     {
       "name": "functype-developer",
       "description": "Assist contributors developing the functype library - architecture patterns, creating new types, testing strategies",
       "source": "./",
       "strict": false,
-      "skills": [
-        "./.claude/skills/functype-developer"
-      ]
+      "skills": ["./.claude/skills/functype-developer"]
     }
   ]
 }

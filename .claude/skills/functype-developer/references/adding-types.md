@@ -32,14 +32,15 @@ touch test/mynewtype.spec.ts
 import type { Functor } from "@/functor"
 import type { Foldable } from "@/foldable"
 
-export type MyNewType<T> = Functor<T> & Foldable<T> & {
-  // Core operations
-  getValue(): T
-  isEmpty(): boolean
+export type MyNewType<T> = Functor<T> &
+  Foldable<T> & {
+    // Core operations
+    getValue(): T
+    isEmpty(): boolean
 
-  // Additional methods
-  filter(predicate: (value: T) => boolean): MyNewType<T>
-}
+    // Additional methods
+    filter(predicate: (value: T) => boolean): MyNewType<T>
+  }
 ```
 
 ### 4. Implement Constructor
@@ -59,13 +60,17 @@ export function MyNew<T>(value: T): MyNewType<T> {
       return value == null ? onEmpty() : onValue(value)
     },
 
-    foldLeft: <B>(z: B) => (op: (b: B, a: T) => B): B => {
-      return value == null ? z : op(z, value)
-    },
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: T) => B): B => {
+        return value == null ? z : op(z, value)
+      },
 
-    foldRight: <B>(z: B) => (op: (a: T, b: B) => B): B => {
-      return value == null ? z : op(value, z)
-    },
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: T, b: B) => B): B => {
+        return value == null ? z : op(value, z)
+      },
 
     // Custom methods
     getValue: () => value,
@@ -90,7 +95,7 @@ export function MyNew<T>(value: T): MyNewType<T> {
 MyNew.empty = <T>(): MyNewType<T> => MyNew<T>(null as any)
 
 MyNew.from = <T>(value: T | null | undefined): MyNewType<T> => {
-  return MyNew(value ?? null as any)
+  return MyNew(value ?? (null as any))
 }
 
 MyNew.of = <T>(value: T): MyNewType<T> => MyNew(value)
@@ -99,12 +104,14 @@ MyNew.of = <T>(value: T): MyNewType<T> => MyNew(value)
 ### 6. Add Exports
 
 **Update `src/index.ts`:**
+
 ```typescript
 export { MyNew } from "./mynewtype"
 export type { MyNewType } from "./mynewtype"
 ```
 
 **Update `package.json` exports:**
+
 ```json
 {
   "exports": {
@@ -140,13 +147,13 @@ describe("MyNewType", () => {
 
   describe("Functor", () => {
     it("should map over values", () => {
-      const result = MyNew(5).map(x => x * 2)
+      const result = MyNew(5).map((x) => x * 2)
       expect(result.getValue()).toBe(10)
     })
 
     it("should satisfy identity law", () => {
       const value = MyNew(5)
-      expect(value.map(x => x)).toEqual(value)
+      expect(value.map((x) => x)).toEqual(value)
     })
 
     it("should satisfy composition law", () => {
@@ -154,7 +161,7 @@ describe("MyNewType", () => {
       const f = (x: number) => x * 2
       const g = (x: number) => x + 1
 
-      expect(value.map(f).map(g)).toEqual(value.map(x => g(f(x))))
+      expect(value.map(f).map(g)).toEqual(value.map((x) => g(f(x))))
     })
   })
 
@@ -162,7 +169,7 @@ describe("MyNewType", () => {
     it("should fold with value", () => {
       const result = MyNew(5).fold(
         () => "empty",
-        x => `value: ${x}`
+        (x) => `value: ${x}`,
       )
       expect(result).toBe("value: 5")
     })
@@ -170,7 +177,7 @@ describe("MyNewType", () => {
     it("should fold when empty", () => {
       const result = MyNew.empty<number>().fold(
         () => "empty",
-        x => `value: ${x}`
+        (x) => `value: ${x}`,
       )
       expect(result).toBe("empty")
     })
@@ -179,8 +186,8 @@ describe("MyNewType", () => {
   describe("Custom Methods", () => {
     it("should filter values", () => {
       const value = MyNew(5)
-      expect(value.filter(x => x > 3).getValue()).toBe(5)
-      expect(value.filter(x => x > 10).isEmpty()).toBe(true)
+      expect(value.filter((x) => x > 3).getValue()).toBe(5)
+      expect(value.filter((x) => x > 10).isEmpty()).toBe(true)
     })
   })
 
@@ -203,10 +210,11 @@ describe("MyNewType", () => {
 **Add to Feature Matrix (`docs/FUNCTYPE_FEATURE_MATRIX.md`):**
 
 ```markdown
-| **MyNewType<T>** |  ✓  |  ✓  |  ✓  |  ...  |
+| **MyNewType<T>** | ✓ | ✓ | ✓ | ... |
 ```
 
 **Add help file (optional):**
+
 ```json
 // src/mynewtype/mynewtype.help.json
 {
@@ -228,6 +236,7 @@ pnpm validate
 ```
 
 This runs:
+
 - Format check
 - Lint check
 - All tests
@@ -240,9 +249,10 @@ This runs:
 If your type should support `flatMap`:
 
 ```typescript
-export type MyNewType<T> = Functor<T> & Monad<T> & {
-  // ...
-}
+export type MyNewType<T> = Functor<T> &
+  Monad<T> & {
+    // ...
+  }
 
 export function MyNew<T>(value: T): MyNewType<T> {
   return Base("MyNewType", {
@@ -264,10 +274,11 @@ export function MyNew<T>(value: T): MyNewType<T> {
   return Base("MyNewType", {
     // ... other methods
 
-    serialize: () => createSerializable({
-      type: "MyNewType",
-      value: value,
-    }),
+    serialize: () =>
+      createSerializable({
+        type: "MyNewType",
+        value: value,
+      }),
   })
 }
 ```

@@ -98,6 +98,9 @@ out
 dist
 dist-landing
 
+# Claude Code skill packages (generated artifacts, not source)
+dist/skills/
+
 # Gatsby files
 .cache/
 # Comment in the public line in if your project uses Gatsby and not Next.js

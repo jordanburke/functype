@@ -42,6 +42,7 @@ TypeName.from = <T>(source: T[]) => TypeName<T>(/* construct */)
 ```
 
 **Why not classes?**
+
 - Enables better tree-shaking
 - Simpler type inference
 - Aligns with functional programming principles
@@ -70,17 +71,16 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ```
 
 **Base provides:**
+
 - `Typeable` interface with type metadata
 - Standard `toString()` method
 - Consistent object structure
 - Type-safe access to internal state
 
 **Implementation:**
+
 ```typescript
-export function Base<T extends string, B extends Record<string, any>>(
-  type: T,
-  body: B
-): Typeable & B {
+export function Base<T extends string, B extends Record<string, any>>(type: T, body: B): Typeable & B {
   return {
     ...body,
     getType: () => type,
@@ -113,6 +113,7 @@ export const Option = Companion(OptionConstructor, OptionCompanion)
 ```
 
 **Result:**
+
 ```typescript
 // Constructor usage
 const opt = Option(5)
@@ -136,6 +137,7 @@ function process<T extends Type>(value: T): void {
 ```
 
 **Never use `any`:**
+
 ```typescript
 // ❌ Wrong
 function process(value: any): void
@@ -159,7 +161,7 @@ type Functor<F, A> = {
 
 // This allows writing generic functions that work with any Functor
 function double<F, A extends number>(fa: Functor<F, A>): Functor<F, A> {
-  return fa.map(a => a * 2)
+  return fa.map((a) => a * 2)
 }
 
 // Works with Option<number>, Either<E, number>, List<number>, etc.
@@ -177,18 +179,14 @@ type UserId = Brand<string, "UserId">
 
 // Constructor with validation
 const UserId = Brand<string, "UserId">(
-  (value: string): Either<string, string> =>
-    value.length > 0
-      ? Right(value)
-      : Left("UserId cannot be empty")
+  (value: string): Either<string, string> => (value.length > 0 ? Right(value) : Left("UserId cannot be empty")),
 )
 
 // Usage
-const userId = UserId.from("user-123")
-  .fold(
-    error => console.error(error),
-    id => processUser(id)  // id has type UserId, not string
-  )
+const userId = UserId.from("user-123").fold(
+  (error) => console.error(error),
+  (id) => processUser(id), // id has type UserId, not string
+)
 ```
 
 ## Functional Interfaces
@@ -217,6 +215,7 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ```
 
 **Laws:**
+
 1. Identity: `fa.map(x => x) === fa`
 2. Composition: `fa.map(f).map(g) === fa.map(x => g(f(x)))`
 
@@ -241,6 +240,7 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ```
 
 **Laws:**
+
 1. Identity: `v.ap(pure(x => x)) === v`
 2. Homomorphism: `pure(x).ap(pure(f)) === pure(f(x))`
 3. Interchange: `u.ap(pure(y)) === pure(f => f(y)).ap(u)`
@@ -267,6 +267,7 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 ```
 
 **Laws:**
+
 1. Left identity: `pure(a).flatMap(f) === f(a)`
 2. Right identity: `m.flatMap(pure) === m`
 3. Associativity: `m.flatMap(f).flatMap(g) === m.flatMap(x => f(x).flatMap(g))`
@@ -288,12 +289,16 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
     fold: <B>(onEmpty: () => B, onValue: (val: T) => B): B => {
       return value == null ? onEmpty() : onValue(value)
     },
-    foldLeft: <B>(z: B) => (op: (b: B, a: T) => B): B => {
-      return value == null ? z : op(z, value)
-    },
-    foldRight: <B>(z: B) => (op: (a: T, b: B) => B): B => {
-      return value == null ? z : op(value, z)
-    },
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: T) => B): B => {
+        return value == null ? z : op(z, value)
+      },
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: T, b: B) => B): B => {
+        return value == null ? z : op(value, z)
+      },
   })
 }
 ```
@@ -347,10 +352,11 @@ import { createSerializable } from "@/core/serializable"
 
 export function Option<T>(value: T | null | undefined): OptionType<T> {
   return Base("Option", {
-    serialize: () => createSerializable({
-      type: "Option",
-      value: value,
-    }),
+    serialize: () =>
+      createSerializable({
+        type: "Option",
+        value: value,
+      }),
   })
 }
 ```
@@ -422,12 +428,10 @@ export type { EitherType } from "./either"
 ```
 
 **Usage:**
-```typescript
-// Full bundle
-import { Option, Either } from "functype"
 
-// Selective import (smaller bundle)
-import { Option } from "functype/option"
+```typescript
+// Import from main bundle
+import { Option, Either } from "functype"
 ```
 
 ## Performance Considerations
@@ -449,12 +453,12 @@ This means unused exports are eliminated during bundling.
 Use `Lazy` and `LazyList` for deferred computation:
 
 ```typescript
-import { Lazy } from "functype/lazy"
+import { Lazy } from "functype"
 
 const expensive = Lazy(() => heavyComputation())
 // Not computed yet
 
-const value = expensive.value()  // Computed once
+const value = expensive.value() // Computed once
 const value2 = expensive.value() // Cached
 ```
 
@@ -466,7 +470,7 @@ Immutable operations have overhead. For performance-critical code:
 // ❌ Slow for large lists
 let result = List([])
 for (let i = 0; i < 10000; i++) {
-  result = result.append(i)  // Creates new list each time
+  result = result.append(i) // Creates new list each time
 }
 
 // ✅ Fast with native array, then convert
@@ -474,7 +478,7 @@ const items = []
 for (let i = 0; i < 10000; i++) {
   items.push(i)
 }
-const result = List(items)  // Single conversion
+const result = List(items) // Single conversion
 ```
 
 ## Error Handling
@@ -544,7 +548,7 @@ describe("Option", () => {
   describe("Functor Laws", () => {
     it("should satisfy identity", () => {
       const opt = Option(5)
-      expect(opt.map(x => x)).toEqual(opt)
+      expect(opt.map((x) => x)).toEqual(opt)
     })
   })
 })
