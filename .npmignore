@@ -5,3 +5,6 @@ typedocs/
 *.log
 *.tmp
 .DS_Store
+
+# Exclude generated README
+README.processed.md
