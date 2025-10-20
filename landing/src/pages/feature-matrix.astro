@@ -1,11 +1,13 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import { Content as FeatureMatrixContent } from '../content/feature-matrix.md';
 ---
 
 <Layout title="Feature Matrix - Functype">
-  <div class="min-h-screen bg-white">
+  <Navigation client:load />
+  <div class="min-h-screen bg-white pt-16">
     <!-- Hero Section -->
     <section class="px-6 py-20 text-center max-w-6xl mx-auto">
       <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Feature Matrix</h1>

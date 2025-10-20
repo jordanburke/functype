@@ -26,20 +26,16 @@ export default function Navigation() {
   }, [])
 
   const navItems = [
-    { label: "Home", href: "#home", id: "home" },
-    { label: "Features", href: "#features", id: "features" },
-    { label: "Core Types", href: "#core-types", id: "core-types" },
-    { label: "Quick Start", href: "#quick-start", id: "quick-start" },
-    { label: "Claude Skills", href: "#claude-skills", id: "claude-skills" },
+    { label: "Home", href: "/#home", id: "home" },
+    { label: "Features", href: "/#features", id: "features" },
+    { label: "Core Types", href: "/#core-types", id: "core-types" },
+    { label: "Quick Start", href: "/#quick-start", id: "quick-start" },
+    { label: "Claude Skills", href: "/#claude-skills", id: "claude-skills" },
   ]
 
-  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-    e.preventDefault()
-    const element = document.querySelector(href)
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" })
-      setIsOpen(false)
-    }
+  const handleNavClick = () => {
+    // Close mobile menu on navigation
+    setIsOpen(false)
   }
 
   return (
@@ -47,7 +43,7 @@ export default function Navigation() {
       <div className="max-w-7xl mx-auto px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <a href="#home" onClick={(e) => handleNavClick(e, "#home")} className="flex items-center space-x-2">
+          <a href="/" className="flex items-center space-x-2">
             <img src="/favicon.svg" alt="Functype" className="w-8 h-8" />
             <span className="font-bold text-xl text-gray-900">functype</span>
           </a>
@@ -58,7 +54,6 @@ export default function Navigation() {
               <a
                 key={item.id}
                 href={item.href}
-                onClick={(e) => handleNavClick(e, item.href)}
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   activeSection === item.id
                     ? "bg-blue-100 text-blue-700"
@@ -78,7 +73,7 @@ export default function Navigation() {
               rel="noopener noreferrer"
               className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
-              Docs
+              API Docs
             </a>
             <a
               href="https://github.com/jordanburke/functype"
@@ -122,7 +117,7 @@ export default function Navigation() {
               <a
                 key={item.id}
                 href={item.href}
-                onClick={(e) => handleNavClick(e, item.href)}
+                onClick={handleNavClick}
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
                   activeSection === item.id
                     ? "bg-blue-100 text-blue-700"
@@ -139,7 +134,7 @@ export default function Navigation() {
                 rel="noopener noreferrer"
                 className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md"
               >
-                Documentation
+                API Docs
               </a>
               <a
                 href="https://github.com/jordanburke/functype"
