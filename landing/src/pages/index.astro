@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation';
 import Hero from '../components/Hero';
 import Features from '../components/Features';
 import QuickStart from '../components/QuickStart';
@@ -9,10 +10,13 @@ import Footer from '../components/Footer';
 ---
 
 <Layout title="Functype - Scala-Inspired Functional Programming for TypeScript">
-  <Hero client:load />
-  <Features client:load />
-  <CoreTypes client:load />
-  <QuickStart client:load />
-  <ClaudeCodeSkills client:load />
-  <Footer client:load />
+  <Navigation client:load />
+  <div class="pt-16">
+    <Hero client:load />
+    <Features client:load />
+    <CoreTypes client:load />
+    <QuickStart client:load />
+    <ClaudeCodeSkills client:load />
+    <Footer client:load />
+  </div>
 </Layout>
