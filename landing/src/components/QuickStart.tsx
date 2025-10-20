@@ -61,8 +61,8 @@ export default function QuickStart() {
                 <div className="bg-gray-900 rounded-lg p-4">
                   <pre className="text-sm font-mono overflow-x-auto">
                     <code>
-                      <span className="text-purple-400">const</span> <span className="text-blue-300">result</span> ={" "}
-                      <span className="text-yellow-300">Option</span>
+                      <span className="text-purple-400">const</span> <span className="text-blue-300">result</span>{" "}
+                      <span className="text-purple-400">=</span> <span className="text-yellow-300">Option</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-blue-300">user</span>
                       <span className="text-gray-100">)</span>

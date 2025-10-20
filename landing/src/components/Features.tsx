@@ -1,6 +1,6 @@
 export default function Features() {
   return (
-    <section className="px-6 py-20 bg-white">
+    <section id="features" className="px-6 py-20 bg-white">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">Why Functype?</h2>
         <p className="text-xl text-gray-600 text-center mb-16 max-w-3xl mx-auto">
