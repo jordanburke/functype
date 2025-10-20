@@ -2,7 +2,10 @@ export default function Hero() {
   return (
     <section id="home" className="px-6 py-20 text-center max-w-6xl mx-auto">
       <div className="space-y-6">
-        <h1 className="text-5xl md:text-7xl font-bold text-gray-900">Functype</h1>
+        <div className="flex items-center justify-center gap-4 md:gap-6">
+          <img src="/favicon.svg" alt="functype logo" className="w-20 h-20 md:w-32 md:h-32" />
+          <h1 className="text-5xl md:text-7xl font-bold text-gray-900">functype</h1>
+        </div>
         <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
           Scala-Inspired Functional Programming for TypeScript
         </p>

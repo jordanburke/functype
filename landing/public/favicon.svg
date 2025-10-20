@@ -17,8 +17,8 @@
   <!-- (f: t) - Functype favicon -->
 
   <!-- Left parenthesis -->
-  <path d="M 18 32 Q 12 32 12 48 L 12 80 Q 12 96 18 96"
-        stroke-width="7" class="paren" stroke-linecap="round"/>
+  <path d="M 20 48 C 12 50 8 58 8 70 C 8 82 12 90 20 92"
+        stroke-width="6" class="paren" stroke-linecap="round" fill="none"/>
 
   <!-- f (lowercase) -->
   <text x="38" y="88" font-family="'Courier New', monospace" font-size="60" font-weight="600" text-anchor="middle" class="f-letter">f</text>
@@ -30,6 +30,6 @@
   <text x="88" y="88" font-family="'Courier New', monospace" font-size="60" font-weight="600" text-anchor="middle" class="t-letter">t</text>
 
   <!-- Right parenthesis -->
-  <path d="M 110 32 Q 116 32 116 48 L 116 80 Q 116 96 110 96"
-        stroke-width="7" class="paren" stroke-linecap="round"/>
+  <path d="M 108 48 C 116 50 120 58 120 70 C 120 82 116 90 108 92"
+        stroke-width="6" class="paren" stroke-linecap="round" fill="none"/>
 </svg>
