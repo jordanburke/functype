@@ -51,6 +51,9 @@ jobs:
         run: cd landing && pnpm build
 
       - name: Build TypeDoc
+        env:
+          BROWSER: none
+          CI: true
         run: node docs-ci.js
 
       - name: Prepare combined deployment

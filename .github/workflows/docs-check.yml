@@ -32,6 +32,9 @@ jobs:
 
       - name: Run documentation validation
         id: docs_validation
+        env:
+          BROWSER: none
+          CI: true
         run: |
           echo "Running documentation sync and validation..."
           pnpm docs:validate
