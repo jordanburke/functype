@@ -36,6 +36,7 @@ jobs:
           BROWSER: none
           CI: true
         run: |
+          npm config set browser false
           echo "Running documentation sync and validation..."
           pnpm docs:validate
         continue-on-error: true

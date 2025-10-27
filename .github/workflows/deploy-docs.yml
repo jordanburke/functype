@@ -54,7 +54,9 @@ jobs:
         env:
           BROWSER: none
           CI: true
-        run: node docs-ci.js
+        run: |
+          npm config set browser false
+          node docs-ci.js
 
       - name: Prepare combined deployment
         run: |
