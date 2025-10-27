@@ -67,10 +67,7 @@ export default function Navigation() {
 
           {/* Desktop External Links */}
           <div className="hidden md:flex items-center space-x-4">
-            <a
-              href="/api-docs"
-              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-            >
+            <a href="/api-docs" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
               API Docs
             </a>
             <a
