@@ -13,7 +13,7 @@
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "validate": "pnpm validate:core && pnpm validate:landing",
-    "validate:core": "pnpm format && pnpm lint && pnpm test && pnpm build",
+    "validate:core": "pnpm format && pnpm lint && pnpm test && pnpm docs:validate && pnpm build",
     "validate:landing": "cd landing && pnpm validate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -34,7 +34,8 @@
     "docs:preprocess": "tsx scripts/preprocess-docs.ts",
     "docs": "pnpm docs:preprocess && typedoc",
     "docs:watch": "typedoc --watch",
-    "docs:validate": "tsx scripts/validate-docs.ts",
+    "docs:sync": "tsx scripts/sync-docs.ts",
+    "docs:validate": "tsx scripts/validate-docs.ts && tsx scripts/sync-docs.ts",
     "postdocs": "node -e \"console.log('Documentation generated in ./typedocs')\"",
     "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js",
     "landing:dev": "cd landing && pnpm dev",

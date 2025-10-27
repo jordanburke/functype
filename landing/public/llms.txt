@@ -1,0 +1,40 @@
+# Functype
+
+> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns. Provides Option, Either, Try, List, Task, and more with a unified interface hierarchy.
+
+## Getting Started
+
+[README](https://github.com/jordanburke/functype/blob/main/README.md): Complete introduction with installation and usage examples
+[Quick Reference](https://github.com/jordanburke/functype/blob/main/docs/quick-reference.md): Concise guide to common patterns and operations
+[Examples](https://github.com/jordanburke/functype/blob/main/docs/examples.md): Practical code examples for all major features
+
+## Core Types
+
+[Option](https://functype.org/option.md): Handle nullable values safely with Some and None
+[Either](https://functype.org/either.md): Express success/failure with Left and Right
+[Try](https://functype.org/try.md): Safely execute operations that might throw exceptions
+[List](https://functype.org/list.md): Immutable array with functional operations
+[Task](https://functype.org/task.md): Sync/async operations with structured error handling
+
+## Advanced Features
+
+[Do-notation](https://functype.org/do-notation.md): Scala-like for-comprehensions with optimized performance
+[Pattern Matching](https://functype.org/match.md): Type-safe pattern matching with Match and Cond
+[Error Formatting](https://github.com/jordanburke/functype/blob/main/docs/error-formatting.md): Utilities for improved error visualization
+
+## API Documentation
+
+[Feature Matrix](https://functype.org/feature-matrix.md): Complete overview of interfaces supported by each data structure
+[API Docs](https://jordanburke.github.io/functype/): Full TypeDoc API documentation
+[AI Guide](https://github.com/jordanburke/functype/blob/main/docs/ai-guide.md): Guide for AI assistants working with functype
+
+## Development
+
+[Architecture](https://github.com/jordanburke/functype/blob/main/docs/HKT.md): Higher-kinded types and core architecture patterns
+[Bundle Optimization](https://github.com/jordanburke/functype/blob/main/docs/BUNDLE_OPTIMIZATION.md): Tree-shaking and import strategies
+
+## Optional
+
+[Roadmap](https://github.com/jordanburke/functype/blob/main/docs/ROADMAP.md): Future features and improvements
+[Tuple Examples](https://github.com/jordanburke/functype/blob/main/docs/TUPLE-EXAMPLES.md): Working with fixed-length arrays
+[Task Migration Guides](https://github.com/jordanburke/functype/blob/main/docs/tasks/v3/TASK_MIGRATION_GUIDE.md): Version upgrade guides

@@ -294,6 +294,40 @@ When implementing a new data structure that supports standard interfaces:
 5. Add comprehensive tests for all interface methods
 6. Run `pnpm validate` to verify everything works correctly
 
+### Documentation Update Checklist
+
+When making code changes that affect public APIs, features, or behavior, ensure documentation stays in sync:
+
+#### ✅ Always Required
+
+- **JSDoc Comments**: Update in source code (automatically appears in TypeDoc)
+- **TypeDoc Regeneration**: Run `pnpm docs` to regenerate API documentation
+- **Test Examples**: Add/update `#region` tags in tests for README code examples
+- **Validation**: Run `pnpm validate` before committing (includes docs validation)
+
+#### ✅ Update if Changed
+
+- **README.md**: Update if adding/changing core features, installation, or main examples
+- **docs/FUNCTYPE_FEATURE_MATRIX.md**: Update if adding/changing interfaces or data structures
+  - This file syncs to `landing/src/content/feature-matrix.md` via `pnpm docs:sync`
+- **docs/quick-reference.md**: Update if adding common patterns or usage examples
+- **landing/src/pages/\*.astro**: Update relevant type documentation pages (option, either, list, etc.)
+- **landing/public/llms.txt**: Update if adding major new features or documentation sections
+
+#### 🔄 Automated (No Action Needed)
+
+- TypeDoc API docs (generated from JSDoc in source code)
+- Landing site build (runs via `pnpm landing:build`)
+- Website deployment (CI/CD deploys on push to main branch)
+- Feature matrix sync (runs with `pnpm docs:sync`)
+
+#### 📝 Documentation Sync Commands
+
+- `pnpm docs` - Generate TypeDoc API documentation
+- `pnpm docs:sync` - Sync feature matrix and validate documentation
+- `pnpm docs:validate` - Run all documentation validation checks
+- `pnpm validate` - Full validation including docs (run before commit!)
+
 ### Debugging Tips
 
 - Use `toString()` method for readable output of any data structure

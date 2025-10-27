@@ -1,0 +1,115 @@
+name: Documentation Check
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "docs/**"
+      - "landing/**"
+      - "README.md"
+      - "CLAUDE.md"
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run documentation validation
+        id: docs_validation
+        run: |
+          echo "Running documentation sync and validation..."
+          pnpm docs:validate
+        continue-on-error: true
+
+      - name: Check if documentation needs updates
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Read CLAUDE.md to get the documentation checklist
+            const claudeMd = fs.readFileSync('CLAUDE.md', 'utf8');
+
+            // Create a comment with documentation reminders
+            const comment = `## 📚 Documentation Reminder
+
+            Changes detected in source code or documentation. Please ensure all documentation is up to date.
+
+            ### ✅ Documentation Checklist
+
+            When making code changes that affect public APIs, features, or behavior:
+
+            #### Always Required
+            - [ ] Update JSDoc comments in source code
+            - [ ] Run \`pnpm docs\` to regenerate TypeDoc
+            - [ ] Add/update test examples with \`#region\` tags for README
+            - [ ] Run \`pnpm validate\` before committing
+
+            #### Update if Changed
+            - [ ] **README.md** - If adding/changing core features or examples
+            - [ ] **docs/FUNCTYPE_FEATURE_MATRIX.md** - If adding/changing interfaces
+            - [ ] **docs/quick-reference.md** - If adding common patterns
+            - [ ] **landing/src/pages/*.astro** - Update relevant type docs
+            - [ ] **landing/public/llms.txt** - If adding major new features
+
+            #### 📝 Useful Commands
+            - \`pnpm docs\` - Generate TypeDoc API documentation
+            - \`pnpm docs:sync\` - Sync feature matrix and validate
+            - \`pnpm docs:validate\` - Run all documentation checks
+            - \`pnpm validate\` - Full validation including docs
+
+            See [CLAUDE.md](${context.payload.repository.html_url}/blob/${context.payload.pull_request.head.sha}/CLAUDE.md#documentation-update-checklist) for complete documentation guidelines.
+            `;
+
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+
+            const botComment = comments.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Documentation Reminder')
+            );
+
+            // Create or update comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body: comment
+              });
+            }
+
+      - name: Fail if validation failed
+        if: steps.docs_validation.outcome == 'failure'
+        run: |
+          echo "❌ Documentation validation failed!"
+          echo "Please run 'pnpm docs:validate' locally to see specific issues."
+          exit 1

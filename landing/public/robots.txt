@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 
 Sitemap: https://functype.org/sitemap.xml
+
+# llms.txt - Machine-readable documentation for LLMs
+# See https://llmstxt.org for more information
