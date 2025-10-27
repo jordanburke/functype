@@ -9,7 +9,7 @@
  * 3. Reports on the validation status
  */
 
-import { spawn } from "child_process"
+import { execSync, spawn } from "child_process"
 
 interface ValidationResult {
   step: string
@@ -82,6 +82,13 @@ class DocumentationValidator {
   }
 
   async validateTypeDocGeneration(): Promise<ValidationResult> {
+    // Disable npm browser opening in CI environments
+    try {
+      execSync("npm config set browser false", { stdio: "inherit" })
+    } catch (error) {
+      console.warn("⚠️  Could not set npm browser config:", error)
+    }
+
     return this.runCommand("pnpm", ["docs"], "Generating TypeDoc documentation with @includeCode references")
   }
 

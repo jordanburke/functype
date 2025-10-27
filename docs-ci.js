@@ -169,6 +169,13 @@ try {
   // Backup documentation files before running TypeDoc
   backupDocsFiles()
 
+  // Disable npm browser opening in CI environments
+  try {
+    execSync("npm config set browser false", { stdio: "inherit" })
+  } catch (error) {
+    console.warn("⚠️  Could not set npm browser config:", error)
+  }
+
   // Run TypeDoc
   console.log("Building documentation with TypeDoc...")
   execSync("npx typedoc", { stdio: "inherit" })
