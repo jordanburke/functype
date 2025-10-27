@@ -36,7 +36,6 @@
     "docs:watch": "typedoc --watch",
     "docs:sync": "tsx scripts/sync-docs.ts",
     "docs:validate": "tsx scripts/validate-docs.ts && tsx scripts/sync-docs.ts",
-    "postdocs": "node -e \"console.log('Documentation generated in ./typedocs')\"",
     "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js",
     "landing:dev": "cd landing && pnpm dev",
     "landing:build": "cd landing && pnpm build",
