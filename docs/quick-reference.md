@@ -512,3 +512,179 @@ const mixed = pipe(
     ),
 ) // "Result: 84"
 ```
+
+## Companion Pattern
+
+All major types in functype use the Companion pattern for consistent API design:
+
+```typescript
+import { Option, Either, List, Try } from "functype"
+
+// Constructor function usage
+const opt = Option(42) // Constructor
+const list = List([1, 2, 3]) // Constructor
+const right = Either.right(42) // Companion method
+
+// Companion methods (static methods)
+Option.from(value) // Alias for constructor
+Option.none<number>() // Create empty instance
+Either.left<Error, number>(err) // Create Left
+Either.right<Error, number>(42) // Create Right
+List.fromJSON(jsonString) // Deserialize from JSON
+Try.fromJSON(jsonString) // Deserialize from JSON
+
+// Type guards as companion methods
+if (Option.isSome(option)) {
+  // TypeScript knows option.value is defined
+  console.log(option.value)
+}
+
+if (Either.isRight(either)) {
+  // TypeScript knows either has Right value
+  console.log(either.value)
+}
+
+if (Try.isSuccess(tryValue)) {
+  // TypeScript knows tryValue succeeded
+  console.log(tryValue.value)
+}
+```
+
+## Type Guards
+
+Use static type guards for better type narrowing:
+
+```typescript
+import { Option, Either, Try } from "functype"
+
+// Option type guards
+const option: Option<number> = Option(42)
+
+if (Option.isSome(option)) {
+  option.value // TypeScript knows: number (not number | undefined)
+}
+
+if (Option.isNone(option)) {
+  // option.value is undefined here
+}
+
+// Either type guards
+const either: Either<Error, number> = Either.right(42)
+
+if (Either.isRight(either)) {
+  either.value // TypeScript knows: number
+}
+
+if (Either.isLeft(either)) {
+  either.value // TypeScript knows: Error
+}
+
+// Try type guards
+const tryValue: Try<number> = Try(() => 42)
+
+if (Try.isSuccess(tryValue)) {
+  tryValue.error // TypeScript knows: undefined
+}
+
+if (Try.isFailure(tryValue)) {
+  tryValue.error // TypeScript knows: Error
+}
+```
+
+## Serialization
+
+All major types support JSON/YAML/Binary serialization:
+
+```typescript
+import { Option, Either, List, Try } from "functype"
+
+// Serialize to different formats
+const option = Option(42)
+const serialized = option.serialize()
+
+const json = serialized.toJSON() // '{"_tag":"Some","value":42}'
+const yaml = serialized.toYAML() // '_tag: Some\nvalue: 42'
+const binary = serialized.toBinary() // Base64 encoded
+
+// Deserialize from JSON
+const opt1 = Option.fromJSON<number>('{"_tag":"Some","value":42}')
+const opt2 = Option.fromYAML<number>("_tag: Some\nvalue: 42")
+const opt3 = Option.fromBinary<number>(binary)
+
+// Works with all types
+const list = List([1, 2, 3])
+const listJson = list.serialize().toJSON()
+const restored = List.fromJSON<number>(listJson)
+
+const either = Either.right<Error, number>(42)
+const eitherJson = either.serialize().toJSON()
+const restoredEither = Either.fromJSON<Error, number>(eitherJson)
+```
+
+## Custom Companion Types
+
+Create your own types using the Companion pattern:
+
+```typescript
+import { Companion } from "functype/companion"
+
+// 1. Define interface
+interface Box<T> {
+  value: T
+  map: <U>(f: (v: T) => U) => Box<U>
+  get: () => T
+}
+
+// 2. Constructor function
+const BoxConstructor = <T>(value: T): Box<T> => ({
+  value,
+  map: <U>(f: (v: T) => U) => BoxConstructor(f(value)),
+  get: () => value,
+})
+
+// 3. Companion object with static methods
+const BoxCompanion = {
+  of: <T>(value: T) => BoxConstructor(value),
+  empty: <T>() => BoxConstructor(undefined as T),
+}
+
+// 4. Combine using Companion
+export const Box = Companion(BoxConstructor, BoxCompanion)
+
+// Usage
+const box1 = Box(10) // Constructor
+const box2 = Box.of(20) // Companion method
+const box3 = Box.empty<number>()
+
+box1.map((x) => x * 2).get() // 20
+```
+
+## Companion Helper Types
+
+Work with Companion objects using helper types:
+
+```typescript
+import { type CompanionMethods, type InstanceType, isCompanion } from "functype/companion"
+
+// Extract companion methods type
+type OptionMethods = CompanionMethods<typeof Option>
+// { from: ..., none: ..., isSome: ..., isNone: ..., fromJSON: ..., etc. }
+
+// Extract instance type
+type OptionInstance = InstanceType<typeof Option>
+// Option<unknown>
+
+// Runtime type guard
+if (isCompanion(Option)) {
+  console.log("Option is a Companion object")
+}
+
+// Use with custom types
+const methods: CompanionMethods<typeof Box> = {
+  of: Box.of,
+  empty: Box.empty,
+}
+
+type BoxInst = InstanceType<typeof Box>
+const instance: BoxInst = Box(42)
+```

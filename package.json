@@ -171,6 +171,18 @@
         "types": "./dist/branded/index.d.ts",
         "default": "./dist/branded/index.mjs"
       }
+    },
+    "./companion": {
+      "import": {
+        "types": "./dist/companion/index.d.ts",
+        "default": "./dist/companion/index.mjs"
+      }
+    },
+    "./serialization": {
+      "import": {
+        "types": "./dist/serialization/index.d.ts",
+        "default": "./dist/serialization/index.mjs"
+      }
     }
   },
   "files": [
