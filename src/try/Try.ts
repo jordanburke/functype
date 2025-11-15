@@ -10,6 +10,7 @@ import { List } from "@/list"
 import { None, Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Reshapeable } from "@/reshapeable"
+import { createCustomSerializer, createSerializer } from "@/serialization"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -95,13 +96,7 @@ const Success = <T>(value: T): Try<T> => ({
   toList: () => List([value]),
   toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "Success", value }),
-      toYAML: () => `_tag: Success\nvalue: ${stringify(value)}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Success", value })).toString("base64"),
-    }
-  },
+  serialize: () => createSerializer("Success", value),
   get size() {
     return 1
   },
@@ -161,14 +156,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   pipe: <U>(_f: (value: T) => U) => {
     throw error
   },
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack }),
-      toYAML: () => `_tag: Failure\nerror: ${error.message}\nstack: ${error.stack}`,
-      toBinary: () =>
-        Buffer.from(JSON.stringify({ _tag: "Failure", error: error.message, stack: error.stack })).toString("base64"),
-    }
-  },
+  serialize: () => createCustomSerializer({ _tag: "Failure", error: error.message, stack: error.stack }),
   get size() {
     return 0
   },
@@ -202,14 +190,28 @@ const TryConstructor = <T>(f: () => T): Try<T> => {
 
 const TryCompanion = {
   /**
+   * Type guard to check if a Try is Success
+   * @param tryValue - The Try to check
+   * @returns True if Try is Success
+   */
+  isSuccess: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Success"; error: undefined } =>
+    tryValue.isSuccess(),
+  /**
+   * Type guard to check if a Try is Failure
+   * @param tryValue - The Try to check
+   * @returns True if Try is Failure
+   */
+  isFailure: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Failure"; error: Error } =>
+    tryValue.isFailure(),
+  /**
    * Creates a Try from JSON string
    * @param json - The JSON string
    * @returns Try instance
    */
   fromJSON: <T>(json: string): Try<T> => {
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { _tag: string; value?: T; error?: string; stack?: string }
     if (parsed._tag === "Success") {
-      return Success<T>(parsed.value)
+      return Success<T>(parsed.value as T)
     } else {
       const error = new Error(parsed.error)
       if (parsed.stack) {
@@ -237,7 +239,7 @@ const TryCompanion = {
       if (!valueStr) {
         return Failure<T>(new Error("Invalid YAML format for Try Success"))
       }
-      const value = JSON.parse(valueStr)
+      const value = JSON.parse(valueStr) as T
       return Success<T>(value)
     } else {
       const errorMsg = lines[1]?.split(": ")[1]

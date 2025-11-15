@@ -4,6 +4,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
 import type { Reshapeable } from "@/reshapeable"
+import { createSerializer } from "@/serialization"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -228,13 +229,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toString: () => `Some(${stringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "Some", value }),
-      toYAML: () => `_tag: Some\nvalue: ${stringify(value)}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Some", value })).toString("base64"),
-    }
-  },
+  serialize: () => createSerializer("Some", value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<T> {
     return { ok: true, value }
@@ -300,13 +295,7 @@ const NONE: Option<never> = {
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
   pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "None", value: null }),
-      toYAML: () => "_tag: None\nvalue: null",
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "None", value: null })).toString("base64"),
-    }
-  },
+  serialize: () => createSerializer("None", null),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<never> {
     return { ok: false, empty: true }
@@ -345,13 +334,25 @@ const OptionCompanion = {
    */
   none: <T>() => None<T>(),
   /**
+   * Type guard to check if an Option is Some
+   * @param option - The Option to check
+   * @returns True if Option is Some
+   */
+  isSome: <T>(option: Option<T>): option is Option<T> & { value: T; isEmpty: false } => option.isSome(),
+  /**
+   * Type guard to check if an Option is None
+   * @param option - The Option to check
+   * @returns True if Option is None
+   */
+  isNone: <T>(option: Option<T>): option is Option<T> & { value: undefined; isEmpty: true } => option.isNone(),
+  /**
    * Creates an Option from JSON string
    * @param json - The JSON string
    * @returns Option instance
    */
   fromJSON: <T>(json: string): Option<T> => {
-    const parsed = JSON.parse(json)
-    return parsed._tag === "Some" ? Some<T>(parsed.value) : None<T>()
+    const parsed = JSON.parse(json) as { _tag: string; value: T | null }
+    return parsed._tag === "Some" ? Some<T>(parsed.value as T) : None<T>()
   },
   /**
    * Creates an Option from YAML string
@@ -365,8 +366,8 @@ const OptionCompanion = {
     if (!tag || !valueStr) {
       return None<T>()
     }
-    const value = valueStr === "null" ? null : JSON.parse(valueStr)
-    return tag === "Some" ? Some<T>(value) : None<T>()
+    const value = valueStr === "null" ? null : (JSON.parse(valueStr) as T)
+    return tag === "Some" ? Some<T>(value as T) : None<T>()
   },
   /**
    * Creates an Option from binary string

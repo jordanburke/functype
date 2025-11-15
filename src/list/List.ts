@@ -6,6 +6,7 @@ import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
+import { createSerializer } from "@/serialization"
 import { Set } from "@/set/Set"
 import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
@@ -167,13 +168,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     pipe: <U>(f: (value: A[]) => U) => f([...array]),
 
-    serialize: () => {
-      return {
-        toJSON: () => JSON.stringify({ _tag: "List", value: array }),
-        toYAML: () => `_tag: List\nvalue: ${stringify(array)}`,
-        toBinary: () => Buffer.from(JSON.stringify({ _tag: "List", value: array })).toString("base64"),
-      }
-    },
+    serialize: () => createSerializer("List", array),
     // Implement Doable interface for Do-notation
     doUnwrap(): DoResult<A> {
       if (array.length === 0) {
@@ -195,7 +190,7 @@ const ListCompanion = {
    * @returns List instance
    */
   fromJSON: <A>(json: string): List<A> => {
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { _tag: string; value: A[] }
     return List<A>(parsed.value)
   },
 
@@ -210,7 +205,7 @@ const ListCompanion = {
     if (!valueStr) {
       return List<A>([])
     }
-    const value = JSON.parse(valueStr)
+    const value = JSON.parse(valueStr) as A[]
     return List<A>(value)
   },
 

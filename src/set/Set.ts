@@ -3,6 +3,7 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
+import { createSerializer } from "@/serialization"
 import type { Type } from "@/types"
 
 import { ESSet, type ESSetType } from "./shim"
@@ -223,13 +224,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     pipe: <U>(f: (value: A[]) => U) => f(Array.from(values)),
 
-    serialize: () => {
-      return {
-        toJSON: () => JSON.stringify({ _tag: "Set", value: Array.from(values) }),
-        toYAML: () => `_tag: Set\nvalue: ${JSON.stringify(Array.from(values))}`,
-        toBinary: () => Buffer.from(JSON.stringify({ _tag: "Set", value: Array.from(values) })).toString("base64"),
-      }
-    },
+    serialize: () => createSerializer("Set", Array.from(values)),
   }
 
   return set
@@ -244,7 +239,7 @@ const SetCompanion = {
    * @returns Set instance
    */
   fromJSON: <A>(json: string): Set<A> => {
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { _tag: string; value: A[] }
     return Set<A>(parsed.value)
   },
 
@@ -259,7 +254,7 @@ const SetCompanion = {
     if (!valueStr) {
       return Set<A>([])
     }
-    const value = JSON.parse(valueStr)
+    const value = JSON.parse(valueStr) as A[]
     return Set<A>(value)
   },
 

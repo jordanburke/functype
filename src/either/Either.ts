@@ -1,5 +1,6 @@
 import stringify from "safe-stable-stringify"
 
+import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
@@ -7,6 +8,7 @@ import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
+import { createSerializer } from "@/serialization"
 import { Try } from "@/try"
 import type { AsyncMonad, Promisable } from "@/typeclass"
 import type { Type } from "@/types"
@@ -153,13 +155,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   toValue: () => ({ _tag: "Right", value }),
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "Right", value }),
-      toYAML: () => `_tag: Right\nvalue: ${stringify(value)}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Right", value })).toString("base64"),
-    }
-  },
+  serialize: () => createSerializer("Right", value),
   get size() {
     return 1
   },
@@ -247,13 +243,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   toValue: () => ({ _tag: "Left", value }),
   pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => {
-    return {
-      toJSON: () => JSON.stringify({ _tag: "Left", value }),
-      toYAML: () => `_tag: Left\nvalue: ${stringify(value)}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Left", value })).toString("base64"),
-    }
-  },
+  serialize: () => createSerializer("Left", value),
   get size() {
     return 0
   },
@@ -310,7 +300,51 @@ export const tryCatchAsync = async <L extends Type, R extends Type>(
   }
 }
 
-export const Either = {
+/**
+ * Either constructor that creates Left or Right based on the isRight parameter
+ * @param value - The value to wrap
+ * @param isRight - If true, creates Right, otherwise creates Left
+ * @returns Either instance
+ */
+const EitherConstructor = <L extends Type, R extends Type>(value: R | L, isRight: boolean): Either<L, R> =>
+  isRight ? Right<L, R>(value as R) : Left<L, R>(value as L)
+
+const EitherCompanion = {
+  /**
+   * Creates a Left instance
+   * @param value - The left value
+   * @returns Left Either
+   */
+  left: <L extends Type, R extends Type>(value: L): Either<L, R> => Left<L, R>(value),
+
+  /**
+   * Creates a Right instance
+   * @param value - The right value
+   * @returns Right Either
+   */
+  right: <L extends Type, R extends Type>(value: R): Either<L, R> => Right<L, R>(value),
+
+  /**
+   * Type guard to check if an Either is Right
+   * @param either - The Either to check
+   * @returns True if Either is Right
+   */
+  isRight: <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
+    either.isRight(),
+
+  /**
+   * Type guard to check if an Either is Left
+   * @param either - The Either to check
+   * @returns True if Either is Left
+   */
+  isLeft: <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
+    either.isLeft(),
+
+  /**
+   * Combines an array of Eithers into a single Either containing an array
+   * @param eithers - Array of Either values
+   * @returns Either with array of values or first Left encountered
+   */
   sequence: <L extends Type, R extends Type>(eithers: Either<L, R>[]): Either<L, R[]> => {
     return eithers.reduce<Either<L, R[]>>((acc, either) => {
       if (acc.isLeft()) return acc
@@ -319,27 +353,58 @@ export const Either = {
     }, Right<L, R[]>([]))
   },
 
+  /**
+   * Maps an array through a function that returns Either, then sequences the results
+   * @param arr - Array of values
+   * @param f - Function that returns Either
+   * @returns Either with array of results or first Left encountered
+   */
   traverse: <L extends Type, R extends Type, U extends Type>(
     arr: R[],
     f: (value: R) => Either<L, U>,
   ): Either<L, U[]> => {
-    return Either.sequence(arr.map(f))
+    return EitherCompanion.sequence(arr.map(f))
   },
 
+  /**
+   * Creates an Either from a nullable value
+   * @param value - The value that might be null or undefined
+   * @param leftValue - The value to use for Left if value is null/undefined
+   * @returns Right if value is not null/undefined, Left otherwise
+   */
   fromNullable: <L extends Type, R extends Type>(value: R | null | undefined, leftValue: L): Either<L, R> =>
     value === null || value === undefined ? Left(leftValue) : Right(value as R),
 
+  /**
+   * Creates an Either based on a predicate
+   * @param value - The value to test
+   * @param predicate - The predicate function
+   * @param leftValue - The value to use for Left if predicate fails
+   * @returns Right if predicate passes, Left otherwise
+   */
   fromPredicate: <L extends Type, R extends Type>(
     value: R,
     predicate: (value: R) => boolean,
     leftValue: L,
   ): Either<L, R> => (predicate(value) ? Right(value) : Left(leftValue)),
 
+  /**
+   * Applicative apply - applies a wrapped function to a wrapped value
+   * @param eitherF - Either containing a function
+   * @param eitherV - Either containing a value
+   * @returns Either with function applied to value
+   */
   ap: <L extends Type, R extends Type, U extends Type>(
     eitherF: Either<L, (value: R) => U>,
     eitherV: Either<L, R>,
   ): Either<L, U> => eitherF.flatMap((f) => eitherV.map(f)),
 
+  /**
+   * Creates an Either from a Promise
+   * @param promise - The Promise to convert
+   * @param onRejected - Function to convert rejection reason to Left value
+   * @returns Promise that resolves to Either
+   */
   fromPromise: async <L, R>(promise: Promise<R>, onRejected: (reason: unknown) => L): Promise<Either<L, R>> => {
     try {
       const result = await promise
@@ -349,11 +414,21 @@ export const Either = {
     }
   },
 
+  /**
+   * Creates an Either from JSON string
+   * @param json - The JSON string
+   * @returns Either instance
+   */
   fromJSON: <L extends Type, R extends Type>(json: string): Either<L, R> => {
-    const parsed = JSON.parse(json)
-    return parsed._tag === "Right" ? Right<L, R>(parsed.value) : Left<L, R>(parsed.value)
+    const parsed = JSON.parse(json) as { _tag: string; value: L | R }
+    return parsed._tag === "Right" ? Right<L, R>(parsed.value as R) : Left<L, R>(parsed.value as L)
   },
 
+  /**
+   * Creates an Either from YAML string
+   * @param yaml - The YAML string
+   * @returns Either instance
+   */
   fromYAML: <L extends Type, R extends Type>(yaml: string): Either<L, R> => {
     const lines = yaml.split("\n")
     const tag = lines[0]?.split(": ")[1]
@@ -361,12 +436,19 @@ export const Either = {
     if (!tag || !valueStr) {
       throw new Error("Invalid YAML format for Either")
     }
-    const value = JSON.parse(valueStr)
-    return tag === "Right" ? Right<L, R>(value) : Left<L, R>(value)
+    const value = JSON.parse(valueStr) as L | R
+    return tag === "Right" ? Right<L, R>(value as R) : Left<L, R>(value as L)
   },
 
+  /**
+   * Creates an Either from binary string
+   * @param binary - The binary string
+   * @returns Either instance
+   */
   fromBinary: <L extends Type, R extends Type>(binary: string): Either<L, R> => {
     const json = Buffer.from(binary, "base64").toString()
-    return Either.fromJSON<L, R>(json)
+    return EitherCompanion.fromJSON<L, R>(json)
   },
 }
+
+export const Either = Companion(EitherConstructor, EitherCompanion)

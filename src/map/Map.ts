@@ -5,6 +5,7 @@ import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
+import { createSerializer } from "@/serialization"
 import { Set } from "@/set/Set"
 import type { Traversable } from "@/traversable/Traversable"
 import { Tuple } from "@/tuple/Tuple"
@@ -192,14 +193,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toString,
     toValue: () => ({ _tag: "Map" as const, value: Array.from(state.values.entries()) }),
     pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
-    serialize: () => {
-      return {
-        toJSON: () => JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) }),
-        toYAML: () => `_tag: Map\nvalue: ${JSON.stringify(Array.from(state.values.entries()))}`,
-        toBinary: () =>
-          Buffer.from(JSON.stringify({ _tag: "Map", value: Array.from(state.values.entries()) })).toString("base64"),
-      }
-    },
+    serialize: () => createSerializer("Map", Array.from(state.values.entries())),
   }
 }
 
@@ -213,7 +207,7 @@ const MapCompanion = {
    * @returns Map instance
    */
   fromJSON: <K, V>(json: string): Map<K, V> => {
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { _tag: string; value: Array<[K, V]> }
     return Map<K, V>(parsed.value)
   },
 
@@ -228,7 +222,7 @@ const MapCompanion = {
     if (!valueStr) {
       return Map<K, V>([])
     }
-    const value = JSON.parse(valueStr)
+    const value = JSON.parse(valueStr) as Array<[K, V]>
     return Map<K, V>(value)
   },
 

@@ -24,5 +24,6 @@ export function Companion<ObjectF extends object, CompanionF extends object>(
   object: ObjectF,
   companion: CompanionF,
 ): ObjectF & CompanionF {
+  // eslint-disable-next-line functional/immutable-data
   return Object.assign(object, companion)
 }
