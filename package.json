@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -49,11 +49,11 @@
     "@semantic-release/github": "^11.0.6",
     "@semantic-release/npm": "^12.0.2",
     "@semantic-release/release-notes-generator": "^14.1.0",
-    "@types/node": "^22.19.0",
-    "@typescript-eslint/eslint-plugin": "^8.46.3",
-    "@typescript-eslint/parser": "^8.46.3",
-    "@vitest/coverage-v8": "^4.0.8",
-    "@vitest/ui": "^4.0.8",
+    "@types/node": "^22.19.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.4",
+    "@typescript-eslint/parser": "^8.46.4",
+    "@vitest/coverage-v8": "^4.0.9",
+    "@vitest/ui": "^4.0.9",
     "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-config-functype": "1.3.0",
@@ -67,11 +67,11 @@
     "rimraf": "^6.1.0",
     "semantic-release": "^24.2.9",
     "ts-node": "^10.9.2",
-    "tsup": "^8.5.0",
+    "tsup": "^8.5.1",
     "tsx": "^4.20.6",
     "typedoc": "^0.28.14",
     "typescript": "5.9.2",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.9"
   },
   "types": "./dist/index.d.ts",
   "module": "./dist/index.mjs",
@@ -192,5 +192,5 @@
     "safe-stable-stringify": "^2.5.0"
   },
   "sideEffects": false,
-  "packageManager": "pnpm@10.21.0+sha512.da3337267e400fdd3d479a6c68079ac6db01d8ca4f67572083e722775a796788a7a9956613749e000fac20d424b594f7a791a5f4e2e13581c5ef947f26968a40"
+  "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c"
 }
