@@ -43,6 +43,47 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
 
+## Companion Methods
+
+All types follow the **Companion pattern** (inspired by Scala), combining constructor functions with static utility methods. Each type provides:
+
+### Common Creation Methods
+
+| Data Structure  | of  | from | pure | empty | none | left | right | success | failure |
+| --------------- | :-: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :-----: |
+| **Option<T>**   |  ✓  |  ✓   |  ✗   |   ✗   |  ✓   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Either<L,R>** |  ✗  |  ✗   |  ✗   |   ✗   |  ✗   |  ✓   |   ✓   |    ✗    |    ✗    |
+| **Try<T>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
+| **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Map<K,V>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Lazy<T>**     |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Stack<A>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **LazyList<A>** |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Tuple<T[]>**  |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Identity<T>** |  ✓  |  ✗   |  ✓   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Ref<A>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+
+### Type Guards
+
+Static type guards for narrowing types:
+
+| Data Structure  | Type Guard Methods                           |
+| --------------- | -------------------------------------------- |
+| **Option<T>**   | `isSome(option)`, `isNone(option)`           |
+| **Either<L,R>** | `isLeft(either)`, `isRight(either)`          |
+| **Try<T>**      | `isSuccess(tryValue)`, `isFailure(tryValue)` |
+
+### Serialization Methods
+
+All Serializable types provide static deserialization methods:
+
+- `fromJSON(json: string): T` - Deserialize from JSON
+- `fromYAML(yaml: string): T` - Deserialize from YAML
+- `fromBinary(binary: string): T` - Deserialize from base64-encoded binary
+
+**Note**: See `docs/companion-pattern.md` for complete guide on the Companion pattern.
+
 ## Key Methods by Interface
 
 ### Functor

@@ -1,3 +1,4 @@
+import { Companion } from "@/companion/Companion"
 import type { Type } from "@/types"
 
 /**
@@ -57,7 +58,7 @@ export interface Ref<A> {
 /**
  * Creates a new mutable reference containing the given value
  */
-export function Ref<A extends Type>(initial: A): Ref<A> {
+const RefConstructor = <A extends Type>(initial: A): Ref<A> => {
   let _value = initial
 
   const ref: Ref<A> = {
@@ -108,5 +109,13 @@ export function Ref<A extends Type>(initial: A): Ref<A> {
   return ref
 }
 
-// Static methods
-Ref.of = Ref
+const RefCompanion = {
+  /**
+   * Creates a Ref. Alias for Ref constructor.
+   * @param initial - The initial value
+   * @returns Ref instance
+   */
+  of: <A extends Type>(initial: A) => RefConstructor(initial),
+}
+
+export const Ref = Companion(RefConstructor, RefCompanion)

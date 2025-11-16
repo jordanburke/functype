@@ -30,6 +30,7 @@
 
 ## Development
 
+[Companion Pattern](https://github.com/jordanburke/functype/blob/main/docs/companion-pattern.md): Scala-inspired pattern combining constructors with static utilities
 [Architecture](https://github.com/jordanburke/functype/blob/main/docs/HKT.md): Higher-kinded types and core architecture patterns
 [Bundle Optimization](https://github.com/jordanburke/functype/blob/main/docs/BUNDLE_OPTIMIZATION.md): Tree-shaking and import strategies
 
