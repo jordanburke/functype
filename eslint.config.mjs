@@ -70,7 +70,6 @@ export default [
     },
 
     rules: {
-      "functional/prefer-immutable-types": "off",
       "functional/no-throw-statements": "off",
       // Project-specific overrides to functype defaults
       "functional/no-let": "warn", // More lenient than functype's default "error"
