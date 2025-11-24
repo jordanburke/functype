@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup"
+import { defineConfig } from "tsdown"
 
 const isProduction = process.env.NODE_ENV === "production"
 
@@ -40,12 +40,12 @@ export default defineConfig({
   sourcemap: isProduction,
   clean: true,
   minify: isProduction,
-  bundle: true,
   target: "es2020",
   outDir: "dist",
   platform: "neutral",
   treeshake: true,
-  outExtension: () => ({
-    js: ".mjs",
+  outExtensions: () => ({
+    js: ".js",
+    dts: ".d.ts",
   }),
 })

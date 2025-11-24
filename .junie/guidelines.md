@@ -52,12 +52,12 @@ The project uses the following build tools:
   - Strict type checking enabled
   - Path alias: `@/*` maps to `./src/*`
 
-- **tsup**: Configuration in `tsup.config.ts`
+- **tsdown**: Configuration in `tsdown.config.ts`
   - Bundles the code into ESM format
   - Creates separate entry points for different modules
   - Generates type declarations
   - Minifies code in production builds
-  - Outputs to the `dist` directory with `.mjs` extension
+  - Outputs to the `dist` directory with `.js` extension
 
 ## Testing Information
 

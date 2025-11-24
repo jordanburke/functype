@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -23,9 +23,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "build": "rimraf dist && cross-env NODE_ENV=production tsup",
-    "build:watch": "tsup --watch",
-    "dev": "tsup --watch",
+    "build": "rimraf dist && cross-env NODE_ENV=production tsdown",
+    "build:watch": "tsdown --watch",
+    "dev": "tsdown --watch",
     "compile": "tsc --noEmit",
     "clean": "rimraf dist",
     "prepublishOnly": "pnpm validate",
@@ -53,120 +53,120 @@
     "fast-check": "^4.3.0",
     "globals": "^16.5.0",
     "semantic-release": "^24.2.9",
-    "tsup": "^8.5.1",
+    "tsdown": "^0.16.6",
     "tsx": "^4.20.6",
     "typedoc": "^0.28.14",
     "typescript-template-configs": "^4.0.0"
   },
   "types": "./dist/index.d.ts",
-  "module": "./dist/index.mjs",
+  "module": "./dist/index.js",
   "exports": {
     ".": {
       "import": {
         "types": "./dist/index.d.ts",
-        "default": "./dist/index.mjs"
+        "default": "./dist/index.js"
       }
     },
     "./option": {
       "import": {
         "types": "./dist/option/index.d.ts",
-        "default": "./dist/option/index.mjs"
+        "default": "./dist/option/index.js"
       }
     },
     "./either": {
       "import": {
         "types": "./dist/either/index.d.ts",
-        "default": "./dist/either/index.mjs"
+        "default": "./dist/either/index.js"
       }
     },
     "./try": {
       "import": {
         "types": "./dist/try/index.d.ts",
-        "default": "./dist/try/index.mjs"
+        "default": "./dist/try/index.js"
       }
     },
     "./list": {
       "import": {
         "types": "./dist/list/index.d.ts",
-        "default": "./dist/list/index.mjs"
+        "default": "./dist/list/index.js"
       }
     },
     "./conditional": {
       "import": {
         "types": "./dist/conditional/index.d.ts",
-        "default": "./dist/conditional/index.mjs"
+        "default": "./dist/conditional/index.js"
       }
     },
     "./do": {
       "import": {
         "types": "./dist/do/index.d.ts",
-        "default": "./dist/do/index.mjs"
+        "default": "./dist/do/index.js"
       }
     },
     "./lazy": {
       "import": {
         "types": "./dist/lazy/index.d.ts",
-        "default": "./dist/lazy/index.mjs"
+        "default": "./dist/lazy/index.js"
       }
     },
     "./task": {
       "import": {
         "types": "./dist/core/task/index.d.ts",
-        "default": "./dist/core/task/index.mjs"
+        "default": "./dist/core/task/index.js"
       }
     },
     "./fpromise": {
       "import": {
         "types": "./dist/fpromise/index.d.ts",
-        "default": "./dist/fpromise/index.mjs"
+        "default": "./dist/fpromise/index.js"
       }
     },
     "./functype": {
       "import": {
         "types": "./dist/functype/index.d.ts",
-        "default": "./dist/functype/index.mjs"
+        "default": "./dist/functype/index.js"
       }
     },
     "./typeclass": {
       "import": {
         "types": "./dist/typeclass/index.d.ts",
-        "default": "./dist/typeclass/index.mjs"
+        "default": "./dist/typeclass/index.js"
       }
     },
     "./map": {
       "import": {
         "types": "./dist/map/index.d.ts",
-        "default": "./dist/map/index.mjs"
+        "default": "./dist/map/index.js"
       }
     },
     "./set": {
       "import": {
         "types": "./dist/set/index.d.ts",
-        "default": "./dist/set/index.mjs"
+        "default": "./dist/set/index.js"
       }
     },
     "./tuple": {
       "import": {
         "types": "./dist/tuple/index.d.ts",
-        "default": "./dist/tuple/index.mjs"
+        "default": "./dist/tuple/index.js"
       }
     },
     "./branded": {
       "import": {
         "types": "./dist/branded/index.d.ts",
-        "default": "./dist/branded/index.mjs"
+        "default": "./dist/branded/index.js"
       }
     },
     "./companion": {
       "import": {
         "types": "./dist/companion/index.d.ts",
-        "default": "./dist/companion/index.mjs"
+        "default": "./dist/companion/index.js"
       }
     },
     "./serialization": {
       "import": {
         "types": "./dist/serialization/index.d.ts",
-        "default": "./dist/serialization/index.mjs"
+        "default": "./dist/serialization/index.js"
       }
     }
   },
