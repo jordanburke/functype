@@ -213,22 +213,6 @@ describe("MyNewType", () => {
 | **MyNewType<T>** | ✓ | ✓ | ✓ | ... |
 ```
 
-**Add help file (optional):**
-
-```json
-// src/mynewtype/mynewtype.help.json
-{
-  "name": "MyNewType",
-  "description": "Brief description of the type",
-  "examples": [
-    {
-      "title": "Basic Usage",
-      "code": "const value = MyNew(5)"
-    }
-  ]
-}
-```
-
 ### 9. Validate
 
 ```bash
@@ -373,4 +357,3 @@ Before submitting:
 - [ ] Functor/Monad laws tested
 - [ ] Feature Matrix updated
 - [ ] `pnpm validate` passes
-- [ ] Documentation added (optional help file)

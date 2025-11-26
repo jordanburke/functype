@@ -146,8 +146,7 @@ Key strict settings enabled:
 - **Selective imports**: Package.json exports field enables importing specific modules
 - **Base pattern**: Use Base function from core/base to add common functionality
 - **Type hierarchy**: Types build on shared abstractions (Functor → Monad → specific types)
-- **Help system**: JSON help files for each module (e.g., `option.help.json`)
-- **Tools directory**: Contains AI integration examples and pattern suggestions
+- **CLI documentation**: Run `npx functype` for LLM-optimized API reference
 
 ## Documentation Standards
 
@@ -335,12 +334,3 @@ When making code changes that affect public APIs, features, or behavior, ensure 
 - Use `ErrorFormatter` for structured error output
 - Run tests with `--reporter=verbose` for detailed output
 - Use `pnpm dev` for development with better debugging info
-
-## AI Integration Tools
-
-The project includes sophisticated tooling for AI assistance:
-
-- **Pattern Suggestion Tool**: Converts JavaScript patterns to functype equivalents
-- **Functype Lookup Tool**: Fuzzy search for functype methods and patterns
-- **Example Scripts**: Located in `src/tools/examples/`
-- **Pattern Registry**: Compiled transformation patterns for common conversions

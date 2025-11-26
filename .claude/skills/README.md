@@ -69,7 +69,7 @@ functype-user/
 - Common use cases (validation, error handling, collections)
 - API lookup by type
 - Debugging tips
-- Reference to functype tools (pattern-suggester, functype-lookup)
+- CLI documentation access (`npx functype`)
 
 ### functype-developer
 
@@ -185,7 +185,6 @@ Before packaging or updating skills, verify the following to prevent errors:
 
 ### Common Import Mistakes to Avoid
 
-- ❌ `import { suggestPattern } from "functype/tools/pattern-suggester"` (tools not exported)
 - ❌ `import { Base } from "functype/core/base"` (internal paths not exported)
 - ❌ `import { Option } from "functype/option"` (subpath imports don't work)
 - ✅ `import { Option } from "functype"` (correct - use main bundle)
