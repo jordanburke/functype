@@ -8,6 +8,7 @@ const modules = ["option", "either", "try", "list", "fpromise", "map", "set", "t
 // Create entry points for each module
 const entries = {
   index: "src/index.ts",
+  "cli/index": "src/cli/index.ts",
   ...Object.fromEntries(
     modules.map((module) => {
       // Special case for task which is in core/task

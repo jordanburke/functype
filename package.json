@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.18.2",
+  "version": "0.19.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -23,7 +23,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
-    "build": "rimraf dist && cross-env NODE_ENV=production tsdown",
+    "build": "rimraf dist && pnpm extract:interfaces && cross-env NODE_ENV=production tsdown",
+    "extract:interfaces": "tsx scripts/extract-interfaces.ts",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "compile": "tsc --noEmit",
@@ -169,6 +170,9 @@
         "default": "./dist/serialization/index.js"
       }
     }
+  },
+  "bin": {
+    "functype": "./dist/cli/index.js"
   },
   "files": [
     "dist"
