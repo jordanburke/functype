@@ -1,141 +1,116 @@
 /**
  * Output formatters for CLI - markdown and JSON
+ * Uses functype FP patterns for implementation
  */
 
+import { List } from "../list"
+import { Option } from "../option"
 import type { InterfaceData, TypeData } from "./data"
 import { CATEGORIES, INTERFACES, TYPES, VERSION } from "./data"
 
 /**
  * Format the library overview (default command)
  */
-export function formatOverview(): string {
-  const lines: string[] = []
+export const formatOverview = (): string => {
+  const header = List<string>([`functype ${VERSION} - Scala-inspired FP for TypeScript`, ""])
 
-  lines.push(`functype ${VERSION} - Scala-inspired FP for TypeScript`)
-  lines.push("")
+  const categoryLines = List(Object.entries(CATEGORIES)).foldLeft(header)((acc, [category, typeNames]) => {
+    const withCategory = acc.add(category.toUpperCase())
+    const withTypes = List(typeNames).foldLeft(withCategory)((innerAcc, name) =>
+      Option(TYPES[name]).fold(
+        () => innerAcc,
+        (type) => {
+          const ifaces = type.interfaces.length > 0 ? ` [${type.interfaces.join(", ")}]` : ""
+          return innerAcc.add(`  ${name}${ifaces}`).add(`    ${type.description}`)
+        },
+      ),
+    )
+    return withTypes.add("")
+  })
 
-  for (const [category, typeNames] of Object.entries(CATEGORIES)) {
-    lines.push(category.toUpperCase())
-    for (const name of typeNames) {
-      const type = TYPES[name]
-      if (type) {
-        const ifaces = type.interfaces.length > 0 ? ` [${type.interfaces.join(", ")}]` : ""
-        lines.push(`  ${name}${ifaces}`)
-        lines.push(`    ${type.description}`)
-      }
-    }
-    lines.push("")
-  }
-
-  lines.push("Use: npx functype <Type> for details")
-  lines.push("Use: npx functype interfaces for interface reference")
-
-  return lines.join("\n")
+  return categoryLines
+    .concat(List(["Use: npx functype <Type> for details", "Use: npx functype interfaces for interface reference"]))
+    .toArray()
+    .join("\n")
 }
 
 /**
  * Format detailed type documentation
  */
-export function formatType(name: string, data: TypeData): string {
-  const lines: string[] = []
-
-  // Header
+export const formatType = (name: string, data: TypeData): string => {
   const ifaceList = data.interfaces.length > 0 ? ` [${data.interfaces.join(", ")}]` : ""
-  lines.push(`${name}<T>${ifaceList}`)
-  lines.push("")
-  lines.push(data.description)
-  lines.push("")
+  const categoryOrder = List(["create", "transform", "extract", "check", "other"] as const)
+  const header = List<string>([`${name}<T>${ifaceList}`, "", data.description, ""])
 
-  // Methods by category
-  const categoryOrder = ["create", "transform", "extract", "check", "other"] as const
-  for (const cat of categoryOrder) {
-    const methods = data.methods[cat]
-    if (methods && methods.length > 0) {
-      lines.push(cat.toUpperCase())
-      for (const method of methods) {
-        lines.push(`  ${method}`)
-      }
-      lines.push("")
-    }
-  }
+  const lines = categoryOrder.foldLeft(header)((acc, cat) =>
+    Option(data.methods[cat])
+      .filter((methods) => methods.length > 0)
+      .fold(
+        () => acc,
+        (methods) => {
+          const withCat = acc.add(cat.toUpperCase())
+          const withMethods = List(methods).foldLeft(withCat)((innerAcc, method) => innerAcc.add(`  ${method}`))
+          return withMethods.add("")
+        },
+      ),
+  )
 
-  return lines.join("\n").trimEnd()
+  return lines.toArray().join("\n").trimEnd()
 }
 
 /**
  * Format interface reference
  */
-export function formatInterfaces(): string {
-  const lines: string[] = []
+export const formatInterfaces = (): string => {
+  const header = List<string>(["INTERFACES", ""])
 
-  lines.push("INTERFACES")
-  lines.push("")
-
-  for (const [name, data] of Object.entries(INTERFACES)) {
+  const lines = List(Object.entries(INTERFACES)).foldLeft(header)((acc, [name, data]) => {
     const ext = data.extends ? ` extends ${data.extends}` : ""
-    lines.push(`${name}<A>${ext}`)
-    lines.push(`  ${data.description}`)
-    for (const method of data.methods) {
-      lines.push(`  ${method}`)
-    }
-    lines.push("")
-  }
+    const withHeader = acc.add(`${name}<A>${ext}`).add(`  ${data.description}`)
+    const withMethods = List(data.methods).foldLeft(withHeader)((innerAcc, method) => innerAcc.add(`  ${method}`))
+    return withMethods.add("")
+  })
 
-  return lines.join("\n").trimEnd()
+  return lines.toArray().join("\n").trimEnd()
 }
 
 /**
  * Format as JSON
  */
-export function formatJson(data: unknown): string {
-  return JSON.stringify(data, null, 2)
-}
+export const formatJson = (data: unknown): string => JSON.stringify(data, null, 2)
 
 /**
  * Get overview data for JSON output
  */
-export function getOverviewData(): {
+export const getOverviewData = (): {
   version: string
   categories: Record<string, string[]>
   types: Record<string, TypeData>
-} {
-  return {
-    version: VERSION,
-    categories: CATEGORIES,
-    types: TYPES,
-  }
-}
+} => ({
+  version: VERSION,
+  categories: CATEGORIES,
+  types: TYPES,
+})
 
 /**
  * Get type data by name (case-insensitive)
  */
-export function getType(name: string): { name: string; data: TypeData } | undefined {
-  // Try exact match first
-  if (TYPES[name]) {
-    return { name, data: TYPES[name] }
-  }
-
-  // Try case-insensitive match
-  const normalizedInput = name.toLowerCase()
-  for (const [typeName, typeData] of Object.entries(TYPES)) {
-    if (typeName.toLowerCase() === normalizedInput) {
-      return { name: typeName, data: typeData }
-    }
-  }
-
-  return undefined
-}
+export const getType = (name: string): { name: string; data: TypeData } | undefined =>
+  Option(TYPES[name])
+    .map((data) => ({ name, data }))
+    .or(
+      List(Object.entries(TYPES))
+        .find(([typeName]) => typeName.toLowerCase() === name.toLowerCase())
+        .map(([typeName, typeData]) => ({ name: typeName, data: typeData })),
+    )
+    .orUndefined()
 
 /**
  * Get all type names for error messages
  */
-export function getAllTypeNames(): string[] {
-  return Object.keys(TYPES)
-}
+export const getAllTypeNames = (): string[] => Object.keys(TYPES)
 
 /**
  * Get interfaces data for JSON output
  */
-export function getInterfacesData(): Record<string, InterfaceData> {
-  return INTERFACES
-}
+export const getInterfacesData = (): Record<string, InterfaceData> => INTERFACES

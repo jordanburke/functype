@@ -2,10 +2,17 @@
 /**
  * Extracts full TypeScript interface definitions with JSDoc comments from source files.
  * Generates src/cli/full-interfaces.ts for the --full flag.
+ *
+ * Uses functype's own FP patterns for implementation.
  */
 
 import * as fs from "fs"
 import * as path from "path"
+
+import { List } from "../src/list"
+import { Match } from "../src/conditional"
+import { Option, Some } from "../src/option"
+import { Try } from "../src/try"
 
 interface InterfaceInfo {
   name: string
@@ -13,11 +20,10 @@ interface InterfaceInfo {
   fullText: string
 }
 
-// Map of type names to their source files and extraction info
 interface TypeSource {
   file: string
-  extractName?: string // Name to extract if different from key
-  isType?: boolean // True if it's a type alias instead of interface
+  extractName?: string
+  isType?: boolean
 }
 
 const TYPE_SOURCES: Record<string, TypeSource> = {
@@ -35,111 +41,165 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   Stack: { file: "src/stack/Stack.ts", isType: true },
 }
 
-/**
- * Extracts an interface or type definition with its JSDoc from source text.
- * Looks for: JSDoc comment followed by "export interface Name<..." or "export type Name<..."
- */
-function extractDefinition(sourceText: string, name: string, isType: boolean = false): string | null {
-  const keyword = isType ? "type" : "interface"
-  const lines = sourceText.split("\n")
+/** Parsing state for extractDefinition */
+interface ParseState {
+  inDefinition: boolean
+  braceCount: number
+  hasSeenOpenBrace: boolean
+  jsDocStart: Option<number>
+  definitionStart: Option<number>
+  result: List<string>
+}
 
-  let inDefinition = false
-  let braceCount = 0
-  let hasSeenOpenBrace = false
-  let jsDocStart = -1
-  let definitionStart = -1
-  let result: string[] = []
+const initialParseState: ParseState = {
+  inDefinition: false,
+  braceCount: 0,
+  hasSeenOpenBrace: false,
+  jsDocStart: Option.none(),
+  definitionStart: Option.none(),
+  result: List<string>([]),
+}
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!
-    const trimmed = line.trim()
+/** Count occurrences of a character in a string */
+const countChar = (str: string, char: string): number => (str.match(new RegExp(char, "g")) || []).length
 
-    // Look for JSDoc start before definition
-    if (trimmed.startsWith("/**") && !inDefinition) {
-      jsDocStart = i
-    }
+/** Check if line starts a JSDoc comment */
+const isJsDocStart = (trimmed: string): boolean => trimmed.startsWith("/**")
 
-    // Look for interface/type declaration
-    const defMatch = trimmed.match(new RegExp(`^export\\s+${keyword}\\s+${name}[<\\s=]`))
-    if (defMatch && !inDefinition) {
-      definitionStart = jsDocStart >= 0 ? jsDocStart : i
-      inDefinition = true
-    }
+/** Check if line is part of JSDoc */
+const isJsDocLine = (trimmed: string): boolean => trimmed.startsWith("*") || trimmed.startsWith("/**") || trimmed === ""
 
-    if (inDefinition) {
-      result.push(line)
+/** Check if line matches definition pattern */
+const matchesDefinition = (trimmed: string, keyword: string, name: string): boolean =>
+  new RegExp(`^export\\s+${keyword}\\s+${name}[<\\s=]`).test(trimmed)
 
-      // Count braces to find definition end
-      const openBraces = (line.match(/{/g) || []).length
-      const closeBraces = (line.match(/}/g) || []).length
-      braceCount += openBraces
-      braceCount -= closeBraces
+/** Process a single line during definition extraction */
+const processLine = (
+  state: ParseState,
+  line: string,
+  index: number,
+  keyword: string,
+  name: string,
+): ParseState | { done: true; result: List<string>; jsDocStart: Option<number>; definitionStart: Option<number> } => {
+  const trimmed = line.trim()
 
-      if (openBraces > 0) {
-        hasSeenOpenBrace = true
-      }
+  // Update JSDoc tracking
+  const jsDocStart = Match(true)
+    .when(isJsDocStart(trimmed) && !state.inDefinition, () => Some(index))
+    .when(
+      !state.inDefinition &&
+        state.jsDocStart.isSome() &&
+        !isJsDocLine(trimmed) &&
+        !matchesDefinition(trimmed, keyword, name),
+      () => Option.none<number>(),
+    )
+    .default(state.jsDocStart)
 
-      // Only check for end after we've seen the opening brace
-      if (hasSeenOpenBrace && braceCount === 0) {
-        // Include JSDoc if found before definition
-        if (jsDocStart >= 0 && jsDocStart < definitionStart) {
-          const jsDocLines = lines.slice(jsDocStart, definitionStart)
-          return [...jsDocLines, ...result].join("\n")
-        }
-        return result.join("\n")
-      }
-    }
+  // Check for definition start
+  const startsDefinition = matchesDefinition(trimmed, keyword, name) && !state.inDefinition
+  const definitionStart = startsDefinition ? jsDocStart.or(Some(index)) : state.definitionStart
+  const inDefinition = state.inDefinition || startsDefinition
 
-    // Reset JSDoc tracking if we hit a non-JSDoc, non-blank line before definition
-    if (!inDefinition && jsDocStart >= 0 && !trimmed.startsWith("*") && !trimmed.startsWith("/**") && trimmed !== "") {
-      if (!trimmed.startsWith(`export ${keyword}`)) {
-        jsDocStart = -1
-      }
-    }
+  // If in definition, accumulate result
+  const result = inDefinition ? state.result.add(line) : state.result
+
+  // Count braces
+  const openBraces = countChar(line, "\\{")
+  const closeBraces = countChar(line, "\\}")
+  const braceCount = inDefinition ? state.braceCount + openBraces - closeBraces : state.braceCount
+  const hasSeenOpenBrace = state.hasSeenOpenBrace || (inDefinition && openBraces > 0)
+
+  // Check if definition is complete
+  if (hasSeenOpenBrace && braceCount === 0 && inDefinition) {
+    return { done: true, result, jsDocStart, definitionStart }
   }
 
-  return null
+  return {
+    inDefinition,
+    braceCount,
+    hasSeenOpenBrace,
+    jsDocStart,
+    definitionStart,
+    result,
+  }
+}
+
+/**
+ * Extracts an interface or type definition with its JSDoc from source text.
+ */
+const extractDefinition = (sourceText: string, name: string, isType: boolean = false): Option<string> => {
+  const keyword = isType ? "type" : "interface"
+  const lines = List(sourceText.split("\n"))
+
+  // Process lines with reduce, using early termination via state
+  const finalState = lines
+    .toArray()
+    .reduce(
+      (
+        acc:
+          | ParseState
+          | { done: true; result: List<string>; jsDocStart: Option<number>; definitionStart: Option<number> },
+        line,
+        index,
+      ) => {
+        if ("done" in acc) return acc
+        return processLine(acc, line, index, keyword, name)
+      },
+      initialParseState,
+    )
+
+  if (!("done" in finalState)) {
+    return Option.none()
+  }
+
+  const { result, jsDocStart, definitionStart } = finalState
+
+  // Include JSDoc if found before definition
+  return jsDocStart
+    .flatMap((jsDocIdx) =>
+      definitionStart.map((defIdx) => {
+        if (jsDocIdx < defIdx) {
+          const jsDocLines = lines.slice(jsDocIdx, defIdx)
+          return jsDocLines.concat(result).toArray().join("\n")
+        }
+        return result.toArray().join("\n")
+      }),
+    )
+    .or(Some(result.toArray().join("\n")))
 }
 
 /**
  * Read file and extract interface/type
  */
-function processFile(typeName: string, source: TypeSource): InterfaceInfo | null {
+const processFile = (typeName: string, source: TypeSource): Option<InterfaceInfo> => {
   const fullPath = path.join(process.cwd(), source.file)
 
-  if (!fs.existsSync(fullPath)) {
-    console.warn(`Warning: Source file not found: ${source.file}`)
-    return null
-  }
-
-  const sourceText = fs.readFileSync(fullPath, "utf-8")
-  const extractName = source.extractName ?? typeName
-  const definitionText = extractDefinition(sourceText, extractName, source.isType ?? false)
-
-  if (!definitionText) {
-    console.warn(
-      `Warning: Could not extract ${source.isType ? "type" : "interface"} ${extractName} from ${source.file}`,
-    )
-    return null
-  }
-
-  return {
-    name: typeName,
-    sourceFile: source.file,
-    fullText: definitionText,
-  }
+  return Try(() => fs.readFileSync(fullPath, "utf-8")).fold(
+    () => {
+      console.warn(`Warning: Source file not found or unreadable: ${source.file}`)
+      return Option.none<InterfaceInfo>()
+    },
+    (sourceText) => {
+      const extractName = source.extractName ?? typeName
+      return extractDefinition(sourceText, extractName, source.isType ?? false).map((fullText) => ({
+        name: typeName,
+        sourceFile: source.file,
+        fullText,
+      }))
+    },
+  )
 }
 
 /**
- * Generate the full-interfaces.ts file
+ * Generate the full-interfaces.ts file content
  */
-function generateOutput(interfaces: InterfaceInfo[]): string {
+const generateOutput = (interfaces: List<InterfaceInfo>): string => {
   const entries = interfaces
     .map((iface) => {
-      // Escape backticks and ${} in the interface text for template literal
       const escaped = iface.fullText.replace(/\\/g, "\\\\").replace(/`/g, "\\`").replace(/\$\{/g, "\\${")
       return `  ${iface.name}: \`${escaped}\``
     })
+    .toArray()
     .join(",\n\n")
 
   return `/**
@@ -154,28 +214,36 @@ ${entries}
 `
 }
 
-// Main execution
-function main() {
+/** Log extraction result */
+const logResult = (typeName: string, success: boolean): void =>
+  console.log(success ? `  ✓ ${typeName}` : `  ✗ ${typeName} (skipped)`)
+
+/** Main execution */
+const main = (): void => {
   console.log("Extracting interfaces from source files...")
 
-  const interfaces: InterfaceInfo[] = []
+  const interfaces = List(Object.entries(TYPE_SOURCES)).foldLeft(List<InterfaceInfo>([]))((acc, [typeName, source]) => {
+    const maybeInfo = processFile(typeName, source)
+    logResult(typeName, maybeInfo.isSome())
+    return maybeInfo.fold(
+      () => acc,
+      (info) => acc.add(info),
+    )
+  })
 
-  for (const [typeName, source] of Object.entries(TYPE_SOURCES)) {
-    const info = processFile(typeName, source)
-    if (info) {
-      interfaces.push(info)
-      console.log(`  ✓ ${typeName}`)
-    } else {
-      console.log(`  ✗ ${typeName} (skipped)`)
-    }
-  }
-
-  const output = generateOutput(interfaces)
+  const outputContent = generateOutput(interfaces)
   const outputPath = path.join(process.cwd(), "src/cli/full-interfaces.ts")
 
-  fs.writeFileSync(outputPath, output, "utf-8")
-  console.log(`\nGenerated: ${outputPath}`)
-  console.log(`Extracted ${interfaces.length} interfaces`)
+  Try(() => fs.writeFileSync(outputPath, outputContent, "utf-8")).fold(
+    (error) => {
+      console.error(`Failed to write output: ${error}`)
+      process.exit(1)
+    },
+    () => {
+      console.log(`\nGenerated: ${outputPath}`)
+      console.log(`Extracted ${interfaces.length} interfaces`)
+    },
+  )
 }
 
 main()

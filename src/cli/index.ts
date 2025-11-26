@@ -10,6 +10,9 @@
  *   npx functype --full       # Full TypeScript interfaces with JSDoc
  */
 
+import { Match } from "../conditional"
+import { List } from "../list"
+import { Option } from "../option"
 import {
   formatInterfaces,
   formatJson,
@@ -22,109 +25,52 @@ import {
 } from "./formatters"
 import { FULL_INTERFACES } from "./full-interfaces"
 
-function main(): void {
-  const args = process.argv.slice(2)
-  const jsonFlag = args.includes("--json")
-  const fullFlag = args.includes("--full")
-  const helpFlag = args.includes("--help") || args.includes("-h")
-  const filteredArgs = args.filter((a) => a !== "--json" && a !== "--full" && a !== "--help" && a !== "-h")
+/** CLI flags parsed from arguments */
+interface Flags {
+  json: boolean
+  full: boolean
+  help: boolean
+}
 
-  if (helpFlag) {
-    printHelp()
-    return
-  }
-
-  if (filteredArgs.length === 0) {
-    // Default: show overview or full interfaces
-    if (fullFlag) {
-      const output = jsonFlag ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces()
-      console.log(output)
-    } else {
-      const output = jsonFlag ? formatJson(getOverviewData()) : formatOverview()
-      console.log(output)
-    }
-    return
-  }
-
-  const command = filteredArgs[0]
-
-  if (command === "interfaces") {
-    // Interface reference
-    const output = jsonFlag ? formatJson(getInterfacesData()) : formatInterfaces()
-    console.log(output)
-    return
-  }
-
-  // Type lookup
-  const result = getType(command)
-
-  if (!result) {
-    console.error(`Unknown type: ${command}`)
-    console.error("")
-    console.error(`Available types: ${getAllTypeNames().join(", ")}`)
-    console.error("")
-    console.error("Use: npx functype interfaces - for interface reference")
-    process.exit(1)
-  }
-
-  // Output type info, with optional full interface
-  if (fullFlag) {
-    const fullInterface = getFullInterface(result.name)
-    if (fullInterface) {
-      const output = jsonFlag ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface
-      console.log(output)
-    } else {
-      // Fall back to regular output if no full interface available
-      const output = jsonFlag ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)
-      console.log(output)
-    }
-  } else {
-    const output = jsonFlag ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)
-    console.log(output)
+/** Parse CLI arguments into flags and filtered args */
+const parseArgs = (
+  argv: string[],
+): {
+  flags: Flags
+  args: List<string>
+} => {
+  const rawArgs = List(argv.slice(2))
+  return {
+    flags: {
+      json: rawArgs.includes("--json"),
+      full: rawArgs.includes("--full"),
+      help: rawArgs.exists((a) => a === "--help" || a === "-h"),
+    },
+    args: rawArgs.filter((a) => !a.startsWith("--") && a !== "-h"),
   }
 }
 
-/**
- * Get full interface definition for a type (case-insensitive)
- */
-function getFullInterface(typeName: string): string | undefined {
-  // Try exact match first
-  if (FULL_INTERFACES[typeName]) {
-    return FULL_INTERFACES[typeName]
-  }
+/** Get full interface definition for a type (case-insensitive) */
+const getFullInterface = (typeName: string): Option<string> =>
+  Option(FULL_INTERFACES[typeName]).or(
+    List(Object.entries(FULL_INTERFACES))
+      .find(([name]) => name.toLowerCase() === typeName.toLowerCase())
+      .map(([, def]) => def),
+  )
 
-  // Try case-insensitive match
-  const normalizedInput = typeName.toLowerCase()
-  for (const [name, def] of Object.entries(FULL_INTERFACES)) {
-    if (name.toLowerCase() === normalizedInput) {
-      return def
-    }
-  }
+/** Format all full interfaces for output */
+const formatAllFullInterfaces = (): string => {
+  const header = List<string>(["FULL INTERFACE DEFINITIONS", "=".repeat(60), ""])
 
-  return undefined
+  const lines = List(Object.entries(FULL_INTERFACES)).foldLeft(header)((acc, [name, def]) =>
+    acc.concat(List([`// ${name}`, def, "", "-".repeat(60), ""])),
+  )
+
+  return lines.toArray().join("\n").trimEnd()
 }
 
-/**
- * Format all full interfaces for output
- */
-function formatAllFullInterfaces(): string {
-  const lines: string[] = []
-  lines.push("FULL INTERFACE DEFINITIONS")
-  lines.push("=".repeat(60))
-  lines.push("")
-
-  for (const [name, def] of Object.entries(FULL_INTERFACES)) {
-    lines.push(`// ${name}`)
-    lines.push(def)
-    lines.push("")
-    lines.push("-".repeat(60))
-    lines.push("")
-  }
-
-  return lines.join("\n").trimEnd()
-}
-
-function printHelp(): void {
+/** Print help message */
+const printHelp = (): void => {
   console.log(`functype - API documentation for LLMs
 
 USAGE
@@ -147,6 +93,60 @@ EXAMPLES
   npx functype Option --full # Full TypeScript interface
   npx functype --full       # All full interfaces (large output!)
 `)
+}
+
+/** Handle unknown type error */
+const handleUnknownType = (command: string): void => {
+  console.error(`Unknown type: ${command}`)
+  console.error("")
+  console.error(`Available types: ${getAllTypeNames().join(", ")}`)
+  console.error("")
+  console.error("Use: npx functype interfaces - for interface reference")
+  process.exit(1)
+}
+
+/** Output a result to console */
+const output = (content: string): void => console.log(content)
+
+/** Handle type lookup command */
+const handleTypeLookup = (command: string, flags: Flags): void =>
+  Option(getType(command)).fold(
+    () => handleUnknownType(command),
+    (result) =>
+      Match(flags.full)
+        .when(true, () =>
+          getFullInterface(result.name).fold(
+            () =>
+              output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
+            (fullInterface) =>
+              output(flags.json ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface),
+          ),
+        )
+        .default(() =>
+          output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
+        ),
+  )
+
+/** Main CLI entry point */
+const main = (): void => {
+  const { flags, args } = parseArgs(process.argv)
+
+  Match(true)
+    .when(flags.help, () => printHelp())
+    .when(args.isEmpty(), () =>
+      Match(flags.full)
+        .when(true, () => output(flags.json ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces()))
+        .default(() => output(flags.json ? formatJson(getOverviewData()) : formatOverview())),
+    )
+    .when(args.head().contains("interfaces"), () =>
+      output(flags.json ? formatJson(getInterfacesData()) : formatInterfaces()),
+    )
+    .default(() =>
+      args.head().fold(
+        () => output(flags.json ? formatJson(getOverviewData()) : formatOverview()),
+        (command) => handleTypeLookup(command, flags),
+      ),
+    )
 }
 
 main()
