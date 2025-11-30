@@ -27,6 +27,7 @@
 [Feature Matrix](https://functype.org/feature-matrix.md): Complete overview of interfaces supported by each data structure
 [API Docs](https://jordanburke.github.io/functype/): Full TypeDoc API documentation
 [AI Guide](https://github.com/jordanburke/functype/blob/main/docs/ai-guide.md): Guide for AI assistants working with functype
+[CLI Reference](https://github.com/jordanburke/functype#cli-documentation): Run `npx functype` for LLM-optimized API reference
 
 ## Development
 

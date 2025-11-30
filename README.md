@@ -9,6 +9,17 @@ Functype is a lightweight functional programming library for TypeScript, drawing
 
 [API Documentation](https://jordanburke.github.io/functype/)
 
+### CLI Documentation
+
+Get LLM-optimized API reference directly in your terminal:
+
+```bash
+npx functype              # Overview of all types
+npx functype Option       # Detailed info for Option type
+npx functype interfaces   # All interface definitions
+npx functype --json       # JSON output for programmatic use
+```
+
 ## Core Principles
 
 - **Immutability**: All data structures are immutable, promoting predictable and side-effect-free code

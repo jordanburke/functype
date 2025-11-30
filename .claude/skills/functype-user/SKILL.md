@@ -294,7 +294,7 @@ For pattern conversion help, examples, and API reference:
 - **Feature Matrix**: See `references/feature-matrix.md` for complete interface/method reference
 - **API Documentation**: https://jordanburke.github.io/functype/
 - **GitHub Repository**: https://github.com/jordanburke/functype
-- **Pattern Examples**: Browse `src/tools/` directory in the repository for pattern conversion examples
+- **CLI Documentation**: Run `npx functype` for LLM-optimized API reference
 
 ## Debugging Tips
 
