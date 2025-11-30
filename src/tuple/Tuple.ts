@@ -8,10 +8,7 @@ import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
 export interface Tuple<T extends Type[]>
-  extends Foldable<T[number]>,
-    Pipe<Tuple<T>>,
-    Serializable<Tuple<T>>,
-    Typeable<"Tuple"> {
+  extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   get<K extends number>(index: K): T[K]
 
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>

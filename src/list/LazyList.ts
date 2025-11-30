@@ -31,10 +31,7 @@ import { List } from "./List"
  *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
  */
 export interface LazyList<A extends Type>
-  extends Foldable<A>,
-    Pipe<LazyList<A>>,
-    Serializable<LazyList<A>>,
-    Typeable<"LazyList"> {
+  extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
   // Iterator protocol
   [Symbol.iterator](): Iterator<A>
 

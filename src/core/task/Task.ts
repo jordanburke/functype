@@ -50,11 +50,7 @@ export interface TaskMetadata {
 
 // Standalone TaskOutcome interface - no longer extends Either
 export interface TaskOutcome<T>
-  extends FunctypeBase<T, "Ok" | "Err">,
-    Extractable<T>,
-    AsyncMonad<T>,
-    Promisable<T>,
-    Doable<T> {
+  extends FunctypeBase<T, "Ok" | "Err">, Extractable<T>, AsyncMonad<T>, Promisable<T>, Doable<T> {
   readonly _tag: "Ok" | "Err"
   readonly _meta: TaskMetadata
 

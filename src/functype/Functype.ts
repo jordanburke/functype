@@ -25,12 +25,7 @@ import type { Type } from "@/types"
  * ```
  */
 export interface FunctypeBase<A, Tag extends string = string>
-  extends AsyncMonad<A>,
-    Traversable<A>,
-    Serializable<A>,
-    Foldable<A>,
-    Typeable<Tag>,
-    ContainerOps<A> {
+  extends AsyncMonad<A>, Traversable<A>, Serializable<A>, Foldable<A>, Typeable<Tag>, ContainerOps<A> {
   readonly _tag: Tag
 }
 
@@ -42,10 +37,7 @@ export interface FunctypeBase<A, Tag extends string = string>
  * @typeParam Tag - The type tag for pattern matching
  */
 export interface Functype<A, Tag extends string = string>
-  extends FunctypeBase<A, Tag>,
-    Extractable<A>,
-    Pipe<A>,
-    Matchable<A, Tag> {
+  extends FunctypeBase<A, Tag>, Extractable<A>, Pipe<A>, Matchable<A, Tag> {
   toValue(): { _tag: Tag; value: A }
 }
 
@@ -57,7 +49,8 @@ export interface Functype<A, Tag extends string = string>
  * @typeParam Tag - The type tag for pattern matching
  */
 export interface FunctypeCollection<A, Tag extends string = string>
-  extends Omit<FunctypeBase<A, Tag>, "flatMapAsync" | "flatMap">,
+  extends
+    Omit<FunctypeBase<A, Tag>, "flatMapAsync" | "flatMap">,
     Iterable<A>,
     Pipe<A[]>,
     Collection<A>,

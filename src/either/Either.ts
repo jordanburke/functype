@@ -19,11 +19,7 @@ import type { Type } from "@/types"
  * @category Core
  */
 export interface Either<L extends Type, R extends Type>
-  extends FunctypeBase<R, "Left" | "Right">,
-    Promisable<R>,
-    Doable<R>,
-    Reshapeable<R>,
-    Extractable<R> {
+  extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }

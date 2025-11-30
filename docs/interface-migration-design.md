@@ -202,12 +202,7 @@ interface ToTask<T> {
 ```typescript
 // Interfaces for specific type capabilities
 interface OptionOps<T>
-  extends Monad<T>,
-    Foldable<T>,
-    Matchable<T, "Some" | "None">,
-    Serializable<T>,
-    ToEither<void, T>,
-    ToList<T> {
+  extends Monad<T>, Foldable<T>, Matchable<T, "Some" | "None">, Serializable<T>, ToEither<void, T>, ToList<T> {
   readonly _tag: "Some" | "None"
   readonly isEmpty: boolean
   get(): T
