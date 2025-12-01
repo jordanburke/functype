@@ -10,9 +10,10 @@
  *   npx functype --full       # Full TypeScript interfaces with JSDoc
  */
 
-import { Match } from "../conditional"
-import { List } from "../list"
-import { Option } from "../option"
+import { Match } from "@/conditional"
+import { List } from "@/list"
+import { Option } from "@/option"
+
 import {
   formatInterfaces,
   formatJson,
@@ -42,8 +43,8 @@ const parseArgs = (
   const rawArgs = List(argv.slice(2))
   return {
     flags: {
-      json: rawArgs.includes("--json"),
-      full: rawArgs.includes("--full"),
+      json: rawArgs.contains("--json"),
+      full: rawArgs.contains("--full"),
       help: rawArgs.exists((a) => a === "--help" || a === "-h"),
     },
     args: rawArgs.filter((a) => !a.startsWith("--") && a !== "-h"),
@@ -109,18 +110,20 @@ const handleUnknownType = (command: string): void => {
 const output = (content: string): void => console.log(content)
 
 /** Handle type lookup command */
-const handleTypeLookup = (command: string, flags: Flags): void =>
+const handleTypeLookup = (command: string, flags: Flags): unknown =>
   Option(getType(command)).fold(
     () => handleUnknownType(command),
     (result) =>
       Match(flags.full)
-        .when(true, () =>
-          getFullInterface(result.name).fold(
-            () =>
-              output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
-            (fullInterface) =>
-              output(flags.json ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface),
-          ),
+        .when(
+          () => true,
+          () =>
+            getFullInterface(result.name).fold(
+              () =>
+                output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
+              (fullInterface) =>
+                output(flags.json ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface),
+            ),
         )
         .default(() =>
           output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
@@ -132,17 +135,26 @@ const main = (): void => {
   const { flags, args } = parseArgs(process.argv)
 
   Match(true)
-    .when(flags.help, () => printHelp())
-    .when(args.isEmpty(), () =>
-      Match(flags.full)
-        .when(true, () => output(flags.json ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces()))
-        .default(() => output(flags.json ? formatJson(getOverviewData()) : formatOverview())),
+    .when(
+      () => flags.help,
+      () => printHelp(),
     )
-    .when(args.head().contains("interfaces"), () =>
-      output(flags.json ? formatJson(getInterfacesData()) : formatInterfaces()),
+    .when(
+      () => args.isEmpty,
+      () =>
+        Match(flags.full)
+          .when(
+            () => true,
+            () => output(flags.json ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces()),
+          )
+          .default(() => output(flags.json ? formatJson(getOverviewData()) : formatOverview())),
+    )
+    .when(
+      () => args.headOption.contains("interfaces"),
+      () => output(flags.json ? formatJson(getInterfacesData()) : formatInterfaces()),
     )
     .default(() =>
-      args.head().fold(
+      args.headOption.fold(
         () => output(flags.json ? formatJson(getOverviewData()) : formatOverview()),
         (command) => handleTypeLookup(command, flags),
       ),
