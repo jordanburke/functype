@@ -148,11 +148,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   Either: `export interface Either<L extends Type, R extends Type>
-  extends FunctypeBase<R, "Left" | "Right">,
-    Promisable<R>,
-    Doable<R>,
-    Reshapeable<R>,
-    Extractable<R> {
+  extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   readonly _tag: "Left" | "Right"
   value: L | R
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
@@ -212,12 +208,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   Try: `export interface Try<T>
-  extends FunctypeBase<T, TypeNames>,
-    Extractable<T>,
-    Pipe<T>,
-    Promisable<T>,
-    Doable<T>,
-    Reshapeable<T> {
+  extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -297,7 +288,8 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   Map: `export interface Map<K, V>
-  extends SafeTraversable<K, V>,
+  extends
+    SafeTraversable<K, V>,
     Collection<Tuple<[K, V]>>,
     Typeable<"Map">,
     Serializable<[K, V][]>,
@@ -480,10 +472,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   LazyList: `export interface LazyList<A extends Type>
-  extends Foldable<A>,
-    Pipe<LazyList<A>>,
-    Serializable<LazyList<A>>,
-    Typeable<"LazyList"> {
+  extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
   // Iterator protocol
   [Symbol.iterator](): Iterator<A>
 
@@ -515,11 +504,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   TaskOutcome: `export interface TaskOutcome<T>
-  extends FunctypeBase<T, "Ok" | "Err">,
-    Extractable<T>,
-    AsyncMonad<T>,
-    Promisable<T>,
-    Doable<T> {
+  extends FunctypeBase<T, "Ok" | "Err">, Extractable<T>, AsyncMonad<T>, Promisable<T>, Doable<T> {
   readonly _tag: "Ok" | "Err"
   readonly _meta: TaskMetadata
 
@@ -584,10 +569,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   Tuple: `export interface Tuple<T extends Type[]>
-  extends Foldable<T[number]>,
-    Pipe<Tuple<T>>,
-    Serializable<Tuple<T>>,
-    Typeable<"Tuple"> {
+  extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   get<K extends number>(index: K): T[K]
 
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>
