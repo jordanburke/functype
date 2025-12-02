@@ -57,7 +57,7 @@
     "tsdown": "^0.16.8",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.15",
-    "typescript-template-configs": "^4.0.0"
+    "ts-builds": "^1.0.0"
   },
   "types": "./dist/index.d.ts",
   "module": "./dist/index.js",

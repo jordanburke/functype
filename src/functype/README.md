@@ -24,7 +24,13 @@ The complete interface for full-featured functional data structures:
 
 ```typescript
 export interface Functype<A, Tag extends string = string>
-  extends AsyncMonad<A>, Traversable<A>, Extractable<A>, Serializable<A>, Pipe<A>, Foldable<A>, Matchable<A, Tag> {
+  extends AsyncMonad<A>,
+    Traversable<A>,
+    Extractable<A>,
+    Serializable<A>,
+    Pipe<A>,
+    Foldable<A>,
+    Matchable<A, Tag> {
   readonly _tag: Tag
   toValue(): { _tag: Tag; value: A }
 }
@@ -36,7 +42,10 @@ A minimal version for simpler data structures that don't need the full monadic i
 
 ```typescript
 export interface FunctypeMinimal<A, Tag extends string = string>
-  extends Serializable<A>, Pipe<A>, Foldable<A>, Matchable<A, Tag> {
+  extends Serializable<A>,
+    Pipe<A>,
+    Foldable<A>,
+    Matchable<A, Tag> {
   readonly _tag: Tag
   toValue(): { _tag: Tag; value: A }
 }

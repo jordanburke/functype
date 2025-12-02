@@ -44,6 +44,9 @@ importers:
       semantic-release:
         specifier: ^24.2.9
         version: 24.2.9(typescript@5.9.3)
+      ts-builds:
+        specifier: ^1.0.0
+        version: 1.0.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2)
       tsdown:
         specifier: ^0.16.8
         version: 0.16.8(synckit@0.11.11)(typescript@5.9.3)
@@ -53,9 +56,6 @@ importers:
       typedoc:
         specifier: ^0.28.15
         version: 0.28.15(typescript@5.9.3)
-      typescript-template-configs:
-        specifier: ^4.0.0
-        version: 4.0.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2)
 
   landing:
     dependencies:
@@ -5379,6 +5379,16 @@ packages:
     peerDependencies:
       typescript: ">=4.8.4"
 
+  ts-builds@1.0.0:
+    resolution:
+      { integrity: sha512-GH7iBX+acXLOedMj53XUC9q1JD8uEVTbgYKOcK2t9aDA2cDyUF+ajD+2lvP1i11Um2EHYLy3dauUKKEmUlmemA== }
+    hasBin: true
+    peerDependencies:
+      tsdown: ^0.x
+    peerDependenciesMeta:
+      tsdown:
+        optional: true
+
   ts-declaration-location@1.0.7:
     resolution:
       { integrity: sha512-EDyGAwH1gO0Ausm9gV6T2nUvBgXT5kGoCMJPllOaooZ+4VvJiKBdZE7wK18N1deEowhcUptS+5GXZK8U/fvpwA== }
@@ -5506,16 +5516,6 @@ packages:
   typescript-auto-import-cache@0.3.6:
     resolution:
       { integrity: sha512-RpuHXrknHdVdK7wv/8ug3Fr0WNsNi5l5aB8MYYuXhq2UH5lnEB1htJ1smhtD5VeCsGr2p8mUDtd83LCQDFVgjQ== }
-
-  typescript-template-configs@4.0.0:
-    resolution:
-      { integrity: sha512-Q4+9uoXcayuhCPwIHmTvKndVpgzMnmA0RAyGVWgBFUpLUrTbpwN5vZbT2dEgh06XbOCFZZg+UWkWJvaM67k7Lg== }
-    hasBin: true
-    peerDependencies:
-      tsdown: ^0.x
-    peerDependenciesMeta:
-      tsdown:
-        optional: true
 
   typescript@5.9.3:
     resolution:
@@ -11048,6 +11048,56 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
+  ts-builds@1.0.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2):
+    dependencies:
+      "@eslint/eslintrc": 3.3.3
+      "@eslint/js": 9.39.1
+      "@types/node": 22.19.1
+      "@typescript-eslint/eslint-plugin": 8.48.0(@typescript-eslint/parser@8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
+      "@typescript-eslint/parser": 8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
+      "@vitest/coverage-v8": 4.0.14(vitest@4.0.14)
+      "@vitest/ui": 4.0.14(vitest@4.0.14)
+      cross-env: 10.1.0
+      eslint: 9.39.1(jiti@2.6.1)
+      eslint-config-prettier: 10.1.8(eslint@9.39.1(jiti@2.6.1))
+      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))
+      eslint-plugin-prettier: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.39.1(jiti@2.6.1)))(eslint@9.39.1(jiti@2.6.1))(prettier@3.7.3)
+      eslint-plugin-simple-import-sort: 12.1.1(eslint@9.39.1(jiti@2.6.1))
+      globals: 16.5.0
+      prettier: 3.7.3
+      rimraf: 6.1.2
+      ts-node: 10.9.2(@types/node@22.19.1)(typescript@5.9.3)
+      typescript: 5.9.3
+      vitest: 4.0.14(@types/node@22.19.1)(@vitest/ui@4.0.14)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
+    optionalDependencies:
+      tsdown: 0.16.8(synckit@0.11.11)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - "@edge-runtime/vm"
+      - "@opentelemetry/api"
+      - "@swc/core"
+      - "@swc/wasm"
+      - "@types/eslint"
+      - "@vitest/browser"
+      - "@vitest/browser-playwright"
+      - "@vitest/browser-preview"
+      - "@vitest/browser-webdriverio"
+      - eslint-import-resolver-typescript
+      - eslint-import-resolver-webpack
+      - happy-dom
+      - jiti
+      - jsdom
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+
   ts-declaration-location@1.0.7(typescript@5.9.3):
     dependencies:
       picomatch: 4.0.3
@@ -11174,56 +11224,6 @@ snapshots:
   typescript-auto-import-cache@0.3.6:
     dependencies:
       semver: 7.7.3
-
-  typescript-template-configs@4.0.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2):
-    dependencies:
-      "@eslint/eslintrc": 3.3.3
-      "@eslint/js": 9.39.1
-      "@types/node": 22.19.1
-      "@typescript-eslint/eslint-plugin": 8.48.0(@typescript-eslint/parser@8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
-      "@typescript-eslint/parser": 8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
-      "@vitest/coverage-v8": 4.0.14(vitest@4.0.14)
-      "@vitest/ui": 4.0.14(vitest@4.0.14)
-      cross-env: 10.1.0
-      eslint: 9.39.1(jiti@2.6.1)
-      eslint-config-prettier: 10.1.8(eslint@9.39.1(jiti@2.6.1))
-      eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.48.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.1))
-      eslint-plugin-prettier: 5.5.4(eslint-config-prettier@10.1.8(eslint@9.39.1(jiti@2.6.1)))(eslint@9.39.1(jiti@2.6.1))(prettier@3.7.3)
-      eslint-plugin-simple-import-sort: 12.1.1(eslint@9.39.1(jiti@2.6.1))
-      globals: 16.5.0
-      prettier: 3.7.3
-      rimraf: 6.1.2
-      ts-node: 10.9.2(@types/node@22.19.1)(typescript@5.9.3)
-      typescript: 5.9.3
-      vitest: 4.0.14(@types/node@22.19.1)(@vitest/ui@4.0.14)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
-    optionalDependencies:
-      tsdown: 0.16.8(synckit@0.11.11)(typescript@5.9.3)
-    transitivePeerDependencies:
-      - "@edge-runtime/vm"
-      - "@opentelemetry/api"
-      - "@swc/core"
-      - "@swc/wasm"
-      - "@types/eslint"
-      - "@vitest/browser"
-      - "@vitest/browser-playwright"
-      - "@vitest/browser-preview"
-      - "@vitest/browser-webdriverio"
-      - eslint-import-resolver-typescript
-      - eslint-import-resolver-webpack
-      - happy-dom
-      - jiti
-      - jsdom
-      - less
-      - lightningcss
-      - msw
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
 
   typescript@5.9.3: {}
 

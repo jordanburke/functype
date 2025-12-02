@@ -608,7 +608,12 @@ All data structures implement the `Functype` hierarchy:
 ```typescript
 // Base interface for all data structures
 interface FunctypeBase<A, Tag>
-  extends AsyncMonad<A>, Traversable<A>, Serializable<A>, Foldable<A>, Typeable<Tag>, ContainerOps<A> {
+  extends AsyncMonad<A>,
+    Traversable<A>,
+    Serializable<A>,
+    Foldable<A>,
+    Typeable<Tag>,
+    ContainerOps<A> {
   readonly _tag: Tag
 }
 
@@ -619,7 +624,11 @@ interface Functype<A, Tag> extends FunctypeBase<A, Tag>, Extractable<A>, Pipe<A>
 
 // For collections (List, Set, Map)
 interface FunctypeCollection<A, Tag>
-  extends FunctypeBase<A, Tag>, Iterable<A>, Pipe<A[]>, Collection<A>, CollectionOps<A, FunctypeCollection<A, Tag>> {
+  extends FunctypeBase<A, Tag>,
+    Iterable<A>,
+    Pipe<A[]>,
+    Collection<A>,
+    CollectionOps<A, FunctypeCollection<A, Tag>> {
   toValue(): { _tag: Tag; value: A[] }
   // Collections work with Iterable instead of Monad
   flatMap<B>(f: (value: A) => Iterable<B>): FunctypeCollection<B, Tag>
