@@ -1,0 +1,750 @@
+import stringify from "safe-stable-stringify"
+
+import { Companion } from "@/companion/Companion"
+import type { Either } from "@/either/Either"
+import { Left, Right } from "@/either/Either"
+import type { Option } from "@/option/Option"
+import type { Try } from "@/try/Try"
+import type { Type } from "@/types"
+
+import type { Exit as ExitType } from "./Exit"
+import { Exit } from "./Exit"
+
+/**
+ * IO Effect type module - a lazy, composable effect type with typed errors.
+ * @module IO
+ * @category IO
+ *
+ * IO<R, E, A> represents an effectful computation that:
+ * - Requires environment R to run
+ * - May fail with error E
+ * - Produces value A on success
+ *
+ * Key features:
+ * - Lazy execution (nothing runs until explicitly executed)
+ * - Unified sync/async API
+ * - Typed errors at compile time
+ * - Composable via map/flatMap
+ */
+
+/**
+ * Internal effect representation types
+ */
+type IOEffect<R, E, A> =
+  | { readonly _tag: "Sync"; readonly thunk: () => A }
+  | { readonly _tag: "Async"; readonly thunk: () => Promise<A> }
+  | { readonly _tag: "Succeed"; readonly value: A }
+  | { readonly _tag: "Fail"; readonly error: E }
+  | { readonly _tag: "Die"; readonly defect: unknown }
+  | { readonly _tag: "FlatMap"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => IO<R, E, A> }
+  | { readonly _tag: "Map"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => A }
+  | { readonly _tag: "MapError"; readonly effect: IO<R, unknown, A>; readonly f: (e: unknown) => E }
+  | { readonly _tag: "Recover"; readonly effect: IO<R, E, A>; readonly fallback: A }
+  | { readonly _tag: "RecoverWith"; readonly effect: IO<R, E, A>; readonly f: (e: E) => IO<R, E, A> }
+  | {
+      readonly _tag: "Fold"
+      readonly effect: IO<R, E, unknown>
+      readonly onFailure: (e: E) => A
+      readonly onSuccess: (a: unknown) => A
+    }
+
+/**
+ * IO<R, E, A> represents a lazy, composable effect.
+ *
+ * @typeParam R - Requirements (environment/dependencies needed to run)
+ * @typeParam E - Error type (typed failures)
+ * @typeParam A - Success type (value produced on success)
+ */
+export interface IO<R extends Type, E extends Type, A extends Type> {
+  /**
+   * Internal effect representation
+   * @internal
+   */
+  readonly _effect: IOEffect<R, E, A>
+
+  /**
+   * Phantom type for requirements
+   * @internal
+   */
+  readonly _R?: R
+
+  /**
+   * Phantom type for error
+   * @internal
+   */
+  readonly _E?: E
+
+  /**
+   * Phantom type for success
+   * @internal
+   */
+  readonly _A?: A
+
+  // ============================================
+  // Core Operations
+  // ============================================
+
+  /**
+   * Transforms the success value.
+   * @param f - Function to apply to the success value
+   * @returns New IO with transformed value
+   */
+  map<B extends Type>(f: (a: A) => B): IO<R, E, B>
+
+  /**
+   * Chains another IO effect based on the success value.
+   * @param f - Function returning next IO effect
+   * @returns New IO with combined effects
+   */
+  flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, B>
+
+  /**
+   * Applies a side effect without changing the value.
+   * @param f - Side effect function
+   * @returns Same IO for chaining
+   */
+  tap(f: (a: A) => void): IO<R, E, A>
+
+  /**
+   * Applies an effectful side effect without changing the value.
+   * @param f - Function returning IO for side effect
+   * @returns Same value after running side effect
+   */
+  tapEffect<R2 extends Type, E2 extends Type>(f: (a: A) => IO<R2, E2, unknown>): IO<R | R2, E | E2, A>
+
+  // ============================================
+  // Error Handling
+  // ============================================
+
+  /**
+   * Transforms the error value.
+   * @param f - Function to apply to the error
+   * @returns New IO with transformed error
+   */
+  mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A>
+
+  /**
+   * Recovers from any error with a fallback value.
+   * @param fallback - Value to use on error
+   * @returns New IO that never fails
+   */
+  recover(fallback: A): IO<R, never, A>
+
+  /**
+   * Recovers from error by running another effect.
+   * @param f - Function returning recovery effect
+   * @returns New IO with error handling
+   */
+  recoverWith<R2 extends Type, E2 extends Type>(f: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A>
+
+  /**
+   * Pattern matches on success and failure.
+   * @param onFailure - Handler for failures
+   * @param onSuccess - Handler for successes
+   * @returns New IO with handled result
+   */
+  fold<B extends Type>(onFailure: (e: E) => B, onSuccess: (a: A) => B): IO<R, never, B>
+
+  /**
+   * Pattern matches with object pattern syntax.
+   */
+  match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B>
+
+  // ============================================
+  // Combinators
+  // ============================================
+
+  /**
+   * Sequences two IOs, keeping the second value.
+   */
+  zipRight<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, B>
+
+  /**
+   * Sequences two IOs, keeping the first value.
+   */
+  zipLeft<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, A>
+
+  /**
+   * Zips two IOs into a tuple.
+   */
+  zip<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, readonly [A, B]>
+
+  /**
+   * Flattens a nested IO.
+   */
+  flatten<R2 extends Type, E2 extends Type, B extends Type>(this: IO<R, E, IO<R2, E2, B>>): IO<R | R2, E | E2, B>
+
+  // ============================================
+  // Execution (R must be never to run)
+  // ============================================
+
+  /**
+   * Runs the effect and returns a Promise of the value.
+   * Throws on error. Requires R = never.
+   */
+  run(this: IO<never, E, A>): Promise<A>
+
+  /**
+   * Runs a sync effect and returns the value.
+   * Throws if the effect is async or has unmet requirements.
+   */
+  runSync(this: IO<never, E, A>): A
+
+  /**
+   * Runs the effect and returns an Either.
+   */
+  runEither(this: IO<never, E, A>): Promise<Either<E, A>>
+
+  /**
+   * Runs the effect and returns an Exit.
+   */
+  runExit(this: IO<never, E, A>): Promise<ExitType<E, A>>
+
+  // ============================================
+  // Utilities
+  // ============================================
+
+  /**
+   * Pipes the IO through a function.
+   */
+  pipe<B>(f: (self: IO<R, E, A>) => B): B
+
+  /**
+   * Delays execution by the specified milliseconds.
+   */
+  delay(ms: number): IO<R, E, A>
+
+  /**
+   * Converts to string representation.
+   */
+  toString(): string
+
+  /**
+   * Converts to JSON representation.
+   */
+  toJSON(): { _tag: string; effect: unknown }
+
+  /**
+   * Makes IO iterable for generator do-notation (yield* syntax).
+   * Yields the IO itself, allowing IO.gen to extract the value.
+   */
+  [Symbol.iterator](): Generator<IO<R, E, A>, A, A>
+}
+
+// ============================================
+// Internal Implementation
+// ============================================
+
+/**
+ * Creates an IO instance from an effect
+ */
+const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): IO<R, E, A> => {
+  const io: IO<R, E, A> = {
+    _effect: effect,
+
+    // Core Operations
+    map<B extends Type>(f: (a: A) => B): IO<R, E, B> {
+      return createIO({ _tag: "Map", effect: io, f: f as (a: unknown) => B })
+    },
+
+    flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, B> {
+      return createIO({
+        _tag: "FlatMap",
+        effect: io as IO<R | R2, E | E2, unknown>,
+        f: f as (a: unknown) => IO<R | R2, E | E2, B>,
+      })
+    },
+
+    tap(f: (a: A) => void): IO<R, E, A> {
+      return io.map((a) => {
+        f(a)
+        return a
+      })
+    },
+
+    tapEffect<R2 extends Type, E2 extends Type>(f: (a: A) => IO<R2, E2, unknown>): IO<R | R2, E | E2, A> {
+      return io.flatMap((a) => f(a).map(() => a))
+    },
+
+    // Error Handling
+    mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A> {
+      return createIO({ _tag: "MapError", effect: io as IO<R, unknown, A>, f: f as (e: unknown) => E2 })
+    },
+
+    recover(fallback: A): IO<R, never, A> {
+      return createIO({ _tag: "Recover", effect: io as IO<R, never, A>, fallback })
+    },
+
+    recoverWith<R2 extends Type, E2 extends Type>(f: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A> {
+      return createIO({
+        _tag: "RecoverWith",
+        effect: io as IO<R | R2, E2, A>,
+        f: f as (e: E2) => IO<R | R2, E2, A>,
+      })
+    },
+
+    fold<B extends Type>(onFailure: (e: E) => B, onSuccess: (a: A) => B): IO<R, never, B> {
+      return createIO({
+        _tag: "Fold",
+        effect: io as IO<R, never, unknown>,
+        onFailure: onFailure as (e: never) => B,
+        onSuccess: onSuccess as (a: unknown) => B,
+      })
+    },
+
+    match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B> {
+      return io.fold(patterns.failure, patterns.success)
+    },
+
+    // Combinators
+    zipRight<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, B> {
+      return io.flatMap(() => that)
+    },
+
+    zipLeft<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, A> {
+      return io.flatMap((a) => that.map(() => a))
+    },
+
+    zip<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, readonly [A, B]> {
+      return io.flatMap((a) => that.map((b) => [a, b] as const))
+    },
+
+    flatten<R2 extends Type, E2 extends Type, B extends Type>(this: IO<R, E, IO<R2, E2, B>>): IO<R | R2, E | E2, B> {
+      return this.flatMap((inner) => inner)
+    },
+
+    // Execution
+    async run(this: IO<never, E, A>): Promise<A> {
+      const exit = await runEffect(this._effect)
+      if (exit.isSuccess()) {
+        return exit.orThrow()
+      }
+      throw exit.isFailure() ? (exit.toValue() as { error: E }).error : new Error("Effect was interrupted")
+    },
+
+    runSync(this: IO<never, E, A>): A {
+      return runEffectSync(this._effect)
+    },
+
+    async runEither(this: IO<never, E, A>): Promise<Either<E, A>> {
+      const exit = await runEffect(this._effect)
+      if (exit.isSuccess()) {
+        return Right(exit.orThrow())
+      }
+      if (exit.isFailure()) {
+        return Left((exit.toValue() as { error: E }).error)
+      }
+      throw new Error("Effect was interrupted")
+    },
+
+    async runExit(this: IO<never, E, A>): Promise<ExitType<E, A>> {
+      return runEffect(this._effect)
+    },
+
+    // Utilities
+    pipe<B>(f: (self: IO<R, E, A>) => B): B {
+      return f(io)
+    },
+
+    delay(ms: number): IO<R, E, A> {
+      return IOCompanion.async<void>(() => new Promise((resolve) => setTimeout(resolve, ms))).flatMap(() => io)
+    },
+
+    toString() {
+      return `IO(${stringify(effect._tag)})`
+    },
+
+    toJSON() {
+      return { _tag: "IO", effect: effect._tag }
+    },
+
+    *[Symbol.iterator](): Generator<IO<R, E, A>, A, A> {
+      return yield io
+    },
+  }
+
+  return io
+}
+
+/**
+ * Interprets and runs an effect synchronously
+ */
+const runEffectSync = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): A => {
+  switch (effect._tag) {
+    case "Succeed":
+      return effect.value
+    case "Fail":
+      throw effect.error
+    case "Die":
+      throw effect.defect
+    case "Sync":
+      return effect.thunk()
+    case "Async":
+      throw new Error("Cannot run async effect synchronously")
+    case "Map": {
+      const a = runEffectSync(effect.effect._effect)
+      return effect.f(a)
+    }
+    case "FlatMap": {
+      const a = runEffectSync(effect.effect._effect)
+      const nextIO = effect.f(a)
+      return runEffectSync(nextIO._effect)
+    }
+    case "MapError": {
+      try {
+        return runEffectSync(effect.effect._effect)
+      } catch (e) {
+        throw effect.f(e)
+      }
+    }
+    case "Recover": {
+      try {
+        return runEffectSync(effect.effect._effect)
+      } catch {
+        return effect.fallback
+      }
+    }
+    case "RecoverWith": {
+      try {
+        return runEffectSync(effect.effect._effect)
+      } catch (e) {
+        const recoveryIO = effect.f(e as E)
+        return runEffectSync(recoveryIO._effect)
+      }
+    }
+    case "Fold": {
+      try {
+        const a = runEffectSync(effect.effect._effect)
+        return effect.onSuccess(a)
+      } catch (e) {
+        return effect.onFailure(e as E)
+      }
+    }
+  }
+}
+
+/**
+ * Interprets and runs an effect asynchronously
+ */
+const runEffect = async <R extends Type, E extends Type, A extends Type>(
+  effect: IOEffect<R, E, A>,
+): Promise<ExitType<E, A>> => {
+  try {
+    switch (effect._tag) {
+      case "Succeed":
+        return Exit.succeed(effect.value)
+      case "Fail":
+        return Exit.fail(effect.error)
+      case "Die":
+        throw effect.defect
+      case "Sync":
+        return Exit.succeed(effect.thunk())
+      case "Async": {
+        const result = await effect.thunk()
+        return Exit.succeed(result)
+      }
+      case "Map": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (!exitA.isSuccess()) {
+          return exitA as ExitType<E, A>
+        }
+        return Exit.succeed(effect.f(exitA.orThrow()))
+      }
+      case "FlatMap": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (!exitA.isSuccess()) {
+          return exitA as ExitType<E, A>
+        }
+        const nextIO = effect.f(exitA.orThrow())
+        return runEffect(nextIO._effect)
+      }
+      case "MapError": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (exitA.isSuccess()) {
+          return exitA
+        }
+        if (exitA.isFailure()) {
+          return Exit.fail(effect.f((exitA.toValue() as { error: unknown }).error))
+        }
+        return exitA as ExitType<E, A>
+      }
+      case "Recover": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (exitA.isSuccess()) {
+          return exitA
+        }
+        return Exit.succeed(effect.fallback)
+      }
+      case "RecoverWith": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (exitA.isSuccess()) {
+          return exitA
+        }
+        if (exitA.isFailure()) {
+          const recoveryIO = effect.f((exitA.toValue() as { error: E }).error)
+          return runEffect(recoveryIO._effect)
+        }
+        return exitA
+      }
+      case "Fold": {
+        const exitA = await runEffect(effect.effect._effect)
+        if (exitA.isSuccess()) {
+          return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+        }
+        if (exitA.isFailure()) {
+          return Exit.succeed(effect.onFailure((exitA.toValue() as { error: E }).error))
+        }
+        return exitA as ExitType<E, A>
+      }
+    }
+  } catch (e) {
+    // Unhandled defects
+    return Exit.fail(e as E)
+  }
+}
+
+// ============================================
+// Companion Object
+// ============================================
+
+/**
+ * IO companion methods for constructing effects
+ */
+const IOCompanion = {
+  // ============================================
+  // Constructors
+  // ============================================
+
+  /**
+   * Creates an IO from a synchronous thunk.
+   * The function is not executed until the IO is run.
+   */
+  sync: <A extends Type>(f: () => A): IO<never, never, A> => createIO({ _tag: "Sync", thunk: f }),
+
+  /**
+   * Creates an IO that succeeds with the given value.
+   */
+  succeed: <A extends Type>(value: A): IO<never, never, A> => createIO({ _tag: "Succeed", value }),
+
+  /**
+   * Creates an IO that fails with the given error.
+   */
+  fail: <E extends Type>(error: E): IO<never, E, never> => createIO({ _tag: "Fail", error }),
+
+  /**
+   * Creates an IO that dies with an unrecoverable defect.
+   */
+  die: (defect: unknown): IO<never, never, never> => createIO({ _tag: "Die", defect }),
+
+  /**
+   * Creates an IO from an async thunk.
+   * The Promise is not created until the IO is run.
+   */
+  async: <A extends Type>(f: () => Promise<A>): IO<never, unknown, A> => createIO({ _tag: "Async", thunk: f }),
+
+  /**
+   * Creates an IO from a Promise with error handling.
+   */
+  tryPromise: <A extends Type, E extends Type>(opts: {
+    readonly try: () => Promise<A>
+    readonly catch: (error: unknown) => E
+  }): IO<never, E, A> => createIO<never, unknown, A>({ _tag: "Async", thunk: opts.try }).mapError(opts.catch),
+
+  /**
+   * Creates an IO from a function that might throw.
+   */
+  tryCatch: <A extends Type, E extends Type>(f: () => A, onError: (error: unknown) => E): IO<never, E, A> =>
+    IOCompanion.sync(() => {
+      try {
+        return f()
+      } catch (e) {
+        throw onError(e)
+      }
+    }) as unknown as IO<never, E, A>,
+
+  // ============================================
+  // Lifting Functions
+  // ============================================
+
+  /**
+   * Lifts a synchronous function into an IO-returning function.
+   */
+  liftSync:
+    <Args extends unknown[], A extends Type>(f: (...args: Args) => A) =>
+    (...args: Args): IO<never, never, A> =>
+      IOCompanion.sync(() => f(...args)),
+
+  /**
+   * Lifts a Promise-returning function into an IO-returning function.
+   */
+  liftPromise:
+    <Args extends unknown[], A extends Type>(f: (...args: Args) => Promise<A>) =>
+    (...args: Args): IO<never, unknown, A> =>
+      IOCompanion.async(() => f(...args)),
+
+  // ============================================
+  // Integration with Other Types
+  // ============================================
+
+  /**
+   * Creates an IO from an Either.
+   */
+  fromEither: <E extends Type, A extends Type>(either: Either<E, A>): IO<never, E, A> =>
+    either.isRight() ? IOCompanion.succeed(either.value as A) : IOCompanion.fail(either.value as E),
+
+  /**
+   * Creates an IO from an Option.
+   */
+  fromOption: <A extends Type>(option: Option<A>): IO<never, void, A> =>
+    option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(undefined as void),
+
+  /**
+   * Creates an IO from an Option with custom error.
+   */
+  fromOptionOrFail: <E extends Type, A extends Type>(option: Option<A>, onNone: () => E): IO<never, E, A> =>
+    option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(onNone()),
+
+  /**
+   * Creates an IO from a Try.
+   */
+  fromTry: <A extends Type>(t: ReturnType<typeof Try<A>>): IO<never, Error, A> =>
+    t.isSuccess() ? IOCompanion.succeed(t.orThrow()) : IOCompanion.fail(t.error as Error),
+
+  // ============================================
+  // Combinators
+  // ============================================
+
+  /**
+   * Runs all IOs in parallel and collects results.
+   */
+  all: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, readonly A[]> => {
+    if (effects.length === 0) {
+      return IOCompanion.succeed([])
+    }
+    return effects.reduce(
+      (acc, effect) => acc.flatMap((results) => effect.map((a) => [...results, a])),
+      IOCompanion.succeed([]) as IO<R, E, A[]>,
+    )
+  },
+
+  /**
+   * Runs IOs in sequence, returning the first success or last failure.
+   */
+  firstSuccessOf: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
+    if (effects.length === 0) {
+      return IOCompanion.fail(new Error("No effects provided") as E)
+    }
+    return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
+  },
+
+  /**
+   * Creates an IO that sleeps for the specified duration.
+   */
+  sleep: (ms: number): IO<never, never, void> =>
+    IOCompanion.async(() => new Promise((resolve) => setTimeout(resolve, ms))),
+
+  /**
+   * Creates an IO that never completes.
+   */
+  never: <A extends Type = never>(): IO<never, never, A> => IOCompanion.async(() => new Promise(() => {})),
+
+  /**
+   * Creates a unit IO.
+   */
+  get unit(): IO<never, never, void> {
+    return createIO({ _tag: "Succeed", value: undefined })
+  },
+
+  /**
+   * Converts a nullable value to an IO.
+   */
+  fromNullable: <A extends Type>(value: A | null | undefined): IO<never, void, A> =>
+    value === null || value === undefined ? IOCompanion.fail(undefined as void) : IOCompanion.succeed(value),
+
+  // ============================================
+  // Generator Syntax Support (Phase 2 preparation)
+  // ============================================
+
+  /**
+   * Creates an IO from a generator function.
+   * This enables do-notation style programming.
+   *
+   * @example
+   * ```typescript
+   * const program = IO.gen(function* () {
+   *   const a = yield* IO.succeed(1)
+   *   const b = yield* IO.succeed(2)
+   *   return a + b
+   * })
+   * ```
+   */
+  gen: <R extends Type, E extends Type, A extends Type>(
+    f: () => Generator<IO<R, E, unknown>, A, unknown>,
+  ): IO<R, E, A> => {
+    return IOCompanion.sync(() => {
+      const iterator = f()
+      const runGenerator = (input: unknown): IO<R, E, A> => {
+        const result = iterator.next(input)
+        if (result.done) {
+          return IOCompanion.succeed(result.value)
+        }
+        return result.value.flatMap((value) => runGenerator(value))
+      }
+      return runGenerator(undefined)
+    }).flatMap((io) => io)
+  },
+}
+
+/**
+ * IO constructor - creates an IO from a synchronous function
+ */
+const IOConstructor = <A extends Type>(f: () => A): IO<never, never, A> => IOCompanion.sync(f)
+
+/**
+ * IO effect type for lazy, composable effects with typed errors.
+ *
+ * @example
+ * ```typescript
+ * // Basic usage
+ * const program = IO.sync(() => 42)
+ *   .map(x => x * 2)
+ *   .flatMap(x => IO.succeed(x + 1))
+ *
+ * const result = await program.run() // 85
+ *
+ * // Error handling
+ * const safe = IO.tryPromise({
+ *   try: () => fetch('/api/data'),
+ *   catch: (e) => new NetworkError(e)
+ * })
+ *   .map(res => res.json())
+ *   .recover({ fallback: 'default' })
+ *
+ * // Composition
+ * const composed = IO.all([
+ *   IO.succeed(1),
+ *   IO.succeed(2),
+ *   IO.succeed(3)
+ * ]) // IO<never, never, [1, 2, 3]>
+ * ```
+ */
+export const IO = Companion(IOConstructor, IOCompanion)
+
+// ============================================
+// Type Aliases for Common Cases
+// ============================================
+
+/**
+ * An IO with no requirements and no error
+ */
+export type UIO<A extends Type> = IO<never, never, A>
+
+/**
+ * An IO with no requirements
+ */
+export type Task<E extends Type, A extends Type> = IO<never, E, A>
+
+/**
+ * An IO with no error
+ */
+export type RIO<R extends Type, A extends Type> = IO<R, never, A>
