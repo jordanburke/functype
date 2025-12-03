@@ -2,7 +2,9 @@
  * Curated API data for CLI output, optimized for LLM consumption
  */
 
-export const VERSION = "0.18.2"
+import pkg from "../../package.json"
+
+export const VERSION = pkg.version
 
 export interface TypeData {
   description: string

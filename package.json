@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.20.1",
+  "version": "0.20.2",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -40,7 +40,8 @@
     "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js",
     "landing:dev": "cd landing && pnpm dev",
     "landing:build": "cd landing && pnpm build",
-    "landing:preview": "cd landing && pnpm preview"
+    "landing:preview": "cd landing && pnpm preview",
+    "cli-example": "npx . Option"
   },
   "devDependencies": {
     "@eslint/compat": "^1.4.1",

@@ -110,24 +110,20 @@ const handleUnknownType = (command: string): void => {
 const output = (content: string): void => console.log(content)
 
 /** Handle type lookup command */
-const handleTypeLookup = (command: string, flags: Flags): unknown =>
+const handleTypeLookup = (command: string, flags: Flags): void =>
   Option(getType(command)).fold(
     () => handleUnknownType(command),
-    (result) =>
-      Match(flags.full)
-        .when(
-          () => true,
-          () =>
-            getFullInterface(result.name).fold(
-              () =>
-                output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
-              (fullInterface) =>
-                output(flags.json ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface),
-            ),
+    (result) => {
+      if (flags.full) {
+        getFullInterface(result.name).fold(
+          () => output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
+          (fullInterface) =>
+            output(flags.json ? formatJson({ [result.name]: { ...result.data, fullInterface } }) : fullInterface),
         )
-        .default(() =>
-          output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data)),
-        ),
+      } else {
+        output(flags.json ? formatJson({ [result.name]: result.data }) : formatType(result.name, result.data))
+      }
+    },
   )
 
 /** Main CLI entry point */
@@ -142,12 +138,9 @@ const main = (): void => {
     .when(
       () => args.isEmpty,
       () =>
-        Match(flags.full)
-          .when(
-            () => true,
-            () => output(flags.json ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces()),
-          )
-          .default(() => output(flags.json ? formatJson(getOverviewData()) : formatOverview())),
+        flags.full
+          ? output(flags.json ? formatJson(FULL_INTERFACES) : formatAllFullInterfaces())
+          : output(flags.json ? formatJson(getOverviewData()) : formatOverview()),
     )
     .when(
       () => args.headOption.contains("interfaces"),
