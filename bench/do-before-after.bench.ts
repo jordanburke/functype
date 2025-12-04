@@ -129,7 +129,7 @@ describe("Do optimization before vs after", () => {
   describe("Early termination", () => {
     bench("OPTIMIZED - early None", () => {
       Do(function* () {
-        const x = yield* $(Option.none())
+        const x = yield* $(Option.none<number>())
         const y = yield* $(Option(10))
         const z = yield* $(Option(15))
         return x + y + z
@@ -138,7 +138,7 @@ describe("Do optimization before vs after", () => {
 
     bench("OLD - early None", () => {
       DoOld(function* () {
-        const x = yield* $(Option.none())
+        const x = yield* $(Option.none<number>())
         const y = yield* $(Option(10))
         const z = yield* $(Option(15))
         return x + y + z

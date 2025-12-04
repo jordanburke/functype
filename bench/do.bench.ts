@@ -7,7 +7,7 @@ describe("Do-notation Performance", () => {
   describe("Do vs traditional flatMap chains", () => {
     bench("traditional nested flatMap - 3 levels", () => {
       const result = Option(5).flatMap((x) => Option(10).flatMap((y) => Option(15).flatMap((z) => Option(x + y + z))))
-      return result.get()
+      result.orThrow()
     })
 
     bench("Do-notation - 3 levels", () => {
@@ -16,8 +16,8 @@ describe("Do-notation Performance", () => {
         const y = yield* $(Option(10))
         const z = yield* $(Option(15))
         return x + y + z
-      })
-      return result.get()
+      }) as Option<number>
+      result.orThrow()
     })
 
     bench("traditional nested flatMap - 5 levels", () => {
@@ -26,7 +26,7 @@ describe("Do-notation Performance", () => {
           Option(3).flatMap((c) => Option(4).flatMap((d) => Option(5).flatMap((e) => Option(a + b + c + d + e)))),
         ),
       )
-      return result.get()
+      result.orThrow()
     })
 
     bench("Do-notation - 5 levels", () => {
@@ -37,8 +37,8 @@ describe("Do-notation Performance", () => {
         const d = yield* $(Option(4))
         const e = yield* $(Option(5))
         return a + b + c + d + e
-      })
-      return result.get()
+      }) as Option<number>
+      result.orThrow()
     })
   })
 
@@ -47,7 +47,7 @@ describe("Do-notation Performance", () => {
       const result = Option(5).flatMap((x) =>
         None<number>().flatMap((y) => Option(10).flatMap((z) => Option(x + y + z))),
       )
-      return result.isNone()
+      result.isNone()
     })
 
     bench("Do-notation - early None", () => {
@@ -56,8 +56,8 @@ describe("Do-notation Performance", () => {
         const y = yield* $(None<number>())
         const z = yield* $(Option(10))
         return x + y + z
-      })
-      return result.isNone()
+      }) as Option<number>
+      result.isNone()
     })
 
     bench("traditional - early Left", () => {
@@ -66,7 +66,7 @@ describe("Do-notation Performance", () => {
           Right<string, number>(10).flatMap((z) => Right<string, number>(x + y + z)),
         ),
       )
-      return result.isLeft()
+      result.isLeft()
     })
 
     bench("Do-notation - early Left", () => {
@@ -75,18 +75,17 @@ describe("Do-notation Performance", () => {
         const y = yield* $(Left<string, number>("error"))
         const z = yield* $(Right<string, number>(10))
         return x + y + z
-      })
-      return result.isLeft()
+      }) as unknown as Option<number>
+      result.isNone()
     })
   })
 
   describe("List comprehensions", () => {
     const list10 = List(Array.from({ length: 10 }, (_, i) => i))
-    const list100 = List(Array.from({ length: 100 }, (_, i) => i))
 
     bench("traditional - cartesian product 10x10", () => {
       const result = list10.flatMap((x) => list10.flatMap((y) => List([x + y])))
-      return result.size
+      void result.size
     })
 
     bench("Do-notation - cartesian product 10x10", () => {
@@ -94,13 +93,13 @@ describe("Do-notation Performance", () => {
         const x = yield* $(list10)
         const y = yield* $(list10)
         return x + y
-      })
-      return result.size
+      }) as List<number>
+      void result.size
     })
 
     bench("traditional - cartesian product 10x10x10", () => {
       const result = list10.flatMap((x) => list10.flatMap((y) => list10.flatMap((z) => List([x + y + z]))))
-      return result.size
+      void result.size
     })
 
     bench("Do-notation - cartesian product 10x10x10", () => {
@@ -109,24 +108,26 @@ describe("Do-notation Performance", () => {
         const y = yield* $(list10)
         const z = yield* $(list10)
         return x + y + z
-      })
-      return result.size
+      }) as List<number>
+      void result.size
     })
 
     bench("traditional - filtered cartesian product", () => {
       const result = list10.flatMap((x) => list10.flatMap((y) => (x < y ? List([{ x, y }]) : List([]))))
-      return result.size
+      void result.size
     })
 
     bench("Do-notation - filtered cartesian product", () => {
-      const result = Do(function* () {
-        const x = yield* $(list10)
-        const y = yield* $(list10)
-        return x < y ? Option({ x, y }) : None<{ x: number; y: number }>()
-      })
+      const result = (
+        Do(function* () {
+          const x = yield* $(list10)
+          const y = yield* $(list10)
+          return x < y ? Option({ x, y }) : None<{ x: number; y: number }>()
+        }) as List<Option<{ x: number; y: number }>>
+      )
         .filter((opt) => opt.isSome())
-        .map((opt) => opt.get())
-      return result.size
+        .map((opt) => opt.orThrow())
+      void result.size
     })
   })
 
@@ -145,18 +146,20 @@ describe("Do-notation Performance", () => {
               ),
           ),
       )
-      return result.get()
+      result.orThrow()
     })
 
     bench("Do-notation - mixed types with Reshapeable", () => {
-      const result = Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Right<string, number>(10))
-        const z = yield* $(List([15]))
-        const w = yield* $(Try(() => 20))
-        return x + y + z + w
-      }).toOption()
-      return result.get()
+      const result = (
+        Do(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Right<string, number>(10))
+          const z = yield* $(List([15]))
+          const w = yield* $(Try(() => 20))
+          return x + y + z + w
+        }) as Option<number>
+      ).toOption()
+      result.orThrow()
     })
   })
 
@@ -188,21 +191,23 @@ describe("Do-notation Performance", () => {
               ),
           ),
       )
-      return result.isSome()
+      result.isSome()
     })
 
     bench("Do-notation - user registration flow", () => {
-      const result = Do(function* () {
-        const email = yield* $(validateEmail("user@example.com"))
-        const availEmail = yield* $(checkAvailable(email))
-        const hashedPw = yield* $(hashPassword("password123"))
-        return {
-          email: availEmail,
-          password: hashedPw,
-          created: Date.now(),
-        }
-      }).toOption()
-      return result.isSome()
+      const result = (
+        Do(function* () {
+          const email = yield* $(validateEmail("user@example.com"))
+          const availEmail = yield* $(checkAvailable(email))
+          const hashedPw = yield* $(hashPassword("password123"))
+          return {
+            email: availEmail,
+            password: hashedPw,
+            created: Date.now(),
+          }
+        }) as Option<{ email: string; password: string; created: number }>
+      ).toOption()
+      result.isSome()
     })
   })
 
@@ -217,25 +222,25 @@ describe("Do-notation Performance", () => {
       const result = await fetchUser(5).then((userOpt) =>
         userOpt.isNone()
           ? Promise.resolve(None<number>())
-          : fetchScore(userOpt.get().id).then((scoreEither) =>
-              scoreEither.isLeft()
-                ? Promise.resolve(None<number>())
-                : fetchBonus(scoreEither.value).then((bonusTry) =>
-                    bonusTry.isFailure() ? None<number>() : Option(scoreEither.value + bonusTry.get()),
-                  ),
-            ),
+          : fetchScore(userOpt.orThrow().id).then((scoreEither) => {
+              if (scoreEither.isLeft()) return Promise.resolve(None<number>())
+              const score = scoreEither.value as number
+              return fetchBonus(score).then((bonusTry) =>
+                bonusTry.isFailure() ? None<number>() : Option(score + bonusTry.orThrow()),
+              )
+            }),
       )
-      return result.orElse(Option(0)).get()
+      result.orElse(0)
     })
 
     bench("DoAsync - async comprehension", async () => {
-      const result = await DoAsync(async function* () {
+      const result = (await DoAsync(async function* () {
         const user = yield* $(await fetchUser(5))
         const score = yield* $(await fetchScore(user.id))
         const bonus = yield* $(await fetchBonus(score))
         return score + bonus
-      })
-      return result.toOption().orElse(Option(0)).get()
+      })) as Option<number>
+      result.toOption().orElse(0)
     })
   })
 
@@ -245,7 +250,7 @@ describe("Do-notation Performance", () => {
       for (let i = 0; i < 100; i++) {
         result = result.flatMap((x) => Option(x + 1))
       }
-      return result.get()
+      result.orThrow()
     })
 
     bench("Do-notation - generator with state", () => {
@@ -256,8 +261,8 @@ describe("Do-notation Performance", () => {
           sum += value
         }
         return sum
-      })
-      return result.get()
+      }) as Option<number>
+      result.orThrow()
     })
   })
 
@@ -274,18 +279,20 @@ describe("Do-notation Performance", () => {
         .flatMap((x) => riskyOperation(x))
         .flatMap((x) => riskyOperation(x))
         .flatMap((x) => riskyOperation(x))
-      return result.getOrElse(0)
+      result.orElse(0)
     })
 
     bench("Do-notation - multiple Try operations", () => {
-      const result = Do(function* () {
-        const a = yield* $(riskyOperation(10))
-        const b = yield* $(riskyOperation(a))
-        const c = yield* $(riskyOperation(b))
-        const d = yield* $(riskyOperation(c))
-        return d
-      })
-      return result.toOption().getOrElse(0)
+      const result = (
+        Do(function* () {
+          const a = yield* $(riskyOperation(10))
+          const b = yield* $(riskyOperation(a))
+          const c = yield* $(riskyOperation(b))
+          const d = yield* $(riskyOperation(c))
+          return d
+        }) as Try<number>
+      ).toOption()
+      result.orElse(0)
     })
   })
 
@@ -295,7 +302,7 @@ describe("Do-notation Performance", () => {
         .flatMap((x) => (x > 25 ? Option(x * 2) : Option(x)))
         .flatMap((x) => (x > 75 ? Option(x + 10) : Option(x - 10)))
         .flatMap((x) => (x > 100 ? Option(x / 2) : Option(x * 3)))
-      return result.get()
+      result.orThrow()
     })
 
     bench("Do-notation - conditional logic", () => {
@@ -304,8 +311,8 @@ describe("Do-notation Performance", () => {
         x = x > 25 ? x * 2 : x
         const y = yield* $(Option(x > 75 ? x + 10 : x - 10))
         return y > 100 ? y / 2 : y * 3
-      })
-      return result.get()
+      }) as Option<number>
+      result.orThrow()
     })
   })
 })

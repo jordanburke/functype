@@ -170,12 +170,12 @@ describe("Documentation Examples", () => {
       })
 
       // Value is not computed yet
-      const _firstAccess = expensive.orThrow() // Logs "Computing..." and returns result
-      const _secondAccess = expensive.orThrow() // Returns cached result (no log)
+      void expensive.orThrow() // Logs "Computing..." and returns result
+      void expensive.orThrow() // Returns cached result (no log)
 
       // Transform lazy values
       const doubled = expensive.map((n) => n * 2)
-      const _formatted = doubled.map((n) => `Result: ${n}`)
+      void doubled.map((n) => `Result: ${n}`) // formatted
 
       // Combine lazy computations
       const combined = Lazy.of(() => 10).flatMap((a) => Lazy.of(() => 20).map((b) => a + b))
@@ -205,11 +205,11 @@ describe("Documentation Examples", () => {
 
       // Async operations
       // eslint-disable-next-line @typescript-eslint/require-await -- Generator function for demo purposes
-      const _asyncResult = DoAsync(async function* () {
+      void DoAsync(async function* () {
         const data = yield* $(Right("user123"))
         const user = yield* $(Option({ id: data, name: "Alice" }))
         return `User: ${user.name}`
-      })
+      }) // asyncResult
       //#endregion readme-do-notation
 
       expect((result as Option<number>).orElse(0)).toBe(17)
@@ -223,10 +223,10 @@ describe("Documentation Examples", () => {
       const syncResult = Task().Sync(() => "success")
       // Returns: TaskSuccess<string> (extends TaskOutcome<string>)
 
-      const _asyncResult = Task().Async(async () => {
+      void Task().Async(async () => {
         await new Promise((resolve) => setTimeout(resolve, 100))
         return "async success"
-      })
+      }) // asyncResult
       // Returns: Promise<TaskSuccess<string>>
 
       // Error handling
@@ -240,8 +240,8 @@ describe("Documentation Examples", () => {
       const doubled = _transformed.map((value) => value * 2)
 
       // Chain operations with error handling
-      const _chained = Task().Sync(() => 5)
-      const _chainResult = _chained.flatMap((value) => Right(value * 2))
+      const chained = Task().Sync(() => 5)
+      void chained.flatMap((value) => Right(value * 2)) // chainResult
       //#endregion readme-task-basic
 
       expect(syncResult.isSuccess()).toBe(true)
@@ -258,7 +258,7 @@ describe("Documentation Examples", () => {
 
       // Type-safe constructors
       const createUserId = (id: string): UserId => Brand("UserId", id)
-      const _createEmail = (email: string): Email => Brand("Email", email)
+      void ((email: string): Email => Brand("Email", email)) // createEmail
 
       // Runtime validation with ValidatedBrand
       const EmailValidator = ValidatedBrand<"Email", string>("Email", (email: string) => {
@@ -358,9 +358,9 @@ describe("Documentation Examples", () => {
       //#region quick-option-patterns
       // Creation
       const some = Option("value")
-      const _none = Option(null)
-      const _explicit = Some("explicit")
-      const _explicitNone = None<string>()
+      void Option(null) // none
+      void Some("explicit") // explicit some
+      void None<string>() // explicit none
 
       // Common operations
       const mapped = some.map((s) => s.toUpperCase())
@@ -559,10 +559,11 @@ describe("Documentation Examples", () => {
       )
 
       // Asynchronous task
-      const async = Task().Async(
+      const asyncTask = Task().Async(
         async () => await fetchData(),
-        async (err) => new Error("Fetch error"),
+        async () => new Error("Fetch error"),
       )
+      void asyncTask
       //#endregion landing-task-sync-async
 
       expect(sync.isSuccess()).toBe(true)

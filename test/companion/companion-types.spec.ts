@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { Companion, type CompanionMethods, isCompanion, type InstanceType } from "@/companion"
+import { Companion, type CompanionMethods, type InstanceType, isCompanion } from "@/companion"
 import { Option } from "@/option"
 
 describe("CompanionTypes", () => {
@@ -48,7 +48,7 @@ describe("CompanionTypes", () => {
         fromBinary: Option.fromBinary,
       }
       // Type test - ensure it's assignable (even if not exact match)
-      const _typeCheck: Partial<OptionCompanionMethods> = methods
+      void (methods satisfies Partial<OptionCompanionMethods>)
 
       expect(methods.from).toBeDefined()
       expect(methods.none).toBeDefined()
@@ -65,8 +65,8 @@ describe("CompanionTypes", () => {
       const noneValue = Option(null)
 
       // Type assertion to verify these match OptionInstance
-      const _typeCheck1: OptionInstance = someValue as OptionInstance
-      const _typeCheck2: OptionInstance = noneValue as OptionInstance
+      void (someValue as OptionInstance)
+      void (noneValue as OptionInstance)
 
       expect(someValue.isSome()).toBe(true)
       expect(noneValue.isNone()).toBe(true)
@@ -117,10 +117,9 @@ describe("CompanionTypes", () => {
 
       // Extract types
       type BoxMethods = CompanionMethods<typeof Box>
-      type BoxInst = InstanceType<typeof Box>
 
       // Use the companion methods
-      const box1 = Box(10)
+      const box1: InstanceType<typeof Box> = Box(10)
       const box2 = Box.of(20)
 
       expect(box1.unwrap()).toBe(10)
@@ -133,7 +132,7 @@ describe("CompanionTypes", () => {
         empty: Box.empty,
       }
       // Type check
-      const _typeCheck: Partial<BoxMethods> = methods
+      void (methods satisfies Partial<BoxMethods>)
       expect(methods.of).toBeDefined()
       expect(methods.empty).toBeDefined()
     })

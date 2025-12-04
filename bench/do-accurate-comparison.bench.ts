@@ -28,14 +28,13 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
 
     bench("Traditional - with intermediate variables", () => {
       const opt1 = Option(5)
-      const result = opt1.flatMap((x) => {
+      opt1.flatMap((x) => {
         const opt2 = Option(10)
         return opt2.flatMap((y) => {
           const opt3 = Option(15)
           return opt3.map((z) => x + y + z)
         })
       })
-      return result
     })
   })
 
@@ -45,13 +44,13 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
 
     bench("Traditional - with None check (proper)", () => {
       const opt1 = Option(5)
-      if (opt1.isNone()) return opt1
+      if (opt1.isNone()) return
 
       const opt2 = Option.none<number>()
-      if (opt2.isNone()) return opt2
+      if (opt2.isNone()) return
 
       const opt3 = Option(15)
-      return opt1.flatMap((x) => opt2.flatMap((y) => opt3.map((z) => x + y + z)))
+      opt1.flatMap((x) => opt2.flatMap((y) => opt3.map((z) => x + y + z)))
     })
 
     bench("Traditional - flatMap chain (auto short-circuit)", () => {
@@ -79,9 +78,8 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
       const c = Option(3)
 
       if (a.isSome() && b.isSome() && c.isSome()) {
-        return Option(a.get() + b.get() + c.get())
+        Option(a.orThrow() + b.orThrow() + c.orThrow())
       }
-      return Option.none()
     })
 
     bench("Manual state machine (simulating Do)", () => {
@@ -94,27 +92,28 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
         switch (step) {
           case 0: {
             const opt = Option(1)
-            if (opt.isNone()) return opt
-            x = opt.get()
+            if (opt.isNone()) return
+            x = opt.orThrow()
             step++
             break
           }
           case 1: {
             const opt = Option(2)
-            if (opt.isNone()) return opt
-            y = opt.get()
+            if (opt.isNone()) return
+            y = opt.orThrow()
             step++
             break
           }
           case 2: {
             const opt = Option(3)
-            if (opt.isNone()) return opt
-            z = opt.get()
+            if (opt.isNone()) return
+            z = opt.orThrow()
             step++
             break
           }
           case 3:
-            return Option(x + y + z)
+            Option(x + y + z)
+            return
         }
       }
     })
@@ -129,7 +128,7 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
     })
 
     bench("Raw generator (no Do wrapper)", () => {
-      const gen = function* () {
+      const gen = function* (): Generator<Option<number>, number, number> {
         const x = yield Option(1)
         const y = yield Option(2)
         const z = yield Option(3)
@@ -140,21 +139,21 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
       const r1 = iter.next()
       if (!r1.done) {
         const opt1 = r1.value as Option<number>
-        if (opt1.isNone()) return opt1
+        if (opt1.isNone()) return
 
-        const r2 = iter.next(opt1.get())
+        const r2 = iter.next(opt1.orThrow())
         if (!r2.done) {
           const opt2 = r2.value as Option<number>
-          if (opt2.isNone()) return opt2
+          if (opt2.isNone()) return
 
-          const r3 = iter.next(opt2.get())
+          const r3 = iter.next(opt2.orThrow())
           if (!r3.done) {
             const opt3 = r3.value as Option<number>
-            if (opt3.isNone()) return opt3
+            if (opt3.isNone()) return
 
-            const final = iter.next(opt3.get())
+            const final = iter.next(opt3.orThrow())
             if (final.done) {
-              return Option(final.value)
+              Option(final.value)
             }
           }
         }
@@ -192,7 +191,7 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
         if (x < y) {
           return { x, y }
         }
-        yield* $(List<{ x: number; y: number }>([]))
+        return yield* $(List<{ x: number; y: number }>([]))
       })
     })
   })
@@ -201,11 +200,10 @@ describe("Accurate Do-notation vs Traditional Comparison", () => {
 describe("Performance bottleneck analysis", () => {
   describe("Do function overhead breakdown", () => {
     bench("Creating generator only", () => {
-      const gen = function* () {
+      void function* () {
         const x = yield* $(Option(5))
         return x
       }
-      return gen // Just return the generator function
     })
 
     bench("Creating and calling generator", () => {
@@ -213,8 +211,7 @@ describe("Performance bottleneck analysis", () => {
         const x = yield* $(Option(5))
         return x
       }
-      const iter = gen() // Create the iterator
-      return iter
+      void gen() // Create the iterator
     })
 
     bench("Do with single yield", () => {
@@ -227,8 +224,7 @@ describe("Performance bottleneck analysis", () => {
     bench("Do with type detection only", () => {
       const opt = Option(5)
       const tag = opt._tag
-      const type = tag === "Some" || tag === "None" ? "Option" : "unknown"
-      return type
+      void (tag === "Some" || tag === "None" ? "Option" : "unknown")
     })
 
     bench("Traditional single flatMap", () => {

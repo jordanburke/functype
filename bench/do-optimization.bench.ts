@@ -21,7 +21,7 @@ describe("Do-notation performance optimization", () => {
     bench("Option - early None", () => {
       Do(function* () {
         const x = yield* $(Option(5))
-        const y = yield* $(Option.none())
+        const y = yield* $(Option.none<number>())
         const z = yield* $(Option(15))
         return x + y + z
       })
@@ -31,7 +31,7 @@ describe("Do-notation performance optimization", () => {
       Do(function* () {
         const x = yield* $(Option(5))
         const y = yield* $(Option(10))
-        const z = yield* $(Option.none())
+        const z = yield* $(Option.none<number>())
         return x + y + z
       })
     })
@@ -78,7 +78,7 @@ describe("Do-notation performance optimization", () => {
     bench("List - with early empty", () => {
       Do(function* () {
         const x = yield* $(List([1, 2, 3]))
-        const y = yield* $(List([]))
+        const y = yield* $(List<number>([]))
         const z = yield* $(List([100, 200]))
         return x + y + z
       })
@@ -99,7 +99,7 @@ describe("Do-notation performance optimization", () => {
       Do(function* () {
         const x = yield* $(Try(() => 5))
         const y = yield* $(
-          Try(() => {
+          Try<number>(() => {
             throw new Error("fail")
           }),
         )
@@ -182,7 +182,7 @@ describe("Do-notation micro optimizations", () => {
   const testOption = Option(42)
   const testEither = Right<string, number>(42)
   const testList = List([1, 2, 3])
-  const testTry = Try(() => 42)
+  void Try(() => 42) // testTry - unused for now
 
   describe("Type detection performance", () => {
     bench("First yield - Option", () => {
@@ -210,7 +210,7 @@ describe("Do-notation micro optimizations", () => {
   describe("Short-circuit performance", () => {
     bench("Immediate None", () => {
       Do(function* () {
-        const x = yield* $(Option.none())
+        const x = yield* $(Option.none<number>())
         const y = yield* $(Option(10))
         return x + y
       })
@@ -226,7 +226,7 @@ describe("Do-notation micro optimizations", () => {
 
     bench("Immediate empty List", () => {
       Do(function* () {
-        const x = yield* $(List([]))
+        const x = yield* $(List<number>([]))
         const y = yield* $(List([1, 2, 3]))
         return x + y
       })

@@ -65,7 +65,7 @@ function detectMonadTypeObject(value: unknown): string {
     return "unknown"
   }
 
-  return TAG_TO_TYPE[value._tag] ?? "unknown"
+  return TAG_TO_TYPE[value._tag as string] ?? "unknown"
 }
 
 // If/else with early return (no intermediate variable)
@@ -74,10 +74,11 @@ function detectMonadTypeEarlyReturn(value: unknown): string {
     return "unknown"
   }
 
-  if (value._tag === "Some" || value._tag === "None") return "Option"
-  if (value._tag === "Right" || value._tag === "Left") return "Either"
-  if (value._tag === "List") return "List"
-  if (value._tag === "Success" || value._tag === "Failure") return "Try"
+  const tag = (value as { _tag: string })._tag
+  if (tag === "Some" || tag === "None") return "Option"
+  if (tag === "Right" || tag === "Left") return "Either"
+  if (tag === "List") return "List"
+  if (tag === "Success" || tag === "Failure") return "Try"
   return "unknown"
 }
 
@@ -149,14 +150,14 @@ describe("detectMonadType performance comparison", () => {
 // Additional micro-benchmarks for specific cases
 describe("detectMonadType micro-benchmarks", () => {
   const someValue = Option(42)
-  const noneValue = Option.none()
+  void Option.none() // noneValue - unused for now
   const rightValue = Right(42)
-  const leftValue = Left("error")
+  void Left("error") // leftValue - unused for now
   const listValue = List([1, 2, 3])
   const trySuccess = Try(() => 42)
-  const tryFailure = Try(() => {
+  void Try(() => {
     throw new Error("test")
-  })
+  }) // tryFailure - unused for now
 
   bench("switch - Option (Some)", () => {
     detectMonadTypeSwitch(someValue)

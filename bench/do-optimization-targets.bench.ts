@@ -24,8 +24,8 @@ describe("Do-notation optimization targets", () => {
       const iter = gen()
       let firstMonadType: string | null = null
 
-      function step(value?: unknown): unknown {
-        const result = iter.next(value)
+      function step(value?: number): unknown {
+        const result = iter.next(value!)
 
         if (result.done) {
           // Always lookup constructor
@@ -61,7 +61,7 @@ describe("Do-notation optimization targets", () => {
         throw new Error("Not a monad")
       }
 
-      return step()
+      step()
     })
 
     bench("Minimal Do implementation", () => {
@@ -73,14 +73,14 @@ describe("Do-notation optimization targets", () => {
       if (!result.done) {
         const opt = result.value as Option<number>
         if (opt.isSome()) {
-          const final = iter.next(opt.get())
+          const final = iter.next(opt.orThrow())
           if (final.done) {
-            return Option(final.value)
+            Option(final.value)
+            return
           }
         }
-        return opt
+        return
       }
-      return Option.none()
     })
   })
 
@@ -88,29 +88,31 @@ describe("Do-notation optimization targets", () => {
     bench("Current detectMonadType", () => {
       const value = Option(5)
       const tag = value._tag
+      let type: string
       switch (tag) {
         case "Some":
         case "None":
-          return "Option"
+          type = "Option"
+          break
         default:
-          return "unknown"
+          type = "unknown"
       }
+      void type
     })
 
     bench("Direct tag check", () => {
       const value = Option(5)
       const tag = value._tag
-      return tag === "Some" || tag === "None" ? "Option" : "unknown"
+      void (tag === "Some" || tag === "None" ? "Option" : "unknown")
     })
 
     bench("Cached type on first detection", () => {
       // Simulate caching the type on the monad itself
       const value = Option(5) as any
-      if (value.__doType) return value.__doType
+      if (value.__doType) return
       const tag = value._tag
       const type = tag === "Some" || tag === "None" ? "Option" : "unknown"
       value.__doType = type
-      return type
     })
   })
 
@@ -119,7 +121,7 @@ describe("Do-notation optimization targets", () => {
 
     bench("Current isDoable check", () => {
       const value: unknown = opt
-      return (
+      void (
         value !== null &&
         typeof value === "object" &&
         "doUnwrap" in value &&
@@ -129,19 +131,20 @@ describe("Do-notation optimization targets", () => {
 
     bench("Simple property check", () => {
       const value: unknown = opt
-      return value && typeof value === "object" && "doUnwrap" in value
+      void (value && typeof value === "object" && "doUnwrap" in value)
     })
 
     bench("Direct method call (no check)", () => {
       // Assuming we know it's doable
-      return (opt as any).doUnwrap()
+      ;(opt as any).doUnwrap()
     })
 
     bench("Traditional isSome + get", () => {
       if (opt.isSome()) {
-        return { ok: true, value: opt.get() }
+        void { ok: true, value: opt.orThrow() }
+      } else {
+        void { ok: false, empty: true }
       }
-      return { ok: false, empty: true }
     })
   })
 
@@ -161,31 +164,31 @@ describe("Do-notation optimization targets", () => {
       const results: number[] = []
 
       for (const opt of values) {
-        if (opt.isNone()) return opt
-        results.push(opt.get())
+        if (opt.isNone()) return
+        results.push(opt.orThrow())
       }
 
-      return Option(results[0] + results[1] + results[2])
+      Option(results[0]! + results[1]! + results[2]!)
     })
 
     bench("Async/await style (theoretical)", () => {
       // This doesn't work but shows the overhead comparison
       try {
         const a = Option(1)
-        if (a.isNone()) return a
-        const aVal = a.get()
+        if (a.isNone()) return
+        const aVal = a.orThrow()
 
         const b = Option(2)
-        if (b.isNone()) return b
-        const bVal = b.get()
+        if (b.isNone()) return
+        const bVal = b.orThrow()
 
         const c = Option(3)
-        if (c.isNone()) return c
-        const cVal = c.get()
+        if (c.isNone()) return
+        const cVal = c.orThrow()
 
-        return Option(aVal + bVal + cVal)
+        Option(aVal + bVal + cVal)
       } catch {
-        return Option.none()
+        // noop
       }
     })
   })
@@ -212,7 +215,7 @@ describe("Do-notation optimization targets", () => {
         }
       }
 
-      return List(results)
+      List(results)
     })
 
     bench("flatMap equivalent", () => {
