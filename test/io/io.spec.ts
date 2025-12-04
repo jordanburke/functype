@@ -538,6 +538,111 @@ describe("IO", () => {
       await expect(program.run()).rejects.toThrow("oops")
     })
   })
+
+  // ============================================
+  // Do-Builder Pattern
+  // ============================================
+
+  describe("IO.Do", () => {
+    it("should support basic bind pattern", async () => {
+      const program = IO.Do.bind("a", () => IO.succeed(1))
+        .bind("b", () => IO.succeed(2))
+        .map(({ a, b }) => a + b)
+
+      const result = await program.run()
+      expect(result).toBe(3)
+    })
+
+    it("should allow accessing previous bindings", async () => {
+      const program = IO.Do.bind("x", () => IO.succeed(10))
+        .bind("y", ({ x }) => IO.succeed(x * 2))
+        .map(({ x, y }) => x + y)
+
+      const result = await program.run()
+      expect(result).toBe(30) // 10 + 20
+    })
+
+    it("should support let for pure values", async () => {
+      const program = IO.Do.bind("a", () => IO.succeed(5))
+        .let("b", ({ a }) => a * 2)
+        .map(({ a, b }) => a + b)
+
+      const result = await program.run()
+      expect(result).toBe(15) // 5 + 10
+    })
+
+    it("should support mixing bind and let", async () => {
+      const program = IO.Do.bind("fetched", () => IO.succeed(100))
+        .let("doubled", ({ fetched }) => fetched * 2)
+        .bind("async", ({ doubled }) => IO.succeed(doubled + 1))
+        .map(({ fetched, doubled, async }) => ({ fetched, doubled, async }))
+
+      const result = await program.run()
+      expect(result).toEqual({ fetched: 100, doubled: 200, async: 201 })
+    })
+
+    it("should short-circuit on failure", async () => {
+      const program = IO.Do.bind("a", () => IO.succeed(1))
+        .bind("b", () => IO.fail(new Error("oops")))
+        .bind("c", () => IO.succeed(3))
+        .map(({ a, c }) => a + c)
+
+      await expect(program.run()).rejects.toThrow("oops")
+    })
+
+    it("should support tap for side effects", async () => {
+      let sideEffect = 0
+      const program = IO.Do.bind("value", () => IO.succeed(42))
+        .tap(({ value }) => {
+          sideEffect = value
+        })
+        .map(({ value }) => value)
+
+      const result = await program.run()
+      expect(result).toBe(42)
+      expect(sideEffect).toBe(42)
+    })
+
+    it("should support tapEffect for effectful side effects", async () => {
+      let sideEffect = 0
+      const program = IO.Do.bind("value", () => IO.succeed(42))
+        .tapEffect(({ value }) =>
+          IO.sync(() => {
+            sideEffect = value
+          }),
+        )
+        .map(({ value }) => value)
+
+      const result = await program.run()
+      expect(result).toBe(42)
+      expect(sideEffect).toBe(42)
+    })
+
+    it("should support flatMap to chain to another IO", async () => {
+      const program = IO.Do.bind("a", () => IO.succeed(10))
+        .bind("b", () => IO.succeed(20))
+        .flatMap(({ a, b }) => IO.succeed(a + b))
+
+      const result = await program.run()
+      expect(result).toBe(30)
+    })
+
+    it("should support done to return context as-is", async () => {
+      const program = IO.Do.bind("name", () => IO.succeed("Alice"))
+        .bind("age", () => IO.succeed(30))
+        .done()
+
+      const result = await program.run()
+      expect(result).toEqual({ name: "Alice", age: 30 })
+    })
+
+    it("should have access to effect property", async () => {
+      const builder = IO.Do.bind("x", () => IO.succeed(1))
+      const effect = builder.effect
+      const result = await effect.run()
+      expect(result).toEqual({ x: 1 })
+    })
+  })
 })
 
 // ============================================
@@ -719,6 +824,289 @@ describe("Exit", () => {
     it("should create failure from Left", () => {
       const exit = Exit.fromEither(Left(new Error("oops")))
       expect(exit.isFailure()).toBe(true)
+    })
+  })
+})
+
+// ============================================
+// Dependency Injection Tests
+// ============================================
+
+import { Context, Layer, Tag } from "@/io"
+
+describe("Dependency Injection", () => {
+  // Define test service interfaces
+  interface Logger {
+    log(message: string): string
+  }
+
+  interface Config {
+    host: string
+    port: number
+  }
+
+  // Create tags
+  const Logger = Tag<Logger>("Logger")
+  const Config = Tag<Config>("Config")
+
+  describe("Tag", () => {
+    it("should create a tag with an id", () => {
+      expect(Logger.id).toBe("Logger")
+      expect(Logger.toString()).toBe("Tag(Logger)")
+    })
+  })
+
+  describe("Context", () => {
+    it("should create empty context", () => {
+      const ctx = Context.empty()
+      expect(ctx.size).toBe(0)
+    })
+
+    it("should add and retrieve services", () => {
+      const logger: Logger = { log: (msg) => msg }
+      const ctx = Context.make(Logger, logger)
+
+      expect(ctx.has(Logger)).toBe(true)
+      expect(ctx.get(Logger).isSome()).toBe(true)
+      expect(ctx.unsafeGet(Logger)).toBe(logger)
+    })
+
+    it("should merge contexts", () => {
+      const logger: Logger = { log: (msg) => msg }
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const ctx1 = Context.make(Logger, logger)
+      const ctx2 = Context.make(Config, config)
+      const merged = ctx1.merge(ctx2)
+
+      expect(merged.has(Logger)).toBe(true)
+      expect(merged.has(Config)).toBe(true)
+    })
+
+    it("should throw on missing service", () => {
+      const ctx = Context.empty()
+      expect(() => ctx.unsafeGet(Logger)).toThrow("Service not found: Logger")
+    })
+  })
+
+  describe("IO.service", () => {
+    it("should access provided service", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Hello")))
+
+      const result = await program.provideService(Logger, logger).run()
+      expect(result).toBe("Logged: Hello")
+    })
+
+    it("should fail when service not provided", async () => {
+      const program = IO.service(Logger)
+      await expect(program.run()).rejects.toThrow("Service not found: Logger")
+    })
+
+    it("should work with serviceWith", async () => {
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const program = IO.serviceWith(Config, (cfg) => `${cfg.host}:${cfg.port}`)
+
+      const result = await program.provideService(Config, config).run()
+      expect(result).toBe("localhost:8080")
+    })
+
+    it("should work with serviceWithIO", async () => {
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const program = IO.serviceWithIO(Config, (cfg) => IO.succeed(`${cfg.host}:${cfg.port}`))
+
+      const result = await program.provideService(Config, config).run()
+      expect(result).toBe("localhost:8080")
+    })
+  })
+
+  describe("provideContext", () => {
+    it("should provide multiple services at once", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const program = IO.Do.bind("logger", () => IO.service(Logger))
+        .bind("config", () => IO.service(Config))
+        .map(({ logger: log, config: cfg }) => log.log(`${cfg.host}:${cfg.port}`))
+
+      const ctx = Context.empty<Logger & Config>().add(Logger, logger).add(Config, config)
+
+      const result = await program.provideContext(ctx).run()
+      expect(result).toBe("Logged: localhost:8080")
+    })
+  })
+
+  describe("Layer", () => {
+    it("should create layer with succeed", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+      const LoggerLive = Layer.succeed(Logger, logger)
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
+
+      const result = await program.provideLayer(LoggerLive).run()
+      expect(result).toBe("Logged: Test")
+    })
+
+    it("should create layer with sync", async () => {
+      const LoggerLive = Layer.sync(Logger, () => ({
+        log: (msg) => `Sync Logged: ${msg}`,
+      }))
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
+
+      const result = await program.provideLayer(LoggerLive).run()
+      expect(result).toBe("Sync Logged: Test")
+    })
+
+    it("should create layer with effect", async () => {
+      const LoggerLive = Layer.effect(Logger, async () => ({
+        log: (msg) => `Async Logged: ${msg}`,
+      }))
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
+
+      const result = await program.provideLayer(LoggerLive).run()
+      expect(result).toBe("Async Logged: Test")
+    })
+
+    it("should create layer from service dependency", async () => {
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const ConfigLive = Layer.succeed(Config, config)
+
+      const LoggerLive = Layer.fromService(Logger, Config, (cfg) => ({
+        log: (msg) => `[${cfg.host}:${cfg.port}] ${msg}`,
+      }))
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Hello")))
+
+      // Need to provide both layers
+      const fullLayer = ConfigLive.provideToAndMerge(LoggerLive)
+      const result = await program.provideLayer(fullLayer).run()
+      expect(result).toBe("[localhost:8080] Hello")
+    })
+
+    it("should merge independent layers", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const LoggerLive = Layer.succeed(Logger, logger)
+      const ConfigLive = Layer.succeed(Config, config)
+      const FullLayer = LoggerLive.merge(ConfigLive)
+
+      const program = IO.Do.bind("logger", () => IO.service(Logger))
+        .bind("config", () => IO.service(Config))
+        .map(({ logger: log, config: cfg }) => log.log(`${cfg.host}:${cfg.port}`))
+
+      const result = await program.provideLayer(FullLayer).run()
+      expect(result).toBe("Logged: localhost:8080")
+    })
+  })
+
+  describe("sync execution with services", () => {
+    it("should work with runSync when services provided", () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+
+      const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Sync")))
+
+      const result = program.provideService(Logger, logger).runSync()
+      expect(result).toBe("Logged: Sync")
+    })
+  })
+
+  // ============================================
+  // IO Constructor Auto-Detection
+  // ============================================
+
+  describe("IO constructor auto-detection", () => {
+    it("should handle sync functions", async () => {
+      const io = IO(() => 42)
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+
+    it("should auto-detect Promise and handle async", async () => {
+      const io = IO(() => Promise.resolve(42))
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+
+    it("should be lazy - function not called until run", async () => {
+      let called = false
+      const io = IO(() => {
+        called = true
+        return 42
+      })
+      expect(called).toBe(false)
+      await io.run()
+      expect(called).toBe(true)
+    })
+
+    it("should work with runSync for sync functions", () => {
+      const io = IO(() => 42)
+      const result = io.runSync()
+      expect(result).toBe(42)
+    })
+
+    it("should throw on runSync for async functions", () => {
+      const io = IO(() => Promise.resolve(42))
+      expect(() => io.runSync()).toThrow("Cannot run async effect synchronously")
+    })
+
+    it("should chain sync and async transparently", async () => {
+      const io = IO(() => 10)
+        .flatMap((x) => IO(() => Promise.resolve(x * 2)))
+        .map((x) => x + 1)
+      const result = await io.run()
+      expect(result).toBe(21)
+    })
+  })
+
+  // ============================================
+  // IO.withServices
+  // ============================================
+
+  describe("IO.withServices", () => {
+    it("should provide multiple services to a function", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+      const config: Config = { host: "localhost", port: 8080 }
+
+      const program = IO.withServices({ logger: Logger, config: Config }, ({ logger: log, config: cfg }) =>
+        log.log(`${cfg.host}:${cfg.port}`),
+      )
+
+      const result = await program.provideService(Logger, logger).provideService(Config, config).run()
+      expect(result).toBe("Logged: localhost:8080")
+    })
+
+    it("should work with async functions", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+
+      const program = IO.withServices({ logger: Logger }, async ({ logger: log }) => {
+        await Promise.resolve() // simulate async
+        return log.log("async")
+      })
+
+      const result = await program.provideService(Logger, logger).run()
+      expect(result).toBe("Logged: async")
+    })
+
+    it("should work with empty services", async () => {
+      const program = IO.withServices({}, () => 42)
+      const result = await program.run()
+      expect(result).toBe(42)
+    })
+
+    it("should work with single service", async () => {
+      const logger: Logger = { log: (msg) => `Logged: ${msg}` }
+
+      const program = IO.withServices({ logger: Logger }, ({ logger: log }) => log.log("single"))
+
+      const result = await program.provideService(Logger, logger).run()
+      expect(result).toBe("Logged: single")
     })
   })
 })

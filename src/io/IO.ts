@@ -7,8 +7,12 @@ import type { Option } from "@/option/Option"
 import type { Try } from "@/try/Try"
 import type { Type } from "@/types"
 
+import type { Context } from "./Context"
+import { Context as ContextCompanion } from "./Context"
 import type { Exit as ExitType } from "./Exit"
 import { Exit } from "./Exit"
+import type { Layer } from "./Layer"
+import type { Tag, TagService } from "./Tag"
 
 /**
  * IO Effect type module - a lazy, composable effect type with typed errors.
@@ -33,6 +37,7 @@ import { Exit } from "./Exit"
 type IOEffect<R, E, A> =
   | { readonly _tag: "Sync"; readonly thunk: () => A }
   | { readonly _tag: "Async"; readonly thunk: () => Promise<A> }
+  | { readonly _tag: "Auto"; readonly thunk: () => A | Promise<A> }
   | { readonly _tag: "Succeed"; readonly value: A }
   | { readonly _tag: "Fail"; readonly error: E }
   | { readonly _tag: "Die"; readonly defect: unknown }
@@ -47,6 +52,8 @@ type IOEffect<R, E, A> =
       readonly onFailure: (e: E) => A
       readonly onSuccess: (a: unknown) => A
     }
+  | { readonly _tag: "Service"; readonly tag: Tag<A> }
+  | { readonly _tag: "ProvideContext"; readonly effect: IO<R, E, A>; readonly context: Context<R> }
 
 /**
  * IO<R, E, A> represents a lazy, composable effect.
@@ -173,6 +180,31 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * Flattens a nested IO.
    */
   flatten<R2 extends Type, E2 extends Type, B extends Type>(this: IO<R, E, IO<R2, E2, B>>): IO<R | R2, E | E2, B>
+
+  // ============================================
+  // Dependency Injection
+  // ============================================
+
+  /**
+   * Provides a context to satisfy the requirements of this effect.
+   * @param context - The context containing required services
+   */
+  provideContext<R2 extends R>(context: Context<R2>): IO<Exclude<R, R2>, E, A>
+
+  /**
+   * Provides a single service to satisfy part of the requirements.
+   * @param tag - The service tag
+   * @param service - The service implementation
+   */
+  provideService<S extends Type>(tag: Tag<S>, service: S): IO<Exclude<R, S>, E, A>
+
+  /**
+   * Provides services using a layer.
+   * @param layer - The layer that provides services
+   */
+  provideLayer<RIn extends Type, E2 extends Type, ROut extends R>(
+    layer: Layer<RIn, E2, ROut>,
+  ): IO<RIn | Exclude<R, ROut>, E | E2, A>
 
   // ============================================
   // Execution (R must be never to run)
@@ -313,6 +345,41 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       return this.flatMap((inner) => inner)
     },
 
+    // Dependency Injection
+    provideContext<R2 extends R>(context: Context<R2>): IO<Exclude<R, R2>, E, A> {
+      return createIO({
+        _tag: "ProvideContext",
+        effect: io as IO<R, E, A>,
+        context: context as Context<R>,
+      }) as IO<Exclude<R, R2>, E, A>
+    },
+
+    provideService<S extends Type>(tag: Tag<S>, service: S): IO<Exclude<R, S>, E, A> {
+      const context = ContextCompanion.make(tag, service) as Context<R>
+      return createIO({
+        _tag: "ProvideContext",
+        effect: io as IO<R, E, A>,
+        context,
+      }) as IO<Exclude<R, S>, E, A>
+    },
+
+    provideLayer<RIn extends Type, E2 extends Type, ROut extends R>(
+      layer: Layer<RIn, E2, ROut>,
+    ): IO<RIn | Exclude<R, ROut>, E | E2, A> {
+      // Build the layer and provide its context
+      return IOCompanion.async(async () => {
+        const inputContext = ContextCompanion.empty()
+        const context = await layer.build(inputContext as Context<RIn>)
+        return context
+      }).flatMap((context) =>
+        createIO({
+          _tag: "ProvideContext",
+          effect: io as IO<ROut, E, A>,
+          context: context as Context<ROut>,
+        }),
+      ) as IO<RIn | Exclude<R, ROut>, E | E2, A>
+    },
+
     // Execution
     async run(this: IO<never, E, A>): Promise<A> {
       const exit = await runEffect(this._effect)
@@ -369,7 +436,10 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 /**
  * Interprets and runs an effect synchronously
  */
-const runEffectSync = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): A => {
+const runEffectSync = <R extends Type, E extends Type, A extends Type>(
+  effect: IOEffect<R, E, A>,
+  context: Context<R> = ContextCompanion.empty() as Context<R>,
+): A => {
   switch (effect._tag) {
     case "Succeed":
       return effect.value
@@ -381,44 +451,62 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(effect: I
       return effect.thunk()
     case "Async":
       throw new Error("Cannot run async effect synchronously")
+    case "Auto": {
+      const result = effect.thunk()
+      if (result instanceof Promise) {
+        throw new Error("Cannot run async effect synchronously")
+      }
+      return result
+    }
     case "Map": {
-      const a = runEffectSync(effect.effect._effect)
+      const a = runEffectSync(effect.effect._effect, context)
       return effect.f(a)
     }
     case "FlatMap": {
-      const a = runEffectSync(effect.effect._effect)
+      const a = runEffectSync(effect.effect._effect, context)
       const nextIO = effect.f(a)
-      return runEffectSync(nextIO._effect)
+      return runEffectSync(nextIO._effect, context)
     }
     case "MapError": {
       try {
-        return runEffectSync(effect.effect._effect)
+        return runEffectSync(effect.effect._effect, context)
       } catch (e) {
         throw effect.f(e)
       }
     }
     case "Recover": {
       try {
-        return runEffectSync(effect.effect._effect)
+        return runEffectSync(effect.effect._effect, context)
       } catch {
         return effect.fallback
       }
     }
     case "RecoverWith": {
       try {
-        return runEffectSync(effect.effect._effect)
+        return runEffectSync(effect.effect._effect, context)
       } catch (e) {
         const recoveryIO = effect.f(e as E)
-        return runEffectSync(recoveryIO._effect)
+        return runEffectSync(recoveryIO._effect, context)
       }
     }
     case "Fold": {
       try {
-        const a = runEffectSync(effect.effect._effect)
+        const a = runEffectSync(effect.effect._effect, context)
         return effect.onSuccess(a)
       } catch (e) {
         return effect.onFailure(e as E)
       }
+    }
+    case "Service": {
+      const service = context.get(effect.tag)
+      if (service.isNone()) {
+        throw new Error(`Service not found: ${effect.tag.id}`)
+      }
+      return service.orThrow() as A
+    }
+    case "ProvideContext": {
+      const mergedContext = context.merge(effect.context)
+      return runEffectSync(effect.effect._effect, mergedContext as Context<R>)
     }
   }
 }
@@ -428,6 +516,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(effect: I
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
+  context: Context<R> = ContextCompanion.empty() as Context<R>,
 ): Promise<ExitType<E, A>> => {
   try {
     switch (effect._tag) {
@@ -443,23 +532,30 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         const result = await effect.thunk()
         return Exit.succeed(result)
       }
+      case "Auto": {
+        const result = effect.thunk()
+        if (result instanceof Promise) {
+          return Exit.succeed(await result)
+        }
+        return Exit.succeed(result)
+      }
       case "Map": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (!exitA.isSuccess()) {
           return exitA as ExitType<E, A>
         }
         return Exit.succeed(effect.f(exitA.orThrow()))
       }
       case "FlatMap": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (!exitA.isSuccess()) {
           return exitA as ExitType<E, A>
         }
         const nextIO = effect.f(exitA.orThrow())
-        return runEffect(nextIO._effect)
+        return runEffect(nextIO._effect, context)
       }
       case "MapError": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (exitA.isSuccess()) {
           return exitA
         }
@@ -469,25 +565,25 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return exitA as ExitType<E, A>
       }
       case "Recover": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (exitA.isSuccess()) {
           return exitA
         }
         return Exit.succeed(effect.fallback)
       }
       case "RecoverWith": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (exitA.isSuccess()) {
           return exitA
         }
         if (exitA.isFailure()) {
           const recoveryIO = effect.f((exitA.toValue() as { error: E }).error)
-          return runEffect(recoveryIO._effect)
+          return runEffect(recoveryIO._effect, context)
         }
         return exitA
       }
       case "Fold": {
-        const exitA = await runEffect(effect.effect._effect)
+        const exitA = await runEffect(effect.effect._effect, context)
         if (exitA.isSuccess()) {
           return Exit.succeed(effect.onSuccess(exitA.orThrow()))
         }
@@ -495,6 +591,17 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return Exit.succeed(effect.onFailure((exitA.toValue() as { error: E }).error))
         }
         return exitA as ExitType<E, A>
+      }
+      case "Service": {
+        const service = context.get(effect.tag)
+        if (service.isNone()) {
+          return Exit.fail(new Error(`Service not found: ${effect.tag.id}`) as E)
+        }
+        return Exit.succeed(service.orThrow() as A)
+      }
+      case "ProvideContext": {
+        const mergedContext = context.merge(effect.context)
+        return runEffect(effect.effect._effect, mergedContext as Context<R>)
       }
     }
   } catch (e) {
@@ -611,6 +718,85 @@ const IOCompanion = {
     t.isSuccess() ? IOCompanion.succeed(t.orThrow()) : IOCompanion.fail(t.error as Error),
 
   // ============================================
+  // Dependency Injection
+  // ============================================
+
+  /**
+   * Creates an IO that requires a service identified by the tag.
+   * The service must be provided before the effect can be run.
+   *
+   * @example
+   * ```typescript
+   * interface Logger {
+   *   log(message: string): void
+   * }
+   * const Logger = Tag<Logger>("Logger")
+   *
+   * const program = IO.service(Logger).flatMap(logger =>
+   *   IO.sync(() => logger.log("Hello!"))
+   * )
+   *
+   * // Provide the service to run
+   * program.provideService(Logger, consoleLogger).run()
+   * ```
+   */
+  service: <S extends Type>(tag: Tag<S>): IO<S, never, S> => createIO({ _tag: "Service", tag }),
+
+  /**
+   * Accesses a service and applies a function to it.
+   */
+  serviceWith: <S extends Type, A extends Type>(tag: Tag<S>, f: (service: S) => A): IO<S, never, A> =>
+    IOCompanion.service(tag).map(f),
+
+  /**
+   * Accesses a service and applies an effectful function to it.
+   */
+  serviceWithIO: <S extends Type, R extends Type, E extends Type, A extends Type>(
+    tag: Tag<S>,
+    f: (service: S) => IO<R, E, A>,
+  ): IO<S | R, E, A> => IOCompanion.service(tag).flatMap(f),
+
+  /**
+   * Accesses multiple services and applies a function to them.
+   * Provides a convenient way to work with multiple dependencies.
+   *
+   * @example
+   * ```typescript
+   * const program = IO.withServices(
+   *   { logger: Logger, db: Database },
+   *   ({ logger, db }) => {
+   *     logger.log("Querying...")
+   *     return db.query("SELECT * FROM users")
+   *   }
+   * )
+   * ```
+   */
+  withServices: <Services extends Record<string, Tag<Type>>, A extends Type>(
+    services: Services,
+    f: (ctx: { [K in keyof Services]: TagService<Services[K]> }) => A | Promise<A>,
+  ): IO<TagService<Services[keyof Services]>, unknown, A> => {
+    const entries = Object.entries(services) as [string, Tag<Type>][]
+    if (entries.length === 0) {
+      return createIO({ _tag: "Auto", thunk: () => f({} as { [K in keyof Services]: TagService<Services[K]> }) })
+    }
+
+    // Build up the context by fetching each service
+    type Ctx = { [K in keyof Services]: TagService<Services[K]> }
+    const buildContext = entries.reduce(
+      (acc, [name, tag]) =>
+        acc.flatMap((ctx) =>
+          IOCompanion.service(tag).map((service) => ({
+            ...ctx,
+            [name]: service,
+          })),
+        ),
+      IOCompanion.succeed({}) as IO<TagService<Services[keyof Services]>, never, Partial<Ctx>>,
+    )
+
+    return buildContext.flatMap((ctx) => createIO({ _tag: "Auto", thunk: () => f(ctx as Ctx) }))
+  },
+
+  // ============================================
   // Combinators
   // ============================================
 
@@ -693,12 +879,148 @@ const IOCompanion = {
       return runGenerator(undefined)
     }).flatMap((io) => io)
   },
+
+  // ============================================
+  // Do-Builder Pattern
+  // ============================================
+
+  /**
+   * Starts a Do-builder context for binding values.
+   * This enables do-notation style programming without generators.
+   *
+   * @example
+   * ```typescript
+   * const program = IO.Do
+   *   .bind("user", () => getUser("123"))
+   *   .bind("posts", ({ user }) => getPosts(user.id))
+   *   .let("count", ({ posts }) => posts.length)
+   *   .map(({ user, posts, count }) => ({ user, posts, count }))
+   * ```
+   */
+  get Do(): DoBuilder<never, never, Record<string, never>> {
+    return createDoBuilder(IOCompanion.succeed({} as Record<string, never>))
+  },
 }
 
 /**
- * IO constructor - creates an IO from a synchronous function
+ * Do-builder interface for chaining binds and maps
  */
-const IOConstructor = <A extends Type>(f: () => A): IO<never, never, A> => IOCompanion.sync(f)
+interface DoBuilder<R extends Type, E extends Type, Ctx extends Record<string, Type>> {
+  /**
+   * The underlying IO effect
+   */
+  readonly effect: IO<R, E, Ctx>
+
+  /**
+   * Binds the result of an effect to a named property in the context.
+   * @param name - The property name to bind to
+   * @param f - Function that returns an IO effect (receives current context)
+   */
+  bind<N extends string, R2 extends Type, E2 extends Type, A extends Type>(
+    name: Exclude<N, keyof Ctx>,
+    f: (ctx: Ctx) => IO<R2, E2, A>,
+  ): DoBuilder<R | R2, E | E2, Ctx & Record<N, A>>
+
+  /**
+   * Binds a pure value to a named property in the context.
+   * @param name - The property name to bind to
+   * @param f - Function that returns a value (receives current context)
+   */
+  let<N extends string, A extends Type>(
+    name: Exclude<N, keyof Ctx>,
+    f: (ctx: Ctx) => A,
+  ): DoBuilder<R, E, Ctx & Record<N, A>>
+
+  /**
+   * Transforms the final context value.
+   * @param f - Function to transform the context
+   */
+  map<B extends Type>(f: (ctx: Ctx) => B): IO<R, E, B>
+
+  /**
+   * Chains to another IO based on the context.
+   * @param f - Function that returns an IO effect
+   */
+  flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (ctx: Ctx) => IO<R2, E2, B>): IO<R | R2, E | E2, B>
+
+  /**
+   * Executes a side effect without changing the context.
+   * @param f - Side effect function
+   */
+  tap(f: (ctx: Ctx) => void): DoBuilder<R, E, Ctx>
+
+  /**
+   * Executes an effectful side effect without changing the context.
+   * @param f - Function returning an IO for the side effect
+   */
+  tapEffect<R2 extends Type, E2 extends Type>(f: (ctx: Ctx) => IO<R2, E2, unknown>): DoBuilder<R | R2, E | E2, Ctx>
+
+  /**
+   * Returns the final context as is.
+   */
+  done(): IO<R, E, Ctx>
+}
+
+/**
+ * Creates a DoBuilder from an IO effect
+ */
+const createDoBuilder = <R extends Type, E extends Type, Ctx extends Record<string, Type>>(
+  effect: IO<R, E, Ctx>,
+): DoBuilder<R, E, Ctx> => ({
+  effect,
+
+  bind<N extends string, R2 extends Type, E2 extends Type, A extends Type>(
+    name: Exclude<N, keyof Ctx>,
+    f: (ctx: Ctx) => IO<R2, E2, A>,
+  ): DoBuilder<R | R2, E | E2, Ctx & Record<N, A>> {
+    const newEffect = effect.flatMap((ctx) => f(ctx).map((a) => ({ ...ctx, [name]: a }) as Ctx & Record<N, A>))
+    return createDoBuilder(newEffect)
+  },
+
+  let<N extends string, A extends Type>(
+    name: Exclude<N, keyof Ctx>,
+    f: (ctx: Ctx) => A,
+  ): DoBuilder<R, E, Ctx & Record<N, A>> {
+    const newEffect = effect.map((ctx) => ({ ...ctx, [name]: f(ctx) }) as Ctx & Record<N, A>)
+    return createDoBuilder(newEffect)
+  },
+
+  map<B extends Type>(f: (ctx: Ctx) => B): IO<R, E, B> {
+    return effect.map(f)
+  },
+
+  flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (ctx: Ctx) => IO<R2, E2, B>): IO<R | R2, E | E2, B> {
+    return effect.flatMap(f)
+  },
+
+  tap(f: (ctx: Ctx) => void): DoBuilder<R, E, Ctx> {
+    return createDoBuilder(effect.tap(f))
+  },
+
+  tapEffect<R2 extends Type, E2 extends Type>(f: (ctx: Ctx) => IO<R2, E2, unknown>): DoBuilder<R | R2, E | E2, Ctx> {
+    return createDoBuilder(effect.tapEffect(f))
+  },
+
+  done(): IO<R, E, Ctx> {
+    return effect
+  },
+})
+
+/**
+ * IO constructor - creates an IO from a function.
+ * Automatically detects if the function returns a Promise and handles it appropriately.
+ *
+ * @example
+ * ```typescript
+ * // Sync usage
+ * const syncIO = IO(() => 42)
+ *
+ * // Async usage - auto-detected
+ * const asyncIO = IO(() => fetch('/api/data'))
+ * ```
+ */
+const IOConstructor = <A extends Type>(f: () => A | Promise<A>): IO<never, unknown, A> =>
+  createIO({ _tag: "Auto", thunk: f })
 
 /**
  * IO effect type for lazy, composable effects with typed errors.
