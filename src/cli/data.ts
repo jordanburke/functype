@@ -124,6 +124,54 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  IO: {
+    description: "Lazy effect type with typed errors and dependency injection",
+    interfaces: ["Functor", "Monad", "Foldable", "Matchable"],
+    methods: {
+      create: [
+        "IO(() => v)",
+        "IO.succeed(v)",
+        "IO.fail(e)",
+        "IO.sync(f)",
+        "IO.async(f)",
+        "IO.tryPromise({try, catch})",
+        "IO.fromEither(e)",
+        "IO.fromOption(o)",
+        "IO.fromTry(t)",
+      ],
+      transform: [".map(f)", ".flatMap(f)", ".tap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
+      extract: [
+        ".run()",
+        ".runSync()",
+        ".runEither()",
+        ".runExit()",
+        ".runOption()",
+        ".runTry()",
+        ".fold(onErr, onOk)",
+        ".match({failure, success})",
+      ],
+      check: [],
+      other: [
+        ".catchTag(tag, f)",
+        ".catchAll(f)",
+        ".retry(n)",
+        ".retryWithDelay(n, ms)",
+        ".timeout(ms)",
+        ".delay(ms)",
+        ".zip(io)",
+        ".pipe(f)",
+        "IO.all([...])",
+        "IO.race([...])",
+        "IO.bracket(acquire, use, release)",
+        "IO.gen(function*() {...})",
+        "IO.Do.bind().map()",
+        "IO.service(Tag)",
+        ".provideService(Tag, impl)",
+        ".provideLayer(layer)",
+      ],
+    },
+  },
+
   FPromise: {
     description: "Enhanced Promise with functional methods",
     interfaces: ["PromiseLike"],
@@ -249,6 +297,6 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Async: ["Task", "FPromise"],
+  Effect: ["IO", "Task", "FPromise"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
 }

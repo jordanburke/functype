@@ -81,7 +81,7 @@ describe("CLI Formatters", () => {
       const output = formatOverview()
       expect(output).toContain("CORE")
       expect(output).toContain("COLLECTION")
-      expect(output).toContain("ASYNC")
+      expect(output).toContain("EFFECT")
       expect(output).toContain("UTILITY")
     })
 
