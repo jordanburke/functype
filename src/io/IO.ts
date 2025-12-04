@@ -15,6 +15,33 @@ import type { Layer } from "./Layer"
 import type { Tag, TagService } from "./Tag"
 
 /**
+ * Error thrown when an effect times out.
+ */
+// eslint-disable-next-line functional/no-classes
+export class TimeoutError extends Error {
+  readonly _tag = "TimeoutError" as const
+  constructor(
+    readonly duration: number,
+    message?: string,
+  ) {
+    super(message ?? `Effect timed out after ${duration}ms`)
+    this.name = "TimeoutError"
+  }
+}
+
+/**
+ * Error thrown when an effect is interrupted.
+ */
+// eslint-disable-next-line functional/no-classes
+export class InterruptedError extends Error {
+  readonly _tag = "InterruptedError" as const
+  constructor(message?: string) {
+    super(message ?? "Effect was interrupted")
+    this.name = "InterruptedError"
+  }
+}
+
+/**
  * IO Effect type module - a lazy, composable effect type with typed errors.
  * @module IO
  * @category IO
@@ -41,6 +68,7 @@ type IOEffect<R, E, A> =
   | { readonly _tag: "Succeed"; readonly value: A }
   | { readonly _tag: "Fail"; readonly error: E }
   | { readonly _tag: "Die"; readonly defect: unknown }
+  | { readonly _tag: "Interrupt" }
   | { readonly _tag: "FlatMap"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => IO<R, E, A> }
   | { readonly _tag: "Map"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => A }
   | { readonly _tag: "MapError"; readonly effect: IO<R, unknown, A>; readonly f: (e: unknown) => E }
@@ -51,6 +79,21 @@ type IOEffect<R, E, A> =
       readonly effect: IO<R, E, unknown>
       readonly onFailure: (e: E) => A
       readonly onSuccess: (a: unknown) => A
+    }
+  | {
+      readonly _tag: "Bracket"
+      readonly acquire: IO<R, E, unknown>
+      readonly use: (a: unknown) => IO<R, E, A>
+      readonly release: (a: unknown) => IO<R, never, void>
+    }
+  | {
+      readonly _tag: "Race"
+      readonly effects: readonly IO<R, E, A>[]
+    }
+  | {
+      readonly _tag: "Timeout"
+      readonly effect: IO<R, E, A>
+      readonly duration: number
     }
   | { readonly _tag: "Service"; readonly tag: Tag<A> }
   | { readonly _tag: "ProvideContext"; readonly effect: IO<R, E, A>; readonly context: Context<R> }
@@ -247,6 +290,19 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
   delay(ms: number): IO<R, E, A>
 
   /**
+   * Fails with TimeoutError if the effect doesn't complete within the specified duration.
+   * @param ms - Maximum time in milliseconds
+   */
+  timeout(ms: number): IO<R, E | TimeoutError, A>
+
+  /**
+   * Returns a fallback value if the effect doesn't complete within the specified duration.
+   * @param ms - Maximum time in milliseconds
+   * @param fallback - Value to return on timeout
+   */
+  timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B>
+
+  /**
    * Converts to string representation.
    */
   toString(): string
@@ -417,6 +473,14 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       return IOCompanion.async<void>(() => new Promise((resolve) => setTimeout(resolve, ms))).flatMap(() => io)
     },
 
+    timeout(ms: number): IO<R, E | TimeoutError, A> {
+      return createIO({ _tag: "Timeout", effect: io, duration: ms })
+    },
+
+    timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B> {
+      return io.timeout(ms).recover(fallback as A | B)
+    },
+
     toString() {
       return `IO(${stringify(effect._tag)})`
     },
@@ -508,6 +572,20 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       const mergedContext = context.merge(effect.context)
       return runEffectSync(effect.effect._effect, mergedContext as Context<R>)
     }
+    case "Interrupt":
+      throw new InterruptedError()
+    case "Bracket": {
+      const resource = runEffectSync(effect.acquire._effect, context)
+      try {
+        return runEffectSync(effect.use(resource)._effect, context)
+      } finally {
+        runEffectSync(effect.release(resource)._effect, context)
+      }
+    }
+    case "Race":
+      throw new Error("Cannot run race effect synchronously")
+    case "Timeout":
+      throw new Error("Cannot run timeout effect synchronously")
   }
 }
 
@@ -602,6 +680,36 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       case "ProvideContext": {
         const mergedContext = context.merge(effect.context)
         return runEffect(effect.effect._effect, mergedContext as Context<R>)
+      }
+      case "Interrupt":
+        return Exit.interrupted()
+      case "Bracket": {
+        const acquireExit = await runEffect(effect.acquire._effect, context)
+        if (!acquireExit.isSuccess()) {
+          return acquireExit as ExitType<E, A>
+        }
+        const resource = acquireExit.orThrow()
+        try {
+          return await runEffect(effect.use(resource)._effect, context)
+        } finally {
+          // Release always runs, even if use fails
+          await runEffect(effect.release(resource)._effect, context)
+        }
+      }
+      case "Race": {
+        if (effect.effects.length === 0) {
+          return Exit.fail(new Error("No effects to race") as E)
+        }
+        // Race all effects - first one to complete wins
+        const result = await Promise.race(effect.effects.map((e) => runEffect(e._effect, context)))
+        return result
+      }
+      case "Timeout": {
+        const timeoutPromise = new Promise<ExitType<E, A>>((resolve) =>
+          setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration),
+        )
+        const effectPromise = runEffect(effect.effect._effect, context)
+        return Promise.race([effectPromise, timeoutPromise])
       }
     }
   } catch (e) {
@@ -846,6 +954,124 @@ const IOCompanion = {
    */
   fromNullable: <A extends Type>(value: A | null | undefined): IO<never, void, A> =>
     value === null || value === undefined ? IOCompanion.fail(undefined as void) : IOCompanion.succeed(value),
+
+  // ============================================
+  // Structured Concurrency
+  // ============================================
+
+  /**
+   * Creates an IO that is immediately interrupted.
+   */
+  interrupt: (): IO<never, never, never> => createIO({ _tag: "Interrupt" }),
+
+  /**
+   * Ensures a resource is properly released after use.
+   * The release function always runs, even if use fails.
+   *
+   * @example
+   * ```typescript
+   * const withFile = IO.bracket(
+   *   IO.sync(() => openFile("data.txt")),   // acquire
+   *   file => IO.async(() => file.read()),    // use
+   *   file => IO.sync(() => file.close())     // release
+   * )
+   * ```
+   */
+  bracket: <R extends Type, E extends Type, A extends Type, B extends Type>(
+    acquire: IO<R, E, A>,
+    use: (a: A) => IO<R, E, B>,
+    release: (a: A) => IO<R, never, void>,
+  ): IO<R, E, B> =>
+    createIO({
+      _tag: "Bracket",
+      acquire: acquire as IO<R, E, unknown>,
+      use: use as (a: unknown) => IO<R, E, B>,
+      release: release as (a: unknown) => IO<R, never, void>,
+    }),
+
+  /**
+   * Alias for bracket with a more descriptive name.
+   */
+  acquireRelease: <R extends Type, E extends Type, A extends Type, B extends Type>(
+    acquire: IO<R, E, A>,
+    use: (a: A) => IO<R, E, B>,
+    release: (a: A) => IO<R, never, void>,
+  ): IO<R, E, B> => IOCompanion.bracket(acquire, use, release),
+
+  /**
+   * Races multiple effects, returning the first to complete.
+   * Note: Other effects are NOT cancelled (JS limitation).
+   *
+   * @example
+   * ```typescript
+   * const result = await IO.race([
+   *   IO.sleep(1000).map(() => "slow"),
+   *   IO.sleep(100).map(() => "fast")
+   * ]).run() // "fast"
+   * ```
+   */
+  race: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> =>
+    createIO({ _tag: "Race", effects }),
+
+  /**
+   * Returns the first effect to succeed, or fails if all fail.
+   *
+   * @example
+   * ```typescript
+   * const result = await IO.any([
+   *   IO.fail("error1"),
+   *   IO.succeed("success"),
+   *   IO.fail("error2")
+   * ]).run() // "success"
+   * ```
+   */
+  any: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
+    if (effects.length === 0) {
+      return IOCompanion.fail(new Error("No effects provided") as E)
+    }
+    // Try each effect, return first success
+    return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
+  },
+
+  /**
+   * Executes an effect for each element in the array, collecting results.
+   *
+   * @example
+   * ```typescript
+   * const results = await IO.forEach([1, 2, 3], n =>
+   *   IO.sync(() => n * 2)
+   * ).run() // [2, 4, 6]
+   * ```
+   */
+  forEach: <R extends Type, E extends Type, A extends Type, B extends Type>(
+    items: readonly A[],
+    f: (a: A) => IO<R, E, B>,
+  ): IO<R, E, readonly B[]> => {
+    if (items.length === 0) {
+      return IOCompanion.succeed([])
+    }
+    return items.reduce(
+      (acc, item) => acc.flatMap((results) => f(item).map((b) => [...results, b])),
+      IOCompanion.succeed([]) as IO<R, E, B[]>,
+    )
+  },
+
+  /**
+   * Executes effects for each element in parallel (limited concurrency coming later).
+   * Alias for forEach.
+   */
+  forEachPar: <R extends Type, E extends Type, A extends Type, B extends Type>(
+    items: readonly A[],
+    f: (a: A) => IO<R, E, B>,
+  ): IO<R, E, readonly B[]> => IOCompanion.forEach(items, f),
+
+  /**
+   * Creates a timeout effect that fails with TimeoutError.
+   */
+  timeout: <R extends Type, E extends Type, A extends Type>(
+    effect: IO<R, E, A>,
+    ms: number,
+  ): IO<R, E | TimeoutError, A> => createIO({ _tag: "Timeout", effect, duration: ms }),
 
   // ============================================
   // Generator Syntax Support (Phase 2 preparation)

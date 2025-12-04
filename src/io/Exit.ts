@@ -340,9 +340,14 @@ const ExitCompanion = {
   fail: <E extends Type, A extends Type>(error: E): Exit<E, A> => FailureExit(error),
 
   /**
-   * Creates an Interrupted Exit
+   * Creates an Interrupted Exit with a fiber ID
    */
   interrupt: <E extends Type, A extends Type>(fiberId: string): Exit<E, A> => InterruptedExit(fiberId),
+
+  /**
+   * Creates an Interrupted Exit with a default fiber ID
+   */
+  interrupted: <E extends Type, A extends Type>(): Exit<E, A> => InterruptedExit("interrupted"),
 
   /**
    * Type guard for Success

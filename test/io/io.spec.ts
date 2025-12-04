@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Left, Right } from "@/either"
-import { Exit, IO } from "@/io"
+import { Exit, IO, InterruptedError, TimeoutError } from "@/io"
 import { None, Some } from "@/option"
 import { Try } from "@/try"
 
@@ -1107,6 +1107,191 @@ describe("Dependency Injection", () => {
 
       const result = await program.provideService(Logger, logger).run()
       expect(result).toBe("Logged: single")
+    })
+  })
+
+  // ============================================
+  // Structured Concurrency
+  // ============================================
+
+  describe("IO.interrupt", () => {
+    it("should create an interrupted effect", async () => {
+      const io = IO.interrupt()
+      const exit = await io.runExit()
+      expect(exit.isInterrupted()).toBe(true)
+    })
+
+    it("should throw InterruptedError on runSync", () => {
+      const io = IO.interrupt()
+      expect(() => io.runSync()).toThrow(InterruptedError)
+    })
+  })
+
+  describe("IO.bracket", () => {
+    it("should acquire, use, and release resource", async () => {
+      const events: string[] = []
+
+      const program = IO.bracket(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`use:${resource}`)
+            return "result"
+          }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`release:${resource}`)
+          }),
+      )
+
+      const result = await program.run()
+      expect(result).toBe("result")
+      expect(events).toEqual(["acquire", "use:resource", "release:resource"])
+    })
+
+    it("should release even when use fails", async () => {
+      const events: string[] = []
+
+      const program = IO.bracket(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }),
+        () => IO.fail(new Error("use failed")),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`release:${resource}`)
+          }),
+      )
+
+      await expect(program.run()).rejects.toThrow("use failed")
+      expect(events).toEqual(["acquire", "release:resource"])
+    })
+
+    it("should work synchronously", () => {
+      const events: string[] = []
+
+      const program = IO.bracket(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`use:${resource}`)
+            return "result"
+          }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`release:${resource}`)
+          }),
+      )
+
+      const result = program.runSync()
+      expect(result).toBe("result")
+      expect(events).toEqual(["acquire", "use:resource", "release:resource"])
+    })
+  })
+
+  describe("IO.race", () => {
+    it("should return first effect to complete", async () => {
+      const result = await IO.race([IO.sleep(100).map(() => "slow"), IO.sleep(10).map(() => "fast")]).run()
+      expect(result).toBe("fast")
+    })
+
+    it("should handle empty array", async () => {
+      const exit = await IO.race([]).runExit()
+      expect(exit.isFailure()).toBe(true)
+    })
+
+    it("should work with immediate values", async () => {
+      const result = await IO.race([IO.succeed("first"), IO.succeed("second")]).run()
+      expect(result).toBe("first")
+    })
+  })
+
+  describe("IO.any", () => {
+    it("should return first success", async () => {
+      const result = await IO.any([IO.fail("error1"), IO.succeed("success"), IO.fail("error2")]).run()
+      expect(result).toBe("success")
+    })
+
+    it("should fail if all fail", async () => {
+      await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).run()).rejects.toBe("error2")
+    })
+
+    it("should handle empty array", async () => {
+      const exit = await IO.any([]).runExit()
+      expect(exit.isFailure()).toBe(true)
+    })
+  })
+
+  describe("IO.forEach", () => {
+    it("should execute effect for each element", async () => {
+      const result = await IO.forEach([1, 2, 3], (n) => IO.sync(() => n * 2)).run()
+      expect(result).toEqual([2, 4, 6])
+    })
+
+    it("should handle empty array", async () => {
+      const result = await IO.forEach([], (n: number) => IO.sync(() => n * 2)).run()
+      expect(result).toEqual([])
+    })
+
+    it("should fail fast on error", async () => {
+      const executed: number[] = []
+      const program = IO.forEach([1, 2, 3], (n) =>
+        IO.sync(() => {
+          executed.push(n)
+          if (n === 2) throw new Error("fail at 2")
+          return n * 2
+        }),
+      )
+
+      await expect(program.run()).rejects.toThrow("fail at 2")
+      expect(executed).toEqual([1, 2])
+    })
+  })
+
+  describe("timeout", () => {
+    it("should complete before timeout", async () => {
+      const result = await IO.succeed(42).timeout(1000).run()
+      expect(result).toBe(42)
+    })
+
+    it("should fail with TimeoutError when exceeded", async () => {
+      const program = IO.sleep(100)
+        .map(() => "done")
+        .timeout(10)
+      const exit = await program.runExit()
+      expect(exit.isFailure()).toBe(true)
+      if (exit.isFailure()) {
+        const error = (exit.toValue() as { error: TimeoutError }).error
+        expect(error).toBeInstanceOf(TimeoutError)
+        expect(error.duration).toBe(10)
+      }
+    })
+
+    it("should work with timeoutTo for fallback", async () => {
+      const result = await IO.sleep(100)
+        .map(() => "done")
+        .timeoutTo(10, "fallback")
+        .run()
+      expect(result).toBe("fallback")
+    })
+
+    it("should return original value with timeoutTo when not exceeded", async () => {
+      const result = await IO.succeed("original").timeoutTo(1000, "fallback").run()
+      expect(result).toBe("original")
+    })
+  })
+
+  describe("IO.timeout static method", () => {
+    it("should work as static method", async () => {
+      const result = await IO.timeout(IO.succeed(42), 1000).run()
+      expect(result).toBe(42)
     })
   })
 })
