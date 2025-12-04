@@ -4,7 +4,8 @@ import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Option } from "@/option/Option"
-import type { Try } from "@/try/Try"
+import { None, Some } from "@/option/Option"
+import { Try } from "@/try/Try"
 import type { Type } from "@/types"
 
 import type { Context } from "./Context"
@@ -200,6 +201,34 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    */
   match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B>
 
+  /**
+   * Catches errors with a specific tag and handles them.
+   * @param tag - The error tag to catch
+   * @param handler - Handler for the caught error
+   */
+  catchTag<K extends E extends { _tag: string } ? E["_tag"] : never, R2 extends Type, E2 extends Type, B extends Type>(
+    tag: K,
+    handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>,
+  ): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B>
+
+  /**
+   * Catches all errors (alias for recoverWith).
+   */
+  catchAll<R2 extends Type, E2 extends Type>(handler: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A>
+
+  /**
+   * Retries the effect up to n times on failure.
+   * @param n - Maximum number of retries
+   */
+  retry(n: number): IO<R, E, A>
+
+  /**
+   * Retries the effect with a delay between attempts.
+   * @param n - Maximum number of retries
+   * @param delayMs - Delay between retries in milliseconds
+   */
+  retryWithDelay(n: number, delayMs: number): IO<R, E, A>
+
   // ============================================
   // Combinators
   // ============================================
@@ -274,6 +303,18 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * Runs the effect and returns an Exit.
    */
   runExit(this: IO<never, E, A>): Promise<ExitType<E, A>>
+
+  /**
+   * Runs the effect and returns an Option.
+   * Some(value) on success, None on failure.
+   */
+  runOption(this: IO<never, E, A>): Promise<Option<A>>
+
+  /**
+   * Runs the effect and returns a Try.
+   * Success(value) on success, Failure(error) on failure.
+   */
+  runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>>
 
   // ============================================
   // Utilities
@@ -384,6 +425,34 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       return io.fold(patterns.failure, patterns.success)
     },
 
+    catchTag<
+      K extends E extends { _tag: string } ? E["_tag"] : never,
+      R2 extends Type,
+      E2 extends Type,
+      B extends Type,
+    >(tag: K, handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B> {
+      return io.recoverWith((e) => {
+        if (typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: string })._tag === tag) {
+          return handler(e as Extract<E, { _tag: K }>)
+        }
+        return IOCompanion.fail(e) as IO<R2, E, never>
+      }) as IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B>
+    },
+
+    catchAll<R2 extends Type, E2 extends Type>(handler: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A> {
+      return io.recoverWith(handler)
+    },
+
+    retry(n: number): IO<R, E, A> {
+      if (n <= 0) return io
+      return io.recoverWith(() => io.retry(n - 1))
+    },
+
+    retryWithDelay(n: number, delayMs: number): IO<R, E, A> {
+      if (n <= 0) return io
+      return io.recoverWith(() => IOCompanion.sleep(delayMs).flatMap(() => io.retryWithDelay(n - 1, delayMs)))
+    },
+
     // Combinators
     zipRight<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, B> {
       return io.flatMap(() => that)
@@ -462,6 +531,25 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     async runExit(this: IO<never, E, A>): Promise<ExitType<E, A>> {
       return runEffect(this._effect)
+    },
+
+    async runOption(this: IO<never, E, A>): Promise<Option<A>> {
+      const exit = await runEffect(this._effect)
+      if (exit.isSuccess()) {
+        return Some(exit.orThrow())
+      }
+      return None()
+    },
+
+    async runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>> {
+      const exit = await runEffect(this._effect)
+      if (exit.isSuccess()) {
+        return Try(() => exit.orThrow())
+      }
+      const error = exit.isFailure() ? (exit.toValue() as { error: E }).error : new Error("Effect was interrupted")
+      return Try(() => {
+        throw error
+      })
     },
 
     // Utilities
@@ -614,8 +702,9 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         const result = effect.thunk()
         if (result instanceof Promise) {
           return Exit.succeed(await result)
+        } else {
+          return Exit.succeed(result)
         }
-        return Exit.succeed(result)
       }
       case "Map": {
         const exitA = await runEffect(effect.effect._effect, context)

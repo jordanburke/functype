@@ -1294,4 +1294,203 @@ describe("Dependency Injection", () => {
       expect(result).toBe(42)
     })
   })
+
+  // ============================================
+  // Phase 5: Interface Implementation Tests
+  // ============================================
+
+  describe("catchTag", () => {
+    interface TaggedError {
+      readonly _tag: string
+      readonly message: string
+    }
+    const NetworkError = (msg: string): TaggedError => ({ _tag: "NetworkError", message: msg })
+    const ValidationError = (msg: string): TaggedError => ({ _tag: "ValidationError", message: msg })
+
+    it("should catch errors with matching tag", async () => {
+      const io = IO.fail(NetworkError("connection failed")).catchTag("NetworkError", (e) =>
+        IO.succeed(`Recovered from: ${e.message}`),
+      )
+      const result = await io.run()
+      expect(result).toBe("Recovered from: connection failed")
+    })
+
+    it("should not catch errors with different tag", async () => {
+      const io = IO.fail(ValidationError("invalid input")).catchTag("NetworkError", () => IO.succeed("recovered"))
+      const exit = await io.runExit()
+      expect(exit.isFailure()).toBe(true)
+    })
+
+    it("should let success pass through", async () => {
+      const io = IO.succeed<TaggedError, number>(42).catchTag("NetworkError", () => IO.succeed(0))
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+  })
+
+  describe("catchAll", () => {
+    it("should catch all errors", async () => {
+      const io = IO.fail<string, number>("error").catchAll((e) => IO.succeed(e.length))
+      const result = await io.run()
+      expect(result).toBe(5)
+    })
+
+    it("should let success pass through", async () => {
+      const io = IO.succeed<string, number>(42).catchAll(() => IO.succeed(0))
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+  })
+
+  describe("retry", () => {
+    it("should retry on failure up to n times", async () => {
+      let attempts = 0
+      const io = IO.sync(() => {
+        attempts++
+        if (attempts < 3) {
+          throw new Error("not yet")
+        }
+        return "success"
+      }).retry(5)
+
+      const result = await io.run()
+      expect(result).toBe("success")
+      expect(attempts).toBe(3)
+    })
+
+    it("should fail after exhausting retries", async () => {
+      let attempts = 0
+      const io = IO.sync(() => {
+        attempts++
+        throw new Error("always fails")
+      }).retry(2)
+
+      await expect(io.run()).rejects.toThrow("always fails")
+      expect(attempts).toBe(3) // 1 initial + 2 retries
+    })
+
+    it("should not retry on success", async () => {
+      let attempts = 0
+      const io = IO.sync(() => {
+        attempts++
+        return "immediate success"
+      }).retry(5)
+
+      const result = await io.run()
+      expect(result).toBe("immediate success")
+      expect(attempts).toBe(1)
+    })
+  })
+
+  describe("retryWithDelay", () => {
+    it("should retry with delay between attempts", async () => {
+      let attempts = 0
+      const timestamps: number[] = []
+
+      const io = IO.sync(() => {
+        timestamps.push(Date.now())
+        attempts++
+        if (attempts < 3) {
+          throw new Error("not yet")
+        }
+        return "success"
+      }).retryWithDelay(5, 50)
+
+      const result = await io.run()
+      expect(result).toBe("success")
+      expect(attempts).toBe(3)
+
+      // Check that there was a delay between attempts
+      if (timestamps.length >= 2 && timestamps[1] !== undefined && timestamps[0] !== undefined) {
+        expect(timestamps[1] - timestamps[0]).toBeGreaterThanOrEqual(40)
+      }
+    })
+  })
+
+  describe("runOption", () => {
+    it("should return Some for success", async () => {
+      const option = await IO.succeed(42).runOption()
+      expect(option.isSome()).toBe(true)
+      expect(option.orElse(0)).toBe(42)
+    })
+
+    it("should return None for failure", async () => {
+      const option = await IO.fail(new Error("oops")).runOption()
+      expect(option.isNone()).toBe(true)
+    })
+  })
+
+  describe("runTry", () => {
+    it("should return Success for success", async () => {
+      const t = await IO.succeed(42).runTry()
+      expect(t.isSuccess()).toBe(true)
+      expect(t.orElse(0)).toBe(42)
+    })
+
+    it("should return Failure for failure", async () => {
+      const t = await IO.fail<Error, number>(new Error("oops")).runTry()
+      expect(t.isFailure()).toBe(true)
+    })
+  })
+
+  // ============================================
+  // Functor Laws
+  // ============================================
+
+  describe("Functor Laws", () => {
+    it("should satisfy identity law: fa.map(x => x) === fa", async () => {
+      const io = IO.succeed(42)
+      const mapped = io.map((x) => x)
+
+      const original = await io.run()
+      const result = await mapped.run()
+      expect(result).toBe(original)
+    })
+
+    it("should satisfy composition law: fa.map(f).map(g) === fa.map(x => g(f(x)))", async () => {
+      const io = IO.succeed(5)
+      const f = (x: number) => x * 2
+      const g = (x: number) => x + 1
+
+      const left = await io.map(f).map(g).run()
+      const right = await io.map((x) => g(f(x))).run()
+
+      expect(left).toBe(right)
+      expect(left).toBe(11) // (5 * 2) + 1 = 11
+    })
+  })
+
+  // ============================================
+  // Monad Laws
+  // ============================================
+
+  describe("Monad Laws", () => {
+    const f = (x: number) => IO.succeed(x * 2)
+    const g = (x: number) => IO.succeed(x + 1)
+
+    it("should satisfy left identity: IO.succeed(a).flatMap(f) === f(a)", async () => {
+      const a = 5
+      const left = await IO.succeed(a).flatMap(f).run()
+      const right = await f(a).run()
+      expect(left).toBe(right)
+      expect(left).toBe(10)
+    })
+
+    it("should satisfy right identity: m.flatMap(IO.succeed) === m", async () => {
+      const m = IO.succeed(42)
+      const left = await m.flatMap(IO.succeed).run()
+      const right = await m.run()
+      expect(left).toBe(right)
+    })
+
+    it("should satisfy associativity: m.flatMap(f).flatMap(g) === m.flatMap(x => f(x).flatMap(g))", async () => {
+      const m = IO.succeed(5)
+
+      const left = await m.flatMap(f).flatMap(g).run()
+      const right = await m.flatMap((x) => f(x).flatMap(g)).run()
+
+      expect(left).toBe(right)
+      expect(left).toBe(11) // (5 * 2) + 1 = 11
+    })
+  })
 })
