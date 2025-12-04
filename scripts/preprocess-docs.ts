@@ -42,9 +42,10 @@ class DocumentationPreprocessor {
 
       // Find region boundaries
       for (let i = 0; i < lines.length; i++) {
-        if (startPattern.test(lines[i])) {
+        const line = lines[i] ?? ""
+        if (startPattern.test(line)) {
           startLine = i
-        } else if (endPattern.test(lines[i]) && startLine !== -1) {
+        } else if (endPattern.test(line) && startLine !== -1) {
           endLine = i
           break
         }
@@ -83,7 +84,7 @@ class DocumentationPreprocessor {
     return Math.min(
       ...nonEmptyLines.map((line) => {
         const match = line.match(/^( *)/)
-        return match ? match[1].length : 0
+        return match?.[1]?.length ?? 0
       }),
     )
   }
@@ -125,6 +126,7 @@ class DocumentationPreprocessor {
 
       while ((match = includeCodePattern.exec(content)) !== null) {
         const [fullMatch, filePath, regionName] = match
+        if (!filePath || !regionName) continue
 
         console.log(`  🔍 Found @includeCode: ${filePath}#${regionName}`)
 

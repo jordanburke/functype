@@ -10,8 +10,8 @@ const expensive = Lazy(() => {
   return 42
 })
 console.log("  Lazy created (not evaluated yet)")
-console.log("  First get:", expensive.get())
-console.log("  Second get:", expensive.get(), "(cached, no recomputation)")
+console.log("  First get:", expensive.orThrow())
+console.log("  Second get:", expensive.orThrow(), "(cached, no recomputation)")
 
 // Example 2: Error handling
 console.log("\n2. Error handling:")
@@ -22,7 +22,7 @@ const risky = Lazy(() => {
   return "Success"
 })
 
-console.log("  Safe access with getOrElse:", risky.getOrElse("Default"))
+console.log("  Safe access with orElse:", risky.orElse("Default"))
 console.log("  Convert to Option:", risky.toOption())
 console.log("  Convert to Either:", risky.toEither())
 
@@ -44,7 +44,7 @@ const result = Lazy(() => 10)
     return 0
   })
 
-console.log("  Final result:", result.get())
+console.log("  Final result:", result.orThrow())
 
 // Example 4: Integration with functype
 console.log("\n4. Integration with Option:")
@@ -55,15 +55,15 @@ const userName = Lazy.fromOption(userOption, fallbackUser)
   .map((user) => user.name)
   .map((name) => name.toUpperCase())
 
-console.log("  User name:", userName.get())
+console.log("  User name:", userName.orThrow())
 
 // Example 5: Lazy filtering
 console.log("\n5. Lazy filtering:")
 const filtered = Lazy(() => 42)
   .filter((x) => x > 40)
-  .map((opt) => opt.getOrElse(0))
+  .map((opt) => opt.orElse(0))
 
-console.log("  Filtered value:", filtered.get())
+console.log("  Filtered value:", filtered.orThrow())
 
 // Example 6: Error recovery patterns
 console.log("\n6. Error recovery patterns:")
@@ -76,7 +76,7 @@ const computation = Lazy<number>(() => {
   })
   .map((x) => x * 2)
 
-console.log("  Recovered value:", computation.get())
+console.log("  Recovered value:", computation.orThrow())
 
 // Example 7: Lazy side effects
 console.log("\n7. Side effects with tap:")
@@ -85,7 +85,7 @@ const withEffects = Lazy(() => 42)
   .map((x) => x + 1)
   .tapError((err) => console.log("  Side effect - error:", err))
 
-console.log("  Final value:", withEffects.get())
+console.log("  Final value:", withEffects.orThrow())
 
 // Example 8: Pattern matching
 console.log("\n8. Pattern matching:")

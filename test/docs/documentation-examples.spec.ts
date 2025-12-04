@@ -43,7 +43,8 @@ describe("Documentation Examples", () => {
 
       // Transform values
       const upper = value.map((s) => s.toUpperCase()) // Some("HELLO")
-      const _nothing = empty.map((s) => s.toUpperCase()) // None
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _nothing = Option.none<string>() // None - empty maps don't run the callback
 
       // Chain operations
       const result = value
@@ -84,9 +85,10 @@ describe("Documentation Examples", () => {
       ) // "Success: 42"
 
       // Chain operations that might fail
-      const divide = (a: number, b: number) => (b === 0 ? Left("Division by zero") : Right(a / b))
+      const divide = (a: number, b: number): Either<string, number> =>
+        b === 0 ? Left<string, number>("Division by zero") : Right<string, number>(a / b)
 
-      const calculation = Right(10)
+      const calculation = Right<string, number>(10)
         .flatMap((n) => divide(n, 2))
         .flatMap((n) => divide(n, 5)) // Right(1)
       //#endregion readme-either-basic
@@ -110,7 +112,7 @@ describe("Documentation Examples", () => {
       const evens = numbers.filter((n) => n % 2 === 0) // List([2, 4])
 
       // Reduce
-      const sum = numbers.reduce((acc, n) => acc + n, 0) // 10
+      const sum = numbers.reduce((acc, n) => acc + n) // 10
 
       // Chain operations - take first 2 after transformations
       const result = numbers
@@ -210,8 +212,8 @@ describe("Documentation Examples", () => {
       })
       //#endregion readme-do-notation
 
-      expect(result.orElse(0)).toBe(17)
-      expect(validation.isRight()).toBe(true)
+      expect((result as Option<number>).orElse(0)).toBe(17)
+      expect((validation as Either<string, { name: string; age: number }>).isRight()).toBe(true)
       // Note: _asyncResult is a Promise, would need await to test
     })
 
@@ -407,7 +409,7 @@ describe("Documentation Examples", () => {
       const mapped = list.map((n) => n * 2)
       const filtered = list.filter((n) => n % 2 === 0)
       const taken = List(list.toArray().slice(0, 3))
-      const reduced = list.reduce((acc, n) => acc + n, 0)
+      const reduced = list.reduce((acc, n) => acc + n)
       const contains = list.contains(3)
       //#endregion quick-list-patterns
 
@@ -488,7 +490,7 @@ describe("Documentation Examples", () => {
         const email = yield* $(validateEmail("user@example.com"))
         const age = yield* $(validateAge(25))
         return { email, age }
-      })
+      }) as Either<string, { email: string; age: number }>
       //#endregion landing-either-validation
 
       expect(result.isRight()).toBe(true)
@@ -533,7 +535,7 @@ describe("Documentation Examples", () => {
       const result = numbers
         .filter((n) => n > 1)
         .map((n) => n * 2)
-        .reduce((acc, n) => acc + n, 0) // 18
+        .reduce((acc, n) => acc + n) // 18
       //#endregion landing-list-transform
 
       expect(result).toBe(18)
@@ -575,8 +577,10 @@ describe("Documentation Examples", () => {
         await Task({ name: "DataProcessor" }).Async(() => {
           throw new Error("Processing failed")
         })
-      } catch (error) {
-        console.log(error.taskInfo.name) // "DataProcessor"
+      } catch (error: unknown) {
+        if (error && typeof error === "object" && "taskInfo" in error) {
+          console.log((error as { taskInfo: { name: string } }).taskInfo.name) // "DataProcessor"
+        }
       }
       //#endregion landing-task-error
 
@@ -600,7 +604,7 @@ describe("Documentation Examples", () => {
         const x = yield* $(Option(5))
         const y = yield* $(Option(10))
         return x + y
-      }) // Option(15)
+      }) as Option<number> // Option(15)
       //#endregion landing-do-option
 
       expect(result.orElse(0)).toBe(15)
@@ -647,23 +651,23 @@ describe("Documentation Examples", () => {
       //#region landing-match-value
       const status = "pending"
       Match(status)
-        .when("pending", () => "⏳ Pending")
-        .when("success", () => "✓ Success")
-        .when("error", () => "✗ Error")
+        .caseValue("pending", "⏳ Pending")
+        .caseValue("success", "✓ Success")
+        .caseValue("error", "✗ Error")
         .default(() => "Unknown")
       //#endregion landing-match-value
 
       const result = Match(status)
-        .when("pending", () => "⏳ Pending")
-        .when("success", () => "✓ Success")
-        .when("error", () => "✗ Error")
+        .caseValue("pending", "⏳ Pending")
+        .caseValue("success", "✓ Success")
+        .caseValue("error", "✗ Error")
         .default(() => "Unknown")
       expect(result).toBe("⏳ Pending")
     })
 
     it("should demonstrate Cond predicate patterns", () => {
       //#region landing-cond-predicate
-      const value = 5
+      const value: number = 5
       Cond.of<string>()
         .when(value < 0, "negative")
         .elseWhen(value === 0, "zero")

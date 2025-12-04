@@ -10,7 +10,7 @@ describe("Err", () => {
     expect(result.isFailure()).toBe(true)
     expect(result._tag).toBe("Err")
     expect(result.error._tag).toBe("Throwable")
-    expect(result.error.message).toBe("Test error")
+    expect(result.error!.message).toBe("Test error")
   })
 
   test("should create an Err with error and additional data", () => {
@@ -21,7 +21,7 @@ describe("Err", () => {
     expect(result.isFailure()).toBe(true)
     expect(result._tag).toBe("Err")
     expect(result.error instanceof Throwable).toBe(true)
-    expect(result.error.data).toEqual(data)
+    expect(result.error!.data).toEqual(data)
   })
 
   test("should include task name in the error", () => {
@@ -101,7 +101,7 @@ describe("Sync", () => {
     })
 
     expect(result.isFailure()).toBe(true)
-    expect(result.error._tag).toBe("Throwable")
+    expect(result.error!._tag).toBe("Throwable")
     expect((result.error as Error).message).toBe("Sync failed")
   })
 
@@ -130,7 +130,7 @@ describe("Sync", () => {
     )
 
     expect(result.isFailure()).toBe(true)
-    expect(result.error.message).toBe(customError)
+    expect(result.error!.message).toBe(customError)
   })
 
   test("Sync.success should create successful result", () => {
@@ -163,7 +163,7 @@ describe("Async", () => {
       throw error
     })
     expect(result.isFailure()).toBe(true)
-    expect(result.error.message).toBe("Async Sync failed")
+    expect(result.error!.message).toBe("Async Sync failed")
   })
 
   test("should include task name in async error when using named task", async () => {
@@ -355,8 +355,8 @@ describe("Async with finally", () => {
       },
     )
     expect(result.isFailure()).toBe(true)
-    expect(result.error._tag).toBe("Throwable")
-    expect(result.error.message).toBe("Async failed")
+    expect(result.error!._tag).toBe("Throwable")
+    expect(result.error!.message).toBe("Async failed")
     expect(finallyExecuted).toBe(true)
   })
 

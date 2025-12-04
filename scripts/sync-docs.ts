@@ -9,7 +9,7 @@
  * - Checks for common inconsistencies
  */
 
-import { copyFileSync, existsSync, readFileSync, writeFileSync } from "fs"
+import { copyFileSync, existsSync, readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import { fileURLToPath } from "url"
 
@@ -82,18 +82,21 @@ class DocumentationSyncer {
 
       // Extract markdown links: [text](url)
       const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g
-      let match: RegExpExecArray | null
       const links: Array<{ text: string; url: string; line: number }> = []
 
       lines.forEach((line, index) => {
         let lineMatch: RegExpExecArray | null
         const regex = new RegExp(linkPattern)
         while ((lineMatch = regex.exec(line)) !== null) {
-          links.push({
-            text: lineMatch[1],
-            url: lineMatch[2],
-            line: index + 1,
-          })
+          const text = lineMatch[1]
+          const url = lineMatch[2]
+          if (text && url) {
+            links.push({
+              text,
+              url,
+              line: index + 1,
+            })
+          }
         }
       })
 

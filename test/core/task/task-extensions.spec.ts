@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest"
 
 import { Task } from "@/core"
-import { FPromise } from "@/fpromise/FPromise"
 
 describe("Task Extensions", () => {
   describe("Task.race", () => {
@@ -119,7 +118,7 @@ describe("Task Extensions", () => {
         })
 
       const failTaskFn = () =>
-        Task().Async(async () => {
+        Task().Async(async (): Promise<string> => {
           await new Promise((resolve) => setTimeout(resolve, 100))
           throw new Error("Task failed but should not affect result")
         })
@@ -166,10 +165,9 @@ describe("Task Extensions", () => {
 
     test("should handle synchronous errors in the node function", async () => {
       // Simulate a Node.js callback-style function that throws synchronously
-      const nodeFunctionWithSyncError = (_: string, callback: (error: Error | null, data: string) => void) => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const nodeFunctionWithSyncError = (_: string, _callback: (error: Error | null, data: string) => void) => {
         throw new Error("Synchronous error")
-        // eslint-disable-next-line no-unreachable
-        callback(null, "never reached")
       }
 
       const taskFn = Task.fromNodeCallback<string, [string]>(nodeFunctionWithSyncError, { name: "SyncErrorNodeTask" })

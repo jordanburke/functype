@@ -136,7 +136,7 @@ describe("IO Property Tests", () => {
     it("recover always produces a value", async () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), fc.integer(), async (errorMsg, fallback) => {
-          const io = IO.fail<string, number>(errorMsg).recover(fallback)
+          const io = IO.fail(errorMsg).recover(fallback)
           const result = await io.run()
           expect(result).toBe(fallback)
         }),
@@ -170,7 +170,7 @@ describe("IO Property Tests", () => {
             () => "failed",
             (x) => `success: ${x}`,
           )
-          const failIo = IO.fail<string, number>("error").fold(
+          const failIo = IO.fail("error").fold(
             (e) => `failed: ${e}`,
             (x) => `success: ${x}`,
           )
@@ -201,7 +201,7 @@ describe("IO Property Tests", () => {
     })
 
     it("empty array returns empty result", async () => {
-      const result = await IO.all([]).run()
+      const result = await IO.all<never, never, never>([]).run()
       expect(result).toEqual([])
     })
   })
@@ -300,7 +300,7 @@ describe("IO Property Tests", () => {
     it("runEither returns Left for failure", async () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), async (errorMsg) => {
-          const either = await IO.fail<string, number>(errorMsg).runEither()
+          const either = await IO.fail(errorMsg).runEither()
           expect(either.isLeft()).toBe(true)
         }),
       )
@@ -319,7 +319,7 @@ describe("IO Property Tests", () => {
     it("runExit returns Failure for failure", async () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), async (errorMsg) => {
-          const exit = await IO.fail<string, number>(errorMsg).runExit()
+          const exit = await IO.fail(errorMsg).runExit()
           expect(exit.isFailure()).toBe(true)
         }),
       )
@@ -338,7 +338,7 @@ describe("IO Property Tests", () => {
     it("runOption returns None for failure", async () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), async (errorMsg) => {
-          const option = await IO.fail<string, number>(errorMsg).runOption()
+          const option = await IO.fail(errorMsg).runOption()
           expect(option.isNone()).toBe(true)
         }),
       )

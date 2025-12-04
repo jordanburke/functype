@@ -182,13 +182,21 @@ export const TestClock = {
    * Creates an IO that advances the TestClock.
    */
   advance: (ms: number): IO<TestClock, never, void> =>
-    IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.advance(ms))),
+    IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.advance(ms))) as unknown as IO<
+      TestClock,
+      never,
+      void
+    >,
 
   /**
    * Creates an IO that sets the TestClock time.
    */
   setTime: (ms: number): IO<TestClock, never, void> =>
-    IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.setTime(ms))),
+    IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.setTime(ms))) as unknown as IO<
+      TestClock,
+      never,
+      void
+    >,
 
   /**
    * Creates an IO that runs all pending tasks.

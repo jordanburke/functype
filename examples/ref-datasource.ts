@@ -119,7 +119,7 @@ function SimpleCache<K, V>(): SimpleCache<K, V> {
       const existing = cache.get().get(key)
       if (!existing.isEmpty) {
         hits.update((n) => n + 1)
-        return existing.get()
+        return existing.orThrow()
       }
 
       misses.update((n) => n + 1)
@@ -222,7 +222,7 @@ function TaskQueue<T>(): TaskQueue<T> {
       }
 
       try {
-        const result = await task.get()()
+        const result = await task.orThrow()()
         results.update((r) => List([...r, Right(result) as Either<Error, T>]))
       } catch (error) {
         results.update((r) =>
@@ -260,24 +260,24 @@ export async function exampleRefUsage() {
   pool.addConnection({ id: "conn2", inUse: false })
 
   const conn1 = pool.acquire()
-  console.log("Acquired:", conn1.map((c) => c.id).getOrElse("none"))
+  console.log("Acquired:", conn1.map((c) => c.id).orElse("none"))
   console.log("Pool stats:", pool.getStats())
 
   if (!conn1.isEmpty) {
-    pool.release(conn1.get().id)
+    pool.release(conn1.orThrow().id)
   }
   console.log("After release:", pool.getStats())
 
   // 3. Cache
   const cache = SimpleCache<string, number>()
-  console.log("Cache miss:", cache.get("key1").getOrElse(-1))
+  console.log("Cache miss:", cache.get("key1").orElse(-1))
 
   const value = cache.getOrCompute("key1", () => {
     console.log("Computing value...")
     return 42
   })
   console.log("Computed:", value)
-  console.log("Cache hit:", cache.get("key1").getOrElse(-1))
+  console.log("Cache hit:", cache.get("key1").orElse(-1))
   console.log("Cache stats:", cache.getStats())
 
   // 4. Rate limiter

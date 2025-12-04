@@ -143,11 +143,12 @@ describe("Task Property Tests", () => {
 
             // (m >>= f) >>= g
             const m = Task().Async(async () => value)
-            const leftGrouping = await m.then((x) => f(x)).then((y) => g(y))
+            // Note: after .then() with f(), the result is a string, not TaskOutcome
+            const leftGrouping = await m.then((x) => f(x.orThrow())).then((y) => g(y))
 
             // m >>= (x -> f(x) >>= g)
             const rightGrouping = await m.then(async (x) => {
-              const fx = await f(x)
+              const fx = await f(x.orThrow())
               return g(fx)
             })
 

@@ -249,9 +249,8 @@ describe("FPromise", () => {
     it("should handle errors in the recovery function", async () => {
       const error = new Error("Test error")
       const promise = FPromise.reject<number>(error)
-      const recovered = promise.recoverWith(() => {
+      const recovered = promise.recoverWith((): number => {
         throw new Error("Recovery error")
-        return 42
       })
 
       // Should still resolve with null as fallback
@@ -292,9 +291,8 @@ describe("FPromise", () => {
     it("should handle errors in the recovery function", async () => {
       const error = new Error("Test error")
       const promise = FPromise.reject<number>(error)
-      const recovered = promise.recoverWithF(() => {
+      const recovered = promise.recoverWithF((): FPromise<number> => {
         throw new Error("Recovery function error")
-        return FPromise.resolve(42)
       })
 
       await expect(recovered.toPromise()).rejects.toThrow("Recovery function error")
@@ -354,9 +352,8 @@ describe("FPromise", () => {
       const promise = FPromise.reject<string>(error)
       const filtered = promise.filterError(
         () => true,
-        () => {
+        (): FPromise<string> => {
           throw new Error("Handler function error")
-          return FPromise.resolve("Fallback")
         },
       )
 

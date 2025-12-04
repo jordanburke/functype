@@ -659,5 +659,5 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
-} & Traversable<A> &`
+} & Traversable<A> &`,
 }

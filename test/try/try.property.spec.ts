@@ -202,14 +202,14 @@ describe("Try - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), fc.integer(), (errorMsg, value) => {
           const success = Try(() => value)
-          const successEither = success.toEither()
+          const successEither = success.toEither("error")
           expect(successEither.isRight()).toBe(true)
           expect(successEither.orElse(0)).toBe(value)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
-          const failureEither = failure.toEither()
+          const failureEither = failure.toEither("error")
           expect(failureEither.isLeft()).toBe(true)
           expect(failureEither.orElse(0)).toBe(0)
         }),

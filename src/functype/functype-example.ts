@@ -1,3 +1,4 @@
+import type { Extractable } from "@/extractable"
 import { None, Option } from "@/option"
 import type { Type } from "@/types"
 
@@ -85,7 +86,18 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._value
   }
 
-  orElse(alternative: Box<T>): Box<T> {
+  orThrow(error?: Error): T {
+    if (this._tag === "Empty" || this._value === undefined) {
+      throw error ?? new Error("Box is empty")
+    }
+    return this._value
+  }
+
+  orElse(defaultValue: T): T {
+    return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue
+  }
+
+  or(alternative: Extractable<T>): Extractable<T> {
     return this._tag === "Full" ? this : alternative
   }
 

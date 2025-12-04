@@ -49,7 +49,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(result.isFailure()).toBe(true)
-      expect(result.error.message).toBe("error occurred")
+      expect(result.error!.message).toBe("error occurred")
     })
 
     it("should handle conditional Ok/Err returns", async () => {
@@ -73,7 +73,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(failureTask.isFailure()).toBe(true)
-      expect(failureTask.error.message).toBe("Value too small")
+      expect(failureTask.error!.message).toBe("Value too small")
     })
   })
 
@@ -93,7 +93,7 @@ describe("Task Ok/Err pattern", () => {
       })
 
       expect(result.isFailure()).toBe(true)
-      expect(result.error.message).toBe("thrown error")
+      expect(result.error!.message).toBe("thrown error")
     })
   })
 
@@ -125,7 +125,7 @@ describe("Task Ok/Err pattern", () => {
       )
 
       expect(result.isFailure()).toBe(true)
-      expect(result.error.message).toBe("transformed error")
+      expect(result.error!.message).toBe("transformed error")
     })
   })
 
@@ -178,7 +178,6 @@ describe("Task Ok/Err pattern", () => {
       // The error should remain unchanged when mapping over a failure
       expect(result).toBe(result) // Identity check - it's the same instance
       // Check that it's still an Err with the original error
-      const err2 = Err<number>("initial error")
       // Both should have equivalent error structures
       expect(result.isFailure()).toBe(true)
     })

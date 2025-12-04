@@ -96,7 +96,7 @@ describe("IO", () => {
     })
 
     it("should not transform on failure", async () => {
-      const io = IO.fail<Error, number>(new Error("oops")).map((x) => x * 2)
+      const io = IO.fail(new Error("oops")).map((x: number) => x * 2)
       await expect(io.run()).rejects.toThrow("oops")
     })
   })
@@ -109,7 +109,7 @@ describe("IO", () => {
     })
 
     it("should short-circuit on failure", async () => {
-      const io = IO.fail<Error, number>(new Error("first")).flatMap(() => IO.fail(new Error("second")))
+      const io = IO.fail(new Error("first")).flatMap(() => IO.fail(new Error("second")))
       await expect(io.run()).rejects.toThrow("first")
     })
 
@@ -164,7 +164,7 @@ describe("IO", () => {
 
   describe("recover", () => {
     it("should recover from failure with fallback value", async () => {
-      const io = IO.fail<Error, number>(new Error("oops")).recover(42)
+      const io = IO.fail(new Error("oops")).recover(42)
       const result = await io.run()
       expect(result).toBe(42)
     })
@@ -178,13 +178,13 @@ describe("IO", () => {
 
   describe("recoverWith", () => {
     it("should recover from failure with another IO", async () => {
-      const io = IO.fail<Error, number>(new Error("oops")).recoverWith(() => IO.succeed(42))
+      const io = IO.fail(new Error("oops")).recoverWith(() => IO.succeed(42))
       const result = await io.run()
       expect(result).toBe(42)
     })
 
     it("should provide error to recovery function", async () => {
-      const io = IO.fail<string, number>("original").recoverWith((e) => IO.succeed(e.length))
+      const io = IO.fail("original").recoverWith((e: string) => IO.succeed(e.length))
       const result = await io.run()
       expect(result).toBe(8) // "original".length
     })
@@ -201,9 +201,9 @@ describe("IO", () => {
     })
 
     it("should handle failure case", async () => {
-      const io = IO.fail<Error, number>(new Error("oops")).fold(
-        (e) => `failed: ${e.message}`,
-        (x) => `success: ${x}`,
+      const io = IO.fail(new Error("oops")).fold(
+        (e: Error) => `failed: ${e.message}`,
+        (x: number) => `success: ${x}`,
       )
       const result = await io.run()
       expect(result).toBe("failed: oops")
@@ -221,9 +221,9 @@ describe("IO", () => {
     })
 
     it("should pattern match on failure", async () => {
-      const io = IO.fail<Error, number>(new Error("oops")).match({
-        failure: (e) => `failed: ${e.message}`,
-        success: (x) => `success: ${x}`,
+      const io = IO.fail(new Error("oops")).match({
+        failure: (e: Error) => `failed: ${e.message}`,
+        success: (x: number) => `success: ${x}`,
       })
       const result = await io.run()
       expect(result).toBe("failed: oops")
@@ -242,12 +242,12 @@ describe("IO", () => {
     })
 
     it("should fail if first fails", async () => {
-      const io = IO.fail<Error, number>(new Error("first")).zip(IO.succeed("a"))
+      const io = IO.fail(new Error("first")).zip(IO.succeed("a"))
       await expect(io.run()).rejects.toThrow("first")
     })
 
     it("should fail if second fails", async () => {
-      const io = IO.succeed(1).zip(IO.fail<Error, string>(new Error("second")))
+      const io = IO.succeed(1).zip(IO.fail(new Error("second")))
       await expect(io.run()).rejects.toThrow("second")
     })
   })
@@ -308,7 +308,7 @@ describe("IO", () => {
     })
 
     it("should return Left on failure", async () => {
-      const io = IO.fail<Error, number>(new Error("oops"))
+      const io = IO.fail(new Error("oops"))
       const result = await io.runEither()
       expect(result.isLeft()).toBe(true)
     })
@@ -323,7 +323,7 @@ describe("IO", () => {
     })
 
     it("should return Failure Exit on failure", async () => {
-      const io = IO.fail<Error, number>(new Error("oops"))
+      const io = IO.fail(new Error("oops"))
       const exit = await io.runExit()
       expect(exit.isFailure()).toBe(true)
     })
@@ -454,12 +454,16 @@ describe("IO", () => {
     })
 
     it("should fail on first failure", async () => {
-      const io = IO.all([IO.succeed(1), IO.fail(new Error("oops")), IO.succeed(3)])
+      const io = IO.all([IO.succeed(1), IO.fail(new Error("oops")), IO.succeed(3)] as unknown as IO<
+        never,
+        Error,
+        number
+      >[])
       await expect(io.run()).rejects.toThrow("oops")
     })
 
     it("should return empty array for empty input", async () => {
-      const io = IO.all([])
+      const io = IO.all<never, never, never>([])
       const result = await io.run()
       expect(result).toEqual([])
     })
@@ -467,7 +471,11 @@ describe("IO", () => {
 
   describe("IO.firstSuccessOf", () => {
     it("should return first success", async () => {
-      const io = IO.firstSuccessOf([IO.fail(new Error("first")), IO.succeed(42), IO.succeed(43)])
+      const io = IO.firstSuccessOf([IO.fail(new Error("first")), IO.succeed(42), IO.succeed(43)] as unknown as IO<
+        never,
+        Error,
+        number
+      >[])
       const result = await io.run()
       expect(result).toBe(42)
     })
@@ -520,7 +528,8 @@ describe("IO", () => {
 
   describe("IO.gen", () => {
     it("should support generator do-notation", async () => {
-      const program = IO.gen(function* () {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const program = IO.gen(function* (): Generator<any, number, any> {
         const a = yield* IO.succeed(1)
         const b = yield* IO.succeed(2)
         return a + b
@@ -530,9 +539,11 @@ describe("IO", () => {
     })
 
     it("should short-circuit on failure", async () => {
-      const program = IO.gen(function* () {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const program = IO.gen(function* (): Generator<any, number, any> {
         const a = yield* IO.succeed(1)
-        yield* IO.fail(new Error("oops"))
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        yield* IO.fail(new Error("oops")) as any
         return a + 1 // Should not reach here
       })
       await expect(program.run()).rejects.toThrow("oops")
@@ -810,7 +821,10 @@ describe("Exit", () => {
     })
 
     it("should fail on first failure", () => {
-      const exit = Exit.all([Exit.succeed(1), Exit.fail(new Error("oops")), Exit.succeed(3)])
+      const exit = Exit.all([Exit.succeed(1), Exit.fail(new Error("oops")), Exit.succeed(3)] as unknown as Exit<
+        Error,
+        number
+      >[])
       expect(exit.isFailure()).toBe(true)
     })
   })
@@ -900,7 +914,7 @@ describe("Dependency Injection", () => {
     })
 
     it("should fail when service not provided", async () => {
-      const program = IO.service(Logger)
+      const program = IO.service(Logger) as unknown as IO<never, never, Logger>
       await expect(program.run()).rejects.toThrow("Service not found: Logger")
     })
 
@@ -934,7 +948,7 @@ describe("Dependency Injection", () => {
 
       const ctx = Context.empty<Logger & Config>().add(Logger, logger).add(Config, config)
 
-      const result = await program.provideContext(ctx).run()
+      const result = await (program.provideContext(ctx) as unknown as IO<never, never, string>).run()
       expect(result).toBe("Logged: localhost:8080")
     })
   })
@@ -984,7 +998,7 @@ describe("Dependency Injection", () => {
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Hello")))
 
       // Need to provide both layers
-      const fullLayer = ConfigLive.provideToAndMerge(LoggerLive)
+      const fullLayer = ConfigLive.provideToAndMerge(LoggerLive) as unknown as Layer<never, never, Logger>
       const result = await program.provideLayer(fullLayer).run()
       expect(result).toBe("[localhost:8080] Hello")
     })
@@ -1159,8 +1173,8 @@ describe("Dependency Injection", () => {
         IO.sync(() => {
           events.push("acquire")
           return "resource"
-        }),
-        () => IO.fail(new Error("use failed")),
+        }) as unknown as IO<never, Error, string>,
+        () => IO.fail(new Error("use failed")) as unknown as IO<never, Error, string>,
         (resource) =>
           IO.sync(() => {
             events.push(`release:${resource}`)
@@ -1203,7 +1217,7 @@ describe("Dependency Injection", () => {
     })
 
     it("should handle empty array", async () => {
-      const exit = await IO.race([]).runExit()
+      const exit = await IO.race<never, never, never>([]).runExit()
       expect(exit.isFailure()).toBe(true)
     })
 
@@ -1215,7 +1229,11 @@ describe("Dependency Injection", () => {
 
   describe("IO.any", () => {
     it("should return first success", async () => {
-      const result = await IO.any([IO.fail("error1"), IO.succeed("success"), IO.fail("error2")]).run()
+      const result = await IO.any([IO.fail("error1"), IO.succeed("success"), IO.fail("error2")] as unknown as IO<
+        never,
+        string,
+        string
+      >[]).run()
       expect(result).toBe("success")
     })
 
@@ -1224,7 +1242,7 @@ describe("Dependency Injection", () => {
     })
 
     it("should handle empty array", async () => {
-      const exit = await IO.any([]).runExit()
+      const exit = await IO.any<never, never, never>([]).runExit()
       expect(exit.isFailure()).toBe(true)
     })
   })
@@ -1308,7 +1326,7 @@ describe("Dependency Injection", () => {
     const ValidationError = (msg: string): TaggedError => ({ _tag: "ValidationError", message: msg })
 
     it("should catch errors with matching tag", async () => {
-      const io = IO.fail(NetworkError("connection failed")).catchTag("NetworkError", (e) =>
+      const io = IO.fail(NetworkError("connection failed")).catchTag("NetworkError", (e: TaggedError) =>
         IO.succeed(`Recovered from: ${e.message}`),
       )
       const result = await io.run()
@@ -1322,7 +1340,9 @@ describe("Dependency Injection", () => {
     })
 
     it("should let success pass through", async () => {
-      const io = IO.succeed<TaggedError, number>(42).catchTag("NetworkError", () => IO.succeed(0))
+      const io = (IO.succeed(42) as unknown as IO<never, TaggedError, number>).catchTag("NetworkError", () =>
+        IO.succeed(0),
+      )
       const result = await io.run()
       expect(result).toBe(42)
     })
@@ -1330,13 +1350,13 @@ describe("Dependency Injection", () => {
 
   describe("catchAll", () => {
     it("should catch all errors", async () => {
-      const io = IO.fail<string, number>("error").catchAll((e) => IO.succeed(e.length))
+      const io = IO.fail("error").catchAll((e: string) => IO.succeed(e.length))
       const result = await io.run()
       expect(result).toBe(5)
     })
 
     it("should let success pass through", async () => {
-      const io = IO.succeed<string, number>(42).catchAll(() => IO.succeed(0))
+      const io = IO.succeed(42).catchAll(() => IO.succeed(0))
       const result = await io.run()
       expect(result).toBe(42)
     })
@@ -1428,7 +1448,7 @@ describe("Dependency Injection", () => {
     })
 
     it("should return Failure for failure", async () => {
-      const t = await IO.fail<Error, number>(new Error("oops")).runTry()
+      const t = await IO.fail(new Error("oops")).runTry()
       expect(t.isFailure()).toBe(true)
     })
   })

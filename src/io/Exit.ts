@@ -406,7 +406,7 @@ const ExitCompanion = {
       if (exit.isFailure()) return exit as unknown as Exit<E, readonly A[]>
       results.push(exit.orThrow())
     }
-    return SuccessExit(results)
+    return SuccessExit(results as readonly A[])
   },
 }
 

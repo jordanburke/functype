@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { Do, DoAsync, $ } from "@/do"
 import { Left, Right, List, None, Option, Try } from "@/index"
+import type { Reshapeable } from "@/reshapeable"
 
 describe("Reshapeable interface", () => {
   describe("Option conversions", () => {
@@ -197,7 +198,7 @@ describe("Reshapeable interface", () => {
         const y = yield* $(Right<string, number>(10))
         const z = yield* $(List([15]))
         return x + y + z
-      })
+      }) as Reshapeable<number>
 
       // Convert to Option for proper chaining
       const asOption = result.toOption()
@@ -225,7 +226,7 @@ describe("Reshapeable interface", () => {
         const x = yield* $(Option(5))
         const y = yield* $(None<number>()) // This short-circuits
         return x + y
-      })
+      }) as Reshapeable<number>
 
       // All conversions should reflect the None/failure state
       expect(result.toOption().isNone()).toBe(true)
@@ -235,11 +236,11 @@ describe("Reshapeable interface", () => {
     })
 
     it("should work with async Do comprehensions", async () => {
-      const result = await DoAsync(async function* () {
+      const result = (await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Option(5)))
         const y = yield* $(Right<string, number>(10))
         return x + y
-      })
+      })) as Reshapeable<number>
 
       // Convert and use
       const asOption = result.toOption()
@@ -257,15 +258,15 @@ describe("Reshapeable interface", () => {
           // Validate - returns Either
           const validated = yield* $(
             typeof parsed === "object" && "value" in parsed
-              ? Right<string, any>(parsed)
-              : Left<string, any>("Invalid structure"),
+              ? Right<string, { value: number }>(parsed)
+              : Left<string, { value: number }>("Invalid structure"),
           )
 
           // Extract optional field - returns Option
           const value = yield* $(Option(validated.value))
 
           return value * 2
-        })
+        }) as Reshapeable<number>
 
         // Convert to Either for consistent error handling
         return result.toEither("Processing failed")
@@ -286,12 +287,13 @@ describe("Reshapeable interface", () => {
       const enrichUser = (user: { id: number; name: string }) =>
         Try(() => ({ ...user, email: `${user.name.toLowerCase()}@example.com` }))
 
+      type EnrichedUser = { id: number; name: string; email: string }
       const result = Do(function* () {
         const user = yield* $(fetchUser(1))
         const validated = yield* $(validateUser(user))
         const enriched = yield* $(enrichUser(validated))
         return enriched
-      })
+      }) as Reshapeable<EnrichedUser>
 
       // Can work with result as any monad type we need
       const asOption = result.toOption()

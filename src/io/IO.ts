@@ -16,6 +16,14 @@ import type { Layer } from "./Layer"
 import type { Tag, TagService } from "./Tag"
 
 /**
+ * Internal utility for type coercion in the effect interpreter.
+ * Used when TypeScript's type system can't express the actual type relationship.
+ * This is a common pattern in effect libraries (Effect-TS uses similar internally).
+ * @internal
+ */
+const unsafeCoerce = <A, B>(a: A): B => a as unknown as B
+
+/**
  * Error thrown when an effect times out.
  */
 // eslint-disable-next-line functional/no-classes
@@ -161,7 +169,7 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * @param f - Function returning IO for side effect
    * @returns Same value after running side effect
    */
-  tapEffect<R2 extends Type, E2 extends Type>(f: (a: A) => IO<R2, E2, unknown>): IO<R | R2, E | E2, A>
+  tapEffect<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, A>
 
   // ============================================
   // Error Handling
@@ -179,14 +187,14 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * @param fallback - Value to use on error
    * @returns New IO that never fails
    */
-  recover(fallback: A): IO<R, never, A>
+  recover<B extends Type>(fallback: B): IO<R, never, A | B>
 
   /**
    * Recovers from error by running another effect.
    * @param f - Function returning recovery effect
    * @returns New IO with error handling
    */
-  recoverWith<R2 extends Type, E2 extends Type>(f: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A>
+  recoverWith<R2 extends Type, E2 extends Type, B extends Type>(f: (e: E) => IO<R2, E2, B>): IO<R | R2, E2, A | B>
 
   /**
    * Pattern matches on success and failure.
@@ -214,7 +222,7 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
   /**
    * Catches all errors (alias for recoverWith).
    */
-  catchAll<R2 extends Type, E2 extends Type>(handler: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A>
+  catchAll<R2 extends Type, E2 extends Type, B extends Type>(handler: (e: E) => IO<R2, E2, B>): IO<R | R2, E2, A | B>
 
   /**
    * Retries the effect up to n times on failure.
@@ -373,15 +381,11 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     // Core Operations
     map<B extends Type>(f: (a: A) => B): IO<R, E, B> {
-      return createIO({ _tag: "Map", effect: io, f: f as (a: unknown) => B })
+      return createIO(unsafeCoerce({ _tag: "Map", effect: io, f }))
     },
 
     flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, B> {
-      return createIO({
-        _tag: "FlatMap",
-        effect: io as IO<R | R2, E | E2, unknown>,
-        f: f as (a: unknown) => IO<R | R2, E | E2, B>,
-      })
+      return createIO(unsafeCoerce({ _tag: "FlatMap", effect: io, f }))
     },
 
     tap(f: (a: A) => void): IO<R, E, A> {
@@ -391,34 +395,25 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       })
     },
 
-    tapEffect<R2 extends Type, E2 extends Type>(f: (a: A) => IO<R2, E2, unknown>): IO<R | R2, E | E2, A> {
+    tapEffect<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, A> {
       return io.flatMap((a) => f(a).map(() => a))
     },
 
     // Error Handling
     mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A> {
-      return createIO({ _tag: "MapError", effect: io as IO<R, unknown, A>, f: f as (e: unknown) => E2 })
+      return createIO(unsafeCoerce({ _tag: "MapError", effect: io, f }))
     },
 
-    recover(fallback: A): IO<R, never, A> {
-      return createIO({ _tag: "Recover", effect: io as IO<R, never, A>, fallback })
+    recover<B extends Type>(fallback: B): IO<R, never, A | B> {
+      return createIO(unsafeCoerce({ _tag: "Recover", effect: io, fallback }))
     },
 
-    recoverWith<R2 extends Type, E2 extends Type>(f: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A> {
-      return createIO({
-        _tag: "RecoverWith",
-        effect: io as IO<R | R2, E2, A>,
-        f: f as (e: E2) => IO<R | R2, E2, A>,
-      })
+    recoverWith<R2 extends Type, E2 extends Type, B extends Type>(f: (e: E) => IO<R2, E2, B>): IO<R | R2, E2, A | B> {
+      return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: io, f }))
     },
 
     fold<B extends Type>(onFailure: (e: E) => B, onSuccess: (a: A) => B): IO<R, never, B> {
-      return createIO({
-        _tag: "Fold",
-        effect: io as IO<R, never, unknown>,
-        onFailure: onFailure as (e: never) => B,
-        onSuccess: onSuccess as (a: unknown) => B,
-      })
+      return createIO(unsafeCoerce({ _tag: "Fold", effect: io, onFailure, onSuccess }))
     },
 
     match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B> {
@@ -431,15 +426,18 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       E2 extends Type,
       B extends Type,
     >(tag: K, handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B> {
-      return io.recoverWith((e) => {
+      const f = (e: E): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B> => {
         if (typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: string })._tag === tag) {
-          return handler(e as Extract<E, { _tag: K }>)
+          return unsafeCoerce(handler(e as Extract<E, { _tag: K }>))
         }
-        return IOCompanion.fail(e) as IO<R2, E, never>
-      }) as IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B>
+        return unsafeCoerce(IOCompanion.fail(e))
+      }
+      return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: io, f }))
     },
 
-    catchAll<R2 extends Type, E2 extends Type>(handler: (e: E) => IO<R2, E2, A>): IO<R | R2, E2, A> {
+    catchAll<R2 extends Type, E2 extends Type, B extends Type>(
+      handler: (e: E) => IO<R2, E2, B>,
+    ): IO<R | R2, E2, A | B> {
       return io.recoverWith(handler)
     },
 
@@ -472,37 +470,27 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     // Dependency Injection
     provideContext<R2 extends R>(context: Context<R2>): IO<Exclude<R, R2>, E, A> {
-      return createIO({
-        _tag: "ProvideContext",
-        effect: io as IO<R, E, A>,
-        context: context as Context<R>,
-      }) as IO<Exclude<R, R2>, E, A>
+      return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
     },
 
     provideService<S extends Type>(tag: Tag<S>, service: S): IO<Exclude<R, S>, E, A> {
-      const context = ContextCompanion.make(tag, service) as Context<R>
-      return createIO({
-        _tag: "ProvideContext",
-        effect: io as IO<R, E, A>,
-        context,
-      }) as IO<Exclude<R, S>, E, A>
+      const context = ContextCompanion.make(tag, service)
+      return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
     },
 
     provideLayer<RIn extends Type, E2 extends Type, ROut extends R>(
       layer: Layer<RIn, E2, ROut>,
     ): IO<RIn | Exclude<R, ROut>, E | E2, A> {
       // Build the layer and provide its context
-      return IOCompanion.async(async () => {
-        const inputContext = ContextCompanion.empty()
-        const context = await layer.build(inputContext as Context<RIn>)
-        return context
-      }).flatMap((context) =>
-        createIO({
-          _tag: "ProvideContext",
-          effect: io as IO<ROut, E, A>,
-          context: context as Context<ROut>,
+      const buildIO: IO<RIn, E2, Context<ROut>> = unsafeCoerce(
+        IOCompanion.async(async () => {
+          const inputContext = ContextCompanion.empty()
+          return await layer.build(unsafeCoerce(inputContext))
         }),
-      ) as IO<RIn | Exclude<R, ROut>, E | E2, A>
+      )
+      const provideFn = (context: Context<ROut>): IO<Exclude<R, ROut>, E, A> =>
+        createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
+      return unsafeCoerce(buildIO.flatMap(provideFn))
     },
 
     // Execution
@@ -544,12 +532,14 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     async runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>> {
       const exit = await runEffect(this._effect)
       if (exit.isSuccess()) {
-        return Try(() => exit.orThrow())
+        return unsafeCoerce(Try(() => exit.orThrow()))
       }
       const error = exit.isFailure() ? (exit.toValue() as { error: E }).error : new Error("Effect was interrupted")
-      return Try(() => {
-        throw error
-      })
+      return unsafeCoerce(
+        Try(() => {
+          throw error
+        }),
+      )
     },
 
     // Utilities
@@ -558,15 +548,17 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     delay(ms: number): IO<R, E, A> {
-      return IOCompanion.async<void>(() => new Promise((resolve) => setTimeout(resolve, ms))).flatMap(() => io)
+      return unsafeCoerce(
+        IOCompanion.async<void>(() => new Promise((resolve) => setTimeout(resolve, ms))).flatMap(() => io),
+      )
     },
 
     timeout(ms: number): IO<R, E | TimeoutError, A> {
-      return createIO({ _tag: "Timeout", effect: io, duration: ms })
+      return createIO(unsafeCoerce({ _tag: "Timeout", effect: io, duration: ms }))
     },
 
     timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B> {
-      return io.timeout(ms).recover(fallback as A | B)
+      return unsafeCoerce(io.timeout(ms).recover(unsafeCoerce(fallback)))
     },
 
     toString() {
@@ -687,36 +679,36 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
   try {
     switch (effect._tag) {
       case "Succeed":
-        return Exit.succeed(effect.value)
+        return unsafeCoerce(Exit.succeed(effect.value))
       case "Fail":
-        return Exit.fail(effect.error)
+        return unsafeCoerce(Exit.fail(effect.error))
       case "Die":
         throw effect.defect
       case "Sync":
-        return Exit.succeed(effect.thunk())
+        return unsafeCoerce(Exit.succeed(effect.thunk()))
       case "Async": {
         const result = await effect.thunk()
-        return Exit.succeed(result)
+        return unsafeCoerce(Exit.succeed(result))
       }
       case "Auto": {
         const result = effect.thunk()
         if (result instanceof Promise) {
-          return Exit.succeed(await result)
+          return unsafeCoerce(Exit.succeed(await result))
         } else {
-          return Exit.succeed(result)
+          return unsafeCoerce(Exit.succeed(result))
         }
       }
       case "Map": {
         const exitA = await runEffect(effect.effect._effect, context)
         if (!exitA.isSuccess()) {
-          return exitA as ExitType<E, A>
+          return unsafeCoerce(exitA)
         }
-        return Exit.succeed(effect.f(exitA.orThrow()))
+        return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
       }
       case "FlatMap": {
         const exitA = await runEffect(effect.effect._effect, context)
         if (!exitA.isSuccess()) {
-          return exitA as ExitType<E, A>
+          return unsafeCoerce(exitA)
         }
         const nextIO = effect.f(exitA.orThrow())
         return runEffect(nextIO._effect, context)
@@ -724,12 +716,12 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       case "MapError": {
         const exitA = await runEffect(effect.effect._effect, context)
         if (exitA.isSuccess()) {
-          return exitA
+          return unsafeCoerce(exitA)
         }
         if (exitA.isFailure()) {
-          return Exit.fail(effect.f((exitA.toValue() as { error: unknown }).error))
+          return unsafeCoerce(Exit.fail(effect.f((exitA.toValue() as { error: unknown }).error)))
         }
-        return exitA as ExitType<E, A>
+        return unsafeCoerce(exitA)
       }
       case "Recover": {
         const exitA = await runEffect(effect.effect._effect, context)
@@ -844,7 +836,8 @@ const IOCompanion = {
    * Creates an IO from an async thunk.
    * The Promise is not created until the IO is run.
    */
-  async: <A extends Type>(f: () => Promise<A>): IO<never, unknown, A> => createIO({ _tag: "Async", thunk: f }),
+  async: <A extends Type>(f: () => Promise<A>): IO<never, unknown, A> =>
+    createIO(unsafeCoerce({ _tag: "Async", thunk: f })),
 
   /**
    * Creates an IO from a Promise with error handling.
@@ -894,25 +887,25 @@ const IOCompanion = {
    * Creates an IO from an Either.
    */
   fromEither: <E extends Type, A extends Type>(either: Either<E, A>): IO<never, E, A> =>
-    either.isRight() ? IOCompanion.succeed(either.value as A) : IOCompanion.fail(either.value as E),
+    unsafeCoerce(either.isRight() ? IOCompanion.succeed(either.value as A) : IOCompanion.fail(either.value as E)),
 
   /**
    * Creates an IO from an Option.
    */
   fromOption: <A extends Type>(option: Option<A>): IO<never, void, A> =>
-    option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(undefined as void),
+    unsafeCoerce(option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(undefined as void)),
 
   /**
    * Creates an IO from an Option with custom error.
    */
   fromOptionOrFail: <E extends Type, A extends Type>(option: Option<A>, onNone: () => E): IO<never, E, A> =>
-    option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(onNone()),
+    unsafeCoerce(option.isSome() ? IOCompanion.succeed(option.value) : IOCompanion.fail(onNone())),
 
   /**
    * Creates an IO from a Try.
    */
   fromTry: <A extends Type>(t: ReturnType<typeof Try<A>>): IO<never, Error, A> =>
-    t.isSuccess() ? IOCompanion.succeed(t.orThrow()) : IOCompanion.fail(t.error as Error),
+    unsafeCoerce(t.isSuccess() ? IOCompanion.succeed(t.orThrow()) : IOCompanion.fail(t.error as Error)),
 
   // ============================================
   // Dependency Injection
@@ -974,23 +967,30 @@ const IOCompanion = {
   ): IO<TagService<Services[keyof Services]>, unknown, A> => {
     const entries = Object.entries(services) as [string, Tag<Type>][]
     if (entries.length === 0) {
-      return createIO({ _tag: "Auto", thunk: () => f({} as { [K in keyof Services]: TagService<Services[K]> }) })
+      return unsafeCoerce(
+        createIO({ _tag: "Auto", thunk: () => f({} as { [K in keyof Services]: TagService<Services[K]> }) }),
+      )
     }
 
     // Build up the context by fetching each service
     type Ctx = { [K in keyof Services]: TagService<Services[K]> }
+    const initial: IO<TagService<Services[keyof Services]>, never, Partial<Ctx>> = unsafeCoerce(IOCompanion.succeed({}))
     const buildContext = entries.reduce(
-      (acc, [name, tag]) =>
-        acc.flatMap((ctx) =>
-          IOCompanion.service(tag).map((service) => ({
-            ...ctx,
-            [name]: service,
-          })),
+      (acc: IO<TagService<Services[keyof Services]>, never, Partial<Ctx>>, [name, tag]) =>
+        unsafeCoerce(
+          acc.flatMap((ctx: Partial<Ctx>) =>
+            IOCompanion.service(tag).map((service) => ({
+              ...ctx,
+              [name]: service,
+            })),
+          ),
         ),
-      IOCompanion.succeed({}) as IO<TagService<Services[keyof Services]>, never, Partial<Ctx>>,
+      initial,
     )
 
-    return buildContext.flatMap((ctx) => createIO({ _tag: "Auto", thunk: () => f(ctx as Ctx) }))
+    return unsafeCoerce(
+      buildContext.flatMap((ctx: Partial<Ctx>) => createIO({ _tag: "Auto", thunk: () => f(ctx as Ctx) })),
+    )
   },
 
   // ============================================
@@ -1002,11 +1002,14 @@ const IOCompanion = {
    */
   all: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, readonly A[]> => {
     if (effects.length === 0) {
-      return IOCompanion.succeed([])
+      return unsafeCoerce(IOCompanion.succeed([]))
     }
-    return effects.reduce(
-      (acc, effect) => acc.flatMap((results) => effect.map((a) => [...results, a])),
-      IOCompanion.succeed([]) as IO<R, E, A[]>,
+    const initial: IO<R, E, A[]> = unsafeCoerce(IOCompanion.succeed([]))
+    return unsafeCoerce(
+      effects.reduce(
+        (acc: IO<R, E, A[]>, effect) => acc.flatMap((results: A[]) => effect.map((a) => [...results, a])),
+        initial,
+      ),
     )
   },
 
@@ -1015,7 +1018,7 @@ const IOCompanion = {
    */
   firstSuccessOf: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
     if (effects.length === 0) {
-      return IOCompanion.fail(new Error("No effects provided") as E)
+      return unsafeCoerce(IOCompanion.fail(new Error("No effects provided")))
     }
     return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
   },
@@ -1024,25 +1027,28 @@ const IOCompanion = {
    * Creates an IO that sleeps for the specified duration.
    */
   sleep: (ms: number): IO<never, never, void> =>
-    IOCompanion.async(() => new Promise((resolve) => setTimeout(resolve, ms))),
+    unsafeCoerce(IOCompanion.async(() => new Promise((resolve) => setTimeout(resolve, ms)))),
 
   /**
    * Creates an IO that never completes.
    */
-  never: <A extends Type = never>(): IO<never, never, A> => IOCompanion.async(() => new Promise(() => {})),
+  never: <A extends Type = never>(): IO<never, never, A> =>
+    unsafeCoerce(IOCompanion.async(() => new Promise(() => {}))),
 
   /**
    * Creates a unit IO.
    */
   get unit(): IO<never, never, void> {
-    return createIO({ _tag: "Succeed", value: undefined })
+    return unsafeCoerce(createIO({ _tag: "Succeed", value: undefined }))
   },
 
   /**
    * Converts a nullable value to an IO.
    */
   fromNullable: <A extends Type>(value: A | null | undefined): IO<never, void, A> =>
-    value === null || value === undefined ? IOCompanion.fail(undefined as void) : IOCompanion.succeed(value),
+    unsafeCoerce(
+      value === null || value === undefined ? IOCompanion.fail(undefined as void) : IOCompanion.succeed(value),
+    ),
 
   // ============================================
   // Structured Concurrency
@@ -1116,7 +1122,7 @@ const IOCompanion = {
    */
   any: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
     if (effects.length === 0) {
-      return IOCompanion.fail(new Error("No effects provided") as E)
+      return unsafeCoerce(IOCompanion.fail(new Error("No effects provided")))
     }
     // Try each effect, return first success
     return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
@@ -1137,11 +1143,14 @@ const IOCompanion = {
     f: (a: A) => IO<R, E, B>,
   ): IO<R, E, readonly B[]> => {
     if (items.length === 0) {
-      return IOCompanion.succeed([])
+      return unsafeCoerce(IOCompanion.succeed([]))
     }
-    return items.reduce(
-      (acc, item) => acc.flatMap((results) => f(item).map((b) => [...results, b])),
-      IOCompanion.succeed([]) as IO<R, E, B[]>,
+    const initial: IO<R, E, B[]> = unsafeCoerce(IOCompanion.succeed([]))
+    return unsafeCoerce(
+      items.reduce(
+        (acc: IO<R, E, B[]>, item) => acc.flatMap((results: B[]) => f(item).map((b) => [...results, b])),
+        initial,
+      ),
     )
   },
 
@@ -1160,7 +1169,7 @@ const IOCompanion = {
   timeout: <R extends Type, E extends Type, A extends Type>(
     effect: IO<R, E, A>,
     ms: number,
-  ): IO<R, E | TimeoutError, A> => createIO({ _tag: "Timeout", effect, duration: ms }),
+  ): IO<R, E | TimeoutError, A> => createIO(unsafeCoerce({ _tag: "Timeout", effect, duration: ms })),
 
   // ============================================
   // Generator Syntax Support (Phase 2 preparation)
@@ -1179,20 +1188,22 @@ const IOCompanion = {
    * })
    * ```
    */
-  gen: <R extends Type, E extends Type, A extends Type>(
-    f: () => Generator<IO<R, E, unknown>, A, unknown>,
-  ): IO<R, E, A> => {
-    return IOCompanion.sync(() => {
-      const iterator = f()
-      const runGenerator = (input: unknown): IO<R, E, A> => {
-        const result = iterator.next(input)
-        if (result.done) {
-          return IOCompanion.succeed(result.value)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gen: <A extends Type>(f: () => Generator<IO<any, any, any>, A, any>): IO<never, any, A> => {
+    return unsafeCoerce(
+      IOCompanion.sync(() => {
+        const iterator = f()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const runGenerator = (input: unknown): IO<never, any, A> => {
+          const result = iterator.next(input)
+          if (result.done) {
+            return unsafeCoerce(IOCompanion.succeed(result.value))
+          }
+          return unsafeCoerce(result.value.flatMap((value: unknown) => runGenerator(value)))
         }
-        return result.value.flatMap((value) => runGenerator(value))
-      }
-      return runGenerator(undefined)
-    }).flatMap((io) => io)
+        return runGenerator(undefined)
+      }).flatMap((io) => io),
+    )
   },
 
   // ============================================
@@ -1212,8 +1223,8 @@ const IOCompanion = {
    *   .map(({ user, posts, count }) => ({ user, posts, count }))
    * ```
    */
-  get Do(): DoBuilder<never, never, Record<string, never>> {
-    return createDoBuilder(IOCompanion.succeed({} as Record<string, never>))
+  get Do(): DoBuilder<never, never, Record<never, never>> {
+    return createDoBuilder(IOCompanion.succeed({} as Record<never, never>))
   },
 }
 
@@ -1268,7 +1279,9 @@ interface DoBuilder<R extends Type, E extends Type, Ctx extends Record<string, T
    * Executes an effectful side effect without changing the context.
    * @param f - Function returning an IO for the side effect
    */
-  tapEffect<R2 extends Type, E2 extends Type>(f: (ctx: Ctx) => IO<R2, E2, unknown>): DoBuilder<R | R2, E | E2, Ctx>
+  tapEffect<R2 extends Type, E2 extends Type, B extends Type>(
+    f: (ctx: Ctx) => IO<R2, E2, B>,
+  ): DoBuilder<R | R2, E | E2, Ctx>
 
   /**
    * Returns the final context as is.
@@ -1312,7 +1325,9 @@ const createDoBuilder = <R extends Type, E extends Type, Ctx extends Record<stri
     return createDoBuilder(effect.tap(f))
   },
 
-  tapEffect<R2 extends Type, E2 extends Type>(f: (ctx: Ctx) => IO<R2, E2, unknown>): DoBuilder<R | R2, E | E2, Ctx> {
+  tapEffect<R2 extends Type, E2 extends Type, B extends Type>(
+    f: (ctx: Ctx) => IO<R2, E2, B>,
+  ): DoBuilder<R | R2, E | E2, Ctx> {
     return createDoBuilder(effect.tapEffect(f))
   },
 
@@ -1335,7 +1350,7 @@ const createDoBuilder = <R extends Type, E extends Type, Ctx extends Record<stri
  * ```
  */
 const IOConstructor = <A extends Type>(f: () => A | Promise<A>): IO<never, unknown, A> =>
-  createIO({ _tag: "Auto", thunk: f })
+  createIO(unsafeCoerce({ _tag: "Auto", thunk: f }))
 
 /**
  * IO effect type for lazy, composable effects with typed errors.

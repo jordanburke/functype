@@ -96,10 +96,8 @@ describe("Task Robustness Tests", () => {
   describe("Task promise adapter edge cases", () => {
     test("should handle promise functions that throw synchronously", async () => {
       const syncError = new Error("Synchronous throw in promise function")
-      const throwingFn = () => {
+      const throwingFn = (): Promise<string> => {
         throw syncError
-        // eslint-disable-next-line no-unreachable
-        return Promise.resolve("never reached")
       }
 
       const taskFn = Task.fromPromise(throwingFn, { name: "SyncErrorTask" })

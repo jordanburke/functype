@@ -52,7 +52,7 @@ describe("Try", () => {
   describe("toEither()", () => {
     it("should convert to Right on success", () => {
       const myTry = Try(() => 1 + 1)
-      const either = myTry.toEither()
+      const either = myTry.toEither("error")
       expect(either.isRight()).toBe(true)
     })
 
@@ -60,7 +60,7 @@ describe("Try", () => {
       const myTry = Try(() => {
         throw new Error("Something went wrong")
       })
-      const either = myTry.toEither()
+      const either = myTry.toEither("error")
       expect(either.isLeft()).toBe(true)
     })
   })

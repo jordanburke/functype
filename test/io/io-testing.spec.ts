@@ -172,7 +172,7 @@ describe("TestContext", () => {
         .bind("config", () => IO.service(Config))
         .map(({ logger, config }) => logger.log(`value: ${config.value}`))
 
-      const result = await ctx.run(program)
+      const result = await ctx.run(program as unknown as IO<Logger & Config, never, string>)
       expect(result).toBe("logged: value: 42")
     })
   })

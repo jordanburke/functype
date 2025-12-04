@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "vitest"
 
-import { List, Map, None, Some, Tuple } from "../../src"
+import { List, Map, None, Option, Some, Tuple } from "../../src"
 
 describe("Map", () => {
   let map: Map<string, number>
@@ -60,7 +60,7 @@ describe("Map", () => {
   })
 
   test("getOrElse should return default value if key does not exist", () => {
-    expect(map.orElse("z", 10)).toBe(10)
+    expect(map.orElse("z", Option(10)).orElse(0)).toBe(10)
   })
 
   test("isEmpty should return true for an empty map", () => {

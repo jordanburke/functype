@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { $, Do, DoAsync } from "@/do"
+import type { Either } from "@/either"
 import { Left, List, None, Option, Right, Try } from "@/index"
 
 describe("Do-notation", () => {
@@ -14,8 +15,8 @@ describe("Do-notation", () => {
       })
 
       // Do returns Option now
-      expect(result.isSome()).toBe(true)
-      expect(result.orThrow()).toBe(30)
+      expect((result as Option<number>).isSome()).toBe(true)
+      expect((result as Option<number>).orThrow()).toBe(30)
     })
 
     it("should short-circuit on None and return None", () => {
@@ -27,7 +28,7 @@ describe("Do-notation", () => {
       })
 
       // Test type inference - this should work if inference is successful
-      expect(result.isNone()).toBe(true)
+      expect((result as Option<number>).isNone()).toBe(true)
     })
 
     it("should work with conditional logic", () => {
@@ -42,8 +43,8 @@ describe("Do-notation", () => {
         }
       })
 
-      expect(result.isSome()).toBe(true)
-      expect(result.orThrow()).toBe(30)
+      expect((result as Option<number>).isSome()).toBe(true)
+      expect((result as Option<number>).orThrow()).toBe(30)
     })
   })
 
@@ -86,12 +87,14 @@ describe("Do-notation", () => {
 
   describe("Do with mixed monad types", () => {
     it("should work with Option and Either together", () => {
-      const result = Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Right<string, number>(10))
-        const z = yield* $(Option(x + y))
-        return z * 2
-      }).toOption()
+      const result = (
+        Do(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Right<string, number>(10))
+          const z = yield* $(Option(x + y))
+          return z * 2
+        }) as Option<number>
+      ).toOption()
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -106,12 +109,14 @@ describe("Do-notation", () => {
 
       const createUser = (email: string) => Option({ id: 1, email })
 
-      const result = Do(function* () {
-        const validEmail = yield* $(validateEmail("user@example.com"))
-        const availableEmail = yield* $(checkAvailable(validEmail))
-        const user = yield* $(createUser(availableEmail))
-        return user
-      }).toOption()
+      const result = (
+        Do(function* () {
+          const validEmail = yield* $(validateEmail("user@example.com"))
+          const availableEmail = yield* $(checkAvailable(validEmail))
+          const user = yield* $(createUser(availableEmail))
+          return user
+        }) as Option<{ id: number; email: string }>
+      ).toOption()
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -147,7 +152,7 @@ describe("Do-notation", () => {
         const x = yield* $(Try(() => 5))
         const y = yield* $(Try(() => 10))
         return x + y
-      })
+      }) as Try<number>
 
       expect(result.isSuccess()).toBe(true)
       expect(result.orThrow()).toBe(15)
@@ -162,7 +167,7 @@ describe("Do-notation", () => {
           }),
         )
         return x + y
-      })
+      }) as Try<number>
 
       expect(result.isFailure()).toBe(true)
       expect(result.error?.message).toBe("computation failed")
@@ -180,7 +185,7 @@ describe("Do-notation", () => {
         const user = yield* $(await fetchUser(1))
         const profile = yield* $(await fetchProfile(user))
         return { user, profile }
-      }).then((f) => f.toOption())
+      }).then((f) => (f as Option<{ user: { id: number; name: string }; profile: { bio: string } }>).toOption())
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -195,7 +200,7 @@ describe("Do-notation", () => {
         const y = yield* $(await Promise.resolve(Option(10))) // Async monad
         const z = yield* $(Right<string, number>(x + y)) // Sync monad
         return z * 2
-      }).then((f) => f.toOption())
+      }).then((f) => (f as Option<number>).toOption())
 
       // First monad is Option, so result is Option
       expect(result.isSome()).toBe(true)
@@ -203,31 +208,31 @@ describe("Do-notation", () => {
     })
 
     it("should handle async None properly", async () => {
-      const result = await DoAsync(async function* () {
+      const result = (await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Option(5)))
         const y = yield* $(await Promise.resolve(Option<number>(null))) // None - short-circuits
         return x + y
-      })
+      })) as Option<number>
 
       expect(result.isNone()).toBe(true)
     })
 
     it("should handle async Left properly", async () => {
-      const result = await DoAsync(async function* () {
+      const result = (await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Right<string, number>(5)))
         const y = yield* $(await Promise.resolve(Left<string, number>("async error")))
         return x + y
-      })
+      })) as Either<string, number>
 
       expect(result.isLeft()).toBe(true)
       expect(result.value).toBe("async error")
     })
 
     it("should handle error recovery in async context", async () => {
-      const result = await DoAsync(async function* () {
+      const result = (await DoAsync(async function* () {
         const x = yield* $(await Promise.resolve(Option<number>(null))) // None - short-circuits
         return x
-      })
+      })) as Option<number>
 
       expect(result.isNone()).toBe(true)
     })
@@ -255,19 +260,25 @@ describe("Do-notation", () => {
       const sendWelcomeEmail = (user: { email: string }) => Option({ sent: true, to: user.email })
 
       const registerUser = (email: string, password: string) => {
-        const result = Do(function* () {
-          const validEmail = yield* $(validateEmail(email))
-          const availableEmail = yield* $(checkEmailAvailable(validEmail))
-          const hashedPw = yield* $(hashPassword(password))
-          const user = yield* $(createUser(availableEmail, hashedPw))
-          const emailResult = yield* $(sendWelcomeEmail(user))
+        const result = (
+          Do(function* () {
+            const validEmail = yield* $(validateEmail(email))
+            const availableEmail = yield* $(checkEmailAvailable(validEmail))
+            const hashedPw = yield* $(hashPassword(password))
+            const user = yield* $(createUser(availableEmail, hashedPw))
+            const emailResult = yield* $(sendWelcomeEmail(user))
 
-          return {
-            user,
-            emailSent: emailResult,
-            status: "success" as const,
-          }
-        }).toOption()
+            return {
+              user,
+              emailSent: emailResult,
+              status: "success" as const,
+            }
+          }) as Option<{
+            user: { id: number; email: string; password: string }
+            emailSent: { sent: boolean; to: string }
+            status: "success"
+          }>
+        ).toOption()
 
         // Result is Option (first monad), wrap in Either for API
         if (result.isSome()) {
@@ -318,11 +329,13 @@ describe("Do-notation", () => {
       const processValue = (data: { value: number }) => Option(data.value > 0 ? data.value * 2 : null)
 
       const pipeline = (jsonString: string) => {
-        const result = Do(function* () {
-          const parsed = yield* $(parseJSON(jsonString))
-          const validated = yield* $(validateData(parsed))
-          return yield* $(processValue(validated))
-        }).toTry()
+        const result = (
+          Do(function* () {
+            const parsed = yield* $(parseJSON(jsonString))
+            const validated = yield* $(validateData(parsed))
+            return yield* $(processValue(validated))
+          }) as Try<number>
+        ).toTry()
         // Result is Try (first monad)
         if (result.isSuccess()) {
           return Option(result.orThrow())
@@ -364,8 +377,8 @@ describe("Do-notation", () => {
         return sum
       })
 
-      expect(result.isSome()).toBe(true)
-      expect(result.orThrow()).toBe(30) // (1+2+3+4+5) * 2
+      expect((result as Option<number>).isSome()).toBe(true)
+      expect((result as Option<number>).orThrow()).toBe(30) // (1+2+3+4+5) * 2
     })
 
     it("should short-circuit loop on None", () => {
@@ -381,7 +394,7 @@ describe("Do-notation", () => {
         return sum
       })
 
-      expect(result.isNone()).toBe(true)
+      expect((result as Option<number>).isNone()).toBe(true)
     })
   })
 
@@ -432,22 +445,26 @@ describe("Do-notation", () => {
     })
 
     it("should handle List with Option (mixed types)", () => {
-      const result = Do(function* () {
-        const x = yield* $(List([1, 2, 3]))
-        const y = yield* $(Option(10))
-        return x + y
-      }).toList()
+      const result = (
+        Do(function* () {
+          const x = yield* $(List([1, 2, 3]))
+          const y = yield* $(Option(10))
+          return x + y
+        }) as List<number>
+      ).toList()
 
       // First yield is List, so result should be a List
       expect(result.toArray()).toEqual([11, 12, 13])
     })
 
     it("should handle Option with List (Option first)", () => {
-      const result = Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(List([1, 2, 3]))
-        return x + y
-      }).toOption()
+      const result = (
+        Do(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(List([1, 2, 3]))
+          return x + y
+        }) as Option<number>
+      ).toOption()
 
       // First monad is Option, not List, so result is Option
       // It takes the first element of the List

@@ -10,7 +10,7 @@ import * as fs from "fs"
 import * as path from "path"
 
 import { List } from "../src/list"
-import { Match } from "../src/conditional"
+import { Cond } from "../src/conditional"
 import { Option, Some } from "../src/option"
 import { Try } from "../src/try"
 
@@ -84,16 +84,16 @@ const processLine = (
   const trimmed = line.trim()
 
   // Update JSDoc tracking
-  const jsDocStart = Match(true)
-    .when(isJsDocStart(trimmed) && !state.inDefinition, () => Some(index))
-    .when(
+  const jsDocStart: Option<number> = Cond.of<Option<number>>()
+    .when(isJsDocStart(trimmed) && !state.inDefinition, Some(index))
+    .elseWhen(
       !state.inDefinition &&
         state.jsDocStart.isSome() &&
         !isJsDocLine(trimmed) &&
         !matchesDefinition(trimmed, keyword, name),
-      () => Option.none<number>(),
+      Option.none<number>(),
     )
-    .default(state.jsDocStart)
+    .else(state.jsDocStart)
 
   // Check for definition start
   const startsDefinition = matchesDefinition(trimmed, keyword, name) && !state.inDefinition
@@ -159,7 +159,7 @@ const extractDefinition = (sourceText: string, name: string, isType: boolean = f
     .flatMap((jsDocIdx) =>
       definitionStart.map((defIdx) => {
         if (jsDocIdx < defIdx) {
-          const jsDocLines = lines.slice(jsDocIdx, defIdx)
+          const jsDocLines = List(lines.toArray().slice(jsDocIdx, defIdx))
           return jsDocLines.concat(result).toArray().join("\n")
         }
         return result.toArray().join("\n")

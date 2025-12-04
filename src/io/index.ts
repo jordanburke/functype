@@ -36,7 +36,7 @@ export type { ContextServices, Context as ContextType, HasService } from "./Cont
 export { Context } from "./Context"
 export type { ExitTag, Exit as ExitType } from "./Exit"
 export { Exit } from "./Exit"
-export type { IO as IOType, RIO, Task, UIO } from "./IO"
+export type { Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
 export { InterruptedError, IO, TimeoutError } from "./IO"
 export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./Layer"
 export { Layer } from "./Layer"

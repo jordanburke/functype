@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { $, Do, DoAsync } from "@/do"
+import type { Either } from "@/either"
 import { Left, List, None, Option, Right, Some, Try } from "@/index"
 
 describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", () => {
@@ -14,8 +15,8 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return x + y
       })
 
-      expect(result.isSome()).toBe(true)
-      expect(result.orThrow()).toBe(15)
+      expect((result as Option<number>).isSome()).toBe(true)
+      expect((result as Option<number>).orThrow()).toBe(15)
 
       // Guard fails case
       const filtered = Do(function* () {
@@ -27,7 +28,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return yield* $(None<number>())
       })
 
-      expect(filtered.isNone()).toBe(true)
+      expect((filtered as Option<number>).isNone()).toBe(true)
     })
 
     it("should support nested comprehensions like Scala", () => {
@@ -65,7 +66,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return z
       })
 
-      expect(result.orThrow()).toBe(11)
+      expect((result as Option<number>).orThrow()).toBe(11)
     })
 
     it("should handle complex cartesian products like Scala", () => {
@@ -115,7 +116,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
 
       const rightSide = f(a)
 
-      expect(leftSide.orThrow()).toBe(rightSide.orThrow())
+      expect((leftSide as Option<number>).orThrow()).toBe(rightSide.orThrow())
     })
 
     // Right identity: m.flatMap(M.unit) == m
@@ -127,7 +128,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return yield* $(Option(x))
       })
 
-      expect(leftSide.orThrow()).toBe(m.orThrow())
+      expect((leftSide as Option<number>).orThrow()).toBe(m.orThrow())
     })
 
     // Associativity: m.flatMap(f).flatMap(g) == m.flatMap(x => f(x).flatMap(g))
@@ -152,7 +153,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         )
       })
 
-      expect(leftSide.orThrow()).toBe(rightSide.orThrow())
+      expect((leftSide as Option<number>).orThrow()).toBe((rightSide as Option<number>).orThrow())
     })
   })
 
@@ -170,7 +171,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return a + b + c
       })
 
-      expect(result.isNone()).toBe(true)
+      expect((result as Option<number>).isNone()).toBe(true)
       expect(sideEffect).toBe(1) // Only first side effect executed
     })
 
@@ -182,8 +183,8 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return a + b + c
       })
 
-      expect(result.isLeft()).toBe(true)
-      expect(result.value).toBe("error")
+      expect((result as Either<string, number>).isLeft()).toBe(true)
+      expect((result as Either<string, number>).value).toBe("error")
     })
 
     it("should propagate Failure through Try chains", () => {
@@ -200,8 +201,8 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return a + b + c
       })
 
-      expect(result.isFailure()).toBe(true)
-      expect(result.error).toBe(error)
+      expect((result as Try<number>).isFailure()).toBe(true)
+      expect((result as Try<number>).error).toBe(error)
     })
   })
 
@@ -232,15 +233,18 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         })
 
       // Successful login
-      const success = loginFlow("admin@example.com", "secret", "admin")
+      const success = loginFlow("admin@example.com", "secret", "admin") as Either<string, { id: number; email: string }>
       expect(success.toOption().isSome()).toBe(true)
 
       // Failed authentication
-      const authFail = loginFlow("wrong@example.com", "wrong", "admin")
+      const authFail = loginFlow("wrong@example.com", "wrong", "admin") as Either<string, { id: number; email: string }>
       expect(authFail.toOption().isNone()).toBe(true)
 
       // Failed authorization
-      const authzFail = loginFlow("admin@example.com", "secret", "superadmin")
+      const authzFail = loginFlow("admin@example.com", "secret", "superadmin") as Either<
+        string,
+        { id: number; email: string }
+      >
       expect(authzFail.toOption().isNone()).toBe(true)
     })
 
@@ -292,7 +296,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         id: "123",
         value: "45.67",
         timestamp: "2024-01-01T00:00:00Z",
-      })
+      }) as Either<string, ProcessedData>
       expect(validData.toOption().isSome()).toBe(true)
       expect(validData.toOption().orThrow().value).toBe(45.67)
 
@@ -301,7 +305,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         id: "abc",
         value: "45.67",
         timestamp: "2024-01-01T00:00:00Z",
-      })
+      }) as Either<string, ProcessedData>
       expect(invalidId.toOption().isNone()).toBe(true)
 
       // Out of range value
@@ -309,7 +313,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         id: "123",
         value: "150",
         timestamp: "2024-01-01T00:00:00Z",
-      })
+      }) as Either<string, ProcessedData>
       expect(outOfRange.toOption().isNone()).toBe(true)
     })
   })
@@ -377,8 +381,8 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return saved
       })
 
-      expect(result.toOption().isSome()).toBe(true)
-      expect(result.toOption().orThrow().value).toBe(50)
+      expect((result as Try<{ id: number; value: number }>).toOption().isSome()).toBe(true)
+      expect((result as Try<{ id: number; value: number }>).toOption().orThrow().value).toBe(50)
     })
 
     it("should handle parallel async operations", async () => {
@@ -396,7 +400,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return v1 + v2 + v3
       })
 
-      expect(result.toOption().orThrow()).toBe(60)
+      expect((result as Option<number>).toOption().orThrow()).toBe(60)
     })
 
     it("should handle async error recovery", async () => {
@@ -409,7 +413,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return value * 2
       })
 
-      expect(result.toOption().orThrow()).toBe(84)
+      expect((result as Option<number>).toOption().orThrow()).toBe(84)
     })
   })
 
@@ -418,17 +422,19 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       const largeList = List(Array.from({ length: 100 }, (_, i) => i))
 
       const start = performance.now()
-      const result = Do(function* () {
-        const x = yield* $(largeList)
-        if (x > 95) {
-          const y = yield* $(Option(x * 2))
-          return y
-        }
-        return 0
-      }).toList()
+      const result = (
+        Do(function* () {
+          const x = yield* $(largeList)
+          if (x > 95) {
+            const y = yield* $(Option(x * 2))
+            return y
+          }
+          return 0
+        }) as List<number>
+      ).toList()
       const end = performance.now()
 
-      expect(result.filter((x) => x > 0).size).toBe(4) // 96, 97, 98, 99
+      expect(result.filter((x: number) => x > 0).size).toBe(4) // 96, 97, 98, 99
       expect(end - start).toBeLessThan(100) // Should be fast
     })
 
@@ -447,7 +453,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         return a + b + c
       })
 
-      expect(result.isNone()).toBe(true)
+      expect((result as Option<number>).isNone()).toBe(true)
       expect(computations).toBe(1) // Only first computation ran
     })
   })
@@ -473,13 +479,13 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
             const x = yield* $(Option(outer * 2))
             const y = yield* $(Option(x + 1))
             return y
-          }),
+          }) as Option<number>,
         )
 
-        return inner + outer
+        return (inner as number) + outer
       })
 
-      expect(result.orThrow()).toBe(16) // (5*2+1) + 5
+      expect((result as Option<number>).orThrow()).toBe(16) // (5*2+1) + 5
     })
 
     it("should handle recursive patterns", () => {
@@ -491,7 +497,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
           const prev1 = yield* $(fibonacci(n - 1))
           const prev2 = yield* $(fibonacci(n - 2))
           return prev1 + prev2
-        })
+        }) as Option<number>
       }
 
       expect(fibonacci(6).orThrow()).toBe(8)
@@ -505,7 +511,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         const list = yield* $(List([15]))
         const tryVal = yield* $(Try(() => 20))
         return opt + either + list + tryVal
-      })
+      }) as Option<number>
 
       // Convert to different types
       expect(result.toOption().orThrow()).toBe(50)
@@ -528,7 +534,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
         const y = yield* $(Option(10))
         const z = yield* $(Option(15))
         return x + y + z
-      })
+      }) as Option<number>
 
       expect(traditional.orThrow()).toBe(withDo.orThrow())
       expect(withDo.orThrow()).toBe(30)
@@ -555,23 +561,25 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
 
       // Do-notation approach
       const doValidation = (input: string) =>
-        Do(function* () {
-          const parsed = yield* $(Try(() => JSON.parse(input)))
+        (
+          Do(function* () {
+            const parsed = yield* $(Try(() => JSON.parse(input)))
 
-          if (!parsed || typeof parsed !== "object" || !("value" in parsed)) {
-            return yield* $(Left<string, number>("Invalid structure"))
-          }
+            if (!parsed || typeof parsed !== "object" || !("value" in parsed)) {
+              return yield* $(Left<string, number>("Invalid structure"))
+            }
 
-          if (typeof parsed.value !== "number") {
-            return yield* $(Left<string, number>("Value not a number"))
-          }
+            if (typeof parsed.value !== "number") {
+              return yield* $(Left<string, number>("Value not a number"))
+            }
 
-          if (parsed.value <= 0) {
-            return yield* $(Left<string, number>("Value must be positive"))
-          }
+            if (parsed.value <= 0) {
+              return yield* $(Left<string, number>("Value must be positive"))
+            }
 
-          return parsed.value * 2
-        }).toEither("Parse error")
+            return parsed.value * 2
+          }) as Try<number>
+        ).toEither("Parse error")
 
       const validInput = '{"value": 10}'
       expect(traditionalValidation(validInput).value).toBe(20)
