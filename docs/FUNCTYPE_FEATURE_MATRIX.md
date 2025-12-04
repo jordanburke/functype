@@ -16,6 +16,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✗   |     ✗      |      ✓       |       ✗       |
 | **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 | **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
 | **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
@@ -33,6 +34,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Option<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
 | **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
 | **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
 | **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
 | **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
@@ -54,6 +56,7 @@ All types follow the **Companion pattern** (inspired by Scala), combining constr
 | **Option<T>**   |  ✓  |  ✓   |  ✗   |   ✗   |  ✓   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Either<L,R>** |  ✗  |  ✗   |  ✗   |   ✗   |  ✗   |  ✓   |   ✓   |    ✗    |    ✗    |
 | **Try<T>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
+| **IO<R,E,A>**   |  ✗  |  ✓   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
 | **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Map<K,V>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
@@ -214,3 +217,21 @@ Provides conversion to Promise for async interop:
    - **ValidatedBrand**: Branded types with validation
    - **Task**: Sync/async operation orchestrator returning TaskOutcome<T> with Ok/Err constructors. Includes conversion methods: toEither(), toTry(), toOption(), fromEither(), fromTry().
    - **Throwable**: Enhanced error type
+
+8. **IO<R,E,A>**: Lazy, composable effect type with typed errors and dependency injection.
+   - **R** = Requirements (environment/dependencies needed to run)
+   - **E** = Error type (typed failures)
+   - **A** = Success type (value produced on success)
+   - Key features:
+     - Lazy execution (nothing runs until explicitly executed)
+     - Unified sync/async API (auto-detects Promise returns)
+     - Typed errors at compile time
+     - Composable via map/flatMap
+     - Dependency injection via Tag/Layer/Context
+     - Structured concurrency: bracket, race, timeout
+     - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
+     - Error handling: catchTag, catchAll, retry, retryWithDelay
+     - Execution methods: run(), runSync(), runEither(), runExit(), runOption(), runTry()
+   - Testing utilities:
+     - **TestClock**: Controlled time for testing timeouts/delays
+     - **TestContext**: Test environment with mocked services

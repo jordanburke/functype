@@ -42,3 +42,5 @@ export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./
 export { Layer } from "./Layer"
 export type { TagService, Tag as TagType } from "./Tag"
 export { Tag } from "./Tag"
+export type { TestClock as TestClockType, TestContext as TestContextType } from "./TestClock"
+export { TestClock, TestClockTag, TestContext } from "./TestClock"
