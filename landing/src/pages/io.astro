@@ -1,0 +1,224 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation';
+import Footer from '../components/Footer';
+---
+
+<Layout title="IO<R,E,A> - Functype">
+  <Navigation client:load />
+  <div class="min-h-screen bg-white pt-16">
+    <section class="px-6 py-20 text-center max-w-4xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">IO&lt;R,E,A&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Lazy, composable effects with typed errors</p>
+      <p class="text-lg text-gray-500 max-w-2xl mx-auto">
+        A powerful effect type inspired by ZIO for building composable, type-safe programs with dependency injection
+      </p>
+      <div class="flex gap-4 justify-center mt-8">
+        <a href="/api-docs/modules/io.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          API Documentation
+        </a>
+        <a href="https://github.com/jordanburke/functype/blob/main/src/io" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+          View Source
+        </a>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is IO&lt;R,E,A&gt;?</h2>
+        <p class="text-lg text-gray-700 mb-4">
+          IO represents a lazy, composable effect that requires environment <code class="bg-gray-100 px-2 py-1 rounded">R</code>,
+          may fail with error <code class="bg-gray-100 px-2 py-1 rounded">E</code>,
+          and produces value <code class="bg-gray-100 px-2 py-1 rounded">A</code> on success.
+        </p>
+        <p class="text-lg text-gray-700 mb-6">
+          Nothing runs until explicitly executed - this enables powerful composition and dependency injection patterns.
+        </p>
+        <div class="bg-gray-900 rounded-xl p-6 overflow-x-auto">
+          <pre class="text-sm text-gray-100"><code>{`// Create effects
+const program = IO.sync(() => 42)
+  .map(x => x * 2)
+  .flatMap(x => IO.succeed(x + 1))
+
+// Run the effect
+const result = await program.run() // 85
+
+// Error handling with typed errors
+const safe = IO.tryCatch(
+  () => JSON.parse(input),
+  (e) => new ParseError(e)
+).recover("default")`}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Lazy Execution</h3>
+            <p class="text-gray-700">Effects are descriptions of computations - nothing runs until you call <code class="bg-gray-100 px-1 rounded">run()</code></p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Typed Errors</h3>
+            <p class="text-gray-700">Errors are tracked in the type system - know exactly what can fail at compile time</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Dependency Injection</h3>
+            <p class="text-gray-700">Built-in DI with Tag, Context, and Layer for clean, testable architecture</p>
+          </div>
+          <div class="bg-gray-50 rounded-xl p-6">
+            <h3 class="text-xl font-semibold mb-3">Resource Safety</h3>
+            <p class="text-gray-700">Bracket/acquireRelease patterns ensure resources are always cleaned up</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Dependency Injection</h2>
+        <p class="text-lg text-gray-700 mb-6">
+          IO has first-class support for dependency injection using Tags, Contexts, and Layers.
+        </p>
+        <div class="bg-gray-900 rounded-xl p-6 overflow-x-auto">
+          <pre class="text-sm text-gray-100"><code>{`// Define a service interface
+interface Logger {
+  log(message: string): void
+}
+
+// Create a Tag for the service
+const Logger = Tag<Logger>("Logger")
+
+// Use the service in your program
+const program = IO.service(Logger).flatMap(logger =>
+  IO.sync(() => logger.log("Hello!"))
+)
+
+// Provide the implementation
+const result = await program
+  .provideService(Logger, { log: console.log })
+  .run()`}</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">Do-Notation</h2>
+        <p class="text-lg text-gray-700 mb-6">
+          IO supports two styles of do-notation for sequential composition.
+        </p>
+        <div class="space-y-8">
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Generator Syntax (IO.gen)</h3>
+            <div class="bg-gray-900 rounded-xl p-6 overflow-x-auto">
+              <pre class="text-sm text-gray-100"><code>{`const program = IO.gen(function* () {
+  const a = yield* IO.succeed(1)
+  const b = yield* IO.succeed(2)
+  const c = yield* IO.succeed(3)
+  return a + b + c
+})
+
+const result = await program.run() // 6`}</code></pre>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-xl font-semibold mb-4">Builder Syntax (IO.Do)</h3>
+            <div class="bg-gray-900 rounded-xl p-6 overflow-x-auto">
+              <pre class="text-sm text-gray-100"><code>{`const program = IO.Do
+  .bind("user", () => getUser("123"))
+  .bind("posts", ({ user }) => getPosts(user.id))
+  .let("count", ({ posts }) => posts.length)
+  .map(({ user, posts, count }) => ({ user, posts, count }))`}</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16 bg-gray-50">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">IO vs Task</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="border-b-2 border-gray-200">
+                <th class="py-3 px-4">Feature</th>
+                <th class="py-3 px-4">IO&lt;R,E,A&gt;</th>
+                <th class="py-3 px-4">Task&lt;T&gt;</th>
+              </tr>
+            </thead>
+            <tbody class="text-gray-700">
+              <tr class="border-b border-gray-200">
+                <td class="py-3 px-4 font-medium">Typed Errors</td>
+                <td class="py-3 px-4 text-green-600">Yes (E type parameter)</td>
+                <td class="py-3 px-4">No</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-3 px-4 font-medium">Dependency Injection</td>
+                <td class="py-3 px-4 text-green-600">Yes (R type parameter)</td>
+                <td class="py-3 px-4">No</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-3 px-4 font-medium">Cancellation</td>
+                <td class="py-3 px-4">Via interrupt</td>
+                <td class="py-3 px-4 text-green-600">Yes (built-in)</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-3 px-4 font-medium">Progress Tracking</td>
+                <td class="py-3 px-4">No</td>
+                <td class="py-3 px-4 text-green-600">Yes</td>
+              </tr>
+              <tr class="border-b border-gray-200">
+                <td class="py-3 px-4 font-medium">Best For</td>
+                <td class="py-3 px-4">Complex applications with DI</td>
+                <td class="py-3 px-4">Simple async with cancellation</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-6 py-16">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use IO</h2>
+        <div class="space-y-6">
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">&#10003;</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Applications with complex dependencies</h3>
+              <p class="text-gray-700">Web servers, CLI tools, or any app that needs clean DI</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">&#10003;</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">When you want errors tracked in the type system</h3>
+              <p class="text-gray-700">Know exactly what can fail without reading the implementation</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">&#10003;</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Resource management with guaranteed cleanup</h3>
+              <p class="text-gray-700">Database connections, file handles, network sockets</p>
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">&#10003;</div>
+            <div>
+              <h3 class="font-semibold text-lg mb-2">Building composable, testable programs</h3>
+              <p class="text-gray-700">Swap implementations for testing without mocking frameworks</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Footer client:load />
+  </div>
+</Layout>

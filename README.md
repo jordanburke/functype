@@ -747,10 +747,12 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - ✓ Add guard clauses (when conditions)
   - ✓ Support destructuring patterns
   - ✓ Consolidated into unified Match implementation
-- [ ] Implement IO<A> monad for functional side effects
-  - Lazy execution of effects
-  - Composable IO operations
-  - Integration with Task for async IO
+- [x] Implement IO<R,E,A> effect type
+  - ✓ Lazy execution with typed errors
+  - ✓ Dependency injection (Tag, Context, Layer)
+  - ✓ Composable operations (map, flatMap, zip, race)
+  - ✓ Resource management (bracket/acquireRelease)
+  - ✓ Generator do-notation (IO.gen) and builder (IO.Do)
 
 ### Low Priority
 

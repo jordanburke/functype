@@ -1,6 +1,6 @@
 # Functype
 
-> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns. Provides Option, Either, Try, List, Task, and more with a unified interface hierarchy.
+> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns. Provides Option, Either, Try, List, Task, IO, and more with a unified interface hierarchy.
 
 ## Getting Started
 
@@ -15,6 +15,7 @@
 [Try](https://functype.org/try.md): Safely execute operations that might throw exceptions
 [List](https://functype.org/list.md): Immutable array with functional operations
 [Task](https://functype.org/task.md): Sync/async operations with structured error handling
+[IO](https://functype.org/io.md): Lazy, composable effects with typed errors and dependency injection
 
 ## Advanced Features
 
