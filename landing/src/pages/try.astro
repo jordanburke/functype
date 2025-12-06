@@ -2,23 +2,23 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
-import { Content as IOContent } from '../content/io.md';
+import { Content as TryContent } from '../content/try.md';
 ---
 
-<Layout title="IO<R,E,A> - Functype">
+<Layout title="Try<T> - Functype">
   <Navigation client:load />
   <div class="min-h-screen bg-white pt-16">
     <section class="px-6 py-20 text-center max-w-4xl mx-auto">
-      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">IO&lt;R,E,A&gt;</h1>
-      <p class="text-2xl text-gray-600 mb-4">Lazy, composable effects with typed errors</p>
+      <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6">Try&lt;T&gt;</h1>
+      <p class="text-2xl text-gray-600 mb-4">Safely execute operations that might throw</p>
       <p class="text-lg text-gray-500 max-w-2xl mx-auto">
-        A powerful effect type inspired by ZIO for building composable, type-safe programs with dependency injection
+        Bridge exception-based code with functional error handling
       </p>
       <div class="flex gap-4 justify-center mt-8">
-        <a href="/api-docs/modules/io.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <a href="/api-docs/modules/try_.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           API Documentation
         </a>
-        <a href="https://github.com/jordanburke/functype/blob/main/src/io" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+        <a href="https://github.com/jordanburke/functype/blob/main/src/try" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
           View Source
         </a>
       </div>
@@ -27,7 +27,7 @@ import { Content as IOContent } from '../content/io.md';
     <!-- Content from Markdown -->
     <section class="px-6 py-16">
       <div class="max-w-4xl mx-auto prose prose-lg markdown-content">
-        <IOContent />
+        <TryContent />
       </div>
     </section>
 

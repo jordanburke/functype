@@ -3,6 +3,9 @@ dist/
 # generated types
 .astro/
 
+# generated markdown (source of truth is src/content/)
+public/*.md
+
 # dependencies
 node_modules/
 

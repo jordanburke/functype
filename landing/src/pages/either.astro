@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
-import CodeExample from '../components/CodeExample.astro';
+import { Content as EitherContent } from '../content/either.md';
 ---
 
 <Layout title="Either<L,R> - Functype">
@@ -16,7 +16,7 @@ import CodeExample from '../components/CodeExample.astro';
         Elegant error handling that preserves error information without throwing exceptions
       </p>
       <div class="flex gap-4 justify-center mt-8">
-        <a href="/api-docs/classes/Either.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <a href="/api-docs/modules/either.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           API Documentation
         </a>
         <a href="https://github.com/jordanburke/functype/blob/main/src/either" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
@@ -25,100 +25,29 @@ import CodeExample from '../components/CodeExample.astro';
       </div>
     </section>
 
-    <!-- What is it? -->
-    <section class="px-6 py-16 bg-gray-50">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is Either&lt;L, R&gt;?</h2>
-        <p class="text-lg text-gray-700 mb-4">
-          Either represents a value that can be one of two types: Left (typically for errors) or Right (for success values).
-          It's perfect for operations that can fail with meaningful error information.
-        </p>
-        <CodeExample region="readme-either-basic" />
-      </div>
-    </section>
-
-    <!-- Key Features -->
+    <!-- Content from Markdown -->
     <section class="px-6 py-16">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Error Information</h3>
-            <p class="text-gray-700">Preserve detailed error context instead of losing it with try-catch</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Railway Oriented</h3>
-            <p class="text-gray-700">Operations automatically short-circuit on Left, like a railway switch</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Composable Errors</h3>
-            <p class="text-gray-700">Chain operations with mapLeft to transform errors at each step</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Type-Safe</h3>
-            <p class="text-gray-700">Both success and error types are known at compile time</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Common Patterns -->
-    <section class="px-6 py-16 bg-gray-50">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
-
-        <div class="space-y-8">
-          <!-- Pattern 1: Creation -->
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Creating Either Values</h3>
-            <CodeExample region="landing-either-creation" />
-          </div>
-
-          <!-- Pattern 2: Validation Chain -->
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Validation Pipeline</h3>
-            <CodeExample region="landing-either-validation" />
-          </div>
-
-          <!-- Pattern 3: Error Recovery -->
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Error Handling</h3>
-            <CodeExample region="landing-either-error" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- When to Use -->
-    <section class="px-6 py-16">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Either</h2>
-        <div class="space-y-6">
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">Operations that can fail with detailed error info</h3>
-              <p class="text-gray-700">Validation, parsing, API calls with error responses</p>
-            </div>
-          </div>
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">Multiple validation steps in a pipeline</h3>
-              <p class="text-gray-700">Each step can fail independently with its own error</p>
-            </div>
-          </div>
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">Railway-oriented programming</h3>
-              <p class="text-gray-700">Happy path and error path handled separately</p>
-            </div>
-          </div>
-        </div>
+      <div class="max-w-4xl mx-auto prose prose-lg markdown-content">
+        <EitherContent />
       </div>
     </section>
 
     <Footer client:load />
   </div>
 </Layout>
+
+<style>
+  .markdown-content :global(h1) { display: none; }
+  .markdown-content :global(h2) { font-size: 1.875rem; font-weight: 700; color: #111827; margin-bottom: 1rem; margin-top: 2.5rem; }
+  .markdown-content :global(h3) { font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem; margin-top: 1.5rem; }
+  .markdown-content :global(p) { margin-bottom: 1rem; line-height: 1.75; color: #374151; }
+  .markdown-content :global(pre) { background-color: #1f2937; border-radius: 0.75rem; padding: 1.5rem; overflow-x: auto; margin: 1.5rem 0; }
+  .markdown-content :global(code) { font-size: 0.875rem; font-family: ui-monospace, monospace; }
+  .markdown-content :global(pre code) { color: #f3f4f6; }
+  .markdown-content :global(:not(pre) > code) { background-color: #f3f4f6; padding: 0.125rem 0.375rem; border-radius: 0.25rem; color: #1f2937; }
+  .markdown-content :global(table) { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+  .markdown-content :global(th), .markdown-content :global(td) { border: 1px solid #d1d5db; padding: 0.75rem 1rem; text-align: left; }
+  .markdown-content :global(th) { background-color: #f3f4f6; font-weight: 600; }
+  .markdown-content :global(ul), .markdown-content :global(ol) { margin: 1rem 0; padding-left: 1.5rem; }
+  .markdown-content :global(li) { margin-bottom: 0.5rem; color: #374151; }
+</style>

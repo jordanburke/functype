@@ -2,7 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
-import CodeExample from '../components/CodeExample.astro';
+import { Content as TaskContent } from '../content/task.md';
 ---
 
 <Layout title="Task<T> - Functype">
@@ -15,7 +15,7 @@ import CodeExample from '../components/CodeExample.astro';
         Enhanced async/await with cancellation support, progress tracking, and structured error handling
       </p>
       <div class="flex gap-4 justify-center mt-8">
-        <a href="/api-docs/classes/Task.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <a href="/api-docs/modules/task.html" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
           API Documentation
         </a>
         <a href="https://github.com/jordanburke/functype/blob/main/src/core/task" target="_blank" rel="noopener noreferrer" class="px-6 py-3 bg-white text-blue-600 border-2 border-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
@@ -24,93 +24,29 @@ import CodeExample from '../components/CodeExample.astro';
       </div>
     </section>
 
-    <section class="px-6 py-16 bg-gray-50">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-6">What is Task&lt;T&gt;?</h2>
-        <p class="text-lg text-gray-700 mb-4">
-          Task provides structured async operations with built-in cancellation, progress tracking, and error handling.
-          Unlike Promises, Tasks can be cancelled and provide detailed error context.
-        </p>
-        <CodeExample region="readme-task-basic" />
-      </div>
-    </section>
-
+    <!-- Content from Markdown -->
     <section class="px-6 py-16">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Key Features</h2>
-        <div class="grid md:grid-cols-2 gap-6">
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Named Tasks</h3>
-            <p class="text-gray-700">Debug async operations easily with named task contexts</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Cancellation</h3>
-            <p class="text-gray-700">Cancel ongoing operations gracefully when they're no longer needed</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Progress Tracking</h3>
-            <p class="text-gray-700">Monitor long-running operations with progress callbacks</p>
-          </div>
-          <div class="bg-gray-50 rounded-xl p-6">
-            <h3 class="text-xl font-semibold mb-3">Error Context</h3>
-            <p class="text-gray-700">Rich error information including task name and stack traces</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="px-6 py-16 bg-gray-50">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">Common Patterns</h2>
-
-        <div class="space-y-8">
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Sync and Async Tasks</h3>
-            <CodeExample region="landing-task-sync-async" />
-          </div>
-
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Error Handling with Context</h3>
-            <CodeExample region="landing-task-error" />
-          </div>
-
-          <div>
-            <h3 class="text-xl font-semibold mb-4">Converting Promises</h3>
-            <CodeExample region="landing-task-conversion" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="px-6 py-16">
-      <div class="max-w-4xl mx-auto">
-        <h2 class="text-3xl font-bold text-gray-900 mb-8">When to Use Task</h2>
-        <div class="space-y-6">
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">Long-running async operations that might be cancelled</h3>
-              <p class="text-gray-700">File uploads, downloads, expensive computations</p>
-            </div>
-          </div>
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">Operations that need progress tracking</h3>
-              <p class="text-gray-700">Batch processing, migrations, data imports</p>
-            </div>
-          </div>
-          <div class="flex gap-4">
-            <div class="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-bold">✓</div>
-            <div>
-              <h3 class="font-semibold text-lg mb-2">When you need better error context than Promises provide</h3>
-              <p class="text-gray-700">Complex workflows, debugging production issues</p>
-            </div>
-          </div>
-        </div>
+      <div class="max-w-4xl mx-auto prose prose-lg markdown-content">
+        <TaskContent />
       </div>
     </section>
 
     <Footer client:load />
   </div>
 </Layout>
+
+<style>
+  .markdown-content :global(h1) { display: none; }
+  .markdown-content :global(h2) { font-size: 1.875rem; font-weight: 700; color: #111827; margin-bottom: 1rem; margin-top: 2.5rem; }
+  .markdown-content :global(h3) { font-size: 1.25rem; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem; margin-top: 1.5rem; }
+  .markdown-content :global(p) { margin-bottom: 1rem; line-height: 1.75; color: #374151; }
+  .markdown-content :global(pre) { background-color: #1f2937; border-radius: 0.75rem; padding: 1.5rem; overflow-x: auto; margin: 1.5rem 0; }
+  .markdown-content :global(code) { font-size: 0.875rem; font-family: ui-monospace, monospace; }
+  .markdown-content :global(pre code) { color: #f3f4f6; }
+  .markdown-content :global(:not(pre) > code) { background-color: #f3f4f6; padding: 0.125rem 0.375rem; border-radius: 0.25rem; color: #1f2937; }
+  .markdown-content :global(table) { width: 100%; border-collapse: collapse; margin: 1.5rem 0; }
+  .markdown-content :global(th), .markdown-content :global(td) { border: 1px solid #d1d5db; padding: 0.75rem 1rem; text-align: left; }
+  .markdown-content :global(th) { background-color: #f3f4f6; font-weight: 600; }
+  .markdown-content :global(ul), .markdown-content :global(ol) { margin: 1rem 0; padding-left: 1.5rem; }
+  .markdown-content :global(li) { margin-bottom: 0.5rem; color: #374151; }
+</style>
