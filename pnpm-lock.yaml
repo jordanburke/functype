@@ -46,8 +46,8 @@ importers:
         specifier: ^24.2.9
         version: 24.2.9(typescript@5.9.3)
       ts-builds:
-        specifier: ^1.1.0
-        version: 1.1.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2)
+        specifier: ^1.2.1
+        version: 1.2.1(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2)
       tsdown:
         specifier: ^0.16.8
         version: 0.16.8(synckit@0.11.11)(typescript@5.9.3)
@@ -4417,8 +4417,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  ts-builds@1.1.0:
-    resolution: {integrity: sha512-qcI66hEqZ5AksSb9/ZaBBOQJr2EVuuKpAN1YaTm2Sy2vcJuAWFTo0fx9RbAD7fgKzaK0nwqPwUAhygvdIw3GfA==}
+  ts-builds@1.2.1:
+    resolution: {integrity: sha512-m3sHnArRxAP9dTiU3kGo0n1TMxFNS73EMUDSqZSlH5/uWnPwS6AXgAD+uu+M7lLrqj+lFldLI2qdlZLnOqxVmw==}
     hasBin: true
     peerDependencies:
       tsdown: ^0.x
@@ -10012,7 +10012,7 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  ts-builds@1.1.0(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2):
+  ts-builds@1.2.1(jiti@2.6.1)(lightningcss@1.30.2)(tsdown@0.16.8(synckit@0.11.11)(typescript@5.9.3))(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
       '@eslint/eslintrc': 3.3.3
       '@eslint/js': 9.39.1

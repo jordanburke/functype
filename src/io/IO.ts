@@ -4,7 +4,7 @@ import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Option } from "@/option/Option"
-import { None, Some } from "@/option/Option"
+import { None, Option as OptionConstructor, Some } from "@/option/Option"
 import { Try } from "@/try/Try"
 import type { Type } from "@/types"
 
@@ -181,6 +181,22 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * @returns New IO with transformed error
    */
   mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A>
+
+  /**
+   * Executes a side effect on the error without changing it.
+   * Useful for logging errors while preserving the error chain.
+   *
+   * @param f - Side effect function to run on error
+   * @returns Same IO with the side effect attached
+   *
+   * @example
+   * ```typescript
+   * const io = IO.asyncResult(() => query(), toError)
+   *   .tapError(err => console.error('Query failed:', err))
+   *   .map(data => transform(data))
+   * ```
+   */
+  tapError(f: (e: E) => void): IO<R, E, A>
 
   /**
    * Recovers from any error with a fallback value.
@@ -402,6 +418,13 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     // Error Handling
     mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A> {
       return createIO(unsafeCoerce({ _tag: "MapError", effect: io, f }))
+    },
+
+    tapError(f: (e: E) => void): IO<R, E, A> {
+      return io.mapError((e) => {
+        f(e)
+        return e
+      })
     },
 
     recover<B extends Type>(fallback: B): IO<R, never, A | B> {
@@ -906,6 +929,124 @@ const IOCompanion = {
    */
   fromTry: <A extends Type>(t: ReturnType<typeof Try<A>>): IO<never, Error, A> =>
     unsafeCoerce(t.isSuccess() ? IOCompanion.succeed(t.orThrow()) : IOCompanion.fail(t.error as Error)),
+
+  /**
+   * Creates an IO from a result object with data/error pattern.
+   * If error is present (truthy), fails with the error.
+   * Otherwise succeeds with Option-wrapped data (None if data is null/undefined).
+   *
+   * This handles the common `{ data, error }` response pattern used by
+   * Supabase, many REST APIs, and similar libraries.
+   *
+   * @example
+   * ```typescript
+   * const response = { data: user, error: null }
+   * const io = IO.fromResult(response) // IO<never, null, Option<User>> -> Some(user)
+   *
+   * const emptyResponse = { data: null, error: null }
+   * const emptyIo = IO.fromResult(emptyResponse) // IO<never, null, Option<User>> -> None
+   *
+   * const errorResponse = { data: null, error: new Error("Not found") }
+   * const failedIo = IO.fromResult(errorResponse) // IO<never, Error, Option<null>> -> fails
+   * ```
+   */
+  fromResult: <D extends Type, E extends Type>(result: { data: D | null; error: E | null }): IO<never, E, Option<D>> =>
+    unsafeCoerce(result.error ? IOCompanion.fail(result.error) : IOCompanion.succeed(OptionConstructor(result.data))),
+
+  /**
+   * Creates an IO from an async thunk with typed error handling.
+   * Catches any thrown errors and maps them using the provided function.
+   * Supports cancellation via AbortSignal.
+   *
+   * This is a simpler alternative to `tryPromise` that takes a direct
+   * error mapper function instead of an options object.
+   *
+   * @param f - Async function to execute (receives optional AbortSignal)
+   * @param onError - Function to map caught errors to typed error E
+   * @param signal - Optional AbortSignal for cancellation support
+   *
+   * @example
+   * ```typescript
+   * const io = IO.tryAsync(
+   *   () => fetch('/api/users').then(r => r.json()),
+   *   (e) => new ApiError(e)
+   * )
+   *
+   * // With cancellation:
+   * const controller = new AbortController()
+   * const io = IO.tryAsync(
+   *   (signal) => fetch('/api/users', { signal }).then(r => r.json()),
+   *   (e) => new ApiError(e),
+   *   controller.signal
+   * )
+   * controller.abort() // Cancels the request
+   * ```
+   */
+  tryAsync: <A extends Type, E extends Type>(
+    f: (signal?: AbortSignal) => Promise<A>,
+    onError: (error: unknown) => E,
+    signal?: AbortSignal,
+  ): IO<never, E, A> => {
+    // Check if already aborted before starting
+    if (signal?.aborted) {
+      return unsafeCoerce(IOCompanion.fail(onError(signal.reason ?? new DOMException("Aborted", "AbortError"))))
+    }
+    return IOCompanion.async(() => f(signal)).mapError(onError)
+  },
+
+  /**
+   * Creates an IO from an async function that returns { data, error }.
+   * Handles both:
+   * - Thrown errors (mapped via onThrow)
+   * - Returned errors in the result object
+   * Supports cancellation via AbortSignal.
+   *
+   * This is the most ergonomic way to wrap Supabase and similar API calls.
+   *
+   * @param f - Async function returning { data, error } object (receives optional AbortSignal)
+   * @param onThrow - Function to map thrown errors to typed error E
+   * @param config - Optional configuration for custom field names and cancellation
+   *
+   * @example
+   * ```typescript
+   * // Supabase query in one line:
+   * const getUser = (id: string): IO<never, Error, Option<User>> =>
+   *   IO.asyncResult(
+   *     () => supabase.from('users').select('*').eq('id', id).single(),
+   *     toError
+   *   )
+   *
+   * // With custom field names:
+   * const result = IO.asyncResult(
+   *   () => customApi.fetch(),
+   *   toError,
+   *   { dataKey: 'result', errorKey: 'err' }
+   * )
+   *
+   * // With cancellation:
+   * const controller = new AbortController()
+   * const getUser = IO.asyncResult(
+   *   (signal) => supabase.from('users').abortSignal(signal).select('*').single(),
+   *   toError,
+   *   { signal: controller.signal }
+   * )
+   * controller.abort() // Cancels the request
+   * ```
+   */
+  asyncResult: <D extends Type, E extends Type>(
+    f: (signal?: AbortSignal) => Promise<Record<string, unknown>>,
+    onThrow: (error: unknown) => E,
+    config?: { dataKey?: string; errorKey?: string; signal?: AbortSignal },
+  ): IO<never, E, Option<D>> => {
+    const dataKey = config?.dataKey ?? "data"
+    const errorKey = config?.errorKey ?? "error"
+    return IOCompanion.tryAsync((signal) => f(signal), onThrow, config?.signal).flatMap((result) =>
+      IOCompanion.fromResult({
+        data: result[dataKey] as D | null,
+        error: result[errorKey] as E | null,
+      }),
+    )
+  },
 
   // ============================================
   // Dependency Injection

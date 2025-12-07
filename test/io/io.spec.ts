@@ -162,6 +162,47 @@ describe("IO", () => {
     })
   })
 
+  describe("tapError", () => {
+    it("should execute side effect on error without changing it", async () => {
+      let capturedError: string | null = null
+      const io = IO.fail("oops").tapError((e) => {
+        capturedError = e
+      })
+      const exit = await io.runExit()
+      expect(exit.isFailure()).toBe(true)
+      expect(capturedError).toBe("oops")
+    })
+
+    it("should not affect success", async () => {
+      let called = false
+      const io = IO.succeed(42).tapError(() => {
+        called = true
+      })
+      const result = await io.run()
+      expect(result).toBe(42)
+      expect(called).toBe(false)
+    })
+
+    it("should preserve the original error", async () => {
+      const originalError = new Error("original")
+      const io = IO.fail(originalError).tapError(() => {
+        // side effect
+      })
+      await expect(io.run()).rejects.toThrow("original")
+    })
+
+    it("should chain with other error handling", async () => {
+      const logs: string[] = []
+      const io = IO.fail("error")
+        .tapError((e) => logs.push(`First: ${e}`))
+        .tapError((e) => logs.push(`Second: ${e}`))
+        .recover("recovered")
+      const result = await io.run()
+      expect(result).toBe("recovered")
+      expect(logs).toEqual(["First: error", "Second: error"])
+    })
+  })
+
   describe("recover", () => {
     it("should recover from failure with fallback value", async () => {
       const io = IO.fail(new Error("oops")).recover(42)
@@ -439,6 +480,285 @@ describe("IO", () => {
       })
       const io = IO.fromTry(t)
       await expect(io.run()).rejects.toThrow("oops")
+    })
+  })
+
+  describe("fromResult", () => {
+    it("should create IO with Some for success with data", async () => {
+      const result = { data: 42, error: null }
+      const io = IO.fromResult(result)
+      const option = await io.run()
+      expect(option.isSome()).toBe(true)
+      expect(option.orElse(0)).toBe(42)
+    })
+
+    it("should create IO with None for null data with no error", async () => {
+      const result = { data: null, error: null }
+      const io = IO.fromResult(result)
+      const option = await io.run()
+      expect(option.isNone()).toBe(true)
+    })
+
+    it("should create failing IO when error is present", async () => {
+      const result = { data: null, error: new Error("not found") }
+      const io = IO.fromResult(result)
+      await expect(io.run()).rejects.toThrow("not found")
+    })
+
+    it("should prioritize error over data", async () => {
+      // Edge case: both data and error present (error takes precedence)
+      const result = { data: 42, error: new Error("error wins") }
+      const io = IO.fromResult(result)
+      await expect(io.run()).rejects.toThrow("error wins")
+    })
+
+    it("should work with string errors", async () => {
+      const result = { data: null, error: "string error" }
+      const io = IO.fromResult(result)
+      await expect(io.run()).rejects.toBe("string error")
+    })
+  })
+
+  describe("tryAsync", () => {
+    it("should handle successful async operations", async () => {
+      const io = IO.tryAsync(
+        () => Promise.resolve(42),
+        (e) => new Error(String(e)),
+      )
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+
+    it("should transform errors on rejection", async () => {
+      const io = IO.tryAsync(
+        () => Promise.reject("raw error"),
+        (e) => new Error(`Wrapped: ${e}`),
+      )
+      await expect(io.run()).rejects.toThrow("Wrapped: raw error")
+    })
+
+    it("should be lazy - Promise not created until run", async () => {
+      let called = false
+      const io = IO.tryAsync(
+        () => {
+          called = true
+          return Promise.resolve(42)
+        },
+        (e) => new Error(String(e)),
+      )
+      expect(called).toBe(false)
+      await io.run()
+      expect(called).toBe(true)
+    })
+
+    it("should catch thrown errors in async function", async () => {
+      const io = IO.tryAsync(
+        async () => {
+          throw new Error("thrown in async")
+        },
+        (e) => new Error(`Caught: ${(e as Error).message}`),
+      )
+      await expect(io.run()).rejects.toThrow("Caught: thrown in async")
+    })
+  })
+
+  describe("asyncResult", () => {
+    it("should handle successful result with data", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ data: 42, error: null }),
+        (e) => new Error(String(e)),
+      )
+      const option = await io.run()
+      expect(option.isSome()).toBe(true)
+      expect(option.orElse(0)).toBe(42)
+    })
+
+    it("should handle result with null data (no error)", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ data: null, error: null }),
+        (e) => new Error(String(e)),
+      )
+      const option = await io.run()
+      expect(option.isNone()).toBe(true)
+    })
+
+    it("should fail when result contains error", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ data: null, error: new Error("API error") }),
+        (e) => new Error(String(e)),
+      )
+      await expect(io.run()).rejects.toThrow("API error")
+    })
+
+    it("should catch thrown errors and transform them", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.reject("network failure"),
+        (e) => new Error(`Network: ${e}`),
+      )
+      await expect(io.run()).rejects.toThrow("Network: network failure")
+    })
+
+    it("should support custom field names", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ result: 42, err: null }),
+        (e) => new Error(String(e)),
+        { dataKey: "result", errorKey: "err" },
+      )
+      const option = await io.run()
+      expect(option.isSome()).toBe(true)
+      expect(option.orElse(0)).toBe(42)
+    })
+
+    it("should handle custom field names with error", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ result: null, err: new Error("custom error") }),
+        (e) => new Error(String(e)),
+        { dataKey: "result", errorKey: "err" },
+      )
+      await expect(io.run()).rejects.toThrow("custom error")
+    })
+
+    it("should be lazy - async function not called until run", async () => {
+      let called = false
+      const io = IO.asyncResult<number, Error>(
+        () => {
+          called = true
+          return Promise.resolve({ data: 42, error: null })
+        },
+        (e) => new Error(String(e)),
+      )
+      expect(called).toBe(false)
+      await io.run()
+      expect(called).toBe(true)
+    })
+
+    it("should chain with map and other operations", async () => {
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ data: 21, error: null }),
+        (e) => new Error(String(e)),
+      )
+        .map((opt) => opt.map((n) => n * 2))
+        .map((opt) => opt.orElse(0))
+
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+
+    it("should support AbortSignal for cancellation", async () => {
+      const controller = new AbortController()
+      let signalReceived: AbortSignal | undefined
+
+      const io = IO.asyncResult<number, Error>(
+        (signal) => {
+          signalReceived = signal
+          return Promise.resolve({ data: 42, error: null })
+        },
+        (e) => new Error(String(e)),
+        { signal: controller.signal },
+      )
+
+      await io.run()
+      expect(signalReceived).toBe(controller.signal)
+    })
+
+    it("should fail immediately if signal is already aborted", async () => {
+      const controller = new AbortController()
+      controller.abort("user cancelled")
+
+      const io = IO.asyncResult<number, Error>(
+        () => Promise.resolve({ data: 42, error: null }),
+        (e) => new Error(String(e)),
+        { signal: controller.signal },
+      )
+
+      await expect(io.run()).rejects.toThrow()
+    })
+  })
+
+  // ============================================
+  // AbortSignal / Cancellation Tests
+  // ============================================
+
+  describe("tryAsync with AbortSignal", () => {
+    it("should pass signal to async function", async () => {
+      const controller = new AbortController()
+      let receivedSignal: AbortSignal | undefined
+
+      const io = IO.tryAsync(
+        (signal) => {
+          receivedSignal = signal
+          return Promise.resolve(42)
+        },
+        (e) => new Error(String(e)),
+        controller.signal,
+      )
+
+      await io.run()
+      expect(receivedSignal).toBe(controller.signal)
+    })
+
+    it("should fail immediately if signal is already aborted", async () => {
+      const controller = new AbortController()
+      controller.abort("cancelled before start")
+
+      let called = false
+      const io = IO.tryAsync(
+        () => {
+          called = true
+          return Promise.resolve(42)
+        },
+        (e) => new Error(String(e)),
+        controller.signal,
+      )
+
+      await expect(io.run()).rejects.toThrow()
+      expect(called).toBe(false) // Function should not have been called
+    })
+
+    it("should use abort reason in error", async () => {
+      const controller = new AbortController()
+      const reason = new Error("custom abort reason")
+      controller.abort(reason)
+
+      const io = IO.tryAsync(
+        () => Promise.resolve(42),
+        (e) => e as Error,
+        controller.signal,
+      )
+
+      await expect(io.run()).rejects.toThrow("custom abort reason")
+    })
+
+    it("should work without signal (backward compatible)", async () => {
+      const io = IO.tryAsync(
+        () => Promise.resolve(42),
+        (e) => new Error(String(e)),
+      )
+
+      const result = await io.run()
+      expect(result).toBe(42)
+    })
+
+    it("should handle abort during execution", async () => {
+      const controller = new AbortController()
+
+      const io = IO.tryAsync(
+        async (signal) => {
+          // Simulate a fetch-like operation that checks the signal
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          if (signal?.aborted) {
+            throw new DOMException("Aborted", "AbortError")
+          }
+          return 42
+        },
+        (e) => e as Error,
+        controller.signal,
+      )
+
+      // Abort after starting but before completion
+      setTimeout(() => controller.abort(), 5)
+
+      await expect(io.run()).rejects.toThrow("Aborted")
     })
   })
 

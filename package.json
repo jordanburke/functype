@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.30.0",
+  "version": "0.40.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -55,7 +55,7 @@
     "fast-check": "^4.4.0",
     "globals": "^16.5.0",
     "semantic-release": "^24.2.9",
-    "ts-builds": "^1.1.0",
+    "ts-builds": "^1.2.1",
     "tsdown": "^0.16.8",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.15"
