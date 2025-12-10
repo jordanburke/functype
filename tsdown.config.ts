@@ -38,7 +38,7 @@ export default defineConfig({
   entry: entries,
   format: ["esm"],
   dts: true,
-  sourcemap: isProduction,
+  sourcemap: false,
   clean: true,
   minify: isProduction,
   target: "es2020",

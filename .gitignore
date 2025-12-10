@@ -144,3 +144,6 @@ typedocs/
 
 
 **/.claude/settings.local.json
+
+# Generated files
+README.processed.md

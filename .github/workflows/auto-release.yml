@@ -1,0 +1,50 @@
+name: Auto Release on Dependency Updates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "package.json"
+      - "pnpm-lock.yaml"
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-release:
+    runs-on: ubuntu-latest
+    # Skip if commit is from this workflow (version bump)
+    if: "!contains(github.event.head_commit.message, 'chore: bump version')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for dependency changes
+        id: check
+        run: |
+          # Check if this is a dependency update commit
+          if git log -1 --pretty=%B | grep -qE "^chore\(deps\)|dependabot"; then
+            echo "is_dep_update=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_dep_update=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js
+        if: steps.check.outputs.is_dep_update == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Configure Git
+        if: steps.check.outputs.is_dep_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version and push tag
+        if: steps.check.outputs.is_dep_update == 'true'
+        run: |
+          npm version patch -m "chore: bump version to %s for dependency updates"
+          git push --follow-tags
