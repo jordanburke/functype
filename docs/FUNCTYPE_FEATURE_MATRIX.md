@@ -231,7 +231,7 @@ Provides conversion to Promise for async interop:
      - Structured concurrency: bracket, race, timeout
      - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
      - Error handling: catchTag, catchAll, retry, retryWithDelay
-     - Execution methods: run(), runSync(), runEither(), runExit(), runOption(), runTry()
+     - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry()
    - Testing utilities:
      - **TestClock**: Controlled time for testing timeouts/delays
      - **TestContext**: Test environment with mocked services

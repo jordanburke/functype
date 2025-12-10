@@ -10,7 +10,7 @@ IO represents a lazy effect that:
 - May fail with error `E` (typed errors)
 - Produces value `A` on success
 
-Nothing runs until explicitly executed with `run()`.
+Nothing runs until explicitly executed.
 
 ## Basic Usage
 
@@ -29,8 +29,13 @@ const safe = IO.tryCatch(
   (e) => new ParseError(e),
 )
 
-// Running effects
-const result = await sync.run() // 42
+// Running effects - safe by default
+const either = await sync.run() // Either<E, A> - never throws
+const value = await sync.runOrThrow() // A - throws on error
+
+// Synchronous execution
+const syncEither = sync.runSync() // Either<E, A> - never throws
+const syncValue = sync.runSyncOrThrow() // A - throws on error
 ```
 
 ## Constructors
@@ -99,7 +104,7 @@ const Logger = Tag<Logger>("Logger")
 const program = IO.service(Logger).flatMap((logger) => IO.sync(() => logger.log("Hello!")))
 
 // Provide implementation
-const result = await program.provideService(Logger, { log: console.log }).run()
+const result = await program.provideService(Logger, { log: console.log }).runOrThrow()
 ```
 
 ### Context and Layer
@@ -129,7 +134,7 @@ const program = IO.gen(function* () {
   return a + b + c
 })
 
-await program.run() // 6
+await program.runOrThrow() // 6
 ```
 
 ### Builder Syntax (IO.Do)

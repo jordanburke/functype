@@ -142,8 +142,9 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".map(f)", ".flatMap(f)", ".tap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
       extract: [
         ".run()",
+        ".runOrThrow()",
         ".runSync()",
-        ".runEither()",
+        ".runSyncOrThrow()",
         ".runExit()",
         ".runOption()",
         ".runTry()",
