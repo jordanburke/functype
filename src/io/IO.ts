@@ -307,21 +307,33 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
   // ============================================
 
   /**
-   * Runs the effect and returns a Promise of the value.
-   * Throws on error. Requires R = never.
+   * Runs the effect and returns an Either. Never throws.
+   * This is the safe default - all errors become Left.
+   * Requires R = never.
    */
-  run(this: IO<never, E, A>): Promise<A>
+  run(this: IO<never, E, A>): Promise<Either<E, A>>
+
+  /**
+   * Runs the effect and returns a Promise of the value.
+   * Throws on any error (typed E, defect, or interrupt).
+   * Requires R = never.
+   */
+  runOrThrow(this: IO<never, E, A>): Promise<A>
+
+  /**
+   * Runs a sync effect and returns an Either. Never throws.
+   * This is the safe default - all errors become Left.
+   * Throws only if the effect is async (cannot be made safe synchronously).
+   * Requires R = never.
+   */
+  runSync(this: IO<never, E, A>): Either<E, A>
 
   /**
    * Runs a sync effect and returns the value.
-   * Throws if the effect is async or has unmet requirements.
+   * Throws on any error or if the effect is async.
+   * Requires R = never.
    */
-  runSync(this: IO<never, E, A>): A
-
-  /**
-   * Runs the effect and returns an Either.
-   */
-  runEither(this: IO<never, E, A>): Promise<Either<E, A>>
+  runSyncOrThrow(this: IO<never, E, A>): A
 
   /**
    * Runs the effect and returns an Exit.
@@ -517,27 +529,34 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     // Execution
-    async run(this: IO<never, E, A>): Promise<A> {
-      const exit = await runEffect(this._effect)
-      if (exit.isSuccess()) {
-        return exit.orThrow()
-      }
-      throw exit.isFailure() ? (exit.toValue() as { error: E }).error : new Error("Effect was interrupted")
-    },
-
-    runSync(this: IO<never, E, A>): A {
-      return runEffectSync(this._effect)
-    },
-
-    async runEither(this: IO<never, E, A>): Promise<Either<E, A>> {
+    async run(this: IO<never, E, A>): Promise<Either<E, A>> {
       const exit = await runEffect(this._effect)
       if (exit.isSuccess()) {
         return Right(exit.orThrow())
       }
-      if (exit.isFailure()) {
-        return Left((exit.toValue() as { error: E }).error)
+      // All errors including InterruptedError go to Left
+      const error = exit.isFailure() ? (exit.toValue() as { error: E }).error : new InterruptedError()
+      return Left(error as E)
+    },
+
+    async runOrThrow(this: IO<never, E, A>): Promise<A> {
+      const exit = await runEffect(this._effect)
+      if (exit.isSuccess()) {
+        return exit.orThrow()
       }
-      throw new Error("Effect was interrupted")
+      throw exit.isFailure() ? (exit.toValue() as { error: E }).error : new InterruptedError()
+    },
+
+    runSync(this: IO<never, E, A>): Either<E, A> {
+      try {
+        return Right(runEffectSync(this._effect))
+      } catch (e) {
+        return Left(e as E)
+      }
+    },
+
+    runSyncOrThrow(this: IO<never, E, A>): A {
+      return runEffectSync(this._effect)
     },
 
     async runExit(this: IO<never, E, A>): Promise<ExitType<E, A>> {

@@ -273,7 +273,7 @@ export const TestContext = {
       },
 
       async run<E extends Type, A extends Type>(effect: IO<R, E, A>): Promise<A> {
-        return effect.provideContext(ctx).run()
+        return effect.provideContext(ctx).runOrThrow()
       },
     }
 

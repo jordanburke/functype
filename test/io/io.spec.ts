@@ -13,7 +13,7 @@ describe("IO", () => {
   describe("IO.succeed", () => {
     it("should create an IO that succeeds with the given value", async () => {
       const io = IO.succeed(42)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -21,7 +21,7 @@ describe("IO", () => {
   describe("IO.fail", () => {
     it("should create an IO that fails with the given error", async () => {
       const io = IO.fail(new Error("oops"))
-      await expect(io.run()).rejects.toThrow("oops")
+      await expect(io.runOrThrow()).rejects.toThrow("oops")
     })
   })
 
@@ -33,7 +33,7 @@ describe("IO", () => {
         return 42
       })
       expect(called).toBe(false) // Lazy - not called until run
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(called).toBe(true)
       expect(result).toBe(42)
     })
@@ -42,7 +42,7 @@ describe("IO", () => {
   describe("IO.async", () => {
     it("should create an IO from an async function", async () => {
       const io = IO.async(() => Promise.resolve(42))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -53,7 +53,7 @@ describe("IO", () => {
         return Promise.resolve(42)
       })
       expect(called).toBe(false)
-      await io.run()
+      await io.runOrThrow()
       expect(called).toBe(true)
     })
   })
@@ -64,7 +64,7 @@ describe("IO", () => {
         try: () => Promise.resolve(42),
         catch: (e) => new Error(String(e)),
       })
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -73,14 +73,14 @@ describe("IO", () => {
         try: () => Promise.reject("raw error"),
         catch: (e) => new Error(`Wrapped: ${e}`),
       })
-      await expect(io.run()).rejects.toThrow("Wrapped: raw error")
+      await expect(io.runOrThrow()).rejects.toThrow("Wrapped: raw error")
     })
   })
 
   describe("IO.die", () => {
     it("should create an IO with an unrecoverable defect", async () => {
       const io = IO.die(new Error("defect"))
-      await expect(io.run()).rejects.toThrow("defect")
+      await expect(io.runOrThrow()).rejects.toThrow("defect")
     })
   })
 
@@ -91,31 +91,31 @@ describe("IO", () => {
   describe("map", () => {
     it("should transform the success value", async () => {
       const io = IO.succeed(21).map((x) => x * 2)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should not transform on failure", async () => {
       const io = IO.fail(new Error("oops")).map((x: number) => x * 2)
-      await expect(io.run()).rejects.toThrow("oops")
+      await expect(io.runOrThrow()).rejects.toThrow("oops")
     })
   })
 
   describe("flatMap", () => {
     it("should chain IO operations", async () => {
       const io = IO.succeed(21).flatMap((x) => IO.succeed(x * 2))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should short-circuit on failure", async () => {
       const io = IO.fail(new Error("first")).flatMap(() => IO.fail(new Error("second")))
-      await expect(io.run()).rejects.toThrow("first")
+      await expect(io.runOrThrow()).rejects.toThrow("first")
     })
 
     it("should propagate failure from chained effect", async () => {
       const io = IO.succeed(21).flatMap(() => IO.fail(new Error("chained error")))
-      await expect(io.run()).rejects.toThrow("chained error")
+      await expect(io.runOrThrow()).rejects.toThrow("chained error")
     })
   })
 
@@ -125,7 +125,7 @@ describe("IO", () => {
       const io = IO.succeed(42).tap((x) => {
         sideEffect = x
       })
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
       expect(sideEffect).toBe(42)
     })
@@ -139,7 +139,7 @@ describe("IO", () => {
           sideEffect = x
         }),
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
       expect(sideEffect).toBe(42)
     })
@@ -152,12 +152,12 @@ describe("IO", () => {
   describe("mapError", () => {
     it("should transform the error", async () => {
       const io = IO.fail("raw error").mapError((e) => new Error(`Wrapped: ${e}`))
-      await expect(io.run()).rejects.toThrow("Wrapped: raw error")
+      await expect(io.runOrThrow()).rejects.toThrow("Wrapped: raw error")
     })
 
     it("should not affect success", async () => {
       const io = IO.succeed(42).mapError(() => new Error("should not happen"))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -178,7 +178,7 @@ describe("IO", () => {
       const io = IO.succeed(42).tapError(() => {
         called = true
       })
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
       expect(called).toBe(false)
     })
@@ -188,7 +188,7 @@ describe("IO", () => {
       const io = IO.fail(originalError).tapError(() => {
         // side effect
       })
-      await expect(io.run()).rejects.toThrow("original")
+      await expect(io.runOrThrow()).rejects.toThrow("original")
     })
 
     it("should chain with other error handling", async () => {
@@ -197,7 +197,7 @@ describe("IO", () => {
         .tapError((e) => logs.push(`First: ${e}`))
         .tapError((e) => logs.push(`Second: ${e}`))
         .recover("recovered")
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("recovered")
       expect(logs).toEqual(["First: error", "Second: error"])
     })
@@ -206,13 +206,13 @@ describe("IO", () => {
   describe("recover", () => {
     it("should recover from failure with fallback value", async () => {
       const io = IO.fail(new Error("oops")).recover(42)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should not affect success", async () => {
       const io = IO.succeed(42).recover(0)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -220,13 +220,13 @@ describe("IO", () => {
   describe("recoverWith", () => {
     it("should recover from failure with another IO", async () => {
       const io = IO.fail(new Error("oops")).recoverWith(() => IO.succeed(42))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should provide error to recovery function", async () => {
       const io = IO.fail("original").recoverWith((e: string) => IO.succeed(e.length))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(8) // "original".length
     })
   })
@@ -237,7 +237,7 @@ describe("IO", () => {
         () => "failed",
         (x) => `success: ${x}`,
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("success: 42")
     })
 
@@ -246,7 +246,7 @@ describe("IO", () => {
         (e: Error) => `failed: ${e.message}`,
         (x: number) => `success: ${x}`,
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("failed: oops")
     })
   })
@@ -257,7 +257,7 @@ describe("IO", () => {
         failure: () => "failed",
         success: (x) => `success: ${x}`,
       })
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("success: 42")
     })
 
@@ -266,7 +266,7 @@ describe("IO", () => {
         failure: (e: Error) => `failed: ${e.message}`,
         success: (x: number) => `success: ${x}`,
       })
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("failed: oops")
     })
   })
@@ -278,25 +278,25 @@ describe("IO", () => {
   describe("zip", () => {
     it("should combine two IOs into a tuple", async () => {
       const io = IO.succeed(1).zip(IO.succeed("a"))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toEqual([1, "a"])
     })
 
     it("should fail if first fails", async () => {
       const io = IO.fail(new Error("first")).zip(IO.succeed("a"))
-      await expect(io.run()).rejects.toThrow("first")
+      await expect(io.runOrThrow()).rejects.toThrow("first")
     })
 
     it("should fail if second fails", async () => {
       const io = IO.succeed(1).zip(IO.fail(new Error("second")))
-      await expect(io.run()).rejects.toThrow("second")
+      await expect(io.runOrThrow()).rejects.toThrow("second")
     })
   })
 
   describe("zipLeft", () => {
     it("should keep the first value", async () => {
       const io = IO.succeed(1).zipLeft(IO.succeed("a"))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(1)
     })
   })
@@ -304,7 +304,7 @@ describe("IO", () => {
   describe("zipRight", () => {
     it("should keep the second value", async () => {
       const io = IO.succeed(1).zipRight(IO.succeed("a"))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("a")
     })
   })
@@ -313,7 +313,7 @@ describe("IO", () => {
     it("should flatten nested IOs", async () => {
       const nested = IO.succeed(IO.succeed(42))
       const io = nested.flatten()
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -322,35 +322,57 @@ describe("IO", () => {
   // Execution
   // ============================================
 
-  describe("runSync", () => {
+  describe("runSyncOrThrow", () => {
     it("should run synchronous effects", () => {
       const io = IO.sync(() => 42)
-      const result = io.runSync()
+      const result = io.runSyncOrThrow()
       expect(result).toBe(42)
     })
 
     it("should throw on async effects", () => {
       const io = IO.async(() => Promise.resolve(42))
-      expect(() => io.runSync()).toThrow("Cannot run async effect synchronously")
+      expect(() => io.runSyncOrThrow()).toThrow("Cannot run async effect synchronously")
     })
 
     it("should throw on failure", () => {
       const io = IO.fail(new Error("oops"))
-      expect(() => io.runSync()).toThrow("oops")
+      expect(() => io.runSyncOrThrow()).toThrow("oops")
     })
   })
 
-  describe("runEither", () => {
+  describe("runSync", () => {
+    it("should return Right for synchronous success", () => {
+      const io = IO.sync(() => 42)
+      const result = io.runSync()
+      expect(result.isRight()).toBe(true)
+      expect(result.orElse(0)).toBe(42)
+    })
+
+    it("should return Left on failure", () => {
+      const io = IO.fail(new Error("oops"))
+      const result = io.runSync()
+      expect(result.isLeft()).toBe(true)
+    })
+
+    it("should return Left on async effects (cannot run async synchronously)", () => {
+      const io = IO.async(() => Promise.resolve(42))
+      const result = io.runSync()
+      // Async effects cannot be run synchronously, so we get Left with the error
+      expect(result.isLeft()).toBe(true)
+    })
+  })
+
+  describe("run", () => {
     it("should return Right on success", async () => {
       const io = IO.succeed(42)
-      const result = await io.runEither()
+      const result = await io.run()
       expect(result.isRight()).toBe(true)
       expect(result.orElse(0)).toBe(42)
     })
 
     it("should return Left on failure", async () => {
       const io = IO.fail(new Error("oops"))
-      const result = await io.runEither()
+      const result = await io.run()
       expect(result.isLeft()).toBe(true)
     })
   })
@@ -377,7 +399,7 @@ describe("IO", () => {
   describe("pipe", () => {
     it("should pipe the IO through a function", async () => {
       const io = IO.succeed(42).pipe((io) => io.map((x) => x * 2))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(84)
     })
   })
@@ -386,7 +408,7 @@ describe("IO", () => {
     it("should delay execution", async () => {
       const start = Date.now()
       const io = IO.succeed(42).delay(50)
-      await io.run()
+      await io.runOrThrow()
       const elapsed = Date.now() - start
       expect(elapsed).toBeGreaterThanOrEqual(45) // Allow some timing variance
     })
@@ -408,7 +430,7 @@ describe("IO", () => {
       const add = (a: number, b: number) => a + b
       const liftedAdd = IO.liftSync(add)
       const io = liftedAdd(20, 22)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -418,7 +440,7 @@ describe("IO", () => {
       const asyncAdd = (a: number, b: number) => Promise.resolve(a + b)
       const liftedAdd = IO.liftPromise(asyncAdd)
       const io = liftedAdd(20, 22)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -431,14 +453,14 @@ describe("IO", () => {
     it("should create IO from Right", async () => {
       const either = Right<Error, number>(42)
       const io = IO.fromEither(either)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should create IO from Left", async () => {
       const either = Left<Error, number>(new Error("oops"))
       const io = IO.fromEither(either)
-      await expect(io.run()).rejects.toThrow("oops")
+      await expect(io.runOrThrow()).rejects.toThrow("oops")
     })
   })
 
@@ -446,7 +468,7 @@ describe("IO", () => {
     it("should create IO from Some", async () => {
       const option = Some(42)
       const io = IO.fromOption(option)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -462,7 +484,7 @@ describe("IO", () => {
     it("should use custom error for None", async () => {
       const option = None<number>()
       const io = IO.fromOptionOrFail(option, () => new Error("custom error"))
-      await expect(io.run()).rejects.toThrow("custom error")
+      await expect(io.runOrThrow()).rejects.toThrow("custom error")
     })
   })
 
@@ -470,7 +492,7 @@ describe("IO", () => {
     it("should create IO from successful Try", async () => {
       const t = Try(() => 42)
       const io = IO.fromTry(t)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -479,7 +501,7 @@ describe("IO", () => {
         throw new Error("oops")
       })
       const io = IO.fromTry(t)
-      await expect(io.run()).rejects.toThrow("oops")
+      await expect(io.runOrThrow()).rejects.toThrow("oops")
     })
   })
 
@@ -487,7 +509,7 @@ describe("IO", () => {
     it("should create IO with Some for success with data", async () => {
       const result = { data: 42, error: null }
       const io = IO.fromResult(result)
-      const option = await io.run()
+      const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
       expect(option.orElse(0)).toBe(42)
     })
@@ -495,27 +517,27 @@ describe("IO", () => {
     it("should create IO with None for null data with no error", async () => {
       const result = { data: null, error: null }
       const io = IO.fromResult(result)
-      const option = await io.run()
+      const option = await io.runOrThrow()
       expect(option.isNone()).toBe(true)
     })
 
     it("should create failing IO when error is present", async () => {
       const result = { data: null, error: new Error("not found") }
       const io = IO.fromResult(result)
-      await expect(io.run()).rejects.toThrow("not found")
+      await expect(io.runOrThrow()).rejects.toThrow("not found")
     })
 
     it("should prioritize error over data", async () => {
       // Edge case: both data and error present (error takes precedence)
       const result = { data: 42, error: new Error("error wins") }
       const io = IO.fromResult(result)
-      await expect(io.run()).rejects.toThrow("error wins")
+      await expect(io.runOrThrow()).rejects.toThrow("error wins")
     })
 
     it("should work with string errors", async () => {
       const result = { data: null, error: "string error" }
       const io = IO.fromResult(result)
-      await expect(io.run()).rejects.toBe("string error")
+      await expect(io.runOrThrow()).rejects.toBe("string error")
     })
   })
 
@@ -525,7 +547,7 @@ describe("IO", () => {
         () => Promise.resolve(42),
         (e) => new Error(String(e)),
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -534,7 +556,7 @@ describe("IO", () => {
         () => Promise.reject("raw error"),
         (e) => new Error(`Wrapped: ${e}`),
       )
-      await expect(io.run()).rejects.toThrow("Wrapped: raw error")
+      await expect(io.runOrThrow()).rejects.toThrow("Wrapped: raw error")
     })
 
     it("should be lazy - Promise not created until run", async () => {
@@ -547,7 +569,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
       )
       expect(called).toBe(false)
-      await io.run()
+      await io.runOrThrow()
       expect(called).toBe(true)
     })
 
@@ -558,7 +580,7 @@ describe("IO", () => {
         },
         (e) => new Error(`Caught: ${(e as Error).message}`),
       )
-      await expect(io.run()).rejects.toThrow("Caught: thrown in async")
+      await expect(io.runOrThrow()).rejects.toThrow("Caught: thrown in async")
     })
   })
 
@@ -568,7 +590,7 @@ describe("IO", () => {
         () => Promise.resolve({ data: 42, error: null }),
         (e) => new Error(String(e)),
       )
-      const option = await io.run()
+      const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
       expect(option.orElse(0)).toBe(42)
     })
@@ -578,7 +600,7 @@ describe("IO", () => {
         () => Promise.resolve({ data: null, error: null }),
         (e) => new Error(String(e)),
       )
-      const option = await io.run()
+      const option = await io.runOrThrow()
       expect(option.isNone()).toBe(true)
     })
 
@@ -587,7 +609,7 @@ describe("IO", () => {
         () => Promise.resolve({ data: null, error: new Error("API error") }),
         (e) => new Error(String(e)),
       )
-      await expect(io.run()).rejects.toThrow("API error")
+      await expect(io.runOrThrow()).rejects.toThrow("API error")
     })
 
     it("should catch thrown errors and transform them", async () => {
@@ -595,7 +617,7 @@ describe("IO", () => {
         () => Promise.reject("network failure"),
         (e) => new Error(`Network: ${e}`),
       )
-      await expect(io.run()).rejects.toThrow("Network: network failure")
+      await expect(io.runOrThrow()).rejects.toThrow("Network: network failure")
     })
 
     it("should support custom field names", async () => {
@@ -604,7 +626,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
         { dataKey: "result", errorKey: "err" },
       )
-      const option = await io.run()
+      const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
       expect(option.orElse(0)).toBe(42)
     })
@@ -615,7 +637,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
         { dataKey: "result", errorKey: "err" },
       )
-      await expect(io.run()).rejects.toThrow("custom error")
+      await expect(io.runOrThrow()).rejects.toThrow("custom error")
     })
 
     it("should be lazy - async function not called until run", async () => {
@@ -628,7 +650,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
       )
       expect(called).toBe(false)
-      await io.run()
+      await io.runOrThrow()
       expect(called).toBe(true)
     })
 
@@ -640,7 +662,7 @@ describe("IO", () => {
         .map((opt) => opt.map((n) => n * 2))
         .map((opt) => opt.orElse(0))
 
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -657,7 +679,7 @@ describe("IO", () => {
         { signal: controller.signal },
       )
 
-      await io.run()
+      await io.runOrThrow()
       expect(signalReceived).toBe(controller.signal)
     })
 
@@ -671,7 +693,7 @@ describe("IO", () => {
         { signal: controller.signal },
       )
 
-      await expect(io.run()).rejects.toThrow()
+      await expect(io.runOrThrow()).rejects.toThrow()
     })
   })
 
@@ -693,7 +715,7 @@ describe("IO", () => {
         controller.signal,
       )
 
-      await io.run()
+      await io.runOrThrow()
       expect(receivedSignal).toBe(controller.signal)
     })
 
@@ -711,7 +733,7 @@ describe("IO", () => {
         controller.signal,
       )
 
-      await expect(io.run()).rejects.toThrow()
+      await expect(io.runOrThrow()).rejects.toThrow()
       expect(called).toBe(false) // Function should not have been called
     })
 
@@ -726,7 +748,7 @@ describe("IO", () => {
         controller.signal,
       )
 
-      await expect(io.run()).rejects.toThrow("custom abort reason")
+      await expect(io.runOrThrow()).rejects.toThrow("custom abort reason")
     })
 
     it("should work without signal (backward compatible)", async () => {
@@ -735,7 +757,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
       )
 
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -758,7 +780,7 @@ describe("IO", () => {
       // Abort after starting but before completion
       setTimeout(() => controller.abort(), 5)
 
-      await expect(io.run()).rejects.toThrow("Aborted")
+      await expect(io.runOrThrow()).rejects.toThrow("Aborted")
     })
   })
 
@@ -769,7 +791,7 @@ describe("IO", () => {
   describe("IO.all", () => {
     it("should collect all successful results", async () => {
       const io = IO.all([IO.succeed(1), IO.succeed(2), IO.succeed(3)])
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toEqual([1, 2, 3])
     })
 
@@ -779,12 +801,12 @@ describe("IO", () => {
         Error,
         number
       >[])
-      await expect(io.run()).rejects.toThrow("oops")
+      await expect(io.runOrThrow()).rejects.toThrow("oops")
     })
 
     it("should return empty array for empty input", async () => {
       const io = IO.all<never, never, never>([])
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toEqual([])
     })
   })
@@ -796,20 +818,20 @@ describe("IO", () => {
         Error,
         number
       >[])
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should fail if all fail", async () => {
       const io = IO.firstSuccessOf([IO.fail(new Error("first")), IO.fail(new Error("second"))])
-      await expect(io.run()).rejects.toThrow("second")
+      await expect(io.runOrThrow()).rejects.toThrow("second")
     })
   })
 
   describe("IO.sleep", () => {
     it("should delay for specified time", async () => {
       const start = Date.now()
-      await IO.sleep(50).run()
+      await IO.sleep(50).runOrThrow()
       const elapsed = Date.now() - start
       expect(elapsed).toBeGreaterThanOrEqual(45)
     })
@@ -817,7 +839,7 @@ describe("IO", () => {
 
   describe("IO.unit", () => {
     it("should return undefined", async () => {
-      const result = await IO.unit.run()
+      const result = await IO.unit.runOrThrow()
       expect(result).toBeUndefined()
     })
   })
@@ -825,7 +847,7 @@ describe("IO", () => {
   describe("IO.fromNullable", () => {
     it("should succeed for non-null value", async () => {
       const io = IO.fromNullable(42)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -854,7 +876,7 @@ describe("IO", () => {
         const b = yield* IO.succeed(2)
         return a + b
       })
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(3)
     })
 
@@ -866,7 +888,7 @@ describe("IO", () => {
         yield* IO.fail(new Error("oops")) as any
         return a + 1 // Should not reach here
       })
-      await expect(program.run()).rejects.toThrow("oops")
+      await expect(program.runOrThrow()).rejects.toThrow("oops")
     })
   })
 
@@ -880,7 +902,7 @@ describe("IO", () => {
         .bind("b", () => IO.succeed(2))
         .map(({ a, b }) => a + b)
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(3)
     })
 
@@ -889,7 +911,7 @@ describe("IO", () => {
         .bind("y", ({ x }) => IO.succeed(x * 2))
         .map(({ x, y }) => x + y)
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(30) // 10 + 20
     })
 
@@ -898,7 +920,7 @@ describe("IO", () => {
         .let("b", ({ a }) => a * 2)
         .map(({ a, b }) => a + b)
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(15) // 5 + 10
     })
 
@@ -908,7 +930,7 @@ describe("IO", () => {
         .bind("async", ({ doubled }) => IO.succeed(doubled + 1))
         .map(({ fetched, doubled, async }) => ({ fetched, doubled, async }))
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toEqual({ fetched: 100, doubled: 200, async: 201 })
     })
 
@@ -918,7 +940,7 @@ describe("IO", () => {
         .bind("c", () => IO.succeed(3))
         .map(({ a, c }) => a + c)
 
-      await expect(program.run()).rejects.toThrow("oops")
+      await expect(program.runOrThrow()).rejects.toThrow("oops")
     })
 
     it("should support tap for side effects", async () => {
@@ -929,7 +951,7 @@ describe("IO", () => {
         })
         .map(({ value }) => value)
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(42)
       expect(sideEffect).toBe(42)
     })
@@ -944,7 +966,7 @@ describe("IO", () => {
         )
         .map(({ value }) => value)
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(42)
       expect(sideEffect).toBe(42)
     })
@@ -954,7 +976,7 @@ describe("IO", () => {
         .bind("b", () => IO.succeed(20))
         .flatMap(({ a, b }) => IO.succeed(a + b))
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(30)
     })
 
@@ -963,14 +985,14 @@ describe("IO", () => {
         .bind("age", () => IO.succeed(30))
         .done()
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toEqual({ name: "Alice", age: 30 })
     })
 
     it("should have access to effect property", async () => {
       const builder = IO.Do.bind("x", () => IO.succeed(1))
       const effect = builder.effect
-      const result = await effect.run()
+      const result = await effect.runOrThrow()
       expect(result).toEqual({ x: 1 })
     })
   })
@@ -1229,13 +1251,13 @@ describe("Dependency Injection", () => {
 
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Hello")))
 
-      const result = await program.provideService(Logger, logger).run()
+      const result = await program.provideService(Logger, logger).runOrThrow()
       expect(result).toBe("Logged: Hello")
     })
 
     it("should fail when service not provided", async () => {
       const program = IO.service(Logger) as unknown as IO<never, never, Logger>
-      await expect(program.run()).rejects.toThrow("Service not found: Logger")
+      await expect(program.runOrThrow()).rejects.toThrow("Service not found: Logger")
     })
 
     it("should work with serviceWith", async () => {
@@ -1243,7 +1265,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.serviceWith(Config, (cfg) => `${cfg.host}:${cfg.port}`)
 
-      const result = await program.provideService(Config, config).run()
+      const result = await program.provideService(Config, config).runOrThrow()
       expect(result).toBe("localhost:8080")
     })
 
@@ -1252,7 +1274,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.serviceWithIO(Config, (cfg) => IO.succeed(`${cfg.host}:${cfg.port}`))
 
-      const result = await program.provideService(Config, config).run()
+      const result = await program.provideService(Config, config).runOrThrow()
       expect(result).toBe("localhost:8080")
     })
   })
@@ -1268,7 +1290,7 @@ describe("Dependency Injection", () => {
 
       const ctx = Context.empty<Logger & Config>().add(Logger, logger).add(Config, config)
 
-      const result = await (program.provideContext(ctx) as unknown as IO<never, never, string>).run()
+      const result = await (program.provideContext(ctx) as unknown as IO<never, never, string>).runOrThrow()
       expect(result).toBe("Logged: localhost:8080")
     })
   })
@@ -1280,7 +1302,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
 
-      const result = await program.provideLayer(LoggerLive).run()
+      const result = await program.provideLayer(LoggerLive).runOrThrow()
       expect(result).toBe("Logged: Test")
     })
 
@@ -1291,7 +1313,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
 
-      const result = await program.provideLayer(LoggerLive).run()
+      const result = await program.provideLayer(LoggerLive).runOrThrow()
       expect(result).toBe("Sync Logged: Test")
     })
 
@@ -1302,7 +1324,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Test")))
 
-      const result = await program.provideLayer(LoggerLive).run()
+      const result = await program.provideLayer(LoggerLive).runOrThrow()
       expect(result).toBe("Async Logged: Test")
     })
 
@@ -1319,7 +1341,7 @@ describe("Dependency Injection", () => {
 
       // Need to provide both layers
       const fullLayer = ConfigLive.provideToAndMerge(LoggerLive) as unknown as Layer<never, never, Logger>
-      const result = await program.provideLayer(fullLayer).run()
+      const result = await program.provideLayer(fullLayer).runOrThrow()
       expect(result).toBe("[localhost:8080] Hello")
     })
 
@@ -1335,18 +1357,18 @@ describe("Dependency Injection", () => {
         .bind("config", () => IO.service(Config))
         .map(({ logger: log, config: cfg }) => log.log(`${cfg.host}:${cfg.port}`))
 
-      const result = await program.provideLayer(FullLayer).run()
+      const result = await program.provideLayer(FullLayer).runOrThrow()
       expect(result).toBe("Logged: localhost:8080")
     })
   })
 
   describe("sync execution with services", () => {
-    it("should work with runSync when services provided", () => {
+    it("should work with runSyncOrThrow when services provided", () => {
       const logger: Logger = { log: (msg) => `Logged: ${msg}` }
 
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Sync")))
 
-      const result = program.provideService(Logger, logger).runSync()
+      const result = program.provideService(Logger, logger).runSyncOrThrow()
       expect(result).toBe("Logged: Sync")
     })
   })
@@ -1358,13 +1380,13 @@ describe("Dependency Injection", () => {
   describe("IO constructor auto-detection", () => {
     it("should handle sync functions", async () => {
       const io = IO(() => 42)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
     it("should auto-detect Promise and handle async", async () => {
       const io = IO(() => Promise.resolve(42))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -1375,26 +1397,26 @@ describe("Dependency Injection", () => {
         return 42
       })
       expect(called).toBe(false)
-      await io.run()
+      await io.runOrThrow()
       expect(called).toBe(true)
     })
 
-    it("should work with runSync for sync functions", () => {
+    it("should work with runSyncOrThrow for sync functions", () => {
       const io = IO(() => 42)
-      const result = io.runSync()
+      const result = io.runSyncOrThrow()
       expect(result).toBe(42)
     })
 
-    it("should throw on runSync for async functions", () => {
+    it("should throw on runSyncOrThrow for async functions", () => {
       const io = IO(() => Promise.resolve(42))
-      expect(() => io.runSync()).toThrow("Cannot run async effect synchronously")
+      expect(() => io.runSyncOrThrow()).toThrow("Cannot run async effect synchronously")
     })
 
     it("should chain sync and async transparently", async () => {
       const io = IO(() => 10)
         .flatMap((x) => IO(() => Promise.resolve(x * 2)))
         .map((x) => x + 1)
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(21)
     })
   })
@@ -1412,7 +1434,7 @@ describe("Dependency Injection", () => {
         log.log(`${cfg.host}:${cfg.port}`),
       )
 
-      const result = await program.provideService(Logger, logger).provideService(Config, config).run()
+      const result = await program.provideService(Logger, logger).provideService(Config, config).runOrThrow()
       expect(result).toBe("Logged: localhost:8080")
     })
 
@@ -1424,13 +1446,13 @@ describe("Dependency Injection", () => {
         return log.log("async")
       })
 
-      const result = await program.provideService(Logger, logger).run()
+      const result = await program.provideService(Logger, logger).runOrThrow()
       expect(result).toBe("Logged: async")
     })
 
     it("should work with empty services", async () => {
       const program = IO.withServices({}, () => 42)
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -1439,7 +1461,7 @@ describe("Dependency Injection", () => {
 
       const program = IO.withServices({ logger: Logger }, ({ logger: log }) => log.log("single"))
 
-      const result = await program.provideService(Logger, logger).run()
+      const result = await program.provideService(Logger, logger).runOrThrow()
       expect(result).toBe("Logged: single")
     })
   })
@@ -1455,9 +1477,9 @@ describe("Dependency Injection", () => {
       expect(exit.isInterrupted()).toBe(true)
     })
 
-    it("should throw InterruptedError on runSync", () => {
+    it("should throw InterruptedError on runSyncOrThrow", () => {
       const io = IO.interrupt()
-      expect(() => io.runSync()).toThrow(InterruptedError)
+      expect(() => io.runSyncOrThrow()).toThrow(InterruptedError)
     })
   })
 
@@ -1481,7 +1503,7 @@ describe("Dependency Injection", () => {
           }),
       )
 
-      const result = await program.run()
+      const result = await program.runOrThrow()
       expect(result).toBe("result")
       expect(events).toEqual(["acquire", "use:resource", "release:resource"])
     })
@@ -1501,7 +1523,7 @@ describe("Dependency Injection", () => {
           }),
       )
 
-      await expect(program.run()).rejects.toThrow("use failed")
+      await expect(program.runOrThrow()).rejects.toThrow("use failed")
       expect(events).toEqual(["acquire", "release:resource"])
     })
 
@@ -1524,7 +1546,7 @@ describe("Dependency Injection", () => {
           }),
       )
 
-      const result = program.runSync()
+      const result = program.runSyncOrThrow()
       expect(result).toBe("result")
       expect(events).toEqual(["acquire", "use:resource", "release:resource"])
     })
@@ -1532,7 +1554,7 @@ describe("Dependency Injection", () => {
 
   describe("IO.race", () => {
     it("should return first effect to complete", async () => {
-      const result = await IO.race([IO.sleep(100).map(() => "slow"), IO.sleep(10).map(() => "fast")]).run()
+      const result = await IO.race([IO.sleep(100).map(() => "slow"), IO.sleep(10).map(() => "fast")]).runOrThrow()
       expect(result).toBe("fast")
     })
 
@@ -1542,7 +1564,7 @@ describe("Dependency Injection", () => {
     })
 
     it("should work with immediate values", async () => {
-      const result = await IO.race([IO.succeed("first"), IO.succeed("second")]).run()
+      const result = await IO.race([IO.succeed("first"), IO.succeed("second")]).runOrThrow()
       expect(result).toBe("first")
     })
   })
@@ -1553,12 +1575,12 @@ describe("Dependency Injection", () => {
         never,
         string,
         string
-      >[]).run()
+      >[]).runOrThrow()
       expect(result).toBe("success")
     })
 
     it("should fail if all fail", async () => {
-      await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).run()).rejects.toBe("error2")
+      await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).runOrThrow()).rejects.toBe("error2")
     })
 
     it("should handle empty array", async () => {
@@ -1569,12 +1591,12 @@ describe("Dependency Injection", () => {
 
   describe("IO.forEach", () => {
     it("should execute effect for each element", async () => {
-      const result = await IO.forEach([1, 2, 3], (n) => IO.sync(() => n * 2)).run()
+      const result = await IO.forEach([1, 2, 3], (n) => IO.sync(() => n * 2)).runOrThrow()
       expect(result).toEqual([2, 4, 6])
     })
 
     it("should handle empty array", async () => {
-      const result = await IO.forEach([], (n: number) => IO.sync(() => n * 2)).run()
+      const result = await IO.forEach([], (n: number) => IO.sync(() => n * 2)).runOrThrow()
       expect(result).toEqual([])
     })
 
@@ -1588,14 +1610,14 @@ describe("Dependency Injection", () => {
         }),
       )
 
-      await expect(program.run()).rejects.toThrow("fail at 2")
+      await expect(program.runOrThrow()).rejects.toThrow("fail at 2")
       expect(executed).toEqual([1, 2])
     })
   })
 
   describe("timeout", () => {
     it("should complete before timeout", async () => {
-      const result = await IO.succeed(42).timeout(1000).run()
+      const result = await IO.succeed(42).timeout(1000).runOrThrow()
       expect(result).toBe(42)
     })
 
@@ -1616,19 +1638,19 @@ describe("Dependency Injection", () => {
       const result = await IO.sleep(100)
         .map(() => "done")
         .timeoutTo(10, "fallback")
-        .run()
+        .runOrThrow()
       expect(result).toBe("fallback")
     })
 
     it("should return original value with timeoutTo when not exceeded", async () => {
-      const result = await IO.succeed("original").timeoutTo(1000, "fallback").run()
+      const result = await IO.succeed("original").timeoutTo(1000, "fallback").runOrThrow()
       expect(result).toBe("original")
     })
   })
 
   describe("IO.timeout static method", () => {
     it("should work as static method", async () => {
-      const result = await IO.timeout(IO.succeed(42), 1000).run()
+      const result = await IO.timeout(IO.succeed(42), 1000).runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -1649,7 +1671,7 @@ describe("Dependency Injection", () => {
       const io = IO.fail(NetworkError("connection failed")).catchTag("NetworkError", (e: TaggedError) =>
         IO.succeed(`Recovered from: ${e.message}`),
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("Recovered from: connection failed")
     })
 
@@ -1663,7 +1685,7 @@ describe("Dependency Injection", () => {
       const io = (IO.succeed(42) as unknown as IO<never, TaggedError, number>).catchTag("NetworkError", () =>
         IO.succeed(0),
       )
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -1671,13 +1693,13 @@ describe("Dependency Injection", () => {
   describe("catchAll", () => {
     it("should catch all errors", async () => {
       const io = IO.fail("error").catchAll((e: string) => IO.succeed(e.length))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(5)
     })
 
     it("should let success pass through", async () => {
       const io = IO.succeed(42).catchAll(() => IO.succeed(0))
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe(42)
     })
   })
@@ -1693,7 +1715,7 @@ describe("Dependency Injection", () => {
         return "success"
       }).retry(5)
 
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("success")
       expect(attempts).toBe(3)
     })
@@ -1705,7 +1727,7 @@ describe("Dependency Injection", () => {
         throw new Error("always fails")
       }).retry(2)
 
-      await expect(io.run()).rejects.toThrow("always fails")
+      await expect(io.runOrThrow()).rejects.toThrow("always fails")
       expect(attempts).toBe(3) // 1 initial + 2 retries
     })
 
@@ -1716,7 +1738,7 @@ describe("Dependency Injection", () => {
         return "immediate success"
       }).retry(5)
 
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("immediate success")
       expect(attempts).toBe(1)
     })
@@ -1736,7 +1758,7 @@ describe("Dependency Injection", () => {
         return "success"
       }).retryWithDelay(5, 50)
 
-      const result = await io.run()
+      const result = await io.runOrThrow()
       expect(result).toBe("success")
       expect(attempts).toBe(3)
 
@@ -1782,8 +1804,8 @@ describe("Dependency Injection", () => {
       const io = IO.succeed(42)
       const mapped = io.map((x) => x)
 
-      const original = await io.run()
-      const result = await mapped.run()
+      const original = await io.runOrThrow()
+      const result = await mapped.runOrThrow()
       expect(result).toBe(original)
     })
 
@@ -1792,8 +1814,8 @@ describe("Dependency Injection", () => {
       const f = (x: number) => x * 2
       const g = (x: number) => x + 1
 
-      const left = await io.map(f).map(g).run()
-      const right = await io.map((x) => g(f(x))).run()
+      const left = await io.map(f).map(g).runOrThrow()
+      const right = await io.map((x) => g(f(x))).runOrThrow()
 
       expect(left).toBe(right)
       expect(left).toBe(11) // (5 * 2) + 1 = 11
@@ -1810,24 +1832,24 @@ describe("Dependency Injection", () => {
 
     it("should satisfy left identity: IO.succeed(a).flatMap(f) === f(a)", async () => {
       const a = 5
-      const left = await IO.succeed(a).flatMap(f).run()
-      const right = await f(a).run()
+      const left = await IO.succeed(a).flatMap(f).runOrThrow()
+      const right = await f(a).runOrThrow()
       expect(left).toBe(right)
       expect(left).toBe(10)
     })
 
     it("should satisfy right identity: m.flatMap(IO.succeed) === m", async () => {
       const m = IO.succeed(42)
-      const left = await m.flatMap(IO.succeed).run()
-      const right = await m.run()
+      const left = await m.flatMap(IO.succeed).runOrThrow()
+      const right = await m.runOrThrow()
       expect(left).toBe(right)
     })
 
     it("should satisfy associativity: m.flatMap(f).flatMap(g) === m.flatMap(x => f(x).flatMap(g))", async () => {
       const m = IO.succeed(5)
 
-      const left = await m.flatMap(f).flatMap(g).run()
-      const right = await m.flatMap((x) => f(x).flatMap(g)).run()
+      const left = await m.flatMap(f).flatMap(g).runOrThrow()
+      const right = await m.flatMap((x) => f(x).flatMap(g)).runOrThrow()
 
       expect(left).toBe(right)
       expect(left).toBe(11) // (5 * 2) + 1 = 11

@@ -19,8 +19,8 @@ describe("IO Property Tests", () => {
           const io = IO.succeed(n)
           const mapped = io.map((x) => x)
 
-          const original = await io.run()
-          const result = await mapped.run()
+          const original = await io.runOrThrow()
+          const result = await mapped.runOrThrow()
           expect(result).toBe(original)
         }),
       )
@@ -34,8 +34,8 @@ describe("IO Property Tests", () => {
         fc.asyncProperty(fc.integer({ min: -1000, max: 1000 }), async (n) => {
           const io = IO.succeed(n)
 
-          const left = await io.map(f).map(g).run()
-          const right = await io.map((x) => g(f(x))).run()
+          const left = await io.map(f).map(g).runOrThrow()
+          const right = await io.map((x) => g(f(x))).runOrThrow()
 
           expect(left).toBe(right)
         }),
@@ -54,8 +54,8 @@ describe("IO Property Tests", () => {
     it("left identity: IO.succeed(a).flatMap(f) === f(a)", async () => {
       await fc.assert(
         fc.asyncProperty(fc.integer({ min: -1000, max: 1000 }), async (a) => {
-          const left = await IO.succeed(a).flatMap(f).run()
-          const right = await f(a).run()
+          const left = await IO.succeed(a).flatMap(f).runOrThrow()
+          const right = await f(a).runOrThrow()
           expect(left).toBe(right)
         }),
       )
@@ -65,8 +65,8 @@ describe("IO Property Tests", () => {
       await fc.assert(
         fc.asyncProperty(fc.integer(), async (n) => {
           const m = IO.succeed(n)
-          const left = await m.flatMap(IO.succeed).run()
-          const right = await m.run()
+          const left = await m.flatMap(IO.succeed).runOrThrow()
+          const right = await m.runOrThrow()
           expect(left).toBe(right)
         }),
       )
@@ -77,8 +77,8 @@ describe("IO Property Tests", () => {
         fc.asyncProperty(fc.integer({ min: -1000, max: 1000 }), async (n) => {
           const m = IO.succeed(n)
 
-          const left = await m.flatMap(f).flatMap(g).run()
-          const right = await m.flatMap((x) => f(x).flatMap(g)).run()
+          const left = await m.flatMap(f).flatMap(g).runOrThrow()
+          const right = await m.flatMap((x) => f(x).flatMap(g)).runOrThrow()
 
           expect(left).toBe(right)
         }),
@@ -97,7 +97,7 @@ describe("IO Property Tests", () => {
           const io1 = IO.succeed(n)
           const io2 = IO.succeed(s)
 
-          const result = await io1.zip(io2).run()
+          const result = await io1.zip(io2).runOrThrow()
           expect(result).toEqual([n, s])
         }),
       )
@@ -109,7 +109,7 @@ describe("IO Property Tests", () => {
           const io1 = IO.succeed(n)
           const io2 = IO.succeed(s)
 
-          const result = await io1.zipLeft(io2).run()
+          const result = await io1.zipLeft(io2).runOrThrow()
           expect(result).toBe(n)
         }),
       )
@@ -121,7 +121,7 @@ describe("IO Property Tests", () => {
           const io1 = IO.succeed(n)
           const io2 = IO.succeed(s)
 
-          const result = await io1.zipRight(io2).run()
+          const result = await io1.zipRight(io2).runOrThrow()
           expect(result).toBe(s)
         }),
       )
@@ -137,7 +137,7 @@ describe("IO Property Tests", () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), fc.integer(), async (errorMsg, fallback) => {
           const io = IO.fail(errorMsg).recover(fallback)
-          const result = await io.run()
+          const result = await io.runOrThrow()
           expect(result).toBe(fallback)
         }),
       )
@@ -147,7 +147,7 @@ describe("IO Property Tests", () => {
       await fc.assert(
         fc.asyncProperty(fc.integer(), fc.integer(), async (original, fallback) => {
           const io = IO.succeed(original).recover(fallback)
-          const result = await io.run()
+          const result = await io.runOrThrow()
           expect(result).toBe(original)
         }),
       )
@@ -175,8 +175,8 @@ describe("IO Property Tests", () => {
             (x) => `success: ${x}`,
           )
 
-          const successResult = await successIo.run()
-          const failResult = await failIo.run()
+          const successResult = await successIo.runOrThrow()
+          const failResult = await failIo.runOrThrow()
 
           expect(successResult).toBe(`success: ${n}`)
           expect(failResult).toBe("failed: error")
@@ -194,14 +194,14 @@ describe("IO Property Tests", () => {
       await fc.assert(
         fc.asyncProperty(fc.array(fc.integer(), { minLength: 0, maxLength: 10 }), async (nums) => {
           const ios = nums.map((n) => IO.succeed(n))
-          const result = await IO.all(ios).run()
+          const result = await IO.all(ios).runOrThrow()
           expect(result).toEqual(nums)
         }),
       )
     })
 
     it("empty array returns empty result", async () => {
-      const result = await IO.all<never, never, never>([]).run()
+      const result = await IO.all<never, never, never>([]).runOrThrow()
       expect(result).toEqual([])
     })
   })
@@ -215,7 +215,7 @@ describe("IO Property Tests", () => {
       await fc.assert(
         fc.asyncProperty(fc.integer(), async (n) => {
           const io = IO.succeed(n).retry(0)
-          const result = await io.run()
+          const result = await io.runOrThrow()
           expect(result).toBe(n)
         }),
       )
@@ -230,7 +230,7 @@ describe("IO Property Tests", () => {
             return n
           }).retry(retries)
 
-          const result = await io.run()
+          const result = await io.runOrThrow()
           expect(result).toBe(n)
           expect(callCount).toBe(1) // Only called once
         }),
@@ -256,7 +256,7 @@ describe("IO Property Tests", () => {
           expect(called).toBe(false)
 
           // Called after run
-          await io.run()
+          await io.runOrThrow()
           expect(called).toBe(true)
         }),
       )
@@ -275,7 +275,7 @@ describe("IO Property Tests", () => {
           expect(called).toBe(false)
 
           // Called after run
-          await io.run()
+          await io.runOrThrow()
           expect(called).toBe(true)
         }),
       )
@@ -283,24 +283,24 @@ describe("IO Property Tests", () => {
   })
 
   // ============================================
-  // runEither/runExit Properties
+  // run/runExit Properties
   // ============================================
 
   describe("Execution Properties", () => {
-    it("runEither returns Right for success", async () => {
+    it("run returns Right for success", async () => {
       await fc.assert(
         fc.asyncProperty(fc.integer(), async (n) => {
-          const either = await IO.succeed(n).runEither()
+          const either = await IO.succeed(n).run()
           expect(either.isRight()).toBe(true)
           expect(either.orElse(0)).toBe(n)
         }),
       )
     })
 
-    it("runEither returns Left for failure", async () => {
+    it("run returns Left for failure", async () => {
       await fc.assert(
         fc.asyncProperty(fc.string(), async (errorMsg) => {
-          const either = await IO.fail(errorMsg).runEither()
+          const either = await IO.fail(errorMsg).run()
           expect(either.isLeft()).toBe(true)
         }),
       )

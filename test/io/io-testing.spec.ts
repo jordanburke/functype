@@ -191,11 +191,11 @@ describe("IO with TestClock", () => {
 
     const program = IO.service(TestClock.tag).map((c) => c.currentTime)
 
-    const result = await program.provideContext(context).run()
+    const result = await program.provideContext(context).runOrThrow()
     expect(result).toBe(0)
 
     await clock.advance(100)
-    const result2 = await program.provideContext(context).run()
+    const result2 = await program.provideContext(context).runOrThrow()
     expect(result2).toBe(100)
   })
 })
