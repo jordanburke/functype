@@ -45,13 +45,13 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.0",
-    "@types/node": "^24.10.4",
+    "@types/node": "~24.10.4",
     "eslint-config-functype": "1.3.0",
     "eslint-plugin-functional": "^9.0.2",
-    "fast-check": "^4.4.0",
+    "fast-check": "^4.5.2",
     "globals": "^16.5.0",
-    "ts-builds": "^1.2.3",
-    "tsdown": "^0.18.0",
+    "ts-builds": "^1.2.5",
+    "tsdown": "^0.18.3",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.15"
   },
@@ -183,5 +183,5 @@
     "safe-stable-stringify": "^2.5.0"
   },
   "sideEffects": false,
-  "packageManager": "pnpm@10.26.0+sha512.3b3f6c725ebe712506c0ab1ad4133cf86b1f4b687effce62a9b38b4d72e3954242e643190fc51fa1642949c735f403debd44f5cb0edd657abe63a8b6a7e1e402"
+  "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6"
 }
