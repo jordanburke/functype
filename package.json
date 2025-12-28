@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.41.1",
+  "version": "0.41.2",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -59,118 +59,99 @@
   "module": "./dist/index.js",
   "exports": {
     ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      }
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./option": {
-      "import": {
-        "types": "./dist/option/index.d.ts",
-        "default": "./dist/option/index.js"
-      }
+      "types": "./dist/option/index.d.ts",
+      "import": "./dist/option/index.js",
+      "default": "./dist/option/index.js"
     },
     "./either": {
-      "import": {
-        "types": "./dist/either/index.d.ts",
-        "default": "./dist/either/index.js"
-      }
+      "types": "./dist/either/index.d.ts",
+      "import": "./dist/either/index.js",
+      "default": "./dist/either/index.js"
     },
     "./try": {
-      "import": {
-        "types": "./dist/try/index.d.ts",
-        "default": "./dist/try/index.js"
-      }
+      "types": "./dist/try/index.d.ts",
+      "import": "./dist/try/index.js",
+      "default": "./dist/try/index.js"
     },
     "./list": {
-      "import": {
-        "types": "./dist/list/index.d.ts",
-        "default": "./dist/list/index.js"
-      }
+      "types": "./dist/list/index.d.ts",
+      "import": "./dist/list/index.js",
+      "default": "./dist/list/index.js"
     },
     "./conditional": {
-      "import": {
-        "types": "./dist/conditional/index.d.ts",
-        "default": "./dist/conditional/index.js"
-      }
+      "types": "./dist/conditional/index.d.ts",
+      "import": "./dist/conditional/index.js",
+      "default": "./dist/conditional/index.js"
     },
     "./do": {
-      "import": {
-        "types": "./dist/do/index.d.ts",
-        "default": "./dist/do/index.js"
-      }
+      "types": "./dist/do/index.d.ts",
+      "import": "./dist/do/index.js",
+      "default": "./dist/do/index.js"
     },
     "./lazy": {
-      "import": {
-        "types": "./dist/lazy/index.d.ts",
-        "default": "./dist/lazy/index.js"
-      }
+      "types": "./dist/lazy/index.d.ts",
+      "import": "./dist/lazy/index.js",
+      "default": "./dist/lazy/index.js"
     },
     "./task": {
-      "import": {
-        "types": "./dist/core/task/index.d.ts",
-        "default": "./dist/core/task/index.js"
-      }
+      "types": "./dist/core/task/index.d.ts",
+      "import": "./dist/core/task/index.js",
+      "default": "./dist/core/task/index.js"
     },
     "./fpromise": {
-      "import": {
-        "types": "./dist/fpromise/index.d.ts",
-        "default": "./dist/fpromise/index.js"
-      }
+      "types": "./dist/fpromise/index.d.ts",
+      "import": "./dist/fpromise/index.js",
+      "default": "./dist/fpromise/index.js"
     },
     "./io": {
-      "import": {
-        "types": "./dist/io/index.d.ts",
-        "default": "./dist/io/index.js"
-      }
+      "types": "./dist/io/index.d.ts",
+      "import": "./dist/io/index.js",
+      "default": "./dist/io/index.js"
     },
     "./functype": {
-      "import": {
-        "types": "./dist/functype/index.d.ts",
-        "default": "./dist/functype/index.js"
-      }
+      "types": "./dist/functype/index.d.ts",
+      "import": "./dist/functype/index.js",
+      "default": "./dist/functype/index.js"
     },
     "./typeclass": {
-      "import": {
-        "types": "./dist/typeclass/index.d.ts",
-        "default": "./dist/typeclass/index.js"
-      }
+      "types": "./dist/typeclass/index.d.ts",
+      "import": "./dist/typeclass/index.js",
+      "default": "./dist/typeclass/index.js"
     },
     "./map": {
-      "import": {
-        "types": "./dist/map/index.d.ts",
-        "default": "./dist/map/index.js"
-      }
+      "types": "./dist/map/index.d.ts",
+      "import": "./dist/map/index.js",
+      "default": "./dist/map/index.js"
     },
     "./set": {
-      "import": {
-        "types": "./dist/set/index.d.ts",
-        "default": "./dist/set/index.js"
-      }
+      "types": "./dist/set/index.d.ts",
+      "import": "./dist/set/index.js",
+      "default": "./dist/set/index.js"
     },
     "./tuple": {
-      "import": {
-        "types": "./dist/tuple/index.d.ts",
-        "default": "./dist/tuple/index.js"
-      }
+      "types": "./dist/tuple/index.d.ts",
+      "import": "./dist/tuple/index.js",
+      "default": "./dist/tuple/index.js"
     },
     "./branded": {
-      "import": {
-        "types": "./dist/branded/index.d.ts",
-        "default": "./dist/branded/index.js"
-      }
+      "types": "./dist/branded/index.d.ts",
+      "import": "./dist/branded/index.js",
+      "default": "./dist/branded/index.js"
     },
     "./companion": {
-      "import": {
-        "types": "./dist/companion/index.d.ts",
-        "default": "./dist/companion/index.js"
-      }
+      "types": "./dist/companion/index.d.ts",
+      "import": "./dist/companion/index.js",
+      "default": "./dist/companion/index.js"
     },
     "./serialization": {
-      "import": {
-        "types": "./dist/serialization/index.d.ts",
-        "default": "./dist/serialization/index.js"
-      }
+      "types": "./dist/serialization/index.d.ts",
+      "import": "./dist/serialization/index.js",
+      "default": "./dist/serialization/index.js"
     }
   },
   "bin": {
