@@ -4,36 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Start
 
-- **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.12.1
+- **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.x
 - **Install**: `pnpm install`
 - **Development**: `pnpm dev` (build with watch mode)
 - **Before commit**: `pnpm validate` (format + lint + test + build)
 - **Test**: `pnpm test` or `pnpm vitest run test/specific.spec.ts` for single file
+- **CLI docs**: `npx functype` for LLM-optimized API reference
 
 ## Primary Reference: Feature Matrix
 
-**IMPORTANT**: Always consult the [FUNCTYPE_FEATURE_MATRIX.md](./FUNCTYPE_FEATURE_MATRIX.md) file FIRST when working with functype. This matrix provides:
-
-- Complete overview of all data structures and interfaces
-- Which interfaces each data structure implements
-- Key methods available for each interface
-- Quick reference for understanding library capabilities
+**IMPORTANT**: Always consult [docs/FUNCTYPE_FEATURE_MATRIX.md](./docs/FUNCTYPE_FEATURE_MATRIX.md) FIRST when working with functype. This matrix shows which interfaces each data structure implements and key methods available.
 
 ## Development Commands
 
-### Pre-Checkin Command
+All commands use `ts-builds` under the hood for standardized tooling.
 
-- `pnpm validate` - **Main command**: Format, lint, test, and build everything for checkin
+### Core Workflow
 
-### Formatting
-
-- `pnpm format` - Format code with Prettier (write mode)
-- `pnpm format:check` - Check Prettier formatting without writing
-
-### Linting
-
-- `pnpm lint` - Fix ESLint issues (write mode)
-- `pnpm lint:check` - Check ESLint issues without fixing
+- `pnpm validate` - **Main command**: Format, lint, test, and build (run before commit!)
+- `pnpm dev` - Development build with watch mode
+- `pnpm build` - Production build (outputs to `dist/`)
+- `pnpm compile` - TypeScript compilation check (no emit)
 
 ### Testing
 
@@ -41,296 +32,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm vitest run test/path/to/file.spec.ts` - Run specific test file
 - `pnpm test:watch` - Run tests in watch mode
 - `pnpm test:coverage` - Run tests with coverage report
-- `pnpm test:ui` - Run tests with Vitest UI
 
-### Building
+### Formatting & Linting
 
-- `pnpm build` - Production build (outputs to `dist/`)
-- `pnpm build:watch` - Watch mode for continuous building
-- `pnpm dev` - Development build with watch mode (alias for build:watch)
-- `pnpm compile` - TypeScript compilation check (no emit)
-- `pnpm clean` - Remove dist directories
+- `pnpm format` / `pnpm format:check` - Format code with Prettier
+- `pnpm lint` / `pnpm lint:check` - Fix/check ESLint issues
 
-### Performance & Documentation
+### Documentation & Analysis
 
-- `pnpm bench` - Run performance benchmarks
-- `pnpm bench:ui` - Run benchmarks with UI
 - `pnpm docs` - Generate TypeDoc documentation
-- `pnpm docs:watch` - Generate docs in watch mode
+- `pnpm docs:sync` - Sync feature matrix and validate docs
+- `pnpm docs:validate` - Run all documentation validation checks
+- `pnpm bench` - Run performance benchmarks
 - `pnpm analyze:size` - Analyze production bundle size
+
+### Landing Site
+
+- `pnpm landing:dev` - Start landing site dev server
+- `pnpm landing:build` - Build landing site for production
 
 ## Core Architecture
 
 ### Scala-Inspired Constructor Pattern
 
-All types follow a consistent pattern where constructor functions return objects with methods:
+All types follow a consistent pattern using the `Companion` utility:
 
 ```typescript
-// Example pattern used throughout:
-const option = Option(value) // Constructor function
-option.map((x) => x + 1) // Instance methods
-Option.none() // Companion methods via Companion utility
+const option = Option(value)    // Constructor function
+option.map((x) => x + 1)        // Instance methods
+Option.none()                   // Companion methods
 ```
 
-### Type System Foundation
+### Type System
 
-- **Base constraint**: Use `Type` from functor module for generic constraints (never `any`)
-- **HKT support**: Higher-kinded types are implemented to enable generic programming
-- **Branded types**: Use `Brand` module for nominal typing when needed
-- **Type classes**: Core interfaces include Functor, Foldable, Traversable, Matchable, Serializable
+- **Base constraint**: Use `Type` from types module for generic constraints (never `any`)
+- **HKT**: Higher-kinded types enable generic programming across containers
+- **Branded types**: Use `Brand` module for nominal typing
+- **Type classes**: Functor, Applicative, Monad, Foldable, Traversable, Matchable, Serializable
 
-### Base Pattern
+### Key Interfaces
 
-The fundamental `Base` function pattern creates objects with type metadata:
+Two base interfaces define the type hierarchy (see `src/functype/Functype.ts`):
 
-```typescript
-Base<T>(type: string, body: T)
-```
+- **`Functype<A, Tag>`**: Single-value containers (Option, Either, Try, Lazy) with Extractable + Matchable
+- **`FunctypeCollection<A, Tag>`**: Collections (List, Set) with Iterable + CollectionOps
 
-This adds `Typeable` functionality and standard `toString()` methods to all data structures.
+Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toString`
 
-### Core Abstractions
+### Error Handling
 
-Every container type implements these key methods:
-
-- `map`: Transform contained values while preserving structure
-- `flatMap`: Chain operations that return wrapped values
-- `fold`: Extract values via pattern matching
-- `pipe`: Enable function composition
-- `toString`: Provide readable string representation
-
-### Error Handling Strategy
-
-- **Throwable**: Wrapper for errors that preserves context and stack traces
-- **Task**: Handles sync/async operations with cancellation and progress tracking
-- **Error patterns**: Use Option/Either/Try for expected failures, Throwable for unexpected
-- **ErrorFormatter**: Use for structured error output
+- **Option/Either/Try**: For expected, recoverable failures
+- **Throwable**: Enhanced error wrapper preserving context and stack traces
+- **Task**: Sync/async operations returning `TaskOutcome<T>` with Ok/Err pattern
+- **IO<R,E,A>**: Lazy effect type with typed errors and dependency injection
 
 ## Code Style
 
-- **Imports**: Use type-only imports when possible. Organized with simple-import-sort.
-- **Types**: Use `Type` from functor. Prefer explicit type annotations.
-- **Naming**: Use PascalCase for classes/types, camelCase for functions/variables.
-- **Error Handling**: Use Option/Either/Try patterns for error handling.
-- **Functional Style**: Follow functional paradigms (immutability, pure functions).
-- **Pattern**: Constructor functions return objects with methods, not classes.
-- **Paths**: Use absolute imports with @ alias (`import from "@/path"`).
-- **Testing**: Use Vitest with describe/it pattern. Test edge cases thoroughly.
-- **TypeScript**: Use strict mode, avoid `any` types, prefer `unknown` where needed.
-- **Property Testing**: Use fast-check for property-based testing where applicable.
+- **Imports**: Type-only imports when possible, organized with simple-import-sort
+- **Paths**: Absolute imports with `@/` alias (e.g., `import from "@/option"`)
+- **Types**: Use `Type` constraint, never `any`, prefer `unknown`
+- **Pattern**: Constructor functions returning objects, not classes
+- **Testing**: Vitest with describe/it, fast-check for property-based tests
 
 ## TypeScript Configuration
 
-Key strict settings enabled:
-
-- `strict: true` - Full strict mode
+Strict mode with additional safety:
 - `noUncheckedIndexedAccess: true` - Safer array/object access
-- `strictPropertyInitialization: true` - Ensures properties are initialized
-- `verbatimModuleSyntax: true` - Stricter module syntax
-- `noErrorTruncation: true` - Full error messages
-
-## API Design Pattern
-
-- **Scala-inspired Approach**: Use a hybrid of functional and object-oriented styles:
-  - Constructor functions that return objects with methods (e.g., `Option(value)`)
-  - Object methods for operations (e.g., `option.map()`, `list.filter()`)
-  - Companion functions for additional utilities (e.g., `Option.from()`, `Option.none()`)
-- **Consistency**: All modules should follow this pattern to maintain API consistency
-- **Companion Pattern**: Use the `Companion` utility to create function-objects where appropriate
-- **Immutability**: All data structures must be immutable
-- **Composability**: Design for function composition and chaining operations
+- `verbatimModuleSyntax: true` - Stricter imports/exports
+- `noImplicitReturns: true` - All code paths must return
 
 ## Module Organization
 
-- **Index exports**: Each module has an index.ts that re-exports its main type
-- **Selective imports**: Package.json exports field enables importing specific modules
-- **Base pattern**: Use Base function from core/base to add common functionality
-- **Type hierarchy**: Types build on shared abstractions (Functor → Monad → specific types)
-- **CLI documentation**: Run `npx functype` for LLM-optimized API reference
+- Each module has `index.ts` re-exporting its main type
+- Package.json `exports` field enables selective imports: `import { Option } from "functype/option"`
+- Use `Base` function from `core/base` to add Typeable and toString to new types
 
-## Documentation Standards
-
-- **API Documentation**: Use TypeDoc for generating API documentation
-- **JSDoc Comments**: Include for all public APIs with examples for non-obvious types
-- **Project Documentation**: Maintain README.md with usage examples
-- **Code Comments**: Document unfinished work with TODOs that include context
-- **Quick Reference**: See `docs/quick-reference.md` for concise usage examples
-
-## Bundle Optimization
-
-- Optimized for tree-shaking with `"sideEffects": false`
-- Supports selective module imports to minimize bundle size
-- Provides modular exports for different functional types
-- ESM-only for modern bundlers
-
-Example import strategies:
-
-```typescript
-// Selective module imports (recommended)
-import { Option } from "functype/option"
-
-// Direct constructor imports (smallest bundle)
-import { some, none } from "functype/option"
-```
-
-## Common Data Structure Patterns
-
-### Creating Instances
-
-```typescript
-// Option
-const some = Option(value) // Some if value is not null/undefined
-const none = Option.none() // None
-
-// Either
-const right = Right(value) // Success
-const left = Left(error) // Failure
-
-// List
-const list = List([1, 2, 3]) // From array
-const empty = List.empty<number>() // Empty typed list
-
-// Try
-const tryValue = Try(() => risky()) // Wraps exceptions
-```
-
-### Common Operations
-
-```typescript
-// Transform (map)
-option.map((x) => x * 2)
-either.map((x) => x.toUpperCase())
-list.map((x) => x + 1)
-
-// Chain (flatMap)
-option.flatMap((x) => Option(x > 0 ? x : null))
-either.flatMap((x) => (validate(x) ? Right(x) : Left("Invalid")))
-
-// Extract (fold/getOrElse)
-option.fold(
-  () => "empty",
-  (x) => `value: ${x}`,
-)
-either.orElse("default")
-tryValue.orThrow()
-```
-
-## Testing Patterns
-
-- **Property Testing**: Use fast-check for property-based tests
-- **Edge Cases**: Always test empty/null/undefined cases
-- **Type Safety**: Verify type inference works correctly
-- **Async Testing**: Use Task for async operation testing
-- **Test Structure**: Tests can use `.test.ts` or `.spec.ts` extensions
-
-```typescript
-// Example test structure
-describe("Option", () => {
-  it("should map over Some values", () => {
-    const result = Option(5).map((x) => x * 2)
-    expect(result.get()).toBe(10)
-  })
-
-  it("should handle None correctly", () => {
-    const result = Option(null).map((x) => x * 2)
-    expect(result.isNone()).toBe(true)
-  })
-})
-```
-
-## Performance Considerations
-
-- **LazyList**: Use for large datasets or infinite sequences
-- **Lazy**: Use for expensive computations that may not be needed
-- **Task**: Use for async operations that need cancellation
-- **Memoization**: Built into Lazy, consider for expensive pure functions
-
-## Available Data Structures
-
-### Fully Implemented
-
-- **Option<T>**: Handle nullable values safely
-- **Either<L,R>**: Express success/failure with values
-- **Try<T>**: Wrap operations that might throw
-- **List<A>**: Immutable array with functional operations
-- **Set<A>**: Immutable set with functional operations
-- **Map<K,V>**: Immutable map (limited functional support)
-- **Lazy<T>**: Deferred computation with memoization
-- **Task<T>**: Sync/async operations with cancellation
-
-### Partially Implemented
-
-- **Stack<A>**: LIFO collection with Matchable interface
-- **LazyList<A>**: Lazy evaluation for sequences (custom Functor/Monad)
-- **Tuple<T[]>**: Fixed-length arrays (custom Functor/Monad)
-
-### Limited Implementation
-
-- **FPromise<T,E>**: Enhanced Promise (only PromiseLike interface)
-- **Identity<T>**: Simple wrapper type
-- **Ref<T>**: Mutable reference container
-
-## Development Workflow
-
-### Adding New Features
+## Adding New Data Structures
 
 1. Create module directory under `src/` (e.g., `src/mynewtype/`)
-2. Create `index.ts` that exports the main type and utilities
-3. Add export to `src/index.ts` for main bundle
-4. Add export mapping in `package.json` for selective imports
-5. Create comprehensive tests in `test/mynewtype.spec.ts`
-6. Update FUNCTYPE_FEATURE_MATRIX.md if implementing standard interfaces
-7. Run `pnpm validate` to verify everything works correctly
+2. Implement the type extending `Functype<A, Tag>` or `FunctypeCollection<A, Tag>`
+3. Use `Companion()` utility to combine constructor with companion methods
+4. Create `index.ts` that re-exports the main type
+5. Add export to `src/index.ts` and `package.json` exports field
+6. Create tests in `test/mynewtype.spec.ts`
+7. Update `docs/FUNCTYPE_FEATURE_MATRIX.md` with interface support
+8. Run `pnpm validate`
 
-### Working with Type Classes
+## Documentation Updates
 
-When implementing a new data structure that supports standard interfaces:
-
-1. Extend appropriate base type (`FunctypeBase` or `FunctypeCollectionBase`)
-2. Implement required methods for each interface
-3. Use `Base` function from `core/base` to add common functionality
-4. Ensure type inference works correctly without explicit annotations
-5. Add comprehensive tests for all interface methods
-6. Run `pnpm validate` to verify everything works correctly
-
-### Documentation Update Checklist
-
-When making code changes that affect public APIs, features, or behavior, ensure documentation stays in sync:
-
-#### ✅ Always Required
-
-- **JSDoc Comments**: Update in source code (automatically appears in TypeDoc)
-- **TypeDoc Regeneration**: Run `pnpm docs` to regenerate API documentation
-- **Test Examples**: Add/update `#region` tags in tests for README code examples
-- **Validation**: Run `pnpm validate` before committing (includes docs validation)
-
-#### ✅ Update if Changed
-
-- **README.md**: Update if adding/changing core features, installation, or main examples
-- **docs/FUNCTYPE_FEATURE_MATRIX.md**: Update if adding/changing interfaces or data structures
-  - This file syncs to `landing/src/content/feature-matrix.md` via `pnpm docs:sync`
-- **docs/quick-reference.md**: Update if adding common patterns or usage examples
-- **landing/src/pages/\*.astro**: Update relevant type documentation pages (option, either, list, etc.)
-- **landing/public/llms.txt**: Update if adding major new features or documentation sections
-
-#### 🔄 Automated (No Action Needed)
-
-- TypeDoc API docs (generated from JSDoc in source code)
-- Landing site build (runs via `pnpm landing:build`)
-- Website deployment (CI/CD deploys on push to main branch)
-- Feature matrix sync (runs with `pnpm docs:sync`)
-
-#### 📝 Documentation Sync Commands
-
-- `pnpm docs` - Generate TypeDoc API documentation
-- `pnpm docs:sync` - Sync feature matrix and validate documentation
-- `pnpm docs:validate` - Run all documentation validation checks
-- `pnpm validate` - Full validation including docs (run before commit!)
-
-### Debugging Tips
-
-- Use `toString()` method for readable output of any data structure
-- Enable source maps in tsconfig for better stack traces
-- Use `ErrorFormatter` for structured error output
-- Run tests with `--reporter=verbose` for detailed output
-- Use `pnpm dev` for development with better debugging info
+When changing public APIs:
+- Update JSDoc comments in source (appears in TypeDoc automatically)
+- Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
+- Run `pnpm docs:sync` to sync feature matrix to landing site
+- Run `pnpm validate` before committing
