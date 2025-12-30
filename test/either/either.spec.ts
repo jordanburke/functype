@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
-import { Either, Left, List, Right } from "../../src"
-import { ParseError } from "../../src/error/ParseError"
-import { parseNumber } from "../../src/util"
+import { Either, Left, parseNumber, ParseError, Right } from "../../src/either"
+import { List } from "../../src/list"
 
 describe("Either", () => {
   beforeEach(() => {

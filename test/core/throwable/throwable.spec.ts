@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Throwable } from "@/core"
+import { mergeObjects } from "@/util"
 
 describe("Throwable", () => {
   it("should create a Throwable from a string message", () => {
@@ -297,7 +298,7 @@ describe("Throwable", () => {
   it("should preserve custom properties from Error instances", () => {
     const originalError = new Error("Original error")
     // Add custom properties to the error
-    const customError = Object.assign(originalError, {
+    const customError = mergeObjects(originalError, {
       code: "E123",
       details: "Some details",
       hint: "A helpful hint",

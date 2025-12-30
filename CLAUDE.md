@@ -58,9 +58,9 @@ All commands use `ts-builds` under the hood for standardized tooling.
 All types follow a consistent pattern using the `Companion` utility:
 
 ```typescript
-const option = Option(value)    // Constructor function
-option.map((x) => x + 1)        // Instance methods
-Option.none()                   // Companion methods
+const option = Option(value) // Constructor function
+option.map((x) => x + 1) // Instance methods
+Option.none() // Companion methods
 ```
 
 ### Type System
@@ -97,6 +97,7 @@ Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toS
 ## TypeScript Configuration
 
 Strict mode with additional safety:
+
 - `noUncheckedIndexedAccess: true` - Safer array/object access
 - `verbatimModuleSyntax: true` - Stricter imports/exports
 - `noImplicitReturns: true` - All code paths must return
@@ -121,6 +122,7 @@ Strict mode with additional safety:
 ## Documentation Updates
 
 When changing public APIs:
+
 - Update JSDoc comments in source (appears in TypeDoc automatically)
 - Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
 - Run `pnpm docs:sync` to sync feature matrix to landing site

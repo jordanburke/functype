@@ -3,6 +3,7 @@ import { Left, Right } from "@/either"
 import { TypedError } from "@/error/typed/TypedError"
 import { List } from "@/list"
 import type { Type } from "@/types"
+import { mergeObjects } from "@/util"
 
 /**
  * Validation rule types using template literal types
@@ -324,4 +325,4 @@ const ValidationCompanion = {
   },
 }
 
-export const Validation = Object.assign(ValidationConstructor.rule, ValidationCompanion)
+export const Validation = mergeObjects(ValidationConstructor.rule, ValidationCompanion)

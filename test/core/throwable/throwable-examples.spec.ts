@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { Throwable } from "@/core"
+import { mergeObjects } from "@/util"
 
 /**
  * This test file demonstrates and documents the output format of various error types
@@ -40,7 +41,7 @@ describe("Throwable Examples", () => {
 
     // Custom Error with properties
     const customError = new Error("Custom error with properties")
-    Object.assign(customError, { code: "E123", details: "Additional details" })
+    mergeObjects(customError, { code: "E123", details: "Additional details" })
     printErrorInfo("Custom Error", customError)
 
     // String

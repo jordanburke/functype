@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { Task, Throwable } from "@/core"
 import { createErrorSerializer, formatError } from "@/error/ErrorFormatter"
+import { mergeObjects } from "@/util"
 
 /**
  * This test file demonstrates how to effectively log functype errors with Pino
@@ -111,7 +112,7 @@ describe("Pino Error Logging with Functype", () => {
     const error = level1Task.error as Error
 
     // Add custom context to the error
-    Object.assign(error, {
+    mergeObjects(error, {
       requestId: "req-789",
       userId: "user-456",
       endpoint: "/api/users/profile",
@@ -168,7 +169,7 @@ describe("Pino Error Logging with Functype", () => {
     const dbTask = Task({ name: "DatabaseQuery", description: "Query user data from database" }).Sync(() => {
       const dbError = new Error('ERROR: duplicate key value violates unique constraint "users_email_key"')
       // Add postgres-like error properties
-      Object.assign(dbError, {
+      mergeObjects(dbError, {
         code: "23505",
         detail: "Key (email)=(user@example.com) already exists.",
         schema: "public",
@@ -191,7 +192,7 @@ describe("Pino Error Logging with Functype", () => {
     const error = apiTask.error as Error
 
     // Add request context to the error
-    Object.assign(error, {
+    mergeObjects(error, {
       request: {
         method: "POST",
         path: "/api/users",

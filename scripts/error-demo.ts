@@ -1,4 +1,5 @@
-import { Throwable } from "../src/core"
+import { Throwable } from "@/core"
+import { mergeObjects } from "@/util"
 
 /**
  * This script demonstrates how different error types are displayed
@@ -7,7 +8,7 @@ import { Throwable } from "../src/core"
 
 // Helper function to safely stringify data including BigInt values
 function safeStringify(obj: unknown): string {
-  return JSON.stringify(obj, (_, value) => (typeof value === "bigint" ? value.toString() + "n" : value), 2)
+  return JSON.stringify(obj, (_, value) => (typeof value === "bigint" ? `${value.toString()}n` : value), 2)
 }
 
 // Helper function to demonstrate error handling
@@ -47,7 +48,7 @@ demonstrateError("Standard Error", new Error("This is a standard error"))
 
 // Custom Error with properties
 const customError = new Error("Custom error with properties")
-Object.assign(customError, { code: "E123", details: "Additional details" })
+mergeObjects(customError, { code: "E123", details: "Additional details" })
 demonstrateError("Custom Error", customError)
 
 // String

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { parseNumber } from "@/util"
+import { parseNumber } from "@/either"
 
 describe("Utility Functions", () => {
   describe("parseNumber", () => {

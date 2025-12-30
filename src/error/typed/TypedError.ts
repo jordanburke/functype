@@ -1,4 +1,5 @@
 import { Throwable } from "@/core/throwable/Throwable"
+import { mergeObjects } from "@/util"
 
 /**
  * Type-safe error codes using template literal types
@@ -114,7 +115,7 @@ const TypedErrorConstructor = <T extends ErrorCode>(
 ): TypedError<T> => {
   const error = Throwable.apply(message, context, { name: code, description: message }) as TypedError<T>
 
-  return Object.assign(error, {
+  return mergeObjects(error, {
     code,
     message,
     status: getStatusForCode(code),

@@ -1,3 +1,5 @@
+import { mergeObjects } from "@/util"
+
 /**
  * Creates a function-object hybrid similar to Scala's companion objects.
  * This utility allows creating TypeScript function objects with attached methods,
@@ -24,6 +26,5 @@ export function Companion<ObjectF extends object, CompanionF extends object>(
   object: ObjectF,
   companion: CompanionF,
 ): ObjectF & CompanionF {
-  // eslint-disable-next-line functional/immutable-data
-  return Object.assign(object, companion)
+  return mergeObjects<ObjectF, CompanionF>(object, companion)
 }
