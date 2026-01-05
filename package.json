@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.42.0",
+  "version": "0.42.1",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -48,10 +48,10 @@
     "@types/node": "~24.10.4",
     "eslint-config-functype": "1.3.0",
     "eslint-plugin-functional": "^9.0.2",
-    "fast-check": "^4.5.2",
+    "fast-check": "^4.5.3",
     "globals": "^16.5.0",
-    "ts-builds": "^2.0.0",
-    "tsdown": "^0.18.3",
+    "ts-builds": "^2.1.0",
+    "tsdown": "^0.18.4",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.15"
   },
@@ -169,5 +169,5 @@
     "safe-stable-stringify": "^2.5.0"
   },
   "sideEffects": false,
-  "packageManager": "pnpm@10.26.2+sha512.0e308ff2005fc7410366f154f625f6631ab2b16b1d2e70238444dd6ae9d630a8482d92a451144debc492416896ed16f7b114a86ec68b8404b2443869e68ffda6"
+  "packageManager": "pnpm@10.27.0+sha512.72d699da16b1179c14ba9e64dc71c9a40988cbdc65c264cb0e489db7de917f20dcf4d64d8723625f2969ba52d4b7e2a1170682d9ac2a5dcaeaab732b7e16f04a"
 }
