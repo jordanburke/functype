@@ -90,34 +90,40 @@ export type UntypedMatch<T extends Type> = {
  */
 export type Match<T extends Type, R extends Type> = {
   /**
-   * Match against a pattern (value, nested object, or predicate)
+   * Match against a pattern (value, nested object, or predicate).
+   * The result type R2 is added to the union of possible results.
    */
-  case: (pattern: Pattern<T>, result: PatternResult<T, R>) => Match<T, R>
+  case: <R2 extends Type>(pattern: Pattern<T>, result: PatternResult<T, R2>) => Match<T, R | R2>
 
   /**
-   * Add a case that matches a specific value (backward compatibility)
+   * Add a case that matches a specific value.
+   * The result type R2 is added to the union of possible results.
    */
-  caseValue: (match: T, result: R | (() => R)) => Match<T, R>
+  caseValue: <R2 extends Type>(match: T, result: R2 | (() => R2)) => Match<T, R | R2>
 
   /**
-   * Add a case that matches multiple values (backward compatibility)
+   * Add a case that matches multiple values.
+   * The result type R2 is added to the union of possible results.
    */
-  caseValues: (matches: T[], result: R | (() => R)) => Match<T, R>
+  caseValues: <R2 extends Type>(matches: T[], result: R2 | (() => R2)) => Match<T, R | R2>
 
   /**
-   * Match with a guard function (alias for readability)
+   * Match with a guard function (alias for readability).
+   * The result type R2 is added to the union of possible results.
    */
-  when: (guard: (value: T) => boolean, result: PatternResult<T, R>) => Match<T, R>
+  when: <R2 extends Type>(guard: (value: T) => boolean, result: PatternResult<T, R2>) => Match<T, R | R2>
 
   /**
-   * Match multiple patterns (OR operation)
+   * Match multiple patterns (OR operation).
+   * The result type R2 is added to the union of possible results.
    */
-  caseAny: (patterns: Pattern<T>[], result: PatternResult<T, R>) => Match<T, R>
+  caseAny: <R2 extends Type>(patterns: Pattern<T>[], result: PatternResult<T, R2>) => Match<T, R | R2>
 
   /**
-   * Default case - makes match non-exhaustive
+   * Default case - makes match non-exhaustive.
+   * The result type R2 is added to the union of possible results.
    */
-  default: (result: PatternResult<T, R>) => R
+  default: <R2 extends Type>(result: PatternResult<T, R2>) => R | R2
 
   /**
    * Force exhaustive matching (compile-time check for union types)
@@ -171,8 +177,8 @@ const matchesPattern = <T>(value: T, pattern: Pattern<T>): boolean => {
 }
 
 const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): Match<T, R> => {
-  const getResult = (result: PatternResult<T, R>, value: T): R => {
-    return typeof result === "function" ? (result as (value: T) => R)(value) : result
+  const getResult = <RX>(result: PatternResult<T, RX>, value: T): RX => {
+    return typeof result === "function" ? (result as (value: T) => RX)(value) : result
   }
 
   const tryMatch = (): { matched: boolean; result?: R } => {
@@ -184,82 +190,90 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
     return { matched: false }
   }
 
-  const match: Match<T, R> = {
-    case: (pattern: Pattern<T>, result: PatternResult<T, R>) => {
-      if (state.resolved) return match
+  // Use type assertions throughout - the runtime behavior is the same,
+  // types accumulate at compile time via the Match<T, R | R2> return types
 
-      const newState: MatchState<T, R> = {
-        ...state,
-        patterns: [...state.patterns, { pattern, result }],
-      }
+  const match: Match<T, R> = {
+    case: <R2 extends Type>(pattern: Pattern<T>, result: PatternResult<T, R2>): Match<T, R | R2> => {
+      if (state.resolved) return match as unknown as Match<T, R | R2>
 
       if (matchesPattern(state.value, pattern)) {
         return MatchObject({
-          ...newState,
+          value: state.value,
           resolved: true,
           result: getResult(result, state.value),
-        })
+          patterns: [],
+        } as MatchState<T, R | R2>) as Match<T, R | R2>
       }
 
-      return MatchObject(newState)
+      return MatchObject({
+        ...state,
+        patterns: [...state.patterns, { pattern, result }] as MatchState<T, R | R2>["patterns"],
+      } as MatchState<T, R | R2>) as Match<T, R | R2>
     },
 
-    caseValue: (matchValue: T, result: R | (() => R)) => {
-      if (state.resolved) return match
+    caseValue: <R2 extends Type>(matchValue: T, result: R2 | (() => R2)): Match<T, R | R2> => {
+      if (state.resolved) return match as unknown as Match<T, R | R2>
       if (state.value === matchValue) {
-        const res = typeof result === "function" ? (result as () => R)() : result
+        const res = typeof result === "function" ? (result as () => R2)() : result
         return MatchObject({
-          ...state,
+          value: state.value,
           resolved: true,
           result: res,
-        })
+          patterns: [],
+        } as MatchState<T, R | R2>) as Match<T, R | R2>
       }
-      return match
+      return match as unknown as Match<T, R | R2>
     },
 
-    caseValues: (matches: T[], result: R | (() => R)) => {
-      if (state.resolved) return match
+    caseValues: <R2 extends Type>(matches: T[], result: R2 | (() => R2)): Match<T, R | R2> => {
+      if (state.resolved) return match as unknown as Match<T, R | R2>
       if (matches.includes(state.value)) {
-        const res = typeof result === "function" ? (result as () => R)() : result
+        const res = typeof result === "function" ? (result as () => R2)() : result
         return MatchObject({
-          ...state,
+          value: state.value,
           resolved: true,
           result: res,
-        })
+          patterns: [],
+        } as MatchState<T, R | R2>) as Match<T, R | R2>
       }
-      return match
+      return match as unknown as Match<T, R | R2>
     },
 
-    when: (guard: (value: T) => boolean, result: PatternResult<T, R>) => {
+    when: <R2 extends Type>(guard: (value: T) => boolean, result: PatternResult<T, R2>): Match<T, R | R2> => {
       return match.case(guard, result)
     },
 
-    caseAny: (patterns: Pattern<T>[], result: PatternResult<T, R>) => {
-      if (state.resolved) return match
+    caseAny: <R2 extends Type>(patterns: Pattern<T>[], result: PatternResult<T, R2>): Match<T, R | R2> => {
+      if (state.resolved) return match as unknown as Match<T, R | R2>
 
       for (const pattern of patterns) {
         if (matchesPattern(state.value, pattern)) {
           return MatchObject({
-            ...state,
+            value: state.value,
             resolved: true,
             result: getResult(result, state.value),
-            patterns: [...state.patterns, { pattern, result }],
-          })
+            patterns: [],
+          } as MatchState<T, R | R2>) as Match<T, R | R2>
         }
       }
 
       return MatchObject({
         ...state,
-        patterns: [...state.patterns, ...patterns.map((pattern) => ({ pattern, result }))],
-      })
+        patterns: [...state.patterns, ...patterns.map((p) => ({ pattern: p, result }))] as MatchState<
+          T,
+          R | R2
+        >["patterns"],
+      } as MatchState<T, R | R2>) as Match<T, R | R2>
     },
 
-    default: (result: PatternResult<T, R>) => {
-      if (state.resolved) return state.result as R
+    default: <R2 extends Type>(result: PatternResult<T, R2>): R | R2 => {
+      if (state.resolved) return state.result as R | R2
       return getResult(result, state.value)
     },
 
     exhaustive: () => {
+      if (state.resolved) return state.result as R
       const matchResult = tryMatch()
       if (!matchResult.matched) {
         throw new Error(`Non-exhaustive match. No pattern matched value: ${JSON.stringify(state.value)}`)
@@ -268,6 +282,7 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
     },
 
     orThrow: (errorMessage?: string) => {
+      if (state.resolved) return state.result as R
       const matchResult = tryMatch()
       if (!matchResult.matched) {
         throw new Error(errorMessage ?? `No matching pattern for value: ${JSON.stringify(state.value)}`)
@@ -276,6 +291,7 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
     },
 
     toOption: () => {
+      if (state.resolved) return Option(state.result)
       const matchResult = tryMatch()
       return matchResult.matched ? Option(matchResult.result) : Option.none()
     },

@@ -100,6 +100,39 @@ describe("Match", () => {
       expect(result).toEqual({ role: "user", id: "user-123" })
       expectTypeOf(result).toEqualTypeOf<{ role: string; id: string }>()
     })
+
+    it("should accumulate different literal types as a union (HTTP status pattern)", () => {
+      const matchHttpStatus = (status: number) =>
+        Match(status)
+          .caseValue(200, "success" as const)
+          .caseValue(201, "created" as const)
+          .caseValue(204, "no_content" as const)
+          .caseValue(400, "bad_request" as const)
+          .caseValue(401, "unauthorized" as const)
+          .caseValue(403, "forbidden" as const)
+          .caseValue(404, "not_found" as const)
+          .caseValue(500, "internal_error" as const)
+          .default("unknown" as const)
+
+      // Verify runtime behavior
+      expect(matchHttpStatus(200)).toBe("success")
+      expect(matchHttpStatus(404)).toBe("not_found")
+      expect(matchHttpStatus(999)).toBe("unknown")
+
+      // Verify type is the union of all literal types
+      const result = matchHttpStatus(200)
+      expectTypeOf(result).toEqualTypeOf<
+        | "success"
+        | "created"
+        | "no_content"
+        | "bad_request"
+        | "unauthorized"
+        | "forbidden"
+        | "not_found"
+        | "internal_error"
+        | "unknown"
+      >()
+    })
   })
 
   describe("basic pattern matching", () => {
