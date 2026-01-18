@@ -57,24 +57,24 @@ type HttpResponse = {
 }
 
 function handleResponse(response: HttpResponse): Either<string, unknown> {
-  return Match<HttpResponse, Either<string, unknown>>(response)
+  return Match(response)
     .case(
       (r: HttpResponse) => r.status >= 200 && r.status < 300,
-      (r: HttpResponse) => Right(r.body),
+      (r: HttpResponse): Either<string, unknown> => Right(r.body),
     )
     .case(
       (r: HttpResponse) => r.status === 404,
-      () => Left("Resource not found"),
+      (): Either<string, unknown> => Left("Resource not found"),
     )
     .case(
       (r: HttpResponse) => r.status >= 400 && r.status < 500,
-      (r: HttpResponse) => Left(`Client error: ${r.status}`),
+      (r: HttpResponse): Either<string, unknown> => Left(`Client error: ${r.status}`),
     )
     .case(
       (r: HttpResponse) => r.status >= 500,
-      (r: HttpResponse) => Left(`Server error: ${r.status}`),
+      (r: HttpResponse): Either<string, unknown> => Left(`Server error: ${r.status}`),
     )
-    .default(() => Left("Unknown error"))
+    .default((): Either<string, unknown> => Left("Unknown error"))
 }
 
 // Example 6: State machine with pattern matching
@@ -86,17 +86,15 @@ type Action =
   | { type: "reset" }
 
 function reducer(state: State, action: Action): State {
-  return Match<Action["type"], State>(action.type)
-    .caseValue(
-      "fetch",
-      Cond.of<State>()
-        .when(state === "idle" || state === "error", "loading")
-        .else(state),
-    )
-    .caseValue("success", "success")
-    .caseValue("fail", "error")
-    .caseValue("reset", "idle")
-    .default(state)
+  // Use Match.exhaustive for union types
+  return Match.exhaustive<Action["type"], State>({
+    fetch: Cond.of<State>()
+      .when(state === "idle" || state === "error", "loading")
+      .else(state),
+    success: "success",
+    fail: "error",
+    reset: "idle",
+  })(action.type)
 }
 
 // Example usage

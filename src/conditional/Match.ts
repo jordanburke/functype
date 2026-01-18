@@ -28,6 +28,40 @@ type Pattern<T> = T | { [K in keyof T]?: Pattern<T[K]> } | ((value: T) => boolea
 type PatternResult<T, R> = R | ((matched: T) => R)
 
 /**
+ * Untyped Match (before first case is added).
+ * The result type R is inferred when the first case method is called.
+ * This enables proper type inference without requiring explicit type annotations.
+ *
+ * @internal
+ */
+export type UntypedMatch<T extends Type> = {
+  /**
+   * Match against a pattern - infers result type R from the result parameter
+   */
+  case: <R extends Type>(pattern: Pattern<T>, result: PatternResult<T, R>) => Match<T, R>
+
+  /**
+   * Match a specific value - infers result type R from the result parameter
+   */
+  caseValue: <R extends Type>(match: T, result: R | (() => R)) => Match<T, R>
+
+  /**
+   * Match multiple values - infers result type R from the result parameter
+   */
+  caseValues: <R extends Type>(matches: T[], result: R | (() => R)) => Match<T, R>
+
+  /**
+   * Match with a guard function - infers result type R from the result parameter
+   */
+  when: <R extends Type>(guard: (value: T) => boolean, result: PatternResult<T, R>) => Match<T, R>
+
+  /**
+   * Match multiple patterns (OR operation) - infers result type R from the result parameter
+   */
+  caseAny: <R extends Type>(patterns: Pattern<T>[], result: PatternResult<T, R>) => Match<T, R>
+}
+
+/**
  * Pattern matching construct similar to Scala's match expressions.
  * Supports exhaustive matching, nested patterns, and guards.
  *
@@ -251,6 +285,107 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
 }
 
 /**
+ * Create an UntypedMatch that defers R inference until the first case.
+ * This is the key to proper type inference - R is not bound until needed.
+ */
+const UntypedMatchObject = <T extends Type>(value: T): UntypedMatch<T> => {
+  const getResult = <R>(result: PatternResult<T, R>, v: T): R => {
+    return typeof result === "function" ? (result as (value: T) => R)(v) : result
+  }
+
+  return {
+    case: <R extends Type>(pattern: Pattern<T>, result: PatternResult<T, R>): Match<T, R> => {
+      const newState: MatchState<T, R> = {
+        value,
+        resolved: false,
+        patterns: [{ pattern, result }],
+      }
+
+      if (matchesPattern(value, pattern)) {
+        return MatchObject({
+          ...newState,
+          resolved: true,
+          result: getResult(result, value),
+        })
+      }
+
+      return MatchObject(newState)
+    },
+
+    caseValue: <R extends Type>(matchValue: T, result: R | (() => R)): Match<T, R> => {
+      if (value === matchValue) {
+        const res = typeof result === "function" ? (result as () => R)() : result
+        return MatchObject<T, R>({
+          value,
+          resolved: true,
+          result: res,
+          patterns: [],
+        })
+      }
+      return MatchObject<T, R>({
+        value,
+        resolved: false,
+        patterns: [],
+      })
+    },
+
+    caseValues: <R extends Type>(matches: T[], result: R | (() => R)): Match<T, R> => {
+      if (matches.includes(value)) {
+        const res = typeof result === "function" ? (result as () => R)() : result
+        return MatchObject<T, R>({
+          value,
+          resolved: true,
+          result: res,
+          patterns: [],
+        })
+      }
+      return MatchObject<T, R>({
+        value,
+        resolved: false,
+        patterns: [],
+      })
+    },
+
+    when: <R extends Type>(guard: (value: T) => boolean, result: PatternResult<T, R>): Match<T, R> => {
+      const newState: MatchState<T, R> = {
+        value,
+        resolved: false,
+        patterns: [{ pattern: guard, result }],
+      }
+
+      if (guard(value)) {
+        return MatchObject({
+          ...newState,
+          resolved: true,
+          result: getResult(result, value),
+        })
+      }
+
+      return MatchObject(newState)
+    },
+
+    caseAny: <R extends Type>(patterns: Pattern<T>[], result: PatternResult<T, R>): Match<T, R> => {
+      for (const pattern of patterns) {
+        if (matchesPattern(value, pattern)) {
+          return MatchObject<T, R>({
+            value,
+            resolved: true,
+            result: getResult(result, value),
+            patterns: patterns.map((p) => ({ pattern: p, result })),
+          })
+        }
+      }
+
+      return MatchObject<T, R>({
+        value,
+        resolved: false,
+        patterns: patterns.map((p) => ({ pattern: p, result })),
+      })
+    },
+  }
+}
+
+/**
  * Create a new pattern match expression
  * @example
  * const result = Match(httpStatus)
@@ -259,8 +394,8 @@ const MatchObject = <T extends Type, R extends Type>(state: MatchState<T, R>): M
  *   .case(s => s >= 500, "Server Error")
  *   .default("Unknown")
  */
-const MatchConstructor = <T extends Type, R extends Type>(value: T): Match<T, R> => {
-  return MatchObject({ value, resolved: false, patterns: [] })
+const MatchConstructor = <T extends Type>(value: T): UntypedMatch<T> => {
+  return UntypedMatchObject(value)
 }
 
 const MatchCompanion = {

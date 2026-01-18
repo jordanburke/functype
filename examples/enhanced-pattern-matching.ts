@@ -13,13 +13,13 @@ import { Match } from "../src/conditional/Match"
 type Status = "idle" | "loading" | "success" | "error"
 
 function getStatusIcon(status: Status): string {
-  // This will give a compile-time error if any case is missing
-  return Match<Status, string>(status)
-    .case("idle", "⏸️")
-    .case("loading", "⏳")
-    .case("success", "✅")
-    .case("error", "❌")
-    .exhaustive() // Forces all cases to be handled
+  // Use Match.exhaustive for union types to ensure all cases are handled
+  return Match.exhaustive<Status, string>({
+    idle: "⏸️",
+    loading: "⏳",
+    success: "✅",
+    error: "❌",
+  })(status)
 }
 
 // Example 2: Nested Pattern Matching
@@ -34,24 +34,18 @@ type User = {
 }
 
 function getUserMessage(user: User): string {
-  return (
-    Match<User, string>(user)
-      // Match nested properties with guards
-      .case({ role: "admin", age: (n: number) => n >= 18, preferences: { theme: "dark" } }, "Welcome, dark mode admin!")
-      // Match with partial nested pattern
-      .case(
-        { role: "admin", preferences: { notifications: true } },
-        (u) => `Admin ${u.name}, you have notifications enabled`,
-      )
-      // Simple pattern
-      .case({ role: "guest" }, "Please sign up for full access")
-      // Guard function
-      .when(
-        (u) => u.age < 18,
-        (u) => `Hello ${u.name}, parental consent required`,
-      )
-      .default((u) => `Welcome, ${u.name}!`)
-  )
+  return Match(user)
+    .case({ role: "admin", age: (n: number) => n >= 18, preferences: { theme: "dark" } }, "Welcome, dark mode admin!")
+    .case(
+      { role: "admin", preferences: { notifications: true } },
+      (u) => `Admin ${u.name}, you have notifications enabled`,
+    )
+    .case({ role: "guest" }, "Please sign up for full access")
+    .when(
+      (u) => u.age < 18,
+      (u) => `Hello ${u.name}, parental consent required`,
+    )
+    .default((u) => `Welcome, ${u.name}!`)
 }
 
 // Example 3: Type-Safe Redux Action Handling
@@ -69,29 +63,35 @@ type State = {
 
 function reducer(state: State, action: Action): State {
   return (
-    Match<Action, State>(action)
-      .case({ type: "SET_USER" }, (a) => ({
-        ...state,
-        user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
-        loading: false,
-      }))
-      .case({ type: "LOGOUT" }, () => ({ ...state, user: null, settings: {} }))
-      .case({ type: "UPDATE_SETTINGS" }, (a) => ({
-        ...state,
-        settings: {
-          ...state.settings,
-          [(a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }).payload.key]: (
-            a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }
-          ).payload.value,
-        },
-      }))
+    Match(action)
+      .case(
+        { type: "SET_USER" },
+        (a): State => ({
+          ...state,
+          user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
+          loading: false,
+        }),
+      )
+      .case({ type: "LOGOUT" }, (): State => ({ ...state, user: null, settings: {} }))
+      .case(
+        { type: "UPDATE_SETTINGS" },
+        (a): State => ({
+          ...state,
+          settings: {
+            ...state.settings,
+            [(a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }).payload.key]: (
+              a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }
+            ).payload.value,
+          },
+        }),
+      )
       // Match specific API methods
-      .case({ type: "API_REQUEST", method: "GET" }, () => ({ ...state, loading: true }))
-      .case({ type: "API_REQUEST", method: "DELETE" }, (a) => {
+      .case({ type: "API_REQUEST", method: "GET" }, (): State => ({ ...state, loading: true }))
+      .case({ type: "API_REQUEST", method: "DELETE" }, (a): State => {
         console.log(`DELETE request to ${(a as { type: "API_REQUEST"; endpoint: string; method: "DELETE" }).endpoint}`)
         return state
       })
-      .default(state)
+      .default((): State => state)
   )
 }
 
@@ -171,34 +171,34 @@ type FormData = {
 type ValidationResult = { valid: true; data: FormData } | { valid: false; errors: string[] }
 
 function validateForm(input: unknown): ValidationResult {
-  return (
-    Match<unknown, ValidationResult>(input)
-      // Type guard first
-      .when((x) => !x || typeof x !== "object", { valid: false, errors: ["Invalid input format"] })
-      // Check required fields
-      .when((x) => !(x as any).username || typeof (x as any).username !== "string", {
-        valid: false,
-        errors: ["Username is required"],
-      })
-      .when((x) => !(x as any).email || !(x as any).email.includes("@"), {
-        valid: false,
-        errors: ["Valid email is required"],
-      })
-      .when((x) => !(x as any).password || (x as any).password.length < 8, {
-        valid: false,
-        errors: ["Password must be at least 8 characters"],
-      })
-      .when((x) => !(x as any).acceptedTerms, { valid: false, errors: ["You must accept the terms"] })
-      // Check optional fields if present
-      .when(
-        (x) =>
-          (x as any).age !== undefined &&
-          (typeof (x as any).age !== "number" || (x as any).age < 13 || (x as any).age > 120),
-        { valid: false, errors: ["Age must be between 13 and 120"] },
-      )
-      // All checks passed
-      .default((x) => ({ valid: true, data: x as FormData }))
-  )
+  return Match(input)
+    .when(
+      (x) => !x || typeof x !== "object",
+      (): ValidationResult => ({ valid: false, errors: ["Invalid input format"] }),
+    )
+    .when(
+      (x) => !(x as any).username || typeof (x as any).username !== "string",
+      (): ValidationResult => ({ valid: false, errors: ["Username is required"] }),
+    )
+    .when(
+      (x) => !(x as any).email || !(x as any).email.includes("@"),
+      (): ValidationResult => ({ valid: false, errors: ["Valid email is required"] }),
+    )
+    .when(
+      (x) => !(x as any).password || (x as any).password.length < 8,
+      (): ValidationResult => ({ valid: false, errors: ["Password must be at least 8 characters"] }),
+    )
+    .when(
+      (x) => !(x as any).acceptedTerms,
+      (): ValidationResult => ({ valid: false, errors: ["You must accept the terms"] }),
+    )
+    .when(
+      (x) =>
+        (x as any).age !== undefined &&
+        (typeof (x as any).age !== "number" || (x as any).age < 13 || (x as any).age > 120),
+      (): ValidationResult => ({ valid: false, errors: ["Age must be between 13 and 120"] }),
+    )
+    .default((x): ValidationResult => ({ valid: true, data: x as FormData }))
 }
 
 // Usage Examples

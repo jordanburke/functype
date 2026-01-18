@@ -1,7 +1,107 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, expectTypeOf } from "vitest"
 import { Match } from "@/conditional"
 
 describe("Match", () => {
+  describe("type inference", () => {
+    it("should infer result type R from predicates without explicit annotations", () => {
+      const value = 42
+
+      // R should be inferred as Date from the first case result
+      const result = Match(value)
+        .case(
+          (x) => x > 100,
+          () => new Date(2024, 0, 1, 0, 0, 0),
+        )
+        .case(
+          (x) => x > 25,
+          () => new Date(2024, 0, 2, 0, 0, 0),
+        )
+        .default(() => new Date(2024, 0, 3, 0, 0, 0))
+
+      // Verify runtime behavior
+      expect(result).toBeInstanceOf(Date)
+      expect(result.getDate()).toBe(2)
+
+      // Verify type inference at compile time
+      expectTypeOf(result).toEqualTypeOf<Date>()
+    })
+
+    it("should infer result type from case predicate", () => {
+      const value = 42
+
+      // R should be inferred as number from the first case
+      const result = Match(value)
+        .case(
+          (x) => x > 50,
+          () => 100,
+        )
+        .case(
+          (x) => x > 25,
+          () => 50,
+        )
+        .default(() => 0)
+
+      expect(result).toBe(50)
+      expectTypeOf(result).toEqualTypeOf<number>()
+    })
+
+    it("should infer result type from when guard", () => {
+      const score = 85
+
+      const result = Match(score)
+        .when(
+          (n) => n >= 90,
+          () => "A",
+        )
+        .when(
+          (n) => n >= 80,
+          () => "B",
+        )
+        .default(() => "F")
+
+      expect(result).toBe("B")
+      expectTypeOf(result).toEqualTypeOf<string>()
+    })
+
+    it("should infer object result types", () => {
+      const value = 42
+
+      // Type is inferred as { status: string; count: number } from first case
+      const result = Match(value)
+        .case(
+          (x) => x > 50,
+          () => ({ status: "large", count: 100 }),
+        )
+        .case(
+          (x) => x > 25,
+          () => ({ status: "medium", count: 50 }),
+        )
+        .default(() => ({ status: "small", count: 0 }))
+
+      expect(result).toEqual({ status: "medium", count: 50 })
+      expectTypeOf(result).toEqualTypeOf<{ status: string; count: number }>()
+    })
+
+    it("should allow function results with computed values", () => {
+      const userId = "user-123"
+
+      // R is inferred as { role: string; id: string } from first case
+      const result = Match(userId)
+        .case(
+          (id) => id.startsWith("admin-"),
+          (id) => ({ role: "admin", id }),
+        )
+        .case(
+          (id) => id.startsWith("user-"),
+          (id) => ({ role: "user", id }),
+        )
+        .default((id) => ({ role: "guest", id }))
+
+      expect(result).toEqual({ role: "user", id: "user-123" })
+      expectTypeOf(result).toEqualTypeOf<{ role: string; id: string }>()
+    })
+  })
+
   describe("basic pattern matching", () => {
     it("should match with case predicates", () => {
       const value = 42
@@ -272,7 +372,7 @@ describe("Match", () => {
           },
         }
 
-        const result = Match<User, string>(user)
+        const result = Match(user)
           .case({ role: "admin", preferences: { theme: "dark" } }, "Dark mode admin")
           .case({ role: "admin" }, "Regular admin")
           .case({ role: "user" }, (u) => `User: ${u.name}`)
@@ -288,7 +388,7 @@ describe("Match", () => {
           role: "user",
         }
 
-        const result = Match<User, string>(user)
+        const result = Match(user)
           .case({ age: (n: number) => n >= 18, role: "admin" }, "Adult admin")
           .case({ age: (n: number) => n >= 18, role: "user" }, "Adult user")
           .case({ age: (n: number) => n < 18 }, (u) => `Minor: ${u.name}`)
@@ -304,7 +404,7 @@ describe("Match", () => {
           role: "user",
         }
 
-        const result = Match<User, string>(userWithoutPrefs)
+        const result = Match(userWithoutPrefs)
           .case({ preferences: { notifications: true } }, "Has notifications")
           .case({ role: "user" }, "Regular user")
           .default("Other")
@@ -351,26 +451,27 @@ describe("Match", () => {
     })
 
     describe("exhaustive method", () => {
-      type Status = "idle" | "loading" | "success" | "error"
-
       it("should enforce exhaustive matching with exhaustive method", () => {
-        const status: Status = "success"
+        const httpCode = 200
 
-        const result = Match<Status, string>(status)
-          .case("idle", "Waiting")
-          .case("loading", "In progress")
-          .case("success", "Complete")
-          .case("error", "Failed")
+        const result = Match(httpCode)
+          .case((x) => x >= 500, "Server Error")
+          .case((x) => x >= 400, "Client Error")
+          .case((x) => x >= 300, "Redirect")
+          .case((x) => x >= 200, "Success")
           .exhaustive()
 
-        expect(result).toBe("Complete")
+        expect(result).toBe("Success")
       })
 
       it("should throw on non-exhaustive match when using exhaustive method", () => {
-        const status: Status = "error"
+        const value = 42
 
         expect(() => {
-          Match<Status, string>(status).case("idle", "Waiting").case("loading", "In progress").exhaustive()
+          Match(value)
+            .case((x) => x > 100, "large")
+            .case((x) => x > 50, "medium")
+            .exhaustive()
         }).toThrow("Non-exhaustive match")
       })
     })
@@ -454,26 +555,32 @@ describe("Match", () => {
         }
 
         const reducer = (state: State, action: Action): State => {
-          return Match<Action, State>(action)
-            .case({ type: "SET_USER" }, (a) => ({
-              ...state,
-              user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
-            }))
-            .case({ type: "LOGOUT" }, () => ({ ...state, user: null, profile: {} }))
-            .case({ type: "UPDATE_PROFILE" }, (a) => ({
-              ...state,
-              profile: {
-                ...state.profile,
-                [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (
-                  a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
-                ).payload.value,
-              },
-            }))
+          return Match(action)
+            .case(
+              { type: "SET_USER" },
+              (a): State => ({
+                ...state,
+                user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
+              }),
+            )
+            .case({ type: "LOGOUT" }, (): State => ({ ...state, user: null, profile: {} }))
+            .case(
+              { type: "UPDATE_PROFILE" },
+              (a): State => ({
+                ...state,
+                profile: {
+                  ...state.profile,
+                  [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (
+                    a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
+                  ).payload.value,
+                },
+              }),
+            )
             .case(
               { type: "API_REQUEST", payload: { method: "DELETE" } },
-              () => state, // Ignore deletes
+              (): State => state, // Ignore deletes
             )
-            .default(state)
+            .default((): State => state)
         }
 
         const initialState: State = { user: null, profile: {} }

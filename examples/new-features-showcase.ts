@@ -60,7 +60,7 @@ function processUserData(userId: string) {
 
 // Basic pattern matching with predicates
 function categorizeNumber(n: number): string {
-  return Match<number, string>(n)
+  return Match(n)
     .case((x) => x === 0, "zero")
     .case((x) => x > 0 && x % 2 === 0, "positive even")
     .case((x) => x > 0 && x % 2 === 1, "positive odd")
@@ -246,13 +246,13 @@ function processFeatureRequest(
   return Cond.of<Either<string, string>>()
     .when(!userId, Left("User ID required"))
     .when(hasAccess.isEmpty, Left(`Access denied for ${feature} feature`))
-    .else(() => {
-      // Process based on feature type
-      const result = Match<FeatureFlag, Either<string, string>>(feature)
-        .caseValue("stable", Right(`Enabled ${feature} for user ${userId}`))
-        .caseValue("beta", Right(`Beta feature ${feature} enabled with limited access`))
-        .caseValue("experimental", Right(`Experimental feature ${feature} enabled - use with caution`))
-        .default(Left("Unknown feature"))
+    .else((): Either<string, string> => {
+      // Process based on feature type - use exhaustive for union types
+      const result = Match.exhaustive<FeatureFlag, Either<string, string>>({
+        stable: Right(`Enabled ${feature} for user ${userId}`),
+        beta: Right(`Beta feature ${feature} enabled with limited access`),
+        experimental: Right(`Experimental feature ${feature} enabled - use with caution`),
+      })(feature)
 
       return result
     })
