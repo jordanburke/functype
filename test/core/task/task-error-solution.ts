@@ -1,6 +1,5 @@
 import { Throwable } from "@/core"
 import { Either } from "@/either"
-import { FPromise } from "@/fpromise"
 
 /**
  * Enhanced TaskException that maintains an error chain
@@ -62,55 +61,57 @@ export const EnhancedTask = (params?: { name?: string; description?: string }) =
       t: () => U | Promise<U>,
       e: (error: unknown) => unknown = (error: unknown) => error,
       f: () => Promise<void> | void = () => {},
-    ): FPromise<U> => {
-      return FPromise<U>(async (resolve, reject) => {
-        try {
-          // Run the main operation
-          const result = await t()
-
+    ): Promise<U> => {
+      return new Promise<U>((resolve, reject) => {
+        void (async () => {
           try {
-            // Run finally before resolving
-            await f()
-          } catch (finallyError) {
-            // Finally errors take precedence
-            reject(EnhancedThrowable(finallyError, undefined, { name, description }))
-            return
-          }
+            // Run the main operation
+            const result = await t()
 
-          // Success path - resolve with the value directly
-          resolve(result)
-        } catch (error) {
-          try {
-            // Always run finally
-            await f()
-          } catch (finallyError) {
-            // Finally errors take precedence over operation errors
-            reject(EnhancedThrowable(finallyError, undefined, { name, description }))
-            return
-          }
-
-          // Here's the key improvement:
-          // If the error is already a Throwable (from an inner task), preserve it
-          if (error instanceof Error && (error as any)._tag === "Throwable") {
-            // Add outer task context while preserving inner task context
-            const enhancedError = EnhancedThrowable(
-              new Error(`${name}: ${(error as Error).message}`),
-              undefined,
-              { name, description },
-              error, // Store the original error as the cause
-            )
-            reject(enhancedError)
-          } else {
-            // Process the original error through error handler
             try {
-              const errorResult = await e(error)
-              reject(EnhancedThrowable(errorResult, undefined, { name, description }))
-            } catch (handlerError) {
-              // If error handler throws, use that error
-              reject(EnhancedThrowable(handlerError, undefined, { name, description }))
+              // Run finally before resolving
+              await f()
+            } catch (finallyError) {
+              // Finally errors take precedence
+              reject(EnhancedThrowable(finallyError, undefined, { name, description }))
+              return
+            }
+
+            // Success path - resolve with the value directly
+            resolve(result)
+          } catch (error) {
+            try {
+              // Always run finally
+              await f()
+            } catch (finallyError) {
+              // Finally errors take precedence over operation errors
+              reject(EnhancedThrowable(finallyError, undefined, { name, description }))
+              return
+            }
+
+            // Here's the key improvement:
+            // If the error is already a Throwable (from an inner task), preserve it
+            if (error instanceof Error && (error as any)._tag === "Throwable") {
+              // Add outer task context while preserving inner task context
+              const enhancedError = EnhancedThrowable(
+                new Error(`${name}: ${(error as Error).message}`),
+                undefined,
+                { name, description },
+                error, // Store the original error as the cause
+              )
+              reject(enhancedError)
+            } else {
+              // Process the original error through error handler
+              try {
+                const errorResult = await e(error)
+                reject(EnhancedThrowable(errorResult, undefined, { name, description }))
+              } catch (handlerError) {
+                // If error handler throws, use that error
+                reject(EnhancedThrowable(handlerError, undefined, { name, description }))
+              }
             }
           }
-        }
+        })()
       })
     },
 

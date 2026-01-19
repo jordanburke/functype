@@ -7,7 +7,6 @@ import type { Doable, DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable/Extractable"
-import { FPromise } from "@/fpromise/FPromise"
 import type { FunctypeBase } from "@/functype"
 import { ArrayBuilder } from "@/internal/mutation-utils"
 import { List } from "@/list/List"
@@ -458,8 +457,8 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       e: (error: unknown) => unknown | TaskOutcome<U> = (error: unknown) => error,
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
-    ): FPromise<TaskOutcome<U>> => {
-      return FPromise<TaskOutcome<U>>((resolve, _reject) => {
+    ): Promise<TaskOutcome<U>> => {
+      return new Promise<TaskOutcome<U>>((resolve) => {
         // Wrap async logic in IIFE to avoid async executor
         void (async () => {
           // Setup cancellation if a token was provided
@@ -657,7 +656,7 @@ const TaskConstructor = <T = unknown>(params?: TaskParams) => {
       e: (error: unknown) => unknown | TaskOutcome<U> = (error: unknown) => error,
       f: () => Promise<void> | void = () => {},
       cancellationToken?: CancellationToken,
-    ): FPromise<TaskOutcome<U>> => {
+    ): Promise<TaskOutcome<U>> => {
       // Create a progress updater that validates and forwards progress
       const updateProgress = (percent: number) => {
         // Validate progress value
@@ -804,7 +803,7 @@ const TaskCompanion = {
   fromPromise: <U, Args extends unknown[]>(
     promiseFn: (...args: Args) => Promise<U>,
     params?: TaskParams,
-  ): ((...args: Args) => FPromise<TaskOutcome<U>>) => {
+  ): ((...args: Args) => Promise<TaskOutcome<U>>) => {
     return (...args: Args) => {
       const taskParams = params ?? { name: "PromiseTask", description: "Task from Promise" }
       return Task(taskParams).Async<U>(
@@ -833,16 +832,16 @@ const TaskCompanion = {
    * Race multiple tasks and return the result of the first one to complete
    * Optionally specify a timeout after which the race will fail
    *
-   * @param tasks - Array of tasks to race (as FPromises)
+   * @param tasks - Array of tasks to race (as Promises)
    * @param timeoutMs - Optional timeout in milliseconds
    * @param params - Task parameters for the race operation
    * @returns A promise that resolves with the first task to complete or rejects if all tasks fail
    */
   race: <T>(
-    tasks: Array<FPromise<T> | FPromise<TaskOutcome<T>>>,
+    tasks: Array<Promise<T> | Promise<TaskOutcome<T>>>,
     timeoutMs?: number,
     params?: TaskParams,
-  ): FPromise<TaskOutcome<T>> => {
+  ): Promise<TaskOutcome<T>> => {
     const name = params?.name ?? "TaskRace"
     const description = params?.description ?? "Race between multiple tasks"
     const taskParams = { name, description }
@@ -850,14 +849,14 @@ const TaskCompanion = {
     return Task(taskParams).Async<T>(
       async () => {
         // Create the race between all tasks - need to handle both T and TaskOutcome<T>
-        const racePromises = ArrayBuilder<FPromise<T> | FPromise<TaskOutcome<T>>>()
+        const racePromises = ArrayBuilder<Promise<T> | Promise<TaskOutcome<T>>>()
         tasks.forEach((task) => racePromises.add(task))
 
         // Add timeout promise if timeoutMs is specified
         const timeoutId = Ref<NodeJS.Timeout | undefined>(undefined)
         if (typeof timeoutMs === "number" && timeoutMs > 0) {
-          // Create a timeout promise using FPromise to maintain type compatibility
-          const timeoutPromise = FPromise<T>((_, reject) => {
+          // Create a timeout promise
+          const timeoutPromise = new Promise<T>((_, reject) => {
             timeoutId.set(
               setTimeout(() => {
                 reject(new Error(`Task race timed out after ${timeoutMs}ms`))
@@ -868,7 +867,7 @@ const TaskCompanion = {
         }
 
         try {
-          // Create a compatible race implementation for FPromise
+          // Create a compatible race implementation
           // We need to handle both T and TaskOutcome<T> types
           return await new Promise<T>((resolve, reject) => {
             // Setup promises to handle their own resolution
@@ -917,12 +916,12 @@ const TaskCompanion = {
    *
    * @param nodeFn - Function that accepts a Node.js style callback
    * @param params - Task parameters
-   * @returns A function that returns an FPromise
+   * @returns A function that returns a Promise
    */
   fromNodeCallback: <T, Args extends unknown[]>(
     nodeFn: (...args: [...Args, (error: unknown, result: T) => void]) => void,
     params?: TaskParams,
-  ): ((...args: Args) => FPromise<TaskOutcome<T>>) => {
+  ): ((...args: Args) => Promise<TaskOutcome<T>>) => {
     const name = params?.name ?? "NodeCallbackTask"
     const description = params?.description ?? "Task from Node.js callback function"
     const taskParams = { name, description }
@@ -965,7 +964,7 @@ const TaskCompanion = {
   cancellable: <T>(
     task: (token: CancellationToken) => Promise<T> | Promise<TaskOutcome<T>>,
     params?: TaskParams,
-  ): { task: FPromise<TaskOutcome<T>>; cancel: () => void } => {
+  ): { task: Promise<TaskOutcome<T>>; cancel: () => void } => {
     const tokenSource = createCancellationTokenSource()
     const taskPromise = Task(params).Async<T>(
       () => task(tokenSource.token),
@@ -992,7 +991,7 @@ const TaskCompanion = {
     task: (updateProgress: (percent: number) => void, token: CancellationToken) => Promise<T> | Promise<TaskOutcome<T>>,
     onProgress: (percent: number) => void = () => {},
     params?: TaskParams,
-  ): { task: FPromise<TaskOutcome<T>>; cancel: () => void; currentProgress: () => number } => {
+  ): { task: Promise<TaskOutcome<T>>; cancel: () => void; currentProgress: () => number } => {
     const tokenSource = createCancellationTokenSource()
     const currentProgressValue = Ref(0)
 

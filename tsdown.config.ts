@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown"
 const isProduction = process.env.NODE_ENV === "production"
 
 // Define the modules we want to expose as separate entry points
-const modules = ["option", "either", "try", "list", "fpromise", "map", "set", "tuple", "branded", "do"]
+const modules = ["option", "either", "try", "list", "map", "set", "tuple", "branded", "do"]
 
 // Create entry points for each module
 const entries = {
@@ -14,10 +14,6 @@ const entries = {
       // Special case for task which is in core/task
       if (module === "task") {
         return [`core/task/index`, `src/core/task/Task.ts`]
-      }
-      // Special case for fpromise (casing issue)
-      if (module === "fpromise") {
-        return [`${module}/index`, `src/${module}/FPromise.ts`]
       }
       // Special case for branded module
       if (module === "branded") {

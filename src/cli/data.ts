@@ -173,16 +173,6 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
-  FPromise: {
-    description: "Enhanced Promise with functional methods",
-    interfaces: ["PromiseLike"],
-    methods: {
-      create: ["FPromise.of(v)", "FPromise.from(promise)"],
-      transform: [".map(f)", ".flatMap(f)", ".mapError(f)", ".recover(f)"],
-      extract: [".toPromise()", ".cancel()"],
-    },
-  },
-
   Cond: {
     description: "Conditional expression builder - replace if-else chains",
     interfaces: [],
@@ -298,6 +288,6 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Task", "FPromise"],
+  Effect: ["IO", "Task"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
 }

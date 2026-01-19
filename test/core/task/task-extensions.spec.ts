@@ -26,7 +26,7 @@ describe("Task Extensions", () => {
           return "fast"
         })
 
-      // Execute task functions to get FPromises with consistent types
+      // Execute task functions to get Promises with consistent types
       const tasks = [slowTaskFn(), fastTaskFn()]
       const racedTask = Task.race(tasks)
 
@@ -123,7 +123,7 @@ describe("Task Extensions", () => {
           throw new Error("Task failed but should not affect result")
         })
 
-      // Execute task functions to get FPromises with consistent types
+      // Execute task functions to get Promises with consistent types
       const tasks = [successTaskFn(), failTaskFn()]
       const racedTask = Task.race(tasks)
 
