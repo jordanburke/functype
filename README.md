@@ -40,7 +40,6 @@ npx functype --json       # JSON output for programmatic use
 - **Tuple**: Type-safe fixed-length arrays
 - **Typeable**: Runtime type identification with compile-time safety
 - **Branded Types**: Nominal typing in TypeScript's structural type system
-- **FPromise**: Enhanced Promise functionality with built-in error handling
 - **Error Formatting**: Utilities for improved error visualization and logging
 - **Unified Type Classes**: Consistent interfaces across all data structures
 
@@ -313,7 +312,7 @@ const chainedResult = await Task().Async(async () => {
 const fetchUserAPI = (userId: string): Promise<User> => fetch(`/api/users/${userId}`).then((r) => r.json())
 
 const fetchUser = Task.fromPromise(fetchUserAPI)
-// Returns: (userId: string) => FPromise<TaskOutcome<User>>
+// Returns: (userId: string) => Promise<TaskOutcome<User>>
 
 const userResult = await fetchUser("user123")
 if (userResult.isSuccess()) {

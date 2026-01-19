@@ -28,13 +28,12 @@
 
 ### Key Gaps
 
-| Type              | Status        | Priority                        |
-| ----------------- | ------------- | ------------------------------- |
-| `NonEmptyList<A>` | ❌ Missing    | **High** - needed for Validated |
-| `Validated<E, A>` | ❌ Missing    | **High** - error accumulation   |
-| `Reader<R, A>`    | ❌ Missing    | **Medium** - DI patterns        |
-| `Lens<S, A>`      | ❌ Missing    | **Medium** - immutable updates  |
-| `FPromise`        | 🗑️ Deprecated | Remove - Task supersedes        |
+| Type              | Status     | Priority                        |
+| ----------------- | ---------- | ------------------------------- |
+| `NonEmptyList<A>` | ❌ Missing | **High** - needed for Validated |
+| `Validated<E, A>` | ❌ Missing | **High** - error accumulation   |
+| `Reader<R, A>`    | ❌ Missing | **Medium** - DI patterns        |
+| `Lens<S, A>`      | ❌ Missing | **Medium** - immutable updates  |
 
 ---
 
@@ -283,17 +282,7 @@ const updated = addressCityLens.modify(user, (city) => city.toUpperCase())
 
 ## Phase 4: Cleanup
 
-### 4a. Deprecate FPromise
-
-1. Add deprecation notice to `src/fpromise/index.ts`:
-   ```typescript
-   /** @deprecated Use Task instead. FPromise will be removed in v1.0.0 */
-   ```
-2. Remove from main exports in `src/index.ts`
-3. Add migration note to CHANGELOG
-4. Delete entirely in v1.0.0
-
-### 4b. LazyList Monad Law Verification
+### 4a. LazyList Monad Law Verification
 
 Add property-based tests to verify:
 
@@ -328,8 +317,7 @@ File: `test/lazylist/lazylist-laws.spec.ts`
 | 1d  | Stack Functor/Monad        | Low     | -            |
 | 2   | Reader                     | Medium  | -            |
 | 3   | Lens                       | Low-Med | -            |
-| 4a  | Deprecate FPromise         | Low     | -            |
-| 4b  | LazyList law tests         | Low     | -            |
+| 4a  | LazyList law tests         | Low     | -            |
 
 ---
 

@@ -4,38 +4,36 @@ This document provides a comprehensive index of all types and data structures in
 
 ## Core Data Structures
 
-| Data Structure   | Description                                          | Import Path          |
-| ---------------- | ---------------------------------------------------- | -------------------- |
-| `Option<T>`      | Represents a value that may or may not exist         | `functype/option`    |
-| `Either<L, R>`   | Represents a value of one of two possible types      | `functype/either`    |
-| `Try<T>`         | Represents a computation that might throw            | `functype/try`       |
-| `List<T>`        | Immutable list collection                            | `functype/list`      |
-| `Map<K, V>`      | Immutable key-value map                              | `functype/map`       |
-| `Set<T>`         | Immutable set collection                             | `functype/set`       |
-| `Tuple<...T>`    | Type-safe fixed-length array                         | `functype/tuple`     |
-| `FPromise<T, E>` | Enhanced Promise with functional operations          | `functype/fpromise`  |
-| `Task<T, E>`     | Represents sync/async operations with error handling | `functype/core/task` |
-| `Brand<T, B>`    | Nominal typing for TypeScript                        | `functype/branded`   |
-| `Identity<T>`    | Identity monad                                       | `functype/identity`  |
-| `Stack<T>`       | Immutable stack collection                           | `functype/stack`     |
+| Data Structure | Description                                          | Import Path          |
+| -------------- | ---------------------------------------------------- | -------------------- |
+| `Option<T>`    | Represents a value that may or may not exist         | `functype/option`    |
+| `Either<L, R>` | Represents a value of one of two possible types      | `functype/either`    |
+| `Try<T>`       | Represents a computation that might throw            | `functype/try`       |
+| `List<T>`      | Immutable list collection                            | `functype/list`      |
+| `Map<K, V>`    | Immutable key-value map                              | `functype/map`       |
+| `Set<T>`       | Immutable set collection                             | `functype/set`       |
+| `Tuple<...T>`  | Type-safe fixed-length array                         | `functype/tuple`     |
+| `Task<T, E>`   | Represents sync/async operations with error handling | `functype/core/task` |
+| `Brand<T, B>`  | Nominal typing for TypeScript                        | `functype/branded`   |
+| `Identity<T>`  | Identity monad                                       | `functype/identity`  |
+| `Stack<T>`     | Immutable stack collection                           | `functype/stack`     |
 
 ## Type Class Implementations
 
 The table below shows which type classes each data structure implements.
 
-| Data Structure   | Functor | Foldable | Matchable | Traversable | Serializable | Typeable | Valuable |
-| ---------------- | ------- | -------- | --------- | ----------- | ------------ | -------- | -------- |
-| `Option<T>`      | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
-| `Either<L, R>`   | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
-| `Try<T>`         | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
-| `List<T>`        | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
-| `Map<K, V>`      | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
-| `Set<T>`         | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
-| `Tuple<...T>`    | ✅      | ✅       | ❌        | ❌          | ✅           | ✅       | ✅       |
-| `FPromise<T, E>` | ✅      | ❌       | ❌        | ❌          | ❌           | ✅       | ❌       |
-| `Task<T, E>`     | ✅      | ❌       | ❌        | ❌          | ❌           | ✅       | ❌       |
-| `Identity<T>`    | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
-| `Stack<T>`       | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
+| Data Structure | Functor | Foldable | Matchable | Traversable | Serializable | Typeable | Valuable |
+| -------------- | ------- | -------- | --------- | ----------- | ------------ | -------- | -------- |
+| `Option<T>`    | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
+| `Either<L, R>` | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
+| `Try<T>`       | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
+| `List<T>`      | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
+| `Map<K, V>`    | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
+| `Set<T>`       | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
+| `Tuple<...T>`  | ✅      | ✅       | ❌        | ❌          | ✅           | ✅       | ✅       |
+| `Task<T, E>`   | ✅      | ❌       | ❌        | ❌          | ❌           | ✅       | ❌       |
+| `Identity<T>`  | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
+| `Stack<T>`     | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
 
 ## Type Classes
 
@@ -116,17 +114,6 @@ type Set<T> = {
 ```
 
 Immutable set with no duplicate elements.
-
-### FPromise<T, E>
-
-```typescript
-type FPromise<T, E> = {
-  /* ... methods ... */
-  toPromise(): Promise<T>
-}
-```
-
-Enhanced Promise with better error handling.
 
 ### Task<T, E>
 

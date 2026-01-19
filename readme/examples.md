@@ -10,7 +10,6 @@ This document provides comprehensive examples of using the Functype library. The
 - [List](#list)
 - [Map](#map)
 - [Set](#set)
-- [FPromise](#fpromise)
 - [Task](#task)
 - [Branded Types](#branded-types)
 - [Tuple](#tuple)
@@ -749,139 +748,6 @@ console.log(numbers.exists((x) => x % 2 === 0)) // true
 console.log(numbers.forAll((x) => x < 10)) // true
 ```
 
-## FPromise
-
-The `FPromise` type enhances JavaScript's Promise with functional operations and better error handling.
-
-### Basic Usage
-
-```typescript
-import { FPromise } from "functype"
-
-// Creating FPromises
-const success = FPromise.resolve(42)
-const failure = FPromise.reject(new Error("Something went wrong"))
-const fromPromise = FPromise.fromPromise(fetch("https://api.example.com/data"))
-
-// From regular functions
-const compute = () => 42
-const fp1 = FPromise.tryCatch(compute) // FPromise<number, Error>
-
-// From async functions
-const fetchData = async () => {
-  const response = await fetch("https://api.example.com/data")
-  if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
-  return response.json()
-}
-
-const fp2 = FPromise.tryCatch(fetchData) // FPromise<Data, Error>
-```
-
-### Transformations
-
-```typescript
-import { FPromise } from "functype"
-
-const promise = FPromise.resolve(5)
-
-// Map: transform success value
-const doubled = promise.map((x) => x * 2) // FPromise<10, never>
-
-// MapError: transform error value
-const mappedError = promise.mapError((e) => new Error(`Enhanced error: ${e.message}`))
-
-// FlatMap: chain operations
-const nextOperation = (n: number) => FPromise.resolve(n.toString())
-const chained = promise.flatMap(nextOperation) // FPromise<"5", never>
-
-// Tap: perform side effects
-const withLogging = promise.tap((value) => {
-  console.log("Processing value:", value)
-})
-
-// TapError: side effects for errors
-const withErrorLogging = promise.tapError((error) => {
-  console.error("Error occurred:", error)
-})
-```
-
-### Error Handling
-
-```typescript
-import { FPromise } from "functype"
-
-const failedPromise = FPromise.reject(new Error("Network error"))
-
-// Recover with a default value
-const recovered = failedPromise.recover(0) // FPromise<0, never>
-
-// Recover with another operation
-const recoveredWith = failedPromise.recoverWith((err) => FPromise.resolve(`Recovered from: ${err.message}`))
-
-// Handle both success and error paths
-const handled = FPromise.resolve(42).fold(
-  (err) => `Error: ${err.message}`,
-  (value) => `Success: ${value}`,
-) // FPromise<"Success: 42", never>
-
-// Convert to standard Promise
-const stdPromise = FPromise.resolve(42).toPromise()
-stdPromise.then((value) => console.log(value)) // 42
-```
-
-### Parallel Operations
-
-```typescript
-import { FPromise } from "functype"
-
-const p1 = FPromise.resolve(1)
-const p2 = FPromise.resolve(2)
-const p3 = FPromise.resolve(3)
-
-// Parallel execution
-const all = FPromise.all([p1, p2, p3]) // FPromise<[1, 2, 3], never>
-
-// Race
-const race = FPromise.race([FPromise.delay(100).map(() => "fast"), FPromise.delay(200).map(() => "slow")]) // FPromise<"fast", never>
-
-// With timeout
-const withTimeout = FPromise.timeout(
-  FPromise.delay(2000).map(() => "result"),
-  1000,
-  () => new Error("Operation timed out"),
-) // FPromise<never, Error> (times out)
-```
-
-### Retry Logic
-
-```typescript
-import { FPromise, retry } from "functype/fpromise"
-
-const unreliableOperation = () => {
-  // Simulate an operation that sometimes fails
-  if (Math.random() < 0.7) {
-    return FPromise.reject(new Error("Temporary failure"))
-  }
-  return FPromise.resolve("Success!")
-}
-
-// Basic retry
-const retried = retry({
-  task: unreliableOperation,
-  maxRetries: 5,
-}) // Will retry up to 5 times
-
-// Advanced retry with backoff
-const retriedWithBackoff = retry({
-  task: unreliableOperation,
-  maxRetries: 5,
-  delay: 1000, // Start with 1 second delay
-  backoffFactor: 2, // Double delay after each attempt
-  maxDelay: 10000, // Cap delay at 10 seconds
-  retryIf: (error) => error.message.includes("Temporary"), // Only retry certain errors
-})
-```
-
 ## Task
 
 The `Task` type represents synchronous and asynchronous operations with error handling.
@@ -1500,82 +1366,6 @@ const configOption: Option<Config> = config.toOption()
 const configEither: Either<Error, Config> = config.toEither()
 ```
 
-### FPromise for Async Error Handling
-
-```typescript
-import { FPromise } from "functype"
-
-// API client with proper error handling
-class ApiClient {
-  private baseUrl: string
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl
-  }
-
-  fetchData<T>(endpoint: string): FPromise<T, Error> {
-    return FPromise.tryCatchAsync(
-      async () => {
-        const response = await fetch(`${this.baseUrl}${endpoint}`)
-
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
-
-        return response.json() as Promise<T>
-      },
-      (error) => {
-        if (error instanceof Error) {
-          return error
-        }
-        return new Error(String(error))
-      },
-    )
-  }
-
-  submitData<T, R>(endpoint: string, data: T): FPromise<R, Error> {
-    return FPromise.tryCatchAsync(
-      async () => {
-        const response = await fetch(`${this.baseUrl}${endpoint}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        })
-
-        if (!response.ok) {
-          throw new Error(`HTTP error: ${response.status}`)
-        }
-
-        return response.json() as Promise<R>
-      },
-      (error) => {
-        if (error instanceof Error) {
-          return error
-        }
-        return new Error(String(error))
-      },
-    )
-  }
-}
-
-// Usage
-const api = new ApiClient("https://api.example.com")
-
-api
-  .fetchData<User[]>("/users")
-  .map((users) => users.map((u) => u.name))
-  .fold(
-    (error) => console.error(`Failed to fetch users: ${error.message}`),
-    (names) => console.log(`User names: ${names.join(", ")}`),
-  )
-
-api
-  .submitData<NewUser, User>("/users", { name: "Alice", email: "alice@example.com" })
-  .map((user) => `Created user with ID: ${user.id}`)
-  .recover("Failed to create user")
-  .then((result) => console.log(result))
-```
-
 ## Real-World Examples
 
 ### Form Validation
@@ -1707,7 +1497,7 @@ validationResult.fold(
 ### Data Fetching and Processing
 
 ```typescript
-import { FPromise, Option, Either, pipe, List } from "functype"
+import { Task, Option, Either, pipe, List, TaskOutcome, Ok, Err } from "functype"
 
 // Define types
 type User = {
@@ -1731,7 +1521,7 @@ type Comment = {
   body: string
 }
 
-// API client
+// API client using Task
 class ApiClient {
   private baseUrl: string
 
@@ -1739,20 +1529,20 @@ class ApiClient {
     this.baseUrl = baseUrl
   }
 
-  fetchUser(userId: string): FPromise<User, Error> {
+  fetchUser(userId: string): Promise<TaskOutcome<User>> {
     return this.fetchResource<User>(`/users/${userId}`)
   }
 
-  fetchUserPosts(userId: string): FPromise<Post[], Error> {
+  fetchUserPosts(userId: string): Promise<TaskOutcome<Post[]>> {
     return this.fetchResource<Post[]>(`/users/${userId}/posts`)
   }
 
-  fetchPostComments(postId: string): FPromise<Comment[], Error> {
+  fetchPostComments(postId: string): Promise<TaskOutcome<Comment[]>> {
     return this.fetchResource<Comment[]>(`/posts/${postId}/comments`)
   }
 
-  private fetchResource<T>(endpoint: string): FPromise<T, Error> {
-    return FPromise.tryCatchAsync(
+  private async fetchResource<T>(endpoint: string): Promise<TaskOutcome<T>> {
+    return Task({ name: `Fetch ${endpoint}` }).Async(
       async () => {
         const response = await fetch(`${this.baseUrl}${endpoint}`)
 
@@ -1762,7 +1552,7 @@ class ApiClient {
 
         return response.json() as Promise<T>
       },
-      (error) => new Error(`API error: ${error}`),
+      async (error) => new Error(`API error: ${error}`),
     )
   }
 }
@@ -1774,20 +1564,20 @@ async function getUserContentSummary(userId: string) {
   // Fetch user
   const userResult = await api.fetchUser(userId)
 
-  if (userResult.isLeft()) {
-    return `Error fetching user: ${userResult.getLeft().message}`
+  if (!userResult.ok) {
+    return `Error fetching user: ${userResult.error.message}`
   }
 
-  const user = userResult.get()
+  const user = userResult.value
 
   // Fetch user's posts
   const postsResult = await api.fetchUserPosts(userId)
 
-  if (postsResult.isLeft()) {
-    return `Error fetching posts: ${postsResult.getLeft().message}`
+  if (!postsResult.ok) {
+    return `Error fetching posts: ${postsResult.error.message}`
   }
 
-  const posts = postsResult.get()
+  const posts = postsResult.value
 
   if (posts.length === 0) {
     return `User ${user.name} has no posts.`
@@ -1799,11 +1589,11 @@ async function getUserContentSummary(userId: string) {
   // Fetch comments for the latest post
   const commentsResult = await api.fetchPostComments(latestPost.id)
 
-  if (commentsResult.isLeft()) {
-    return `Error fetching comments: ${commentsResult.getLeft().message}`
+  if (!commentsResult.ok) {
+    return `Error fetching comments: ${commentsResult.error.message}`
   }
 
-  const comments = commentsResult.get()
+  const comments = commentsResult.value
 
   // Create summary
   return {

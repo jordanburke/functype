@@ -103,11 +103,6 @@
       "import": "./dist/core/task/index.js",
       "default": "./dist/core/task/index.js"
     },
-    "./fpromise": {
-      "types": "./dist/fpromise/index.d.ts",
-      "import": "./dist/fpromise/index.js",
-      "default": "./dist/fpromise/index.js"
-    },
     "./io": {
       "types": "./dist/io/index.d.ts",
       "import": "./dist/io/index.js",

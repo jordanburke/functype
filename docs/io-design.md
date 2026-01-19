@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-Promises in JavaScript have fundamental limitations that functype's current types (FPromise, Task) cannot fully address because they wrap Promise:
+Promises in JavaScript have fundamental limitations that functype's current types cannot fully address because they wrap Promise:
 
 1. **Eager execution** - Promises run immediately, preventing composition-before-execution
 2. **No sync/async unification** - Different APIs for sync vs async operations
@@ -50,8 +50,7 @@ type IO<R, E, A> = {
   pipe: <B>(f: (self: IO<R, E, A>) => B) => B
 
   // Integration
-  toTask: () => Task<A>
-  toFPromise: () => FPromise<A, E>
+  toTask: () => TaskOutcome<A>
 }
 
 // Exit type for capturing full outcome
@@ -208,7 +207,7 @@ export const users = {
 
 ### Integration with Sync Types
 
-IO integrates with functype's sync data types (no FPromise/Task integration):
+IO integrates with functype's sync data types (no Task/Task integration):
 
 | From         | To IO             | From IO        |
 | ------------ | ----------------- | -------------- |
@@ -257,7 +256,7 @@ IO integrates with functype's sync data types (no FPromise/Task integration):
 - Implement Functor, Monad, Foldable, Matchable
 - Error handling: catchTag, catchAll, retry, timeout
 - Integration with sync types: fromEither, fromOption, fromTry
-- No FPromise/Task integration (standalone)
+- No Task/Task integration (standalone)
 
 **Phase 6: Testing & Documentation**
 
@@ -267,13 +266,12 @@ IO integrates with functype's sync data types (no FPromise/Task integration):
 - Documentation and examples
 - Feature matrix update
 
-### Relationship to FPromise/Task
+### Relationship to Task
 
 **No integration for now.** IO is a standalone effect type:
 
-- **FPromise**: Unchanged, continues to exist
 - **Task**: Unchanged, continues to exist
-- **IO**: New standalone type, no dependencies on FPromise or Task
+- **IO**: New standalone type, no dependencies on Task
 
 Users can choose which to use based on their needs. Integration/migration can be added later if desired.
 
@@ -362,7 +360,7 @@ Users can choose which to use based on their needs. Integration/migration can be
 ### Integration
 
 - [ ] Full functype interface implementation (Functor, Monad, Foldable, Matchable)
-- [ ] Bridges to sync types: Either, Option, Try (no FPromise/Task)
+- [ ] Bridges to sync types: Either, Option, Try (no Task/Task)
 - [ ] Comprehensive test suite with property tests
 
 ### Comparison to Effect-TS

@@ -258,58 +258,6 @@ set.symmetricDifference(Set([3, 4])) // Elements in either set but not both
 set.isSubsetOf(Set([1, 2, 3, 4])) // true if all elements in other set
 ```
 
-## FPromise<T, E>
-
-```typescript
-import { FPromise } from "functype/fpromise"
-
-// Creation
-FPromise.resolve(42) // Resolves with value
-FPromise.reject(new Error()) // Rejects with error
-FPromise.fromPromise(fetch("/api")) // From standard Promise
-
-// From functions
-FPromise.tryCatch(
-  () => JSON.parse(data),
-  (err) => new Error(`Parse error: ${err}`),
-)
-
-FPromise.tryCatchAsync(
-  async () => await fetch("/api").then((r) => r.json()),
-  (err) => new Error(`Fetch error: ${err}`),
-)
-
-// Transforming
-promise.map((x) => x * 2) // Transform success value
-promise.mapError((e) => new Error(`Enhanced: ${e}`)) // Transform error
-promise.flatMap((x) => FPromise.resolve(x.toString())) // Chain with another FPromise
-
-// Error handling
-promise.recover(defaultValue) // Default if rejected
-promise.recoverWith((err) => FPromise.resolve(`Recovered from ${err}`)) // Alternative promise on error
-
-// Side effects
-promise.tap((value) => console.log(value)) // Side effect on success
-promise.tapError((err) => console.error(err)) // Side effect on error
-
-// Combining
-FPromise.all([p1, p2, p3]) // All promises succeed
-FPromise.race([p1, p2]) // First to resolve
-FPromise.any([p1, p2]) // First to resolve successfully
-
-// Timeouts
-FPromise.timeout(promise, 1000, () => new Error("Timed out")) // Rejects if promise takes too long
-
-// Pattern matching
-promise.fold(
-  (err) => `Error: ${err}`,
-  (val) => `Success: ${val}`,
-) // Handle both outcomes
-
-// Conversion
-promise.toPromise() // Convert to standard Promise
-```
-
 ## Task
 
 ```typescript

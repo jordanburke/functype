@@ -24,7 +24,6 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 | **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **FPromise<T,E>**  |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
 | **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 
 ## Additional Properties
@@ -41,7 +40,6 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **LazyList<A>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **FPromise<T,E>**  |    ✗     |    ✗     |    ✗     |      ✓      |      ✗      |      ✗      |     ✗      |
 | **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
 
@@ -202,7 +200,6 @@ Provides conversion to Promise for async interop:
    - **Map**: Custom implementation with SafeTraversable instead of standard Traversable
    - **Stack**: Implements individual interfaces without FunctypeBase
    - **LazyList**: Lazy evaluation with support for Foldable, Serializable, Pipe, and Typeable interfaces
-   - **FPromise**: Promise-like with functional methods
    - **Tuple**: Enhanced container with Foldable, Serializable, Pipe, Typeable, and Valuable support
 
 4. **Do-notation**: Provides generator-based monadic comprehensions similar to Scala's for-comprehensions. Supports Option, Either, Try, and List with automatic short-circuiting and cartesian products.

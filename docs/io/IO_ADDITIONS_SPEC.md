@@ -121,23 +121,21 @@ tapError(f: (e: E) => void): IO<R, E, A> {
 
 ## Usage Example: Supabase Query
 
-Before (with FPromise/TaskOutcome):
+Before (with TaskOutcome):
 
 ```typescript
-one: (): FPromise<TaskOutcome<Option<User>>> => {
-  return wrapAsync(async () => {
-    try {
+one: (): Promise<TaskOutcome<Option<User>>> => {
+  return Task().Async(
+    async () => {
       const { data, error } = await supabase.from("users").select("*").single()
       if (error) {
         log.error(`Query failed: ${error}`)
-        return Err(toError(error))
+        throw error
       }
-      return Ok(Option(data))
-    } catch (error) {
-      log.error(`Query failed: ${error}`)
-      return Err(toError(error))
-    }
-  })
+      return Option(data)
+    },
+    async (error) => toError(error),
+  )
 }
 ```
 

@@ -124,28 +124,6 @@ set.union(set2) // Set([1, 2, 3, 4, 5, 6, 7])
 set.intersect(set2) // Set([4, 5])
 ```
 
-### FPromise<T, E>
-
-```typescript
-// Create: FPromise.resolve(), FPromise.reject(), FPromise.tryCatch()
-const success = FPromise.resolve(42)
-const failure = FPromise.reject(new Error("Failed"))
-
-// From async functions
-const result = FPromise.tryCatchAsync(
-  async () => await fetchData(),
-  (err) => new Error(`Fetch failed: ${err}`),
-)
-
-// Transform: .map(), .mapError(), .flatMap()
-success.map((x) => x * 2) // FPromise<84, never>
-failure.mapError((e) => new Error(`Enhanced: ${e.message}`))
-success.flatMap((x) => FPromise.resolve(x.toString()))
-
-// Error handling
-failure.recover("default") // FPromise<"default", never>
-```
-
 ### Task
 
 ```typescript

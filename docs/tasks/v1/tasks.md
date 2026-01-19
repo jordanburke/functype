@@ -172,14 +172,6 @@ This document contains a comprehensive list of potential improvement ideas for t
 [x] Add Task retry utilities with exponential backoff
 [ ] Implement Task.fromNodeCallback for Node.js style callbacks
 
-### FPromise Module
-
-[x] Add timeout support for all FPromise operations
-[ ] Implement cancellation support for FPromise chains
-[x] Create FPromise.allSettled equivalent with typed results
-[x] Add FPromise.any with proper typing
-[ ] Implement progress tracking for long-running operations
-
 ### Collection Modules
 
 [x] Implement pipe for List data structure

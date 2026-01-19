@@ -193,8 +193,8 @@ async function fetchUserData(userId: string): Promise<User | null> {
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchUserData(userId: string): FPromise<User, Error> {
-  return FPromise.tryCatchAsync(
+function fetchUserData(userId: string): Task<User, Error> {
+  return Task.tryCatchAsync(
     async () => {
       const response = await fetch(`/api/users/${userId}`)
       if (!response.ok) {
@@ -441,9 +441,9 @@ async function fetchUserWithPosts(userId: string): Promise<UserWithPosts | null>
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchUserWithPosts(userId: string): FPromise<UserWithPosts, Error> {
-  return FPromise.tryCatch(() => fetchUser(userId)).flatMap((user) =>
-    FPromise.tryCatch(() => fetchUserPosts(userId)).map((posts) => ({ ...user, posts })),
+function fetchUserWithPosts(userId: string): Task<UserWithPosts, Error> {
+  return Task.tryCatch(() => fetchUser(userId)).flatMap((user) =>
+    Task.tryCatch(() => fetchUserPosts(userId)).map((posts) => ({ ...user, posts })),
   )
 }
 ```
@@ -466,10 +466,11 @@ async function fetchAllData(): Promise<{ users?: User[]; posts?: Post[]; error?:
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchAllData(): FPromise<{ users: User[]; posts: Post[] }, Error> {
-  return FPromise.all([FPromise.tryCatch(() => fetchUsers()), FPromise.tryCatch(() => fetchPosts())]).map(
-    ([users, posts]) => ({ users, posts }),
-  )
+function fetchAllData(): Task<{ users: User[]; posts: Post[] }, Error> {
+  return Task.all([Task.tryCatch(() => fetchUsers()), Task.tryCatch(() => fetchPosts())]).map(([users, posts]) => ({
+    users,
+    posts,
+  }))
 }
 ```
 
@@ -489,8 +490,8 @@ function fetchWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchWithTimeout<T>(task: () => Promise<T>, timeout: number): FPromise<T, Error> {
-  return FPromise.timeout(FPromise.tryCatch(task), timeout, () => new Error("Timeout"))
+function fetchWithTimeout<T>(task: () => Promise<T>, timeout: number): Task<T, Error> {
+  return Task.timeout(Task.tryCatch(task), timeout, () => new Error("Timeout"))
 }
 ```
 
@@ -798,14 +799,12 @@ async function processDataFile(filePath: string): Promise<ProcessedData | null> 
 **✅ Functype Pattern:**
 
 ```typescript
-function processDataFile(filePath: string): FPromise<ProcessedData, Error> {
-  return FPromise.tryCatchAsync(async () => {
+function processDataFile(filePath: string): Task<ProcessedData, Error> {
+  return Task.tryCatchAsync(async () => {
     const content = await fs.readFile(filePath, "utf-8")
     return JSON.parse(content)
   })
-    .flatMap((data) =>
-      Array.isArray(data) ? FPromise.resolve(data) : FPromise.reject(new Error("Data must be an array")),
-    )
+    .flatMap((data) => (Array.isArray(data) ? Task.resolve(data) : Task.reject(new Error("Data must be an array"))))
     .map((data) => {
       const processed = List(data)
         .filter((item) => item.value > 0)
@@ -1008,9 +1007,9 @@ getUserById(userId, (err, user) => {
 **✅ Functype Pattern:**
 
 ```typescript
-FPromise.tryCatch(() => getUserById(userId))
-  .flatMap((user) => FPromise.tryCatch(() => getOrdersByUser(user.id)))
-  .flatMap((orders) => FPromise.tryCatch(() => calculateTotal(orders)))
+Task.tryCatch(() => getUserById(userId))
+  .flatMap((user) => Task.tryCatch(() => getOrdersByUser(user.id)))
+  .flatMap((orders) => Task.tryCatch(() => calculateTotal(orders)))
   .fold(
     (error) => handleError(error),
     (total) => displayResult(total),
@@ -1027,7 +1026,7 @@ The key principles when converting JavaScript/TypeScript to functype patterns:
 4. **Replace object literals with Map for dynamic keys**
 5. **Replace if-else chains with Cond**
 6. **Replace switch statements with Match**
-7. **Replace Promises with FPromise for better error handling**
+7. **Replace Promises with Task for better error handling**
 8. **Replace mutation with immutable transformations**
 9. **Use composition over imperative loops**
 10. **Leverage type safety with branded types**

@@ -42,14 +42,14 @@ const either = right("value")
 
 ## Common Module Sizes
 
-| Module   | Approximate Size (minified) | Gzipped Size |
-| -------- | --------------------------- | ------------ |
-| Option   | ~200 bytes                  | ~140 bytes   |
-| Either   | ~290 bytes                  | ~190 bytes   |
-| List     | ~170 bytes                  | ~125 bytes   |
-| Try      | ~170 bytes                  | ~125 bytes   |
-| Tuple    | ~120 bytes                  | ~100 bytes   |
-| FPromise | ~200 bytes                  | ~140 bytes   |
+| Module | Approximate Size (minified) | Gzipped Size |
+| ------ | --------------------------- | ------------ |
+| Option | ~200 bytes                  | ~140 bytes   |
+| Either | ~290 bytes                  | ~190 bytes   |
+| List   | ~170 bytes                  | ~125 bytes   |
+| Try    | ~170 bytes                  | ~125 bytes   |
+| Tuple  | ~120 bytes                  | ~100 bytes   |
+| Task   | ~200 bytes                  | ~140 bytes   |
 
 ## Additional Tips
 

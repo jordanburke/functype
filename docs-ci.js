@@ -8,12 +8,10 @@ import { join } from "path"
 // List of markdown files that should be preserved during documentation generation
 const PRESERVE_FILES = [
   "BUNDLE_OPTIMIZATION.md",
-  "FPromise-Assessment.md",
   "HKT.md",
   "ROADMAP.md",
   "TASK-TODO.md",
   "TUPLE-EXAMPLES.md",
-  "TaskMigration.md",
   "ai-guide.md",
   "examples.md",
   "quick-reference.md",
@@ -134,7 +132,7 @@ const either = right("value")
 | List     | ~170 bytes                  | ~125 bytes   |
 | Try      | ~170 bytes                  | ~125 bytes   |
 | Tuple    | ~120 bytes                  | ~100 bytes   |
-| FPromise | ~200 bytes                  | ~140 bytes   |
+| Task     | ~200 bytes                  | ~140 bytes   |
 
 ## Additional Tips
 
