@@ -541,33 +541,6 @@ export const FULL_INTERFACES: Record<string, string> = {
   readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
 }`,
 
-  FPromise: `export type FPromise<T extends Type, E extends Type = unknown> = PromiseLike<T> & {
-  readonly _tag: "FPromise"
-
-  // FPromise methods
-  tap: (f: (value: T) => void) => FPromise<T, E>
-  mapError: <E2>(f: (error: E, context: ErrorContext) => E2) => FPromise<T, E2>
-  tapError: (f: (error: E) => void) => FPromise<T, E>
-  recover: (fallback: T) => FPromise<T, never>
-  recoverWith: (f: (error: E) => T) => FPromise<T, never>
-  recoverWithF: <E2>(f: (error: E) => FPromise<T, E2>) => FPromise<T, E2>
-  filterError: <E2 extends E>(
-    predicate: (error: E) => boolean,
-    handler: (error: E) => FPromise<T, E2>,
-  ) => FPromise<T, E>
-  logError: (logger: (error: E, context: ErrorContext) => void) => FPromise<T, E>
-  toPromise: () => Promise<T>
-  toEither: () => Promise<Either<E, T>>
-  fold: <R extends Type>(onError: (error: E) => R, onSuccess: (value: T) => R) => FPromise<R, never>
-
-  // Functor implementation
-  map: <U extends Type>(f: (value: T) => U) => FPromise<U, E>
-
-  // AsyncFunctor implementation
-  flatMap: <U extends Type>(f: (value: T) => FPromise<U, E> | PromiseLike<U>) => FPromise<U, E>
-  flatMapAsync: <U extends Type>(f: (value: T) => PromiseLike<U>) => Promise<U>
-}`,
-
   Tuple: `export interface Tuple<T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   get<K extends number>(index: K): T[K]

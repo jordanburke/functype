@@ -25,7 +25,6 @@ describe("CLI Data", () => {
       "Lazy",
       "LazyList",
       "Task",
-      "FPromise",
       "Cond",
       "Match",
       "Brand",
@@ -260,10 +259,7 @@ describe("Full Interfaces", () => {
   })
 
   it("should include type definitions (not just interfaces)", () => {
-    // FPromise and Stack are defined as types
-    expect(FULL_INTERFACES.FPromise).toBeDefined()
-    expect(FULL_INTERFACES.FPromise).toContain("export type FPromise<T")
-
+    // Stack is defined as a type
     expect(FULL_INTERFACES.Stack).toBeDefined()
     expect(FULL_INTERFACES.Stack).toContain("export type Stack<A")
   })

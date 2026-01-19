@@ -36,7 +36,6 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   Lazy: { file: "src/lazy/Lazy.ts" },
   LazyList: { file: "src/list/LazyList.ts" },
   TaskOutcome: { file: "src/core/task/Task.ts" },
-  FPromise: { file: "src/fpromise/FPromise.ts", isType: true },
   Tuple: { file: "src/tuple/Tuple.ts" },
   Stack: { file: "src/stack/Stack.ts", isType: true },
 }
