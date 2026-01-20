@@ -232,7 +232,24 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
 const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => createSet(iterable)
 
+// Singleton empty set - uses 'never' which is subtype of all types
+const EMPTY_SET: Set<never> = createSet<never>([])
+
 const SetCompanion = {
+  /**
+   * Creates an empty Set
+   * Returns a singleton instance for efficiency
+   * @returns An empty Set instance
+   */
+  empty: <A extends Type>(): Set<A> => EMPTY_SET as unknown as Set<A>,
+
+  /**
+   * Creates a Set from variadic arguments
+   * @param values - Values to create set from
+   * @returns A Set containing the unique values
+   */
+  of: <A extends Type>(...values: A[]): Set<A> => createSet<A>(values),
+
   /**
    * Creates a Set from JSON string
    * @param json - The JSON string

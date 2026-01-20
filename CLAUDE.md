@@ -127,3 +127,122 @@ When changing public APIs:
 - Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
 - Run `pnpm docs:sync` to sync feature matrix to landing site
 - Run `pnpm validate` before committing
+
+## Functype API Quick Reference (v0.44.0+)
+
+```typescript
+// List - immutable array
+List([1, 2, 3])              // create from array
+List.of(1, 2, 3)             // variadic factory
+List.empty<number>()         // typed empty list
+list.concat(other)           // combine lists (returns new List)
+list.toArray()               // convert back to array
+list.filter(fn).map(fn)      // transforms
+list.isEmpty                 // check if empty (property)
+
+// Set - immutable set
+Set([1, 2, 3])               // create from array
+Set.of(1, 2, 3)              // variadic factory
+Set.empty<number>()          // typed empty set
+set.add(value)               // add value (returns new Set)
+set.toArray()                // convert to array
+
+// Map - immutable key-value store
+Map([["a", 1], ["b", 2]])    // create from pairs
+Map.of<string, number>(["a", 1], ["b", 2])  // variadic factory
+Map.empty<string, number>()  // typed empty map
+map.set(key, value)          // add entry (returns new Map)
+map.get(key)                 // get value (returns Option)
+
+// Option - nullable handling
+Option(value)                // wrap value (None if null/undefined)
+Option.none()                // explicit None
+option.map(fn).orElse(default)
+
+// Either - error handling
+Right(value)                 // success
+Left(error)                  // error
+either.fold(onLeft, onRight)
+
+// Try - exception handling
+Try(() => riskyCode())       // catches exceptions
+try_.toEither()              // convert to Either
+```
+
+## Functype Refactoring Patterns
+
+### Pattern 1: Array mutations → List
+
+```typescript
+// BEFORE: Mutable array with push
+const errors: string[] = []
+if (condition) errors.push("error message")
+return errors
+
+// AFTER: Immutable List with concat
+const errors = condition ? List(["error message"]) : List<string>([])
+return errors.toArray()
+```
+
+### Pattern 2: Accumulating in loops → List.concat
+
+```typescript
+// BEFORE: Push in forEach/map
+const results: Item[] = []
+items.forEach((item) => {
+  if (item.valid) results.push(transform(item))
+})
+
+// AFTER: Filter + map (or reduce with List)
+const results = List(items.filter((i) => i.valid).map(transform))
+```
+
+### Pattern 3: Conditional object properties → spread syntax
+
+```typescript
+// BEFORE: Mutate after creation
+const config: Config = { base: true }
+if (env.TOKEN) config.token = env.TOKEN
+
+// AFTER: Spread syntax (no mutation)
+const config: Config = {
+  base: true,
+  ...(env.TOKEN && { token: env.TOKEN }),
+}
+```
+
+### Pattern 4: Map/Set mutations → functype Map/Set
+
+```typescript
+// BEFORE: Native Map with set()
+const cache = new Map<string, Value>()
+cache.set(key, value)
+
+// AFTER: functype Map (returns new Map)
+import { Map as FMap } from "functype"
+const cache = FMap<string, Value>([])
+const newCache = cache.set(key, value)
+```
+
+### Pattern 5: Error accumulation → List + buildResult helper
+
+```typescript
+const buildResult = (
+  success: boolean,
+  errors: List<string>,
+  warnings: List<string>,
+  details: Record<string, unknown>,
+): ValidationResult => ({
+  success,
+  errors: errors.toArray(),
+  warnings: warnings.toArray(),
+  details,
+})
+
+// Usage
+const errors = List<string>([])
+  .concat(check1Failed ? List(["Check 1 failed"]) : List([]))
+  .concat(check2Failed ? List(["Check 2 failed"]) : List([]))
+
+return buildResult(errors.isEmpty, errors, List([]), {})
+```

@@ -63,7 +63,7 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: ["Functor", "Monad", "Foldable", "Collection", "Serializable", "Traversable"],
     methods: {
       create: ["List([...])", "List.of(...)", "List.empty()"],
-      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".take(n)", ".drop(n)"],
+      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".take(n)", ".drop(n)", ".concat(list)"],
       extract: [".fold(z, f)", ".reduce(f)", ".head", ".tail", ".toArray()"],
       check: [".isEmpty", ".nonEmpty", ".size", ".contains(v)"],
     },
@@ -74,7 +74,7 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: ["Functor", "Foldable", "Collection", "Serializable", "Traversable"],
     methods: {
       create: ["Set([...])", "Set.of(...)", "Set.empty()"],
-      transform: [".map(f)", ".filter(p)", ".union(s)", ".intersection(s)", ".difference(s)"],
+      transform: [".map(f)", ".filter(p)", ".union(s)", ".intersection(s)", ".difference(s)", ".add(v)"],
       extract: [".fold(z, f)", ".toArray()"],
       check: [".has(v)", ".isEmpty", ".size"],
     },
@@ -84,8 +84,8 @@ export const TYPES: Record<string, TypeData> = {
     description: "Immutable key-value store",
     interfaces: ["SafeTraversable", "Collection", "Serializable"],
     methods: {
-      create: ["Map([...])", "Map.of(...)", "Map.empty()"],
-      transform: [".set(k, v)", ".delete(k)", ".map(f)", ".filter(p)"],
+      create: ["Map([[k, v], ...])", "Map.of([k, v], ...)", "Map.empty()"],
+      transform: [".set(k, v)", ".delete(k)", ".map(f)", ".filter(p)", ".add(k, v)"],
       extract: [".get(k)", ".keys()", ".values()", ".entries()", ".fold(z, f)"],
       check: [".has(k)", ".isEmpty", ".size"],
     },

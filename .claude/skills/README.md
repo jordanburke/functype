@@ -4,7 +4,7 @@ This directory contains Claude Code skills for working with the functype library
 
 ## Available Skills
 
-### 1. functype-user
+### 1. functype
 
 **Purpose**: Help developers use functype patterns in their TypeScript projects
 
@@ -21,10 +21,10 @@ This directory contains Claude Code skills for working with the functype library
 
 ```bash
 # From the distributed zip
-claude-code install dist/skills/functype-user.zip
+claude-code install dist/skills/functype.zip
 
 # Or copy directly to Claude's skills directory
-cp -r .claude/skills/functype-user ~/.claude/skills/
+cp -r .claude/skills/functype ~/.claude/skills/
 ```
 
 ### 2. functype-developer
@@ -52,10 +52,10 @@ cp -r .claude/skills/functype-developer ~/.claude/skills/
 
 ## Skill Contents
 
-### functype-user
+### functype
 
 ```
-functype-user/
+functype/
 ├── SKILL.md                        # Main skill guide
 └── references/
     ├── feature-matrix.md           # Interface and method reference (symlink)
@@ -115,9 +115,9 @@ The `.claude-plugin/marketplace.json` file enables marketplace distribution:
   "name": "functype",
   "skills": [
     {
-      "id": "functype-user",
+      "id": "functype",
       "name": "Functype User Guide",
-      "path": ".claude/skills/functype-user"
+      "path": ".claude/skills/functype"
     },
     {
       "id": "functype-developer",
@@ -132,7 +132,7 @@ The `.claude-plugin/marketplace.json` file enables marketplace distribution:
 
 Once installed, Claude Code will automatically suggest these skills when:
 
-**functype-user** triggers:
+**functype** triggers:
 
 - Code contains null checks, optional chaining, or try-catch
 - User asks about functype patterns or APIs
@@ -157,7 +157,7 @@ To update skills after making changes:
 
 To improve these skills:
 
-1. Edit files in `.claude/skills/functype-user/` or `.claude/skills/functype-developer/`
+1. Edit files in `.claude/skills/functype/` or `.claude/skills/functype-developer/`
 2. Test the skill locally
 3. Repackage and verify
 4. Commit changes to the repository
@@ -181,7 +181,7 @@ Before packaging or updating skills, verify the following to prevent errors:
 2. Compare all `import` statements in skill files against available exports
 3. Remove or update any imports that aren't exported
 4. For internal development examples (functype-developer), use `@/` imports
-5. For user-facing examples (functype-user), only use published package imports
+5. For user-facing examples (functype), only use published package imports
 
 ### Common Import Mistakes to Avoid
 
@@ -194,10 +194,10 @@ Before packaging or updating skills, verify the following to prevent errors:
 
 ```bash
 # Validate before packaging
-python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/quick_validate.py .claude/skills/functype-user
+python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/quick_validate.py .claude/skills/functype
 
 # Package after validation passes
-python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/package_skill.py .claude/skills/functype-user dist/skills
+python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scripts/package_skill.py .claude/skills/functype dist/skills
 ```
 
 ## Resources

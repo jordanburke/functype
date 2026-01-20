@@ -57,13 +57,35 @@ All types follow the **Companion pattern** (inspired by Scala), combining constr
 | **IO<R,E,A>**   |  ✗  |  ✓   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
 | **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
-| **Map<K,V>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Map<K,V>**    |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Lazy<T>**     |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Stack<A>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **LazyList<A>** |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Tuple<T[]>**  |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Identity<T>** |  ✓  |  ✗   |  ✓   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Ref<A>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+
+**Collection creation** - multiple options available:
+
+```typescript
+// List creation
+List([1, 2, 3]) // from array
+List.of(1, 2, 3) // variadic factory
+List.empty<number>() // typed empty list
+
+// Set creation
+Set([1, 2, 3]) // from array
+Set.of(1, 2, 3) // variadic factory
+Set.empty<number>() // typed empty set
+
+// Map creation
+Map([
+  ["a", 1],
+  ["b", 2],
+]) // from key-value pairs
+Map.of<string, number>(["a", 1], ["b", 2]) // variadic factory
+Map.empty<string, number>() // typed empty map
+```
 
 ### Type Guards
 

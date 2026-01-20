@@ -201,7 +201,24 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
   MapObject(entries)
 
+// Singleton empty map - uses 'never' which is subtype of all types
+const EMPTY_MAP: Map<never, never> = MapObject<never, never>([])
+
 const MapCompanion = {
+  /**
+   * Creates an empty Map
+   * Returns a singleton instance for efficiency
+   * @returns An empty Map instance
+   */
+  empty: <K, V>(): Map<K, V> => EMPTY_MAP as unknown as Map<K, V>,
+
+  /**
+   * Creates a Map from variadic key-value pair arguments
+   * @param entries - Key-value pairs to create map from
+   * @returns A Map containing the entries
+   */
+  of: <K, V>(...entries: [K, V][]): Map<K, V> => MapObject<K, V>(entries),
+
   /**
    * Creates a Map from JSON string
    * @param json - The JSON string

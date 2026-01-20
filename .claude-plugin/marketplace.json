@@ -10,11 +10,11 @@
   },
   "plugins": [
     {
-      "name": "functype-user",
+      "name": "functype",
       "description": "Help developers use functype patterns in their TypeScript projects - pattern conversion, API lookup, common use cases",
       "source": "./",
       "strict": false,
-      "skills": ["./.claude/skills/functype-user"]
+      "skills": ["./.claude/skills/functype"]
     },
     {
       "name": "functype-developer",

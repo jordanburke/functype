@@ -183,7 +183,24 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
 const ListConstructor = <A>(values?: Iterable<A>): List<A> => ListObject(values)
 
+// Singleton empty list - uses 'never' which is subtype of all types
+const EMPTY_LIST: List<never> = ListObject<never>([])
+
 const ListCompanion = {
+  /**
+   * Creates an empty List
+   * Returns a singleton instance for efficiency
+   * @returns An empty List instance
+   */
+  empty: <A extends Type>(): List<A> => EMPTY_LIST as unknown as List<A>,
+
+  /**
+   * Creates a List from variadic arguments
+   * @param values - Values to create list from
+   * @returns A List containing the values
+   */
+  of: <A extends Type>(...values: A[]): List<A> => ListObject<A>(values),
+
   /**
    * Creates a List from JSON string
    * @param json - The JSON string

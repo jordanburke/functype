@@ -3,6 +3,38 @@ import { beforeEach, describe, expect, test } from "vitest"
 import { List, Map, None, Option, Some, Tuple } from "../../src"
 
 describe("Map", () => {
+  describe("companion methods", () => {
+    test("Map.empty() creates empty map", () => {
+      const map = Map.empty<string, number>()
+      expect(map.isEmpty).toBe(true)
+      expect(map.size).toBe(0)
+    })
+
+    test("Map.of() creates map from varargs", () => {
+      const map = Map.of<string, number>(["a", 1], ["b", 2], ["c", 3])
+      expect(map.get("a").orElse(0)).toBe(1)
+      expect(map.get("b").orElse(0)).toBe(2)
+      expect(map.get("c").orElse(0)).toBe(3)
+    })
+
+    test("Map.of() with single entry", () => {
+      const map = Map.of<string, number>(["key", 42])
+      expect(map.size).toBe(1)
+      expect(map.get("key").orElse(0)).toBe(42)
+    })
+
+    test("Map.of() with no arguments creates empty map", () => {
+      const map = Map.of<string, number>()
+      expect(map.isEmpty).toBe(true)
+    })
+
+    test("Map.empty() returns singleton instance", () => {
+      const a = Map.empty<string, number>()
+      const b = Map.empty<number, string>()
+      expect(a).toBe(b) // Same instance regardless of type parameters
+    })
+  })
+
   let map: Map<string, number>
 
   beforeEach(() => {

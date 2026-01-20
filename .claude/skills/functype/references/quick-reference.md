@@ -4,15 +4,21 @@ Quick lookup guide for common functype operations.
 
 ## Construction
 
-| Type   | Constructor                         | Example                              |
-| ------ | ----------------------------------- | ------------------------------------ |
-| Option | `Option(value)`                     | `Option("hello")`, `Option.none()`   |
-| Either | `Right(value)` or `Left(error)`     | `Right(42)`, `Left("error")`         |
-| Try    | `Try(() => expression)`             | `Try(() => JSON.parse(str))`         |
-| List   | `List(array)` or `List.from(array)` | `List([1, 2, 3])`                    |
-| Set    | `Set(array)`                        | `Set([1, 2, 3])`                     |
-| Map    | `Map<K,V>()`                        | `Map<string, number>()`              |
-| Lazy   | `Lazy(() => expression)`            | `Lazy(() => expensiveComputation())` |
+| Type   | Constructor                               | Example                                         |
+| ------ | ----------------------------------------- | ----------------------------------------------- |
+| Option | `Option(value)`                           | `Option("hello")`, `Option.none()`              |
+| Either | `Right(value)` or `Left(error)`           | `Right(42)`, `Left("error")`                    |
+| Try    | `Try(() => expression)`                   | `Try(() => JSON.parse(str))`                    |
+| List   | `List(array)`, `.of()`, `.empty()`        | `List([1, 2])`, `List.of(1, 2)`, `List.empty()` |
+| Set    | `Set(array)`, `.of()`, `.empty()`         | `Set([1, 2])`, `Set.of(1, 2)`, `Set.empty()`    |
+| Map    | `Map([[k, v], ...])`, `.of()`, `.empty()` | `Map.of(["a", 1])`, `Map.empty()`               |
+| Lazy   | `Lazy(() => expression)`                  | `Lazy(() => expensiveComputation())`            |
+
+**Note**: Collections support multiple creation styles:
+
+- **Constructor `List([...])`**: Use for existing arrays/iterables
+- **`.of(...)`**: Use for inline literal values (cleaner syntax)
+- **`.empty()`**: Use for typed empty collections (returns singleton - efficient for repeated calls)
 
 ## Transformation
 

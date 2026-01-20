@@ -7,6 +7,35 @@ describe("List", () => {
     // Setup if needed
   })
 
+  describe("companion methods", () => {
+    it("List.empty() creates empty list", () => {
+      const list = List.empty<number>()
+      expect(list.isEmpty).toBe(true)
+      expect(list.toArray()).toEqual([])
+    })
+
+    it("List.of() creates list from varargs", () => {
+      const list = List.of(1, 2, 3)
+      expect(list.toArray()).toEqual([1, 2, 3])
+    })
+
+    it("List.of() with single element", () => {
+      const list = List.of("hello")
+      expect(list.toArray()).toEqual(["hello"])
+    })
+
+    it("List.of() with no arguments creates empty list", () => {
+      const list = List.of<number>()
+      expect(list.isEmpty).toBe(true)
+    })
+
+    it("List.empty() returns singleton instance", () => {
+      const a = List.empty<number>()
+      const b = List.empty<string>()
+      expect(a).toBe(b) // Same instance regardless of type parameter
+    })
+  })
+
   const list1 = List<number>()
   const list2 = list1.add(10)
   const list3 = list2.add(20)

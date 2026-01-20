@@ -1,5 +1,5 @@
 ---
-name: functype-user
+name: functype
 description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, or working with immutable collections like List and Set.
 ---
 
@@ -35,6 +35,52 @@ pnpm add functype
 ```typescript
 // Import from main bundle
 import { Option, Either, Left, Right, Try, List } from "functype"
+```
+
+## Constructor vs Companion Methods
+
+Functype collections provide multiple ways to create instances:
+
+| Method         | Use When                     | Example                |
+| -------------- | ---------------------------- | ---------------------- |
+| `List([...])`  | Creating from existing array | `List(existingArray)`  |
+| `List.of(...)` | Inline literal values        | `List.of(1, 2, 3)`     |
+| `List.empty()` | Empty collections (typed)    | `List.empty<number>()` |
+
+### Decision Guide
+
+**Use Constructor `List([...])` when:**
+
+- Converting existing arrays: `List(data.items)`
+- Spreading iterables: `List([...set])`
+- Variables holding arrays: `List(myArray)`
+
+**Use `List.of(...)` when:**
+
+- Inline literal values: `List.of(1, 2, 3)`
+- Cleaner for small fixed lists: `List.of("a", "b", "c")`
+- No need to wrap in array brackets
+
+**Use `List.empty()` when:**
+
+- Starting with empty collection: `List.empty<User>()`
+- Type parameter needed but no initial values
+- Returns singleton (efficient for repeated calls)
+
+### Examples
+
+```typescript
+// Constructor - wrapping existing data
+const users = List(fetchedUsers)
+const items = List([...existingSet])
+
+// .of() - inline literals
+const colors = List.of("red", "green", "blue")
+const primes = Set.of(2, 3, 5, 7, 11)
+
+// .empty() - typed empty collections
+const errors = List.empty<string>()
+const cache = Map.empty<string, User>()
 ```
 
 ## Pattern Conversion Guide

@@ -4,6 +4,41 @@ import { List } from "@/list"
 import { Set } from "@/set"
 
 describe("Set", () => {
+  describe("companion methods", () => {
+    test("Set.empty() creates empty set", () => {
+      const set = Set.empty<number>()
+      expect(set.isEmpty).toBe(true)
+      expect(set.toArray()).toEqual([])
+    })
+
+    test("Set.of() creates set from varargs", () => {
+      const set = Set.of(1, 2, 3)
+      expect(set.toArray()).toEqual(expect.arrayContaining([1, 2, 3]))
+    })
+
+    test("Set.of() with single element", () => {
+      const set = Set.of("hello")
+      expect(set.toArray()).toEqual(["hello"])
+    })
+
+    test("Set.of() with no arguments creates empty set", () => {
+      const set = Set.of<number>()
+      expect(set.isEmpty).toBe(true)
+    })
+
+    test("Set.of() deduplicates values", () => {
+      const set = Set.of(1, 2, 2, 3, 3, 3)
+      expect(set.size).toBe(3)
+      expect(set.toArray()).toEqual(expect.arrayContaining([1, 2, 3]))
+    })
+
+    test("Set.empty() returns singleton instance", () => {
+      const a = Set.empty<number>()
+      const b = Set.empty<string>()
+      expect(a).toBe(b) // Same instance regardless of type parameter
+    })
+  })
+
   test("add should add a new value", () => {
     const set = Set([1, 2, 3])
     const newSet = set.add(4)
