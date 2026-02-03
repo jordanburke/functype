@@ -17,18 +17,18 @@
   "dependencies": {
     "@astrojs/react": "^4.4.2",
     "@tailwindcss/vite": "^4.1.18",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
-    "astro": "^5.16.6",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "shiki": "^3.20.0",
+    "astro": "^5.17.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "shiki": "^3.22.0",
     "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.6",
     "@astrojs/mdx": "^4.3.13",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "typescript": "^5.9.3"
   }
 }
