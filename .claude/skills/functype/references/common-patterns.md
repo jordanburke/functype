@@ -378,3 +378,113 @@ const email = Email.from("test@example.com").fold(
   (validEmail) => sendEmail(validEmail), // Type is Email, not string
 )
 ```
+
+## IO Patterns
+
+### Basic Effect Composition
+
+```typescript
+import { IO, Tag, Layer } from "functype"
+
+// Define a service
+interface UserService {
+  findUser(id: string): Promise<User | null>
+  saveUser(user: User): Promise<void>
+}
+const UserService = Tag<UserService>("UserService")
+
+// Create effects that use the service
+const getUser = (id: string) =>
+  IO.gen(function* () {
+    const service = yield* IO.service(UserService)
+    const user = yield* IO.tryPromise({
+      try: () => service.findUser(id),
+      catch: (e) => new UserNotFoundError(id, e)
+    })
+    return user
+  })
+
+// Provide implementation
+const live = Layer.fromValue(UserService, {
+  findUser: async (id) => db.query(`SELECT * FROM users WHERE id = $1`, [id]),
+  saveUser: async (user) => db.query(`INSERT INTO users...`)
+})
+
+// Run the program
+const user = await getUser("123").provide(live).run()
+```
+
+### Error Handling with IO
+
+```typescript
+import { IO } from "functype"
+
+class NetworkError extends Error { type = "NetworkError" as const }
+class ParseError extends Error { type = "ParseError" as const }
+
+const fetchData = IO.tryPromise({
+  try: () => fetch(url),
+  catch: () => new NetworkError("Failed to fetch")
+}).flatMap(response =>
+  IO.tryPromise({
+    try: () => response.json(),
+    catch: () => new ParseError("Failed to parse JSON")
+  })
+)
+
+// Handle specific errors
+const result = fetchData
+  .catchTag("NetworkError", (e) => IO.succeed(fallbackData))
+  .catchTag("ParseError", (e) => IO.succeed(defaultValue))
+```
+
+### Resource Management with Bracket
+
+```typescript
+import { IO } from "functype"
+
+const program = IO.bracket({
+  acquire: IO.sync(() => openConnection()),
+  use: (conn) => IO.async(() => conn.query("SELECT * FROM users")),
+  release: (conn) => IO.sync(() => conn.close())
+})
+// Connection is always closed, even if query fails
+```
+
+## Do-Notation Patterns
+
+### Sequential Dependent Operations
+
+```typescript
+import { Do, $, Option, Either } from "functype"
+
+// Option comprehension
+const userTheme = Do(function* () {
+  const user = yield* $(Option(currentUser))
+  const profile = yield* $(Option(user.profile))
+  const settings = yield* $(Option(profile.settings))
+  return settings.theme
+}).orElse("light")
+
+// Either validation chain
+const validated = Do(function* () {
+  const email = yield* $(validateEmail(input.email))
+  const age = yield* $(validateAge(input.age))
+  const name = yield* $(validateName(input.name))
+  return { email, age, name }
+})
+```
+
+### Cartesian Products
+
+```typescript
+import { Do, $, List } from "functype"
+
+// All combinations of x and y
+const pairs = Do(function* () {
+  const x = yield* $(List([1, 2, 3]))
+  const y = yield* $(List(["a", "b"]))
+  return `${x}${y}`
+})
+// List(["1a", "1b", "2a", "2b", "3a", "3b"])
+```

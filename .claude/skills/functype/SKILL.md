@@ -218,7 +218,7 @@ import { Match } from "functype"
 Match(status)
   .case("success", () => data)
   .case("error", () => null)
-  .done()
+  .exhaustive()
 ```
 
 ## Common Use Cases
@@ -291,6 +291,187 @@ const allHobbies = users
   .flatMap((user) => List(user.hobbies))
   .toSet() // Remove duplicates
   .toArray()
+```
+
+## Additional Data Structures
+
+### IO<R,E,A> - Effect Type
+
+IO is a lazy, composable effect type with typed errors and dependency injection:
+
+- **R** = Requirements (environment/dependencies needed)
+- **E** = Error type (typed failures)
+- **A** = Success type (value produced on success)
+
+```typescript
+import { IO, Tag, Layer } from "functype"
+
+// Creation
+IO.sync(() => computation())     // Sync operation
+IO.succeed(value)                // Pure success
+IO.fail(error)                   // Pure failure
+IO.async(() => promise)          // Async operation
+IO.tryPromise({                  // Promise with error mapping
+  try: () => fetch(url),
+  catch: (e) => new NetworkError(e)
+})
+
+// Dependency injection
+const Database = Tag<DatabaseService>("Database")
+const dbEffect = IO.service(Database)  // Access a service
+const program = dbEffect.flatMap(db => IO.sync(() => db.query()))
+program.provide(Layer.fromValue(Database, myDb))  // Provide deps
+
+// Generator do-notation (cleaner syntax)
+const program = IO.gen(function* () {
+  const db = yield* IO.service(Database)
+  const user = yield* IO.tryPromise(() => db.findUser(id))
+  return user
+})
+
+// Execution
+await effect.run()           // Returns Promise<A>
+effect.runSync()             // Returns A (throws if async)
+await effect.runEither()     // Returns Promise<Either<E,A>>
+await effect.runExit()       // Returns Promise<Exit<E,A>>
+```
+
+### Tuple - Type-safe Fixed-length Array
+
+```typescript
+import { Tuple } from "functype"
+
+const pair = Tuple(42, "hello")
+pair.first()                 // 42
+pair.second()                // "hello"
+pair.mapFirst(x => x * 2)    // Tuple(84, "hello")
+pair.swap()                  // Tuple("hello", 42)
+pair.apply((a, b) => a + b.length)  // 47
+pair.concat(Tuple(true))     // Tuple(42, "hello", true)
+```
+
+### Stack - Last-In-First-Out Collection
+
+```typescript
+import { Stack } from "functype"
+
+Stack.empty<number>()
+const stack = Stack.of(1, 2, 3)
+stack.push(value)            // Returns new Stack
+stack.pop()                  // Returns [Option<T>, Stack<T>]
+stack.peek()                 // Returns Option<T>
+stack.match({
+  Empty: () => "empty stack",
+  NonEmpty: (top, rest) => `top: ${top}`
+})
+```
+
+### LazyList - Lazy-evaluated List
+
+```typescript
+import { LazyList } from "functype"
+
+// Creation
+LazyList([1, 2, 3])
+LazyList.of(1, 2, 3)
+LazyList.empty<number>()
+
+// Infinite sequences
+const naturals = LazyList.from(0, n => n + 1)
+const evens = naturals.filter(n => n % 2 === 0).take(10)
+
+// Operations are deferred until needed
+const result = LazyList(hugeArray)
+  .filter(x => x > 0)
+  .map(x => x * 2)
+  .take(5)
+  .toArray()  // Only processes first 5 matching elements
+```
+
+## Do-Notation (Generator Comprehensions)
+
+Scala-like for-comprehensions using JavaScript generators:
+
+```typescript
+import { Do, DoAsync, $ } from "functype"
+
+// Synchronous comprehensions
+const result = Do(function* () {
+  const x = yield* $(Option(5))
+  const y = yield* $(Option(10))
+  return x + y
+})  // Option(15)
+
+// Async comprehensions
+const asyncResult = await DoAsync(async function* () {
+  const user = yield* $(await fetchUserAsync(userId))
+  const profile = yield* $(await fetchProfileAsync(user.id))
+  return { user, profile }
+})
+
+// Cartesian products with List (2.5x-12x faster than nested flatMap)
+const pairs = Do(function* () {
+  const x = yield* $(List([1, 2, 3]))
+  const y = yield* $(List([10, 20]))
+  return { x, y }
+})  // List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, ...])
+
+// Mixed monad types with automatic conversion
+const mixed = Do(function* () {
+  const a = yield* $(Option(5))
+  const b = yield* $(Right<string, number>(10))
+  return a + b
+})
+```
+
+**Note**: First monad determines return type. Uses Reshapeable for automatic type conversion.
+
+## Companion Pattern & Type Guards
+
+All types provide static type guards for narrowing:
+
+```typescript
+import { Option, Either, Try } from "functype"
+
+// Option type guards
+if (Option.isSome(option)) {
+  option.value  // TypeScript knows value exists
+}
+if (Option.isNone(option)) {
+  // Handle empty case
+}
+
+// Either type guards
+if (Either.isRight(either)) {
+  either.value  // TypeScript knows it's Right
+}
+if (Either.isLeft(either)) {
+  either.value  // TypeScript knows it's error value
+}
+
+// Try type guards
+if (Try.isSuccess(tryVal)) {
+  tryVal.value  // TypeScript knows it succeeded
+}
+if (Try.isFailure(tryVal)) {
+  tryVal.error  // TypeScript knows it failed
+}
+```
+
+## Serialization
+
+All Serializable types provide JSON, YAML, and binary serialization:
+
+```typescript
+// Serialization methods
+option.serialize().toJSON()
+option.serialize().toYAML()
+option.serialize().toBinary()  // Uint8Array
+
+// Deserialization
+Option.fromJSON<string>(jsonString)
+Option.fromYAML<string>(yamlString)
+Option.fromBinary<string>(binaryData)
 ```
 
 ## Looking Up Functype APIs

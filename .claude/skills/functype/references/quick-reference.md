@@ -4,15 +4,19 @@ Quick lookup guide for common functype operations.
 
 ## Construction
 
-| Type   | Constructor                               | Example                                         |
-| ------ | ----------------------------------------- | ----------------------------------------------- |
-| Option | `Option(value)`                           | `Option("hello")`, `Option.none()`              |
-| Either | `Right(value)` or `Left(error)`           | `Right(42)`, `Left("error")`                    |
-| Try    | `Try(() => expression)`                   | `Try(() => JSON.parse(str))`                    |
-| List   | `List(array)`, `.of()`, `.empty()`        | `List([1, 2])`, `List.of(1, 2)`, `List.empty()` |
-| Set    | `Set(array)`, `.of()`, `.empty()`         | `Set([1, 2])`, `Set.of(1, 2)`, `Set.empty()`    |
-| Map    | `Map([[k, v], ...])`, `.of()`, `.empty()` | `Map.of(["a", 1])`, `Map.empty()`               |
-| Lazy   | `Lazy(() => expression)`                  | `Lazy(() => expensiveComputation())`            |
+| Type     | Constructor                               | Example                                         |
+| -------- | ----------------------------------------- | ----------------------------------------------- |
+| Option   | `Option(value)`                           | `Option("hello")`, `Option.none()`              |
+| Either   | `Right(value)` or `Left(error)`           | `Right(42)`, `Left("error")`                    |
+| Try      | `Try(() => expression)`                   | `Try(() => JSON.parse(str))`                    |
+| List     | `List(array)`, `.of()`, `.empty()`        | `List([1, 2])`, `List.of(1, 2)`, `List.empty()` |
+| Set      | `Set(array)`, `.of()`, `.empty()`         | `Set([1, 2])`, `Set.of(1, 2)`, `Set.empty()`    |
+| Map      | `Map([[k, v], ...])`, `.of()`, `.empty()` | `Map.of(["a", 1])`, `Map.empty()`               |
+| Lazy     | `Lazy(() => expression)`                  | `Lazy(() => expensiveComputation())`            |
+| IO       | `IO.sync()`, `IO.succeed()`, `IO.fail()`  | `IO.sync(() => value)`, `IO.succeed(42)`        |
+| Tuple    | `Tuple(...values)`                        | `Tuple(42, "hello")`, `Tuple(1, 2, 3)`          |
+| Stack    | `Stack.of()`, `Stack.empty()`             | `Stack.of(1, 2, 3)`, `Stack.empty<number>()`    |
+| LazyList | `LazyList(array)`, `.of()`, `.empty()`    | `LazyList([1, 2])`, `LazyList.of(1, 2, 3)`      |
 
 **Note**: Collections support multiple creation styles:
 
@@ -175,19 +179,72 @@ List(users)
 
 ## Do-Notation
 
-For complex monadic workflows, some types support do-notation:
+Generator-based monadic comprehensions (Scala-like for-comprehensions):
 
 ```typescript
-import { Option } from "functype"
+import { Do, DoAsync, $ } from "functype"
 
-// Using do-notation for cleaner nested operations
-const result = Option.Do(function* () {
-  const user = yield* Option(currentUser)
-  const profile = yield* Option(user.profile)
-  const settings = yield* Option(profile.settings)
-  return settings.theme
-}).orElse("light")
+// Synchronous comprehensions
+const result = Do(function* () {
+  const x = yield* $(Option(5))
+  const y = yield* $(Option(10))
+  return x + y
+}) // Option(15)
+
+// Async comprehensions
+const asyncResult = await DoAsync(async function* () {
+  const user = yield* $(await fetchUserAsync(userId))
+  return user
+})
+
+// Cartesian products with List (2.5x-12x faster than nested flatMap)
+const pairs = Do(function* () {
+  const x = yield* $(List([1, 2, 3]))
+  const y = yield* $(List([10, 20]))
+  return { x, y }
+}) // List of 6 pairs
 ```
+
+**Note**: First monad determines return type. Supports Option, Either, Try, List.
+
+## IO Operations
+
+| Operation           | Method                          | Example                                    |
+| ------------------- | ------------------------------- | ------------------------------------------ |
+| Create sync         | `IO.sync(fn)`                   | `IO.sync(() => value)`                     |
+| Create async        | `IO.async(fn)`                  | `IO.async(() => promise)`                  |
+| Pure success        | `IO.succeed(value)`             | `IO.succeed(42)`                           |
+| Pure failure        | `IO.fail(error)`                | `IO.fail(new Error("oops"))`               |
+| From promise        | `IO.tryPromise({try, catch})`   | `IO.tryPromise({ try: () => fetch(url) })` |
+| Access service      | `IO.service(Tag)`               | `IO.service(Database)`                     |
+| Provide deps        | `effect.provide(layer)`         | `program.provide(dbLayer)`                 |
+| Run (async)         | `effect.run()`                  | `await effect.run()`                       |
+| Run (sync)          | `effect.runSync()`              | `effect.runSync()`                         |
+| Run to Either       | `effect.runEither()`            | `await effect.runEither()`                 |
+
+## Tuple Operations
+
+| Operation         | Method                  | Example                              |
+| ----------------- | ----------------------- | ------------------------------------ |
+| Create            | `Tuple(...values)`      | `Tuple(42, "hello")`                 |
+| First element     | `first()`               | `pair.first()`                       |
+| Second element    | `second()`              | `pair.second()`                      |
+| Transform first   | `mapFirst(fn)`          | `pair.mapFirst(x => x * 2)`          |
+| Transform second  | `mapSecond(fn)`         | `pair.mapSecond(s => s.toUpperCase())`|
+| Swap elements     | `swap()`                | `pair.swap()`                        |
+| Apply function    | `apply(fn)`             | `pair.apply((a, b) => a + b)`        |
+| Concatenate       | `concat(other)`         | `pair.concat(Tuple(true))`           |
+
+## Stack Operations
+
+| Operation       | Method          | Example                                |
+| --------------- | --------------- | -------------------------------------- |
+| Create empty    | `Stack.empty()` | `Stack.empty<number>()`                |
+| Create from     | `Stack.of(...)`  | `Stack.of(1, 2, 3)`                    |
+| Push            | `push(value)`   | `stack.push(4)`                        |
+| Pop             | `pop()`         | `stack.pop()` → `[Option<T>, Stack<T>]`|
+| Peek            | `peek()`        | `stack.peek()` → `Option<T>`           |
+| Pattern match   | `match({...})`  | `stack.match({ Empty: ..., NonEmpty: ... })` |
 
 ## TypeScript Tips
 
