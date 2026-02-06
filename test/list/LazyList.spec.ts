@@ -178,21 +178,21 @@ describe("LazyList", () => {
       expect(LazyList.empty().count()).toBe(0)
     })
 
-    it("should get first element", () => {
-      const result1 = LazyList([1, 2, 3]).first()
+    it("should get first element via headOption", () => {
+      const result1 = LazyList([1, 2, 3]).headOption
       expect(result1.isEmpty).toBe(false)
       expect(result1.value).toBe(1)
 
-      const result2 = LazyList.empty().first()
+      const result2 = LazyList.empty<number>().headOption
       expect(result2.isEmpty).toBe(true)
     })
 
-    it("should get last element", () => {
-      const result1 = LazyList([1, 2, 3]).last()
+    it("should get last element via lastOption", () => {
+      const result1 = LazyList([1, 2, 3]).lastOption
       expect(result1.isEmpty).toBe(false)
       expect(result1.value).toBe(3)
 
-      const result2 = LazyList.empty().last()
+      const result2 = LazyList.empty<number>().lastOption
       expect(result2.isEmpty).toBe(true)
     })
   })
@@ -343,6 +343,123 @@ describe("LazyList", () => {
     it("should have _tag property", () => {
       const list = LazyList([1, 2, 3])
       expect(list._tag).toBe("LazyList")
+    })
+  })
+
+  describe("element access properties", () => {
+    it("head returns first element", () => {
+      expect(LazyList([1, 2, 3]).head).toBe(1)
+    })
+
+    it("head returns undefined on empty", () => {
+      expect(LazyList.empty<number>().head).toBeUndefined()
+    })
+
+    it("headOption returns Some for non-empty", () => {
+      const opt = LazyList([10, 20]).headOption
+      expect(opt.isEmpty).toBe(false)
+      expect(opt.value).toBe(10)
+    })
+
+    it("headOption returns None for empty", () => {
+      expect(LazyList.empty<number>().headOption.isEmpty).toBe(true)
+    })
+
+    it("last returns last element", () => {
+      expect(LazyList([1, 2, 3]).last).toBe(3)
+    })
+
+    it("last returns undefined on empty", () => {
+      expect(LazyList.empty<number>().last).toBeUndefined()
+    })
+
+    it("lastOption returns Some for non-empty", () => {
+      const opt = LazyList([10, 20, 30]).lastOption
+      expect(opt.isEmpty).toBe(false)
+      expect(opt.value).toBe(30)
+    })
+
+    it("lastOption returns None for empty", () => {
+      expect(LazyList.empty<number>().lastOption.isEmpty).toBe(true)
+    })
+  })
+
+  describe("tail and init", () => {
+    it("tail returns lazy list without first", () => {
+      expect(LazyList([1, 2, 3]).tail.toArray()).toEqual([2, 3])
+    })
+
+    it("tail returns empty for empty list", () => {
+      expect(LazyList.empty<number>().tail.toArray()).toEqual([])
+    })
+
+    it("tail returns empty for single element", () => {
+      expect(LazyList([42]).tail.toArray()).toEqual([])
+    })
+
+    it("init returns lazy list without last", () => {
+      expect(LazyList([1, 2, 3]).init.toArray()).toEqual([1, 2])
+    })
+
+    it("init returns empty for empty list", () => {
+      expect(LazyList.empty<number>().init.toArray()).toEqual([])
+    })
+
+    it("init returns empty for single element", () => {
+      expect(LazyList([42]).init.toArray()).toEqual([])
+    })
+  })
+
+  describe("takeRight", () => {
+    it("returns last n elements", () => {
+      expect(LazyList([1, 2, 3, 4, 5]).takeRight(3).toArray()).toEqual([3, 4, 5])
+    })
+
+    it("handles n > length", () => {
+      expect(LazyList([1, 2]).takeRight(5).toArray()).toEqual([1, 2])
+    })
+
+    it("handles n <= 0", () => {
+      expect(LazyList([1, 2, 3]).takeRight(0).toArray()).toEqual([])
+      expect(LazyList([1, 2, 3]).takeRight(-1).toArray()).toEqual([])
+    })
+  })
+
+  describe("reverse", () => {
+    it("reverses order", () => {
+      expect(LazyList([1, 2, 3]).reverse().toArray()).toEqual([3, 2, 1])
+    })
+
+    it("returns empty for empty", () => {
+      expect(LazyList.empty<number>().reverse().toArray()).toEqual([])
+    })
+  })
+
+  describe("distinct", () => {
+    it("removes duplicates", () => {
+      expect(LazyList([1, 2, 2, 3, 1, 3]).distinct().toArray()).toEqual([1, 2, 3])
+    })
+
+    it("preserves order of first occurrence", () => {
+      expect(LazyList([3, 1, 2, 1, 3]).distinct().toArray()).toEqual([3, 1, 2])
+    })
+
+    it("returns empty for empty", () => {
+      expect(LazyList.empty<number>().distinct().toArray()).toEqual([])
+    })
+  })
+
+  describe("zipWithIndex", () => {
+    it("pairs with indices", () => {
+      expect(LazyList(["a", "b", "c"]).zipWithIndex().toArray()).toEqual([
+        ["a", 0],
+        ["b", 1],
+        ["c", 2],
+      ])
+    })
+
+    it("returns empty for empty", () => {
+      expect(LazyList.empty<string>().zipWithIndex().toArray()).toEqual([])
     })
   })
 

@@ -184,9 +184,31 @@ All Serializable types provide static deserialization methods:
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
 - `flatten(): Self`
-- `head: A`
+- `head: A | undefined`
 - `headOption: Option<A>`
+- `take(n: number): Self`
+- `takeWhile(p: (value: A) => boolean): Self`
+- `takeRight(n: number): Self`
+- `last: A | undefined`
+- `lastOption: Option<A>`
+- `tail: Self`
+- `init: Self`
 - `toArray(): A[]`
+
+### List-specific Methods
+
+- `reverse(): List<A>`
+- `indexOf(value: A): number`
+- `prepend(item: A): List<A>`
+- `distinct(): List<A>`
+- `sorted(compareFn?): List<A>`
+- `sortBy(f, compareFn?): List<A>`
+- `zip(other: List<B>): List<[A, B]>`
+- `zipWithIndex(): List<[A, number]>`
+- `groupBy(f: (a: A) => K): Map<K, List<A>>`
+- `partition(p): [List<A>, List<A>]`
+- `span(p): [List<A>, List<A>]`
+- `slice(start, end): List<A>`
 
 ### Do-notation Support
 

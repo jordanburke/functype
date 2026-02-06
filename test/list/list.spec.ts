@@ -313,6 +313,240 @@ describe("List", () => {
     })
   })
 
+  describe("slicing", () => {
+    const list = List([1, 2, 3, 4, 5])
+
+    it("take returns first n elements", () => {
+      expect(list.take(3).toArray()).toEqual([1, 2, 3])
+    })
+
+    it("take handles n > length", () => {
+      expect(list.take(10).toArray()).toEqual([1, 2, 3, 4, 5])
+    })
+
+    it("take handles n <= 0", () => {
+      expect(list.take(0).toArray()).toEqual([])
+      expect(list.take(-1).toArray()).toEqual([])
+    })
+
+    it("takeWhile takes while predicate true", () => {
+      expect(list.takeWhile((x) => x < 4).toArray()).toEqual([1, 2, 3])
+    })
+
+    it("takeWhile stops at first false", () => {
+      expect(
+        List([1, 2, 5, 3, 4])
+          .takeWhile((x) => x < 4)
+          .toArray(),
+      ).toEqual([1, 2])
+    })
+
+    it("takeWhile on empty returns empty", () => {
+      expect(
+        List.empty<number>()
+          .takeWhile((x) => x < 4)
+          .toArray(),
+      ).toEqual([])
+    })
+
+    it("takeRight returns last n elements", () => {
+      expect(list.takeRight(3).toArray()).toEqual([3, 4, 5])
+    })
+
+    it("takeRight handles n > length", () => {
+      expect(list.takeRight(10).toArray()).toEqual([1, 2, 3, 4, 5])
+    })
+
+    it("takeRight handles n <= 0", () => {
+      expect(list.takeRight(0).toArray()).toEqual([])
+      expect(list.takeRight(-1).toArray()).toEqual([])
+    })
+
+    it("slice extracts range", () => {
+      expect(list.slice(1, 4).toArray()).toEqual([2, 3, 4])
+    })
+
+    it("slice handles out of bounds", () => {
+      expect(list.slice(3, 10).toArray()).toEqual([4, 5])
+    })
+  })
+
+  describe("element access", () => {
+    it("last returns last element", () => {
+      expect(List([1, 2, 3]).last).toBe(3)
+    })
+
+    it("last returns undefined on empty", () => {
+      expect(List.empty<number>().last).toBeUndefined()
+    })
+
+    it("lastOption returns Some for non-empty", () => {
+      const opt = List([10, 20, 30]).lastOption
+      expect(opt._tag).toBe("Some")
+      expect(opt.value).toBe(30)
+    })
+
+    it("lastOption returns None for empty", () => {
+      expect(List.empty<number>().lastOption._tag).toBe("None")
+    })
+
+    it("tail returns all except first", () => {
+      expect(List([1, 2, 3]).tail.toArray()).toEqual([2, 3])
+    })
+
+    it("tail returns empty for empty list", () => {
+      expect(List.empty<number>().tail.toArray()).toEqual([])
+    })
+
+    it("tail returns empty for single element", () => {
+      expect(List([42]).tail.toArray()).toEqual([])
+    })
+
+    it("init returns all except last", () => {
+      expect(List([1, 2, 3]).init.toArray()).toEqual([1, 2])
+    })
+
+    it("init returns empty for empty list", () => {
+      expect(List.empty<number>().init.toArray()).toEqual([])
+    })
+
+    it("init returns empty for single element", () => {
+      expect(List([42]).init.toArray()).toEqual([])
+    })
+  })
+
+  describe("transformations", () => {
+    it("reverse reverses order", () => {
+      expect(List([1, 2, 3]).reverse().toArray()).toEqual([3, 2, 1])
+    })
+
+    it("reverse returns empty for empty", () => {
+      expect(List.empty<number>().reverse().toArray()).toEqual([])
+    })
+
+    it("distinct removes duplicates", () => {
+      expect(List([1, 2, 2, 3, 1, 3]).distinct().toArray()).toEqual([1, 2, 3])
+    })
+
+    it("distinct preserves order of first occurrence", () => {
+      expect(List([3, 1, 2, 1, 3]).distinct().toArray()).toEqual([3, 1, 2])
+    })
+
+    it("sorted sorts with natural order", () => {
+      expect(List([3, 1, 4, 1, 5]).sorted().toArray()).toEqual([1, 1, 3, 4, 5])
+    })
+
+    it("sorted uses custom comparator", () => {
+      expect(
+        List([3, 1, 4, 1, 5])
+          .sorted((a, b) => b - a)
+          .toArray(),
+      ).toEqual([5, 4, 3, 1, 1])
+    })
+
+    it("sortBy sorts by extracted key", () => {
+      const list = List([{ name: "Charlie" }, { name: "Alice" }, { name: "Bob" }])
+      expect(list.sortBy((x) => x.name).toArray()).toEqual([{ name: "Alice" }, { name: "Bob" }, { name: "Charlie" }])
+    })
+
+    it("sortBy uses custom comparator", () => {
+      const list = List([{ age: 30 }, { age: 20 }, { age: 25 }])
+      expect(
+        list
+          .sortBy(
+            (x) => x.age,
+            (a, b) => b - a,
+          )
+          .toArray(),
+      ).toEqual([{ age: 30 }, { age: 25 }, { age: 20 }])
+    })
+  })
+
+  describe("searching", () => {
+    it("indexOf finds element index", () => {
+      expect(List([10, 20, 30]).indexOf(20)).toBe(1)
+    })
+
+    it("indexOf returns -1 for missing", () => {
+      expect(List([10, 20, 30]).indexOf(99)).toBe(-1)
+    })
+  })
+
+  describe("adding", () => {
+    it("prepend adds to front", () => {
+      expect(List([2, 3]).prepend(1).toArray()).toEqual([1, 2, 3])
+    })
+
+    it("prepend on empty", () => {
+      expect(List.empty<number>().prepend(1).toArray()).toEqual([1])
+    })
+  })
+
+  describe("zipping", () => {
+    it("zip combines two lists", () => {
+      expect(
+        List(["a", "b", "c"])
+          .zip(List([1, 2, 3]))
+          .toArray(),
+      ).toEqual([
+        ["a", 1],
+        ["b", 2],
+        ["c", 3],
+      ])
+    })
+
+    it("zip truncates to shorter list", () => {
+      expect(
+        List(["a", "b"])
+          .zip(List([1, 2, 3, 4]))
+          .toArray(),
+      ).toEqual([
+        ["a", 1],
+        ["b", 2],
+      ])
+    })
+
+    it("zipWithIndex pairs with indices", () => {
+      expect(List(["a", "b", "c"]).zipWithIndex().toArray()).toEqual([
+        ["a", 0],
+        ["b", 1],
+        ["c", 2],
+      ])
+    })
+  })
+
+  describe("grouping", () => {
+    it("groupBy groups by key function", () => {
+      const groups = List([1, 2, 3, 4, 5, 6]).groupBy((x) => (x % 2 === 0 ? "even" : "odd"))
+      expect(groups.get("even")?.toArray()).toEqual([2, 4, 6])
+      expect(groups.get("odd")?.toArray()).toEqual([1, 3, 5])
+    })
+
+    it("partition splits by predicate", () => {
+      const [evens, odds] = List([1, 2, 3, 4, 5]).partition((x) => x % 2 === 0)
+      expect(evens.toArray()).toEqual([2, 4])
+      expect(odds.toArray()).toEqual([1, 3, 5])
+    })
+
+    it("span splits at first false", () => {
+      const [before, after] = List([1, 2, 3, 4, 1, 2]).span((x) => x < 4)
+      expect(before.toArray()).toEqual([1, 2, 3])
+      expect(after.toArray()).toEqual([4, 1, 2])
+    })
+
+    it("span with all true", () => {
+      const [before, after] = List([1, 2, 3]).span((x) => x < 10)
+      expect(before.toArray()).toEqual([1, 2, 3])
+      expect(after.toArray()).toEqual([])
+    })
+
+    it("span with all false", () => {
+      const [before, after] = List([1, 2, 3]).span((x) => x < 0)
+      expect(before.toArray()).toEqual([])
+      expect(after.toArray()).toEqual([1, 2, 3])
+    })
+  })
+
   describe("List Type Filtering", () => {
     // First, let's define base interfaces for our data
     type BaseNodeData = {

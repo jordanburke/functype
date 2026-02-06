@@ -59,17 +59,35 @@ Quick lookup guide for common functype operations.
 
 ## Collection Operations
 
-| Operation       | Method                | Example                                  |
-| --------------- | --------------------- | ---------------------------------------- |
-| Add element     | `append(elem)`        | `list.append(4)`                         |
-| Add at start    | `prepend(elem)`       | `list.prepend(0)`                        |
-| Combine lists   | `concat(other)`       | `list.concat(otherList)`                 |
-| First element   | `head()`              | `list.head()`                            |
-| Rest of list    | `tail()`              | `list.tail()`                            |
-| First (safe)    | `headOption()`        | `list.headOption()`                      |
-| Reduce left     | `foldLeft(init)(fn)`  | `list.foldLeft(0)((sum, n) => sum + n)`  |
-| Reduce right    | `foldRight(init)(fn)` | `list.foldRight(0)((n, sum) => sum + n)` |
-| Standard reduce | `reduce(fn, init)`    | `list.reduce((acc, n) => acc + n, 0)`    |
+| Operation              | Method                | Example                                  |
+| ---------------------- | --------------------- | ---------------------------------------- |
+| Add element            | `append(elem)`        | `list.append(4)`                         |
+| Add at start           | `prepend(elem)`       | `list.prepend(0)`                        |
+| Combine lists          | `concat(other)`       | `list.concat(otherList)`                 |
+| First element          | `head`                | `list.head`                              |
+| First (safe)           | `headOption`          | `list.headOption`                        |
+| Last element           | `last`                | `list.last`                              |
+| Last (safe)            | `lastOption`          | `list.lastOption`                        |
+| Rest of list           | `tail`                | `list.tail`                              |
+| All except last        | `init`                | `list.init`                              |
+| Take first N           | `take(n)`             | `list.take(3)`                           |
+| Take while matching    | `takeWhile(p)`        | `list.takeWhile(x => x < 5)`             |
+| Take last N            | `takeRight(n)`        | `list.takeRight(2)`                      |
+| Drop while matching    | `dropWhile(p)`        | `list.dropWhile(x => x < 3)`             |
+| Reverse                | `reverse()`           | `list.reverse()`                         |
+| Remove duplicates      | `distinct()`          | `list.distinct()`                        |
+| Sort (natural)         | `sorted()`            | `list.sorted()`                          |
+| Sort by key            | `sortBy(f)`           | `list.sortBy(u => u.name)`               |
+| Zip with another list  | `zip(list)`           | `list.zip(otherList)`                    |
+| Zip with indices       | `zipWithIndex()`      | `list.zipWithIndex()`                    |
+| Group by key           | `groupBy(f)`          | `list.groupBy(x => x.type)`              |
+| Partition by predicate | `partition(p)`        | `list.partition(x => x > 0)`             |
+| Span (prefix split)    | `span(p)`             | `list.span(x => x < 5)`                  |
+| Slice range            | `slice(s, e)`         | `list.slice(1, 4)`                       |
+| Find index             | `indexOf(v)`          | `list.indexOf(42)`                       |
+| Reduce left            | `foldLeft(init)(fn)`  | `list.foldLeft(0)((sum, n) => sum + n)`  |
+| Reduce right           | `foldRight(init)(fn)` | `list.foldRight(0)((n, sum) => sum + n)` |
+| Standard reduce        | `reduce(fn, init)`    | `list.reduce((acc, n) => acc + n, 0)`    |
 
 ## Conversion
 
@@ -209,42 +227,42 @@ const pairs = Do(function* () {
 
 ## IO Operations
 
-| Operation           | Method                          | Example                                    |
-| ------------------- | ------------------------------- | ------------------------------------------ |
-| Create sync         | `IO.sync(fn)`                   | `IO.sync(() => value)`                     |
-| Create async        | `IO.async(fn)`                  | `IO.async(() => promise)`                  |
-| Pure success        | `IO.succeed(value)`             | `IO.succeed(42)`                           |
-| Pure failure        | `IO.fail(error)`                | `IO.fail(new Error("oops"))`               |
-| From promise        | `IO.tryPromise({try, catch})`   | `IO.tryPromise({ try: () => fetch(url) })` |
-| Access service      | `IO.service(Tag)`               | `IO.service(Database)`                     |
-| Provide deps        | `effect.provide(layer)`         | `program.provide(dbLayer)`                 |
-| Run (async)         | `effect.run()`                  | `await effect.run()`                       |
-| Run (sync)          | `effect.runSync()`              | `effect.runSync()`                         |
-| Run to Either       | `effect.runEither()`            | `await effect.runEither()`                 |
+| Operation      | Method                        | Example                                    |
+| -------------- | ----------------------------- | ------------------------------------------ |
+| Create sync    | `IO.sync(fn)`                 | `IO.sync(() => value)`                     |
+| Create async   | `IO.async(fn)`                | `IO.async(() => promise)`                  |
+| Pure success   | `IO.succeed(value)`           | `IO.succeed(42)`                           |
+| Pure failure   | `IO.fail(error)`              | `IO.fail(new Error("oops"))`               |
+| From promise   | `IO.tryPromise({try, catch})` | `IO.tryPromise({ try: () => fetch(url) })` |
+| Access service | `IO.service(Tag)`             | `IO.service(Database)`                     |
+| Provide deps   | `effect.provide(layer)`       | `program.provide(dbLayer)`                 |
+| Run (async)    | `effect.run()`                | `await effect.run()`                       |
+| Run (sync)     | `effect.runSync()`            | `effect.runSync()`                         |
+| Run to Either  | `effect.runEither()`          | `await effect.runEither()`                 |
 
 ## Tuple Operations
 
-| Operation         | Method                  | Example                              |
-| ----------------- | ----------------------- | ------------------------------------ |
-| Create            | `Tuple(...values)`      | `Tuple(42, "hello")`                 |
-| First element     | `first()`               | `pair.first()`                       |
-| Second element    | `second()`              | `pair.second()`                      |
-| Transform first   | `mapFirst(fn)`          | `pair.mapFirst(x => x * 2)`          |
-| Transform second  | `mapSecond(fn)`         | `pair.mapSecond(s => s.toUpperCase())`|
-| Swap elements     | `swap()`                | `pair.swap()`                        |
-| Apply function    | `apply(fn)`             | `pair.apply((a, b) => a + b)`        |
-| Concatenate       | `concat(other)`         | `pair.concat(Tuple(true))`           |
+| Operation        | Method             | Example                                |
+| ---------------- | ------------------ | -------------------------------------- |
+| Create           | `Tuple(...values)` | `Tuple(42, "hello")`                   |
+| First element    | `first()`          | `pair.first()`                         |
+| Second element   | `second()`         | `pair.second()`                        |
+| Transform first  | `mapFirst(fn)`     | `pair.mapFirst(x => x * 2)`            |
+| Transform second | `mapSecond(fn)`    | `pair.mapSecond(s => s.toUpperCase())` |
+| Swap elements    | `swap()`           | `pair.swap()`                          |
+| Apply function   | `apply(fn)`        | `pair.apply((a, b) => a + b)`          |
+| Concatenate      | `concat(other)`    | `pair.concat(Tuple(true))`             |
 
 ## Stack Operations
 
-| Operation       | Method          | Example                                |
-| --------------- | --------------- | -------------------------------------- |
-| Create empty    | `Stack.empty()` | `Stack.empty<number>()`                |
-| Create from     | `Stack.of(...)`  | `Stack.of(1, 2, 3)`                    |
-| Push            | `push(value)`   | `stack.push(4)`                        |
-| Pop             | `pop()`         | `stack.pop()` → `[Option<T>, Stack<T>]`|
-| Peek            | `peek()`        | `stack.peek()` → `Option<T>`           |
-| Pattern match   | `match({...})`  | `stack.match({ Empty: ..., NonEmpty: ... })` |
+| Operation     | Method          | Example                                      |
+| ------------- | --------------- | -------------------------------------------- |
+| Create empty  | `Stack.empty()` | `Stack.empty<number>()`                      |
+| Create from   | `Stack.of(...)` | `Stack.of(1, 2, 3)`                          |
+| Push          | `push(value)`   | `stack.push(4)`                              |
+| Pop           | `pop()`         | `stack.pop()` → `[Option<T>, Stack<T>]`      |
+| Peek          | `peek()`        | `stack.peek()` → `Option<T>`                 |
+| Pattern match | `match({...})`  | `stack.match({ Empty: ..., NonEmpty: ... })` |
 
 ## TypeScript Tips
 

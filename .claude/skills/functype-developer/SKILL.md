@@ -14,6 +14,7 @@ Guide for contributing to the functype TypeScript library. This skill provides a
 Trigger this skill when:
 
 - Creating new data structures or types
+- Adding methods to existing data structures
 - Implementing functional interfaces (Functor, Monad, Foldable, etc.)
 - Adding or fixing tests
 - Understanding library architecture
@@ -549,6 +550,7 @@ pnpm analyze:size
 
 - `architecture.md` - Detailed architecture and patterns
 - `adding-types.md` - Complete guide for adding new data structures
+- `adding-methods.md` - Checklist for adding methods to existing types
 - `testing-patterns.md` - Testing strategies and examples
 
 ### External Links

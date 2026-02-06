@@ -119,6 +119,23 @@ Strict mode with additional safety:
 7. Update `docs/FUNCTYPE_FEATURE_MATRIX.md` with interface support
 8. Run `pnpm validate`
 
+## Adding Methods to Existing Data Structures
+
+1. Add to shared interface (e.g., `CollectionOps` in `src/typeclass/ContainerOps.ts`) if applicable
+2. Implement in ALL types extending that interface (List, Set, etc.)
+3. Override return types in type-specific interfaces
+4. Add JSDoc comments and tests
+5. Run `pnpm extract:interfaces` to regenerate CLI interfaces
+6. Update `src/cli/data.ts` with new method entries
+7. Update `docs/FUNCTYPE_FEATURE_MATRIX.md`
+8. Run `pnpm docs:sync` to sync feature matrix to landing site
+9. Update `landing/src/content/<type>.md` with examples
+10. Update `.claude/skills/functype/references/quick-reference.md`
+11. Update `.claude/skills/functype/references/common-patterns.md` if workarounds become built-in
+12. Run `pnpm validate`
+
+See `.claude/skills/functype-developer/references/adding-methods.md` for the full checklist.
+
 ## Documentation Updates
 
 When changing public APIs:

@@ -76,6 +76,41 @@ export interface CollectionOps<A extends Type, Self> {
   get headOption(): Option<A>
 
   /**
+   * Takes the first n elements from the collection.
+   */
+  take(n: number): Self
+
+  /**
+   * Takes elements from the start while the predicate is true.
+   */
+  takeWhile(p: (a: A) => boolean): Self
+
+  /**
+   * Takes the last n elements from the collection.
+   */
+  takeRight(n: number): Self
+
+  /**
+   * Gets the last element of the collection.
+   */
+  get last(): A | undefined
+
+  /**
+   * Gets the last element wrapped in Option.
+   */
+  get lastOption(): Option<A>
+
+  /**
+   * Gets all elements except the first.
+   */
+  get tail(): Self
+
+  /**
+   * Gets all elements except the last.
+   */
+  get init(): Self
+
+  /**
    * Converts the collection to an array.
    */
   toArray<B = A>(): B[]

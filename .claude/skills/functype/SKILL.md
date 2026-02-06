@@ -307,20 +307,21 @@ IO is a lazy, composable effect type with typed errors and dependency injection:
 import { IO, Tag, Layer } from "functype"
 
 // Creation
-IO.sync(() => computation())     // Sync operation
-IO.succeed(value)                // Pure success
-IO.fail(error)                   // Pure failure
-IO.async(() => promise)          // Async operation
-IO.tryPromise({                  // Promise with error mapping
+IO.sync(() => computation()) // Sync operation
+IO.succeed(value) // Pure success
+IO.fail(error) // Pure failure
+IO.async(() => promise) // Async operation
+IO.tryPromise({
+  // Promise with error mapping
   try: () => fetch(url),
-  catch: (e) => new NetworkError(e)
+  catch: (e) => new NetworkError(e),
 })
 
 // Dependency injection
 const Database = Tag<DatabaseService>("Database")
-const dbEffect = IO.service(Database)  // Access a service
-const program = dbEffect.flatMap(db => IO.sync(() => db.query()))
-program.provide(Layer.fromValue(Database, myDb))  // Provide deps
+const dbEffect = IO.service(Database) // Access a service
+const program = dbEffect.flatMap((db) => IO.sync(() => db.query()))
+program.provide(Layer.fromValue(Database, myDb)) // Provide deps
 
 // Generator do-notation (cleaner syntax)
 const program = IO.gen(function* () {
@@ -330,10 +331,10 @@ const program = IO.gen(function* () {
 })
 
 // Execution
-await effect.run()           // Returns Promise<A>
-effect.runSync()             // Returns A (throws if async)
-await effect.runEither()     // Returns Promise<Either<E,A>>
-await effect.runExit()       // Returns Promise<Exit<E,A>>
+await effect.run() // Returns Promise<A>
+effect.runSync() // Returns A (throws if async)
+await effect.runEither() // Returns Promise<Either<E,A>>
+await effect.runExit() // Returns Promise<Exit<E,A>>
 ```
 
 ### Tuple - Type-safe Fixed-length Array
@@ -342,12 +343,12 @@ await effect.runExit()       // Returns Promise<Exit<E,A>>
 import { Tuple } from "functype"
 
 const pair = Tuple(42, "hello")
-pair.first()                 // 42
-pair.second()                // "hello"
-pair.mapFirst(x => x * 2)    // Tuple(84, "hello")
-pair.swap()                  // Tuple("hello", 42)
-pair.apply((a, b) => a + b.length)  // 47
-pair.concat(Tuple(true))     // Tuple(42, "hello", true)
+pair.first() // 42
+pair.second() // "hello"
+pair.mapFirst((x) => x * 2) // Tuple(84, "hello")
+pair.swap() // Tuple("hello", 42)
+pair.apply((a, b) => a + b.length) // 47
+pair.concat(Tuple(true)) // Tuple(42, "hello", true)
 ```
 
 ### Stack - Last-In-First-Out Collection
@@ -357,12 +358,12 @@ import { Stack } from "functype"
 
 Stack.empty<number>()
 const stack = Stack.of(1, 2, 3)
-stack.push(value)            // Returns new Stack
-stack.pop()                  // Returns [Option<T>, Stack<T>]
-stack.peek()                 // Returns Option<T>
+stack.push(value) // Returns new Stack
+stack.pop() // Returns [Option<T>, Stack<T>]
+stack.peek() // Returns Option<T>
 stack.match({
   Empty: () => "empty stack",
-  NonEmpty: (top, rest) => `top: ${top}`
+  NonEmpty: (top, rest) => `top: ${top}`,
 })
 ```
 
@@ -377,15 +378,15 @@ LazyList.of(1, 2, 3)
 LazyList.empty<number>()
 
 // Infinite sequences
-const naturals = LazyList.from(0, n => n + 1)
-const evens = naturals.filter(n => n % 2 === 0).take(10)
+const naturals = LazyList.from(0, (n) => n + 1)
+const evens = naturals.filter((n) => n % 2 === 0).take(10)
 
 // Operations are deferred until needed
 const result = LazyList(hugeArray)
-  .filter(x => x > 0)
-  .map(x => x * 2)
+  .filter((x) => x > 0)
+  .map((x) => x * 2)
   .take(5)
-  .toArray()  // Only processes first 5 matching elements
+  .toArray() // Only processes first 5 matching elements
 ```
 
 ## Do-Notation (Generator Comprehensions)
@@ -400,7 +401,7 @@ const result = Do(function* () {
   const x = yield* $(Option(5))
   const y = yield* $(Option(10))
   return x + y
-})  // Option(15)
+}) // Option(15)
 
 // Async comprehensions
 const asyncResult = await DoAsync(async function* () {
@@ -414,7 +415,7 @@ const pairs = Do(function* () {
   const x = yield* $(List([1, 2, 3]))
   const y = yield* $(List([10, 20]))
   return { x, y }
-})  // List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, ...])
+}) // List([{x:1,y:10}, {x:1,y:20}, {x:2,y:10}, ...])
 
 // Mixed monad types with automatic conversion
 const mixed = Do(function* () {
@@ -435,7 +436,7 @@ import { Option, Either, Try } from "functype"
 
 // Option type guards
 if (Option.isSome(option)) {
-  option.value  // TypeScript knows value exists
+  option.value // TypeScript knows value exists
 }
 if (Option.isNone(option)) {
   // Handle empty case
@@ -443,18 +444,18 @@ if (Option.isNone(option)) {
 
 // Either type guards
 if (Either.isRight(either)) {
-  either.value  // TypeScript knows it's Right
+  either.value // TypeScript knows it's Right
 }
 if (Either.isLeft(either)) {
-  either.value  // TypeScript knows it's error value
+  either.value // TypeScript knows it's error value
 }
 
 // Try type guards
 if (Try.isSuccess(tryVal)) {
-  tryVal.value  // TypeScript knows it succeeded
+  tryVal.value // TypeScript knows it succeeded
 }
 if (Try.isFailure(tryVal)) {
-  tryVal.error  // TypeScript knows it failed
+  tryVal.error // TypeScript knows it failed
 }
 ```
 
@@ -466,7 +467,7 @@ All Serializable types provide JSON, YAML, and binary serialization:
 // Serialization methods
 option.serialize().toJSON()
 option.serialize().toYAML()
-option.serialize().toBinary()  // Uint8Array
+option.serialize().toBinary() // Uint8Array
 
 // Deserialization
 Option.fromJSON<string>(jsonString)

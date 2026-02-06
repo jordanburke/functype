@@ -212,6 +212,42 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return Option(first)
     },
 
+    take: (n: number) => createSet(Array.from(values).slice(0, Math.max(0, n))),
+
+    takeWhile: (p: (a: A) => boolean) => {
+      const arr = Array.from(values)
+      const result: A[] = []
+      for (const item of arr) {
+        if (!p(item)) break
+        result.push(item)
+      }
+      return createSet(result)
+    },
+
+    takeRight: (n: number) => {
+      const arr = Array.from(values)
+      return createSet(n <= 0 ? [] : arr.slice(-n))
+    },
+
+    get last() {
+      const arr = Array.from(values)
+      return arr[arr.length - 1] as A | undefined
+    },
+
+    get lastOption() {
+      const arr = Array.from(values)
+      return Option(arr[arr.length - 1])
+    },
+
+    get tail() {
+      return createSet(Array.from(values).slice(1))
+    },
+
+    get init() {
+      const arr = Array.from(values)
+      return createSet(arr.length === 0 ? [] : arr.slice(0, -1))
+    },
+
     toList: (): List<A> => List(Array.from(values)),
 
     toSet: (): Set<A> => set,

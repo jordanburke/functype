@@ -33,6 +33,25 @@ export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Resha
   add: (item: A) => List<A>
   get: (index: number) => Option<A>
   concat: (other: List<A>) => List<A>
+  take: (n: number) => List<A>
+  takeWhile: (p: (a: A) => boolean) => List<A>
+  takeRight: (n: number) => List<A>
+  get last(): A | undefined
+  get lastOption(): Option<A>
+  get tail(): List<A>
+  get init(): List<A>
+  reverse: () => List<A>
+  indexOf: (value: A) => number
+  prepend: (item: A) => List<A>
+  distinct: () => List<A>
+  sorted: (compareFn?: (a: A, b: A) => number) => List<A>
+  sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
+  zip: <B>(other: List<B>) => List<[A, B]>
+  zipWithIndex: () => List<[A, number]>
+  groupBy: <K>(f: (a: A) => K) => globalThis.Map<K, List<A>>
+  partition: (p: (a: A) => boolean) => [List<A>, List<A>]
+  span: (p: (a: A) => boolean) => [List<A>, List<A>]
+  slice: (start: number, end: number) => List<A>
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -138,6 +157,110 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     get: (index: number) => Option(array[index]),
 
     concat: (other: List<A>) => ListObject([...array, ...other.toArray()]),
+
+    take: (n: number) => ListObject(array.slice(0, Math.max(0, n))),
+
+    takeWhile: (p: (a: A) => boolean) => {
+      const result: A[] = []
+      for (const item of array) {
+        if (!p(item)) break
+        result.push(item)
+      }
+      return ListObject(result)
+    },
+
+    takeRight: (n: number) => ListObject(n <= 0 ? [] : array.slice(-n)),
+
+    get last() {
+      return array[array.length - 1] as A | undefined
+    },
+
+    get lastOption() {
+      return array.length > 0 ? Option(array[array.length - 1]) : None<A>()
+    },
+
+    get tail() {
+      return ListObject(array.slice(1))
+    },
+
+    get init() {
+      return ListObject(array.length === 0 ? [] : array.slice(0, -1))
+    },
+
+    reverse: () => ListObject([...array].reverse()),
+
+    indexOf: (value: A) => array.indexOf(value),
+
+    prepend: (item: A) => ListObject([item, ...array]),
+
+    distinct: () => {
+      const seen = new globalThis.Set<A>()
+      const result: A[] = []
+      for (const item of array) {
+        if (!seen.has(item)) {
+          seen.add(item)
+          result.push(item)
+        }
+      }
+      return ListObject(result)
+    },
+
+    sorted: (compareFn?: (a: A, b: A) => number) => ListObject([...array].sort(compareFn)),
+
+    sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) =>
+      ListObject(
+        [...array].sort((x, y) => {
+          const fx = f(x)
+          const fy = f(y)
+          if (compareFn) return compareFn(fx, fy)
+          return fx < fy ? -1 : fx > fy ? 1 : 0
+        }),
+      ),
+
+    zip: <B>(other: List<B>) => {
+      const otherArr = other.toArray()
+      const len = Math.min(array.length, otherArr.length)
+      const result: [A, B][] = []
+      for (let i = 0; i < len; i++) {
+        result.push([array[i]!, otherArr[i]!])
+      }
+      return ListObject(result)
+    },
+
+    zipWithIndex: () => ListObject(array.map((a, i) => [a, i] as [A, number])),
+
+    groupBy: <K>(f: (a: A) => K) => {
+      const groups = new globalThis.Map<K, A[]>()
+      for (const item of array) {
+        const key = f(item)
+        const group = groups.get(key) ?? []
+        group.push(item)
+        groups.set(key, group)
+      }
+      const result = new globalThis.Map<K, List<A>>()
+      for (const [key, items] of groups) {
+        result.set(key, ListObject(items))
+      }
+      return result
+    },
+
+    partition: (p: (a: A) => boolean): [List<A>, List<A>] => {
+      const yes: A[] = []
+      const no: A[] = []
+      for (const item of array) {
+        if (p(item)) yes.push(item)
+        else no.push(item)
+      }
+      return [ListObject(yes), ListObject(no)]
+    },
+
+    span: (p: (a: A) => boolean): [List<A>, List<A>] => {
+      const idx = array.findIndex((x) => !p(x))
+      if (idx === -1) return [ListObject([...array]), ListObject<A>([])]
+      return [ListObject(array.slice(0, idx)), ListObject(array.slice(idx))]
+    },
+
+    slice: (start: number, end: number) => ListObject(array.slice(start, end)),
 
     drop: (n: number) => ListObject(array.slice(n)),
 

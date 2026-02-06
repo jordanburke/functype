@@ -263,6 +263,25 @@ export const FULL_INTERFACES: Record<string, string> = {
   add: (item: A) => List<A>
   get: (index: number) => Option<A>
   concat: (other: List<A>) => List<A>
+  take: (n: number) => List<A>
+  takeWhile: (p: (a: A) => boolean) => List<A>
+  takeRight: (n: number) => List<A>
+  get last(): A | undefined
+  get lastOption(): Option<A>
+  get tail(): List<A>
+  get init(): List<A>
+  reverse: () => List<A>
+  indexOf: (value: A) => number
+  prepend: (item: A) => List<A>
+  distinct: () => List<A>
+  sorted: (compareFn?: (a: A, b: A) => number) => List<A>
+  sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
+  zip: <B>(other: List<B>) => List<[A, B]>
+  zipWithIndex: () => List<[A, number]>
+  groupBy: <K>(f: (a: A) => K) => globalThis.Map<K, List<A>>
+  partition: (p: (a: A) => boolean) => [List<A>, List<A>]
+  span: (p: (a: A) => boolean) => [List<A>, List<A>]
+  slice: (start: number, end: number) => List<A>
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -487,6 +506,19 @@ export const FULL_INTERFACES: Record<string, string> = {
   concat(other: LazyList<A>): LazyList<A>
   zip<B extends Type>(other: LazyList<B>): LazyList<[A, B]>
 
+  takeRight(n: number): LazyList<A>
+  reverse(): LazyList<A>
+  distinct(): LazyList<A>
+  zipWithIndex(): LazyList<[A, number]>
+
+  // Element access (properties)
+  get head(): A | undefined
+  get headOption(): Option<A>
+  get last(): A | undefined
+  get lastOption(): Option<A>
+  get tail(): LazyList<A>
+  get init(): LazyList<A>
+
   // Terminal operations (force evaluation)
   toList(): List<A>
   toArray(): A[]
@@ -496,8 +528,6 @@ export const FULL_INTERFACES: Record<string, string> = {
   some(predicate: (a: A) => boolean): boolean
   every(predicate: (a: A) => boolean): boolean
   count(): number
-  first(): Option<A>
-  last(): Option<A>
 
   // Additional methods for clarity
   toString(): string

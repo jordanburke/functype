@@ -144,7 +144,7 @@ const data = retryOperation(() => fetchFromAPI(), 3).recover((error) => {
 
 ## Collection Patterns
 
-### GroupBy Implementation
+### GroupBy
 
 ```typescript
 import { List } from "functype"
@@ -154,16 +154,15 @@ interface Item {
   name: string
 }
 
-const items: Item[] = [
+const items = List<Item>([
   { category: "fruit", name: "apple" },
   { category: "fruit", name: "banana" },
   { category: "vegetable", name: "carrot" },
-]
+])
 
-const grouped = List(items).foldLeft(new Map<string, Item[]>())((acc, item) => {
-  const existing = acc.get(item.category) ?? []
-  return new Map(acc).set(item.category, [...existing, item])
-})
+// Built-in groupBy returns Map<K, List<A>>
+const grouped = items.groupBy((item) => item.category)
+// Map { "fruit" => List([apple, banana]), "vegetable" => List([carrot]) }
 ```
 
 ### Partition by Predicate
@@ -173,30 +172,28 @@ import { List } from "functype"
 
 const numbers = List([1, 2, 3, 4, 5, 6])
 
-const [evens, odds] = numbers
-  .toArray()
-  .reduce(([e, o], n) => (n % 2 === 0 ? [[...e, n], o] : [e, [...o, n]]), [[] as number[], [] as number[]])
-
-// Or using filter
-const evens = numbers.filter((n) => n % 2 === 0)
-const odds = numbers.filter((n) => n % 2 !== 0)
+// Built-in partition returns [matching, non-matching]
+const [evens, odds] = numbers.partition((n) => n % 2 === 0)
+// evens: List([2, 4, 6])
+// odds: List([1, 3, 5])
 ```
 
 ### Safe Head/Tail Operations
 
 ```typescript
 import { List } from "functype"
-import { Option } from "functype"
 
 const list = List([1, 2, 3, 4, 5])
 
-// Safe head (first element)
-const first = list
-  .headOption() // Option<number>
-  .orElse(0)
+// Safe head (first element) - headOption is a property, not a method
+const first = list.headOption.orElse(0) // Option<number>
 
-// Safe operations on tail
-const restSum = list.tail().foldLeft(0)((sum, n) => sum + n)
+// Safe last element
+const end = list.lastOption.orElse(0) // Option<number>
+
+// tail and init are properties
+const restSum = list.tail.foldLeft(0)((sum, n) => sum + n)
+const initSum = list.init.foldLeft(0)((sum, n) => sum + n)
 ```
 
 ## Async Patterns
@@ -399,7 +396,7 @@ const getUser = (id: string) =>
     const service = yield* IO.service(UserService)
     const user = yield* IO.tryPromise({
       try: () => service.findUser(id),
-      catch: (e) => new UserNotFoundError(id, e)
+      catch: (e) => new UserNotFoundError(id, e),
     })
     return user
   })
@@ -407,7 +404,7 @@ const getUser = (id: string) =>
 // Provide implementation
 const live = Layer.fromValue(UserService, {
   findUser: async (id) => db.query(`SELECT * FROM users WHERE id = $1`, [id]),
-  saveUser: async (user) => db.query(`INSERT INTO users...`)
+  saveUser: async (user) => db.query(`INSERT INTO users...`),
 })
 
 // Run the program
@@ -419,17 +416,21 @@ const user = await getUser("123").provide(live).run()
 ```typescript
 import { IO } from "functype"
 
-class NetworkError extends Error { type = "NetworkError" as const }
-class ParseError extends Error { type = "ParseError" as const }
+class NetworkError extends Error {
+  type = "NetworkError" as const
+}
+class ParseError extends Error {
+  type = "ParseError" as const
+}
 
 const fetchData = IO.tryPromise({
   try: () => fetch(url),
-  catch: () => new NetworkError("Failed to fetch")
-}).flatMap(response =>
+  catch: () => new NetworkError("Failed to fetch"),
+}).flatMap((response) =>
   IO.tryPromise({
     try: () => response.json(),
-    catch: () => new ParseError("Failed to parse JSON")
-  })
+    catch: () => new ParseError("Failed to parse JSON"),
+  }),
 )
 
 // Handle specific errors
@@ -446,7 +447,7 @@ import { IO } from "functype"
 const program = IO.bracket({
   acquire: IO.sync(() => openConnection()),
   use: (conn) => IO.async(() => conn.query("SELECT * FROM users")),
-  release: (conn) => IO.sync(() => conn.close())
+  release: (conn) => IO.sync(() => conn.close()),
 })
 // Connection is always closed, even if query fails
 ```

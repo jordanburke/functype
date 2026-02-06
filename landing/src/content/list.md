@@ -53,18 +53,29 @@ List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x) // 6
 ```typescript
 // Take and drop
 List([1, 2, 3, 4, 5]).take(3) // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).takeRight(2) // List([4, 5])
 List([1, 2, 3, 4, 5]).drop(2) // List([3, 4, 5])
 List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4) // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).slice(1, 4) // List([2, 3, 4])
+
+// Element access
+List([1, 2, 3]).head // 1
+List([1, 2, 3]).headOption // Option(1)
+List([1, 2, 3]).last // 3
+List([1, 2, 3]).lastOption // Option(3)
+List([1, 2, 3]).tail // List([2, 3])
+List([1, 2, 3]).init // List([1, 2])
 
 // Find and contains
 List([1, 2, 3]).find((x) => x > 1) // 2 (or undefined)
 List([1, 2, 3]).contains(2) // true
 List([1, 2, 3]).exists((x) => x > 2) // true
 
-// Combine
+// Combine and reorder
 List([1, 2]).concat(List([3, 4])) // List([1, 2, 3, 4])
 List([1, 2]).append(3) // List([1, 2, 3])
 List([1, 2]).prepend(0) // List([0, 1, 2])
+List([1, 2, 3]).reverse() // List([3, 2, 1])
 ```
 
 ## Grouping and Sorting
@@ -74,12 +85,24 @@ List([1, 2]).prepend(0) // List([0, 1, 2])
 List([1, 2, 3, 4]).groupBy((x) => (x % 2 === 0 ? "even" : "odd"))
 // Map { "odd" => List([1, 3]), "even" => List([2, 4]) }
 
+// Partition - split by predicate [matching, non-matching]
+List([1, 2, 3, 4, 5]).partition((x) => x % 2 === 0)
+// [List([2, 4]), List([1, 3, 5])]
+
+// Span - split at first non-matching [prefix, rest]
+List([1, 2, 3, 4, 1]).span((x) => x < 3)
+// [List([1, 2]), List([3, 4, 1])]
+
 // Sort
 List([3, 1, 2]).sorted() // List([1, 2, 3])
 List(["b", "a"]).sortBy((s) => s) // List(["a", "b"])
 
 // Distinct
 List([1, 2, 2, 3, 3, 3]).distinct() // List([1, 2, 3])
+
+// Zip
+List([1, 2, 3]).zip(List(["a", "b", "c"])) // List([[1, "a"], [2, "b"], [3, "c"]])
+List(["a", "b", "c"]).zipWithIndex() // List([["a", 0], ["b", 1], ["c", 2]])
 ```
 
 ## Do-Notation (Cartesian Products)

@@ -46,6 +46,19 @@ export interface LazyList<A extends Type>
   concat(other: LazyList<A>): LazyList<A>
   zip<B extends Type>(other: LazyList<B>): LazyList<[A, B]>
 
+  takeRight(n: number): LazyList<A>
+  reverse(): LazyList<A>
+  distinct(): LazyList<A>
+  zipWithIndex(): LazyList<[A, number]>
+
+  // Element access (properties)
+  get head(): A | undefined
+  get headOption(): Option<A>
+  get last(): A | undefined
+  get lastOption(): Option<A>
+  get tail(): LazyList<A>
+  get init(): LazyList<A>
+
   // Terminal operations (force evaluation)
   toList(): List<A>
   toArray(): A[]
@@ -55,8 +68,6 @@ export interface LazyList<A extends Type>
   some(predicate: (a: A) => boolean): boolean
   every(predicate: (a: A) => boolean): boolean
   count(): number
-  first(): Option<A>
-  last(): Option<A>
 
   // Additional methods for clarity
   toString(): string
@@ -218,21 +229,85 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
       return counter.get()
     },
 
-    first: () => {
+    get head() {
       const iter = iterable[Symbol.iterator]()
       const next = iter.next()
-      return next.done ? Option.none() : Option(next.value)
+      return next.done ? undefined : next.value
     },
 
-    last: () => {
+    get headOption() {
+      const iter = iterable[Symbol.iterator]()
+      const next = iter.next()
+      return next.done ? Option.none<A>() : Option(next.value)
+    },
+
+    get last() {
+      let lastValue: A | undefined = undefined
+      for (const item of iterable) {
+        lastValue = item
+      }
+      return lastValue
+    },
+
+    get lastOption() {
       const lastValue = Ref<A | undefined>(undefined)
       const hasValue = Ref(false)
       for (const item of iterable) {
         lastValue.set(item)
         hasValue.set(true)
       }
-      return hasValue.get() ? Option(lastValue.get() as A) : Option.none()
+      return hasValue.get() ? Option(lastValue.get() as A) : Option.none<A>()
     },
+
+    get tail() {
+      return LazyListObject(
+        (function* () {
+          const iter = iterable[Symbol.iterator]()
+          iter.next() // skip first
+          let next = iter.next()
+          while (!next.done) {
+            yield next.value
+            next = iter.next()
+          }
+        })(),
+      )
+    },
+
+    get init() {
+      const arr = Array.from(iterable) as A[]
+      return LazyListObject<A>(arr.length === 0 ? [] : arr.slice(0, -1))
+    },
+
+    takeRight: (n: number) => {
+      const arr = Array.from(iterable) as A[]
+      return LazyListObject<A>(n <= 0 ? [] : arr.slice(-n))
+    },
+
+    reverse: () => LazyListObject<A>((Array.from(iterable) as A[]).reverse()),
+
+    distinct: () =>
+      LazyListObject(
+        (function* () {
+          const seen = new globalThis.Set<A>()
+          for (const item of iterable) {
+            if (!seen.has(item)) {
+              seen.add(item)
+              yield item
+            }
+          }
+        })(),
+      ),
+
+    zipWithIndex: () =>
+      LazyListObject(
+        (function* () {
+          const counter = Counter(0)
+          for (const item of iterable) {
+            yield [item, counter.get()] as [A, number]
+            counter.increment()
+          }
+        })(),
+      ),
 
     // Foldable implementation
     fold: <B extends Type>(onEmpty: () => B, onValue: (value: A) => B): B => {
