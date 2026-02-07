@@ -6,7 +6,8 @@ import { Option } from "@/option/Option"
 import { createSerializer } from "@/serialization"
 import type { Type } from "@/types"
 
-import { ESSet, type ESSetType } from "./shim"
+type NativeSet<T> = globalThis.Set<T>
+const NativeSet = globalThis.Set
 
 export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add: (value: A) => Set<A>
@@ -25,7 +26,7 @@ export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
 }
 
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
-  const values: ESSetType<A> = new ESSet<A>(iterable)
+  const values: NativeSet<A> = new NativeSet<A>(iterable)
 
   const set: Set<A> = {
     _tag: "Set",
@@ -35,7 +36,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     add: (value: A): Set<A> => createSet([...values, value]),
 
     remove: (value: A): Set<A> => {
-      const newSet = new ESSet(values)
+      const newSet = new NativeSet(values)
       newSet.delete(value)
       return createSet(newSet)
     },
@@ -47,7 +48,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     map: <B>(f: (a: A) => B): Set<B> => createSet(Array.from(values).map(f)),
 
     ap: <B>(ff: Set<(value: A) => B>): Set<B> => {
-      const results = new ESSet<B>()
+      const results = new NativeSet<B>()
       for (const a of values) {
         for (const f of ff) {
           results.add(f(a))
@@ -57,7 +58,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     },
 
     flatMap: <B>(f: (a: A) => Iterable<B>): Set<B> => {
-      const results = new ESSet<B>()
+      const results = new NativeSet<B>()
       for (const a of values) {
         for (const b of f(a)) {
           results.add(b)
@@ -67,7 +68,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     },
 
     flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>): Promise<Set<B>> => {
-      const results = new ESSet<B>()
+      const results = new NativeSet<B>()
       for (const a of values) {
         const items = await f(a)
         for (const b of items) {
@@ -160,7 +161,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     },
 
     filter: (p: (a: A) => boolean) => {
-      const results = new ESSet<A>()
+      const results = new NativeSet<A>()
       for (const a of values) {
         if (p(a)) results.add(a)
       }
@@ -168,7 +169,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     },
 
     filterNot: (p: (a: A) => boolean) => {
-      const results = new ESSet<A>()
+      const results = new NativeSet<A>()
       for (const a of values) {
         if (!p(a)) results.add(a)
       }
@@ -186,7 +187,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     },
 
     flatten: <B>() => {
-      const results = new ESSet<B>()
+      const results = new NativeSet<B>()
       for (const item of values) {
         if (Array.isArray(item)) {
           for (const subItem of item) {
