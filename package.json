@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",
-    "@types/node": "~24.10.11",
+    "@types/node": "~25.2.2",
     "eslint-config-functype": "1.3.0",
     "eslint-plugin-functional": "^9.0.2",
     "fast-check": "^4.5.3",
