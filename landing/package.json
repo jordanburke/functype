@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "prebuild": "cp src/content/*.md public/",
+    "prebuild": "cp src/content/*.md public/ && tsx scripts/generate-llms-full.ts",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",

@@ -1,0 +1,2624 @@
+# Functype v0.46.2
+
+> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns.
+
+- Install: npm install functype
+- Homepage: https://functype.org/
+- Repository: https://github.com/jordanburke/functype
+
+This file contains the complete functype documentation concatenated into a single file for LLM consumption.
+
+
+────────────────────────────────────────────────────────────────────────────────
+## AI Guide
+────────────────────────────────────────────────────────────────────────────────
+
+# AI Guide to Functype
+
+This document provides a concise reference for AI models to understand the patterns and usage of the Functype library.
+
+## Core Types
+
+### Option<T>
+
+```typescript
+// Create: Option(value) returns Some(value) or None
+const some = Option(42) // Some(42)
+const none = Option(null) // None
+
+// Access: .get() or .orElse(default)
+some.get() // 42
+none.orElse("default") // "default"
+
+// Transform: .map(), .flatMap(), .filter()
+some.map((x) => x * 2) // Some(84)
+some.flatMap((x) => Option(x.toString())) // Some("42")
+some.filter((x) => x > 50) // None
+
+// Pattern match: .fold() or .match()
+some.fold(
+  () => "empty",
+  (val) => `value: ${val}`,
+) // "value: 42"
+```
+
+### Either<L, R>
+
+```typescript
+// Create: Right(value) or Left(error)
+const right = Right<string, number>(42)
+const left = Left<string, number>("error")
+
+// From functions: Either.tryCatch()
+const result = Either.tryCatch(
+  () => JSON.parse('{"key":"value"}'),
+  (err) => `Parse error: ${err}`,
+) // Right({key: "value"})
+
+// Transform: .map(), .mapLeft(), .flatMap()
+right.map((x) => x * 2) // Right(84)
+left.mapLeft((e) => e.toUpperCase()) // Left("ERROR")
+right.flatMap((x) => Right(x.toString())) // Right("42")
+
+// Pattern match: .fold() or .match()
+right.fold(
+  (err) => `Error: ${err}`,
+  (val) => `Success: ${val}`,
+) // "Success: 42"
+```
+
+### Try<T>
+
+```typescript
+// Create: Try(() => potentially_throwing_function())
+const success = Try(() => 42)
+const failure = Try(() => {
+  throw new Error("Failed")
+})
+
+// Transform: .map(), .flatMap(), .recover()
+success.map((x) => x * 2) // Success(84)
+failure.recover("default") // Success("default")
+success.flatMap((x) => Try(() => x.toString())) // Success("42")
+
+// Pattern match: .fold() or .match()
+success.fold(
+  (err) => `Error: ${err.message}`,
+  (val) => `Success: ${val}`,
+) // "Success: 42"
+```
+
+### List<T>
+
+```typescript
+// Create: List([...elements])
+const list = List([1, 2, 3, 4, 5])
+
+// Access: .head(), .tail(), .at(index)
+list.head() // Some(1)
+list.tail() // List([2, 3, 4, 5])
+
+// Transform: .map(), .flatMap(), .filter()
+list.map((x) => x * 2) // List([2, 4, 6, 8, 10])
+list.filter((x) => x % 2 === 0) // List([2, 4])
+list.flatMap((x) => List([x, x])) // List([1, 1, 2, 2, 3, 3, 4, 4, 5, 5])
+
+// Reduce: .foldLeft(), .foldRight()
+list.foldLeft(0)((acc, x) => acc + x) // 15
+```
+
+### Map<K, V>
+
+```typescript
+// Create: Map({key: value})
+const map = Map({ a: 1, b: 2, c: 3 })
+
+// Access: .get(key), .orElse(key, default)
+map.get("a") // Some(1)
+map.orElse("d", 0) // 0
+
+// Transform: .map(), .filter()
+map.map((v) => v * 2) // Map({a: 2, b: 4, c: 6})
+map.filter((v) => v > 1) // Map({b: 2, c: 3})
+```
+
+### Set<T>
+
+```typescript
+// Create: Set([...elements])
+const set = Set([1, 2, 3, 4, 5])
+
+// Operations: .add(), .remove(), .has()
+set.add(6) // Set([1, 2, 3, 4, 5, 6])
+set.remove(3) // Set([1, 2, 4, 5])
+set.has(2) // true
+
+// Set operations: .union(), .intersect(), .difference()
+const set2 = Set([4, 5, 6, 7])
+set.union(set2) // Set([1, 2, 3, 4, 5, 6, 7])
+set.intersect(set2) // Set([4, 5])
+```
+
+### Task
+
+```typescript
+// Create: Task().Sync() or Task().Async()
+const syncTask = Task().Sync(
+  () => 42,
+  (err) => new Error(`Failed: ${err}`),
+)
+
+const asyncTask = Task().Async(
+  async () => await fetchData(),
+  async (err) => new Error(`Fetch failed: ${err}`),
+)
+
+// From promise
+const fetchUser = Task.fromPromise(fetchUserAPI, { name: "UserFetch" })
+
+// Usage
+const result = syncTask
+if (result.isSuccess()) {
+  console.log(result.value)
+} else {
+  console.error(result.error)
+}
+```
+
+### Tuple
+
+```typescript
+// Create: Tuple(...values)
+const pair = Tuple(42, "hello")
+
+// Access: .first(), .second(), etc.
+pair.first() // 42
+pair.second() // "hello"
+
+// Transform: .map(), .mapFirst(), .mapSecond()
+pair.mapFirst((x) => x * 2) // Tuple(84, "hello")
+```
+
+## Common Patterns
+
+### Type Safety
+
+```typescript
+// Branded types
+type UserId = Brand<string, "UserId">
+const UserId = (id: string): UserId => {
+  if (!/^U\d{6}$/.test(id)) throw new Error("Invalid ID format")
+  return id as UserId
+}
+
+// Type-safe functions
+function getUserById(id: UserId): User {
+  /* ... */
+}
+getUserById(UserId("U123456")) // Works
+getUserById("U123456") // Type error
+```
+
+### Error Handling
+
+```typescript
+// Option for nullable values
+const maybeUser = Option(findUser(id))
+maybeUser.fold(
+  () => console.log("User not found"),
+  (user) => console.log("User:", user.name),
+)
+
+// Either for errors with context
+const validationResult = validateForm(formData)
+validationResult.fold(
+  (errors) => handleErrors(errors),
+  (data) => processForm(data),
+)
+
+// Try for exception safety
+const parseResult = Try(() => JSON.parse(input))
+parseResult.fold(
+  (err) => console.error("Parse error:", err.message),
+  (data) => console.log("Data:", data),
+)
+```
+
+### Chaining Operations
+
+```typescript
+// Option chain
+const userCity = Option(user)
+  .flatMap((u) => Option(u.address))
+  .flatMap((a) => Option(a.city))
+  .orElse("Unknown")
+
+// Either chain
+parseInput(input)
+  .flatMap(validateData)
+  .flatMap(transformData)
+  .fold(
+    (err) => handleError(err),
+    (result) => displayResult(result),
+  )
+
+// List processing
+List([1, 2, 3, 4, 5])
+  .filter((n) => n % 2 === 0)
+  .map((n) => n * n)
+  .foldLeft(0)((acc, n) => acc + n) // 20 (4 + 16)
+```
+
+### Pattern Matching
+
+```typescript
+// Using match method
+result.match({
+  Some: (value) => `Found: ${value}`,
+  None: () => "Not found",
+})
+
+// Using fold method
+either.fold(
+  (left) => `Error: ${left}`,
+  (right) => `Success: ${right}`,
+)
+
+// Using MatchableUtils
+const isPositive = MatchableUtils.when(
+  (n: number) => n > 0,
+  (n) => `Positive: ${n}`,
+)
+
+const isNegative = MatchableUtils.when(
+  (n: number) => n < 0,
+  (n) => `Negative: ${n}`,
+)
+
+const defaultCase = MatchableUtils.default((n: number) => `Zero: ${n}`)
+
+// Usage
+isPositive(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 42"
+```
+
+### Functional Composition
+
+```typescript
+// Using pipe for sequential operations
+import { pipe } from "functype"
+
+const result = pipe(
+  Option(input),
+  (opt) => opt.map((s) => s.trim()),
+  (opt) => opt.filter((s) => s.length > 0),
+  (opt) => opt.map((s) => parseInt(s, 10)),
+  (opt) => opt.filter((n) => !isNaN(n)),
+  (opt) => opt.orElse(0),
+)
+
+// Converting between types
+import { FoldableUtils } from "functype"
+
+const optionAsList = FoldableUtils.toList(option)
+const listAsOption = FoldableUtils.toOption(list)
+const tryAsEither = FoldableUtils.toEither(tryVal, "Default error")
+```
+
+## Key Principles
+
+1. **Immutability**: All data structures return new instances when modified
+2. **Type Safety**: Strong TypeScript typing throughout the library
+3. **Null Safety**: No null/undefined values within containers (Option, Either, etc.)
+4. **Error Handling**: Explicit error handling using functional patterns
+5. **Pattern Matching**: Consistent APIs for inspecting and handling variants
+6. **Composability**: Methods designed for chaining and composition
+7. **Consistency**: Similar patterns across different data structures
+
+## Common Imports
+
+```typescript
+// Full package import (not recommended for production)
+import { Option, Either, Try, List } from "functype"
+
+// Optimized imports for tree-shaking
+import { Option } from "functype/option"
+import { Either } from "functype/either"
+import { List } from "functype/list"
+
+// Individual constructor imports
+import { some, none } from "functype/option"
+import { right, left } from "functype/either"
+```
+
+## Type Class Hierarchy
+
+- **Functor**: `map` - Transform values while preserving structure
+  - **Applicative**: Apply functions inside containers
+    - **Monad**: `flatMap` - Chain operations that return containerized values
+      - **Foldable**: `fold`, `foldLeft`, `foldRight` - Collapse structure
+        - **Traversable**: Convert/sequence containers
+
+## Anti-Patterns to Avoid
+
+1. ❌ **Unnecessary Unwrapping**:
+
+   ```typescript
+   // Bad
+   if (option.isDefined()) {
+     doSomething(option.get())
+   } else {
+     doSomethingElse()
+   }
+
+   // Good
+   option.fold(
+     () => doSomethingElse(),
+     (value) => doSomething(value),
+   )
+   ```
+
+2. ❌ **Throwing from Inside Containers**:
+
+   ```typescript
+   // Bad
+   option.map((value) => {
+     if (!isValid(value)) throw new Error("Invalid")
+     return transform(value)
+   })
+
+   // Good
+   option.flatMap((value) => (isValid(value) ? Option(transform(value)) : Option(null)))
+   ```
+
+3. ❌ **Not Using Composition**:
+
+   ```typescript
+   // Bad
+   const a = option.map((x) => x + 1)
+   const b = a.filter((x) => x > 10)
+   const c = b.orElse(0)
+
+   // Good
+   const result = option
+     .map((x) => x + 1)
+     .filter((x) => x > 10)
+     .orElse(0)
+   ```
+
+4. ❌ **Mixing Imperative and Functional Styles**:
+
+   ```typescript
+   // Bad
+   let result = 0
+   option.fold(
+     () => {
+       result = 42
+     },
+     (value) => {
+       result = value
+     },
+   )
+
+   // Good
+   const result = option.orElse(42)
+   ```
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Quick Reference
+────────────────────────────────────────────────────────────────────────────────
+
+# Functype Quick Reference
+
+## Option<T>
+
+```typescript
+import { Option, Some, None } from "functype/option"
+
+// Creation
+Option(42) // Some(42)
+Option(null) // None
+Option(undefined) // None
+Some(42) // Some(42)
+None() // None
+Option.from(42) // Some(42)
+Option.none() // None
+
+// Checking
+option.isDefined() // true if Some, false if None
+option.isEmpty() // true if None, false if Some
+
+// Accessing
+option.get() // Gets value or throws if None
+option.orElse(defaultValue) // Gets value or returns default
+option.orThrow(new Error("No value")) // Gets value or throws custom error
+
+// Transforming
+option.map((x) => x * 2) // Transforms inner value
+option.flatMap((x) => Option(x.toString())) // Chains with operations returning Option
+option.filter((x) => x > 10) // None if predicate fails, unchanged if passes
+
+// Pattern matching
+option.fold(
+  () => "empty", // Called for None
+  (value) => `value: ${value}`, // Called for Some
+)
+
+option.match({
+  Some: (value) => `value: ${value}`,
+  None: () => "empty",
+})
+```
+
+## Either<L, R>
+
+```typescript
+import { Either, Left, Right } from "functype/either"
+
+// Creation
+Right<string, number>(42) // Right<number>(42)
+Left<string, number>("error") // Left<string>("error")
+Either.right(42) // Right(42)
+Either.left("error") // Left("error")
+Either.fromNullable(value, "was null") // Left if null/undefined
+
+// Checking
+either.isRight() // true if Right, false if Left
+either.isLeft() // true if Left, false if Right
+
+// Accessing
+either.get() // Gets Right value or throws if Left
+either.orElse(defaultValue) // Gets Right value or returns default
+either.getLeft() // Gets Left value or throws if Right
+
+// Transforming
+either.map((x) => x * 2) // Transforms Right value
+either.mapLeft((e) => `Error: ${e}`) // Transforms Left value
+either.flatMap((x) => Right(x.toString())) // Chains with operations returning Either
+either.filter(
+  (x) => x > 10,
+  (x) => `${x} is too small`,
+) // Left if predicate fails
+
+// Operations
+either.swap() // Converts Left to Right and vice versa
+
+// Pattern matching
+either.fold(
+  (left) => `Error: ${left}`,
+  (right) => `Success: ${right}`,
+)
+
+either.match({
+  Right: (value) => `Success: ${value}`,
+  Left: (error) => `Error: ${error}`,
+})
+```
+
+## Try<T>
+
+```typescript
+import { Try, Success, Failure } from "functype/try"
+
+// Creation
+Try(() => 42) // Success(42)
+Try(() => {
+  throw new Error("Failed")
+}) // Failure(Error)
+Success(42) // Success(42)
+Failure(new Error("Failed")) // Failure(Error)
+
+// Checking
+tryVal.isSuccess() // true if Success, false if Failure
+tryVal.isFailure() // true if Failure, false if Success
+
+// Accessing
+tryVal.get() // Gets value or throws original error
+tryVal.orElse(defaultValue) // Gets value or returns default
+tryVal.error // Gets error for Failure
+
+// Error handling
+tryVal.recover(defaultValue) // Success with original value or default
+tryVal.recoverWith(() => Try(() => backup())) // Tries alternative computation on failure
+
+// Transforming
+tryVal.map((x) => x * 2) // Maps success value
+tryVal.flatMap((x) => Try(() => operation(x))) // Chains with operations returning Try
+
+// Conversions
+tryVal.toOption() // Option.Some for Success, Option.None for Failure
+tryVal.toEither() // Either.Right for Success, Either.Left for Failure
+
+// Pattern matching
+tryVal.fold(
+  (error) => `Error: ${error.message}`,
+  (value) => `Success: ${value}`,
+)
+
+tryVal.match({
+  Success: (value) => `Success: ${value}`,
+  Failure: (error) => `Error: ${error.message}`,
+})
+```
+
+## List<T>
+
+```typescript
+import { List } from "functype/list"
+
+// Creation
+List([1, 2, 3]) // List([1, 2, 3])
+List.empty<number>() // List([])
+
+// Properties
+list.isEmpty() // true if empty, false otherwise
+list.size() // Number of elements
+
+// Accessing
+list.head() // Option.Some with first element or None if empty
+list.tail() // List with all elements except the first
+list.at(2) // Option.Some with element at index or None
+
+// Adding/removing
+list.add(4) // New list with element added
+list.addAll([4, 5, 6]) // New list with elements added
+list.remove(2) // New list with element removed
+list.removeAt(1) // New list with element at index removed
+
+// Transforming
+list.map((x) => x * 2) // List with transformed elements
+list.flatMap((x) => List([x, x * 2])) // Transform + flatten
+list.filter((x) => x % 2 === 0) // List with elements matching predicate
+
+// Slicing
+list.take(2) // First n elements
+list.drop(2) // All elements after first n
+list.slice(1, 3) // Elements from start to end (exclusive)
+
+// Finding
+list.find((x) => x > 10) // Option.Some with first match or None
+list.exists((x) => x > 10) // true if any element matches predicate
+list.forAll((x) => x > 0) // true if all elements match predicate
+list.count((x) => x % 2 === 0) // Count of elements matching predicate
+
+// Aggregating
+list.foldLeft(0)((acc, x) => acc + x) // Reduce from left to right
+list.foldRight(0)((x, acc) => x + acc) // Reduce from right to left
+list.reduce((a, b) => a + b) // Reduce (without initial value)
+
+// Operations
+list.reverse() // Reversed list
+list.sort((a, b) => a - b) // Sorted list
+list.distinct() // List with duplicates removed
+list.concat(List([4, 5, 6])) // Lists combined
+list.groupBy((x) => (x % 2 === 0 ? "even" : "odd")) // Map of grouped elements
+```
+
+## Map<K, V>
+
+```typescript
+import { Map } from "functype/map"
+
+// Creation
+Map({ a: 1, b: 2, c: 3 }) // Map({a: 1, b: 2, c: 3})
+Map.empty<string, number>() // Empty map
+
+// Properties
+map.isEmpty() // true if empty
+map.size() // Number of entries
+map.has("a") // true if key exists
+
+// Accessing
+map.get("a") // Option.Some with value or None
+map.orElse("a", 0) // Value or default
+map.keys() // List of keys
+map.values() // List of values
+map.entries() // List of [key, value] tuples
+
+// Modifying
+map.add("d", 4) // New map with entry added
+map.addAll({ d: 4, e: 5 }) // New map with entries added
+map.remove("a") // New map with key removed
+map.removeAll(["a", "b"]) // New map with keys removed
+
+// Transforming
+map.map((v) => v * 2) // Map with transformed values
+map.mapEntries(([k, v]) => [`key_${k}`, v * 2]) // Transform both keys and values
+map.filter((v) => v > 1) // Map with entries matching predicate
+map.filterKeys((k) => k !== "a") // Map with entries having keys matching predicate
+
+// Operations
+map.merge(Map({ c: 30, d: 40 })) // Maps combined (right values override)
+map.mergeWith(Map({ c: 30, d: 40 }), (v1, v2) => v1 + v2) // Maps combined with custom function
+
+// Conversions
+map.toObject() // Standard JS object
+```
+
+## Set<T>
+
+```typescript
+import { Set } from "functype/set"
+
+// Creation
+Set([1, 2, 3]) // Set([1, 2, 3])
+Set.empty<number>() // Empty set
+
+// Properties
+set.isEmpty() // true if empty
+set.size() // Number of elements
+set.has(2) // true if element exists
+
+// Modifying
+set.add(4) // New set with element added
+set.addAll([4, 5]) // New set with elements added
+set.remove(2) // New set with element removed
+set.removeAll([1, 2]) // New set with elements removed
+
+// Transforming
+set.map((x) => x * 2) // Set with transformed elements
+set.flatMap((x) => Set([x, x + 1])) // Transform + flatten
+set.filter((x) => x % 2 === 0) // Set with elements matching predicate
+
+// Set operations
+set.union(Set([3, 4, 5])) // Union of sets
+set.intersect(Set([2, 3, 4])) // Intersection of sets
+set.difference(Set([3, 4])) // Elements in this set but not in other
+set.symmetricDifference(Set([3, 4])) // Elements in either set but not both
+set.isSubsetOf(Set([1, 2, 3, 4])) // true if all elements in other set
+```
+
+## Task
+
+```typescript
+import { Task } from "functype/core/task"
+
+// Synchronous tasks
+const syncTask = Task().Sync(
+  () => 42,
+  (err) => new Error(`Failed: ${err}`),
+)
+
+// Asynchronous tasks
+const asyncTask = Task().Async(
+  async () => await fetch("/api").then((r) => r.json()),
+  async (err) => new Error(`Fetch failed: ${err}`),
+)
+
+// Named tasks (for debugging and error identification)
+const namedTask = Task({ name: "UserFetch" }).Sync(
+  () => ({ id: 1, name: "John" }),
+  (err) => new Error(`User fetch failed: ${err}`),
+)
+
+// Error handling with named tasks
+try {
+  await Task({ name: "DataProcessor" }).Async(() => {
+    throw new Error("Processing failed")
+  })
+} catch (error) {
+  console.log(error.name) // "DataProcessor"
+  console.log(error.taskInfo.name) // "DataProcessor"
+}
+
+// Companion functions
+Task.success(42, { name: "SuccessResult" }) // Creates TaskResult
+Task.fail(new Error("Failed"), data, { name: "FailureResult" }) // Creates TaskException with name
+
+// Adapting functions
+const fetchAPI = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json())
+const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
+
+// Converting
+const promise = Task.toPromise(syncTask) // Standard Promise
+```
+
+## Tuple
+
+```typescript
+import { Tuple } from "functype/tuple"
+
+// Creation
+const pair = Tuple(42, "hello")
+const triple = Tuple(true, 42, "hello")
+
+// Accessing
+pair.first() // 42
+pair.second() // "hello"
+triple.third() // "hello"
+pair.toArray() // [42, "hello"]
+
+// Transforming
+pair.mapFirst((x) => x * 2) // Tuple(84, "hello")
+pair.mapSecond((s) => s.toUpperCase()) // Tuple(42, "HELLO")
+pair.map(([a, b]) => [a * 2, b.toUpperCase()]) // Tuple(84, "HELLO")
+
+// Operations
+pair.swap() // Tuple("hello", 42)
+pair.apply((a, b) => a + b.length) // 47
+
+// Combining
+pair.concat(Tuple(true)) // Tuple(42, "hello", true)
+```
+
+## Branded Types
+
+```typescript
+import { Brand } from "functype/branded"
+
+// Type definitions
+type UserId = Brand<string, "UserId">
+type Email = Brand<string, "Email">
+type PositiveInt = Brand<number, "PositiveInt">
+
+// Factory functions with validation
+const UserId = (id: string): UserId => {
+  if (!/^U\d{6}$/.test(id)) throw new Error("Invalid ID format")
+  return id as UserId
+}
+
+const PositiveInt = (n: number): PositiveInt => {
+  if (!Number.isInteger(n) || n <= 0) throw new Error("Not a positive integer")
+  return n as PositiveInt
+}
+
+// Usage
+function getUserById(id: UserId): User {
+  /* ... */
+}
+
+// Type-safe calls
+getUserById(UserId("U123456")) // Works
+// getUserById("U123456")       // Type error: string is not UserId
+```
+
+## Pattern Matching
+
+```typescript
+import { Option, Either, Try, List, MatchableUtils } from "functype"
+
+// Built-in pattern matching
+option.match({
+  Some: (value) => `Found: ${value}`,
+  None: () => "Not found",
+})
+
+either.match({
+  Right: (value) => `Success: ${value}`,
+  Left: (error) => `Error: ${error}`,
+})
+
+list.match({
+  NonEmpty: (values) => `Values: ${values.join(", ")}`,
+  Empty: () => "No values",
+})
+
+// Custom pattern matching
+const isPositive = MatchableUtils.when(
+  (n: number) => n > 0,
+  (n) => `Positive: ${n}`,
+)
+
+const isZero = MatchableUtils.when(
+  (n: number) => n === 0,
+  () => "Zero",
+)
+
+const isNegative = MatchableUtils.when(
+  (n: number) => n < 0,
+  (n) => `Negative: ${n}`,
+)
+
+const defaultCase = MatchableUtils.default((x: number) => `Default: ${x}`)
+
+// Chain patterns with fallbacks
+isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 42"
+```
+
+## Common Conversions
+
+```typescript
+import { Option, Either, Try, List, FoldableUtils } from "functype"
+
+// Convert between types
+FoldableUtils.toList(Option(42)) // List([42])
+FoldableUtils.toList(Either.right(42)) // List([42])
+FoldableUtils.toList(Try(() => 42)) // List([42])
+
+FoldableUtils.toOption(List([1, 2, 3])) // Some(1)
+FoldableUtils.toOption(Either.right(42)) // Some(42)
+FoldableUtils.toOption(Try(() => 42)) // Some(42)
+
+FoldableUtils.toEither(Option(42), "Empty") // Right(42)
+FoldableUtils.toEither(
+  Try(() => 42),
+  "Failed",
+) // Right(42)
+
+// Built-in conversions
+option.toEither("No value") // Either.Right or Either.Left
+either.toOption() // Option.Some or Option.None
+tryVal.toEither() // Either.Right or Either.Left with error
+tryVal.toOption() // Option.Some or Option.None
+```
+
+## Functional Composition
+
+```typescript
+import { pipe } from "functype/pipe"
+
+// Pipe operations for cleaner sequential transformations
+const result = pipe(
+  Option("42"),
+  (opt) => opt.map((s) => s.trim()),
+  (opt) => opt.map((s) => parseInt(s, 10)),
+  (opt) => opt.filter((n) => !isNaN(n)),
+  (opt) => opt.map((n) => n * 2),
+  (opt) => opt.orElse(0),
+) // 84
+
+// Cross-type transformations
+const mixed = pipe(
+  Option("42"),
+  (opt) => opt.map((s) => parseInt(s, 10)),
+  (opt) => opt.toEither("Invalid number"),
+  (e) => e.map((n) => n * 2),
+  (e) =>
+    e.fold(
+      (err) => `Error: ${err}`,
+      (val) => `Result: ${val}`,
+    ),
+) // "Result: 84"
+```
+
+## Companion Pattern
+
+All major types in functype use the Companion pattern for consistent API design:
+
+```typescript
+import { Option, Either, List, Try } from "functype"
+
+// Constructor function usage
+const opt = Option(42) // Constructor
+const list = List([1, 2, 3]) // Constructor
+const right = Either.right(42) // Companion method
+
+// Companion methods (static methods)
+Option.from(value) // Alias for constructor
+Option.none<number>() // Create empty instance
+Either.left<Error, number>(err) // Create Left
+Either.right<Error, number>(42) // Create Right
+List.fromJSON(jsonString) // Deserialize from JSON
+Try.fromJSON(jsonString) // Deserialize from JSON
+
+// Type guards as companion methods
+if (Option.isSome(option)) {
+  // TypeScript knows option.value is defined
+  console.log(option.value)
+}
+
+if (Either.isRight(either)) {
+  // TypeScript knows either has Right value
+  console.log(either.value)
+}
+
+if (Try.isSuccess(tryValue)) {
+  // TypeScript knows tryValue succeeded
+  console.log(tryValue.value)
+}
+```
+
+## Type Guards
+
+Use static type guards for better type narrowing:
+
+```typescript
+import { Option, Either, Try } from "functype"
+
+// Option type guards
+const option: Option<number> = Option(42)
+
+if (Option.isSome(option)) {
+  option.value // TypeScript knows: number (not number | undefined)
+}
+
+if (Option.isNone(option)) {
+  // option.value is undefined here
+}
+
+// Either type guards
+const either: Either<Error, number> = Either.right(42)
+
+if (Either.isRight(either)) {
+  either.value // TypeScript knows: number
+}
+
+if (Either.isLeft(either)) {
+  either.value // TypeScript knows: Error
+}
+
+// Try type guards
+const tryValue: Try<number> = Try(() => 42)
+
+if (Try.isSuccess(tryValue)) {
+  tryValue.error // TypeScript knows: undefined
+}
+
+if (Try.isFailure(tryValue)) {
+  tryValue.error // TypeScript knows: Error
+}
+```
+
+## Serialization
+
+All major types support JSON/YAML/Binary serialization:
+
+```typescript
+import { Option, Either, List, Try } from "functype"
+
+// Serialize to different formats
+const option = Option(42)
+const serialized = option.serialize()
+
+const json = serialized.toJSON() // '{"_tag":"Some","value":42}'
+const yaml = serialized.toYAML() // '_tag: Some\nvalue: 42'
+const binary = serialized.toBinary() // Base64 encoded
+
+// Deserialize from JSON
+const opt1 = Option.fromJSON<number>('{"_tag":"Some","value":42}')
+const opt2 = Option.fromYAML<number>("_tag: Some\nvalue: 42")
+const opt3 = Option.fromBinary<number>(binary)
+
+// Works with all types
+const list = List([1, 2, 3])
+const listJson = list.serialize().toJSON()
+const restored = List.fromJSON<number>(listJson)
+
+const either = Either.right<Error, number>(42)
+const eitherJson = either.serialize().toJSON()
+const restoredEither = Either.fromJSON<Error, number>(eitherJson)
+```
+
+## Custom Companion Types
+
+Create your own types using the Companion pattern:
+
+```typescript
+import { Companion } from "functype/companion"
+
+// 1. Define interface
+interface Box<T> {
+  value: T
+  map: <U>(f: (v: T) => U) => Box<U>
+  get: () => T
+}
+
+// 2. Constructor function
+const BoxConstructor = <T>(value: T): Box<T> => ({
+  value,
+  map: <U>(f: (v: T) => U) => BoxConstructor(f(value)),
+  get: () => value,
+})
+
+// 3. Companion object with static methods
+const BoxCompanion = {
+  of: <T>(value: T) => BoxConstructor(value),
+  empty: <T>() => BoxConstructor(undefined as T),
+}
+
+// 4. Combine using Companion
+export const Box = Companion(BoxConstructor, BoxCompanion)
+
+// Usage
+const box1 = Box(10) // Constructor
+const box2 = Box.of(20) // Companion method
+const box3 = Box.empty<number>()
+
+box1.map((x) => x * 2).get() // 20
+```
+
+## Companion Helper Types
+
+Work with Companion objects using helper types:
+
+```typescript
+import { type CompanionMethods, type InstanceType, isCompanion } from "functype/companion"
+
+// Extract companion methods type
+type OptionMethods = CompanionMethods<typeof Option>
+// { from: ..., none: ..., isSome: ..., isNone: ..., fromJSON: ..., etc. }
+
+// Extract instance type
+type OptionInstance = InstanceType<typeof Option>
+// Option<unknown>
+
+// Runtime type guard
+if (isCompanion(Option)) {
+  console.log("Option is a Companion object")
+}
+
+// Use with custom types
+const methods: CompanionMethods<typeof Box> = {
+  of: Box.of,
+  empty: Box.empty,
+}
+
+type BoxInst = InstanceType<typeof Box>
+const instance: BoxInst = Box(42)
+```
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Feature Matrix
+────────────────────────────────────────────────────────────────────────────────
+
+# Functype Feature Matrix
+
+This matrix shows which interfaces are supported by each data structure in the functype library.
+
+## Legend
+
+- ✓ Full support
+- ◐ Partial support (custom implementation)
+- ✗ Not supported
+- ← Inherited from parent interface
+
+## Core Interfaces
+
+| Data Structure     | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
+| ------------------ | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✗   |     ✗      |      ✓       |       ✗       |
+| **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
+| **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+
+## Additional Properties
+
+| Data Structure     | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
+| ------------------ | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
+| **Option<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
+| **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
+| **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
+| **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **LazyList<A>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
+
+## Companion Methods
+
+All types follow the **Companion pattern** (inspired by Scala), combining constructor functions with static utility methods. Each type provides:
+
+### Common Creation Methods
+
+| Data Structure  | of  | from | pure | empty | none | left | right | success | failure |
+| --------------- | :-: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :-----: |
+| **Option<T>**   |  ✓  |  ✓   |  ✗   |   ✗   |  ✓   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Either<L,R>** |  ✗  |  ✗   |  ✗   |   ✗   |  ✗   |  ✓   |   ✓   |    ✗    |    ✗    |
+| **Try<T>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
+| **IO<R,E,A>**   |  ✗  |  ✓   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
+| **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Map<K,V>**    |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Lazy<T>**     |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Stack<A>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **LazyList<A>** |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Tuple<T[]>**  |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Identity<T>** |  ✓  |  ✗   |  ✓   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Ref<A>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+
+**Collection creation** - multiple options available:
+
+```typescript
+// List creation
+List([1, 2, 3]) // from array
+List.of(1, 2, 3) // variadic factory
+List.empty<number>() // typed empty list
+
+// Set creation
+Set([1, 2, 3]) // from array
+Set.of(1, 2, 3) // variadic factory
+Set.empty<number>() // typed empty set
+
+// Map creation
+Map([
+  ["a", 1],
+  ["b", 2],
+]) // from key-value pairs
+Map.of<string, number>(["a", 1], ["b", 2]) // variadic factory
+Map.empty<string, number>() // typed empty map
+```
+
+### Type Guards
+
+Static type guards for narrowing types:
+
+| Data Structure  | Type Guard Methods                           |
+| --------------- | -------------------------------------------- |
+| **Option<T>**   | `isSome(option)`, `isNone(option)`           |
+| **Either<L,R>** | `isLeft(either)`, `isRight(either)`          |
+| **Try<T>**      | `isSuccess(tryValue)`, `isFailure(tryValue)` |
+
+### Serialization Methods
+
+All Serializable types provide static deserialization methods:
+
+- `fromJSON(json: string): T` - Deserialize from JSON
+- `fromYAML(yaml: string): T` - Deserialize from YAML
+- `fromBinary(binary: string): T` - Deserialize from base64-encoded binary
+
+**Note**: See `docs/companion-pattern.md` for complete guide on the Companion pattern.
+
+## Key Methods by Interface
+
+### Functor
+
+- `map<B>(f: (value: A) => B): Functor<B>`
+
+### Applicative (extends Functor)
+
+- `ap<B>(ff: Applicative<(value: A) => B>): Applicative<B>`
+
+### Monad (extends Applicative)
+
+- `flatMap<B>(f: (value: A) => Monad<B>): Monad<B>`
+
+### AsyncMonad (extends Monad)
+
+- `flatMapAsync<B>(f: (value: A) => PromiseLike<AsyncMonad<B>>): PromiseLike<AsyncMonad<B>>`
+
+### Foldable
+
+- `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
+- `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
+- `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
+
+### Matchable
+
+- `match<R>(patterns: Record<Tags, (value: A) => R>): R`
+
+### Serializable
+
+- `serialize(): SerializationMethods<T>`
+  - `toJSON(): string`
+  - `toYAML(): string`
+  - `toBinary(): Uint8Array`
+
+### Traversable (extends AsyncMonad)
+
+- `size: number`
+- `isEmpty: boolean`
+- `contains(value: A): boolean`
+- `reduce<B>(f: (acc: B, value: A) => B, initial: B): B`
+- `reduceRight<B>(f: (value: A, acc: B) => B, initial: B): B`
+
+### Unsafe
+
+- `orThrow(error?: Error): T`
+
+### Extractable (extends Unsafe)
+
+- `orElse(defaultValue: T): T`
+- `or(alternative: Extractable<T>): Extractable<T>`
+- `orNull(): T | null`
+- `orUndefined(): T | undefined`
+
+### Pipe
+
+- `pipe<U>(f: (value: T) => U): U`
+
+### Collection
+
+- `toList(): List<A>`
+- `toSet(): Set<A>`
+- `toString(): string`
+
+### ContainerOps
+
+- `count(p: (value: A) => boolean): number`
+- `find(p: (value: A) => boolean): A | undefined`
+- `exists(p: (value: A) => boolean): boolean`
+- `forEach(f: (value: A) => void): void`
+
+### CollectionOps
+
+- `drop(n: number): Self`
+- `dropRight(n: number): Self`
+- `dropWhile(p: (value: A) => boolean): Self`
+- `flatten(): Self`
+- `head: A | undefined`
+- `headOption: Option<A>`
+- `take(n: number): Self`
+- `takeWhile(p: (value: A) => boolean): Self`
+- `takeRight(n: number): Self`
+- `last: A | undefined`
+- `lastOption: Option<A>`
+- `tail: Self`
+- `init: Self`
+- `toArray(): A[]`
+
+### List-specific Methods
+
+- `reverse(): List<A>`
+- `indexOf(value: A): number`
+- `prepend(item: A): List<A>`
+- `distinct(): List<A>`
+- `sorted(compareFn?): List<A>`
+- `sortBy(f, compareFn?): List<A>`
+- `zip(other: List<B>): List<[A, B]>`
+- `zipWithIndex(): List<[A, number]>`
+- `groupBy(f: (a: A) => K): Map<K, List<A>>`
+- `partition(p): [List<A>, List<A>]`
+- `span(p): [List<A>, List<A>]`
+- `slice(start, end): List<A>`
+
+### Do-notation Support
+
+Enables Scala-like for-comprehensions using JavaScript generators:
+
+- `Do(function* () { ... })`: Synchronous monadic comprehensions
+- `DoAsync(async function* () { ... })`: Async monadic comprehensions
+- `$(monad)`: Helper for type inference with `yield*`
+
+### Reshapeable
+
+Provides type conversion between monadic types:
+
+- `toOption(): Option<T>`
+- `toEither<E>(leftValue: E): Either<E, T>`
+- `toList(): List<T>`
+- `toTry(): Try<T>`
+
+### Promisable
+
+Provides conversion to Promise for async interop:
+
+- `toPromise(): Promise<T>`
+
+## Notes
+
+1. **Functype<A, Tag>**: Implemented by single-value containers (Option, Try, Lazy). Provides full functional programming support.
+
+2. **FunctypeCollection<A, Tag>**: Implemented by collection containers (List, Set). Extends FunctypeBase with collection-specific operations.
+
+3. **Special Cases**:
+   - **Either**: Implements FunctypeBase but not full Functype (no Extractable/Matchable)
+   - **Map**: Custom implementation with SafeTraversable instead of standard Traversable
+   - **Stack**: Implements individual interfaces without FunctypeBase
+   - **LazyList**: Lazy evaluation with support for Foldable, Serializable, Pipe, and Typeable interfaces
+   - **Tuple**: Enhanced container with Foldable, Serializable, Pipe, Typeable, and Valuable support
+
+4. **Do-notation**: Provides generator-based monadic comprehensions similar to Scala's for-comprehensions. Supports Option, Either, Try, and List with automatic short-circuiting and cartesian products.
+
+5. **Reshapeable**: Enables conversion between different monad types, allowing flexible composition in Do-notation when mixing types.
+
+6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either, Try, and TaskOutcome.
+
+7. **Utility Types** (not in matrix):
+   - **Cond**: Conditional expression builder
+   - **Match**: Pattern matching utility
+   - **ValidatedBrand**: Branded types with validation
+   - **Task**: Sync/async operation orchestrator returning TaskOutcome<T> with Ok/Err constructors. Includes conversion methods: toEither(), toTry(), toOption(), fromEither(), fromTry().
+   - **Throwable**: Enhanced error type
+
+8. **IO<R,E,A>**: Lazy, composable effect type with typed errors and dependency injection.
+   - **R** = Requirements (environment/dependencies needed to run)
+   - **E** = Error type (typed failures)
+   - **A** = Success type (value produced on success)
+   - Key features:
+     - Lazy execution (nothing runs until explicitly executed)
+     - Unified sync/async API (auto-detects Promise returns)
+     - Typed errors at compile time
+     - Composable via map/flatMap
+     - Dependency injection via Tag/Layer/Context
+     - Structured concurrency: bracket, race, timeout
+     - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
+     - Error handling: catchTag, catchAll, retry, retryWithDelay
+     - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry()
+   - Testing utilities:
+     - **TestClock**: Controlled time for testing timeouts/delays
+     - **TestContext**: Test environment with mocked services
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Option
+────────────────────────────────────────────────────────────────────────────────
+
+# Option<T>
+
+Safe handling of nullable values.
+
+## Overview
+
+Option is a container that either holds a value (`Some`) or represents the absence of a value (`None`). It eliminates null pointer exceptions by making nullable values explicit in the type system.
+
+## Basic Usage
+
+```typescript
+import { Option } from "functype/option"
+
+// Creating Options
+const some = Option(42) // Some(42)
+const none = Option(null) // None
+const explicit = Option.none() // None
+
+// Checking state
+some.isSome() // true
+none.isNone() // true
+
+// Extracting values
+some.orElse(0) // 42
+none.orElse(0) // 0
+some.orThrow() // 42
+none.orThrow() // throws Error
+some.orNull() // 42
+none.orNull() // null
+```
+
+## Constructors
+
+| Method               | Description                           |
+| -------------------- | ------------------------------------- |
+| `Option(value)`      | Some if non-null/undefined, else None |
+| `Option.from(value)` | Same as constructor                   |
+| `Option.none()`      | Create None explicitly                |
+| `Option.of(value)`   | Same as constructor                   |
+
+## Transformations
+
+```typescript
+// Map - transform the value if present
+Option(5).map((x) => x * 2) // Some(10)
+Option(null).map((x) => x * 2) // None
+
+// FlatMap - chain operations that return Options
+Option(5).flatMap((x) => (x > 0 ? Option(x) : Option.none()))
+
+// Filter - keep value only if predicate passes
+Option(5).filter((x) => x > 3) // Some(5)
+Option(5).filter((x) => x > 10) // None
+
+// Tap - side effect without changing value
+Option(5).tap((x) => console.log(x)) // logs 5, returns Some(5)
+```
+
+## Pattern Matching
+
+```typescript
+// Using fold
+const result = Option(user).fold(
+  () => "No user found",
+  (u) => `Hello, ${u.name}`,
+)
+
+// Using match
+const greeting = Option(name).match({
+  Some: (n) => `Hello, ${n}`,
+  None: () => "Hello, stranger",
+})
+```
+
+## Do-Notation
+
+```typescript
+import { Do, $ } from "functype/do"
+
+const result = Do(function* () {
+  const a = yield* $(Option(1))
+  const b = yield* $(Option(2))
+  const c = yield* $(Option(3))
+  return a + b + c
+}) // Some(6)
+
+// Short-circuits on None
+const failed = Do(function* () {
+  const a = yield* $(Option(1))
+  const b = yield* $(Option.none<number>()) // stops here
+  const c = yield* $(Option(3))
+  return a + b + c
+}) // None
+```
+
+## Key Features
+
+- **Type Safety**: TypeScript enforces explicit handling of empty cases
+- **Chainable Operations**: map, flatMap, filter without null checks
+- **Pattern Matching**: Explicit Some/None handling with fold() and match()
+- **Composable**: Works with Do-notation for complex workflows
+
+## When to Use Option
+
+- Function return values that might not exist (database queries, array searches)
+- Optional configuration or parameters
+- Chaining operations where any step might fail
+- Replacing nullable types with explicit presence/absence
+
+## Type Conversions
+
+```typescript
+option.toEither("Error message") // Left("Error message") or Right(value)
+option.toList() // List([]) or List([value])
+option.toTry() // Failure or Success(value)
+option.toPromise() // Rejected or Resolved Promise
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/option.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Either
+────────────────────────────────────────────────────────────────────────────────
+
+# Either<L, R>
+
+Express success/failure with values.
+
+## Overview
+
+Either represents a value that can be one of two types: `Left` (typically for errors) or `Right` (for success values). It's perfect for operations that can fail with meaningful error information.
+
+## Basic Usage
+
+```typescript
+import { Either, Left, Right } from "functype/either"
+
+// Creating Either values
+const success = Right(42) // Right(42)
+const failure = Left("error") // Left("error")
+
+// Checking state
+success.isRight() // true
+failure.isLeft() // true
+
+// Extracting values
+success.orElse(0) // 42
+failure.orElse(0) // 0
+success.orThrow() // 42
+failure.orThrow() // throws Error
+```
+
+## Constructors
+
+| Method                | Description                    |
+| --------------------- | ------------------------------ |
+| `Right(value)`        | Create a Right (success) value |
+| `Left(error)`         | Create a Left (error) value    |
+| `Either.right(value)` | Same as Right()                |
+| `Either.left(error)`  | Same as Left()                 |
+
+## Transformations
+
+```typescript
+// Map - transform the Right value
+Right(5).map((x) => x * 2) // Right(10)
+Left("err").map((x) => x * 2) // Left("err") - unchanged
+
+// MapLeft - transform the Left value
+Left("err").mapLeft((e) => e.toUpperCase()) // Left("ERR")
+Right(5).mapLeft((e) => e.toUpperCase()) // Right(5) - unchanged
+
+// FlatMap - chain operations
+Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")))
+
+// Bimap - transform both sides
+either.bimap(
+  (left) => `Error: ${left}`,
+  (right) => right * 2,
+)
+```
+
+## Pattern Matching
+
+```typescript
+// Using fold
+const result = either.fold(
+  (error) => `Failed: ${error}`,
+  (value) => `Success: ${value}`,
+)
+
+// Using match pattern
+const message = validateUser(input).fold(
+  (errors) => `Validation failed: ${errors.join(", ")}`,
+  (user) => `Welcome, ${user.name}!`,
+)
+```
+
+## Validation Pipeline
+
+```typescript
+const validateAge = (age: number): Either<string, number> => (age >= 0 && age <= 120 ? Right(age) : Left("Invalid age"))
+
+const validateName = (name: string): Either<string, string> => (name.length > 0 ? Right(name) : Left("Name required"))
+
+// Chain validations
+const validateUser = (data: UserInput) =>
+  validateName(data.name).flatMap((name) => validateAge(data.age).map((age) => ({ name, age })))
+```
+
+## Do-Notation
+
+```typescript
+import { Do, $ } from "functype/do"
+
+const result = Do(function* () {
+  const name = yield* $(validateName(input.name))
+  const age = yield* $(validateAge(input.age))
+  const email = yield* $(validateEmail(input.email))
+  return { name, age, email }
+})
+
+// Short-circuits on first Left
+```
+
+## Key Features
+
+- **Error Information**: Preserve detailed error context instead of losing it with try-catch
+- **Railway Oriented**: Operations automatically short-circuit on Left
+- **Composable Errors**: Chain operations with mapLeft to transform errors
+- **Type-Safe**: Both success and error types are known at compile time
+
+## When to Use Either
+
+- Operations that can fail with detailed error info (validation, parsing, API calls)
+- Multiple validation steps in a pipeline
+- Railway-oriented programming (happy path and error path handled separately)
+- When you need typed errors at compile time
+
+## Type Conversions
+
+```typescript
+either.toOption() // None for Left, Some(value) for Right
+either.toTry() // Failure for Left, Success for Right
+either.toPromise() // Rejected for Left, Resolved for Right
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/either.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Try
+────────────────────────────────────────────────────────────────────────────────
+
+# Try<T>
+
+Safely execute operations that might throw exceptions.
+
+## Overview
+
+Try wraps operations that might throw exceptions, converting them to `Success` or `Failure` values. It bridges exception-based code with functional error handling.
+
+## Basic Usage
+
+```typescript
+import { Try } from "functype/try"
+
+// Wrap potentially throwing code
+const result = Try(() => JSON.parse(jsonString))
+
+// Check state
+result.isSuccess() // true if no exception
+result.isFailure() // true if exception thrown
+
+// Extract values
+result.orElse({}) // value or default
+result.orThrow() // value or re-throw
+result.toEither() // Either<Error, T>
+```
+
+## Constructors
+
+| Method                | Description                          |
+| --------------------- | ------------------------------------ |
+| `Try(() => value)`    | Wrap a potentially throwing function |
+| `Try.of(() => value)` | Same as constructor                  |
+| `Try.success(value)`  | Create a Success directly            |
+| `Try.failure(error)`  | Create a Failure directly            |
+
+## Transformations
+
+```typescript
+// Map - transform success value
+Try(() => "hello").map((s) => s.toUpperCase()) // Success("HELLO")
+Try(() => {
+  throw new Error()
+}).map((s) => s.toUpperCase()) // Failure
+
+// FlatMap - chain Try operations
+Try(() => readFile(path))
+  .flatMap((content) => Try(() => JSON.parse(content)))
+  .flatMap((data) => Try(() => validate(data)))
+
+// Recover - handle failures
+Try(() => riskyOperation()).recover("default value")
+
+// RecoverWith - handle with another Try
+Try(() => primarySource()).recoverWith(() => Try(() => backupSource()))
+```
+
+## Pattern Matching
+
+```typescript
+// Using fold
+const message = Try(() => fetchData()).fold(
+  (error) => `Failed: ${error.message}`,
+  (data) => `Got ${data.length} items`,
+)
+
+// Using match
+result.match({
+  Success: (value) => console.log("Got:", value),
+  Failure: (error) => console.error("Error:", error),
+})
+```
+
+## Error Handling Patterns
+
+```typescript
+// Chain multiple operations
+const result = Try(() => readConfig())
+  .flatMap((config) => Try(() => connectDB(config)))
+  .flatMap((db) => Try(() => db.query("SELECT * FROM users")))
+  .recover([]) // Return empty array on any failure
+
+// Transform errors
+Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message))
+
+// Filter with predicate
+Try(() => parseInt(input)).filter(
+  (n) => n > 0,
+  () => new Error("Must be positive"),
+)
+```
+
+## Do-Notation
+
+```typescript
+import { Do, $ } from "functype/do"
+
+const result = Do(function* () {
+  const config = yield* $(Try(() => readConfig()))
+  const db = yield* $(Try(() => connectDB(config)))
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
+  return users
+}) // Try<User[]>
+```
+
+## Key Features
+
+- **Exception Bridge**: Convert throwing code to functional style
+- **Composable**: Chain operations without try-catch blocks
+- **Recovery**: Elegant fallback patterns
+- **Type-Safe**: Success type tracked at compile time
+
+## When to Use Try
+
+- Wrapping external code that throws exceptions
+- JSON parsing, file operations, network calls
+- When you want to chain operations that might fail
+- Converting exception-based APIs to functional style
+
+## Type Conversions
+
+```typescript
+tryValue.toOption() // None for Failure, Some for Success
+tryValue.toEither() // Left(error) or Right(value)
+tryValue.toPromise() // Rejected or Resolved Promise
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/try_.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## List
+────────────────────────────────────────────────────────────────────────────────
+
+# List<A>
+
+Immutable arrays with functional operations.
+
+## Overview
+
+List is an immutable collection that wraps arrays and provides functional operations. Every transformation creates a new List, preserving the original data.
+
+## Basic Usage
+
+```typescript
+import { List } from "functype/list"
+
+// Creating Lists
+const nums = List([1, 2, 3, 4, 5])
+const empty = List.empty<number>()
+const single = List.of(42)
+
+// Basic operations
+nums.head // 1
+nums.tail // List([2, 3, 4, 5])
+nums.size // 5
+nums.isEmpty // false
+```
+
+## Constructors
+
+| Method                   | Description             |
+| ------------------------ | ----------------------- |
+| `List(array)`            | Create from array       |
+| `List.of(...values)`     | Create from values      |
+| `List.empty<T>()`        | Create empty typed list |
+| `List.range(start, end)` | Create range of numbers |
+
+## Transformations
+
+```typescript
+// Map - transform each element
+List([1, 2, 3]).map((x) => x * 2) // List([2, 4, 6])
+
+// Filter - keep matching elements
+List([1, 2, 3, 4]).filter((x) => x % 2 === 0) // List([2, 4])
+
+// FlatMap - flatten nested results
+List([1, 2]).flatMap((x) => List([x, x * 10])) // List([1, 10, 2, 20])
+
+// Fold - reduce to single value
+List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x) // 6
+```
+
+## Collection Operations
+
+```typescript
+// Take and drop
+List([1, 2, 3, 4, 5]).take(3) // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).takeRight(2) // List([4, 5])
+List([1, 2, 3, 4, 5]).drop(2) // List([3, 4, 5])
+List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4) // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).slice(1, 4) // List([2, 3, 4])
+
+// Element access
+List([1, 2, 3]).head // 1
+List([1, 2, 3]).headOption // Option(1)
+List([1, 2, 3]).last // 3
+List([1, 2, 3]).lastOption // Option(3)
+List([1, 2, 3]).tail // List([2, 3])
+List([1, 2, 3]).init // List([1, 2])
+
+// Find and contains
+List([1, 2, 3]).find((x) => x > 1) // 2 (or undefined)
+List([1, 2, 3]).contains(2) // true
+List([1, 2, 3]).exists((x) => x > 2) // true
+
+// Combine and reorder
+List([1, 2]).concat(List([3, 4])) // List([1, 2, 3, 4])
+List([1, 2]).append(3) // List([1, 2, 3])
+List([1, 2]).prepend(0) // List([0, 1, 2])
+List([1, 2, 3]).reverse() // List([3, 2, 1])
+```
+
+## Grouping and Sorting
+
+```typescript
+// Group by key
+List([1, 2, 3, 4]).groupBy((x) => (x % 2 === 0 ? "even" : "odd"))
+// Map { "odd" => List([1, 3]), "even" => List([2, 4]) }
+
+// Partition - split by predicate [matching, non-matching]
+List([1, 2, 3, 4, 5]).partition((x) => x % 2 === 0)
+// [List([2, 4]), List([1, 3, 5])]
+
+// Span - split at first non-matching [prefix, rest]
+List([1, 2, 3, 4, 1]).span((x) => x < 3)
+// [List([1, 2]), List([3, 4, 1])]
+
+// Sort
+List([3, 1, 2]).sorted() // List([1, 2, 3])
+List(["b", "a"]).sortBy((s) => s) // List(["a", "b"])
+
+// Distinct
+List([1, 2, 2, 3, 3, 3]).distinct() // List([1, 2, 3])
+
+// Zip
+List([1, 2, 3]).zip(List(["a", "b", "c"])) // List([[1, "a"], [2, "b"], [3, "c"]])
+List(["a", "b", "c"]).zipWithIndex() // List([["a", 0], ["b", 1], ["c", 2]])
+```
+
+## Do-Notation (Cartesian Products)
+
+```typescript
+import { Do, $ } from "functype/do"
+
+// Generate all combinations
+const result = Do(function* () {
+  const x = yield* $(List([1, 2]))
+  const y = yield* $(List(["a", "b"]))
+  return `${x}${y}`
+}) // List(["1a", "1b", "2a", "2b"])
+
+// Performance: 175x faster than nested flatMaps
+```
+
+## Key Features
+
+- **Immutable**: All operations return new Lists
+- **Optimized Performance**: 12x faster than nested flatMaps for complex operations
+- **Functional Methods**: map, filter, fold, groupBy, and 40+ more
+- **Type-Safe**: Full TypeScript inference for all transformations
+
+## When to Use List
+
+- Data transformations that need to preserve originals (UI state, historical data)
+- Functional pipelines with map/filter/fold
+- Cartesian products with Do-notation (generating combinations, test data)
+- When immutability is important
+
+## Type Conversions
+
+```typescript
+list.toArray() // Convert to native array
+list.toSet() // Convert to Set<A>
+list.headOption // Option<A> for first element
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/list.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Task
+────────────────────────────────────────────────────────────────────────────────
+
+# Task<T>
+
+Async operations with cancellation and error handling.
+
+## Overview
+
+Task provides structured async operations with built-in cancellation, progress tracking, and error handling. Unlike Promises, Tasks can be cancelled and provide detailed error context.
+
+## Basic Usage
+
+```typescript
+import { Task } from "functype/task"
+
+// Synchronous task
+const syncTask = Task.sync("myTask", () => computeValue())
+
+// Async task
+const asyncTask = Task.async("fetchData", async () => {
+  const response = await fetch(url)
+  return response.json()
+})
+
+// Run and get result
+const result = await asyncTask.run() // TaskOutcome<T>
+
+// Check outcome
+if (result.isOk()) {
+  console.log(result.value)
+} else {
+  console.error(result.error)
+}
+```
+
+## Constructors
+
+| Method                            | Description                   |
+| --------------------------------- | ----------------------------- |
+| `Task.sync(name, () => T)`        | Wrap synchronous computation  |
+| `Task.async(name, async () => T)` | Wrap async computation        |
+| `Task.of(value)`                  | Task that succeeds with value |
+| `Task.fail(error)`                | Task that fails with error    |
+| `Task.fromPromise(name, promise)` | Convert Promise to Task       |
+
+## Cancellation
+
+```typescript
+const task = Task.async("longOperation", async (signal) => {
+  // Check signal periodically
+  for (let i = 0; i < 1000; i++) {
+    if (signal.aborted) {
+      throw new Error("Cancelled")
+    }
+    await processChunk(i)
+  }
+})
+
+// Run with timeout
+const result = await task.run({ timeout: 5000 })
+
+// Manual cancellation
+const controller = new AbortController()
+const promise = task.run({ signal: controller.signal })
+controller.abort() // Cancel the task
+```
+
+## Progress Tracking
+
+```typescript
+const task = Task.async("upload", async (signal, progress) => {
+  for (let i = 0; i <= 100; i += 10) {
+    await uploadChunk(i)
+    progress(i / 100) // Report progress 0-1
+  }
+  return "complete"
+})
+
+// Subscribe to progress
+task.run({
+  onProgress: (p) => console.log(`${p * 100}% complete`),
+})
+```
+
+## Transformations
+
+```typescript
+// Map - transform success value
+task.map((data) => data.items)
+
+// FlatMap - chain tasks
+Task.async("getUser", () => fetchUser(id)).flatMap((user) => Task.async("getPosts", () => fetchPosts(user.id)))
+
+// Recover - handle errors
+task.recover(defaultValue)
+task.recoverWith((error) => Task.of(fallback))
+```
+
+## TaskOutcome
+
+Task returns `TaskOutcome<T>` which is either `Ok<T>` or `Err<Error>`:
+
+```typescript
+const outcome = await task.run()
+
+// Pattern matching
+outcome.fold(
+  (error) => `Failed: ${error.message}`,
+  (value) => `Success: ${value}`,
+)
+
+// Type guards
+if (outcome.isOk()) {
+  console.log(outcome.value)
+}
+
+// Extract with default
+const value = outcome.orElse(defaultValue)
+
+// Convert to other types
+outcome.toEither() // Either<Error, T>
+outcome.toOption() // Option<T>
+outcome.toTry() // Try<T>
+```
+
+## Do-Notation
+
+```typescript
+import { Do, $ } from "functype/do"
+
+const result = Do(function* () {
+  const user = yield* $(Task.async("getUser", () => fetchUser()))
+  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)))
+  const comments = yield* $(Task.async("getComments", () => fetchComments(posts)))
+  return { user, posts, comments }
+})
+```
+
+## Key Features
+
+- **Named Tasks**: Debug async operations easily with named task contexts
+- **Cancellation**: Cancel ongoing operations gracefully
+- **Progress Tracking**: Monitor long-running operations
+- **Error Context**: Rich error information including task name and stack traces
+
+## When to Use Task
+
+- Long-running async operations that might be cancelled (file uploads, downloads)
+- Operations that need progress tracking (batch processing, migrations)
+- When you need better error context than Promises provide
+- Complex async workflows with multiple steps
+
+## Type Conversions
+
+```typescript
+// TaskOutcome conversions
+outcome.toEither() // Either<Error, T>
+outcome.toOption() // Option<T>
+outcome.toTry() // Try<T>
+outcome.toPromise() // Promise<T>
+
+// Create from other types
+Task.fromEither(either)
+Task.fromTry(tryValue)
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/task.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## IO
+────────────────────────────────────────────────────────────────────────────────
+
+# IO<R,E,A>
+
+Lazy, composable effects with typed errors and dependency injection.
+
+## Overview
+
+IO represents a lazy effect that:
+
+- Requires environment `R` (dependencies)
+- May fail with error `E` (typed errors)
+- Produces value `A` on success
+
+Nothing runs until explicitly executed.
+
+## Basic Usage
+
+```typescript
+import { IO } from "functype/io"
+
+// Synchronous effect
+const sync = IO.sync(() => 42)
+
+// Async effect
+const async = IO.async(async () => fetchData())
+
+// Effect that may fail
+const safe = IO.tryCatch(
+  () => JSON.parse(input),
+  (e) => new ParseError(e),
+)
+
+// Running effects - safe by default
+const either = await sync.run() // Either<E, A> - never throws
+const value = await sync.runOrThrow() // A - throws on error
+
+// Synchronous execution
+const syncEither = sync.runSync() // Either<E, A> - never throws
+const syncValue = sync.runSyncOrThrow() // A - throws on error
+```
+
+## Constructors
+
+| Method                             | Description                      |
+| ---------------------------------- | -------------------------------- |
+| `IO.succeed(value)`                | Effect that succeeds with value  |
+| `IO.fail(error)`                   | Effect that fails with error     |
+| `IO.sync(() => A)`                 | Wrap synchronous computation     |
+| `IO.async(async () => A)`          | Wrap async computation           |
+| `IO.tryCatch(fn, onError)`         | Catch exceptions as typed errors |
+| `IO.fromPromise(promise, onError)` | Convert Promise to IO            |
+| `IO.unit`                          | Effect that succeeds with void   |
+| `IO.never`                         | Effect that never completes      |
+
+## Transformations
+
+```typescript
+// Map over success value
+io.map((x) => x * 2)
+
+// Chain effects
+io.flatMap((x) => IO.succeed(x + 1))
+
+// Handle errors
+io.mapError((e) => new WrappedError(e))
+io.catchAll((e) => IO.succeed(fallback))
+io.recover(defaultValue)
+
+// Provide fallback
+io.orElse(fallbackIO)
+```
+
+## Combining Effects
+
+```typescript
+// Run in parallel
+IO.all([io1, io2, io3]) // All must succeed
+IO.race([io1, io2]) // First to complete wins
+IO.any([io1, io2, io3]) // First success wins
+
+// Zip effects
+io1.zip(io2) // [A, B]
+io1.zipWith(io2, (a, b) => c) // C
+
+// Sequential
+io1.andThen(io2) // Run io2 after io1
+```
+
+## Dependency Injection
+
+IO has built-in dependency injection using Tags, Contexts, and Layers.
+
+```typescript
+import { IO, Tag, Context } from "functype/io"
+
+// Define service interface
+interface Logger {
+  log(message: string): void
+}
+
+// Create a Tag for the service
+const Logger = Tag<Logger>("Logger")
+
+// Use the service
+const program = IO.service(Logger).flatMap((logger) => IO.sync(() => logger.log("Hello!")))
+
+// Provide implementation
+const result = await program.provideService(Logger, { log: console.log }).runOrThrow()
+```
+
+### Context and Layer
+
+```typescript
+// Build context with multiple services
+const context = Context.empty().add(Logger, consoleLogger).add(Config, appConfig)
+
+// Provide full context
+program.provideContext(context)
+
+// Use Layer for complex dependency graphs
+const AppLayer = Layer.succeed(Logger, consoleLogger).merge(Layer.succeed(Config, appConfig))
+
+program.provideLayer(AppLayer)
+```
+
+## Do-Notation
+
+### Generator Syntax (IO.gen)
+
+```typescript
+const program = IO.gen(function* () {
+  const a = yield* IO.succeed(1)
+  const b = yield* IO.succeed(2)
+  const c = yield* IO.succeed(3)
+  return a + b + c
+})
+
+await program.runOrThrow() // 6
+```
+
+### Builder Syntax (IO.Do)
+
+```typescript
+const program = IO.Do.bind("user", () => getUser("123"))
+  .bind("posts", ({ user }) => getPosts(user.id))
+  .let("count", ({ posts }) => posts.length)
+  .map(({ user, posts, count }) => ({ user, posts, count }))
+```
+
+## Resource Management
+
+```typescript
+// Bracket pattern
+IO.bracket(
+  IO.sync(() => openFile(path)), // acquire
+  (file) => IO.sync(() => file.close()), // release
+  (file) => IO.sync(() => file.read()), // use
+)
+
+// Acquire/Release
+IO.acquireRelease(
+  IO.sync(() => openConnection()),
+  (conn) => IO.sync(() => conn.close()),
+)
+```
+
+## Error Handling Patterns
+
+```typescript
+// Catch specific errors
+io.catch("NotFound", () => IO.succeed(null))
+
+// Fold over success/failure
+io.fold(
+  (error) => `Failed: ${error}`,
+  (value) => `Success: ${value}`,
+)
+
+// Ensure cleanup
+io.ensuring(IO.sync(() => cleanup()))
+
+// Retry on failure
+io.retry(3)
+io.retryWithDelay(3, 1000)
+```
+
+## IO vs Task
+
+| Feature              | IO<R,E,A>            | Task<T>                        |
+| -------------------- | -------------------- | ------------------------------ |
+| Typed Errors         | Yes (E parameter)    | No                             |
+| Dependency Injection | Yes (R parameter)    | No                             |
+| Cancellation         | Via interrupt        | Built-in                       |
+| Progress Tracking    | No                   | Yes                            |
+| Best For             | Complex apps with DI | Simple async with cancellation |
+
+## When to Use IO
+
+- Applications with complex dependencies (web servers, CLI tools)
+- When you want errors tracked in the type system
+- Resource management with guaranteed cleanup
+- Building composable, testable programs
+- When you need dependency injection without mocking frameworks
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/io.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Do-notation
+────────────────────────────────────────────────────────────────────────────────
+
+# Do-Notation
+
+Scala-like for-comprehensions for composing monadic operations.
+
+## Overview
+
+Do-notation provides generator-based monadic comprehensions inspired by Scala's for-comprehensions. It makes complex monadic chains readable and maintainable by eliminating nested flatMap calls.
+
+## Basic Usage
+
+```typescript
+import { Do, $ } from "functype/do"
+import { Option } from "functype/option"
+
+// Instead of nested flatMaps
+const nested = Option(1).flatMap((a) => Option(2).flatMap((b) => Option(3).map((c) => a + b + c)))
+
+// Use Do-notation
+const clean = Do(function* () {
+  const a = yield* $(Option(1))
+  const b = yield* $(Option(2))
+  const c = yield* $(Option(3))
+  return a + b + c
+}) // Some(6)
+```
+
+## The $ Helper
+
+The `$` function enables TypeScript type inference with generators:
+
+```typescript
+import { Do, $ } from "functype/do"
+
+const result = Do(function* () {
+  const x = yield* $(Option(42)) // x is number, not unknown
+  return x * 2
+})
+```
+
+## Short-Circuiting
+
+Do-notation automatically propagates None/Left/Failure:
+
+```typescript
+// Option - stops on None
+const result = Do(function* () {
+  const a = yield* $(Option(1))
+  const b = yield* $(Option.none<number>()) // stops here
+  const c = yield* $(Option(3))
+  return a + b + c
+}) // None
+
+// Either - stops on Left
+const validated = Do(function* () {
+  const name = yield* $(validateName(input)) // Left stops chain
+  const email = yield* $(validateEmail(input))
+  return { name, email }
+})
+```
+
+## Supported Types
+
+Do-notation works with any monad in functype:
+
+### Option
+
+```typescript
+const result = Do(function* () {
+  const user = yield* $(findUser(id))
+  const profile = yield* $(user.profile)
+  const email = yield* $(profile.email)
+  return email
+}) // Option<string>
+```
+
+### Either
+
+```typescript
+const result = Do(function* () {
+  const name = yield* $(validateName(input.name))
+  const age = yield* $(validateAge(input.age))
+  const email = yield* $(validateEmail(input.email))
+  return { name, age, email }
+}) // Either<ValidationError, User>
+```
+
+### Try
+
+```typescript
+const result = Do(function* () {
+  const config = yield* $(Try(() => readConfig()))
+  const db = yield* $(Try(() => connectDB(config)))
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
+  return users
+}) // Try<User[]>
+```
+
+### List (Cartesian Products)
+
+```typescript
+const combinations = Do(function* () {
+  const x = yield* $(List([1, 2, 3]))
+  const y = yield* $(List(["a", "b"]))
+  return `${x}${y}`
+}) // List(["1a", "1b", "2a", "2b", "3a", "3b"])
+```
+
+## Async Do-Notation
+
+For async operations, use `DoAsync`:
+
+```typescript
+import { DoAsync, $ } from "functype/do"
+
+const result = await DoAsync(async function* () {
+  const user = yield* $(Task.async("getUser", () => fetchUser()))
+  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)))
+  return { user, posts }
+})
+```
+
+## Performance
+
+Do-notation is highly optimized:
+
+- **Option/Either/Try**: Near-zero overhead
+- **List comprehensions**: 175x faster than nested flatMaps
+- Uses direct iteration instead of creating intermediate structures
+
+## Key Features
+
+- **Scala-Inspired**: Similar syntax to Scala's for-comprehensions
+- **Type-Safe**: Full TypeScript inference with the $ helper
+- **Short-Circuiting**: None/Left/Failure automatically propagates
+- **High Performance**: Optimized for List comprehensions
+
+## When to Use Do-Notation
+
+- Chaining 3+ monadic operations
+- List comprehensions (cartesian products)
+- Complex validation pipelines
+- When readability matters more than micro-optimization
+
+## Comparison
+
+```typescript
+// Without Do-notation
+const result = getUser(id).flatMap((user) =>
+  getProfile(user.profileId).flatMap((profile) =>
+    getSettings(profile.settingsId).map((settings) => ({ user, profile, settings })),
+  ),
+)
+
+// With Do-notation
+const result = Do(function* () {
+  const user = yield* $(getUser(id))
+  const profile = yield* $(getProfile(user.profileId))
+  const settings = yield* $(getSettings(profile.settingsId))
+  return { user, profile, settings }
+})
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/do.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## Pattern Matching
+────────────────────────────────────────────────────────────────────────────────
+
+# Match & Cond
+
+Powerful pattern matching and conditional expressions.
+
+## Overview
+
+Match provides exhaustive pattern matching for Scala-style case expressions, while Cond offers functional conditional evaluation without early returns or if-else chains.
+
+## Match
+
+### Basic Usage
+
+```typescript
+import { Match } from "functype/conditional"
+
+const result = Match(statusCode)
+  .case(200, () => "OK")
+  .case(404, () => "Not Found")
+  .case(500, () => "Server Error")
+  .default(() => "Unknown")
+```
+
+### Pattern Matching on Types
+
+```typescript
+const describe = Match(value)
+  .case(
+    (v): v is string => typeof v === "string",
+    (s) => `String: ${s}`,
+  )
+  .case(
+    (v): v is number => typeof v === "number",
+    (n) => `Number: ${n}`,
+  )
+  .case(
+    (v): v is boolean => typeof v === "boolean",
+    (b) => `Boolean: ${b}`,
+  )
+  .default(() => "Unknown type")
+```
+
+### With Functype Types
+
+Option, Either, Try, and other types have built-in match methods:
+
+```typescript
+// Option match
+const greeting = Option(name).match({
+  Some: (n) => `Hello, ${n}!`,
+  None: () => "Hello, stranger!",
+})
+
+// Either match
+const message = result.match({
+  Left: (error) => `Error: ${error}`,
+  Right: (value) => `Success: ${value}`,
+})
+
+// Try match
+const output = tryValue.match({
+  Success: (v) => `Got: ${v}`,
+  Failure: (e) => `Failed: ${e.message}`,
+})
+```
+
+## Cond
+
+Cond provides conditional expressions without early returns:
+
+### Basic Usage
+
+```typescript
+import { Cond } from "functype/conditional"
+
+const grade = Cond<string>()
+  .when(score >= 90, () => "A")
+  .when(score >= 80, () => "B")
+  .when(score >= 70, () => "C")
+  .when(score >= 60, () => "D")
+  .otherwise(() => "F")
+```
+
+### With Predicates
+
+```typescript
+const category = Cond<string>()
+  .when(age < 13, () => "child")
+  .when(age < 20, () => "teenager")
+  .when(age < 65, () => "adult")
+  .otherwise(() => "senior")
+```
+
+### Lazy Evaluation
+
+Cond evaluates lazily - only the matching branch runs:
+
+```typescript
+const result = Cond<number>()
+  .when(true, () => 1) // This runs
+  .when(true, () => expensiveCompute()) // This doesn't run
+  .otherwise(() => 0)
+```
+
+## Match vs Cond
+
+| Feature  | Match                         | Cond                        |
+| -------- | ----------------------------- | --------------------------- |
+| Input    | Single value to match against | No input, checks conditions |
+| Use Case | Value-based branching         | Predicate-based branching   |
+| Pattern  | `Match(value).case(...)`      | `Cond().when(...)`          |
+
+### When to Use Match
+
+```typescript
+// Matching on specific values
+Match(httpMethod)
+  .case("GET", () => handleGet())
+  .case("POST", () => handlePost())
+  .case("PUT", () => handlePut())
+  .default(() => handleOther())
+
+// Matching on discriminated unions
+Match(action.type)
+  .case("INCREMENT", () => state + 1)
+  .case("DECREMENT", () => state - 1)
+  .case("RESET", () => 0)
+  .default(() => state)
+```
+
+### When to Use Cond
+
+```typescript
+// Complex conditional logic
+const shipping = Cond<number>()
+  .when(order.total > 100, () => 0)
+  .when(order.isPrime, () => 0)
+  .when(order.isLocal, () => 5)
+  .otherwise(() => 10)
+
+// Replacing if-else chains
+const message = Cond<string>()
+  .when(errors.length > 0, () => `${errors.length} errors found`)
+  .when(warnings.length > 0, () => `${warnings.length} warnings`)
+  .otherwise(() => "All good!")
+```
+
+## Key Features
+
+- **Exhaustive Matching**: Type-safe pattern matching with default case enforcement
+- **No Early Returns**: Functional style without breaking out of expressions
+- **Type Inference**: Full TypeScript type inference for all branches
+- **Composable**: Chain multiple conditions and patterns together
+
+## When to Use Match & Cond
+
+- Complex conditional logic with multiple cases (status codes, state machines)
+- Avoiding if-else chains and early returns
+- Pattern matching on monadic types (Option, Either, Try)
+- Expression-based code where you need a value back
+
+## Comparison with if-else
+
+```typescript
+// Traditional if-else (imperative)
+let result: string
+if (status === 200) {
+  result = "OK"
+} else if (status === 404) {
+  result = "Not Found"
+} else {
+  result = "Unknown"
+}
+
+// Match (functional expression)
+const result = Match(status)
+  .case(200, () => "OK")
+  .case(404, () => "Not Found")
+  .default(() => "Unknown")
+```
+
+## API Reference
+
+See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/conditional.html)

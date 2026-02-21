@@ -2,6 +2,8 @@
 
 > A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns. Provides Option, Either, Try, List, Task, IO, and more with a unified interface hierarchy.
 
+> [llms-full.txt](https://functype.org/llms-full.txt): Complete documentation in a single file
+
 ## Getting Started
 
 [README](https://github.com/jordanburke/functype/blob/main/README.md): Complete introduction with installation and usage examples
