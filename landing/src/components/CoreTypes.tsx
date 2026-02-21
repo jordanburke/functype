@@ -25,6 +25,12 @@ export default function CoreTypes() {
       icon: "⚙",
     },
     {
+      name: "IO<R,E,A>",
+      href: "/io",
+      description: "Lazy, composable effects with typed errors and dependency injection",
+      icon: "λ",
+    },
+    {
       name: "Do-Notation",
       href: "/do-notation",
       description: "Scala-like for-comprehensions for monadic composition",
