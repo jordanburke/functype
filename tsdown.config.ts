@@ -9,6 +9,7 @@ const modules = ["option", "either", "try", "list", "map", "set", "tuple", "bran
 const entries = {
   index: "src/index.ts",
   "cli/index": "src/cli/index.ts",
+  "cli/exports": "src/cli/exports.ts",
   ...Object.fromEntries(
     modules.map((module) => {
       // Special case for task which is in core/task
