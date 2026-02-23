@@ -121,6 +121,11 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <a href="/mcp-server" className="hover:text-white transition-colors">
+                  MCP Server
+                </a>
+              </li>
+              <li>
                 <a
                   href="https://github.com/jordanburke/functype/blob/main/docs/do-notation.md"
                   target="_blank"

@@ -8,6 +8,7 @@ export async function GET() {
     { loc: "/task", priority: "0.8", changefreq: "monthly" },
     { loc: "/do-notation", priority: "0.8", changefreq: "monthly" },
     { loc: "/match", priority: "0.8", changefreq: "monthly" },
+    { loc: "/mcp-server", priority: "0.8", changefreq: "monthly" },
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>

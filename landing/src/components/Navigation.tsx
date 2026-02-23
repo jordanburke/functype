@@ -6,7 +6,7 @@ export default function Navigation() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ["home", "features", "core-types", "quick-start", "claude-skills"]
+      const sections = ["home", "features", "core-types", "quick-start", "ai-tools"]
       const scrollPosition = window.scrollY + 100
 
       for (const section of sections) {
@@ -30,7 +30,7 @@ export default function Navigation() {
     { label: "Features", href: "/#features", id: "features" },
     { label: "Core Types", href: "/#core-types", id: "core-types" },
     { label: "Quick Start", href: "/#quick-start", id: "quick-start" },
-    { label: "Claude Skills", href: "/#claude-skills", id: "claude-skills" },
+    { label: "AI Tools", href: "/#ai-tools", id: "ai-tools" },
   ]
 
   const handleNavClick = () => {
