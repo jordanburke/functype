@@ -96,7 +96,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
-dist-landing
+dist-site
 
 # Claude Code skill packages (generated artifacts, not source)
 dist/skills/

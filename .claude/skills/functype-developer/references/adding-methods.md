@@ -35,8 +35,8 @@ Checklist for adding new methods to existing functype types (List, Set, Map, Opt
 ### 5. Documentation
 
 - [ ] Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
-- [ ] Run `pnpm docs:sync` to sync feature matrix to landing site
-- [ ] Update `landing/src/content/<type>.md` with examples
+- [ ] Run `pnpm docs:sync` to sync feature matrix to site
+- [ ] Update `site/src/content/<type>.md` with examples
 - [ ] Update `.claude/skills/functype/references/quick-reference.md`
 - [ ] Update `.claude/skills/functype/references/common-patterns.md` if workarounds become built-in
 

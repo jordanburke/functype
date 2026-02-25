@@ -44,11 +44,11 @@ jobs:
       - name: Install dependencies (root)
         run: pnpm install
 
-      - name: Install dependencies (landing)
-        run: cd landing && pnpm install
+      - name: Install dependencies (site)
+        run: cd site && pnpm install
 
-      - name: Build landing page
-        run: cd landing && pnpm build
+      - name: Build site
+        run: cd site && pnpm build
 
       - name: Build TypeDoc
         env:
@@ -61,7 +61,7 @@ jobs:
       - name: Prepare combined deployment
         run: |
           mkdir -p dist-combined
-          cp -r dist-landing/* dist-combined/
+          cp -r dist-site/* dist-combined/
           mkdir -p dist-combined/api-docs
           cp -r typedocs/* dist-combined/api-docs/
 

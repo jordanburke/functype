@@ -3,8 +3,8 @@ import { resolve, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const landingDir = resolve(__dirname, "..")
-const rootDir = resolve(landingDir, "..")
+const siteDir = resolve(__dirname, "..")
+const rootDir = resolve(siteDir, "..")
 
 const pkg = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf-8"))
 
@@ -12,14 +12,14 @@ const sections: Array<{ label: string; path: string }> = [
   { label: "AI Guide", path: resolve(rootDir, "docs/ai-guide.md") },
   { label: "Quick Reference", path: resolve(rootDir, "docs/quick-reference.md") },
   { label: "Feature Matrix", path: resolve(rootDir, "docs/FUNCTYPE_FEATURE_MATRIX.md") },
-  { label: "Option", path: resolve(landingDir, "src/content/option.md") },
-  { label: "Either", path: resolve(landingDir, "src/content/either.md") },
-  { label: "Try", path: resolve(landingDir, "src/content/try.md") },
-  { label: "List", path: resolve(landingDir, "src/content/list.md") },
-  { label: "Task", path: resolve(landingDir, "src/content/task.md") },
-  { label: "IO", path: resolve(landingDir, "src/content/io.md") },
-  { label: "Do-notation", path: resolve(landingDir, "src/content/do-notation.md") },
-  { label: "Pattern Matching", path: resolve(landingDir, "src/content/match.md") },
+  { label: "Option", path: resolve(siteDir, "src/content/option.md") },
+  { label: "Either", path: resolve(siteDir, "src/content/either.md") },
+  { label: "Try", path: resolve(siteDir, "src/content/try.md") },
+  { label: "List", path: resolve(siteDir, "src/content/list.md") },
+  { label: "Task", path: resolve(siteDir, "src/content/task.md") },
+  { label: "IO", path: resolve(siteDir, "src/content/io.md") },
+  { label: "Do-notation", path: resolve(siteDir, "src/content/do-notation.md") },
+  { label: "Pattern Matching", path: resolve(siteDir, "src/content/match.md") },
 ]
 
 const header = `# Functype v${pkg.version}
@@ -45,7 +45,7 @@ for (const section of sections) {
 }
 
 const output = parts.join("\n")
-const outputPath = resolve(landingDir, "public/llms-full.txt")
+const outputPath = resolve(siteDir, "public/llms-full.txt")
 
 writeFileSync(outputPath, output, "utf-8")
 

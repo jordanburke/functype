@@ -46,10 +46,10 @@ All commands use `ts-builds` under the hood for standardized tooling.
 - `pnpm bench` - Run performance benchmarks
 - `pnpm analyze:size` - Analyze production bundle size
 
-### Landing Site
+### Site
 
-- `pnpm landing:dev` - Start landing site dev server
-- `pnpm landing:build` - Build landing site for production
+- `pnpm site:dev` - Start site dev server
+- `pnpm site:build` - Build site for production
 
 ## Core Architecture
 
@@ -128,8 +128,8 @@ Strict mode with additional safety:
 5. Run `pnpm extract:interfaces` to regenerate CLI interfaces
 6. Update `src/cli/data.ts` with new method entries
 7. Update `docs/FUNCTYPE_FEATURE_MATRIX.md`
-8. Run `pnpm docs:sync` to sync feature matrix to landing site
-9. Update `landing/src/content/<type>.md` with examples
+8. Run `pnpm docs:sync` to sync feature matrix to site
+9. Update `site/src/content/<type>.md` with examples
 10. Update `.claude/skills/functype/references/quick-reference.md`
 11. Update `.claude/skills/functype/references/common-patterns.md` if workarounds become built-in
 12. Run `pnpm validate`
@@ -142,7 +142,7 @@ When changing public APIs:
 
 - Update JSDoc comments in source (appears in TypeDoc automatically)
 - Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
-- Run `pnpm docs:sync` to sync feature matrix to landing site
+- Run `pnpm docs:sync` to sync feature matrix to site
 - Run `pnpm validate` before committing
 
 ## Functype API Quick Reference (v0.44.0+)

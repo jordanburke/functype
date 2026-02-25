@@ -5,7 +5,7 @@ on:
     paths:
       - "src/**"
       - "docs/**"
-      - "landing/**"
+      - "site/**"
       - "README.md"
       - "CLAUDE.md"
 
@@ -70,8 +70,8 @@ jobs:
             - [ ] **README.md** - If adding/changing core features or examples
             - [ ] **docs/FUNCTYPE_FEATURE_MATRIX.md** - If adding/changing interfaces
             - [ ] **docs/quick-reference.md** - If adding common patterns
-            - [ ] **landing/src/pages/*.astro** - Update relevant type docs
-            - [ ] **landing/public/llms.txt** - If adding major new features
+            - [ ] **site/src/pages/*.astro** - Update relevant type docs
+            - [ ] **site/public/llms.txt** - If adding major new features
 
             #### 📝 Useful Commands
             - \`pnpm docs\` - Generate TypeDoc API documentation

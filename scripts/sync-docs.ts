@@ -4,7 +4,7 @@
  * Documentation Sync Script
  *
  * This script ensures documentation stays in sync across the project:
- * - Syncs FUNCTYPE_FEATURE_MATRIX.md from docs/ to landing/src/content/
+ * - Syncs FUNCTYPE_FEATURE_MATRIX.md from docs/ to site/src/content/
  * - Validates links in llms.txt
  * - Checks for common inconsistencies
  */
@@ -36,11 +36,11 @@ class DocumentationSyncer {
   }
 
   /**
-   * Sync feature matrix from docs/ to landing/src/content/
+   * Sync feature matrix from docs/ to site/src/content/
    */
   private syncFeatureMatrix(): void {
     const sourcePath = resolve(this.projectRoot, "docs/FUNCTYPE_FEATURE_MATRIX.md")
-    const destPath = resolve(this.projectRoot, "landing/src/content/feature-matrix.md")
+    const destPath = resolve(this.projectRoot, "site/src/content/feature-matrix.md")
 
     if (!existsSync(sourcePath)) {
       this.result.errors.push(`Source feature matrix not found: ${sourcePath}`)
@@ -58,7 +58,7 @@ class DocumentationSyncer {
       }
 
       copyFileSync(sourcePath, destPath)
-      this.result.info.push("✓ Synced feature matrix: docs/ → landing/src/content/")
+      this.result.info.push("✓ Synced feature matrix: docs/ → site/src/content/")
     } catch (error) {
       this.result.errors.push(`Failed to sync feature matrix: ${error}`)
       this.result.success = false
@@ -69,10 +69,10 @@ class DocumentationSyncer {
    * Validate links in llms.txt
    */
   private validateLlmsTxt(): void {
-    const llmsTxtPath = resolve(this.projectRoot, "landing/public/llms.txt")
+    const llmsTxtPath = resolve(this.projectRoot, "site/public/llms.txt")
 
     if (!existsSync(llmsTxtPath)) {
-      this.result.warnings.push("⚠ llms.txt not found in landing/public/")
+      this.result.warnings.push("⚠ llms.txt not found in site/public/")
       return
     }
 
@@ -105,10 +105,10 @@ class DocumentationSyncer {
       // Validate local file links
       const localLinks = links.filter((link) => !link.url.startsWith("http"))
       localLinks.forEach((link) => {
-        // Check if markdown file exists in landing or docs
+        // Check if markdown file exists in site or docs
         const possiblePaths = [
-          resolve(this.projectRoot, "landing/public", link.url),
-          resolve(this.projectRoot, "landing/src/pages", link.url),
+          resolve(this.projectRoot, "site/public", link.url),
+          resolve(this.projectRoot, "site/src/pages", link.url),
           resolve(this.projectRoot, link.url),
         ]
 
