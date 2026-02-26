@@ -16,6 +16,9 @@ export default defineConfig({
     // Include patterns
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
 
+    // Exclude workspace packages (they run their own tests)
+    exclude: ["node_modules", "dist", "mcp-server/**", "site/**"],
+
     // Coverage settings
     coverage: {
       provider: "v8",
