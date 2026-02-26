@@ -23,6 +23,7 @@ In a browser, this manifests as the tab becoming unresponsive ("page unresponsiv
 When a query refetches, React Query compares old and new data using `replaceEqualDeep()` to preserve reference identity where possible. This avoids unnecessary re-renders when data hasn't actually changed.
 
 The algorithm:
+
 1. If `a === b`, return `a` (same reference — done)
 2. If `isPlainObject(a) && isPlainObject(b)`, iterate all keys via `Object.keys()` and recursively compare each property value
 3. If `isPlainArray(a) && isPlainArray(b)`, iterate elements and recursively compare
@@ -106,7 +107,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
 
   const list: List<A> = {
-    [Symbol.toStringTag]: "List",  // <-- This one line
+    [Symbol.toStringTag]: "List", // <-- This one line
     _tag: "List" as const,
     // ... everything else unchanged
   }
@@ -120,7 +121,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 **Verified working:**
 
 ```typescript
-const a = List.of(1, 2, 3)  // with Symbol.toStringTag
+const a = List.of(1, 2, 3) // with Symbol.toStringTag
 const b = List.of(1, 2, 3)
 
 replaceEqualDeep(a, b) // Returns instantly, no crash
@@ -143,12 +144,14 @@ tail: () => ListObject(array.slice(1))
 ```
 
 **Candidates for conversion:**
+
 - `tail` → `tail()` — returns new List
 - `init` → `init()` — returns new List
 - `headOption` → `headOption()` — returns new Option
 - `lastOption` → `lastOption()` — returns new Option
 
 **Keep as getters** (safe — return primitives or existing refs):
+
 - `size`, `length`, `isEmpty` — return primitives
 - `head`, `last` — return existing array element references
 
@@ -163,13 +166,16 @@ const FunctypeProto = Object.create(Object.prototype)
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
-  const list: List<A> = { /* ... */ }
+  const list: List<A> = {
+    /* ... */
+  }
   Object.setPrototypeOf(list, FunctypeProto)
   return list
 }
 ```
 
 **Downsides:**
+
 - `Object.setPrototypeOf` triggers V8 deoptimization (slower property lookups)
 - More invasive than `Symbol.toStringTag`
 - Same result with more code
@@ -177,6 +183,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 ## Recommendation
 
 **Fix 1 (`Symbol.toStringTag`) is the clear winner.** It's:
+
 - 1 line per type, no structural changes
 - Semantically correct (a List IS a List, not a plain Object)
 - Compatible with all JavaScript environments
@@ -190,21 +197,22 @@ Fix 2 (getter → method) is independently worth doing for API correctness (gett
 
 All functype types that are returned from React Query hooks need `Symbol.toStringTag`:
 
-| Type | Tag Value | Has Recursive Getters |
-|------|-----------|----------------------|
-| List | `"List"` | Yes (`tail`, `init`, `headOption`, `lastOption`) |
-| Option | `"Option"` | Possibly (depends on implementation) |
-| Either | `"Either"` | Possibly |
-| Try | `"Try"` | Possibly |
-| Set | `"Set"` | Check implementation |
-| Map | `"Map"` | Check implementation |
-| Tuple | `"Tuple"` | Check implementation |
+| Type   | Tag Value  | Has Recursive Getters                            |
+| ------ | ---------- | ------------------------------------------------ |
+| List   | `"List"`   | Yes (`tail`, `init`, `headOption`, `lastOption`) |
+| Option | `"Option"` | Possibly (depends on implementation)             |
+| Either | `"Either"` | Possibly                                         |
+| Try    | `"Try"`    | Possibly                                         |
+| Set    | `"Set"`    | Check implementation                             |
+| Map    | `"Map"`    | Check implementation                             |
+| Tuple  | `"Tuple"`  | Check implementation                             |
 
 ## Consumer-Side Workarounds (cq-ui)
 
 Until functype is fixed, consuming apps can:
 
 1. **Disable structural sharing** on queries returning functype types:
+
    ```typescript
    useQuery({
      queryKey: [...],
@@ -214,10 +222,11 @@ Until functype is fixed, consuming apps can:
    ```
 
 2. **Convert to arrays in queryFn** before returning:
+
    ```typescript
    queryFn: async () => {
      const list = await fetchSegments()
-     return list.toArray()  // Plain array — structural sharing works
+     return list.toArray() // Plain array — structural sharing works
    }
    ```
 

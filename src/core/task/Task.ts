@@ -143,6 +143,7 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
 
   const errResult = {
     ...Base("Err", { error: throwable, meta }),
+    [Symbol.toStringTag]: "TaskOutcome",
     _tag: "Err" as const,
     _meta: meta,
     value: undefined,
@@ -259,6 +260,7 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
 
   const okResult = {
     ...Base("Ok", { value: data, meta }),
+    [Symbol.toStringTag]: "TaskOutcome",
     _tag: "Ok" as const,
     _meta: meta,
     value: data,

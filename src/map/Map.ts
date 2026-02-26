@@ -27,6 +27,7 @@ export interface Map<K, V>
     Pipe<[K, V][]>,
     Foldable<Tuple<[K, V]>>,
     Iterable<[K, V]> {
+  readonly [Symbol.toStringTag]: string
   readonly _tag: "Map"
   add(item: Tuple<[K, V]>): Map<K, V>
   remove(value: K): Map<K, V>
@@ -165,6 +166,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
   }
 
   return {
+    [Symbol.toStringTag]: "FunctypeMap",
     _tag,
     [Symbol.iterator]: () => state.values.entries(),
     add,

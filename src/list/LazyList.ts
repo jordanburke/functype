@@ -32,6 +32,7 @@ import { List } from "./List"
  */
 export interface LazyList<A extends Type>
   extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
+  readonly [Symbol.toStringTag]: string
   // Iterator protocol
   [Symbol.iterator](): Iterator<A>
 
@@ -75,6 +76,7 @@ export interface LazyList<A extends Type>
 
 const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
   const lazyList: LazyList<A> = {
+    [Symbol.toStringTag]: "LazyList",
     _tag: "LazyList" as const,
     [Symbol.iterator]: () => iterable[Symbol.iterator](),
 

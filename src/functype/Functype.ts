@@ -27,6 +27,7 @@ import type { Type } from "@/types"
 export interface FunctypeBase<A, Tag extends string = string>
   extends AsyncMonad<A>, Traversable<A>, Serializable<A>, Foldable<A>, Typeable<Tag>, ContainerOps<A> {
   readonly _tag: Tag
+  readonly [Symbol.toStringTag]: string
 }
 
 /**

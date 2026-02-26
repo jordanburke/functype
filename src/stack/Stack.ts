@@ -14,6 +14,7 @@ import type { Valuable } from "@/valuable/Valuable"
  * Implements the Traversable interface for working with ordered collections
  */
 export type Stack<A extends Type> = {
+  readonly [Symbol.toStringTag]: string
   /**
    * Push a value onto the top of the stack
    * @param value - The value to push
@@ -216,6 +217,7 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
   }
 
   return {
+    [Symbol.toStringTag]: "Stack",
     _tag,
     get size() {
       return size()

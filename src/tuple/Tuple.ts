@@ -9,6 +9,7 @@ import type { Type } from "@/types"
 
 export interface Tuple<T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
+  readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
 
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>
@@ -28,6 +29,7 @@ export interface Tuple<T extends Type[]>
 
 const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
   const tuple: Tuple<T> = {
+    [Symbol.toStringTag]: "Tuple",
     _tag: "Tuple",
     map: <U extends Type[]>(f: (value: T) => U): Tuple<U> => {
       const mapValue = f(values)

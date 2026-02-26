@@ -64,6 +64,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
 
   const list: List<A> = {
+    [Symbol.toStringTag]: "List",
     _tag: "List" as const,
 
     [Symbol.iterator]: () => array[Symbol.iterator](),

@@ -315,6 +315,7 @@ export const FULL_INTERFACES: Record<string, string> = {
     Pipe<[K, V][]>,
     Foldable<Tuple<[K, V]>>,
     Iterable<[K, V]> {
+  readonly [Symbol.toStringTag]: string
   readonly _tag: "Map"
   add(item: Tuple<[K, V]>): Map<K, V>
   remove(value: K): Map<K, V>
@@ -492,6 +493,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 
   LazyList: `export interface LazyList<A extends Type>
   extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
+  readonly [Symbol.toStringTag]: string
   // Iterator protocol
   [Symbol.iterator](): Iterator<A>
 
@@ -573,6 +575,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 
   Tuple: `export interface Tuple<T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
+  readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
 
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>
@@ -591,6 +594,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 }`,
 
   Stack: `export type Stack<A extends Type> = {
+  readonly [Symbol.toStringTag]: string
   /**
    * Push a value onto the top of the stack
    * @param value - The value to push
@@ -662,5 +666,5 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
-} & Traversable<A> &`,
+} & Traversable<A> &`
 }

@@ -56,6 +56,7 @@ export interface Try<T>
 }
 
 const Success = <T>(value: T): Try<T> => ({
+  [Symbol.toStringTag]: "Try",
   _tag: "Success",
   error: undefined,
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {
@@ -112,6 +113,7 @@ const Success = <T>(value: T): Try<T> => ({
 })
 
 const Failure = <T>(error: Error): Try<T> => ({
+  [Symbol.toStringTag]: "Try",
   _tag: "Failure",
   error,
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {

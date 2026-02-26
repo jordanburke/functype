@@ -29,6 +29,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: NativeSet<A> = new NativeSet<A>(iterable)
 
   const set: Set<A> = {
+    [Symbol.toStringTag]: "FunctypeSet",
     _tag: "Set",
 
     [Symbol.iterator]: () => values[Symbol.iterator](),

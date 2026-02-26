@@ -171,6 +171,7 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
  * @typeParam T - The type of the value
  */
 export const Some = <T extends Type>(value: T): Option<T> => ({
+  [Symbol.toStringTag]: "Option",
   _tag: "Some",
   value,
   isEmpty: false,
@@ -237,6 +238,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
 })
 
 const NONE: Option<never> = {
+  [Symbol.toStringTag]: "Option",
   _tag: "None",
   value: undefined as never,
   isEmpty: true,

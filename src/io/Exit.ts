@@ -25,6 +25,7 @@ export type ExitTag = "Success" | "Failure" | "Interrupted"
  * - Interrupted: The effect was cancelled/interrupted
  */
 export interface Exit<E extends Type, A extends Type> {
+  readonly [Symbol.toStringTag]: string
   readonly _tag: ExitTag
 
   /**
@@ -113,6 +114,7 @@ export interface Exit<E extends Type, A extends Type> {
  * Creates a Success Exit
  */
 const SuccessExit = <E extends Type, A extends Type>(value: A): Exit<E, A> => ({
+  [Symbol.toStringTag]: "Exit",
   _tag: "Success",
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
@@ -184,6 +186,7 @@ const SuccessExit = <E extends Type, A extends Type>(value: A): Exit<E, A> => ({
  * Creates a Failure Exit
  */
 const FailureExit = <E extends Type, A extends Type>(error: E): Exit<E, A> => ({
+  [Symbol.toStringTag]: "Exit",
   _tag: "Failure",
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
@@ -255,6 +258,7 @@ const FailureExit = <E extends Type, A extends Type>(error: E): Exit<E, A> => ({
  * Creates an Interrupted Exit
  */
 const InterruptedExit = <E extends Type, A extends Type>(fiberId: string): Exit<E, A> => ({
+  [Symbol.toStringTag]: "Exit",
   _tag: "Interrupted",
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {

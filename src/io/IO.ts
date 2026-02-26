@@ -115,6 +115,7 @@ type IOEffect<R, E, A> =
  * @typeParam A - Success type (value produced on success)
  */
 export interface IO<R extends Type, E extends Type, A extends Type> {
+  readonly [Symbol.toStringTag]: string
   /**
    * Internal effect representation
    * @internal
@@ -405,6 +406,7 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
  */
 const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): IO<R, E, A> => {
   const io: IO<R, E, A> = {
+    [Symbol.toStringTag]: "IO",
     _effect: effect,
 
     // Core Operations

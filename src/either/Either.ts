@@ -81,6 +81,7 @@ export interface Either<L extends Type, R extends Type>
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
 
 const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
+  [Symbol.toStringTag]: "Either",
   _tag: "Right",
   value,
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {
@@ -172,6 +173,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
 })
 
 const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
+  [Symbol.toStringTag]: "Either",
   _tag: "Left",
   value,
   isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {

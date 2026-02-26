@@ -203,6 +203,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
   }
 
   const lazy: Lazy<T> = {
+    [Symbol.toStringTag]: "Lazy",
     _tag: "Lazy",
     get isEvaluated() {
       return evaluated
