@@ -46,6 +46,12 @@ All commands use `ts-builds` under the hood for standardized tooling.
 - `pnpm bench` - Run performance benchmarks
 - `pnpm analyze:size` - Analyze production bundle size
 
+### MCP Server (`mcp-server/`)
+
+- `cd mcp-server && pnpm validate` - Validate MCP server
+- `cd mcp-server && pnpm serve:dev` - Dev server with hot reload
+- `cd mcp-server && pnpm inspect` - MCP Inspector
+
 ### Site
 
 - `pnpm site:dev` - Start site dev server

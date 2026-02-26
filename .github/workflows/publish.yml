@@ -41,8 +41,14 @@ jobs:
           echo "Files to be published:"
           npm pack --dry-run
 
-      - name: Publish to npm
+      - name: Publish functype to npm
         run: npm publish --provenance --access public
+
+      - name: Publish MCP Server to npm
+        working-directory: mcp-server
+        run: pnpm publish --no-git-checks --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1

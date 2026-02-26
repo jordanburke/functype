@@ -1,0 +1,76 @@
+{
+  "name": "functype-mcp-server",
+  "version": "0.47.1",
+  "description": "MCP server for functype documentation lookup and TypeScript code validation",
+  "keywords": [
+    "mcp",
+    "functype",
+    "typescript",
+    "functional-programming",
+    "model-context-protocol",
+    "claude",
+    "ai-assistant",
+    "fastmcp",
+    "type-checking"
+  ],
+  "author": "Jordan Burke <jordan.burke@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "NODE_ENV=production ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate",
+    "inspect": "pnpm build && npx @modelcontextprotocol/inspector dist/index.js",
+    "serve": "pnpm build && node dist/index.js",
+    "serve:dev": "tsx watch src/index.ts"
+  },
+  "bin": {
+    "functype-mcp-server": "dist/bin.js"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "fastmcp": "^3.33.0",
+    "functype": "workspace:*",
+    "typescript": "^5.9.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.13",
+    "ts-builds": "^2.4.0",
+    "tsdown": "^0.20.3",
+    "tsx": "^4.21.0"
+  },
+  "prettier": "ts-builds/prettier"
+}

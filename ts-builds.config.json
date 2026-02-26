@@ -6,10 +6,11 @@
     "docs": "pnpm docs:preprocess && typedoc",
     "docs:validate": "tsx scripts/validate-docs.ts && tsx scripts/sync-docs.ts",
     "build": "rimraf dist && tsx scripts/extract-interfaces.ts && cross-env NODE_ENV=production tsdown",
+    "validate:mcp-server": { "run": "pnpm validate", "cwd": "./mcp-server" },
     "validate:site": { "run": "pnpm validate", "cwd": "./site" }
   },
   "chains": {
-    "validate": ["validate:core", "validate:site"],
+    "validate": ["validate:core", "validate:mcp-server", "validate:site"],
     "validate:core": ["format", "lint", "compile", "test", "docs:validate", "build"]
   }
 }
