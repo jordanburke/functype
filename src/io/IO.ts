@@ -1,8 +1,7 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
 import { None, Option as OptionConstructor, Some } from "@/option/Option"
 import { Try } from "@/try/Try"
@@ -606,7 +605,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     toString() {
-      return `IO(${stringify(effect._tag)})`
+      return `IO(${safeStringify(effect._tag)})`
     },
 
     toJSON() {

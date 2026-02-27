@@ -1,8 +1,7 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Type } from "@/types"
@@ -174,7 +173,7 @@ const SuccessExit = <E extends Type, A extends Type>(value: A): Exit<E, A> => ({
   },
 
   toString() {
-    return `Exit.Success(${stringify(value)})`
+    return `Exit.Success(${safeStringify(value)})`
   },
 
   toJSON() {
@@ -246,7 +245,7 @@ const FailureExit = <E extends Type, A extends Type>(error: E): Exit<E, A> => ({
   },
 
   toString() {
-    return `Exit.Failure(${stringify(error)})`
+    return `Exit.Failure(${safeStringify(error)})`
   },
 
   toJSON() {

@@ -1,5 +1,3 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import { Base } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
@@ -9,6 +7,7 @@ import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
 import { ArrayBuilder } from "@/internal/mutation-utils"
+import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -232,7 +231,7 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
 
     // Serializable methods
     serialize: () => ({
-      toJSON: () => stringify({ _tag: "Err", error: throwable.message ?? throwable.toString() }) ?? "{}",
+      toJSON: () => safeStringify({ _tag: "Err", error: throwable.message ?? throwable.toString() }) ?? "{}",
       toYAML: () => `_tag: Err\nerror: ${throwable.message ?? throwable.toString()}`,
       toBinary: () =>
         Buffer.from(JSON.stringify({ _tag: "Err", error: throwable.message ?? throwable.toString() })).toString(
@@ -349,8 +348,8 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
 
     // Serializable methods
     serialize: () => ({
-      toJSON: () => stringify({ _tag: "Ok", value: data }) ?? "{}",
-      toYAML: () => `_tag: Ok\nvalue: ${stringify(data) ?? "undefined"}`,
+      toJSON: () => safeStringify({ _tag: "Ok", value: data }) ?? "{}",
+      toYAML: () => `_tag: Ok\nvalue: ${safeStringify(data) ?? "undefined"}`,
       toBinary: () => Buffer.from(JSON.stringify({ _tag: "Ok", value: data })).toString("base64"),
     }),
 

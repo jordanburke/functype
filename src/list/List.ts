@@ -1,9 +1,8 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
+import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
@@ -286,7 +285,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
             throw new Error("Empty list")
           }),
 
-    toString: () => `List(${stringify(array)})`,
+    toString: () => `List(${safeStringify(array)})`,
 
     toValue: () => ({ _tag: "List", value: array }),
 

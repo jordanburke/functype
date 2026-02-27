@@ -1,5 +1,6 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
+import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -247,7 +248,7 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     serialize: () => {
       return {
         toJSON: () => JSON.stringify({ _tag: "Stack", value: items }),
-        toYAML: () => `_tag: Stack\nvalue: ${JSON.stringify(items)}`,
+        toYAML: () => `_tag: Stack\nvalue: ${safeStringify(items)}`,
         toBinary: () => Buffer.from(JSON.stringify({ _tag: "Stack", value: items })).toString("base64"),
       }
     },

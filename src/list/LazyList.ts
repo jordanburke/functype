@@ -1,8 +1,7 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import { Counter } from "@/internal/mutation-utils"
+import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
 import { Ref } from "@/ref/Ref"
@@ -345,7 +344,7 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
       const array = Array.from(iterable)
       return {
         toJSON: () => JSON.stringify({ _tag: "LazyList", value: array }),
-        toYAML: () => `_tag: LazyList\nvalue: ${stringify(array)}`,
+        toYAML: () => `_tag: LazyList\nvalue: ${safeStringify(array)}`,
         toBinary: () => Buffer.from(JSON.stringify({ _tag: "LazyList", value: array })).toString("base64"),
       }
     },

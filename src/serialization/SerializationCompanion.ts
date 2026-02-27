@@ -1,4 +1,4 @@
-import stringify from "safe-stable-stringify"
+import { safeStringify } from "@/internal/stringify"
 
 /**
  * Serialization result containing methods for different formats
@@ -20,7 +20,7 @@ export interface SerializationResult {
  */
 export const createSerializer = (tag: string, value: unknown): SerializationResult => ({
   toJSON: () => JSON.stringify({ _tag: tag, value }),
-  toYAML: () => `_tag: ${tag}\nvalue: ${stringify(value)}`,
+  toYAML: () => `_tag: ${tag}\nvalue: ${safeStringify(value)}`,
   toBinary: () => Buffer.from(JSON.stringify({ _tag: tag, value })).toString("base64"),
 })
 
@@ -33,7 +33,7 @@ export const createCustomSerializer = (data: Record<string, unknown>): Serializa
   toJSON: () => JSON.stringify(data),
   toYAML: () => {
     const entries = Object.entries(data)
-    return entries.map(([key, val]) => `${key}: ${stringify(val)}`).join("\n")
+    return entries.map(([key, val]) => `${key}: ${safeStringify(val)}`).join("\n")
   },
   toBinary: () => Buffer.from(JSON.stringify(data)).toString("base64"),
 })

@@ -1,7 +1,6 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
+import { safeStringify } from "@/internal/stringify"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Typeable } from "@/typeable/Typeable"
@@ -93,7 +92,7 @@ const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
     serialize: () => {
       return {
         toJSON: () => JSON.stringify({ _tag: "Tuple", value: values }),
-        toYAML: () => `_tag: Tuple\nvalue: ${stringify(values)}`,
+        toYAML: () => `_tag: Tuple\nvalue: ${safeStringify(values)}`,
         toBinary: () => Buffer.from(JSON.stringify({ _tag: "Tuple", value: values })).toString("base64"),
       }
     },

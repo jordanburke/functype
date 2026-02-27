@@ -1,9 +1,8 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
+import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -115,7 +114,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
     return { _tag: "Right", value }
   },
   toString: () => {
-    return `Right(${stringify(value)})`
+    return `Right(${safeStringify(value)})`
   },
   *[Symbol.iterator]() {
     yield value
@@ -208,7 +207,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   toJSON() {
     return { _tag: "Left", value }
   },
-  toString: () => `Left(${stringify(value)})`,
+  toString: () => `Left(${safeStringify(value)})`,
   *[Symbol.iterator]() {
     // Left doesn't yield any values
   },

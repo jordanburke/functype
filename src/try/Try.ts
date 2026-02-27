@@ -1,11 +1,10 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
+import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list"
 import { None, Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -85,7 +84,7 @@ const Success = <T>(value: T): Try<T> => ({
     <B>(z: B) =>
     (op: (a: T, b: B) => B) =>
       op(value, z),
-  toString: () => `Success(${stringify(value)})`,
+  toString: () => `Success(${safeStringify(value)})`,
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
   toOption: () => Some(value),
@@ -144,7 +143,7 @@ const Failure = <T>(error: Error): Try<T> => ({
     <B>(z: B) =>
     (_op: (a: T, b: B) => B) =>
       z, // No transformation on failure
-  toString: () => `Failure(${stringify(error)}))`,
+  toString: () => `Failure(${safeStringify(error)}))`,
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
   toOption: () => None<T>(),

@@ -1,10 +1,9 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either"
 import { Left, Right } from "@/either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
+import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option"
 import { None, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -334,7 +333,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     match: <R>(patterns: { Lazy: (value: T) => R }): R => patterns.Lazy(evaluate()),
     toString: (): string => {
       if (evaluated && !hasError) {
-        return `Lazy(${stringify(value)})`
+        return `Lazy(${safeStringify(value)})`
       } else if (evaluated && hasError) {
         const errorMessage = error instanceof Error ? error.message : String(error)
         return `Lazy(<error: ${errorMessage}>)`
@@ -414,7 +413,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         ),
       toYAML: () =>
         evaluated && !hasError
-          ? `_tag: Lazy\nevaluated: true\nvalue: ${stringify(value)}`
+          ? `_tag: Lazy\nevaluated: true\nvalue: ${safeStringify(value)}`
           : `_tag: Lazy\nevaluated: false`,
       toBinary: () =>
         Buffer.from(

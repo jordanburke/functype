@@ -1,8 +1,7 @@
-import stringify from "safe-stable-stringify"
-
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
+import { safeStringify } from "@/internal/stringify"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
 import type { Promisable } from "@/typeclass"
@@ -227,7 +226,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toEither: <E>(_left: E) => Right<E, T>(value),
   toTry: () => Try(() => value),
   toPromise: (): Promise<T> => Promise.resolve(value),
-  toString: () => `Some(${stringify(value)})`,
+  toString: () => `Some(${safeStringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
   serialize: () => createSerializer("Some", value),
