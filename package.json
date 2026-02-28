@@ -12,6 +12,7 @@
   "homepage": "https://functype.org/",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
+    "prevalidate": "bash scripts/version-check.sh",
     "validate": "ts-builds validate",
     "validate:core": "ts-builds validate:core",
     "validate:site": "ts-builds validate:site",
@@ -41,7 +42,8 @@
     "site:dev": "cd site && pnpm dev",
     "site:build": "cd site && pnpm build",
     "site:preview": "cd site && pnpm preview",
-    "cli-example": "npx . Option"
+    "cli-example": "npx . Option",
+    "version:bump": "bash scripts/version-bump.sh"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.2",

@@ -22,6 +22,7 @@ npx functype --json       # JSON output for programmatic use
 
 ## Core Principles
 
+- **Zero Dependencies**: No third-party runtime dependencies — just TypeScript
 - **Immutability**: All data structures are immutable, promoting predictable and side-effect-free code
 - **Type Safety**: Leverages TypeScript's type system to ensure compile-time safety
 - **Composability**: Provides abstractions for building complex programs from simple components
