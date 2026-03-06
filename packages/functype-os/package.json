@@ -88,6 +88,7 @@
     "dist"
   ],
   "prettier": "ts-builds/prettier",
+  "packageManager": "pnpm@10.17.0",
   "engines": {
     "node": ">=18.0.0"
   }
