@@ -18,7 +18,7 @@ const EnvCompanion = {
   has: (name: string): boolean => process.env[name] !== undefined,
 
   entries: (): List<readonly [string, string]> => {
-    const pairs: Array<readonly [string, string]> = Object.entries(process.env)
+    const pairs: Readonly<Array<readonly [string, string]>> = Object.entries(process.env)
       .filter((entry): entry is [string, string] => entry[1] !== undefined)
       .map(([k, v]) => [k, v] as const)
     return List(pairs)

@@ -81,4 +81,55 @@ describe("Fs", () => {
       expect(result.isErr()).toBe(true)
     })
   })
+
+  describe("existsSync", () => {
+    it("should return true for existing file", () => {
+      expect(Fs.existsSync(testFile)).toBe(true)
+    })
+
+    it("should return false for non-existing file", () => {
+      expect(Fs.existsSync(path.join(tmpDir, "nope.txt"))).toBe(false)
+    })
+  })
+
+  describe("readFileSync", () => {
+    it("should return Right with file content", () => {
+      const result = Fs.readFileSync(testFile)
+      expect(result.isRight()).toBe(true)
+      expect(result.value).toBe(testContent)
+    })
+
+    it("should return Left for non-existing file", () => {
+      const result = Fs.readFileSync(path.join(tmpDir, "missing.txt"))
+      expect(result.isLeft()).toBe(true)
+    })
+  })
+
+  describe("readFileOptSync", () => {
+    it("should return Right(Some) for existing file", () => {
+      const result = Fs.readFileOptSync(testFile)
+      expect(result.isRight()).toBe(true)
+      expect(result.value.isSome()).toBe(true)
+      expect(result.value.orElse("")).toBe(testContent)
+    })
+
+    it("should return Right(None) for ENOENT", () => {
+      const result = Fs.readFileOptSync(path.join(tmpDir, "missing.txt"))
+      expect(result.isRight()).toBe(true)
+      expect(result.value.isNone()).toBe(true)
+    })
+  })
+
+  describe("readdirSync", () => {
+    it("should return Right with List of entries", () => {
+      const result = Fs.readdirSync(tmpDir)
+      expect(result.isRight()).toBe(true)
+      expect(result.value.toArray()).toContain("test.txt")
+    })
+
+    it("should return Left for non-existing directory", () => {
+      const result = Fs.readdirSync(path.join(tmpDir, "no-such-dir"))
+      expect(result.isLeft()).toBe(true)
+    })
+  })
 })
