@@ -12,7 +12,6 @@ export type UserInfo = {
   readonly homedir: string
 }
 
-let isDockerCached: boolean | undefined
 const hasDockerEnv = (): boolean => {
   try {
     fs.statSync("/.dockerenv")
@@ -29,9 +28,42 @@ const hasDockerCGroup = (): boolean => {
   }
 }
 
-let isKubeCached: boolean | undefined
-let isWSLCached: boolean | undefined
-let isCICached: boolean | undefined
+const memo = <T>(fn: () => T): (() => T) => {
+  const cache: { value?: T } = {}
+  return () => {
+    if (!("value" in cache)) {
+      cache.value = fn()
+    }
+    return cache.value as T
+  }
+}
+
+const cachedIsDocker = memo(() => hasDockerEnv() || hasDockerCGroup())
+const cachedIsKube = memo(() => {
+  try {
+    return fs.readFileSync("/proc/self/cgroup", "utf8").includes("kube")
+  } catch {
+    return false
+  }
+})
+const cachedIsWSL = memo(() => {
+  try {
+    const version = fs.readFileSync("/proc/version", "utf8")
+    return version.includes("Microsoft") || version.includes("WSL")
+  } catch {
+    return false
+  }
+})
+const cachedIsCI = memo(
+  () =>
+    process.env["CI"] !== undefined ||
+    process.env["GITHUB_ACTIONS"] !== undefined ||
+    process.env["GITLAB_CI"] !== undefined ||
+    process.env["CIRCLECI"] !== undefined ||
+    process.env["JENKINS_URL"] !== undefined ||
+    process.env["TRAVIS"] !== undefined ||
+    process.env["BUILDKITE"] !== undefined,
+)
 
 export const Platform = {
   os: (): "darwin" | "linux" | "win32" | string => process.platform,
@@ -61,45 +93,10 @@ export const Platform = {
     }
   },
 
-  isDocker: (): boolean => {
-    isDockerCached ??= hasDockerEnv() || hasDockerCGroup()
-    return isDockerCached
-  },
-
-  isKubernetes: (): boolean => {
-    isKubeCached ??= (() => {
-      try {
-        return fs.readFileSync("/proc/self/cgroup", "utf8").includes("kube")
-      } catch {
-        return false
-      }
-    })()
-    return isKubeCached
-  },
-
-  isWSL: (): boolean => {
-    isWSLCached ??= (() => {
-      try {
-        const version = fs.readFileSync("/proc/version", "utf8")
-        return version.includes("Microsoft") || version.includes("WSL")
-      } catch {
-        return false
-      }
-    })()
-    return isWSLCached
-  },
-
-  isCI: (): boolean => {
-    isCICached ??=
-      process.env["CI"] !== undefined ||
-      process.env["GITHUB_ACTIONS"] !== undefined ||
-      process.env["GITLAB_CI"] !== undefined ||
-      process.env["CIRCLECI"] !== undefined ||
-      process.env["JENKINS_URL"] !== undefined ||
-      process.env["TRAVIS"] !== undefined ||
-      process.env["BUILDKITE"] !== undefined
-    return isCICached
-  },
+  isDocker: (): boolean => cachedIsDocker(),
+  isKubernetes: (): boolean => cachedIsKube(),
+  isWSL: (): boolean => cachedIsWSL(),
+  isCI: (): boolean => cachedIsCI(),
 
   isContainer: (): boolean => Platform.isDocker() || Platform.isKubernetes(),
 }

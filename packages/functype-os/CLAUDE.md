@@ -31,13 +31,13 @@ src/
 
 ### Design Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Async wrapper | Task (Ok/Err) | The "environment" IS the OS — nothing to inject. Task is simpler than IO. |
-| Path ops | Pure functions → Either | Tilde/var expansion is sync string manipulation. Only FS ops need Task. |
-| Error types | Discriminated unions | Enables exhaustive matching via `_tag`. |
-| Container detection | Lazy-cached sync | Follows sindresorhus/is-docker pattern. |
-| functype imports | Barrel `"functype"` only | Subpath exports (`functype/task`, `functype/either`) don't resolve correctly in published package. |
+| Decision            | Choice                   | Rationale                                                                                          |
+| ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------- |
+| Async wrapper       | Task (Ok/Err)            | The "environment" IS the OS — nothing to inject. Task is simpler than IO.                          |
+| Path ops            | Pure functions → Either  | Tilde/var expansion is sync string manipulation. Only FS ops need Task.                            |
+| Error types         | Discriminated unions     | Enables exhaustive matching via `_tag`.                                                            |
+| Container detection | Lazy-cached sync         | Follows sindresorhus/is-docker pattern.                                                            |
+| functype imports    | Barrel `"functype"` only | Subpath exports (`functype/task`, `functype/either`) don't resolve correctly in published package. |
 
 ### Key Patterns
 
