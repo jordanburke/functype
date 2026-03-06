@@ -10,12 +10,15 @@ importers:
       "@types/node":
         specifier: ^24.11.2
         version: 24.11.2
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.0.2)
       functype:
         specifier: ^0.49.0
         version: 0.49.0
       ts-builds:
         specifier: ^2.5.0
-        version: 2.5.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(tsdown@0.20.3(synckit@0.11.12)(typescript@5.9.3))(vite@7.3.1(@types/node@24.11.2))
+        version: 2.5.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-config-prettier@10.1.8(eslint@10.0.2))(tsdown@0.20.3(synckit@0.11.12)(typescript@5.9.3))(vite@7.3.1(@types/node@24.11.2))
       tsdown:
         specifier: ^0.20.3
         version: 0.20.3(synckit@0.11.12)(typescript@5.9.3)
@@ -1134,6 +1137,13 @@ packages:
       eslint-plugin-prettier: ^5.0.0
       eslint-plugin-simple-import-sort: ^12.0.0
       prettier: ^3.0.0
+
+  eslint-config-prettier@10.1.8:
+    resolution:
+      { integrity: sha512-82GZUjRS0p/jganf6q1rEO25VSoHH0hKPCTrgillPjdI/3bgBhAE1QzHrHTizjpRvy6pGAvKjDJtk2pF9NDq8w== }
+    hasBin: true
+    peerDependencies:
+      eslint: ">=7.0.0"
 
   eslint-plugin-functional@9.0.4:
     resolution:
@@ -2661,7 +2671,7 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-config-functype@2.0.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-functional@9.0.4(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-prettier@5.5.5(eslint@10.0.2)(prettier@3.8.1))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1):
+  eslint-config-functype@2.0.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-functional@9.0.4(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1):
     dependencies:
       "@eslint/eslintrc": 3.3.4
       "@eslint/js": 9.39.3
@@ -2669,11 +2679,15 @@ snapshots:
       "@typescript-eslint/parser": 8.56.1(eslint@10.0.2)(typescript@5.9.3)
       eslint: 10.0.2
       eslint-plugin-functional: 9.0.4(eslint@10.0.2)(typescript@5.9.3)
-      eslint-plugin-prettier: 5.5.5(eslint@10.0.2)(prettier@3.8.1)
+      eslint-plugin-prettier: 5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1)
       eslint-plugin-simple-import-sort: 12.1.1(eslint@10.0.2)
       prettier: 3.8.1
     transitivePeerDependencies:
       - supports-color
+
+  eslint-config-prettier@10.1.8(eslint@10.0.2):
+    dependencies:
+      eslint: 10.0.2
 
   eslint-plugin-functional@9.0.4(eslint@10.0.2)(typescript@5.9.3):
     dependencies:
@@ -2693,12 +2707,14 @@ snapshots:
     dependencies:
       eslint: 10.0.2
 
-  eslint-plugin-prettier@5.5.5(eslint@10.0.2)(prettier@3.8.1):
+  eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1):
     dependencies:
       eslint: 10.0.2
       prettier: 3.8.1
       prettier-linter-helpers: 1.0.1
       synckit: 0.11.12
+    optionalDependencies:
+      eslint-config-prettier: 10.1.8(eslint@10.0.2)
 
   eslint-plugin-simple-import-sort@12.1.1(eslint@10.0.2):
     dependencies:
@@ -3154,7 +3170,7 @@ snapshots:
     dependencies:
       typescript: 5.9.3
 
-  ts-builds@2.5.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(tsdown@0.20.3(synckit@0.11.12)(typescript@5.9.3))(vite@7.3.1(@types/node@24.11.2)):
+  ts-builds@2.5.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-config-prettier@10.1.8(eslint@10.0.2))(tsdown@0.20.3(synckit@0.11.12)(typescript@5.9.3))(vite@7.3.1(@types/node@24.11.2)):
     dependencies:
       "@eslint/js": 10.0.1(eslint@10.0.2)
       "@types/node": 24.10.15
@@ -3162,10 +3178,10 @@ snapshots:
       "@vitest/ui": 4.0.18(vitest@4.0.18)
       cross-env: 10.1.0
       eslint: 10.0.2
-      eslint-config-functype: 2.0.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-functional@9.0.4(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-prettier@5.5.5(eslint@10.0.2)(prettier@3.8.1))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1)
+      eslint-config-functype: 2.0.0(@typescript-eslint/eslint-plugin@8.56.1(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint@10.0.2)(typescript@5.9.3))(@typescript-eslint/parser@8.56.1(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-functional@9.0.4(eslint@10.0.2)(typescript@5.9.3))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1)
       eslint-plugin-functional: 9.0.4(eslint@10.0.2)(typescript@5.9.3)
       eslint-plugin-functype: 2.0.0(eslint@10.0.2)
-      eslint-plugin-prettier: 5.5.5(eslint@10.0.2)(prettier@3.8.1)
+      eslint-plugin-prettier: 5.5.5(eslint-config-prettier@10.1.8(eslint@10.0.2))(eslint@10.0.2)(prettier@3.8.1)
       eslint-plugin-simple-import-sort: 12.1.1(eslint@10.0.2)
       globals: 17.4.0
       prettier: 3.8.1
