@@ -67,7 +67,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/node": "^24.10.15",
+    "@types/node": "^25.3.5",
     "ts-builds": "^2.5.0",
     "tsdown": "^0.21.1",
     "tsx": "^4.21.0"
