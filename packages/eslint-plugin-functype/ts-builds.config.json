@@ -1,0 +1,8 @@
+{
+  "srcDir": "./src",
+  "testDir": "./tests",
+  "lint": {
+    "useProjectEslint": true
+  },
+  "validateChain": ["format", "lint", "typecheck", "test", "build"]
+}

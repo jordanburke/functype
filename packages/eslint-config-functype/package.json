@@ -1,0 +1,101 @@
+{
+  "name": "eslint-config-functype",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Curated ESLint flat config bundle for functional TypeScript programming (ESLint 9.x+)",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./recommended": {
+      "types": "./dist/configs/recommended.d.ts",
+      "import": "./dist/configs/recommended.js",
+      "default": "./dist/configs/recommended.js"
+    },
+    "./strict": {
+      "types": "./dist/configs/strict.d.ts",
+      "import": "./dist/configs/strict.js",
+      "default": "./dist/configs/strict.js"
+    },
+    "./test-overrides": {
+      "types": "./dist/configs/test-overrides.d.ts",
+      "import": "./dist/configs/test-overrides.js",
+      "default": "./dist/configs/test-overrides.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "bin": {
+    "functype-list-rules": "dist/cli/list-rules.js"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "functional",
+    "typescript",
+    "immutable"
+  ],
+  "prettier": "ts-builds/prettier",
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate",
+    "list-rules": "node dist/cli/list-rules.js",
+    "list-rules:verbose": "node dist/cli/list-rules.js --verbose",
+    "list-rules:usage": "node dist/cli/list-rules.js --usage",
+    "check-deps": "node dist/cli/list-rules.js --check-deps",
+    "cli:help": "node dist/cli/list-rules.js --help",
+    "diff": "node dist/cli/list-rules.js --diff"
+  },
+  "peerDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.38.0 || ^8.39.0 || ^9.0.0",
+    "@typescript-eslint/parser": "^8.38.0 || ^8.39.0 || ^9.0.0",
+    "eslint": "^10.0.3",
+    "eslint-plugin-functional": "^9.0.2",
+    "eslint-plugin-prettier": "^5.0.0",
+    "eslint-plugin-simple-import-sort": "^12.0.0",
+    "prettier": "^3.0.0"
+  },
+  "dependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.0",
+    "@typescript-eslint/parser": "^8.57.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-functional": "^9.0.4",
+    "eslint-plugin-prettier": "^5.5.5",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "ts-builds": "^2.5.1",
+    "tsdown": "^0.21.2"
+  },
+  "author": "Jordan Burke",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/eslint-functype",
+    "directory": "packages/config"
+  },
+  "homepage": "https://github.com/jordanburke/eslint-functype",
+  "bugs": {
+    "url": "https://github.com/jordanburke/eslint-functype/issues"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
