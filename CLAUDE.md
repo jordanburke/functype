@@ -190,6 +190,27 @@ either.fold(onLeft, onRight)
 // Try - exception handling
 Try(() => riskyCode())       // catches exceptions
 try_.toEither()              // convert to Either
+
+// IO - lazy effect type with typed errors and dependency injection
+IO.sync(() => value)         // wrap sync computation
+IO.async(() => promise)      // wrap async computation
+IO.succeed(42)               // pure success value
+IO.fail(new MyError())       // pure failure value
+IO.tryPromise({              // promise with error mapping
+  try: () => fetch(url),
+  catch: (e) => new NetworkError(e)
+})
+IO.service(Tag)              // access injected dependency
+effect.provide(layer)        // provide dependencies
+effect.retry(3)              // retry on failure
+await effect.run()           // execute the effect
+effect.runSync()             // execute sync effect
+await effect.runEither()     // execute, get Either<E,A>
+IO.gen(function*() {         // generator do-notation
+  const db = yield* IO.service(Database)
+  const user = yield* IO.tryPromise(() => db.find(id))
+  return user
+})
 ```
 
 ## Functype Refactoring Patterns

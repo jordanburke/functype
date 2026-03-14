@@ -1,13 +1,13 @@
 ---
 name: functype
-description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, or working with immutable collections like List and Set.
+description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry), or working with immutable collections like List and Set.
 ---
 
 # Functype User Guide
 
 ## Overview
 
-Transform TypeScript code to use functype - a Scala-inspired functional programming library providing type-safe alternatives to null checks, exceptions, and imperative patterns. This skill helps integrate Option, Either, Try, List, and other functional types into projects.
+Transform TypeScript code to use functype - a Scala-inspired functional programming library providing type-safe alternatives to null checks, exceptions, and imperative patterns. This skill helps integrate Option, Either, Try, IO, List, and other functional types into projects.
 
 ## When to Use This Skill
 
@@ -17,6 +17,7 @@ Trigger this skill when users:
 - Look up functype APIs or methods
 - Handle nullable values or optional chaining
 - Replace try-catch with functional error handling
+- Compose side effects, async operations, or dependency injection with IO
 - Work with immutable collections
 - Debug functype code or understand error messages
 
@@ -34,7 +35,7 @@ pnpm add functype
 
 ```typescript
 // Import from main bundle
-import { Option, Either, Left, Right, Try, List } from "functype"
+import { Option, Either, Left, Right, Try, List, IO, Tag, Layer } from "functype"
 ```
 
 ## Constructor vs Companion Methods
@@ -293,7 +294,7 @@ const allHobbies = users
   .toArray()
 ```
 
-## Additional Data Structures
+## Effect & Utility Types
 
 ### IO<R,E,A> - Effect Type
 
@@ -514,6 +515,16 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 - `append`, `prepend`, `concat`
 - `head`, `tail`, `isEmpty`
 - `toArray`, `toSet`
+
+**IO<R,E,A>** — Lazy effect type with typed errors and dependency injection
+
+- `IO.sync`, `IO.async`, `IO.succeed`, `IO.fail`, `IO.tryPromise`
+- `IO.service(Tag)` — access injected dependencies
+- `IO.gen(function*() {...})` — generator do-notation
+- `.map`, `.flatMap`, `.provide(layer)`, `.retry(n)`, `.timeout(ms)`
+- `.run()`, `.runSync()`, `.runEither()`, `.runExit()`
+- `.catchTag(tag, handler)` — typed error recovery
+- `IO.bracket({ acquire, use, release })` — resource management
 
 ## Additional Resources
 

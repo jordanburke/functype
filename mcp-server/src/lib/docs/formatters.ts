@@ -69,6 +69,13 @@ export const formatInterfaces = (): string => {
 
 export const searchTypes = (query: string): string => {
   const q = query.toLowerCase()
+
+  // Check for exact type name match first (case-sensitive, e.g. "IO", "Map", "Option")
+  const exactMatch = TYPES[query]
+  if (exactMatch) {
+    return formatType(query, exactMatch)
+  }
+
   const matches: Array<{ name: string; data: TypeData }> = []
 
   for (const [name, data] of Object.entries(TYPES)) {
@@ -93,8 +100,13 @@ export const searchTypes = (query: string): string => {
     return formatType(match.name, match.data)
   }
 
-  const lines: string[] = [`# Search results for "${query}"`, "", `Found ${matches.length} matching types:`, ""]
-  for (const match of matches) {
+  // Prioritize name matches over description/method substring matches
+  const nameMatches = matches.filter((m) => m.name.toLowerCase().includes(q))
+  const otherMatches = matches.filter((m) => !m.name.toLowerCase().includes(q))
+  const sorted = [...nameMatches, ...otherMatches]
+
+  const lines: string[] = [`# Search results for "${query}"`, "", `Found ${sorted.length} matching types:`, ""]
+  for (const match of sorted) {
     const ifaces = match.data.interfaces.length > 0 ? ` [${match.data.interfaces.join(", ")}]` : ""
     lines.push(`**${match.name}**${ifaces}`)
     lines.push(`  ${match.data.description}`, "")
