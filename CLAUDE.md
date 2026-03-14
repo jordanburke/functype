@@ -211,6 +211,30 @@ IO.gen(function*() {         // generator do-notation
   const user = yield* IO.tryPromise(() => db.find(id))
   return user
 })
+
+// Task - async with cancellation and progress tracking
+// Returns TaskOutcome<T> (Ok/Err) with Functor, AsyncMonad, Foldable, Extractable
+Task(params).Async(() => fetch(url))     // async operation → Promise<TaskOutcome<T>>
+Task(params).Sync(() => computation())   // sync operation → TaskOutcome<T>
+Task.ok(value)                           // create Ok result
+Task.err(error)                          // create Err result
+Task.cancellable(fn)                     // { task, cancel }
+Task.withProgress(fn, onProgress)        // { task, cancel, currentProgress }
+outcome.fold(onErr, onOk)               // pattern match on result
+outcome.toEither()                       // convert to Either
+
+// IO<R,E,A> - lazy effects with typed errors and dependency injection
+// Use IO when you need: typed errors, DI, service composition, testability
+IO.sync(() => value)         // sync effect
+IO.succeed(42)               // pure success
+IO.fail(error)               // typed failure
+IO.tryPromise({try, catch})  // promise with error mapping
+IO.service(Tag)              // dependency injection
+IO.gen(function*() {...})    // generator do-notation
+effect.provide(layer)        // provide dependencies
+await effect.run()           // execute async
+effect.runSync()             // execute sync
+await effect.runEither()     // execute → Either<E,A>
 ```
 
 ## Functype Refactoring Patterns

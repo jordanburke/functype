@@ -157,13 +157,29 @@ export const TYPES: Record<string, TypeData> = {
   },
 
   Task: {
-    description: "Async operations with cancellation and progress",
+    description:
+      "Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable",
     interfaces: [],
     methods: {
-      create: ["Task.of(v)", "Task.from(promise)", "Task.sync(f)", "Task.async(f)"],
-      transform: [".map(f)", ".flatMap(f)", ".mapError(f)"],
-      extract: [".run()", ".cancel()"],
-      other: [".onProgress(cb)", ".onCancel(cb)"],
+      create: [
+        "Task(params).Async(fn, errFn)",
+        "Task(params).Sync(fn, errFn)",
+        "Task.ok(value)",
+        "Task.err(error)",
+        "Task.fromEither(either)",
+        "Task.fromTry(try)",
+        "Task.fromPromise(fn)",
+        "Task.fromNodeCallback(fn)",
+      ],
+      transform: [".map(f)", ".flatMap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
+      extract: [".fold(onErr, onOk)", ".match({Ok, Err})", ".orElse(v)", ".orThrow()", ".toEither()", ".toOption()"],
+      other: [
+        "Task.cancellable(fn)",
+        "Task.withProgress(fn, onProgress)",
+        "Task.race(tasks, timeout?)",
+        "Task.getErrorChain(error)",
+        "Task.formatErrorChain(error)",
+      ],
     },
   },
 
