@@ -95,7 +95,7 @@ export default {
     "functional/prefer-immutable-types": "off",
     "functional/no-mixed-types": "off",
     "functional/functional-parameters": "off",
-    "functional/no-throw-statements": ["warn", { allowToRejectWith: true }],
+    "functional/no-throw-statements": ["warn", { allowToRejectPromises: true }],
     "functional/no-try-statements": ["warn", { allowCatch: true }],
 
     // Allow some flexibility

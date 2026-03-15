@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-functype",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "description": "Curated ESLint flat config bundle for functional TypeScript programming (ESLint 9.x+)",
   "main": "dist/index.js",
