@@ -57,6 +57,15 @@ export const Fs = {
     }
   },
 
+  mkdir: async (p: string, options?: { recursive?: boolean }): TaskResult<void> => {
+    try {
+      await fs.mkdir(p, options)
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(p, "mkdir", error))
+    }
+  },
+
   // Sync methods — return Either<FsError, T>
 
   existsSync: (p: string): boolean => {
@@ -101,6 +110,15 @@ export const Fs = {
       return Right(undefined as void)
     } catch (error) {
       return Left(toFsError(p, "writeFileSync", error))
+    }
+  },
+
+  mkdirSync: (p: string, options?: { recursive?: boolean }): Either<FsError, void> => {
+    try {
+      fsSync.mkdirSync(p, options)
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(p, "mkdirSync", error))
     }
   },
 }

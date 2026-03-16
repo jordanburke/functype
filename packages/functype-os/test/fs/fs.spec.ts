@@ -160,4 +160,41 @@ describe("Fs", () => {
       expect(result.isLeft()).toBe(true)
     })
   })
+
+  describe("mkdir", () => {
+    it("should create directory and return Ok(undefined)", async () => {
+      const target = path.join(tmpDir, "new-dir")
+      const result = await Fs.mkdir(target)
+      expect(result.isOk()).toBe(true)
+      expect(fs.statSync(target).isDirectory()).toBe(true)
+    })
+
+    it("should create nested directories with recursive option", async () => {
+      const target = path.join(tmpDir, "a", "b", "c")
+      const result = await Fs.mkdir(target, { recursive: true })
+      expect(result.isOk()).toBe(true)
+      expect(fs.statSync(target).isDirectory()).toBe(true)
+    })
+
+    it("should return Err for invalid path without recursive", async () => {
+      const result = await Fs.mkdir(path.join(tmpDir, "x", "y", "z"))
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
+  describe("mkdirSync", () => {
+    it("should create directory and return Right(undefined)", () => {
+      const target = path.join(tmpDir, "new-dir-sync")
+      const result = Fs.mkdirSync(target)
+      expect(result.isRight()).toBe(true)
+      expect(fs.statSync(target).isDirectory()).toBe(true)
+    })
+
+    it("should create nested directories with recursive", () => {
+      const target = path.join(tmpDir, "d", "e", "f")
+      const result = Fs.mkdirSync(target, { recursive: true })
+      expect(result.isRight()).toBe(true)
+      expect(fs.statSync(target).isDirectory()).toBe(true)
+    })
+  })
 })
