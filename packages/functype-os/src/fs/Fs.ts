@@ -48,6 +48,15 @@ export const Fs = {
     }
   },
 
+  writeFile: async (p: string, data: string, encoding: BufferEncoding = "utf8"): TaskResult<void> => {
+    try {
+      await fs.writeFile(p, data, { encoding })
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(p, "writeFile", error))
+    }
+  },
+
   // Sync methods — return Either<FsError, T>
 
   existsSync: (p: string): boolean => {
@@ -83,6 +92,15 @@ export const Fs = {
       return Right(List(fsSync.readdirSync(p)))
     } catch (error) {
       return Left(toFsError(p, "readdirSync", error))
+    }
+  },
+
+  writeFileSync: (p: string, data: string, encoding: BufferEncoding = "utf8"): Either<FsError, void> => {
+    try {
+      fsSync.writeFileSync(p, data, { encoding })
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(p, "writeFileSync", error))
     }
   },
 }

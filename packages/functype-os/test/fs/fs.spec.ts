@@ -132,4 +132,32 @@ describe("Fs", () => {
       expect(result.isLeft()).toBe(true)
     })
   })
+
+  describe("writeFile", () => {
+    it("should write content and return Ok(undefined)", async () => {
+      const target = path.join(tmpDir, "write-test.txt")
+      const result = await Fs.writeFile(target, "written content")
+      expect(result.isOk()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("written content")
+    })
+
+    it("should return Err for invalid path", async () => {
+      const result = await Fs.writeFile("/no-such-dir/file.txt", "data")
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
+  describe("writeFileSync", () => {
+    it("should write content and return Right(undefined)", () => {
+      const target = path.join(tmpDir, "write-sync-test.txt")
+      const result = Fs.writeFileSync(target, "sync content")
+      expect(result.isRight()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("sync content")
+    })
+
+    it("should return Left for invalid path", () => {
+      const result = Fs.writeFileSync("/no-such-dir/file.txt", "data")
+      expect(result.isLeft()).toBe(true)
+    })
+  })
 })
