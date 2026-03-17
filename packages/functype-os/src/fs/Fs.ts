@@ -6,6 +6,28 @@ import { Err, Left, List, Ok, Option, Right } from "functype"
 
 import { FsError } from "../errors/errors"
 
+export type FileInfo = {
+  readonly size: number
+  readonly isFile: boolean
+  readonly isDirectory: boolean
+  readonly isSymbolicLink: boolean
+  readonly createdAt: Date
+  readonly modifiedAt: Date
+  readonly accessedAt: Date
+  readonly permissions: number
+}
+
+const toFileInfo = (stats: fsSync.Stats): FileInfo => ({
+  size: stats.size,
+  isFile: stats.isFile(),
+  isDirectory: stats.isDirectory(),
+  isSymbolicLink: stats.isSymbolicLink(),
+  createdAt: stats.birthtime,
+  modifiedAt: stats.mtime,
+  accessedAt: stats.atime,
+  permissions: stats.mode,
+})
+
 const toFsError = (p: string, op: string, error: unknown): FsError =>
   FsError(p, op, error instanceof Error ? error : new Error(String(error)))
 
@@ -37,6 +59,14 @@ export const Fs = {
         return Ok(Option<string>(undefined))
       }
       return Err(toFsError(p, "readFile", error))
+    }
+  },
+
+  stat: async (p: string): TaskResult<FileInfo> => {
+    try {
+      return Ok(toFileInfo(await fs.stat(p)))
+    } catch (error) {
+      return Err(toFsError(p, "stat", error))
     }
   },
 
@@ -93,6 +123,14 @@ export const Fs = {
         return Right(Option<string>(undefined))
       }
       return Left(toFsError(p, "readFileOptSync", error))
+    }
+  },
+
+  statSync: (p: string): Either<FsError, FileInfo> => {
+    try {
+      return Right(toFileInfo(fsSync.statSync(p)))
+    } catch (error) {
+      return Left(toFsError(p, "statSync", error))
     }
   },
 

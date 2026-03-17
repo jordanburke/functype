@@ -68,6 +68,34 @@ describe("Fs", () => {
     })
   })
 
+  describe("stat", () => {
+    it("should return Ok with FileInfo for existing file", async () => {
+      const result = await Fs.stat(testFile)
+      expect(result.isOk()).toBe(true)
+      if (result.isOk()) {
+        const info = result.value
+        expect(info.isFile).toBe(true)
+        expect(info.isDirectory).toBe(false)
+        expect(info.size).toBeGreaterThan(0)
+        expect(info.modifiedAt).toBeInstanceOf(Date)
+      }
+    })
+
+    it("should return Ok with FileInfo for directory", async () => {
+      const result = await Fs.stat(tmpDir)
+      expect(result.isOk()).toBe(true)
+      if (result.isOk()) {
+        expect(result.value.isDirectory).toBe(true)
+        expect(result.value.isFile).toBe(false)
+      }
+    })
+
+    it("should return Err for non-existing path", async () => {
+      const result = await Fs.stat(path.join(tmpDir, "nope"))
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
   describe("readdir", () => {
     it("should return Ok with List of entries", async () => {
       const result = await Fs.readdir(tmpDir)
@@ -117,6 +145,22 @@ describe("Fs", () => {
       const result = Fs.readFileOptSync(path.join(tmpDir, "missing.txt"))
       expect(result.isRight()).toBe(true)
       expect(result.value.isNone()).toBe(true)
+    })
+  })
+
+  describe("statSync", () => {
+    it("should return Right with FileInfo for existing file", () => {
+      const result = Fs.statSync(testFile)
+      expect(result.isRight()).toBe(true)
+      if (result.isRight()) {
+        expect(result.value.isFile).toBe(true)
+        expect(result.value.size).toBeGreaterThan(0)
+      }
+    })
+
+    it("should return Left for non-existing path", () => {
+      const result = Fs.statSync(path.join(tmpDir, "nope"))
+      expect(result.isLeft()).toBe(true)
     })
   })
 
