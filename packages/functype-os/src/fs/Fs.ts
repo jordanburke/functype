@@ -31,6 +31,16 @@ const toFileInfo = (stats: fsSync.Stats): FileInfo => ({
 const toFsError = (p: string, op: string, error: unknown): FsError =>
   FsError(p, op, error instanceof Error ? error : new Error(String(error)))
 
+const matchGlob = (filePath: string, pattern: string): boolean => {
+  const regex = pattern
+    .replace(/\./g, "\\.")
+    .replace(/\*\*\//g, "{{GLOBSTAR}}")
+    .replace(/\*\*/g, "{{GLOBSTAR}}")
+    .replace(/\*/g, "[^/]*")
+    .replace(/\{\{GLOBSTAR\}\}/g, "(?:.*/)?")
+  return new RegExp(`^${regex}$`).test(filePath)
+}
+
 export const Fs = {
   // Async methods — return TaskResult<T>
 
@@ -93,6 +103,18 @@ export const Fs = {
       return Ok(List(await fs.readdir(p)))
     } catch (error) {
       return Err(toFsError(p, "readdir", error))
+    }
+  },
+
+  glob: async (dir: string, pattern: string): TaskResult<List<string>> => {
+    try {
+      const entries = await fs.readdir(dir, { recursive: true })
+      const matched = entries
+        .map((e) => (typeof e === "string" ? e : e.toString()))
+        .filter((entry) => matchGlob(entry, pattern))
+      return Ok(List(matched))
+    } catch (error) {
+      return Err(toFsError(dir, "glob", error))
     }
   },
 

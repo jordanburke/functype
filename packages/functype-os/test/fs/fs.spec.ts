@@ -323,4 +323,33 @@ describe("Fs", () => {
       expect(result.isLeft()).toBe(true)
     })
   })
+
+  describe("glob", () => {
+    beforeAll(() => {
+      fs.mkdirSync(path.join(tmpDir, "glob-test", "sub"), { recursive: true })
+      fs.writeFileSync(path.join(tmpDir, "glob-test", "a.ts"), "a")
+      fs.writeFileSync(path.join(tmpDir, "glob-test", "b.js"), "b")
+      fs.writeFileSync(path.join(tmpDir, "glob-test", "sub", "c.ts"), "c")
+    })
+
+    it("should return matching files for *.ts pattern", async () => {
+      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.ts")
+      expect(result.isOk()).toBe(true)
+      const files = result.value.toArray()
+      expect(files).toContain("a.ts")
+      expect(files).toContain(path.join("sub", "c.ts"))
+      expect(files).not.toContain("b.js")
+    })
+
+    it("should return empty list for no matches", async () => {
+      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.py")
+      expect(result.isOk()).toBe(true)
+      expect(result.value.size).toBe(0)
+    })
+
+    it("should return Err for non-existing directory", async () => {
+      const result = await Fs.glob(path.join(tmpDir, "no-dir"), "**/*")
+      expect(result.isErr()).toBe(true)
+    })
+  })
 })
