@@ -79,6 +79,15 @@ export const Fs = {
     }
   },
 
+  rename: async (oldPath: string, newPath: string): TaskResult<void> => {
+    try {
+      await fs.rename(oldPath, newPath)
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(oldPath, "rename", error))
+    }
+  },
+
   readdir: async (p: string): TaskResult<List<string>> => {
     try {
       return Ok(List(await fs.readdir(p)))
@@ -149,6 +158,15 @@ export const Fs = {
       return Right(undefined as void)
     } catch (error) {
       return Left(toFsError(src, "copyFileSync", error))
+    }
+  },
+
+  renameSync: (oldPath: string, newPath: string): Either<FsError, void> => {
+    try {
+      fsSync.renameSync(oldPath, newPath)
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(oldPath, "renameSync", error))
     }
   },
 

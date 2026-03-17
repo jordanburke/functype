@@ -110,6 +110,23 @@ describe("Fs", () => {
     })
   })
 
+  describe("rename", () => {
+    it("should rename file and return Ok(undefined)", async () => {
+      const src = path.join(tmpDir, "rename-src.txt")
+      const dest = path.join(tmpDir, "rename-dest.txt")
+      fs.writeFileSync(src, "rename me")
+      const result = await Fs.rename(src, dest)
+      expect(result.isOk()).toBe(true)
+      expect(fs.existsSync(src)).toBe(false)
+      expect(fs.readFileSync(dest, "utf8")).toBe("rename me")
+    })
+
+    it("should return Err when source does not exist", async () => {
+      const result = await Fs.rename(path.join(tmpDir, "nope.txt"), path.join(tmpDir, "dest.txt"))
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
   describe("readdir", () => {
     it("should return Ok with List of entries", async () => {
       const result = await Fs.readdir(tmpDir)
@@ -184,6 +201,18 @@ describe("Fs", () => {
       const result = Fs.copyFileSync(testFile, dest)
       expect(result.isRight()).toBe(true)
       expect(fs.readFileSync(dest, "utf8")).toBe(testContent)
+    })
+  })
+
+  describe("renameSync", () => {
+    it("should rename file and return Right(undefined)", () => {
+      const src = path.join(tmpDir, "rename-sync-src.txt")
+      const dest = path.join(tmpDir, "rename-sync-dest.txt")
+      fs.writeFileSync(src, "rename sync")
+      const result = Fs.renameSync(src, dest)
+      expect(result.isRight()).toBe(true)
+      expect(fs.existsSync(src)).toBe(false)
+      expect(fs.readFileSync(dest, "utf8")).toBe("rename sync")
     })
   })
 
