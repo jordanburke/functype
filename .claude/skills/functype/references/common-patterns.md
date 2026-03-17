@@ -130,9 +130,7 @@ function retryOperation<T>(operation: () => T, maxAttempts: number = 3): Try<T> 
     )
   }
 
-  return Try(() => {
-    throw lastError ?? new Error("All retry attempts failed")
-  })
+  return Try.failure<T>(lastError ?? new Error("All retry attempts failed"))
 }
 
 // Usage

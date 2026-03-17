@@ -189,6 +189,11 @@ either.fold(onLeft, onRight)
 
 // Try - exception handling
 Try(() => riskyCode())       // catches exceptions
+Try.success(value)           // direct Success construction
+Try.failure(error)           // direct Failure (Error or string)
+Try.fromPromise(promise)     // async: Promise<T> → Promise<Try<T>>
+try_.recover(e => fallback)  // map over failure
+try_.recoverWith(e => Try.success(alt)) // flatMap over failure
 try_.toEither()              // convert to Either
 
 // IO - lazy effect type with typed errors and dependency injection

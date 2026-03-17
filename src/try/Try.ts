@@ -51,6 +51,18 @@ export interface Try<T>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
+  /**
+   * Recovers from a Failure by applying a function to the error, returning a new Try
+   * @param f - Function to apply to the error to produce a recovery value
+   * @returns Success with the recovery value if Failure, otherwise this
+   */
+  recover: (f: (error: Error) => T) => Try<T>
+  /**
+   * Recovers from a Failure by applying a function that returns a new Try
+   * @param f - Function to apply to the error to produce a new Try
+   * @returns The result of f if Failure, otherwise this
+   */
+  recoverWith: (f: (error: Error) => Try<T>) => Try<T>
   toValue(): { _tag: TypeNames; value: T | Error }
 }
 
@@ -76,6 +88,8 @@ const Success = <T>(value: T): Try<T> => ({
   flatMapAsync: async <U>(f: (value: T) => Promise<Try<U>>) => f(value),
   fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
+  recover: (_f: (error: Error) => T) => Success(value),
+  recoverWith: (_f: (error: Error) => Try<T>) => Success(value),
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: T) => B) =>
@@ -135,6 +149,14 @@ const Failure = <T>(error: Error): Try<T> => ({
   flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>): Promise<Try<U>> => Promise.resolve(Failure<U>(error)),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
+  recover: (f: (error: Error) => T) => Try(() => f(error)),
+  recoverWith: (f: (error: Error) => Try<T>) => {
+    try {
+      return f(error)
+    } catch (e) {
+      return Failure<T>(e instanceof Error ? e : new Error(String(e)))
+    }
+  },
   foldLeft:
     <B>(z: B) =>
     (_op: (b: B, a: T) => B) =>
@@ -185,6 +207,27 @@ const TryConstructor = <T>(f: () => T): Try<T> => {
 }
 
 const TryCompanion = {
+  /**
+   * Creates a Success directly without needing a callback
+   * @param value - The success value
+   * @returns Try containing the value as Success
+   */
+  success: <T>(value: T): Try<T> => Success(value),
+  /**
+   * Creates a Failure directly without needing to throw
+   * @param error - The error (string or Error instance)
+   * @returns Try containing the error as Failure
+   */
+  failure: <T>(error: Error | string): Try<T> => Failure<T>(typeof error === "string" ? new Error(error) : error),
+  /**
+   * Creates a Try from a Promise, resolving to Success or Failure
+   * @param promise - The promise to convert
+   * @returns Promise resolving to a Try
+   */
+  fromPromise: <T>(promise: Promise<T>): Promise<Try<T>> =>
+    promise
+      .then((value) => Success<T>(value))
+      .catch((error) => Failure<T>(error instanceof Error ? error : new Error(String(error)))),
   /**
    * Type guard to check if a Try is Success
    * @param tryValue - The Try to check

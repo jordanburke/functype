@@ -51,7 +51,7 @@ export const TYPES: Record<string, TypeData> = {
     description: "Wrap operations that may throw - Success<T> or Failure",
     interfaces: ["Functor", "Monad", "Foldable", "Extractable", "Matchable", "Serializable", "Traversable"],
     methods: {
-      create: ["Try(() => expr)", "Success(v)", "Failure(e)"],
+      create: ["Try(() => expr)", "Try.success(v)", "Try.failure(e)", "Try.fromPromise(p)"],
       transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
       extract: [".fold(f, s)", ".orElse(d)", ".orThrow()", ".toOption()", ".toEither()"],
       check: [".isSuccess", ".isFailure"],

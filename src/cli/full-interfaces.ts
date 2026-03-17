@@ -240,6 +240,18 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
+  /**
+   * Recovers from a Failure by applying a function to the error, returning a new Try
+   * @param f - Function to apply to the error to produce a recovery value
+   * @returns Success with the recovery value if Failure, otherwise this
+   */
+  recover: (f: (error: Error) => T) => Try<T>
+  /**
+   * Recovers from a Failure by applying a function that returns a new Try
+   * @param f - Function to apply to the error to produce a new Try
+   * @returns The result of f if Failure, otherwise this
+   */
+  recoverWith: (f: (error: Error) => Try<T>) => Try<T>
   toValue(): { _tag: TypeNames; value: T | Error }
 }`,
 

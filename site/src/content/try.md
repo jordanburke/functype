@@ -26,12 +26,13 @@ result.toEither() // Either<Error, T>
 
 ## Constructors
 
-| Method                | Description                          |
-| --------------------- | ------------------------------------ |
-| `Try(() => value)`    | Wrap a potentially throwing function |
-| `Try.of(() => value)` | Same as constructor                  |
-| `Try.success(value)`  | Create a Success directly            |
-| `Try.failure(error)`  | Create a Failure directly            |
+| Method                | Description                                 |
+| --------------------- | ------------------------------------------- |
+| `Try(() => value)`    | Wrap a potentially throwing function        |
+| `Try.of(() => value)` | Same as constructor                         |
+| `Try.success(value)`  | Create a Success directly                   |
+| `Try.failure(error)`  | Create a Failure directly (Error or string) |
+| `Try.fromPromise(p)`  | Create Try from a Promise (async)           |
 
 ## Transformations
 
@@ -47,11 +48,11 @@ Try(() => readFile(path))
   .flatMap((content) => Try(() => JSON.parse(content)))
   .flatMap((data) => Try(() => validate(data)))
 
-// Recover - handle failures
-Try(() => riskyOperation()).recover("default value")
+// Recover - handle failures by mapping over the error
+Try(() => riskyOperation()).recover((error) => fallbackValue)
 
 // RecoverWith - handle with another Try
-Try(() => primarySource()).recoverWith(() => Try(() => backupSource()))
+Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()))
 ```
 
 ## Pattern Matching
@@ -77,7 +78,7 @@ result.match({
 const result = Try(() => readConfig())
   .flatMap((config) => Try(() => connectDB(config)))
   .flatMap((db) => Try(() => db.query("SELECT * FROM users")))
-  .recover([]) // Return empty array on any failure
+  .recover(() => []) // Return empty array on any failure
 
 // Transform errors
 Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message))
