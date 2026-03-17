@@ -121,4 +121,22 @@ export const Fs = {
       return Left(toFsError(p, "mkdirSync", error))
     }
   },
+
+  unlink: async (p: string): TaskResult<void> => {
+    try {
+      await fs.unlink(p)
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(p, "unlink", error))
+    }
+  },
+
+  unlinkSync: (p: string): Either<FsError, void> => {
+    try {
+      fsSync.unlinkSync(p)
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(p, "unlinkSync", error))
+    }
+  },
 }

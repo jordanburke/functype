@@ -197,4 +197,34 @@ describe("Fs", () => {
       expect(fs.statSync(target).isDirectory()).toBe(true)
     })
   })
+
+  describe("unlink", () => {
+    it("should delete file and return Ok(undefined)", async () => {
+      const target = path.join(tmpDir, "to-delete.txt")
+      fs.writeFileSync(target, "delete me")
+      const result = await Fs.unlink(target)
+      expect(result.isOk()).toBe(true)
+      expect(fs.existsSync(target)).toBe(false)
+    })
+
+    it("should return Err for non-existing file", async () => {
+      const result = await Fs.unlink(path.join(tmpDir, "no-exist.txt"))
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
+  describe("unlinkSync", () => {
+    it("should delete file and return Right(undefined)", () => {
+      const target = path.join(tmpDir, "to-delete-sync.txt")
+      fs.writeFileSync(target, "delete me")
+      const result = Fs.unlinkSync(target)
+      expect(result.isRight()).toBe(true)
+      expect(fs.existsSync(target)).toBe(false)
+    })
+
+    it("should return Left for non-existing file", () => {
+      const result = Fs.unlinkSync(path.join(tmpDir, "no-exist-sync.txt"))
+      expect(result.isLeft()).toBe(true)
+    })
+  })
 })
