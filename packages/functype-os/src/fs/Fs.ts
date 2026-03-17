@@ -70,6 +70,15 @@ export const Fs = {
     }
   },
 
+  copyFile: async (src: string, dest: string): TaskResult<void> => {
+    try {
+      await fs.copyFile(src, dest)
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(src, "copyFile", error))
+    }
+  },
+
   readdir: async (p: string): TaskResult<List<string>> => {
     try {
       return Ok(List(await fs.readdir(p)))
@@ -131,6 +140,15 @@ export const Fs = {
       return Right(toFileInfo(fsSync.statSync(p)))
     } catch (error) {
       return Left(toFsError(p, "statSync", error))
+    }
+  },
+
+  copyFileSync: (src: string, dest: string): Either<FsError, void> => {
+    try {
+      fsSync.copyFileSync(src, dest)
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(src, "copyFileSync", error))
     }
   },
 
