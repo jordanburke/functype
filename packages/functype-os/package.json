@@ -82,6 +82,11 @@
       "types": "./dist/errors/index.d.ts",
       "import": "./dist/errors/index.js",
       "default": "./dist/errors/index.js"
+    },
+    "./process": {
+      "types": "./dist/process/index.d.ts",
+      "import": "./dist/process/index.js",
+      "default": "./dist/process/index.js"
     }
   },
   "files": [

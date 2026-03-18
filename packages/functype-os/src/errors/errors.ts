@@ -25,7 +25,15 @@ export type ConfigError = {
   readonly message: string
 }
 
-export type OsError = EnvError | PathError | FsError | ConfigError
+export type ProcessError = {
+  readonly _tag: "ProcessError"
+  readonly command: string
+  readonly exitCode: number | null
+  readonly stderr: string
+  readonly message: string
+}
+
+export type OsError = EnvError | PathError | FsError | ConfigError | ProcessError
 
 export const EnvError = (variable: string, message?: string): EnvError => ({
   _tag: "EnvError",
@@ -53,4 +61,17 @@ export const ConfigError = (candidates: readonly string[], message?: string): Co
   _tag: "ConfigError",
   candidates,
   message: message ?? `No config file found among candidates: ${candidates.join(", ")}`,
+})
+
+export const ProcessError = (
+  command: string,
+  exitCode: number | null,
+  stderr: string,
+  message?: string,
+): ProcessError => ({
+  _tag: "ProcessError",
+  command,
+  exitCode,
+  stderr,
+  message: message ?? `Command '${command}' failed (exit ${exitCode}): ${stderr}`,
 })

@@ -108,10 +108,8 @@ export const Fs = {
 
   glob: async (dir: string, pattern: string): TaskResult<List<string>> => {
     try {
-      const entries = await fs.readdir(dir, { recursive: true })
-      const matched = entries
-        .map((e) => (typeof e === "string" ? e : e.toString()))
-        .filter((entry) => matchGlob(entry, pattern))
+      const entries = await fs.readdir(dir, { recursive: true, encoding: "utf8" })
+      const matched = entries.filter((entry) => matchGlob(entry, pattern))
       return Ok(List(matched))
     } catch (error) {
       return Err(toFsError(dir, "glob", error))
