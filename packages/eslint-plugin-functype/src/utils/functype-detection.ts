@@ -53,7 +53,7 @@ export function getFunctypeImports(context: Rule.RuleContext): FunctypeImports {
             all.add(name)
 
             // Categorize imports
-            if (["Option", "Either", "List", "LazyList", "Task", "Try"].includes(name)) {
+            if (["Option", "Either", "List", "LazyList", "Task", "Try", "Map", "Set", "Stack"].includes(name)) {
               types.add(name)
             } else if (["Do", "DoAsync", "$"].includes(name)) {
               functions.add(name)
@@ -96,7 +96,7 @@ export function isFunctypeType(node: ASTNode, functypeImports: FunctypeImports |
   // Check direct type names
   if (node.type === "TSTypeReference" && node.typeName?.type === "Identifier") {
     const typeName = node.typeName.name
-    return types.has(typeName) || ["Option", "Either", "List", "LazyList", "Task", "Try"].includes(typeName)
+    return types.has(typeName) || ["Option", "Either", "List", "LazyList", "Task", "Try", "Map", "Set", "Stack"].includes(typeName)
   }
 
   return false
@@ -122,7 +122,9 @@ export function isFunctypeCall(node: ASTNode, functypeImports: Set<string>): boo
     if (
       (objectName === "Option" && ["some", "none", "of"].includes(methodName)) ||
       (objectName === "Either" && ["left", "right", "of"].includes(methodName)) ||
-      (objectName === "List" && ["of", "from", "empty"].includes(methodName))
+      (objectName === "List" && ["of", "from", "empty"].includes(methodName)) ||
+      (objectName === "Map" && ["of", "empty"].includes(methodName)) ||
+      (objectName === "Set" && ["of", "empty"].includes(methodName))
     ) {
       return true
     }
