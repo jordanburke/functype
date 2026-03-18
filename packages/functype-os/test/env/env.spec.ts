@@ -87,4 +87,51 @@ describe("Env", () => {
       }
     })
   })
+
+  describe("parse", () => {
+    it("should parse string env var as number", () => {
+      process.env["TEST_PORT"] = "3000"
+      const result = Env.parse("TEST_PORT", Number)
+      expect(result.isRight()).toBe(true)
+      expect(result.value).toBe(3000)
+      delete process.env["TEST_PORT"]
+    })
+
+    it("should return Left for NaN result with Number parser", () => {
+      process.env["TEST_BAD_NUM"] = "not-a-number"
+      const result = Env.parse("TEST_BAD_NUM", Number)
+      expect(result.isLeft()).toBe(true)
+      delete process.env["TEST_BAD_NUM"]
+    })
+
+    it("should return Left for missing env var", () => {
+      const result = Env.parse("MISSING_PARSE_VAR", Number)
+      expect(result.isLeft()).toBe(true)
+    })
+
+    it("should parse with custom parser function", () => {
+      process.env["TEST_BOOL"] = "true"
+      const result = Env.parse("TEST_BOOL", (v) => v === "true")
+      expect(result.isRight()).toBe(true)
+      expect(result.value).toBe(true)
+      delete process.env["TEST_BOOL"]
+    })
+
+    it("should parse JSON with JSON.parse", () => {
+      process.env["TEST_JSON"] = '{"key":"value"}'
+      const result = Env.parse("TEST_JSON", JSON.parse)
+      expect(result.isRight()).toBe(true)
+      expect(result.value).toEqual({ key: "value" })
+      delete process.env["TEST_JSON"]
+    })
+
+    it("should return Left when custom parser throws", () => {
+      process.env["TEST_THROW"] = "bad"
+      const result = Env.parse("TEST_THROW", () => {
+        throw new Error("parse failed")
+      })
+      expect(result.isLeft()).toBe(true)
+      delete process.env["TEST_THROW"]
+    })
+  })
 })

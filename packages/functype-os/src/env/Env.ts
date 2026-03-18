@@ -23,6 +23,22 @@ const EnvCompanion = {
       .map(([k, v]) => [k, v] as const)
     return List(pairs)
   },
+
+  parse: <T>(name: string, parser: (value: string) => T): Either<EnvError, T> => {
+    const value = process.env[name]
+    if (value === undefined) {
+      return Left(EnvError(name))
+    }
+    try {
+      const parsed = parser(value)
+      if (typeof parsed === "number" && isNaN(parsed)) {
+        return Left(EnvError(name, `Cannot parse '${value}' as number for '${name}'`))
+      }
+      return Right(parsed)
+    } catch (error) {
+      return Left(EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`))
+    }
+  },
 }
 
 export const Env: typeof EnvConstructor & typeof EnvCompanion = Object.assign(EnvConstructor, EnvCompanion)
