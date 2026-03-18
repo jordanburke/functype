@@ -36,7 +36,9 @@ const EnvCompanion = {
       }
       return Right(parsed)
     } catch (error) {
-      return Left(EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`))
+      return Left(
+        EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`),
+      )
     }
   },
 }
