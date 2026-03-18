@@ -2,10 +2,12 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype, isFunctypeType } from "../utils/functype-detection"
+import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
+    hasSuggestions: true,
     docs: {
       description: "Prefer Option<T> over nullable types (T | null | undefined)",
       recommended: true,
@@ -25,6 +27,8 @@ const rule: Rule.RuleModule = {
     messages: {
       preferOption: "Prefer Option<{{type}}> over nullable type '{{nullable}}'",
       preferOptionReturn: "Prefer Option<{{type}}> as return type over nullable '{{nullable}}'",
+      suggestOptionType: "Replace with Option<{{type}}>",
+      suggestAddImport: "Add {{symbol}} import from functype",
     },
   },
 
@@ -66,6 +70,24 @@ const rule: Rule.RuleModule = {
           // Skip if it's already an Option type (fallback check)
           if (nonNullTypeText.startsWith("Option<")) return
 
+          const suggestions: Rule.SuggestionReportDescriptor[] = [
+            {
+              messageId: "suggestOptionType",
+              data: { type: nonNullTypeText },
+              fix(fixer) {
+                return fixer.replaceText(node, `Option<${nonNullTypeText}>`)
+              },
+            },
+          ]
+
+          if (!hasFunctypeSymbol(sourceCode, "Option")) {
+            suggestions.push({
+              messageId: "suggestAddImport",
+              data: { symbol: "Option" },
+              fix: createImportFixer(sourceCode, "Option"),
+            })
+          }
+
           context.report({
             node,
             messageId: "preferOption",
@@ -73,6 +95,7 @@ const rule: Rule.RuleModule = {
               type: nonNullTypeText,
               nullable: fullType,
             },
+            suggest: suggestions,
           })
         }
       },

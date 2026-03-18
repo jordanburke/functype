@@ -25,6 +25,11 @@ describe("prefer-option", () => {
         name: "Complex types without nullability",
         code: 'const value: { name: string; age: number } = { name: "test", age: 25 }',
       },
+      // Multi-member union should not flag
+      {
+        name: "Multi-type union with null is not flagged",
+        code: "const value: string | number | null = null",
+      },
     ],
     invalid: [
       // Basic nullable type
@@ -35,6 +40,18 @@ describe("prefer-option", () => {
           {
             messageId: "preferOption",
             data: { type: "string", nullable: "string | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "const value: Option<string> = null",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nconst value: string | null = null',
+              },
+            ],
           },
         ],
       },
@@ -46,6 +63,18 @@ describe("prefer-option", () => {
           {
             messageId: "preferOption",
             data: { type: "string", nullable: "string | undefined" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "const value: Option<string> = undefined",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nconst value: string | undefined = undefined',
+              },
+            ],
           },
         ],
       },
@@ -57,6 +86,18 @@ describe("prefer-option", () => {
           {
             messageId: "preferOption",
             data: { type: "string", nullable: "string | null | undefined" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "const value: Option<string> = null",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nconst value: string | null | undefined = null',
+              },
+            ],
           },
         ],
       },
@@ -68,6 +109,18 @@ describe("prefer-option", () => {
           {
             messageId: "preferOption",
             data: { type: "string", nullable: "string | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "function getValue(): Option<string> { return null }",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nfunction getValue(): string | null { return null }',
+              },
+            ],
           },
         ],
       },
@@ -82,6 +135,19 @@ describe("prefer-option", () => {
               type: "{ name: string; age: number }",
               nullable: "{ name: string; age: number } | null",
             },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "{ name: string; age: number }" },
+                output: "const user: Option<{ name: string; age: number }> = null",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output:
+                  'import { Option } from "functype"\nconst user: { name: string; age: number } | null = null',
+              },
+            ],
           },
         ],
       },
@@ -93,6 +159,18 @@ describe("prefer-option", () => {
           {
             messageId: "preferOption",
             data: { type: "string[]", nullable: "string[] | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string[]" },
+                output: "const items: Option<string[]> = null",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nconst items: string[] | null = null',
+              },
+            ],
           },
         ],
       },

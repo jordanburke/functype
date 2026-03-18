@@ -57,6 +57,16 @@ describe("real-functype-integration", () => {
             {
               messageId: "preferOption",
               data: { type: "string", nullable: "string | null" },
+              suggestions: [
+                {
+                  messageId: "suggestOptionType",
+                  output: `
+            import { Option } from 'functype'
+            const value: Option<string> = null
+            const unused = Option.some("test") // functype is available but not used for value
+          `,
+                },
+              ],
             },
           ],
         },
@@ -110,6 +120,16 @@ describe("real-functype-integration", () => {
           errors: [
             {
               messageId: "preferListLiteral",
+              suggestions: [
+                {
+                  messageId: "suggestListOf",
+                  output: `
+            import { List } from 'functype'
+            const items = List.of(1, 2, 3)
+            const unused = List.from([4, 5, 6]) // functype is available but not used for items
+          `,
+                },
+              ],
             },
           ],
         },

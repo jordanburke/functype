@@ -37,6 +37,15 @@ describe("functype-integration", () => {
             {
               messageId: "preferOption",
               data: { type: "string", nullable: "string | null" },
+              suggestions: [
+                {
+                  messageId: "suggestOptionType",
+                  output: `
+            import { Option } from 'functype'
+            const value: Option<string> = null
+          `,
+                },
+              ],
             },
           ],
         },
@@ -76,6 +85,22 @@ describe("functype-integration", () => {
           errors: [
             {
               messageId: "preferListLiteral",
+              suggestions: [
+                {
+                  messageId: "suggestListOf",
+                  output: `
+            import { Option } from 'functype'
+            const items = List.of(1, 2, 3)
+          `,
+                },
+                {
+                  messageId: "suggestAddImport",
+                  output: `
+            import { Option, List } from 'functype'
+            const items = [1, 2, 3]
+          `,
+                },
+              ],
             },
           ],
         },

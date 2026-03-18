@@ -30,6 +30,18 @@ describe("prefer-list", () => {
           {
             messageId: "preferList",
             data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: 'const items: List<string> = ["a", "b", "c"]',
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst items: string[] = ["a", "b", "c"]',
+              },
+            ],
           },
         ],
       },
@@ -41,6 +53,18 @@ describe("prefer-list", () => {
           {
             messageId: "preferList",
             data: { type: "string", arrayType: "Array<string>" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: 'const items: List<string> = ["a", "b", "c"]',
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst items: Array<string> = ["a", "b", "c"]',
+              },
+            ],
           },
         ],
       },
@@ -52,6 +76,18 @@ describe("prefer-list", () => {
           {
             messageId: "preferList",
             data: { type: "string", arrayType: "ReadonlyArray<string>" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: 'const items: List<string> = ["a", "b", "c"]',
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst items: ReadonlyArray<string> = ["a", "b", "c"]',
+              },
+            ],
           },
         ],
       },
@@ -62,6 +98,17 @@ describe("prefer-list", () => {
         errors: [
           {
             messageId: "preferListLiteral",
+            suggestions: [
+              {
+                messageId: "suggestListOf",
+                output: 'const items = List.of("a", "b", "c")',
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst items = ["a", "b", "c"]',
+              },
+            ],
           },
         ],
       },
@@ -76,6 +123,18 @@ describe("prefer-list", () => {
               type: "{ name: string; age: number }",
               arrayType: "{ name: string; age: number }[]",
             },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "{ name: string; age: number }" },
+                output: "const users: List<{ name: string; age: number }> = []",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst users: { name: string; age: number }[] = []',
+              },
+            ],
           },
         ],
       },
@@ -87,6 +146,18 @@ describe("prefer-list", () => {
           {
             messageId: "preferList",
             data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: "function processItems(items: List<string>): void {}",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nfunction processItems(items: string[]): void {}',
+              },
+            ],
           },
         ],
       },
@@ -98,6 +169,18 @@ describe("prefer-list", () => {
           {
             messageId: "preferList",
             data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: "function getItems(): List<string> { return [] }",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nfunction getItems(): string[] { return [] }',
+              },
+            ],
           },
         ],
       },
@@ -108,6 +191,28 @@ describe("prefer-list", () => {
         errors: [
           {
             messageId: "preferListLiteral",
+            suggestions: [
+              {
+                messageId: "suggestListOf",
+                output: "const matrix = List.of([1, 2], [3, 4])",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\nconst matrix = [[1, 2], [3, 4]]',
+              },
+            ],
+          },
+        ],
+      },
+      // Array with spread elements — no suggestions (ambiguous semantics)
+      {
+        name: "Array literal with spread should warn but have no suggestions",
+        code: "const items = [...other, 1, 2]",
+        errors: [
+          {
+            messageId: "preferListLiteral",
+            suggestions: [],
           },
         ],
       },

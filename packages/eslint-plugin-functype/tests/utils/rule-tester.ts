@@ -40,6 +40,11 @@ export type InvalidTestCase = ValidTestCase & {
     data?: Record<string, unknown>
     line?: number
     column?: number
+    suggestions?: Array<{
+      messageId: string
+      data?: Record<string, unknown>
+      output: string
+    }>
   }>
   output?: string
 }

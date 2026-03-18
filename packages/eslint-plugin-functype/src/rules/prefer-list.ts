@@ -2,10 +2,12 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
+import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
+    hasSuggestions: true,
     docs: {
       description: "Prefer List<T> over native arrays for immutable collections",
       recommended: true,
@@ -29,6 +31,9 @@ const rule: Rule.RuleModule = {
     messages: {
       preferList: "Prefer List<{{type}}> over array type {{arrayType}}",
       preferListLiteral: "Prefer List.of(...) or List.from([...]) over array literal",
+      suggestListType: "Replace with List<{{type}}>",
+      suggestListOf: "Replace with List.of(...)",
+      suggestAddImport: "Add {{symbol}} import from functype",
     },
   },
 
@@ -88,6 +93,24 @@ const rule: Rule.RuleModule = {
         const elementType = sourceCode.getText(node.elementType)
         const fullType = sourceCode.getText(node)
 
+        const suggest: Rule.SuggestionReportDescriptor[] = [
+          {
+            messageId: "suggestListType",
+            data: { type: elementType },
+            fix(fixer: Rule.RuleFixer) {
+              return fixer.replaceText(node, `List<${elementType}>`)
+            },
+          },
+        ]
+
+        if (!hasFunctypeSymbol(sourceCode, "List")) {
+          suggest.push({
+            messageId: "suggestAddImport",
+            data: { symbol: "List" },
+            fix: createImportFixer(sourceCode, "List"),
+          })
+        }
+
         context.report({
           node,
           messageId: "preferList",
@@ -95,6 +118,7 @@ const rule: Rule.RuleModule = {
             type: elementType,
             arrayType: fullType,
           },
+          suggest,
         })
       },
 
@@ -117,13 +141,34 @@ const rule: Rule.RuleModule = {
           // Skip if already readonly
           if (allowReadonlyArrays && fullType.startsWith("readonly")) return
 
+          const resolvedType = typeParam || "T"
+
+          const suggest: Rule.SuggestionReportDescriptor[] = [
+            {
+              messageId: "suggestListType",
+              data: { type: resolvedType },
+              fix(fixer: Rule.RuleFixer) {
+                return fixer.replaceText(node, `List<${resolvedType}>`)
+              },
+            },
+          ]
+
+          if (!hasFunctypeSymbol(sourceCode, "List")) {
+            suggest.push({
+              messageId: "suggestAddImport",
+              data: { symbol: "List" },
+              fix: createImportFixer(sourceCode, "List"),
+            })
+          }
+
           context.report({
             node,
             messageId: "preferList",
             data: {
-              type: typeParam || "T",
+              type: resolvedType,
               arrayType: fullType,
             },
+            suggest,
           })
         }
 
@@ -131,14 +176,34 @@ const rule: Rule.RuleModule = {
         if (typeName === "ReadonlyArray") {
           const typeParam = findTypeParameter(node, sourceCode)
           const fullType = sourceCode.getText(node)
+          const resolvedType = typeParam || "T"
+
+          const suggest: Rule.SuggestionReportDescriptor[] = [
+            {
+              messageId: "suggestListType",
+              data: { type: resolvedType },
+              fix(fixer: Rule.RuleFixer) {
+                return fixer.replaceText(node, `List<${resolvedType}>`)
+              },
+            },
+          ]
+
+          if (!hasFunctypeSymbol(sourceCode, "List")) {
+            suggest.push({
+              messageId: "suggestAddImport",
+              data: { symbol: "List" },
+              fix: createImportFixer(sourceCode, "List"),
+            })
+          }
 
           context.report({
             node,
             messageId: "preferList",
             data: {
-              type: typeParam || "T",
+              type: resolvedType,
               arrayType: fullType,
             },
+            suggest,
           })
         }
       },
@@ -196,9 +261,43 @@ const rule: Rule.RuleModule = {
 
         if (hasTypeAnnotation) return
 
+        // Check if any element is a SpreadElement — ambiguous semantics, skip suggestions
+        const hasSpread = node.elements.some((el) => el !== null && el.type === "SpreadElement")
+
+        if (hasSpread) {
+          context.report({
+            node,
+            messageId: "preferListLiteral",
+          })
+          return
+        }
+
+        const sourceCode = context.sourceCode
+        const elementTexts = node.elements
+          .filter((el) => el !== null)
+          .map((el) => sourceCode.getText(el))
+
+        const suggest: Rule.SuggestionReportDescriptor[] = [
+          {
+            messageId: "suggestListOf",
+            fix(fixer: Rule.RuleFixer) {
+              return fixer.replaceText(node, `List.of(${elementTexts.join(", ")})`)
+            },
+          },
+        ]
+
+        if (!hasFunctypeSymbol(sourceCode, "List")) {
+          suggest.push({
+            messageId: "suggestAddImport",
+            data: { symbol: "List" },
+            fix: createImportFixer(sourceCode, "List"),
+          })
+        }
+
         context.report({
           node,
           messageId: "preferListLiteral",
+          suggest,
         })
       },
     }
