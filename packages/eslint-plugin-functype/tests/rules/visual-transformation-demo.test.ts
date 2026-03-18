@@ -202,7 +202,22 @@ describe("Visual Transformation Demo", () => {
               processUser(user)
             }
           `,
-            errors: [{ messageId: "noForOfLoop" }],
+            errors: [
+              {
+                messageId: "noForOfLoop",
+                suggestions: [
+                  {
+                    messageId: "suggestForEach",
+                    data: { iterable: "users" },
+                    output: `
+            users.forEach((user) => {
+  processUser(user)
+})
+          `,
+                  },
+                ],
+              },
+            ],
             showTransformation: true,
           },
         ],

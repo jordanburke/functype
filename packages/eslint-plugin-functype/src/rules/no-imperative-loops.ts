@@ -5,6 +5,7 @@ import type { ASTNode } from "../types/ast"
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
+    hasSuggestions: true,
     docs: {
       description: "Prefer functional iteration methods over imperative for loops",
       recommended: true,
@@ -35,7 +36,8 @@ const rule: Rule.RuleModule = {
       noForOfLoop: "Prefer .forEach() or .map() over for..of loops",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
       noDoWhileLoop: "Prefer functional iteration or recursion over do..while loops",
-      suggestFunctional: "Consider: {{suggestion}}",
+      suggestForEach: "Replace with {{iterable}}.forEach(...)",
+      suggestObjectKeys: "Replace with Object.keys({{object}}).forEach(...)",
     },
   },
 
@@ -65,30 +67,26 @@ const rule: Rule.RuleModule = {
       return /\[\s*\w+\s*\]/.test(bodyText) && node.init && node.init.type === "VariableDeclaration"
     }
 
-    function getSuggestionForForLoop(node: ASTNode): string {
-      if (!node.body) return "functional iteration method"
-
-      const sourceCode = context.sourceCode
-      const bodyText = sourceCode.getText(node.body)
-
-      // Simple heuristics for suggestions
-      if (bodyText.includes("if") && bodyText.includes("push")) {
-        return "array.filter().map() for conditional transformation"
-      } else if (bodyText.includes("push")) {
-        return "array.map() to transform elements"
-      } else if (bodyText.includes("console.log") || bodyText.includes("print")) {
-        return "array.forEach() for side effects"
-      } else if (bodyText.includes("+=") || bodyText.includes("sum")) {
-        return "array.reduce() for accumulation"
-      }
-
-      return "functional iteration method (.map, .filter, .forEach, .reduce)"
+    function isSingleStatementBody(node: ASTNode): boolean {
+      if (!node.body || node.body.type !== "BlockStatement") return false
+      return node.body.body.length === 1
     }
 
-    // Remove unused function to fix lint error
-    // getSuggestionForForLoop could be used for better error messages in the future
-    // Mark as used to avoid lint error:
-    void getSuggestionForForLoop
+    function hasDestructuringVariable(node: ASTNode): boolean {
+      const left = node.left
+      if (!left) return false
+      if (left.type === "VariableDeclaration" && left.declarations[0]) {
+        const id = left.declarations[0].id
+        return id.type === "ObjectPattern" || id.type === "ArrayPattern"
+      }
+      return false
+    }
+
+    function bodyContainsBreakOrContinue(node: ASTNode): boolean {
+      const sourceCode = context.sourceCode
+      const bodyText = sourceCode.getText(node.body)
+      return /\b(break|continue)\b/.test(bodyText)
+    }
 
     return {
       ForStatement(node: ASTNode) {
@@ -97,8 +95,6 @@ const rule: Rule.RuleModule = {
         // Allow traditional for loops if they need index access and option is set
         if (allowForIndexAccess && needsIndexAccess(node)) return
 
-        // Remove unused suggestion variable
-        // const _suggestion = getSuggestionForForLoop(node)
         context.report({
           node,
           messageId: "noForLoop",
@@ -108,18 +104,78 @@ const rule: Rule.RuleModule = {
       ForInStatement(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
 
+        const suggest: Rule.SuggestionReportDescriptor[] = []
+
+        if (isSingleStatementBody(node) && !hasDestructuringVariable(node) && !bodyContainsBreakOrContinue(node)) {
+          const sourceCode = context.sourceCode
+          const bodyStmt = node.body.body[0]
+
+          if (bodyStmt && bodyStmt.type === "ExpressionStatement") {
+            const stmtText = sourceCode.getText(bodyStmt)
+            const objText = sourceCode.getText(node.right)
+
+            const left = node.left
+            let keyVar: string
+            if (left.type === "VariableDeclaration" && left.declarations[0]) {
+              keyVar = sourceCode.getText(left.declarations[0].id)
+            } else {
+              keyVar = sourceCode.getText(left)
+            }
+
+            suggest.push({
+              messageId: "suggestObjectKeys",
+              data: { object: objText },
+              fix(fixer) {
+                return fixer.replaceText(node, `Object.keys(${objText}).forEach((${keyVar}) => {\n  ${stmtText}\n})`)
+              },
+            })
+          }
+        }
+
         context.report({
           node,
           messageId: "noForInLoop",
+          suggest: suggest.length > 0 ? suggest : undefined,
         })
       },
 
       ForOfStatement(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
 
+        const suggest: Rule.SuggestionReportDescriptor[] = []
+
+        if (isSingleStatementBody(node) && !hasDestructuringVariable(node) && !bodyContainsBreakOrContinue(node)) {
+          const sourceCode = context.sourceCode
+          const bodyStmt = node.body.body[0]
+
+          if (bodyStmt && bodyStmt.type === "ExpressionStatement") {
+            const stmtText = sourceCode.getText(bodyStmt)
+            const iterableText = sourceCode.getText(node.right)
+
+            const varDecl = node.left
+            let varName: string
+            if (varDecl.type === "VariableDeclaration" && varDecl.declarations[0]) {
+              varName = sourceCode.getText(varDecl.declarations[0].id)
+            } else {
+              varName = sourceCode.getText(varDecl)
+            }
+
+            if (!stmtText.includes(".push(")) {
+              suggest.push({
+                messageId: "suggestForEach",
+                data: { iterable: iterableText },
+                fix(fixer) {
+                  return fixer.replaceText(node, `${iterableText}.forEach((${varName}) => {\n  ${stmtText}\n})`)
+                },
+              })
+            }
+          }
+        }
+
         context.report({
           node,
           messageId: "noForOfLoop",
+          suggest: suggest.length > 0 ? suggest : undefined,
         })
       },
 

@@ -68,18 +68,10 @@ describe("prefer-either", () => {
       },
     ],
     invalid: [
-      // Try/catch block
+      // Try/catch block with multi-stmt catch — no suggestion (catch has 2 stmts, isSimpleCatch=false)
       {
         name: "Try/catch should use Either",
-        code: `
-          function parseJson(json: string) {
-            try {
-              return JSON.parse(json)
-            } catch (error) {
-              return null
-            }
-          }
-        `,
+        code: `function parseJson(json: string) { try { return JSON.parse(json) } catch (error) { console.error(error); return null } }`,
         errors: [
           {
             messageId: "preferEitherOverTryCatch",
@@ -89,31 +81,28 @@ describe("prefer-either", () => {
       // Throw statement
       {
         name: "Throw statement should use Either.left",
-        code: `
-          function validateAge(age: number) {
-            if (age < 0) {
-              throw new Error('Age cannot be negative')
-            }
-            return age
-          }
-        `,
+        code: `function validateAge(age: number) { if (age < 0) { throw new Error('Age cannot be negative') } return age }`,
         errors: [
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `function validateAge(age: number) { if (age < 0) { return Either.left(new Error('Age cannot be negative')) } return age }`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `import { Either } from "functype"\nfunction validateAge(age: number) { if (age < 0) { throw new Error('Age cannot be negative') } return age }`,
+              },
+            ],
           },
         ],
       },
       // Function with throw and no Either return type
       {
         name: "Function with throw should return Either",
-        code: `
-          function divide(a: number, b: number): number {
-            if (b === 0) {
-              throw new Error('Division by zero')
-            }
-            return a / b
-          }
-        `,
+        code: `function divide(a: number, b: number): number { if (b === 0) { throw new Error('Division by zero') } return a / b }`,
         errors: [
           {
             messageId: "preferEitherReturn",
@@ -121,10 +110,21 @@ describe("prefer-either", () => {
           },
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `function divide(a: number, b: number): number { if (b === 0) { return Either.left(new Error('Division by zero')) } return a / b }`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `import { Either } from "functype"\nfunction divide(a: number, b: number): number { if (b === 0) { throw new Error('Division by zero') } return a / b }`,
+              },
+            ],
           },
         ],
       },
-      // Multiple try/catch blocks
+      // Multiple try/catch blocks — each has single-stmt expression body (non-return), so no suggestion
       {
         name: "Multiple try/catch blocks should use Either",
         code: `
@@ -261,6 +261,81 @@ describe("prefer-either", () => {
             messageId: "preferEitherOverThrow",
           },
         ],
+      },
+      // Simple try/catch with empty catch -> Try() suggestion
+      {
+        name: "Simple try/catch with empty catch should suggest Try()",
+        code: `function parse(json: string) {
+  try {
+    return JSON.parse(json)
+  } catch (e) {}
+}`,
+        errors: [
+          {
+            messageId: "preferEitherOverTryCatch",
+            suggestions: [
+              {
+                messageId: "suggestTry",
+                output: `function parse(json: string) {
+  return Try(() => JSON.parse(json))
+}`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Try" },
+                output: `import { Try } from "functype"
+function parse(json: string) {
+  try {
+    return JSON.parse(json)
+  } catch (e) {}
+}`,
+              },
+            ],
+          },
+        ],
+      },
+      // throw in function body -> Either.left()
+      {
+        name: "throw in function body should suggest Either.left()",
+        code: `function validate(x: number) {
+  if (x < 0) {
+    throw new Error("negative")
+  }
+  return x
+}`,
+        errors: [
+          {
+            messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `function validate(x: number) {
+  if (x < 0) {
+    return Either.left(new Error("negative"))
+  }
+  return x
+}`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `import { Either } from "functype"
+function validate(x: number) {
+  if (x < 0) {
+    throw new Error("negative")
+  }
+  return x
+}`,
+              },
+            ],
+          },
+        ],
+      },
+      // Multi-statement try body -> no suggestion
+      {
+        name: "Multi-statement try body should have no suggestion",
+        code: `function f() { try { const a = 1; return a } catch (e) { return null } }`,
+        errors: [{ messageId: "preferEitherOverTryCatch" }],
       },
     ],
   })
