@@ -8,7 +8,7 @@ functype-os is a standalone npm package that wraps Node.js OS operations using f
 
 ## Quick Start
 
-- **Prerequisites**: Node.js >= 18, pnpm 10.x
+- **Prerequisites**: Node.js >= 18.17, pnpm 10.x
 - **Install**: `pnpm install`
 - **Development**: `pnpm dev`
 - **Before commit**: `pnpm validate` (format + lint + typecheck + test + build)
@@ -20,12 +20,13 @@ functype-os is a standalone npm package that wraps Node.js OS operations using f
 
 ```
 src/
-├── errors/     # Discriminated union error types (EnvError, PathError, FsError, ConfigError)
-├── env/        # Env("VAR") → Option, Env.getRequired() → Either
+├── errors/     # Discriminated union error types (EnvError, PathError, FsError, ConfigError, ProcessError)
+├── env/        # Env("VAR") → Option, Env.getRequired() → Either, Env.parse() → Either
 ├── path/       # expandTilde, expandVars, expandPath — pure sync functions
-├── fs/         # Fs.exists, readFile, readFileOpt, readdir → TaskResult
+├── fs/         # Fs.exists, readFile, writeFile, mkdir, unlink, stat, copyFile, rename, glob → TaskResult
 ├── platform/   # OS detection + container runtime detection (lazy-cached)
 ├── config/     # ConfigResolver — find first existing config from candidates
+├── process/    # Process.exec, Process.execSync → TaskResult/Either<ProcessError, ExecResult>
 └── index.ts    # Barrel export
 ```
 
@@ -78,10 +79,7 @@ src/
 6. Write tests in `test/`
 7. Run `pnpm validate`
 
-## Phase 2 (Future)
+## Phase 3 (Future)
 
-- `Fs.writeFile`, `Fs.mkdir`, `Fs.unlink`
-- `Fs.stat → TaskResult<FileInfo>`
 - Branded types: `AbsolutePath`, `RelativePath` via functype `Brand`
-- `Process.exec → TaskResult<ExecResult>`
 - `Fs.watch` — file watching
