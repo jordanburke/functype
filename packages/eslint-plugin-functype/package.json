@@ -60,11 +60,11 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
-    "@typescript-eslint/rule-tester": "^8.57.0",
+    "@typescript-eslint/rule-tester": "^8.57.1",
     "eslint-config-prettier": "^10.1.8",
-    "functype": "^0.49.0",
-    "ts-builds": "^2.5.1",
-    "tsdown": "^0.21.2"
+    "functype": "^0.50.0",
+    "ts-builds": "^2.5.2",
+    "tsdown": "^0.21.4"
   },
   "author": {
     "name": "Jordan Burke",
