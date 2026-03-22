@@ -76,6 +76,32 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    function checkFunctionForThrows(node: ASTNode): void {
+      // Allow functions in test files
+      if (allowThrowInTests && isInTestFile()) return
+
+      if (!node.body) return
+
+      // Only report function-level errors if there are throws NOT in catch blocks
+      const hasThrowsNotInCatch = hasThrowStatementsOutsideCatch(node.body)
+      if (hasThrowsNotInCatch) {
+        const returnType = node.returnType?.typeAnnotation
+        if (returnType) {
+          const sourceCode = context.sourceCode
+          const returnTypeText = sourceCode.getText(returnType)
+
+          // Don't report if already using Either
+          if (!returnTypeText.includes("Either")) {
+            context.report({
+              node: node.id || node,
+              messageId: "preferEitherReturn",
+              data: { type: returnTypeText },
+            })
+          }
+        }
+      }
+    }
+
     return {
       TryStatement(node: ASTNode) {
         // Allow try/catch in test files
@@ -112,30 +138,11 @@ const rule: Rule.RuleModule = {
       },
 
       FunctionDeclaration(node: ASTNode) {
-        // Allow functions in test files
-        if (allowThrowInTests && isInTestFile()) return
+        checkFunctionForThrows(node)
+      },
 
-        if (!node.body) return
-
-        // Only report function-level errors if there are throws NOT in catch blocks
-        // (throws in catch blocks are handled by ThrowStatement rule)
-        const hasThrowsNotInCatch = hasThrowStatementsOutsideCatch(node.body)
-        if (hasThrowsNotInCatch) {
-          const returnType = node.returnType?.typeAnnotation
-          if (returnType) {
-            const sourceCode = context.sourceCode
-            const returnTypeText = sourceCode.getText(returnType)
-
-            // Don't report if already using Either
-            if (!returnTypeText.includes("Either")) {
-              context.report({
-                node: node.id || node,
-                messageId: "preferEitherReturn",
-                data: { type: returnTypeText },
-              })
-            }
-          }
-        }
+      ArrowFunctionExpression(node: ASTNode) {
+        checkFunctionForThrows(node)
       },
     }
   },

@@ -48,6 +48,12 @@ const rule: Rule.RuleModule = {
       }
     }
 
+    function replaceGetWithValue(body: string, monadicObj: string): string {
+      // Replace monadicObj.get() with value, and monadicObj.get().chain with value.chain
+      const escaped = monadicObj.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      return body.replace(new RegExp(`${escaped}\\.get\\(\\)`, "g"), "value")
+    }
+
     function generateFoldFromIf(node: ASTNode): string | null {
       const sourceCode = context.sourceCode
 
@@ -101,11 +107,15 @@ const rule: Rule.RuleModule = {
       const thenBody = extractBodyForFold(consequent, sourceCode)
       const elseBody = extractBodyForFold(alternate, sourceCode)
 
-      // Generate fold expression
+      // Generate fold expression — replace .get() calls with value parameter
       if (isNegated) {
-        return `${monadicObj}.fold(() => ${thenBody}, () => ${elseBody})`
+        // isNone/isLeft/isFailure: consequent is the "none" branch, alternate is the "some" branch
+        const successBody = replaceGetWithValue(elseBody, monadicObj)
+        return `${monadicObj}.fold(() => ${thenBody}, (value) => ${successBody})`
       } else {
-        return `${monadicObj}.fold(() => ${elseBody}, (value) => ${thenBody})`
+        // isSome/isRight/isSuccess: consequent is the "some" branch, alternate is the "none" branch
+        const successBody = replaceGetWithValue(thenBody, monadicObj)
+        return `${monadicObj}.fold(() => ${elseBody}, (value) => ${successBody})`
       }
     }
 
@@ -143,11 +153,13 @@ const rule: Rule.RuleModule = {
       const thenExpr = sourceCode.getText(consequent)
       const elseExpr = sourceCode.getText(alternate)
 
-      // Generate fold expression
+      // Generate fold expression — replace .get() calls with value parameter
       if (isNegated) {
-        return `${monadicObj}.fold(() => ${thenExpr}, () => ${elseExpr})`
+        const successExpr = replaceGetWithValue(elseExpr, monadicObj)
+        return `${monadicObj}.fold(() => ${thenExpr}, (value) => ${successExpr})`
       } else {
-        return `${monadicObj}.fold(() => ${elseExpr}, (value) => ${thenExpr})`
+        const successExpr = replaceGetWithValue(thenExpr, monadicObj)
+        return `${monadicObj}.fold(() => ${elseExpr}, (value) => ${successExpr})`
       }
     }
 
@@ -181,22 +193,17 @@ const rule: Rule.RuleModule = {
       // Check for null/undefined checks on variables that might be Options
       if (node.type === "BinaryExpression") {
         if (
-          (node.operator === "===" || node.operator === "!==") &&
+          (node.operator === "===" || node.operator === "!==" || node.operator === "==" || node.operator === "!=") &&
           ((node.left.type === "Literal" && (node.left.value === null || node.left.value === undefined)) ||
             (node.right.type === "Literal" && (node.right.value === null || node.right.value === undefined)))
         ) {
-          // This might be checking an Option that hasn't been properly typed
           return { isMonadic: true, type: "Option" }
         }
 
-        // Check for == or != with undefined
+        // Check for === or == with undefined identifier
         if (node.operator === "==" || node.operator === "!=" || node.operator === "===" || node.operator === "!==") {
-          const leftIsUndefined =
-            (node.left.type === "Identifier" && node.left.name === "undefined") ||
-            (node.left.type === "Literal" && node.left.value === undefined)
-          const rightIsUndefined =
-            (node.right.type === "Identifier" && node.right.name === "undefined") ||
-            (node.right.type === "Literal" && node.right.value === undefined)
+          const leftIsUndefined = node.left.type === "Identifier" && node.left.name === "undefined"
+          const rightIsUndefined = node.right.type === "Identifier" && node.right.name === "undefined"
 
           if (leftIsUndefined || rightIsUndefined) {
             return { isMonadic: true, type: "Option" }

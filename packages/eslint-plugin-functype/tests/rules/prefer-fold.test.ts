@@ -34,6 +34,22 @@ describe("prefer-fold", () => {
         `,
         options: [{ minComplexity: 3 }],
       },
+      // Using getOrElse (already using proper pattern)
+      {
+        name: "getOrElse is a valid alternative to fold",
+        code: `const result = option.getOrElse("default")`,
+      },
+      // If/else with regular boolean condition (not monadic)
+      {
+        name: "Non-monadic if/else is allowed",
+        code: `
+          if (count > 0) {
+            return "positive"
+          } else {
+            return "non-positive"
+          }
+        `,
+      },
     ],
     invalid: [
       // If/else chain with isSome check
@@ -53,7 +69,7 @@ describe("prefer-fold", () => {
           },
         ],
         output: `
-          option.fold(() => "default", (value) => option.get())
+          option.fold(() => "default", (value) => value)
         `,
       },
       // Ternary operator with isRight check
@@ -66,7 +82,7 @@ describe("prefer-fold", () => {
             data: { type: "Either" },
           },
         ],
-        output: 'const result = either.fold(() => "error", (value) => either.get())',
+        output: 'const result = either.fold(() => "error", (value) => value)',
       },
       // Complex if/else if/else chain
       {
@@ -131,6 +147,136 @@ describe("prefer-fold", () => {
             data: { type: "Option" },
           },
         ],
+      },
+      // isNone() check in if/else (negated path)
+      {
+        name: "If/else with isNone should use fold",
+        code: `
+          if (option.isNone()) {
+            return "empty"
+          } else {
+            return option.get()
+          }
+        `,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Option" },
+          },
+        ],
+        output: `
+          option.fold(() => "empty", (value) => value)
+        `,
+      },
+      // isLeft() check in if/else (Either negated path)
+      {
+        name: "If/else with isLeft should use fold",
+        code: `
+          if (either.isLeft()) {
+            return "error"
+          } else {
+            return either.get()
+          }
+        `,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Either" },
+          },
+        ],
+        output: `
+          either.fold(() => "error", (value) => value)
+        `,
+      },
+      // Ternary with isNone() (negated ternary)
+      {
+        name: "Ternary with isNone should use fold",
+        code: 'const result = option.isNone() ? "empty" : option.get()',
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+          },
+        ],
+        output: 'const result = option.fold(() => "empty", (value) => value)',
+      },
+      // minComplexity: 1 triggers on single if/else
+      {
+        name: "Single if/else triggers with minComplexity 1",
+        code: `
+          if (option.isSome()) {
+            return option.get()
+          } else {
+            return "default"
+          }
+        `,
+        options: [{ minComplexity: 1 }],
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Option" },
+          },
+        ],
+        output: `
+          option.fold(() => "default", (value) => value)
+        `,
+      },
+      // Loose equality null check (== null)
+      {
+        name: "Loose null equality check should use fold",
+        code: `
+          if (value == null) {
+            return "missing"
+          } else {
+            return value.toString()
+          }
+        `,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Option" },
+          },
+        ],
+      },
+      // .get() followed by method call should be replaced with value
+      {
+        name: "Auto-fix replaces .get().method() with value.method()",
+        code: `
+          if (option.isSome()) {
+            return option.get().toUpperCase()
+          } else {
+            return "default"
+          }
+        `,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Option" },
+          },
+        ],
+        output: `
+          option.fold(() => "default", (value) => value.toUpperCase())
+        `,
+      },
+      // isFailure() check (Result type negated path)
+      {
+        name: "If/else with isFailure should use fold",
+        code: `
+          if (result.isFailure()) {
+            return "failed"
+          } else {
+            return result.get()
+          }
+        `,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Result" },
+          },
+        ],
+        output: `
+          result.fold(() => "failed", (value) => value)
+        `,
       },
     ],
   })
