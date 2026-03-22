@@ -88,21 +88,6 @@ export default {
       },
     ],
 
-    // Functional programming rules (when eslint-plugin-functional is available)
-    "functional/no-let": "error",
-    "functional/immutable-data": "warn",
-    "functional/no-loop-statements": "off", // Start disabled, can enable later
-    "functional/prefer-immutable-types": "off",
-    "functional/no-mixed-types": "off",
-    "functional/functional-parameters": "off",
-    "functional/no-throw-statements": ["warn", { allowToRejectPromises: true }],
-    "functional/no-try-statements": ["warn", { allowCatch: true }],
-
-    // Allow some flexibility
-    "functional/no-conditional-statements": "off",
-    "functional/no-expression-statements": "off",
-    "functional/no-return-void": "off",
-
     // Code formatting (when eslint-plugin-prettier is available)
     "prettier/prettier": [
       "error",

@@ -21,12 +21,6 @@ const PEER_DEPENDENCIES: PeerDependency[] = [
     required: true,
   },
   {
-    name: "eslint-plugin-functional",
-    packageName: "eslint-plugin-functional",
-    description: "Functional programming ESLint rules",
-    required: true,
-  },
-  {
     name: "eslint-plugin-prettier",
     packageName: "eslint-plugin-prettier",
     description: "Code formatting rules",

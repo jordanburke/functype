@@ -83,7 +83,6 @@ function extractRules(config: Config): Map<string, RuleData> {
 }
 
 function getRuleSource(ruleName: string): string {
-  if (ruleName.startsWith("functional/")) return "eslint-plugin-functional"
   if (ruleName.startsWith("@typescript-eslint/")) return "@typescript-eslint/eslint-plugin"
   return "eslint (core)"
 }
@@ -520,7 +519,6 @@ async function main(): Promise<void> {
 
     console.log(colorize("\n🔗 Links:", "bright"))
     console.log("• Documentation: https://github.com/jordanburke/eslint-config-functype")
-    console.log("• eslint-plugin-functional: https://github.com/eslint-functional/eslint-plugin-functional")
     console.log("• @typescript-eslint: https://typescript-eslint.io/")
   }
 }

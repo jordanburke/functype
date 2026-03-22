@@ -6,7 +6,6 @@ const peerDeps = [
   "@eslint/js",
   "@typescript-eslint/eslint-plugin",
   "@typescript-eslint/parser",
-  "eslint-plugin-functional",
   "eslint-plugin-prettier",
   "eslint-plugin-simple-import-sort",
   "prettier",

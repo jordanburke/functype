@@ -1,11 +1,11 @@
 # eslint-config-functype
 
-Curated ESLint flat config for functional TypeScript with [functype](https://github.com/jordanburke/functype). Composes rules from `eslint-plugin-functional`, `typescript-eslint`, `prettier`, and `simple-import-sort` into opinionated `recommended` and `strict` presets.
+Curated ESLint flat config for functional TypeScript with [functype](https://github.com/jordanburke/functype). Composes rules from `typescript-eslint`, `prettier`, and `simple-import-sort` into opinionated `recommended` and `strict` presets.
 
 ## Install
 
 ```bash
-npm install -D eslint-config-functype eslint eslint-plugin-functional @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-prettier prettier eslint-plugin-simple-import-sort
+npm install -D eslint-config-functype eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser eslint-plugin-prettier prettier eslint-plugin-simple-import-sort
 ```
 
 ## Usage
@@ -15,10 +15,7 @@ npm install -D eslint-config-functype eslint eslint-plugin-functional @typescrip
 import recommended from "eslint-config-functype/recommended"
 import testOverrides from "eslint-config-functype/test-overrides"
 
-export default [
-  recommended,
-  testOverrides, // relaxes functional rules for test files
-]
+export default [recommended, testOverrides]
 ```
 
 ### Strict mode
@@ -36,23 +33,35 @@ export default [strict, testOverrides]
 
 - `prefer-const`, `no-var`, `no-throw-literal`
 - `@typescript-eslint/consistent-type-imports`, `no-explicit-any`, `no-floating-promises`, `await-thenable`
-- `functional/no-let`, `functional/immutable-data` (warn), `functional/no-throw-statements` (warn, allows reject)
-- `functional/prefer-immutable-types` is **off** - functype types are immutable by design
+- `@typescript-eslint/strict-boolean-expressions` (warn, relaxed for functional patterns)
 - Prettier formatting and import sorting
 
 ### `strict`
 
 Everything in `recommended` plus:
 
-- `functional/no-loop-statements` (error)
-- `functional/immutable-data` (error)
-- `functional/prefer-immutable-types` (warn)
 - `@typescript-eslint/explicit-function-return-type` (error)
+- `@typescript-eslint/no-non-null-assertion` (error)
 - `@typescript-eslint/strict-boolean-expressions` (error, default strict)
 
 ### `test-overrides`
 
-Disables `functional/no-let`, `immutable-data`, `no-throw-statements`, and `no-try-statements` for test files (`*.test.ts`, `*.spec.ts`, `test/**`, `tests/**`, `__tests__/**`).
+Extension point for test files (`*.test.ts`, `*.spec.ts`, `test/**`, `tests/**`, `__tests__/**`).
+
+## Pairing with eslint-plugin-functype
+
+For functype-specific rules (prefer-option, prefer-either, prefer-fold, etc.):
+
+```bash
+npm install -D eslint-plugin-functype
+```
+
+```js
+import recommended from "eslint-config-functype/recommended"
+import functype from "eslint-plugin-functype"
+
+export default [recommended, functype.configs.recommended]
+```
 
 ## CLI
 
