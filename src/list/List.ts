@@ -125,13 +125,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     reduceRight: (f: (prev: A, curr: A) => A) => array.reduceRight(f),
 
-    fold: <B extends Type>(onEmpty: () => B, onValue: (value: A) => B): B => {
-      if (array.length === 0) {
-        return onEmpty()
-      }
-      const firstElement = array[0] as A // Type assertion to avoid undefined
-      return onValue(firstElement)
-    },
+    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => array.reduce(fn, initial),
 
     foldLeft:
       <B>(z: B) =>

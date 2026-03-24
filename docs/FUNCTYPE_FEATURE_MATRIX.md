@@ -127,9 +127,13 @@ All Serializable types provide static deserialization methods:
 
 ### Foldable
 
-- `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
 - `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
 - `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
+
+Note: `fold` has different semantics per type category:
+
+- **Sum types** (Option, Either, Try, IO, TaskOutcome): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
+- **Collections** (List, Set, Map, Stack, Tuple, LazyList): `fold<B>(initial: B, fn: (acc: B, a: A) => B): B` — left-reduce accumulator
 
 ### Matchable
 

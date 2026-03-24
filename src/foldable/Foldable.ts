@@ -1,17 +1,17 @@
 /**
  * Foldable type class represents data structures that can be folded to a summary value.
  *
+ * This interface provides the universal fold operations (foldLeft, foldRight) that work
+ * consistently across all data structures. The `fold` method is intentionally excluded
+ * because it has different semantics for sum types vs collections:
+ * - Sum types (Option, Either, Try): `fold(onEmpty, onValue)` — pattern match
+ * - Collections (List, Set, Map): `fold(initial, fn)` — left-reduce accumulator
+ *
+ * Each type category defines its own `fold` with the appropriate signature.
+ *
  * @typeParam A - The type of elements in the data structure
  */
 export interface Foldable<A> {
-  /**
-   * Pattern matches over the structure, applying specific handlers for each variant
-   * @param onEmpty - Function to apply if the structure is empty or has no value
-   * @param onValue - Function to apply if the structure has a value
-   * @returns The result of applying the appropriate function
-   */
-  fold<B>(onEmpty: () => B, onValue: (value: A) => B): B
-
   /**
    * Left-associative fold using the provided zero value and operation
    * @param z - Zero/identity value

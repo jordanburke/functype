@@ -59,6 +59,9 @@ export interface LazyList<A extends Type>
   get tail(): LazyList<A>
   get init(): LazyList<A>
 
+  // Foldable
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+
   // Terminal operations (force evaluation)
   toList(): List<A>
   toArray(): A[]
@@ -311,10 +314,12 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
       ),
 
     // Foldable implementation
-    fold: <B extends Type>(onEmpty: () => B, onValue: (value: A) => B): B => {
-      const iter = iterable[Symbol.iterator]()
-      const next = iter.next()
-      return next.done ? onEmpty() : onValue(next.value)
+    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => {
+      let acc = initial
+      for (const item of iterable) {
+        acc = fn(acc, item)
+      }
+      return acc
     },
 
     foldLeft:

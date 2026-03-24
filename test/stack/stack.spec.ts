@@ -115,22 +115,15 @@ describe("Stack", () => {
     expect(nonEmptyResult).toBe("has 3 items")
   })
 
-  it("should implement fold correctly", () => {
+  it("should implement fold as accumulator", () => {
     const emptyStack = Stack<number>([])
     const nonEmptyStack = Stack([1, 2, 3])
 
-    const emptyResult = emptyStack.fold(
-      () => "empty",
-      (value: number) => `top: ${value}`,
-    )
+    const emptyResult = emptyStack.fold(0, (acc, x) => acc + x)
+    const nonEmptyResult = nonEmptyStack.fold(0, (acc, x) => acc + x)
 
-    const nonEmptyResult = nonEmptyStack.fold(
-      () => "empty",
-      (value: number) => `top: ${value}`,
-    )
-
-    expect(emptyResult).toBe("empty")
-    expect(nonEmptyResult).toBe("top: 3") // Top value is 3
+    expect(emptyResult).toBe(0)
+    expect(nonEmptyResult).toBe(6)
   })
 
   it("should convert to list correctly", () => {

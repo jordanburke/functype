@@ -9,7 +9,6 @@ import { createSerializer } from "@/serialization"
 import { Set } from "@/set/Set"
 import type { Traversable } from "@/traversable/Traversable"
 import { Tuple } from "@/tuple/Tuple"
-import type { Type } from "@/types"
 
 import { ESMap, type ESMapType } from "./shim"
 
@@ -38,7 +37,7 @@ export interface Map<K, V>
   get(key: K): Option<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
-  fold<U extends Type>(onEmpty: () => U, onValue: (value: Tuple<[K, V]>) => U): U
+  fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B
   /**
@@ -133,24 +132,7 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
 
   const orElse = (key: K, alternative: Option<V>): Option<V> => Option(state.values.get(key)).or(alternative)
 
-  const fold = <U extends Type>(onEmpty: () => U, onValue: (value: Tuple<[K, V]>) => U): U => {
-    if (isEmpty()) return onEmpty()
-
-    // For Map, we'll always return the first entry as the value for fold
-    // This is consistent with how Option and other single-value types work
-    const entries = getEntries()
-    if (entries.length === 0) {
-      return onEmpty()
-    }
-
-    const firstEntry = entries[0]
-    // Make sure we handle potential undefined values
-    if (firstEntry === undefined) {
-      return onEmpty()
-    }
-
-    return onValue(firstEntry)
-  }
+  const fold = <B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B => List(getEntries()).fold(initial, fn)
 
   const toList = (): List<Tuple<[K, V]>> => List(getEntries())
 

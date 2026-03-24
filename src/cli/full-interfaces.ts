@@ -311,7 +311,7 @@ export const FULL_INTERFACES: Record<string, string> = {
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
-  fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U) => U
+  fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>
   toArray: <B = A>() => B[]
@@ -338,7 +338,7 @@ export const FULL_INTERFACES: Record<string, string> = {
   get(key: K): Option<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
-  fold<U extends Type>(onEmpty: () => U, onValue: (value: Tuple<[K, V]>) => U): U
+  fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B
   /**
@@ -533,6 +533,9 @@ export const FULL_INTERFACES: Record<string, string> = {
   get tail(): LazyList<A>
   get init(): LazyList<A>
 
+  // Foldable
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+
   // Terminal operations (force evaluation)
   toList(): List<A>
   toArray(): A[]
@@ -589,6 +592,8 @@ export const FULL_INTERFACES: Record<string, string> = {
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
+
+  fold<B>(initial: B, fn: (acc: B, a: T[number]) => B): B
 
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>
 
@@ -671,6 +676,11 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns A string representation
    */
   toString(): string
+
+  /**
+   * Left-associative fold over all elements using an initial value and combining function.
+   */
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
 
   /**
    * Pattern matches over the Stack, applying a handler function based on whether it's empty

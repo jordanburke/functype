@@ -18,7 +18,7 @@ export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
-  fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U) => U
+  fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>
   toArray: <B = A>() => B[]
@@ -79,23 +79,12 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return createSet(results)
     },
 
-    fold: <U extends Type>(onEmpty: () => U, onValue: (value: A) => U): U => {
-      if (values.size === 0) return onEmpty()
-
-      // For Set, we'll always return the first entry as the value for fold
-      // This is consistent with how Option and other single-value types work
-      const entries = Array.from(values)
-      if (entries.length === 0) {
-        return onEmpty()
+    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => {
+      let acc = initial
+      for (const a of values) {
+        acc = fn(acc, a)
       }
-
-      const firstEntry = entries[0]
-      // Make sure we handle potential undefined values
-      if (firstEntry === undefined) {
-        return onEmpty()
-      }
-
-      return onValue(firstEntry)
+      return acc
     },
 
     foldLeft:

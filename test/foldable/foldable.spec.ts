@@ -48,6 +48,24 @@ describe("Foldable", () => {
   })
 
   describe("List", () => {
+    it("should implement fold as left-reduce accumulator", () => {
+      const list = List([1, 2, 3])
+      const result = list.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(6)
+    })
+
+    it("should fold empty list returning initial value", () => {
+      const list = List<number>([])
+      const result = list.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(0)
+    })
+
+    it("should fold over ALL elements (not just first)", () => {
+      const list = List([1, 2, 3, 4, 5])
+      const result = list.fold(0, (acc, value) => acc + value)
+      expect(result).toBe(15)
+    })
+
     it("should implement foldLeft correctly", () => {
       const list = List([1, 2, 3, 4, 5])
       const result = list.foldLeft(0)((acc, value) => acc + value)
@@ -71,6 +89,13 @@ describe("Foldable", () => {
       const resultRight = list.foldRight(20)((value, acc) => value - acc)
       // 1 - (2 - (3 - (4 - 20))) = 18
       expect(resultRight).toBe(18)
+    })
+
+    it("fold should be equivalent to foldLeft (uncurried)", () => {
+      const list = List([1, 2, 3, 4])
+      const foldResult = list.fold(20, (acc, value) => acc - value)
+      const foldLeftResult = list.foldLeft(20)((acc, value) => acc - value)
+      expect(foldResult).toBe(foldLeftResult)
     })
   })
 

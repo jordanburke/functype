@@ -270,22 +270,16 @@ describe("LazyList", () => {
   })
 
   describe("Foldable interface", () => {
-    it("should implement fold", () => {
+    it("should implement fold as accumulator", () => {
       const list = LazyList([1, 2, 3])
-      const result = list.fold(
-        () => "empty",
-        (value) => `has value: ${value}`,
-      )
-      expect(result).toBe("has value: 1")
+      const result = list.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(6)
     })
 
-    it("should fold empty list", () => {
+    it("should fold empty list returning initial value", () => {
       const list = LazyList.empty<number>()
-      const result = list.fold(
-        () => "empty",
-        (value) => `has value: ${value}`,
-      )
-      expect(result).toBe("empty")
+      const result = list.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(0)
     })
 
     it("should implement foldLeft", () => {

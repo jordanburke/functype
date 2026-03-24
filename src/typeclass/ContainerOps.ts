@@ -46,6 +46,21 @@ export interface ContainerOps<A extends Type> {
  */
 export interface CollectionOps<A extends Type, Self> {
   /**
+   * Left-associative fold over all elements using an initial value and combining function.
+   * Unlike foldLeft (which is curried), this provides a convenient uncurried signature.
+   *
+   * @example
+   * ```typescript
+   * List([1, 2, 3]).fold(0, (acc, x) => acc + x) // 6
+   * ```
+   *
+   * @param initial - The initial accumulator value
+   * @param fn - A function that combines the accumulator with each element
+   * @returns The final accumulated value
+   */
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+
+  /**
    * Drops the first n elements from the collection.
    */
   drop(n: number): Self

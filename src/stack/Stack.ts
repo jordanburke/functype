@@ -82,6 +82,11 @@ export type Stack<A extends Type> = {
   toString(): string
 
   /**
+   * Left-associative fold over all elements using an initial value and combining function.
+   */
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+
+  /**
    * Pattern matches over the Stack, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
    * @returns The result of applying the matching handler function
@@ -191,13 +196,8 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
   const toString = (): string => `Stack(${items.join(", ")})`
 
   // Fold implementations
-  const fold = <U extends Type>(onEmpty: () => U, onValue: (value: A) => U): U => {
-    if (isEmpty()) {
-      return onEmpty()
-    }
-    const lastItem = items[items.length - 1]
-    // If the last item is undefined, return the empty case to be safe
-    return lastItem !== undefined ? onValue(lastItem) : onEmpty()
+  const fold = <B>(initial: B, fn: (acc: B, a: A) => B): B => {
+    return items.reduce(fn, initial)
   }
 
   const foldLeft =

@@ -98,22 +98,16 @@ describe("Tuple", () => {
   })
 
   describe("Foldable interface", () => {
-    it("should implement fold", () => {
+    it("should implement fold as accumulator", () => {
       const tuple = Tuple([1, 2, 3])
-      const result = tuple.fold(
-        () => "empty",
-        (value) => `first value: ${value}`,
-      )
-      expect(result).toBe("first value: 1")
+      const result = tuple.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(6)
     })
 
-    it("should fold empty tuple", () => {
+    it("should fold empty tuple returning initial value", () => {
       const tuple = Tuple.empty()
-      const result = tuple.fold(
-        () => "empty",
-        (value) => `first value: ${value}`,
-      )
-      expect(result).toBe("empty")
+      const result = tuple.fold(0, (acc, x) => acc + x)
+      expect(result).toBe(0)
     })
 
     it("should implement foldLeft", () => {

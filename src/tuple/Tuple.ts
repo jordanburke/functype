@@ -11,6 +11,8 @@ export interface Tuple<T extends Type[]>
   readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
 
+  fold<B>(initial: B, fn: (acc: B, a: T[number]) => B): B
+
   map<U extends Type[]>(f: (value: T) => U): Tuple<U>
 
   flatMap<U extends Type[]>(f: (value: T) => Tuple<U>): Tuple<U>
@@ -69,8 +71,8 @@ const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
     },
 
     // Foldable implementation
-    fold: <B>(onEmpty: () => B, onValue: (value: T[number]) => B): B => {
-      return values.length === 0 ? onEmpty() : onValue(values[0]!)
+    fold: <B>(initial: B, fn: (acc: B, a: T[number]) => B): B => {
+      return values.reduce(fn, initial)
     },
 
     foldLeft:
