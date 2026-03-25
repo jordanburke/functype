@@ -33,12 +33,12 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": ">=0.49.0"
+    "functype": ">=0.51.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
     "eslint-config-prettier": "^10.1.8",
-    "functype": "^0.49.0",
+    "functype": "^0.51.0",
     "ts-builds": "^2.6.1",
     "tsdown": "^0.20.3",
     "vitest": "^4.1.1"
