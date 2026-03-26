@@ -52,6 +52,7 @@ const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
     length: values.length,
 
     [Symbol.iterator](): Iterator<T[number]> {
+      // eslint-disable-next-line functional/no-let
       let index = 0
       return {
         next: (): IteratorResult<T[number]> => {

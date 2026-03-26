@@ -34,8 +34,15 @@ echo "  Updated functype-mcp-server to $VERSION"
 
 cd "$ROOT_DIR"
 
+# Update llms-full.txt version header
+LLMS_FILE="$ROOT_DIR/site/public/llms-full.txt"
+if [ -f "$LLMS_FILE" ]; then
+  sed -i '' "1s/# Functype v.*/# Functype v$VERSION/" "$LLMS_FILE"
+  echo "  Updated llms-full.txt to $VERSION"
+fi
+
 # Stage and commit
-git add package.json mcp-server/package.json
+git add package.json mcp-server/package.json site/public/llms-full.txt
 git commit -m "v$VERSION"
 git tag "v$VERSION"
 

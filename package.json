@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.51.0",
+  "version": "0.52.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -129,6 +129,11 @@
       "types": "./dist/map/index.d.ts",
       "import": "./dist/map/index.js",
       "default": "./dist/map/index.js"
+    },
+    "./obj": {
+      "types": "./dist/obj/index.d.ts",
+      "import": "./dist/obj/index.js",
+      "default": "./dist/obj/index.js"
     },
     "./set": {
       "types": "./dist/set/index.d.ts",

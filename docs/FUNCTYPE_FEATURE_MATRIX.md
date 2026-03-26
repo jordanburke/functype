@@ -20,6 +20,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
 | **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Obj<T>**         |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
 | **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
@@ -36,6 +37,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
 | **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
 | **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Obj<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
 | **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
@@ -57,6 +59,7 @@ All types follow the **Companion pattern** (inspired by Scala), combining constr
 | **IO<R,E,A>**   |  ✗  |  ✓   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
 | **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
+| **Obj<T>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Map<K,V>**    |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Lazy<T>**     |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Stack<A>**    |  ✗  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
@@ -245,7 +248,8 @@ Provides conversion to Promise for async interop:
 
 3. **Special Cases**:
    - **Either**: Implements FunctypeBase but not full Functype (no Extractable/Matchable)
-   - **Map**: Custom implementation with SafeTraversable instead of standard Traversable
+   - **Map**: Uses KVTraversable (omits map/flatMap/ap from Traversable — key-value containers can't freely transform their type parameter)
+   - **Obj**: Immutable object wrapper using KVTraversable. Record-constrained map/flatMap (B must be a Record). Provides fluent ops: get, set, assign, merge, when, omit, pick
    - **Stack**: Implements individual interfaces without FunctypeBase
    - **LazyList**: Lazy evaluation with support for Foldable, Serializable, Pipe, and Typeable interfaces
    - **Tuple**: Enhanced container with Foldable, Serializable, Pipe, Typeable, and Valuable support

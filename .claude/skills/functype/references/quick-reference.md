@@ -11,6 +11,7 @@ Quick lookup guide for common functype operations.
 | Try      | `Try(() => expr)`, `.success()`, `.failure()`, `.fromPromise()` | `Try(() => JSON.parse(str))`, `Try.success(42)`, `Try.failure("err")` |
 | List     | `List(array)`, `.of()`, `.empty()`                              | `List([1, 2])`, `List.of(1, 2)`, `List.empty()`                       |
 | Set      | `Set(array)`, `.of()`, `.empty()`                               | `Set([1, 2])`, `Set.of(1, 2)`, `Set.empty()`                          |
+| Obj      | `Obj({...})`, `.of()`, `.empty()`                               | `Obj({ name: "John" })`, `Obj.empty()`                                |
 | Map      | `Map([[k, v], ...])`, `.of()`, `.empty()`                       | `Map.of(["a", 1])`, `Map.empty()`                                     |
 | Lazy     | `Lazy(() => expression)`                                        | `Lazy(() => expensiveComputation())`                                  |
 | IO       | `IO.sync()`, `IO.succeed()`, `IO.fail()`                        | `IO.sync(() => value)`, `IO.succeed(42)`                              |
@@ -182,6 +183,23 @@ validateEmail(input)
     (error) => console.error(error),
     (email) => sendWelcome(email),
   )
+```
+
+### Obj Pipeline
+
+```typescript
+// Build HTTP headers with conditional auth
+const headers = Obj({ "User-Agent": "MyApp/1.0" } as Record<string, string>)
+  .assign({ "Content-Type": "application/json" })
+  .when(requiresAuth, { Authorization: `Bearer ${token}` })
+  .value()
+
+// Object manipulation
+const user = Obj({ name: "John", age: 30, role: "admin" })
+user.get("name") // Some("John")
+user.pick("name", "role").value() // { name: "John", role: "admin" }
+user.omit("role").value() // { name: "John", age: 30 }
+user.set("age", 31).value() // { name: "John", age: 31, role: "admin" }
 ```
 
 ### List Pipeline

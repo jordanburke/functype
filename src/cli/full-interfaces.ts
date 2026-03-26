@@ -320,7 +320,7 @@ export const FULL_INTERFACES: Record<string, string> = {
 
   Map: `export interface Map<K, V>
   extends
-    SafeTraversable<K, V>,
+    KVTraversable<Tuple<[K, V]>>,
     Collection<Tuple<[K, V]>>,
     Typeable<"Map">,
     Serializable<[K, V][]>,

@@ -37,6 +37,11 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <a href="/obj" className="hover:text-white transition-colors">
+                  Obj&lt;T&gt;
+                </a>
+              </li>
+              <li>
                 <a href="/task" className="hover:text-white transition-colors">
                   Task&lt;T&gt;
                 </a>

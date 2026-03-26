@@ -194,6 +194,55 @@ const restSum = list.tail.foldLeft(0)((sum, n) => sum + n)
 const initSum = list.init.foldLeft(0)((sum, n) => sum + n)
 ```
 
+## Obj Patterns
+
+### Immutable Object Building
+
+```typescript
+import { Obj } from "functype"
+
+// BEFORE: Mutable object assignment
+const headers: Record<string, string> = { "User-Agent": userAgent }
+if (requiresAuth && accessToken) {
+  headers["Authorization"] = `Bearer ${accessToken}`
+}
+
+// AFTER: Fluent immutable chain
+const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
+  .when(requiresAuth && !!accessToken, { Authorization: `Bearer ${accessToken}` })
+  .value()
+```
+
+### Conditional Config Assembly
+
+```typescript
+const config = Obj({ debug: false, port: 3000 })
+  .assign({ logLevel: "info" })
+  .when(process.env.NODE_ENV === "production", { debug: false, logLevel: "error" })
+  .when(process.env.NODE_ENV === "development", { debug: true })
+  .value()
+```
+
+### Safe Property Access
+
+```typescript
+const user = Obj({ name: "John", age: 30 })
+user.get("name") // Some("John")
+user.get("email" as keyof typeof user.data) // None
+```
+
+### Object Reshaping
+
+```typescript
+const fullUser = Obj({ name: "John", age: 30, role: "admin", ssn: "123-45-6789" })
+
+// Pick only safe fields for API response
+const publicUser = fullUser.pick("name", "age", "role").value()
+
+// Remove sensitive fields
+const safeUser = fullUser.omit("ssn").value()
+```
+
 ## Async Patterns
 
 ### Promise to Either

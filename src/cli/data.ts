@@ -110,9 +110,29 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  Obj: {
+    description: "Immutable object wrapper with fluent operations",
+    interfaces: ["KVTraversable", "Foldable", "Matchable", "Extractable", "Serializable", "Reshapeable", "Doable"],
+    methods: {
+      create: ["Obj({...})", "Obj.of({...})", "Obj.empty()"],
+      transform: [
+        ".set(k, v)",
+        ".assign(partial)",
+        ".merge(obj)",
+        ".when(cond, partial)",
+        ".omit(...keys)",
+        ".pick(...keys)",
+        ".map(f)",
+        ".flatMap(f)",
+      ],
+      extract: [".get(k)", ".value()", ".keys()", ".values()", ".entries()", ".fold(n, s)", ".match({Obj})"],
+      check: [".has(k)", ".isEmpty", ".size"],
+    },
+  },
+
   Map: {
     description: "Immutable key-value store",
-    interfaces: ["SafeTraversable", "Collection", "Serializable"],
+    interfaces: ["KVTraversable", "Collection", "Serializable"],
     methods: {
       create: ["Map([[k, v], ...])", "Map.of([k, v], ...)", "Map.empty()"],
       transform: [".set(k, v)", ".delete(k)", ".map(f)", ".filter(p)", ".add(k, v)"],
@@ -345,7 +365,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
 }
 
 export const CATEGORIES = {
-  Core: ["Option", "Either", "Try"],
+  Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Task"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],

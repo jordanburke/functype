@@ -25,6 +25,12 @@ export default function CoreTypes() {
       icon: "⚙",
     },
     {
+      name: "Obj<T>",
+      href: "/obj",
+      description: "Immutable object wrapper with fluent operations like set, assign, when, omit, pick",
+      icon: "{}",
+    },
+    {
       name: "IO<R,E,A>",
       href: "/io",
       description: "Lazy, composable effects with typed errors and dependency injection",

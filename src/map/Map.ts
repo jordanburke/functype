@@ -7,19 +7,14 @@ import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { createSerializer } from "@/serialization"
 import { Set } from "@/set/Set"
-import type { Traversable } from "@/traversable/Traversable"
+import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
 
 import { ESMap, type ESMapType } from "./shim"
 
-/**
- * A traversable interface for map that excludes map and flatMap operations
- */
-export type SafeTraversable<K, V> = Omit<Traversable<Tuple<[K, V]>>, "map" | "flatMap" | "flatMapAsync" | "ap">
-
 export interface Map<K, V>
   extends
-    SafeTraversable<K, V>,
+    KVTraversable<Tuple<[K, V]>>,
     Collection<Tuple<[K, V]>>,
     Typeable<"Map">,
     Serializable<[K, V][]>,
