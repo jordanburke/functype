@@ -1,6 +1,6 @@
 ---
 name: functype
-description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry), working with immutable collections like List and Set, or running async operations with Task.
+description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry), working with immutable collections like List and Set, running async operations with Task, or making HTTP requests with Http (typed fetch wrapper).
 ---
 
 # Functype User Guide

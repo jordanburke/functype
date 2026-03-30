@@ -240,6 +240,19 @@ effect.provide(layer)        // provide dependencies
 await effect.run()           // execute async
 effect.runSync()             // execute sync
 await effect.runEither()     // execute → Either<E,A>
+
+// Http - typed fetch wrapper
+Http.get<T>(url, opts?)           // GET → IO<never, HttpError, HttpResponse<T>>
+Http.post<T>(url, opts?)          // POST with auto JSON body serialization
+Http.put<T>(url, opts?)           // PUT
+Http.patch<T>(url, opts?)         // PATCH
+Http.delete<T>(url, opts?)        // DELETE
+Http.request<T>(fullOpts)         // Full control (url, method, headers, body, parseAs)
+Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch
+// HttpError ADT: NetworkError | HttpStatusError | DecodeError
+// Use .catchTag("HttpStatusError", e => ...) for selective error recovery
+// Compose: Http.get(url).map(r => r.data).retry(3).timeout(5000)
+await effect.runOrThrow()         // HttpResponse<T> with data, status, headers
 ```
 
 ## Functype Refactoring Patterns
