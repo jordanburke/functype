@@ -688,5 +688,14 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
-} & Traversable<A> &`
+} & Traversable<A> &`,
+
+  HttpError: `export type HttpError = NetworkError | HttpStatusError | DecodeError
+
+const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkError => ({
+  _tag: "NetworkError",
+  url,
+  method,
+  cause,
+})`
 }

@@ -37,6 +37,7 @@ npx functype --json       # JSON output for programmatic use
 - **Try Type**: Safely execute operations that might throw exceptions
 - **Do-notation**: Scala-like for-comprehensions with **optimized List performance** (up to 12x faster than traditional flatMap)
 - **Task**: Handle synchronous and asynchronous operations with error handling
+- **Http**: Typed HTTP fetch wrapper returning IO effects with HttpError ADT, auto content-type detection, and configurable clients
 - **Lazy**: Deferred computation with memoization
 - **Tuple**: Type-safe fixed-length arrays
 - **Typeable**: Runtime type identification with compile-time safety

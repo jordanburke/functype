@@ -38,6 +38,8 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   TaskOutcome: { file: "src/core/task/Task.ts" },
   Tuple: { file: "src/tuple/Tuple.ts" },
   Stack: { file: "src/stack/Stack.ts", isType: true },
+  Http: { file: "src/fetch/Http.ts" },
+  HttpError: { file: "src/fetch/HttpError.ts", isType: true },
 }
 
 /** Parsing state for extractDefinition */
