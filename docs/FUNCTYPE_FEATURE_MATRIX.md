@@ -17,6 +17,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✗   |     ✗      |      ✓       |       ✗       |
 | **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Http**           |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
 | **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
 | **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
 | **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
@@ -35,6 +36,7 @@ This matrix shows which interfaces are supported by each data structure in the f
 | **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
 | **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
 | **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
+| **Http**           |    ✗     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
 | **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 | **Obj<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
@@ -57,6 +59,7 @@ All types follow the **Companion pattern** (inspired by Scala), combining constr
 | **Either<L,R>** |  ✗  |  ✗   |  ✗   |   ✗   |  ✗   |  ✓   |   ✓   |    ✗    |    ✗    |
 | **Try<T>**      |  ✓  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
 | **IO<R,E,A>**   |  ✗  |  ✓   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✓    |    ✓    |
+| **Http**        |  ✗  |  ✗   |  ✗   |   ✗   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **List<A>**     |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Set<A>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
 | **Obj<T>**      |  ✓  |  ✗   |  ✗   |   ✓   |  ✗   |  ✗   |   ✗   |    ✗    |    ✗    |
@@ -88,6 +91,26 @@ Map([
 ]) // from key-value pairs
 Map.of<string, number>(["a", 1], ["b", 2]) // variadic factory
 Map.empty<string, number>() // typed empty map
+```
+
+### Http Methods
+
+```typescript
+// Http — typed fetch wrapper returning IO<never, HttpError, HttpResponse<T>>
+Http.get<T>(url, opts?)       // GET request
+Http.post<T>(url, opts?)      // POST request
+Http.put<T>(url, opts?)       // PUT request
+Http.patch<T>(url, opts?)     // PATCH request
+Http.delete<T>(url, opts?)    // DELETE request
+Http.request<T>(fullOpts)     // Full control
+Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch
+
+// HttpError — three-variant ADT
+HttpError.networkError(url, method, cause)
+HttpError.httpStatusError(url, method, status, statusText, body)
+HttpError.decodeError(url, method, body, cause)
+HttpError.match(error, { NetworkError, HttpStatusError, DecodeError })
+HttpError.isNetworkError(e) / .isHttpStatusError(e) / .isDecodeError(e)
 ```
 
 ### Type Guards
