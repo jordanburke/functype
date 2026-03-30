@@ -2,7 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { IO } from "@/io"
 
 import type { HttpClientConfig } from "./HttpClient"
-import { defaultHttpClientConfig, HttpClient } from "./HttpClient"
+import { defaultHttpClientConfig } from "./HttpClient"
 import type { HttpError, HttpMethod } from "./HttpError"
 import { HttpError as HttpErrorCompanion } from "./HttpError"
 import type { HttpMethodOptions, HttpRequestOptions, HttpResponse, ParseMode } from "./HttpRequest"
@@ -69,62 +69,84 @@ const parseResponse = async <T>(
   return { data, status: response.status, statusText: response.statusText, headers: response.headers }
 }
 
-const request = <T>(options: HttpRequestOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> => {
-  return IO.service(HttpClient)
-    .recover(defaultHttpClientConfig)
-    .flatMap((config) => {
-      const url = resolveUrl(config.baseUrl, options.url)
-      const { serialized, contentType } = serializeBody(options.body)
-      const headers: Record<string, string> = {
-        ...config.defaultHeaders,
-        ...options.headers,
-        ...(contentType ? { "Content-Type": contentType } : {}),
-      }
+const doRequest = <T>(config: HttpClientConfig, options: HttpRequestOptions): IO<never, HttpError, HttpResponse<T>> => {
+  const url = resolveUrl(config.baseUrl, options.url)
+  const { serialized, contentType } = serializeBody(options.body)
+  const headers: Record<string, string> = {
+    ...config.defaultHeaders,
+    ...options.headers,
+    ...(contentType ? { "Content-Type": contentType } : {}),
+  }
 
-      return IO.tryAsync<HttpResponse<T>, HttpError>(
-        (signal) =>
-          (config.fetch ?? globalThis.fetch)(url, {
-            method: options.method,
-            headers,
-            body: serialized,
-            signal: options.signal ?? signal,
-          }).then(async (response) => {
-            if (!response.ok) {
-              const body = await response.text().catch(() => "")
-              throw HttpErrorCompanion.httpStatusError(url, options.method, response.status, response.statusText, body)
-            }
-            return parseResponse<T>(response, options.parseAs, url, options.method)
-          }),
-        (error) => {
-          if (typeof error === "object" && error !== null && "_tag" in error) {
-            return error as HttpError
-          }
-          return HttpErrorCompanion.networkError(url, options.method, error)
-        },
-      )
-    }) as IO<HttpClientConfig, HttpError, HttpResponse<T>>
+  return IO.tryAsync<HttpResponse<T>, HttpError>(
+    (signal) =>
+      (config.fetch ?? globalThis.fetch)(url, {
+        method: options.method,
+        headers,
+        body: serialized,
+        signal: options.signal ?? signal,
+      }).then(async (response) => {
+        if (!response.ok) {
+          const body = await response.text().catch(() => "")
+          throw HttpErrorCompanion.httpStatusError(url, options.method, response.status, response.statusText, body)
+        }
+        return parseResponse<T>(response, options.parseAs, url, options.method)
+      }),
+    (error) => {
+      if (typeof error === "object" && error !== null && "_tag" in error) {
+        return error as HttpError
+      }
+      return HttpErrorCompanion.networkError(url, options.method, error)
+    },
+  )
 }
 
-const get = <T>(url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> =>
+const request = <T>(options: HttpRequestOptions): IO<never, HttpError, HttpResponse<T>> =>
+  doRequest<T>(defaultHttpClientConfig, options)
+
+const get = <T>(url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "GET" })
 
-const post = <T>(url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> =>
+const post = <T>(url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "POST" })
 
-const put = <T>(url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> =>
+const put = <T>(url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "PUT" })
 
-const patch = <T>(url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> =>
+const patch = <T>(url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "PATCH" })
 
-const del = <T>(url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<T>> =>
+const del = <T>(url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "DELETE" })
 
-const head = (url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<void>> =>
+const head = (url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<void>> =>
   request<void>({ ...options, url, method: "HEAD", parseAs: "raw" })
 
-const optionsMethod = (url: string, options?: HttpMethodOptions): IO<HttpClientConfig, HttpError, HttpResponse<void>> =>
+const optionsMethod = (url: string, options?: HttpMethodOptions): IO<never, HttpError, HttpResponse<void>> =>
   request<void>({ ...options, url, method: "OPTIONS", parseAs: "raw" })
+
+type HttpMethods = {
+  readonly request: <T>(options: HttpRequestOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly get: <T>(url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly post: <T>(url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly put: <T>(url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly patch: <T>(url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly delete: <T>(url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<T>>
+  readonly head: (url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<void>>
+  readonly options: (url: string, options?: HttpMethodOptions) => IO<never, HttpError, HttpResponse<void>>
+}
+
+/** Create an Http client with a custom configuration (base URL, default headers, custom fetch). */
+const client = (config: HttpClientConfig): HttpMethods => ({
+  request: <T>(options: HttpRequestOptions) => doRequest<T>(config, options),
+  get: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "GET" }),
+  post: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "POST" }),
+  put: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "PUT" }),
+  patch: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "PATCH" }),
+  delete: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "DELETE" }),
+  head: (url: string, options?: HttpMethodOptions) => doRequest<void>(config, { ...options, url, method: "HEAD", parseAs: "raw" }),
+  options: (url: string, options?: HttpMethodOptions) => doRequest<void>(config, { ...options, url, method: "OPTIONS", parseAs: "raw" }),
+})
 
 const HttpCompanion = {
   request,
@@ -135,6 +157,7 @@ const HttpCompanion = {
   delete: del,
   head,
   options: optionsMethod,
+  client,
 }
 
 export const Http = Companion({} as { readonly _tag: "Http" }, HttpCompanion)
