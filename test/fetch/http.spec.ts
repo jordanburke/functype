@@ -105,8 +105,6 @@ describe("Http", () => {
 
   describe("Error handling", () => {
     it("should return HttpStatusError for non-2xx status via run()", async () => {
-      const fetch = mockFetch({ status: 404, statusText: "Not Found", body: "not found" })
-      // Override the Response to have ok=false — we need a real non-ok response
       const mockFn = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
         new Response("not found", {
           status: 404,

@@ -164,6 +164,11 @@
       "types": "./dist/util/index.d.ts",
       "import": "./dist/util/index.js",
       "default": "./dist/util/index.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch/index.d.ts",
+      "import": "./dist/fetch/index.js",
+      "default": "./dist/fetch/index.js"
     }
   },
   "bin": {
