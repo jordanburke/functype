@@ -309,6 +309,41 @@ export const TYPES: Record<string, TypeData> = {
       check: [".isEmpty", ".size"],
     },
   },
+
+  Http: {
+    description:
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>> with typed errors and auto content-type detection",
+    interfaces: [],
+    methods: {
+      create: [
+        "Http.get<T>(url)",
+        "Http.post<T>(url, opts)",
+        "Http.put<T>(url, opts)",
+        "Http.patch<T>(url, opts)",
+        "Http.delete<T>(url, opts)",
+        "Http.request<T>(opts)",
+        "Http.client(config)",
+      ],
+      transform: [".map(f)", ".flatMap(f)", ".retry(n)", ".retryWithDelay(n, ms)", ".timeout(ms)"],
+      extract: [".run()", ".runOrThrow()", ".runOption()", ".runTry()"],
+      check: [],
+      other: [".catchTag(tag, handler)", ".catchAll(handler)", ".mapError(f)", ".recover(fallback)"],
+    },
+  },
+
+  HttpError: {
+    description: "Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError",
+    interfaces: [],
+    methods: {
+      create: [
+        "HttpError.networkError(url, method, cause)",
+        "HttpError.httpStatusError(url, method, status, statusText, body)",
+        "HttpError.decodeError(url, method, body, cause)",
+      ],
+      check: ["HttpError.isNetworkError(e)", "HttpError.isHttpStatusError(e)", "HttpError.isDecodeError(e)"],
+      other: ["HttpError.match(error, { NetworkError, HttpStatusError, DecodeError })"],
+    },
+  },
 }
 
 export const INTERFACES: Record<string, InterfaceData> = {
