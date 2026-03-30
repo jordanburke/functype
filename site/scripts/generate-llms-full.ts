@@ -18,6 +18,7 @@ const sections: Array<{ label: string; path: string }> = [
   { label: "List", path: resolve(siteDir, "src/content/list.md") },
   { label: "Task", path: resolve(siteDir, "src/content/task.md") },
   { label: "IO", path: resolve(siteDir, "src/content/io.md") },
+  { label: "Http", path: resolve(siteDir, "src/content/http.md") },
   { label: "Do-notation", path: resolve(siteDir, "src/content/do-notation.md") },
   { label: "Pattern Matching", path: resolve(siteDir, "src/content/match.md") },
 ]

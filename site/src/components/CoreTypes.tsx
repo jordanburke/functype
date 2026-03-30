@@ -37,6 +37,12 @@ export default function CoreTypes() {
       icon: "λ",
     },
     {
+      name: "Http",
+      href: "/http",
+      description: "Typed HTTP fetch wrapper with IO integration, auto content-type detection, and HttpError ADT",
+      icon: "↗",
+    },
+    {
       name: "Do-Notation",
       href: "/do-notation",
       description: "Scala-like for-comprehensions for monadic composition",
