@@ -35,9 +35,7 @@ describe("Http", () => {
     it("should POST with JSON body", async () => {
       const fetch = mockFetch({ status: 201, statusText: "Created", body: { id: 42 } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
-      const result = await http
-        .post<{ id: number }>("https://api.test/users", { body: { name: "Bob" } })
-        .runOrThrow()
+      const result = await http.post<{ id: number }>("https://api.test/users", { body: { name: "Bob" } }).runOrThrow()
 
       expect(result.data).toEqual({ id: 42 })
       expect(result.status).toBe(201)
@@ -185,7 +183,9 @@ describe("Http", () => {
       const http = Http.client({ fetch: mockFn as unknown as typeof globalThis.fetch })
       const result = await http
         .get<string>("https://api.test/missing")
-        .catchTag("HttpStatusError", (e) => IO.succeed({ data: "recovered", status: e.status, statusText: e.statusText, headers: new Headers() }))
+        .catchTag("HttpStatusError", (e) =>
+          IO.succeed({ data: "recovered", status: e.status, statusText: e.statusText, headers: new Headers() }),
+        )
         .runOrThrow()
 
       expect(result.data).toBe("recovered")

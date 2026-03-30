@@ -1,6 +1,6 @@
+export { Http } from "./Http"
 export type { HttpClientConfig } from "./HttpClient"
 export { HttpClient } from "./HttpClient"
-export { Http } from "./Http"
 export type { DecodeError, HttpError, HttpMethod, HttpStatusError, NetworkError } from "./HttpError"
 export { HttpError as HttpErrors } from "./HttpError"
 export type { HttpMethodOptions, HttpRequestOptions, HttpResponse, ParseMode } from "./HttpRequest"

@@ -144,8 +144,10 @@ const client = (config: HttpClientConfig): HttpMethods => ({
   put: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "PUT" }),
   patch: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "PATCH" }),
   delete: <T>(url: string, options?: HttpMethodOptions) => doRequest<T>(config, { ...options, url, method: "DELETE" }),
-  head: (url: string, options?: HttpMethodOptions) => doRequest<void>(config, { ...options, url, method: "HEAD", parseAs: "raw" }),
-  options: (url: string, options?: HttpMethodOptions) => doRequest<void>(config, { ...options, url, method: "OPTIONS", parseAs: "raw" }),
+  head: (url: string, options?: HttpMethodOptions) =>
+    doRequest<void>(config, { ...options, url, method: "HEAD", parseAs: "raw" }),
+  options: (url: string, options?: HttpMethodOptions) =>
+    doRequest<void>(config, { ...options, url, method: "OPTIONS", parseAs: "raw" }),
 })
 
 const HttpCompanion = {
