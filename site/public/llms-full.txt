@@ -818,33 +818,42 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
-import { Http, HttpClient } from "functype/fetch"
+import { Http } from "functype/fetch"
 
-// Simple requests — returns IO<never, HttpError, HttpResponse<T>>
-const users = Http.get<User[]>("/api/users")
-const created = Http.post<User>("/api/users", { body: { name: "Alice" } })
+// Without validator — data is unknown
+const effect = Http.get("/api/users") // IO<never, HttpError, HttpResponse<unknown>>
+
+// With validator — T inferred from validate return type (BYOV: bring your own validator)
+const users = Http.get("/api/users", {
+  validate: (data) => z.array(UserSchema).parse(data),
+}) // IO<never, HttpError, HttpResponse<User[]>>
+
+const created = Http.post("/api/users", {
+  body: { name: "Alice" },
+  validate: (data) => UserSchema.parse(data),
+}) // IO<never, HttpError, HttpResponse<User>>
 
 // Configured client
 const http = Http.client({
   baseUrl: "https://api.example.com",
   defaultHeaders: { Authorization: "Bearer token" },
 })
-const user = http.get<User>("/users/1")
+const user = http.get("/users/1", { validate: (data) => UserSchema.parse(data) })
 
 // Compose with IO
-Http.get<User[]>("/api/users")
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
   .map((res) => res.data.filter((u) => u.active))
   .retry(3)
   .timeout(5000)
 
 // Error handling
-Http.get<User>("/api/users/1")
+Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
   .catchTag("HttpStatusError", (e) => (e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e)))
   .catchTag("NetworkError", () => IO.succeed(cachedResponse))
 
 // Run
-await Http.get<User>("/api/users/1").runOrThrow() // HttpResponse<User>
-await Http.get<User>("/api/users/1").run() // Either<HttpError, HttpResponse<User>>
+await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).runOrThrow() // HttpResponse<User>
+await Http.get("/api/users/1").run() // Either<HttpError, HttpResponse<unknown>>
 ```
 
 ## Common Conversions
@@ -1182,14 +1191,20 @@ Map.empty<string, number>() // typed empty map
 ### Http Methods
 
 ```typescript
-// Http — typed fetch wrapper returning IO<never, HttpError, HttpResponse<T>>
-Http.get<T>(url, opts?)       // GET request
-Http.post<T>(url, opts?)      // POST request
-Http.put<T>(url, opts?)       // PUT request
-Http.patch<T>(url, opts?)     // PATCH request
-Http.delete<T>(url, opts?)    // DELETE request
-Http.request<T>(fullOpts)     // Full control
+// Http — fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default
+// Provide a validate function to get typed responses (BYOV: bring your own validator)
+Http.get(url, opts?)          // GET → HttpResponse<unknown>
+Http.get(url, { validate })   // GET → HttpResponse<T> (T inferred from validate)
+Http.post(url, opts?)         // POST with auto JSON body serialization
+Http.put(url, opts?)          // PUT
+Http.patch(url, opts?)        // PATCH
+Http.delete(url, opts?)       // DELETE
+Http.request(fullOpts)        // Full control
 Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch
+
+// Example with validator (works with Zod, TypeBox, Valibot, or manual validators)
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+Http.post("/api/users", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
 
 // HttpError — three-variant ADT
 HttpError.networkError(url, method, cause)
@@ -2334,13 +2349,15 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 # Http
 
-Typed HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<T>>` effects.
+HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<unknown>>` effects by default. Provide a `validate` function to get typed responses.
 
 ## Overview
 
 `Http` wraps the global `fetch` API with full IO integration:
 
-- Returns `IO<never, HttpError, HttpResponse<T>>` — every request is a lazy, composable effect
+- Returns `IO<never, HttpError, HttpResponse<unknown>>` by default — every request is a lazy, composable effect
+- **BYOV (Bring Your Own Validator)**: Pass a `validate: (data: unknown) => T` function to get `HttpResponse<T>`
+- Works with any validation library: Zod, TypeBox, Valibot, or manual validators
 - Three typed error variants: `NetworkError`, `HttpStatusError`, `DecodeError`
 - Zero dependencies — uses `globalThis.fetch` (browsers, Node 18+, Bun, Deno)
 - Auto content-type detection from response headers (JSON, text, raw)
@@ -2354,52 +2371,99 @@ Nothing runs until you call `.run()` or `.runOrThrow()`.
 ```typescript
 import { Http } from "functype/fetch"
 
-// GET request — infer response type with generic
-const effect = Http.get<User>("/api/users/1")
-const result = await effect.run() // Either<HttpError, HttpResponse<User>>
+// Without validator — data is unknown
+const effect = Http.get("/api/users/1")
+const result = await effect.run() // Either<HttpError, HttpResponse<unknown>>
+
+// With validator — T inferred from validate return type
+const typedEffect = Http.get("/api/users/1", {
+  validate: (data) => UserSchema.parse(data),
+})
+const typedResult = await typedEffect.run() // Either<HttpError, HttpResponse<User>>
 
 // POST with body — auto-serialized as JSON
-const create = Http.post<User>("/api/users", {
+const create = Http.post("/api/users", {
   body: { name: "Alice", email: "alice@example.com" },
+  validate: (data) => UserSchema.parse(data),
 })
 
 // PUT, PATCH, DELETE
-Http.put<User>("/api/users/1", { body: { name: "Alice Updated" } })
-Http.patch<User>("/api/users/1", { body: { name: "Alice" } })
-Http.delete<void>("/api/users/1")
+Http.put("/api/users/1", { body: { name: "Alice Updated" }, validate: (data) => UserSchema.parse(data) })
+Http.patch("/api/users/1", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
+Http.delete("/api/users/1")
 
 // HEAD and OPTIONS (return HttpResponse<void>)
 Http.head("/api/users")
 Http.options("/api/users")
 
 // Low-level request with full control
-Http.request<User>({
+Http.request({
   url: "/api/users/1",
   method: "GET",
   headers: { "X-Request-Id": "abc123" },
+  validate: (data) => UserSchema.parse(data),
+})
+```
+
+## Validation
+
+Without a `validate` function, response data is `unknown`. This is intentional — it prevents unsafe type casts and encourages runtime validation.
+
+```typescript
+// Without validate — data is unknown, you must narrow it yourself
+const effect = Http.get("/api/users")
+// effect: IO<never, HttpError, HttpResponse<unknown>>
+
+// With validate — T is inferred from the validator's return type
+const typedEffect = Http.get("/api/users", {
+  validate: (data) => z.array(UserSchema).parse(data),
+})
+// typedEffect: IO<never, HttpError, HttpResponse<User[]>>
+```
+
+### Using Different Validators
+
+```typescript
+// Zod
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+
+// TypeBox
+Http.get("/api/users", { validate: (data) => Value.Decode(UserSchema, data) })
+
+// Valibot
+Http.get("/api/users", { validate: (data) => parse(UserSchema, data) })
+
+// Manual validation
+Http.get("/api/users", {
+  validate: (data) => {
+    if (!Array.isArray(data)) throw new Error("Expected array")
+    return data as User[]
+  },
 })
 ```
 
 ## HttpResponse\<T\>
 
-Every successful request resolves to `HttpResponse<T>`:
+Every successful request resolves to `HttpResponse<T>` (where `T` is `unknown` without a validator):
 
 ```typescript
 type HttpResponse<T> = {
-  readonly data: T // Parsed response body
+  readonly data: T // Parsed response body (unknown without validate)
   readonly status: number // HTTP status code (e.g. 200)
   readonly statusText: string // HTTP status text (e.g. "OK")
   readonly headers: Headers // Response headers (standard Web API)
 }
 
-// Accessing response fields
-const effect = Http.get<User[]>("/api/users")
+// Accessing response fields with a validator
+const effect = Http.get("/api/users", {
+  validate: (data) => z.array(UserSchema).parse(data),
+})
 const either = await effect.run()
 
 if (either._tag === "Right") {
   const { data, status, headers } = either.value
   console.log(status) // 200
-  console.log(data[0].name) // "Alice"
+  console.log(data[0].name) // "Alice" — data is User[], not unknown
   console.log(headers.get("x-total-count"))
 }
 ```
@@ -2439,7 +2503,7 @@ type DecodeError = {
 ```typescript
 import { Http, HttpError } from "functype/fetch"
 
-const effect = Http.get<User>("/api/users/1")
+const effect = Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
 
 const result = await effect
   .mapError((err) =>
@@ -2456,14 +2520,14 @@ const result = await effect
 
 ```typescript
 // Recover from 404 with a default value
-const user = Http.get<User>("/api/users/99").catchTag("HttpStatusError", (e) =>
+const user = Http.get("/api/users/99", { validate: (data) => UserSchema.parse(data) }).catchTag("HttpStatusError", (e) =>
   e.status === 404
     ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
     : IO.fail(e),
 )
 
 // Handle network errors separately
-const resilient = Http.get<Data>("/api/data").catchTag("NetworkError", () => Http.get<Data>("/api/data/fallback"))
+const resilient = Http.get("/api/data").catchTag("NetworkError", () => Http.get("/api/data/fallback"))
 ```
 
 ### Type Guards
@@ -2471,7 +2535,7 @@ const resilient = Http.get<Data>("/api/data").catchTag("NetworkError", () => Htt
 ```typescript
 import { HttpError } from "functype/fetch"
 
-const either = await Http.get<User>("/api/users/1").run()
+const either = await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).run()
 
 if (either._tag === "Left") {
   const err = either.value
@@ -2502,11 +2566,11 @@ const api = Http.client({
 })
 
 // Paths are resolved relative to baseUrl
-const users = api.get<User[]>("/users") // → https://api.example.com/v1/users
-const user = api.get<User>("/users/1") // → https://api.example.com/v1/users/1
+const users = api.get("/users", { validate: (data) => z.array(UserSchema).parse(data) }) // → https://api.example.com/v1/users
+const user = api.get("/users/1", { validate: (data) => UserSchema.parse(data) }) // → https://api.example.com/v1/users/1
 
 // Absolute URLs bypass baseUrl
-const ext = api.get<Data>("https://other.com/data") // → https://other.com/data
+const ext = api.get("https://other.com/data") // → https://other.com/data (data is unknown)
 
 // Custom fetch for testing or proxying
 const testApi = Http.client({
@@ -2543,16 +2607,16 @@ Override auto-detection with the `parseAs` option:
 type ParseMode = "json" | "text" | "blob" | "arrayBuffer" | "raw"
 
 // Force JSON parsing regardless of Content-Type header
-Http.get<Config>("/api/config", { parseAs: "json" })
+Http.get("/api/config", { parseAs: "json", validate: (data) => ConfigSchema.parse(data) })
 
 // Get raw Blob for file downloads
-Http.get<Blob>("/api/export/report.pdf", { parseAs: "blob" })
+Http.get("/api/export/report.pdf", { parseAs: "blob" })
 
 // Get ArrayBuffer for binary data
-Http.get<ArrayBuffer>("/api/binary", { parseAs: "arrayBuffer" })
+Http.get("/api/binary", { parseAs: "arrayBuffer" })
 
 // Get the raw Response object
-Http.get<Response>("/api/stream", { parseAs: "raw" })
+Http.get("/api/stream", { parseAs: "raw" })
 ```
 
 ## IO Composition
@@ -2563,27 +2627,32 @@ Because `Http` returns `IO` effects, the full IO operator set is available:
 import { Http } from "functype/fetch"
 
 // Retry on failure
-Http.get<Data>("/api/data").retry(3)
+Http.get("/api/data").retry(3)
 
 // Retry with delay between attempts (ms)
-Http.get<Data>("/api/data").retryWithDelay(3, 1000)
+Http.get("/api/data").retryWithDelay(3, 1000)
 
 // Timeout after N milliseconds
-Http.get<Data>("/api/data").timeout(5000)
+Http.get("/api/data").timeout(5000)
 
-// Transform the response data
-Http.get<User>("/api/users/1").map((res) => res.data.name)
+// Transform the response data (with validator for typed access)
+Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).map((res) => res.data.name)
 
 // Chain requests — use result of first to drive second
-Http.get<User>("/api/users/1").flatMap((res) => Http.get<Post[]>(`/api/users/${res.data.id}/posts`))
+Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).flatMap((res) =>
+  Http.get(`/api/users/${res.data.id}/posts`, { validate: (data) => z.array(PostSchema).parse(data) }),
+)
 
 // Parallel requests
 import { IO } from "functype/io"
 
-const [users, posts] = await IO.all([Http.get<User[]>("/api/users"), Http.get<Post[]>("/api/posts")]).run()
+const [users, posts] = await IO.all([
+  Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) }),
+  Http.get("/api/posts", { validate: (data) => z.array(PostSchema).parse(data) }),
+]).run()
 
 // Map over errors
-Http.get<Data>("/api/data").mapError((err) => new AppError(err))
+Http.get("/api/data").mapError((err) => new AppError(err))
 ```
 
 ## Body Serialization
@@ -2599,19 +2668,21 @@ Request bodies are serialized based on their JavaScript type:
 
 ```typescript
 // Object body → JSON serialized automatically
-Http.post<Order>("/api/orders", {
+Http.post("/api/orders", {
   body: { productId: 42, quantity: 3 },
+  validate: (data) => OrderSchema.parse(data),
   // Content-Type: application/json is added automatically
 })
 
 // String body → sent as-is, no Content-Type added
-Http.post<Result>("/api/graphql", {
+Http.post("/api/graphql", {
   body: '{"query":"{ users { id name } }"}',
   headers: { "Content-Type": "application/json" },
+  validate: (data) => GraphQLResultSchema.parse(data),
 })
 
 // FormData or URLSearchParams — pass as string or handle manually
-Http.post<Result>("/api/form", {
+Http.post("/api/form", {
   body: new URLSearchParams({ key: "value" }).toString(),
   headers: { "Content-Type": "application/x-www-form-urlencoded" },
 })
