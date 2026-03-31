@@ -4,19 +4,19 @@ This document provides a comprehensive index of all types and data structures in
 
 ## Core Data Structures
 
-| Data Structure | Description                                          | Import Path          |
-| -------------- | ---------------------------------------------------- | -------------------- |
-| `Option<T>`    | Represents a value that may or may not exist         | `functype/option`    |
-| `Either<L, R>` | Represents a value of one of two possible types      | `functype/either`    |
-| `Try<T>`       | Represents a computation that might throw            | `functype/try`       |
-| `List<T>`      | Immutable list collection                            | `functype/list`      |
-| `Map<K, V>`    | Immutable key-value map                              | `functype/map`       |
-| `Set<T>`       | Immutable set collection                             | `functype/set`       |
-| `Tuple<...T>`  | Type-safe fixed-length array                         | `functype/tuple`     |
-| `Task<T, E>`   | Represents sync/async operations with error handling | `functype/core/task` |
-| `Brand<T, B>`  | Nominal typing for TypeScript                        | `functype/branded`   |
-| `Identity<T>`  | Identity monad                                       | `functype/identity`  |
-| `Stack<T>`     | Immutable stack collection                           | `functype/stack`     |
+| Data Structure | Description                                                                                             | Import Path          |
+| -------------- | ------------------------------------------------------------------------------------------------------- | -------------------- |
+| `Option<T>`    | Represents a value that may or may not exist                                                            | `functype/option`    |
+| `Either<L, R>` | Represents a value of one of two possible types                                                         | `functype/either`    |
+| `Try<T>`       | Represents a computation that might throw                                                               | `functype/try`       |
+| `List<T>`      | Immutable list collection                                                                               | `functype/list`      |
+| `Map<K, V>`    | Immutable key-value map                                                                                 | `functype/map`       |
+| `Set<T>`       | Immutable set collection                                                                                | `functype/set`       |
+| `Tuple<...T>`  | Type-safe fixed-length array                                                                            | `functype/tuple`     |
+| `Task<T, E>`   | Represents sync/async operations with error handling                                                    | `functype/core/task` |
+| `Brand<T, B>`  | Nominal typing for TypeScript                                                                           | `functype/branded`   |
+| `Identity<T>`  | Identity monad                                                                                          | `functype/identity`  |
+| `Stack<T>`     | Immutable stack collection                                                                              | `functype/stack`     |
 | `Http`         | HTTP fetch wrapper returning IO effects (unknown data by default, provide validate for typed responses) | `functype/fetch`     |
 
 ## Type Class Implementations

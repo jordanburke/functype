@@ -2520,10 +2520,12 @@ const result = await effect
 
 ```typescript
 // Recover from 404 with a default value
-const user = Http.get("/api/users/99", { validate: (data) => UserSchema.parse(data) }).catchTag("HttpStatusError", (e) =>
-  e.status === 404
-    ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
-    : IO.fail(e),
+const user = Http.get("/api/users/99", { validate: (data) => UserSchema.parse(data) }).catchTag(
+  "HttpStatusError",
+  (e) =>
+    e.status === 404
+      ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
+      : IO.fail(e),
 )
 
 // Handle network errors separately
