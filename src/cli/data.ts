@@ -402,6 +402,6 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Task"],
+  Effect: ["IO", "Task", "Http", "HttpError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
 }
