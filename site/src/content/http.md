@@ -52,10 +52,10 @@ Every successful request resolves to `HttpResponse<T>`:
 
 ```typescript
 type HttpResponse<T> = {
-  readonly data: T        // Parsed response body
+  readonly data: T // Parsed response body
   readonly status: number // HTTP status code (e.g. 200)
   readonly statusText: string // HTTP status text (e.g. "OK")
-  readonly headers: Headers   // Response headers (standard Web API)
+  readonly headers: Headers // Response headers (standard Web API)
 }
 
 // Accessing response fields
@@ -64,8 +64,8 @@ const either = await effect.run()
 
 if (either._tag === "Right") {
   const { data, status, headers } = either.value
-  console.log(status)            // 200
-  console.log(data[0].name)      // "Alice"
+  console.log(status) // 200
+  console.log(data[0].name) // "Alice"
   console.log(headers.get("x-total-count"))
 }
 ```
@@ -79,23 +79,23 @@ type NetworkError = {
   _tag: "NetworkError"
   url: string
   method: HttpMethod
-  cause: unknown          // The underlying fetch error
+  cause: unknown // The underlying fetch error
 }
 
 type HttpStatusError = {
   _tag: "HttpStatusError"
   url: string
   method: HttpMethod
-  status: number          // e.g. 404, 500
+  status: number // e.g. 404, 500
   statusText: string
-  body: string            // Raw response body text
+  body: string // Raw response body text
 }
 
 type DecodeError = {
   _tag: "DecodeError"
   url: string
   method: HttpMethod
-  body: string            // The text that failed to parse
+  body: string // The text that failed to parse
   cause: unknown
 }
 ```
@@ -122,17 +122,14 @@ const result = await effect
 
 ```typescript
 // Recover from 404 with a default value
-const user = Http.get<User>("/api/users/99")
-  .catchTag("HttpStatusError", (e) =>
-    e.status === 404
-      ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
-      : IO.fail(e),
-  )
+const user = Http.get<User>("/api/users/99").catchTag("HttpStatusError", (e) =>
+  e.status === 404
+    ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
+    : IO.fail(e),
+)
 
 // Handle network errors separately
-const resilient = Http.get<Data>("/api/data").catchTag("NetworkError", () =>
-  Http.get<Data>("/api/data/fallback"),
-)
+const resilient = Http.get<Data>("/api/data").catchTag("NetworkError", () => Http.get<Data>("/api/data/fallback"))
 ```
 
 ### Type Guards
@@ -148,9 +145,9 @@ if (either._tag === "Left") {
   if (HttpError.isHttpStatusError(err)) {
     console.log(err.status, err.body) // typed as HttpStatusError
   } else if (HttpError.isNetworkError(err)) {
-    console.log(err.cause)            // typed as NetworkError
+    console.log(err.cause) // typed as NetworkError
   } else if (HttpError.isDecodeError(err)) {
-    console.log(err.body)             // typed as DecodeError
+    console.log(err.body) // typed as DecodeError
   }
 }
 ```
@@ -171,8 +168,8 @@ const api = Http.client({
 })
 
 // Paths are resolved relative to baseUrl
-const users = api.get<User[]>("/users")           // → https://api.example.com/v1/users
-const user  = api.get<User>("/users/1")           // → https://api.example.com/v1/users/1
+const users = api.get<User[]>("/users") // → https://api.example.com/v1/users
+const user = api.get<User>("/users/1") // → https://api.example.com/v1/users/1
 
 // Absolute URLs bypass baseUrl
 const ext = api.get<Data>("https://other.com/data") // → https://other.com/data
@@ -188,9 +185,9 @@ const testApi = Http.client({
 
 ```typescript
 interface HttpClientConfig {
-  readonly baseUrl?: string                    // Base URL prepended to relative paths
+  readonly baseUrl?: string // Base URL prepended to relative paths
   readonly defaultHeaders?: Record<string, string> // Merged with per-request headers
-  readonly fetch?: typeof globalThis.fetch     // Override the fetch implementation
+  readonly fetch?: typeof globalThis.fetch // Override the fetch implementation
 }
 ```
 
@@ -200,11 +197,11 @@ Per-request headers always override `defaultHeaders` when keys conflict.
 
 Response bodies are parsed based on the `Content-Type` response header:
 
-| Content-Type             | Parse Mode    | Result type       |
-| ------------------------ | ------------- | ----------------- |
-| `application/json`       | `json`        | Parsed JS object  |
-| `text/*` (any text type) | `text`        | `string`          |
-| Anything else            | `raw`         | `Response` object |
+| Content-Type             | Parse Mode | Result type       |
+| ------------------------ | ---------- | ----------------- |
+| `application/json`       | `json`     | Parsed JS object  |
+| `text/*` (any text type) | `text`     | `string`          |
+| Anything else            | `raw`      | `Response` object |
 
 Override auto-detection with the `parseAs` option:
 
@@ -244,17 +241,12 @@ Http.get<Data>("/api/data").timeout(5000)
 Http.get<User>("/api/users/1").map((res) => res.data.name)
 
 // Chain requests — use result of first to drive second
-Http.get<User>("/api/users/1").flatMap((res) =>
-  Http.get<Post[]>(`/api/users/${res.data.id}/posts`),
-)
+Http.get<User>("/api/users/1").flatMap((res) => Http.get<Post[]>(`/api/users/${res.data.id}/posts`))
 
 // Parallel requests
 import { IO } from "functype/io"
 
-const [users, posts] = await IO.all([
-  Http.get<User[]>("/api/users"),
-  Http.get<Post[]>("/api/posts"),
-]).run()
+const [users, posts] = await IO.all([Http.get<User[]>("/api/users"), Http.get<Post[]>("/api/posts")]).run()
 
 // Map over errors
 Http.get<Data>("/api/data").mapError((err) => new AppError(err))
@@ -264,12 +256,12 @@ Http.get<Data>("/api/data").mapError((err) => new AppError(err))
 
 Request bodies are serialized based on their JavaScript type:
 
-| Body value          | Serialized as        | Content-Type header added |
-| ------------------- | -------------------- | ------------------------- |
-| `undefined` / `null`| No body sent         | None                      |
-| `string`            | Passed through as-is | None (set manually if needed) |
-| Object or Array     | `JSON.stringify()`   | `application/json`        |
-| Other primitives    | `String(value)`      | None                      |
+| Body value           | Serialized as        | Content-Type header added     |
+| -------------------- | -------------------- | ----------------------------- |
+| `undefined` / `null` | No body sent         | None                          |
+| `string`             | Passed through as-is | None (set manually if needed) |
+| Object or Array      | `JSON.stringify()`   | `application/json`            |
+| Other primitives     | `String(value)`      | None                          |
 
 ```typescript
 // Object body → JSON serialized automatically
