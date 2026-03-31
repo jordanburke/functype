@@ -17,7 +17,7 @@ This document provides a comprehensive index of all types and data structures in
 | `Brand<T, B>`  | Nominal typing for TypeScript                        | `functype/branded`   |
 | `Identity<T>`  | Identity monad                                       | `functype/identity`  |
 | `Stack<T>`     | Immutable stack collection                           | `functype/stack`     |
-| `Http`         | Typed HTTP fetch wrapper returning IO effects        | `functype/fetch`     |
+| `Http`         | HTTP fetch wrapper returning IO effects (unknown data by default, provide validate for typed responses) | `functype/fetch`     |
 
 ## Type Class Implementations
 

@@ -408,33 +408,42 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
-import { Http, HttpClient } from "functype/fetch"
+import { Http } from "functype/fetch"
 
-// Simple requests — returns IO<never, HttpError, HttpResponse<T>>
-const users = Http.get<User[]>("/api/users")
-const created = Http.post<User>("/api/users", { body: { name: "Alice" } })
+// Without validator — data is unknown
+const effect = Http.get("/api/users") // IO<never, HttpError, HttpResponse<unknown>>
+
+// With validator — T inferred from validate return type (BYOV: bring your own validator)
+const users = Http.get("/api/users", {
+  validate: (data) => z.array(UserSchema).parse(data),
+}) // IO<never, HttpError, HttpResponse<User[]>>
+
+const created = Http.post("/api/users", {
+  body: { name: "Alice" },
+  validate: (data) => UserSchema.parse(data),
+}) // IO<never, HttpError, HttpResponse<User>>
 
 // Configured client
 const http = Http.client({
   baseUrl: "https://api.example.com",
   defaultHeaders: { Authorization: "Bearer token" },
 })
-const user = http.get<User>("/users/1")
+const user = http.get("/users/1", { validate: (data) => UserSchema.parse(data) })
 
 // Compose with IO
-Http.get<User[]>("/api/users")
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
   .map((res) => res.data.filter((u) => u.active))
   .retry(3)
   .timeout(5000)
 
 // Error handling
-Http.get<User>("/api/users/1")
+Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
   .catchTag("HttpStatusError", (e) => (e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e)))
   .catchTag("NetworkError", () => IO.succeed(cachedResponse))
 
 // Run
-await Http.get<User>("/api/users/1").runOrThrow() // HttpResponse<User>
-await Http.get<User>("/api/users/1").run() // Either<HttpError, HttpResponse<User>>
+await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).runOrThrow() // HttpResponse<User>
+await Http.get("/api/users/1").run() // Either<HttpError, HttpResponse<unknown>>
 ```
 
 ## Common Conversions

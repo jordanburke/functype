@@ -312,16 +312,16 @@ export const TYPES: Record<string, TypeData> = {
 
   Http: {
     description:
-      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>> with typed errors and auto content-type detection",
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default. Provide a validate function to get typed responses (BYOV: bring your own validator). Works with Zod, TypeBox, Valibot, or manual validators.",
     interfaces: [],
     methods: {
       create: [
-        "Http.get<T>(url)",
-        "Http.post<T>(url, opts)",
-        "Http.put<T>(url, opts)",
-        "Http.patch<T>(url, opts)",
-        "Http.delete<T>(url, opts)",
-        "Http.request<T>(opts)",
+        "Http.get(url, { validate }?)",
+        "Http.post(url, { body, validate }?)",
+        "Http.put(url, { body, validate }?)",
+        "Http.patch(url, { body, validate }?)",
+        "Http.delete(url, { validate }?)",
+        "Http.request({ url, validate })",
         "Http.client(config)",
       ],
       transform: [".map(f)", ".flatMap(f)", ".retry(n)", ".retryWithDelay(n, ms)", ".timeout(ms)"],

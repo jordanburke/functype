@@ -19,7 +19,7 @@ Quick lookup guide for common functype operations.
 | Tuple    | `Tuple(...values)`                                              | `Tuple(42, "hello")`, `Tuple(1, 2, 3)`                                |
 | Stack    | `Stack.of()`, `Stack.empty()`                                   | `Stack.of(1, 2, 3)`, `Stack.empty<number>()`                          |
 | LazyList | `LazyList(array)`, `.of()`, `.empty()`                          | `LazyList([1, 2])`, `LazyList.of(1, 2, 3)`                            |
-| Http     | `Http.get<T>(url)`, `.post()`, `.client(config)`                | `Http.get<User>("/api/users/1")`, `Http.client({ baseUrl })`          |
+| Http     | `Http.get(url, { validate }?)`, `.post()`, `.client(config)`    | `Http.get("/api/users", { validate: (d) => schema.parse(d) })`, `Http.client({ baseUrl })` |
 
 **Note**: Collections support multiple creation styles:
 

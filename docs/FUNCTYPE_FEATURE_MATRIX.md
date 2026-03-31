@@ -96,14 +96,20 @@ Map.empty<string, number>() // typed empty map
 ### Http Methods
 
 ```typescript
-// Http — typed fetch wrapper returning IO<never, HttpError, HttpResponse<T>>
-Http.get<T>(url, opts?)       // GET request
-Http.post<T>(url, opts?)      // POST request
-Http.put<T>(url, opts?)       // PUT request
-Http.patch<T>(url, opts?)     // PATCH request
-Http.delete<T>(url, opts?)    // DELETE request
-Http.request<T>(fullOpts)     // Full control
+// Http — fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default
+// Provide a validate function to get typed responses (BYOV: bring your own validator)
+Http.get(url, opts?)          // GET → HttpResponse<unknown>
+Http.get(url, { validate })   // GET → HttpResponse<T> (T inferred from validate)
+Http.post(url, opts?)         // POST with auto JSON body serialization
+Http.put(url, opts?)          // PUT
+Http.patch(url, opts?)        // PATCH
+Http.delete(url, opts?)       // DELETE
+Http.request(fullOpts)        // Full control
 Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch
+
+// Example with validator (works with Zod, TypeBox, Valibot, or manual validators)
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+Http.post("/api/users", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
 
 // HttpError — three-variant ADT
 HttpError.networkError(url, method, cause)

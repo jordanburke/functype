@@ -241,17 +241,20 @@ await effect.run()           // execute async
 effect.runSync()             // execute sync
 await effect.runEither()     // execute → Either<E,A>
 
-// Http - typed fetch wrapper
-Http.get<T>(url, opts?)           // GET → IO<never, HttpError, HttpResponse<T>>
-Http.post<T>(url, opts?)          // POST with auto JSON body serialization
-Http.put<T>(url, opts?)           // PUT
-Http.patch<T>(url, opts?)         // PATCH
-Http.delete<T>(url, opts?)        // DELETE
-Http.request<T>(fullOpts)         // Full control (url, method, headers, body, parseAs)
+// Http - typed fetch wrapper (BYOV: bring your own validator)
+Http.get(url, opts?)              // GET → IO<never, HttpError, HttpResponse<unknown>>
+Http.get(url, { validate })       // GET → IO<never, HttpError, HttpResponse<T>> (T from validate)
+Http.post(url, { body, validate })// POST with auto JSON body serialization
+Http.put(url, { body, validate }) // PUT
+Http.patch(url, { body, validate })// PATCH
+Http.delete(url, opts?)           // DELETE
+Http.request({ url, validate })   // Full control (url, method, headers, body, parseAs, validate)
 Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch
+// Without validate, response data is unknown. Provide validate: (data: unknown) => T for typed data.
+// Works with Zod, TypeBox, Valibot, or manual validators.
 // HttpError ADT: NetworkError | HttpStatusError | DecodeError
 // Use .catchTag("HttpStatusError", e => ...) for selective error recovery
-// Compose: Http.get(url).map(r => r.data).retry(3).timeout(5000)
+// Compose: Http.get(url, { validate }).map(r => r.data).retry(3).timeout(5000)
 await effect.runOrThrow()         // HttpResponse<T> with data, status, headers
 ```
 
