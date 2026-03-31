@@ -423,19 +423,18 @@ const user = http.get<User>("/users/1")
 
 // Compose with IO
 Http.get<User[]>("/api/users")
-  .map(res => res.data.filter(u => u.active))
+  .map((res) => res.data.filter((u) => u.active))
   .retry(3)
   .timeout(5000)
 
 // Error handling
 Http.get<User>("/api/users/1")
-  .catchTag("HttpStatusError", e =>
-    e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e))
+  .catchTag("HttpStatusError", (e) => (e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e)))
   .catchTag("NetworkError", () => IO.succeed(cachedResponse))
 
 // Run
-await Http.get<User>("/api/users/1").runOrThrow()  // HttpResponse<User>
-await Http.get<User>("/api/users/1").run()          // Either<HttpError, HttpResponse<User>>
+await Http.get<User>("/api/users/1").runOrThrow() // HttpResponse<User>
+await Http.get<User>("/api/users/1").run() // Either<HttpError, HttpResponse<User>>
 ```
 
 ## Common Conversions
