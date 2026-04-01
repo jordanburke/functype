@@ -4,93 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a TypeScript library template designed to be cloned/forked for creating new npm packages. It uses the `ts-builds` toolchain for standardized build scripts with ESM output.
+IO-native logging for the functype ecosystem. Wraps LogLayer with functype's Tag/Layer dependency injection system. Each log method returns `IO<never, never, void>` — logging is lazy, composable, and testable.
 
-**Template Usage**: See STANDARDIZATION_GUIDE.md for applying this pattern to other TypeScript projects.
+**Dependencies**: `functype` (peer, >=0.54.0), `loglayer` (runtime)
 
 ## Development Commands
 
-All commands delegate to `ts-builds` for consistency across projects:
-
 ```bash
-pnpm validate        # Main command: format + lint + test + build (use before commits)
-
-pnpm format          # Format code with Prettier
-pnpm format:check    # Check formatting only
-
-pnpm lint            # Fix ESLint issues
-pnpm lint:check      # Check ESLint issues only
-
-pnpm test            # Run tests once
-pnpm test:watch      # Run tests in watch mode
-pnpm test:coverage   # Run tests with coverage
-
+pnpm validate        # Main: format + lint + test + build (before commits)
+pnpm test            # Run tests
+pnpm typecheck       # TypeScript type check
 pnpm build           # Production build (outputs to dist/)
-pnpm dev             # Development build with watch mode
-
-pnpm typecheck       # Check TypeScript types
-```
-
-### Running a Single Test
-
-```bash
-pnpm test -- --testNamePattern="pattern"    # Filter by test name
-pnpm test -- test/specific.spec.ts          # Run specific file
+pnpm dev             # Dev build with watch mode
 ```
 
 ## Architecture
 
-### Build System: ts-builds + tsdown
+### Module Structure
 
-- **ts-builds**: Centralized toolchain package providing all build scripts
-- **tsdown**: Underlying bundler configured via `ts-builds/tsdown`
-- **Configuration**: `tsdown.config.ts` imports default config from ts-builds
-- **TypeScript**: `tsconfig.json` extends `ts-builds/tsconfig`
-- **Prettier**: Uses `ts-builds/prettier` shared config
-
-### Output Format
-
-- **dist/**: Production builds containing:
-  - `index.js` - ES module format
-  - `index.d.ts` - TypeScript declarations
-- **lib/**: Development builds (also published)
-
-### Package Exports
-
-```json
-{
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
-    }
-  }
-}
+```
+src/
+  logger/       # Logger interface, Tag, LogLevel, LogMetadata, LogEntry types
+  adapter/      # LogLayerAdapter: ILogLayer → Logger bridge (internal)
+  layers/       # LoggerLive factory: console(), silent(), fromLogLayer()
+  testing/      # TestLogger: captures entries as List<LogEntry>
+  middleware/   # withLogging, tapLog utilities
 ```
 
-### Testing: Vitest
+### Key Pattern: Logger as IO Service
 
-- Tests located in `test/*.spec.ts`
-- Uses Vitest with configuration from ts-builds
-- Coverage via v8 provider
+```typescript
+import { IO } from "functype"
+import { Logger, LoggerLive } from "functype-log"
 
-## Key Files
+const program = IO.service(Logger)
+  .flatMap(log => log.info("hello"))
 
-- `src/index.ts` - Main library entry point
-- `test/*.spec.ts` - Test files
-- `tsdown.config.ts` - Build config (imports from ts-builds)
-- `tsconfig.json` - TypeScript config (extends ts-builds)
-- `.claude/skills/ts-builds-template/` - Claude Code skill for bootstrapping libraries from this template
-
-## Publishing
-
-```bash
-npm version patch|minor|major
-npm publish --access public
+await program.provideLayer(LoggerLive.console()).runOrThrow()
 ```
 
-The `prepublishOnly` hook automatically runs `pnpm validate` before publishing.
+### LogLayer is an Implementation Detail
+
+Users interact with the `Logger` interface and `LoggerLive` layers. LogLayer is only visible through `LoggerLive.fromLogLayer()` for advanced transport configuration (pino, winston, datadog, etc.).
+
+### Import Convention
+
+All functype imports use the barrel export (`"functype"`, not subpaths) per functype-os convention.
+
+## Key Types
+
+- `Logger` — Interface + Tag (declaration merging). Methods return `IO<never, never, void>`
+- `LoggerLive` — Layer constructors: `.console()`, `.silent()`, `.fromLogLayer()`
+- `TestLoggerHandle` — `{ logger, entries(), clear(), hasEntry() }`
+- `LogEntry` — `{ level, message, metadata?, error?, timestamp }`
+
+## Testing
+
+Tests use `createTestLogger()` which provides a `Logger` that captures entries in memory:
+
+```typescript
+const { logger, entries, hasEntry } = createTestLogger()
+await logger.info("test").runOrThrow()
+expect(hasEntry("info", "test")).toBe(true)
+```
