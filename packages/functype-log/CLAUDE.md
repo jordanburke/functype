@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 IO-native logging for the functype ecosystem. Wraps LogLayer with functype's Tag/Layer dependency injection system. Each log method returns `IO<never, never, void>` — logging is lazy, composable, and testable.
 
-**Dependencies**: `functype` (peer, >=0.54.0), `loglayer` (runtime)
+**Dependencies**: `functype` (peer, >=0.55.0), `loglayer` (runtime)
 
 ## Development Commands
 
