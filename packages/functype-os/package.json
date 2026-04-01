@@ -33,7 +33,7 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": ">=0.51.0"
+    "functype": ">=0.54.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
