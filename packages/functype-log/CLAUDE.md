@@ -37,8 +37,7 @@ src/
 import { IO } from "functype"
 import { Logger, LoggerLive } from "functype-log"
 
-const program = IO.service(Logger)
-  .flatMap(log => log.info("hello"))
+const program = IO.service(Logger).flatMap((log) => log.info("hello"))
 
 await program.provideLayer(LoggerLive.console()).runOrThrow()
 ```

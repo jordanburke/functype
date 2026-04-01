@@ -33,14 +33,14 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": ">=0.54.0"
+    "functype": ">=0.55.0"
   },
   "dependencies": {
     "loglayer": "^9.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
-    "functype": "^0.54.0",
+    "functype": "^0.55.0",
     "ts-builds": "^2.6.3",
     "tsdown": "^0.21.7"
   },
