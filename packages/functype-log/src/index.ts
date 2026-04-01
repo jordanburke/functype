@@ -1,5 +1,17 @@
-export const helloWorld = () => {
-  const helloWorld = "Hello World!"
-  console.log(helloWorld)
-  return "Hello World!"
-}
+// Logger interface + Tag
+export type { LogEntry, LogLevel, LogMetadata } from "./logger"
+export { Logger } from "./logger"
+
+// Layer constructors
+export type { ConsoleLoggerOptions } from "./layers"
+export { createConsoleLogger, LoggerLive, silentLogger } from "./layers"
+
+// Adapter (for advanced use — creating Logger from ILogLayer directly)
+export { logLayerAdapter } from "./adapter"
+
+// Testing utilities
+export type { TestLoggerHandle } from "./testing"
+export { createTestLogger } from "./testing"
+
+// Middleware
+export { tapLog, withLogging } from "./middleware"

@@ -1,3 +1,3 @@
-import baseConfig from "ts-builds/eslint"
+import baseConfig from "ts-builds/eslint-functype"
 
 export default [...baseConfig]

@@ -1,19 +1,22 @@
 {
-  "name": "ts-builds-template",
-  "version": "1.0.0",
-  "description": "A basic template for creating a TypeScript Builds and Publishing it to NPM.",
+  "name": "functype-log",
+  "version": "0.1.0",
+  "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
   "keywords": [
-    "typescript",
-    "template",
-    "tsdown",
-    "npm"
+    "functype",
+    "functional",
+    "logging",
+    "loglayer",
+    "io",
+    "dependency-injection",
+    "typescript"
   ],
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
-  "homepage": "https://github.com/jordanburke/ts-builds-template",
+  "homepage": "https://github.com/jordanburke/functype-log",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jordanburke/ts-builds-template"
+    "url": "https://github.com/jordanburke/functype-log"
   },
   "scripts": {
     "validate": "ts-builds validate",
@@ -29,8 +32,15 @@
     "dev": "ts-builds dev",
     "prepublishOnly": "pnpm validate"
   },
+  "peerDependencies": {
+    "functype": ">=0.54.0"
+  },
+  "dependencies": {
+    "loglayer": "^9.1.0"
+  },
   "devDependencies": {
     "@types/node": "^24.12.0",
+    "functype": "^0.54.0",
     "ts-builds": "^2.6.3",
     "tsdown": "^0.21.7"
   },
@@ -43,6 +53,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./logger": {
+      "types": "./dist/logger/index.d.ts",
+      "import": "./dist/logger/index.js",
+      "default": "./dist/logger/index.js"
+    },
+    "./layers": {
+      "types": "./dist/layers/index.d.ts",
+      "import": "./dist/layers/index.js",
+      "default": "./dist/layers/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware/index.d.ts",
+      "import": "./dist/middleware/index.js",
+      "default": "./dist/middleware/index.js"
     }
   },
   "files": [
@@ -50,5 +80,8 @@
     "dist"
   ],
   "prettier": "ts-builds/prettier",
-  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "engines": {
+    "node": ">=18.17.0"
+  }
 }
