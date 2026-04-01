@@ -870,8 +870,7 @@ describe("IO", () => {
 
   describe("IO.gen", () => {
     it("should support generator do-notation", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const program = IO.gen(function* (): Generator<any, number, any> {
+      const program = IO.gen(function* () {
         const a = yield* IO.succeed(1)
         const b = yield* IO.succeed(2)
         return a + b
@@ -881,14 +880,37 @@ describe("IO", () => {
     })
 
     it("should short-circuit on failure", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const program = IO.gen(function* (): Generator<any, number, any> {
+      const program = IO.gen(function* () {
         const a = yield* IO.succeed(1)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        yield* IO.fail(new Error("oops")) as any
+        yield* IO.fail(new Error("oops"))
         return a + 1 // Should not reach here
       })
       await expect(program.runOrThrow()).rejects.toThrow("oops")
+    })
+
+    it("should work with IO<never, never, void> without explicit generator annotation", async () => {
+      interface Logger {
+        info: (msg: string) => IO<never, never, void>
+      }
+      const LoggerTag = Tag<Logger>("Logger")
+
+      const program = IO.gen(function* () {
+        const log = yield* IO.service(LoggerTag)
+        yield* log.info("hello")
+        const x = yield* IO.succeed(42)
+        return x
+      })
+
+      const messages: string[] = []
+      const testLogger: Logger = {
+        info: (msg: string) =>
+          IO.sync(() => {
+            messages.push(msg)
+          }),
+      }
+      const result = await program.provideService(LoggerTag, testLogger).runOrThrow()
+      expect(result).toBe(42)
+      expect(messages).toEqual(["hello"])
     })
   })
 

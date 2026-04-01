@@ -67,6 +67,17 @@ export class InterruptedError extends Error {
  */
 
 /**
+ * Unique symbol for the internal effect representation.
+ * Using a symbol key makes IO structurally opaque — TypeScript won't
+ * deeply compare IOEffect types when checking IO assignability.
+ * This allows IO<never, never, void> to be assignable to IO<any, any, any>
+ * (needed for IO.gen) without deep variance failures on the effect ADT.
+ * @internal
+ */
+export const IOEffectKey: unique symbol = Symbol.for("functype/IO/effect")
+export type IOEffectKey = typeof IOEffectKey
+
+/**
  * Internal effect representation types
  */
 type IOEffect<R, E, A> =
@@ -113,31 +124,23 @@ type IOEffect<R, E, A> =
  * @typeParam E - Error type (typed failures)
  * @typeParam A - Success type (value produced on success)
  */
+/**
+ * Minimal marker interface for IO-like values that can be yielded in IO.gen.
+ * Using this instead of IO<any, any, any> avoids deep structural variance
+ * failures when yielding IO<never, never, void> in generators.
+ * @internal
+ */
+export interface IOYieldable {
+  readonly [Symbol.toStringTag]: string
+}
+
 export interface IO<R extends Type, E extends Type, A extends Type> {
   readonly [Symbol.toStringTag]: string
   /**
-   * Internal effect representation
+   * Internal effect representation (symbol-keyed for opacity)
    * @internal
    */
-  readonly _effect: IOEffect<R, E, A>
-
-  /**
-   * Phantom type for requirements
-   * @internal
-   */
-  readonly _R?: R
-
-  /**
-   * Phantom type for error
-   * @internal
-   */
-  readonly _E?: E
-
-  /**
-   * Phantom type for success
-   * @internal
-   */
-  readonly _A?: A
+  readonly [IOEffectKey]: IOEffect<R, E, A>
 
   // ============================================
   // Core Operations
@@ -393,12 +396,16 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
    * Makes IO iterable for generator do-notation (yield* syntax).
    * Yields the IO itself, allowing IO.gen to extract the value.
    */
-  [Symbol.iterator](): Generator<IO<R, E, A>, A, A>
+  [Symbol.iterator](): Generator<IO<R, E, A>, A, unknown>
 }
 
 // ============================================
 // Internal Implementation
 // ============================================
+
+/** @internal Extract the effect from an IO (avoids scattering [IOEffectKey] through the interpreter) */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _fx = <R, E, A>(io: IO<R, E, A>): IOEffect<R, E, A> => (io as any)[IOEffectKey]
 
 /**
  * Creates an IO instance from an effect
@@ -406,7 +413,7 @@ export interface IO<R extends Type, E extends Type, A extends Type> {
 const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): IO<R, E, A> => {
   const io: IO<R, E, A> = {
     [Symbol.toStringTag]: "IO",
-    _effect: effect,
+    [IOEffectKey]: effect,
 
     // Core Operations
     map<B extends Type>(f: (a: A) => B): IO<R, E, B> {
@@ -531,7 +538,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     // Execution
     async run(this: IO<never, E, A>): Promise<Either<E, A>> {
-      const exit = await runEffect(this._effect)
+      const exit = await runEffect(_fx(this))
       if (exit.isSuccess()) {
         return Right(exit.orThrow())
       }
@@ -541,7 +548,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     async runOrThrow(this: IO<never, E, A>): Promise<A> {
-      const exit = await runEffect(this._effect)
+      const exit = await runEffect(_fx(this))
       if (exit.isSuccess()) {
         return exit.orThrow()
       }
@@ -550,22 +557,22 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     runSync(this: IO<never, E, A>): Either<E, A> {
       try {
-        return Right(runEffectSync(this._effect))
+        return Right(runEffectSync(_fx(this)))
       } catch (e) {
         return Left(e as E)
       }
     },
 
     runSyncOrThrow(this: IO<never, E, A>): A {
-      return runEffectSync(this._effect)
+      return runEffectSync(_fx(this))
     },
 
     async runExit(this: IO<never, E, A>): Promise<ExitType<E, A>> {
-      return runEffect(this._effect)
+      return runEffect(_fx(this))
     },
 
     async runOption(this: IO<never, E, A>): Promise<Option<A>> {
-      const exit = await runEffect(this._effect)
+      const exit = await runEffect(_fx(this))
       if (exit.isSuccess()) {
         return Some(exit.orThrow())
       }
@@ -573,7 +580,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     async runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>> {
-      const exit = await runEffect(this._effect)
+      const exit = await runEffect(_fx(this))
       if (exit.isSuccess()) {
         return unsafeCoerce(Try(() => exit.orThrow()))
       }
@@ -612,8 +619,8 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       return { _tag: "IO", effect: effect._tag }
     },
 
-    *[Symbol.iterator](): Generator<IO<R, E, A>, A, A> {
-      return yield io
+    *[Symbol.iterator](): Generator<IO<R, E, A>, A, unknown> {
+      return (yield io) as A
     },
   }
 
@@ -646,39 +653,39 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       return result
     }
     case "Map": {
-      const a = runEffectSync(effect.effect._effect, context)
+      const a = runEffectSync(_fx(effect.effect), context)
       return effect.f(a)
     }
     case "FlatMap": {
-      const a = runEffectSync(effect.effect._effect, context)
+      const a = runEffectSync(_fx(effect.effect), context)
       const nextIO = effect.f(a)
-      return runEffectSync(nextIO._effect, context)
+      return runEffectSync(_fx(nextIO), context)
     }
     case "MapError": {
       try {
-        return runEffectSync(effect.effect._effect, context)
+        return runEffectSync(_fx(effect.effect), context)
       } catch (e) {
         throw effect.f(e)
       }
     }
     case "Recover": {
       try {
-        return runEffectSync(effect.effect._effect, context)
+        return runEffectSync(_fx(effect.effect), context)
       } catch {
         return effect.fallback
       }
     }
     case "RecoverWith": {
       try {
-        return runEffectSync(effect.effect._effect, context)
+        return runEffectSync(_fx(effect.effect), context)
       } catch (e) {
         const recoveryIO = effect.f(e as E)
-        return runEffectSync(recoveryIO._effect, context)
+        return runEffectSync(_fx(recoveryIO), context)
       }
     }
     case "Fold": {
       try {
-        const a = runEffectSync(effect.effect._effect, context)
+        const a = runEffectSync(_fx(effect.effect), context)
         return effect.onSuccess(a)
       } catch (e) {
         return effect.onFailure(e as E)
@@ -693,16 +700,16 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
     }
     case "ProvideContext": {
       const mergedContext = context.merge(effect.context)
-      return runEffectSync(effect.effect._effect, mergedContext as Context<R>)
+      return runEffectSync(_fx(effect.effect), mergedContext as Context<R>)
     }
     case "Interrupt":
       throw new InterruptedError()
     case "Bracket": {
-      const resource = runEffectSync(effect.acquire._effect, context)
+      const resource = runEffectSync(_fx(effect.acquire), context)
       try {
-        return runEffectSync(effect.use(resource)._effect, context)
+        return runEffectSync(_fx(effect.use(resource)), context)
       } finally {
-        runEffectSync(effect.release(resource)._effect, context)
+        runEffectSync(_fx(effect.release(resource)), context)
       }
     }
     case "Race":
@@ -742,22 +749,22 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         }
       }
       case "Map": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
         return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
       }
       case "FlatMap": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
         const nextIO = effect.f(exitA.orThrow())
-        return runEffect(nextIO._effect, context)
+        return runEffect(_fx(nextIO), context)
       }
       case "MapError": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
@@ -767,25 +774,25 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return unsafeCoerce(exitA)
       }
       case "Recover": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (exitA.isSuccess()) {
           return exitA
         }
         return Exit.succeed(effect.fallback)
       }
       case "RecoverWith": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (exitA.isSuccess()) {
           return exitA
         }
         if (exitA.isFailure()) {
           const recoveryIO = effect.f((exitA.toValue() as { error: E }).error)
-          return runEffect(recoveryIO._effect, context)
+          return runEffect(_fx(recoveryIO), context)
         }
         return exitA
       }
       case "Fold": {
-        const exitA = await runEffect(effect.effect._effect, context)
+        const exitA = await runEffect(_fx(effect.effect), context)
         if (exitA.isSuccess()) {
           return Exit.succeed(effect.onSuccess(exitA.orThrow()))
         }
@@ -803,21 +810,21 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "ProvideContext": {
         const mergedContext = context.merge(effect.context)
-        return runEffect(effect.effect._effect, mergedContext as Context<R>)
+        return runEffect(_fx(effect.effect), mergedContext as Context<R>)
       }
       case "Interrupt":
         return Exit.interrupted()
       case "Bracket": {
-        const acquireExit = await runEffect(effect.acquire._effect, context)
+        const acquireExit = await runEffect(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
         const resource = acquireExit.orThrow()
         try {
-          return await runEffect(effect.use(resource)._effect, context)
+          return await runEffect(_fx(effect.use(resource)), context)
         } finally {
           // Release always runs, even if use fails
-          await runEffect(effect.release(resource)._effect, context)
+          await runEffect(_fx(effect.release(resource)), context)
         }
       }
       case "Race": {
@@ -825,14 +832,14 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return Exit.fail(new Error("No effects to race") as E)
         }
         // Race all effects - first one to complete wins
-        const result = await Promise.race(effect.effects.map((e) => runEffect(e._effect, context)))
+        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context)))
         return result
       }
       case "Timeout": {
         const timeoutPromise = new Promise<ExitType<E, A>>((resolve) =>
           setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration),
         )
-        const effectPromise = runEffect(effect.effect._effect, context)
+        const effectPromise = runEffect(_fx(effect.effect), context)
         return Promise.race([effectPromise, timeoutPromise])
       }
     }
@@ -1350,7 +1357,7 @@ const IOCompanion = {
    * ```
    */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gen: <A extends Type>(f: () => Generator<IO<any, any, any>, A, any>): IO<never, any, A> => {
+  gen: <A extends Type>(f: () => Generator<IOYieldable, A, any>): IO<never, any, A> => {
     return unsafeCoerce(
       IOCompanion.sync(() => {
         const iterator = f()
@@ -1360,7 +1367,8 @@ const IOCompanion = {
           if (result.done) {
             return unsafeCoerce(IOCompanion.succeed(result.value))
           }
-          return unsafeCoerce(result.value.flatMap((value: unknown) => runGenerator(value)))
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          return unsafeCoerce((result.value as any).flatMap((value: unknown) => runGenerator(value)))
         }
         return runGenerator(undefined)
       }).flatMap((io) => io),
