@@ -1,6 +1,7 @@
 {
   "extends": "ts-builds/tsconfig",
   "compilerOptions": {
+    "types": ["node"],
     "rootDir": "src",
     "outDir": "dist"
   },
