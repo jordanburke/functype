@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-functype",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "type": "module",
   "description": "Curated ESLint flat config bundle for functional TypeScript programming (ESLint 9.x+)",
   "main": "dist/index.js",
@@ -75,13 +75,13 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.0",
-    "@typescript-eslint/eslint-plugin": "^8.57.2",
-    "@typescript-eslint/parser": "^8.57.2",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-simple-import-sort": "^12.1.1",
-    "ts-builds": "^2.6.1",
-    "tsdown": "^0.21.5"
+    "ts-builds": "^2.6.2",
+    "tsdown": "^0.21.7"
   },
   "author": "Jordan Burke",
   "repository": {
