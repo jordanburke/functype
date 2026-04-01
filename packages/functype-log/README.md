@@ -75,26 +75,26 @@ await program.provideLayer(LoggerLive.fromLogLayer(otelLog)).runOrThrow()
 ## Logger API
 
 ```typescript
-const log = yield* IO.service(Logger)
+const log = yield * IO.service(Logger)
 
 // Log levels
-yield* log.trace("verbose detail")
-yield* log.debug("debug info")
-yield* log.info("informational")
-yield* log.warn("warning")
-yield* log.error("error occurred")
-yield* log.fatal("fatal error")
+yield * log.trace("verbose detail")
+yield * log.debug("debug info")
+yield * log.info("informational")
+yield * log.warn("warning")
+yield * log.error("error occurred")
+yield * log.fatal("fatal error")
 
 // Structured metadata
-yield* log.info("user action", { userId: "123", action: "login" })
+yield * log.info("user action", { userId: "123", action: "login" })
 
 // Error context
-yield* log.withError(err).error("operation failed")
+yield * log.withError(err).error("operation failed")
 
 // Persistent context
 const reqLog = log.withContext({ requestId: "req-1" })
-yield* reqLog.info("first")   // includes requestId
-yield* reqLog.info("second")  // includes requestId
+yield * reqLog.info("first") // includes requestId
+yield * reqLog.info("second") // includes requestId
 
 // Child logger
 const child = log.child({ handler: "users" })
@@ -121,9 +121,10 @@ Logs after an effect completes:
 ```typescript
 import { tapLog } from "functype-log"
 
-const result = await tapLog<number[]>("info", (arr) => `fetched ${arr.length} items`)(
-  IO.succeed([1, 2, 3]),
-)
+const result = await tapLog<number[]>(
+  "info",
+  (arr) => `fetched ${arr.length} items`,
+)(IO.succeed([1, 2, 3]))
   .provideService(Logger, logger)
   .runOrThrow()
 ```
@@ -154,11 +155,11 @@ expect(first.timestamp).toBeInstanceOf(Date)
 ## Subpath Exports
 
 ```typescript
-import { Logger } from "functype-log"                // everything
-import { Logger } from "functype-log/logger"          // types only
-import { LoggerLive } from "functype-log/layers"      // layer constructors
+import { Logger } from "functype-log" // everything
+import { Logger } from "functype-log/logger" // types only
+import { LoggerLive } from "functype-log/layers" // layer constructors
 import { createTestLogger } from "functype-log/testing" // test utilities
-import { withLogging } from "functype-log/middleware"  // middleware
+import { withLogging } from "functype-log/middleware" // middleware
 ```
 
 ## Requirements

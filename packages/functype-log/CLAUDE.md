@@ -11,12 +11,17 @@ IO-native logging for the functype ecosystem. Wraps LogLayer with functype's Tag
 ## Development Commands
 
 ```bash
-pnpm validate        # Main: format + lint + test + build (before commits)
-pnpm test            # Run tests
+pnpm validate        # Main: format → lint → typecheck → test → build (run before commits)
+pnpm test            # Run all tests
+pnpm test -- test/logger.spec.ts          # Run a single test file
+pnpm test -- -t "should attach metadata"  # Run tests matching a pattern
+pnpm test:watch      # Watch mode
 pnpm typecheck       # TypeScript type check
 pnpm build           # Production build (outputs to dist/)
 pnpm dev             # Dev build with watch mode
 ```
+
+All scripts delegate to `ts-builds` — prettier, eslint, vitest, and tsdown configs are inherited from it.
 
 ## Architecture
 
@@ -33,6 +38,8 @@ src/
 
 ### Key Pattern: Logger as IO Service
 
+The `Logger` type uses functype's declaration merging pattern — `Logger` is both a TypeScript type and a `Tag` value (same identifier). This enables `IO.service(Logger)` to resolve the service via the type system:
+
 ```typescript
 import { IO } from "functype"
 import { Logger, LoggerLive } from "functype-log"
@@ -46,9 +53,13 @@ await program.provideLayer(LoggerLive.console()).runOrThrow()
 
 Users interact with the `Logger` interface and `LoggerLive` layers. LogLayer is only visible through `LoggerLive.fromLogLayer()` for advanced transport configuration (pino, winston, datadog, etc.).
 
+### Subpath Exports
+
+The package exposes subpath imports for tree-shaking: `functype-log/logger`, `functype-log/layers`, `functype-log/testing`, `functype-log/middleware`. The root `functype-log` re-exports everything.
+
 ### Import Convention
 
-All functype imports use the barrel export (`"functype"`, not subpaths) per functype-os convention.
+All functype imports use the barrel export (`"functype"`, not subpaths) per functype ecosystem convention.
 
 ## Key Types
 
