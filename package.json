@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "0.55.0",
+  "version": "0.56.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "author": "jordan.burke@gmail.com",
@@ -52,7 +52,7 @@
     "eslint-plugin-functional": "^9.0.4",
     "fast-check": "^4.6.0",
     "globals": "^17.4.0",
-    "ts-builds": "^2.6.2",
+    "ts-builds": "^2.6.3",
     "tsdown": "^0.21.7",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.18"
