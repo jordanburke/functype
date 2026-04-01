@@ -1,0 +1,20 @@
+{
+  "name": "ts-builds-template",
+  "owner": {
+    "name": "Jordan Burke",
+    "email": "jordan.burke@gmail.com"
+  },
+  "metadata": {
+    "description": "Skills for bootstrapping new TypeScript libraries from the ts-builds-template",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "ts-builds-template",
+      "description": "Guide for bootstrapping new TypeScript libraries from the ts-builds-template. Use when creating a new npm package from this template, customizing the template for a new project, or understanding the template's project structure and dev workflow.",
+      "source": "./",
+      "strict": false,
+      "skills": ["./.claude/skills/ts-builds-template"]
+    }
+  ]
+}

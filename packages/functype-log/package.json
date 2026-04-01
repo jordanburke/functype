@@ -1,0 +1,54 @@
+{
+  "name": "ts-builds-template",
+  "version": "1.0.0",
+  "description": "A basic template for creating a TypeScript Builds and Publishing it to NPM.",
+  "keywords": [
+    "typescript",
+    "template",
+    "tsdown",
+    "npm"
+  ],
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/ts-builds-template",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/ts-builds-template"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.0",
+    "ts-builds": "^2.6.3",
+    "tsdown": "^0.21.7"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "prettier": "ts-builds/prettier",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
+}
