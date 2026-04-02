@@ -1,6 +1,6 @@
 {
   "name": "functype-log",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
   "keywords": [
     "functype",
@@ -73,6 +73,11 @@
       "types": "./dist/middleware/index.d.ts",
       "import": "./dist/middleware/index.js",
       "default": "./dist/middleware/index.js"
+    },
+    "./direct": {
+      "types": "./dist/direct/index.d.ts",
+      "import": "./dist/direct/index.js",
+      "default": "./dist/direct/index.js"
     }
   },
   "files": [

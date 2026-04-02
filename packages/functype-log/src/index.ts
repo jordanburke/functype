@@ -15,3 +15,7 @@ export { createTestLogger } from "./testing"
 
 // Middleware
 export { tapLog, withLogging } from "./middleware"
+
+// Direct (imperative) logging
+export type { DirectLogger, DirectTestLoggerHandle } from "./direct"
+export { createDirectConsoleLogger, createDirectTestLogger, directSilentLogger, toDirectLogger } from "./direct"
