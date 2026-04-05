@@ -151,7 +151,7 @@ describe("prefer-either", () => {
           },
         ],
       },
-      // try/catch with empty catch block
+      // try/catch with empty catch block — simple try + empty catch triggers suggestions
       {
         name: "Empty catch block should use Either",
         code: `
@@ -165,6 +165,29 @@ describe("prefer-either", () => {
         errors: [
           {
             messageId: "preferEitherOverTryCatch",
+            suggestions: [
+              {
+                messageId: "suggestTry",
+                output: `
+          function silentParse(json: string) {
+            return Try(() => JSON.parse(json))
+          }
+        `,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Try" },
+                output: `
+          import { Try } from "functype"
+function silentParse(json: string) {
+            try {
+              return JSON.parse(json)
+            } catch (e) {
+            }
+          }
+        `,
+              },
+            ],
           },
         ],
       },
@@ -211,6 +234,32 @@ describe("prefer-either", () => {
           },
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `
+          function fetchData(url: string): Promise<Array<Record<string, unknown>>> {
+            if (!url) {
+              return Either.left(new Error('URL required'))
+            }
+            return fetch(url).then(r => r.json())
+          }
+        `,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `
+          import { Either } from "functype"
+function fetchData(url: string): Promise<Array<Record<string, unknown>>> {
+            if (!url) {
+              throw new Error('URL required')
+            }
+            return fetch(url).then(r => r.json())
+          }
+        `,
+              },
+            ],
           },
         ],
       },
@@ -232,6 +281,32 @@ describe("prefer-either", () => {
           },
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `
+          const divide = (a: number, b: number): number => {
+            if (b === 0) {
+              return Either.left(new Error('Division by zero'))
+            }
+            return a / b
+          }
+        `,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `
+          import { Either } from "functype"
+const divide = (a: number, b: number): number => {
+            if (b === 0) {
+              throw new Error('Division by zero')
+            }
+            return a / b
+          }
+        `,
+              },
+            ],
           },
         ],
       },
@@ -256,9 +331,73 @@ describe("prefer-either", () => {
           },
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `
+          function validate(input: string): string {
+            if (!input) {
+              return Either.left(new Error('Input required'))
+            }
+            if (input.length > 100) {
+              throw new Error('Input too long')
+            }
+            return input.trim()
+          }
+        `,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `
+          import { Either } from "functype"
+function validate(input: string): string {
+            if (!input) {
+              throw new Error('Input required')
+            }
+            if (input.length > 100) {
+              throw new Error('Input too long')
+            }
+            return input.trim()
+          }
+        `,
+              },
+            ],
           },
           {
             messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `
+          function validate(input: string): string {
+            if (!input) {
+              throw new Error('Input required')
+            }
+            if (input.length > 100) {
+              return Either.left(new Error('Input too long'))
+            }
+            return input.trim()
+          }
+        `,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `
+          import { Either } from "functype"
+function validate(input: string): string {
+            if (!input) {
+              throw new Error('Input required')
+            }
+            if (input.length > 100) {
+              throw new Error('Input too long')
+            }
+            return input.trim()
+          }
+        `,
+              },
+            ],
           },
         ],
       },

@@ -273,9 +273,7 @@ const rule: Rule.RuleModule = {
         }
 
         const sourceCode = context.sourceCode
-        const elementTexts = node.elements
-          .filter((el) => el !== null)
-          .map((el) => sourceCode.getText(el))
+        const elementTexts = node.elements.filter((el) => el !== null).map((el) => sourceCode.getText(el))
 
         const suggest: Rule.SuggestionReportDescriptor[] = [
           {

@@ -132,8 +132,7 @@ const rule: Rule.RuleModule = {
         if (!node.typeName) return
 
         const sourceCode = context.sourceCode
-        const typeName =
-          node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
+        const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
         if (typeName !== "Map") return
 

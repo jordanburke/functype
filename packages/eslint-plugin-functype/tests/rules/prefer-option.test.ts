@@ -144,8 +144,7 @@ describe("prefer-option", () => {
               {
                 messageId: "suggestAddImport",
                 data: { symbol: "Option" },
-                output:
-                  'import { Option } from "functype"\nconst user: { name: string; age: number } | null = null',
+                output: 'import { Option } from "functype"\nconst user: { name: string; age: number } | null = null',
               },
             ],
           },

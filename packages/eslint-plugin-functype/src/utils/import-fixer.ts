@@ -14,7 +14,11 @@ export function hasFunctypeSymbol(sourceCode: SourceCode, symbolName: string): b
           if (spec.type === "ImportNamespaceSpecifier") {
             return true
           }
-          if (spec.type === "ImportSpecifier" && spec.imported.type === "Identifier" && spec.imported.name === symbolName) {
+          if (
+            spec.type === "ImportSpecifier" &&
+            spec.imported.type === "Identifier" &&
+            spec.imported.name === symbolName
+          ) {
             return true
           }
         }

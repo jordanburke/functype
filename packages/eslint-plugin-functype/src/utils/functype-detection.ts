@@ -96,7 +96,10 @@ export function isFunctypeType(node: ASTNode, functypeImports: FunctypeImports |
   // Check direct type names
   if (node.type === "TSTypeReference" && node.typeName?.type === "Identifier") {
     const typeName = node.typeName.name
-    return types.has(typeName) || ["Option", "Either", "List", "LazyList", "Task", "Try", "Map", "Set", "Stack"].includes(typeName)
+    return (
+      types.has(typeName) ||
+      ["Option", "Either", "List", "LazyList", "Task", "Try", "Map", "Set", "Stack"].includes(typeName)
+    )
   }
 
   return false

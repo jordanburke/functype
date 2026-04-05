@@ -34,7 +34,9 @@ describe("no-let", () => {
       {
         name: "let declared then assigned should warn without autofix",
         code: "let x; x = getValue()",
-        errors: [{ messageId: "noLet", suggestions: [{ messageId: "suggestConst", output: "const x; x = getValue()" }] }],
+        errors: [
+          { messageId: "noLet", suggestions: [{ messageId: "suggestConst", output: "const x; x = getValue()" }] },
+        ],
         output: null,
       },
       {
@@ -47,7 +49,10 @@ describe("no-let", () => {
         name: "for loop with increment should warn without autofix",
         code: "for (let i = 0; i < 10; i++) { console.log(i) }",
         errors: [
-          { messageId: "noLet", suggestions: [{ messageId: "suggestConst", output: "for (const i = 0; i < 10; i++) { console.log(i) }" }] },
+          {
+            messageId: "noLet",
+            suggestions: [{ messageId: "suggestConst", output: "for (const i = 0; i < 10; i++) { console.log(i) }" }],
+          },
         ],
         output: null,
       },

@@ -50,9 +50,7 @@ const rule: Rule.RuleModule = {
 
         const declaredVars = context.sourceCode.getDeclaredVariables(node)
         const hasReassignment = declaredVars.some((variable: ASTNode) =>
-          variable.references.some(
-            (ref: ASTNode) => ref.isWrite() && ref.identifier !== variable.defs[0]?.name,
-          ),
+          variable.references.some((ref: ASTNode) => ref.isWrite() && ref.identifier !== variable.defs[0]?.name),
         )
 
         if (!hasReassignment) {
