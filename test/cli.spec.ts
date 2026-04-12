@@ -246,11 +246,14 @@ describe("Full Interfaces", () => {
     expect(FULL_INTERFACES.Option).toContain("flatMap<U")
   })
 
-  it("should include Either interface", () => {
+  it("should include Either type", () => {
     expect(FULL_INTERFACES.Either).toBeDefined()
-    expect(FULL_INTERFACES.Either).toContain("export interface Either<L")
+    expect(FULL_INTERFACES.Either).toContain("export type Either<L")
+    expect(FULL_INTERFACES.Either).toContain("LeftOf")
+    expect(FULL_INTERFACES.Either).toContain("RightOf")
     expect(FULL_INTERFACES.Either).toContain("isLeft()")
     expect(FULL_INTERFACES.Either).toContain("isRight()")
+    expect(FULL_INTERFACES.Either).toContain("foldAsync")
   })
 
   it("should include List interface", () => {

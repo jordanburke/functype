@@ -427,3 +427,89 @@ describe("Either", () => {
     ).toBe("Error: Rejected")
   })
 })
+
+describe("Either discriminated-union narrowing", () => {
+  it("narrows value to R in the else branch after isLeft()", () => {
+    const e: Either<string, number> = Right<string, number>(42)
+    if (e.isLeft()) {
+      const l: string = e.value
+      expect(l).toBe("never")
+    } else {
+      const n: number = e.value
+      expect(n).toBe(42)
+    }
+  })
+
+  it("narrows value to L in the else branch after isRight()", () => {
+    const e: Either<string, number> = Left<string, number>("boom")
+    if (e.isRight()) {
+      const n: number = e.value
+      expect(n).toBe(-1)
+    } else {
+      const l: string = e.value
+      expect(l).toBe("boom")
+    }
+  })
+
+  it("narrows via _tag discriminant", () => {
+    const e: Either<string, number> = Right<string, number>(7)
+    if (e._tag === "Right") {
+      const n: number = e.value
+      expect(n).toBe(7)
+    }
+  })
+})
+
+describe("Either.void", () => {
+  it("returns a Right<L, void> with undefined value", () => {
+    const e = Either.void<Error>()
+    expect(e.isRight()).toBe(true)
+    if (e.isRight()) {
+      expect(e.value).toBeUndefined()
+    }
+  })
+
+  it("composes with flatMap expecting void", () => {
+    const check = (n: number): Either<Error, void> =>
+      n > 0 ? Either.void<Error>() : Left<Error, void>(new Error("non-positive"))
+    expect(check(5).isRight()).toBe(true)
+    expect(check(-1).isLeft()).toBe(true)
+  })
+})
+
+describe("Either.foldAsync", () => {
+  it("awaits an async onRight and returns Promise", async () => {
+    const e: Either<string, number> = Right<string, number>(10)
+    const result = await e.foldAsync(
+      (_l) => "left-sync",
+      async (r) => `right-async-${r}`,
+    )
+    expect(result).toBe("right-async-10")
+  })
+
+  it("awaits an async onLeft and returns Promise", async () => {
+    const e: Either<string, number> = Left<string, number>("oops")
+    const result = await e.foldAsync(
+      async (l) => `left-async-${l}`,
+      (_r) => "right-sync",
+    )
+    expect(result).toBe("left-async-oops")
+  })
+
+  it("accepts mixed sync and async branches", async () => {
+    const sync: Either<string, number> = Right<string, number>(1)
+    const asyncE: Either<string, number> = Left<string, number>("e")
+    expect(
+      await sync.foldAsync(
+        (l) => l.length,
+        (r) => r,
+      ),
+    ).toBe(1)
+    expect(
+      await asyncE.foldAsync(
+        async (l) => l.length,
+        (r) => r,
+      ),
+    ).toBe(1)
+  })
+})

@@ -31,7 +31,7 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["Option(v)", "Option.none()", "Some(v)", "None()"],
       transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
-      extract: [".fold(n, s)", ".orElse(d)", ".orThrow()", ".orNull()", ".match({Some, None})"],
+      extract: [".fold(n, s)", ".foldAsync(n, s)", ".orElse(d)", ".orThrow()", ".orNull()", ".match({Some, None})"],
       check: [".isSome", ".isNone", ".isDefined", ".isEmpty"],
     },
   },
@@ -40,9 +40,9 @@ export const TYPES: Record<string, TypeData> = {
     description: "Error handling with Left (error) or Right (success)",
     interfaces: ["Functor", "Monad", "Foldable", "Traversable", "PromiseLike"],
     methods: {
-      create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)"],
+      create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
       transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
-      extract: [".fold(l, r)", ".orElse(d)", ".orThrow()", ".match({Left, Right})"],
+      extract: [".fold(l, r)", ".foldAsync(l, r)", ".orElse(d)", ".orThrow()", ".match({Left, Right})"],
       check: [".isRight", ".isLeft"],
     },
   },
@@ -53,7 +53,7 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["Try(() => expr)", "Try.success(v)", "Try.failure(e)", "Try.fromPromise(p)"],
       transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
-      extract: [".fold(f, s)", ".orElse(d)", ".orThrow()", ".toOption()", ".toEither()"],
+      extract: [".fold(f, s)", ".foldAsync(f, s)", ".orElse(d)", ".orThrow()", ".toOption()", ".toEither()"],
       check: [".isSuccess", ".isFailure"],
     },
   },

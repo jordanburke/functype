@@ -199,4 +199,26 @@ describe("Try", () => {
       }
     })
   })
+
+  describe("foldAsync", () => {
+    it("awaits an async onSuccess", async () => {
+      const t = Try(() => 21)
+      const result = await t.foldAsync(
+        (_e) => 0,
+        async (v) => v * 2,
+      )
+      expect(result).toBe(42)
+    })
+
+    it("awaits an async onFailure", async () => {
+      const t = Try<number>(() => {
+        throw new Error("nope")
+      })
+      const result = await t.foldAsync(
+        async (e) => e.message,
+        (_v) => "ok",
+      )
+      expect(result).toBe("nope")
+    })
+  })
 })

@@ -17,12 +17,18 @@ import type { Type } from "@/types"
  * @module Either
  * @category Core
  */
-export interface Either<L extends Type, R extends Type>
+
+/**
+ * Shared interface for Either variants. Contains all methods and type guards but
+ * does NOT include the discriminant `_tag` or `value` — those are declared on the
+ * variant interfaces (LeftOf / RightOf) so that Either acts as a true discriminated
+ * union. After `if (e.isLeft())`, the else branch narrows `e` to RightOf<L,R> and
+ * `e.value` narrows to R without a cast.
+ */
+export interface EitherBase<L extends Type, R extends Type>
   extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
-  readonly _tag: "Left" | "Right"
-  value: L | R
-  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
-  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R }
+  isLeft(): this is LeftOf<L, R>
+  isRight(): this is RightOf<L, R>
   orElse: (defaultValue: R) => R
   orThrow: (error?: Error) => R
   or(alternative: Either<L, R>): Either<L, R>
@@ -46,25 +52,23 @@ export interface Either<L extends Type, R extends Type>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
+  /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise, keeping chains fluent when at least one branch is async.
+   */
+  foldAsync: <T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) => Promise<T>
   swap: () => Either<R, L>
   /**
    * Pipes the value through the provided function based on whether this is a Left or Right
-   * @param onLeft - The function to apply if this is a Left
-   * @param onRight - The function to apply if this is a Right
-   * @returns The result of applying the appropriate function
    */
   pipeEither<U extends Type>(onLeft: (value: L) => U, onRight: (value: R) => U): U
 
   /**
    * Pipes the Either value through the provided function
-   * @param f - The function to apply to the value (Left or Right)
-   * @returns The result of applying the function to the value
    */
   pipe<U extends Type>(f: (value: L | R) => U): U
   /**
    * Pattern matches over the Either, applying a handler function based on the variant
-   * @param patterns - Object with handler functions for Left and Right variants
-   * @returns The result of applying the matching handler function
    */
   match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
   /**
@@ -77,16 +81,38 @@ export interface Either<L extends Type, R extends Type>
   toJSON(): { _tag: "Left" | "Right"; value: L | R }
 }
 
+/**
+ * Left variant of Either. Discriminated by `_tag: "Left"` with `value: L`.
+ */
+export interface LeftOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+  readonly _tag: "Left"
+  readonly value: L
+}
+
+/**
+ * Right variant of Either. Discriminated by `_tag: "Right"` with `value: R`.
+ */
+export interface RightOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+  readonly _tag: "Right"
+  readonly value: R
+}
+
+/**
+ * Either is a discriminated union of LeftOf and RightOf. TypeScript narrows
+ * across both branches of `isLeft()` / `isRight()` and `_tag` checks.
+ */
+export type Either<L extends Type, R extends Type> = LeftOf<L, R> | RightOf<L, R>
+
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
 
-const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R> => ({
+const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, R> => ({
   [Symbol.toStringTag]: "Either",
-  _tag: "Right",
+  _tag: "Right" as const,
   value,
-  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {
+  isLeft(): this is LeftOf<L, R> {
     return false
   },
-  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
+  isRight(): this is RightOf<L, R> {
     return true
   },
   orElse: (_defaultValue: R) => value,
@@ -137,6 +163,8 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
   bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
   fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
+  foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
+    onRight(value),
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: R) => B) =>
@@ -171,14 +199,14 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): Either<L, R
   },
 })
 
-const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R> => ({
+const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R> => ({
   [Symbol.toStringTag]: "Either",
-  _tag: "Left",
+  _tag: "Left" as const,
   value,
-  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L } {
+  isLeft(): this is LeftOf<L, R> {
     return true
   },
-  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R } {
+  isRight(): this is RightOf<L, R> {
     return false
   },
   orElse: (defaultValue: R): R => defaultValue,
@@ -226,6 +254,8 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Left<L2, R>(f(value)),
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, _fr: (value: R) => R2) => Left<L2, R2>(fl(value)),
   fold: <T extends Type>(onLeft: (value: L) => T, _onRight: (value: R) => T) => onLeft(value),
+  foldAsync: async <T extends Type>(onLeft: (value: L) => T | Promise<T>, _onRight: (value: R) => T | Promise<T>) =>
+    onLeft(value),
   foldLeft:
     <B>(z: B) =>
     (_op: (b: B, a: R) => B) =>
@@ -267,10 +297,9 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): Either<L, R>
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)
 export const Left = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)
 
-export const isRight = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
+export const isRight = <L extends Type, R extends Type>(either: Either<L, R>): either is RightOf<L, R> =>
   either.isRight()
-export const isLeft = <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
-  either.isLeft()
+export const isLeft = <L extends Type, R extends Type>(either: Either<L, R>): either is LeftOf<L, R> => either.isLeft()
 
 export const tryCatch = <L extends Type, R extends Type>(f: () => R, onError: (error: unknown) => L): Either<L, R> => {
   try {
@@ -322,20 +351,25 @@ const EitherCompanion = {
   right: <L extends Type, R extends Type>(value: R): Either<L, R> => Right<L, R>(value),
 
   /**
+   * Creates a Right<L, void> — convenience for "operation succeeded with no meaningful value".
+   * Avoids variance quirks around Either<L, void> vs Either<L, undefined>.
+   * @returns Right Either with void value
+   */
+  void: <L extends Type>(): Either<L, void> => Right<L, void>(undefined as void),
+
+  /**
    * Type guard to check if an Either is Right
    * @param either - The Either to check
    * @returns True if Either is Right
    */
-  isRight: <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: R } =>
-    either.isRight(),
+  isRight: <L extends Type, R extends Type>(either: Either<L, R>): either is RightOf<L, R> => either.isRight(),
 
   /**
    * Type guard to check if an Either is Left
    * @param either - The Either to check
    * @returns True if Either is Left
    */
-  isLeft: <L extends Type, R extends Type>(either: Either<L, R>): either is Either<L, R> & { value: L } =>
-    either.isLeft(),
+  isLeft: <L extends Type, R extends Type>(either: Either<L, R>): either is LeftOf<L, R> => either.isLeft(),
 
   /**
    * Combines an array of Eithers into a single Either containing an array

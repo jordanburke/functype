@@ -99,6 +99,11 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   fold<U>(onNone: () => U, onSome: (value: T) => U): U
   /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise.
+   */
+  foldAsync<U>(onNone: () => U | Promise<U>, onSome: (value: T) => U | Promise<U>): Promise<U>
+  /**
    * Left-associative fold using the provided zero value and operation
    * @param z - Zero/identity value
    * @returns A function that takes an operation to apply
@@ -147,12 +152,108 @@ export const FULL_INTERFACES: Record<string, string> = {
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 }`,
 
-  Either: `export interface Either<L extends Type, R extends Type>
+  Either: `export type Either<L extends Type, R extends Type> = LeftOf<L, R> | RightOf<L, R>
+
+export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
+
+const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, R> => ({
+  [Symbol.toStringTag]: "Either",
+  _tag: "Right" as const,
+  value,
+  isLeft(): this is LeftOf<L, R> {
+    return false
+  },
+  isRight(): this is RightOf<L, R> {
+    return true
+  },
+  orElse: (_defaultValue: R) => value,
+  orThrow: () => value,
+  or: (_alternative: Either<L, R>) => Right<L, R>(value),
+  orNull: () => value,
+  orUndefined: () => value,
+  map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
+  ap: <U extends Type>(ff: Either<L, (value: R) => U>): Either<L, U> =>
+    ff._tag === "Right" ? Right((ff.value as (value: R) => U)(value)) : Left(ff.value as L),
+  mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
+    f(value)
+      .then((result) => Right<L, U>(result))
+      .catch((error: unknown) => Promise.resolve(Left<L, U>(error as L))) as Promise<Either<L, U>>,
+  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
+    other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
+  flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
+  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
+    f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
+  toOption: () => Some<R>(value),
+  toList: () => List<R>([value]),
+  toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
+  toTry: () => Try(() => value),
+  toJSON() {
+    return { _tag: "Right", value }
+  },
+  toString: () => {
+    return \`Right(\${safeStringify(value)})\`
+  },
+  *[Symbol.iterator]() {
+    yield value
+  },
+  *yield() {
+    yield value
+  },
+  traverse: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U[]> => {
+    const result = f(value)
+    return result.isLeft() ? Left(result.value as L) : Right([result.value as U])
+  },
+  *lazyMap<U extends Type>(f: (value: R) => U) {
+    yield Right<L, U>(f(value))
+  },
+  tap: (f: (value: R) => void) => {
+    f(value)
+    return Right<L, R>(value)
+  },
+  tapLeft: (_f: (value: L) => void) => Right<L, R>(value),
+  mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
+  bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
+  fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
+  foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
+    onRight(value),
+  foldLeft:
+    <B>(z: B) =>
+    (op: (b: B, a: R) => B) =>
+      op(z, value),
+  foldRight:
+    <B>(z: B) =>
+    (op: (a: R, b: B) => B) =>
+      op(value, z),
+  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Right(value),
+  swap: () => Left<R, L>(value),
+  toPromise: (): Promise<R> => Promise.resolve(value),
+  toValue: () => ({ _tag: "Right", value }),
+  pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
+  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
+  serialize: () => createSerializer("Right", value),
+  get size() {
+    return 1
+  },
+  get isEmpty() {
+    return false
+  },
+  contains: (v: R) => value === v,
+  reduce: (_f: (b: R, a: R) => R) => value,
+  reduceRight: (_f: (b: R, a: R) => R) => value,
+  count: (p: (x: R) => boolean) => (p(value) ? 1 : 0),
+  find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
+  exists: (p: (a: R) => boolean) => p(value),
+  forEach: (f: (a: R) => void) => f(value),
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<R> {
+    return { ok: true, value }
+  },
+})
+
+export interface EitherBase<L extends Type, R extends Type>
   extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
-  readonly _tag: "Left" | "Right"
-  value: L | R
-  isLeft(): this is Either<L, R> & { readonly _tag: "Left"; value: L }
-  isRight(): this is Either<L, R> & { readonly _tag: "Right"; value: R }
+  isLeft(): this is LeftOf<L, R>
+  isRight(): this is RightOf<L, R>
   orElse: (defaultValue: R) => R
   orThrow: (error?: Error) => R
   or(alternative: Either<L, R>): Either<L, R>
@@ -176,25 +277,23 @@ export const FULL_INTERFACES: Record<string, string> = {
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
+  /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise, keeping chains fluent when at least one branch is async.
+   */
+  foldAsync: <T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) => Promise<T>
   swap: () => Either<R, L>
   /**
    * Pipes the value through the provided function based on whether this is a Left or Right
-   * @param onLeft - The function to apply if this is a Left
-   * @param onRight - The function to apply if this is a Right
-   * @returns The result of applying the appropriate function
    */
   pipeEither<U extends Type>(onLeft: (value: L) => U, onRight: (value: R) => U): U
 
   /**
    * Pipes the Either value through the provided function
-   * @param f - The function to apply to the value (Left or Right)
-   * @returns The result of applying the function to the value
    */
   pipe<U extends Type>(f: (value: L | R) => U): U
   /**
    * Pattern matches over the Either, applying a handler function based on the variant
-   * @param patterns - Object with handler functions for Left and Right variants
-   * @returns The result of applying the matching handler function
    */
   match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
   /**
@@ -205,6 +304,16 @@ export const FULL_INTERFACES: Record<string, string> = {
    * Custom JSON serialization that excludes getter properties
    */
   toJSON(): { _tag: "Left" | "Right"; value: L | R }
+}
+
+export interface LeftOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+  readonly _tag: "Left"
+  readonly value: L
+}
+
+export interface RightOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+  readonly _tag: "Right"
+  readonly value: R
 }`,
 
   Try: `export interface Try<T>
@@ -233,6 +342,14 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the appropriate function
    */
   fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
+  /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise.
+   */
+  foldAsync: <U extends Type>(
+    onFailure: (error: Error) => U | Promise<U>,
+    onSuccess: (value: T) => U | Promise<U>,
+  ) => Promise<U>
   toString: () => string
   /**
    * Pattern matches over the Try, applying a handler function based on the variant

@@ -44,6 +44,14 @@ export interface Try<T>
    * @returns The result of applying the appropriate function
    */
   fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
+  /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise.
+   */
+  foldAsync: <U extends Type>(
+    onFailure: (error: Error) => U | Promise<U>,
+    onSuccess: (value: T) => U | Promise<U>,
+  ) => Promise<U>
   toString: () => string
   /**
    * Pattern matches over the Try, applying a handler function based on the variant
@@ -87,6 +95,10 @@ const Success = <T>(value: T): Try<T> => ({
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
   flatMapAsync: async <U>(f: (value: T) => Promise<Try<U>>) => f(value),
   fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
+  foldAsync: async <U extends Type>(
+    _onFailure: (error: Error) => U | Promise<U>,
+    onSuccess: (value: T) => U | Promise<U>,
+  ) => onSuccess(value),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
   recover: (_f: (error: Error) => T) => Success(value),
   recoverWith: (_f: (error: Error) => Try<T>) => Success(value),
@@ -148,6 +160,10 @@ const Failure = <T>(error: Error): Try<T> => ({
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
   flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>): Promise<Try<U>> => Promise.resolve(Failure<U>(error)),
   fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
+  foldAsync: async <U extends Type>(
+    onFailure: (error: Error) => U | Promise<U>,
+    _onSuccess: (value: T) => U | Promise<U>,
+  ) => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
   recover: (f: (error: Error) => T) => Try(() => f(error)),
   recoverWith: (f: (error: Error) => Try<T>) => {

@@ -7,7 +7,7 @@ Quick lookup guide for common functype operations.
 | Type     | Constructor                                                     | Example                                                                                    |
 | -------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Option   | `Option(value)`                                                 | `Option("hello")`, `Option.none()`                                                         |
-| Either   | `Right(value)` or `Left(error)`                                 | `Right(42)`, `Left("error")`                                                               |
+| Either   | `Right(value)`, `Left(error)`, `Either.void<L>()`               | `Right(42)`, `Left("error")`, `Either.void<Error>()` for `Either<Error, void>`             |
 | Try      | `Try(() => expr)`, `.success()`, `.failure()`, `.fromPromise()` | `Try(() => JSON.parse(str))`, `Try.success(42)`, `Try.failure("err")`                      |
 | List     | `List(array)`, `.of()`, `.empty()`                              | `List([1, 2])`, `List.of(1, 2)`, `List.empty()`                                            |
 | Set      | `Set(array)`, `.of()`, `.empty()`                               | `Set([1, 2])`, `Set.of(1, 2)`, `Set.empty()`                                               |
@@ -38,14 +38,15 @@ Quick lookup guide for common functype operations.
 
 ## Extraction
 
-| Operation        | Method                   | Example                        | Returns          |
-| ---------------- | ------------------------ | ------------------------------ | ---------------- |
-| With default     | `orElse(default)`        | `option.orElse("N/A")`         | `T`              |
-| With alternative | `or(alternative)`        | `option.or(Option("alt"))`     | `Option<T>`      |
-| Or throw         | `orThrow(error?)`        | `option.orThrow()`             | `T` or throws    |
-| Or null          | `orNull()`               | `option.orNull()`              | `T \| null`      |
-| Or undefined     | `orUndefined()`          | `option.orUndefined()`         | `T \| undefined` |
-| Pattern match    | `fold(onEmpty, onValue)` | `option.fold(() => 0, x => x)` | `R`              |
+| Operation           | Method                        | Example                                                    | Returns          |
+| ------------------- | ----------------------------- | ---------------------------------------------------------- | ---------------- |
+| With default        | `orElse(default)`             | `option.orElse("N/A")`                                     | `T`              |
+| With alternative    | `or(alternative)`             | `option.or(Option("alt"))`                                 | `Option<T>`      |
+| Or throw            | `orThrow(error?)`             | `option.orThrow()`                                         | `T` or throws    |
+| Or null             | `orNull()`                    | `option.orNull()`                                          | `T \| null`      |
+| Or undefined        | `orUndefined()`               | `option.orUndefined()`                                     | `T \| undefined` |
+| Pattern match       | `fold(onEmpty, onValue)`      | `option.fold(() => 0, x => x)`                             | `R`              |
+| Async pattern match | `foldAsync(onEmpty, onValue)` | `await either.foldAsync(e => msg(e), async v => fetch(v))` | `Promise<R>`     |
 
 ## Predicates
 
@@ -381,3 +382,18 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
    const memoized = Lazy(() => computeOnce())
    // Always returns same value after first computation
    ```
+
+## Either is a Discriminated Union
+
+As of 0.53.0, `Either<L, R>` is defined as `LeftOf<L, R> | RightOf<L, R>`. This means TypeScript narrows `value` in both branches of `isLeft()` / `isRight()` or `_tag` checks — no `as R` casts needed.
+
+```typescript
+const e: Either<Error, number> = parse("42")
+if (e.isLeft()) {
+  console.error(e.value.message) // e narrowed to LeftOf — value is Error
+  return
+}
+const n: number = e.value // narrowed to RightOf — value is number, no cast
+```
+
+If you need to reference a specific variant, import `LeftOf` / `RightOf` from `functype/either`.

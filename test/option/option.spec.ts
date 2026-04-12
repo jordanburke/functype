@@ -316,4 +316,24 @@ describe("Option", () => {
       expect(nothing.isNone()).toBe(true)
     })
   })
+
+  describe("foldAsync", () => {
+    it("awaits an async onSome", async () => {
+      const some = Option(5)
+      const result = await some.foldAsync(
+        () => 0,
+        async (v) => v * 2,
+      )
+      expect(result).toBe(10)
+    })
+
+    it("awaits an async onNone", async () => {
+      const none = Option<number>(null)
+      const result = await none.foldAsync(
+        async () => -1,
+        (v) => v,
+      )
+      expect(result).toBe(-1)
+    })
+  })
 })

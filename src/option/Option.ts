@@ -115,6 +115,11 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    */
   fold<U>(onNone: () => U, onSome: (value: T) => U): U
   /**
+   * Async variant of fold. Accepts sync or async handlers on either branch and
+   * always returns a Promise.
+   */
+  foldAsync<U>(onNone: () => U | Promise<U>, onSome: (value: T) => U | Promise<U>): Promise<U>
+  /**
    * Left-associative fold using the provided zero value and operation
    * @param z - Zero/identity value
    * @returns A function that takes an operation to apply
@@ -202,6 +207,8 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
     return onSome(value)
   },
+  foldAsync: async <U extends Type>(_onNone: () => U | Promise<U>, onSome: (value: T) => U | Promise<U>) =>
+    onSome(value),
   match: <R>(patterns: { Some: (value: T) => R; None: () => R }): R => {
     return patterns.Some(value)
   },
@@ -272,6 +279,8 @@ const NONE: Option<never> = {
   fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {
     return onNone()
   },
+  foldAsync: async <U extends Type>(onNone: () => U | Promise<U>, _onSome: (value: never) => U | Promise<U>) =>
+    onNone(),
   match: <R>(patterns: { Some: (value: never) => R; None: () => R }): R => {
     return patterns.None()
   },

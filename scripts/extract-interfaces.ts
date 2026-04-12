@@ -24,11 +24,21 @@ interface TypeSource {
   file: string
   extractName?: string
   isType?: boolean
+  /**
+   * Additional definitions (interfaces or types) to append to the extracted text.
+   * Useful for type aliases that reference other interfaces whose bodies contain
+   * the useful methods (e.g., Either = LeftOf | RightOf — methods live in EitherBase).
+   */
+  extras?: Array<{ name: string; isType?: boolean }>
 }
 
 const TYPE_SOURCES: Record<string, TypeSource> = {
   Option: { file: "src/option/Option.ts" },
-  Either: { file: "src/either/Either.ts" },
+  Either: {
+    file: "src/either/Either.ts",
+    isType: true,
+    extras: [{ name: "EitherBase" }, { name: "LeftOf" }, { name: "RightOf" }],
+  },
   Try: { file: "src/try/Try.ts" },
   List: { file: "src/list/List.ts" },
   Set: { file: "src/set/Set.ts" },
@@ -181,11 +191,17 @@ const processFile = (typeName: string, source: TypeSource): Option<InterfaceInfo
     },
     (sourceText) => {
       const extractName = source.extractName ?? typeName
-      return extractDefinition(sourceText, extractName, source.isType ?? false).map((fullText) => ({
-        name: typeName,
-        sourceFile: source.file,
-        fullText,
-      }))
+      return extractDefinition(sourceText, extractName, source.isType ?? false).map((fullText) => {
+        const extraTexts = (source.extras ?? [])
+          .map((extra) => extractDefinition(sourceText, extra.name, extra.isType ?? false).orNull())
+          .filter((t): t is string => t !== null)
+        const combined = [fullText, ...extraTexts].join("\n\n")
+        return {
+          name: typeName,
+          sourceFile: source.file,
+          fullText: combined,
+        }
+      })
     },
   )
 }
