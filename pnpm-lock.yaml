@@ -15,8 +15,8 @@ importers:
         specifier: ~24.10.15
         version: 24.10.15
       eslint-config-functype:
-        specifier: 2.1.2
-        version: 2.1.2(@typescript-eslint/eslint-plugin@8.58.2(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3)
+        specifier: 2.2.0
+        version: 2.2.0(@typescript-eslint/eslint-plugin@8.58.2(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3)
       eslint-plugin-functional:
         specifier: ^9.0.4
         version: 9.0.4(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2)
@@ -42,8 +42,8 @@ importers:
   mcp-server:
     dependencies:
       fastmcp:
-        specifier: ^3.35.0
-        version: 3.35.0
+        specifier: ^4.0.0
+        version: 4.0.0
       functype:
         specifier: workspace:*
         version: link:..
@@ -1896,18 +1896,6 @@ packages:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
 
-  eslint-config-functype@2.1.2:
-    resolution: {integrity: sha512-FVn87o0gUyh4IIfZtLD6ybYfYNY2oajtq2uxb0JTEhcC9pzuH0gq2FihkY7RITlz1Q09Sg5GCTfXhvXvyijvOA==}
-    engines: {node: '>=22.0.0'}
-    hasBin: true
-    peerDependencies:
-      '@typescript-eslint/eslint-plugin': ^8.38.0 || ^8.39.0 || ^9.0.0
-      '@typescript-eslint/parser': ^8.38.0 || ^8.39.0 || ^9.0.0
-      eslint: ^10.0.3
-      eslint-plugin-prettier: ^5.0.0
-      eslint-plugin-simple-import-sort: ^12.0.0
-      prettier: ^3.0.0
-
   eslint-config-functype@2.2.0:
     resolution: {integrity: sha512-yyTrGGgpUNpqSBV1cEYsZWOovkva/WehMuND6P/FhVgLSNHAFOfhLFjF+Gxcfw9bGgctVuKnZdOqdQ3e00J1EA==}
     engines: {node: '>=22.0.0'}
@@ -2100,8 +2088,8 @@ packages:
   fast-wrap-ansi@0.1.6:
     resolution: {integrity: sha512-HlUwET7a5gqjURj70D5jl7aC3Zmy4weA1SHUfM0JFI0Ptq987NH2TwbBFLoERhfwk+E+eaq4EK3jXoT+R3yp3w==}
 
-  fastmcp@3.35.0:
-    resolution: {integrity: sha512-bcyAaVa3Zw5f4xighGg6fNNgEzZoP6tX/O+ZfS2lIhbEULWe/zUWG533JyFEUOjZT7EB+tiZW1ot4eWKmYJ6DA==}
+  fastmcp@4.0.0:
+    resolution: {integrity: sha512-QGIvKVkjRLLiyn1JUHVDWkqPucJfMfGReaVxB2UzlOVs9NSfmg2f1hU9aNEcDd0804hMqrsxr62kN83XrNh00g==}
     hasBin: true
     peerDependencies:
       jose: ^5.0.0
@@ -5909,19 +5897,6 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-config-functype@2.1.2(@typescript-eslint/eslint-plugin@8.58.2(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3):
-    dependencies:
-      '@eslint/eslintrc': 3.3.5
-      '@eslint/js': 10.0.1(eslint@10.2.0(jiti@2.6.1))
-      '@typescript-eslint/eslint-plugin': 8.58.2(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2)
-      '@typescript-eslint/parser': 8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2)
-      eslint: 10.2.0(jiti@2.6.1)
-      eslint-plugin-prettier: 5.5.5(eslint-config-prettier@10.1.8(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3)
-      eslint-plugin-simple-import-sort: 12.1.1(eslint@10.2.0(jiti@2.6.1))
-      prettier: 3.8.3
-    transitivePeerDependencies:
-      - supports-color
-
   eslint-config-functype@2.2.0(@typescript-eslint/eslint-plugin@8.58.2(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(@typescript-eslint/parser@8.58.2(eslint@10.2.0(jiti@2.6.1))(typescript@6.0.2))(eslint-plugin-prettier@5.5.5(eslint-config-prettier@10.1.8(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3))(eslint-plugin-simple-import-sort@12.1.1(eslint@10.2.0(jiti@2.6.1)))(eslint@10.2.0(jiti@2.6.1))(prettier@3.8.3):
     dependencies:
       '@eslint/eslintrc': 3.3.5
@@ -6171,7 +6146,7 @@ snapshots:
     dependencies:
       fast-string-width: 1.1.0
 
-  fastmcp@3.35.0:
+  fastmcp@4.0.0:
     dependencies:
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.3.6)
       '@standard-schema/spec': 1.1.0

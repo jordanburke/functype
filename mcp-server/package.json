@@ -61,7 +61,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "fastmcp": "^3.35.0",
+    "fastmcp": "^4.0.0",
     "functype": "workspace:*",
     "typescript": "^6.0.2",
     "zod": "^4.3.6"
