@@ -11,22 +11,28 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Core Interfaces
 
-| Data Structure     | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
-| ------------------ | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
-| **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
-| **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
-| **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Http**           |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
-| **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Obj<T>**         |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
-| **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| Data Structure  | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
+| --------------- | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
+| **Try<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
+
+**Variance notes (0.58+):**
+
+- `Option<out T>`, `Either<out L, out R>`, `Try<out T>` — declared covariant; widening via subtyping works without method-level generics.
+- `List<out A>`, `Set<out A>` — declared covariant. Scala-aligned pattern: element-query methods (`contains`, `indexOf`, `remove`, `has`) accept `unknown`; additive methods (`add`, `prepend`, `concat`) widen via `<B>(B): List<A | B>`; `reduce`/`reduceRight` take a wider accumulator (default `B = A`).
+- Collections (`List`, `Set`) keep `Traversable`. Sum types (`Either`, `Try`) do not — they extend the lighter `FunctypeSum` instead.
+  | **IO<R,E,A>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
+  | **Http** | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+  | **TaskOutcome<T>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ← | ✓ | ✗ | ✓ | ✗ |
+  | **List<A>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✓ |
+  | **Set<A>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✗ | ✗ | ✓ | ✓ | ✓ | ✓ |
+  | **Obj<T>** | ◐ | ◐ | ◐ | ◐ | ✓ | ✓ | ✓ | ◐ | ✓ | ← | ✓ | ✗ | ✓ | ✗ |
+  | **Map<K,V>** | ◐ | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ | ◐ | ✗ | ✗ | ✓ | ✓ | ✗ | ✗ |
+  | **Lazy<T>** | ✓ | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ | ✓ | ✓ | ← | ✓ | ✗ | ✓ | ✗ |
+  | **Stack<A>** | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
+  | **LazyList<A>** | ◐ | ✗ | ◐ | ✗ | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
+  | **Tuple<T[]>** | ◐ | ✗ | ◐ | ✗ | ✓ | ✗ | ✓ | ✗ | ✗ | ✗ | ✓ | ✗ | ✗ | ✗ |
 
 ## Additional Properties
 

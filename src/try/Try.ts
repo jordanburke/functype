@@ -5,6 +5,7 @@ import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
+import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Reshapeable } from "@/reshapeable"
@@ -24,7 +25,7 @@ export interface Try<out T>
     Pipe<T>,
     Promisable<T>,
     Doable<T>,
-    Omit<Reshapeable<T>, "toList"> {
+    Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -117,6 +118,7 @@ const Success = <T>(value: T): Try<T> => ({
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
   toOption: () => Some(value),
+  toList: () => List<T>([value]),
   toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => createSerializer("Success", value),
@@ -177,6 +179,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
   toOption: () => Option<T>(null),
+  toList: () => List<T>([]),
   toTry: () => Failure<T>(error),
   pipe: <U>(_f: (value: T) => U) => {
     throw error

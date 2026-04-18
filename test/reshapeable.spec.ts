@@ -19,6 +19,10 @@ describe("Reshapeable interface", () => {
       expect(either.isRight()).toBe(true)
       expect(either.value).toBe(5)
 
+      // toList
+      const list = opt.toList()
+      expect(list.toArray()).toEqual([5])
+
       // toTry
       const tryVal = opt.toTry()
       expect(tryVal.isSuccess()).toBe(true)
@@ -36,6 +40,10 @@ describe("Reshapeable interface", () => {
       const either = opt.toEither("none value")
       expect(either.isLeft()).toBe(true)
       expect(either.value).toBe("none value")
+
+      // toList
+      const list = opt.toList()
+      expect(list.isEmpty).toBe(true)
 
       // toTry
       const tryVal = opt.toTry()
@@ -57,6 +65,10 @@ describe("Reshapeable interface", () => {
       expect(newEither.isRight()).toBe(true)
       expect(newEither.value).toBe(10)
 
+      // toList
+      const list = either.toList()
+      expect(list.toArray()).toEqual([10])
+
       // toTry
       const tryVal = either.toTry()
       expect(tryVal.isSuccess()).toBe(true)
@@ -74,6 +86,10 @@ describe("Reshapeable interface", () => {
       const newEither = either.toEither("default")
       expect(newEither.isLeft()).toBe(true)
       expect(newEither.value).toBe("default")
+
+      // toList
+      const list = either.toList()
+      expect(list.isEmpty).toBe(true)
 
       // toTry
       const tryVal = either.toTry()
@@ -139,6 +155,10 @@ describe("Reshapeable interface", () => {
       expect(either.isRight()).toBe(true)
       expect(either.value).toBe(42)
 
+      // toList
+      const list = tryVal.toList()
+      expect(list.toArray()).toEqual([42])
+
       // toTry - returns new Success with same value
       const tryAgain = tryVal.toTry()
       expect(tryAgain.isSuccess()).toBe(true)
@@ -159,6 +179,10 @@ describe("Reshapeable interface", () => {
       const either = tryVal.toEither("default")
       expect(either.isLeft()).toBe(true)
       expect(either.value).toBe(error)
+
+      // toList
+      const list = tryVal.toList()
+      expect(list.isEmpty).toBe(true)
 
       // toTry - returns new Failure with same error
       const tryAgain = tryVal.toTry()
@@ -186,6 +210,11 @@ describe("Reshapeable interface", () => {
       const tripled = asEither.map((x) => x * 3)
       expect(tripled.value).toBe(90)
 
+      // Convert to List
+      const asList = result.toList()
+      const quadrupled = asList.map((x) => x * 4)
+      expect(quadrupled.toArray()).toEqual([120])
+
       // Convert to Try
       const asTry = result.toTry()
       const quintupled = asTry.map((x) => x * 5)
@@ -202,6 +231,7 @@ describe("Reshapeable interface", () => {
       // All conversions should reflect the None/failure state
       expect(result.toOption().isNone()).toBe(true)
       expect(result.toEither("failed").isLeft()).toBe(true)
+      expect(result.toList().isEmpty).toBe(true)
       expect(result.toTry().isFailure()).toBe(true)
     })
 

@@ -3,6 +3,7 @@ import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeSum } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
+import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -29,7 +30,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
     FunctypeSum<R, "Left" | "Right">,
     Promisable<R>,
     Doable<R>,
-    Omit<Reshapeable<R>, "toList">,
+    Reshapeable<R>,
     Omit<Extractable<R>, "or" | "orElse"> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
@@ -141,6 +142,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   ): Promise<Either<L | L2, U>> =>
     f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
   toOption: () => Some<R>(value),
+  toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
@@ -223,6 +225,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
     _f: (value: R) => Promise<Either<L2, U>>,
   ): Promise<Either<L | L2, U>> => Promise.resolve(Left<L | L2, U>(value)) as Promise<Either<L | L2, U>>,
   toOption: () => None<R>(),
+  toList: () => List<R>(),
   toEither: <E extends Type>(leftValue: E) => Left<E, R>(leftValue),
   toTry: () =>
     Try<R>(() => {

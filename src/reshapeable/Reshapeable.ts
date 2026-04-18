@@ -68,15 +68,11 @@ export interface Reshapeable<T extends Type> {
   /**
    * Converts this monad to a List.
    *
-   * Conversion rules (where supported):
+   * Conversion rules:
+   * - Option: Some → List([value]), None → List([])
+   * - Either: Right → List([value]), Left → List([])
    * - List: returns self
-   * - Obj: single-element List wrapping the value
-   *
-   * NOTE: Option, Either, and Try deliberately omit this method (`Omit<Reshapeable<T>, "toList">`).
-   * Sum types are not collections; their List coercion would force T-invariance through
-   * `List.remove`, breaking covariance declared at `<out T>` on those containers.
-   * Users needing a List-like output can `.fold(() => [], v => [v])`, `[...option]` (where iterable),
-   * or iterate manually.
+   * - Try: Success → List([value]), Failure → List([])
    *
    * @returns A List containing the value(s) if present, empty List otherwise
    */
@@ -110,12 +106,12 @@ export const ReshapeableUtils = {
       typeof value === "object" &&
       "toOption" in value &&
       "toEither" in value &&
+      "toList" in value &&
       "toTry" in value &&
       typeof (value as Record<string, unknown>).toOption === "function" &&
       typeof (value as Record<string, unknown>).toEither === "function" &&
-      typeof (value as Record<string, unknown>).toTry === "function" &&
-      // toList is optional — collections have it, sum types (Option/Either/Try) do not.
-      (!("toList" in value) || typeof (value as Record<string, unknown>).toList === "function")
+      typeof (value as Record<string, unknown>).toList === "function" &&
+      typeof (value as Record<string, unknown>).toTry === "function"
     )
   },
 

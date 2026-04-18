@@ -12,7 +12,20 @@ import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
-export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
+/**
+ * Immutable List. Covariant in A (`<out A>`) — mirrors Scala's `List[+A]`.
+ *
+ * Methods that would otherwise force A-invariance use TS equivalents of Scala's
+ * co-variance patterns:
+ *   - query/removal ops (`contains`, `indexOf`, `remove`) take `unknown`, matching
+ *     Scala's `-(elem: Any)` / `contains(elem: Any)` — if the value can't possibly
+ *     be in the list, it's a no-op, not a type error.
+ *   - additive ops (`add`, `prepend`, `concat`) widen the element type, matching
+ *     Scala's `::[B >: A]` / `++[B >: A]` — `List<A> + B` produces `List<A | B>`.
+ *   - `reduce` / `reduceRight` accept a wider accumulator type, matching Scala's
+ *     `reduce[B >: A]`.
+ */
+export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   // Override these to return List instead of FunctypeCollection
@@ -27,11 +40,14 @@ export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Resha
   // List-specific methods
   /** @internal */
   filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
-  remove: (value: A) => List<A>
+  /** Remove a value. Accepts `unknown` so an unrelated-type arg is a safe no-op (Scala: `-(elem: Any)`). */
+  remove: (value: unknown) => List<A>
   removeAt: (index: number) => List<A>
-  add: (item: A) => List<A>
+  /** Add a value, possibly widening the element type (Scala: `:+[B >: A]`). */
+  add<B>(item: B): List<A | B>
   get: (index: number) => Option<A>
-  concat: (other: List<A>) => List<A>
+  /** Concatenate with another list, possibly widening (Scala: `++[B >: A]`). */
+  concat<B>(other: List<B>): List<A | B>
   take: (n: number) => List<A>
   takeWhile: (p: (a: A) => boolean) => List<A>
   takeRight: (n: number) => List<A>
@@ -40,8 +56,10 @@ export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Resha
   get tail(): List<A>
   get init(): List<A>
   reverse: () => List<A>
-  indexOf: (value: A) => number
-  prepend: (item: A) => List<A>
+  /** Find the index of a value. Accepts `unknown` (Scala: `indexOf(elem: Any)`). */
+  indexOf: (value: unknown) => number
+  /** Prepend a value, possibly widening (Scala: `+:[B >: A]`). */
+  prepend<B>(item: B): List<A | B>
   distinct: () => List<A>
   sorted: (compareFn?: (a: A, b: A) => number) => List<A>
   sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
@@ -51,6 +69,11 @@ export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Resha
   partition: (p: (a: A) => boolean) => [List<A>, List<A>]
   span: (p: (a: A) => boolean) => [List<A>, List<A>]
   slice: (start: number, end: number) => List<A>
+  /** Contains check. Accepts `unknown` (Scala: `contains(elem: Any)`). */
+  contains(value: unknown): boolean
+  /** Reduce with a possibly-wider accumulator type (Scala: `reduce[B >: A]`). Defaults to `B = A`. */
+  reduce<B = A>(op: (b: B, a: B) => B): B
+  reduceRight<B = A>(op: (b: B, a: B) => B): B
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -89,7 +112,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     forEach: (f: (a: A) => void) => array.forEach(f),
 
-    contains: (value: A): boolean => array.includes(value),
+    contains: (value: unknown): boolean => array.includes(value as A),
 
     count: (p: (x: A) => boolean) => array.filter(p).length,
 
@@ -121,9 +144,10 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     toArray: <B = A>(): B[] => [...array] as unknown as B[],
 
-    reduce: (f: (prev: A, curr: A) => A) => array.reduce(f),
+    reduce: <B = A>(op: (b: B, a: B) => B): B => array.reduce(op as unknown as (prev: A, curr: A) => A) as unknown as B,
 
-    reduceRight: (f: (prev: A, curr: A) => A) => array.reduceRight(f),
+    reduceRight: <B = A>(op: (b: B, a: B) => B): B =>
+      array.reduceRight(op as unknown as (prev: A, curr: A) => A) as unknown as B,
 
     fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => array.reduce(fn, initial),
 
@@ -141,16 +165,17 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       return array.length === 0 ? patterns.Empty() : patterns.NonEmpty([...array])
     },
 
-    remove: (value: A) => ListObject(array.filter((x) => x !== value)),
+    remove: (value: unknown) => ListObject(array.filter((x) => x !== value)),
 
     removeAt: (index: number) =>
       index < 0 || index >= array.length ? list : ListObject([...array.slice(0, index), ...array.slice(index + 1)]),
 
-    add: (item: A) => ListObject([...array, item]),
+    add: <B>(item: B): List<A | B> => ListObject<A | B>([...(array as (A | B)[]), item]),
 
     get: (index: number) => Option(array[index]),
 
-    concat: (other: List<A>) => ListObject([...array, ...other.toArray()]),
+    concat: <B>(other: List<B>): List<A | B> =>
+      ListObject<A | B>([...(array as (A | B)[]), ...(other.toArray() as (A | B)[])]),
 
     take: (n: number) => ListObject(array.slice(0, Math.max(0, n))),
 
@@ -183,9 +208,9 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     reverse: () => ListObject([...array].reverse()),
 
-    indexOf: (value: A) => array.indexOf(value),
+    indexOf: (value: unknown) => array.indexOf(value as A),
 
-    prepend: (item: A) => ListObject([item, ...array]),
+    prepend: <B>(item: B): List<A | B> => ListObject<A | B>([item, ...(array as (A | B)[])]),
 
     distinct: () => {
       const seen = new globalThis.Set<A>()

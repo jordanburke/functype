@@ -8,7 +8,7 @@ import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Either } from "../index"
-import { Left, Right, Try } from "../index"
+import { Left, List, Right, Try } from "../index"
 
 /**
  * Option type module
@@ -22,7 +22,7 @@ import { Left, Right, Try } from "../index"
  * @typeParam T - The type of the value contained in the Option
  */
 export interface Option<out T extends Type>
-  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Omit<Reshapeable<T>, "toList"> {
+  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -140,6 +140,11 @@ export interface Option<out T extends Type>
    * @returns true if this Option contains the value, false otherwise
    */
   contains(value: T): boolean
+  /**
+   * Converts this Option to a List.
+   * @returns A List containing the value if Some, or empty List if None
+   */
+  toList(): List<T>
   /** The number of elements in this Option (0 or 1) */
   size: number
   /**
@@ -225,6 +230,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     (op: (a: T, b: B) => B) =>
       op(value, z),
   contains: (val: T) => val === value,
+  toList: () => List<T>([value]),
   size: 1,
   toOption: () => Some(value),
   toEither: <E>(_left: E) => Right<E, T>(value),
@@ -290,6 +296,7 @@ const NONE: Option<never> = {
     () =>
       z,
   contains: () => false,
+  toList: () => List([]),
   size: 0,
   toOption: <T>() => NONE as unknown as Option<T>,
   toEither: <E>(left: E) => Left<E, never>(left),

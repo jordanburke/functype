@@ -464,7 +464,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       // eslint-disable-next-line require-yield
       const result = Do(function* () {
         return 42
-      }) as unknown as List<number>
+      }).toList()
 
       // Empty generator returns List with single value
       expect(result.toArray()).toEqual([42])
@@ -516,12 +516,7 @@ describe("Do-notation Comprehensive Tests (Scala for-comprehension alignment)", 
       // Convert to different types
       expect(result.toOption().orThrow()).toBe(50)
       expect(result.toEither("error").value).toBe(50)
-      expect(
-        result.fold(
-          () => [],
-          (v) => [v],
-        )[0],
-      ).toBe(50)
+      expect(result.toList().toArray()[0]).toBe(50)
       expect(result.toTry().orThrow()).toBe(50)
     })
   })

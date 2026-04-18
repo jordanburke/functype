@@ -109,6 +109,18 @@ describe("Either", () => {
     expect(option.isNone()).toBe(true)
   })
 
+  it("toList on Right", () => {
+    const right = Right<string, number>(5)
+    const list = right.toList()
+    expect(list.toArray()).toEqual([5])
+  })
+
+  it("toList on Left", () => {
+    const left = Left<string, number>("error")
+    const list = left.toList()
+    expect(list.toArray()).toEqual([])
+  })
+
   it("toString on Right", () => {
     const right = Right<string, number>(5)
     expect(right.toString()).toBe("Right(5)")

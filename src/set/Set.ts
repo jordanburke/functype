@@ -9,16 +9,24 @@ import type { Type } from "@/types"
 type NativeSet<T> = globalThis.Set<T>
 const NativeSet = globalThis.Set
 
-export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
-  add: (value: A) => Set<A>
-  remove: (value: A) => Set<A>
-  contains: (value: A) => boolean
-  has: (value: A) => boolean
+/**
+ * Immutable Set. Covariant in A (`<out A>`) — while Scala's `Set[A]` is nominally invariant,
+ * functype's Set follows the same pragmatic covariance pattern as List: element-query methods
+ * (`contains`, `has`, `remove`) accept `unknown`, and additions widen via `<B>(B) => Set<A | B>`.
+ * `reduce`/`reduceRight` follow Scala's `reduce[B >: A]` pattern with a default `B = A`.
+ */
+export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
+  add<B>(value: B): Set<A | B>
+  remove: (value: unknown) => Set<A>
+  contains(value: unknown): boolean
+  has(value: unknown): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
+  reduce<B = A>(op: (b: B, a: B) => B): B
+  reduceRight<B = A>(op: (b: B, a: B) => B): B
   toList: () => List<A>
   toSet: () => Set<A>
   toArray: <B = A>() => B[]
@@ -34,17 +42,17 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     [Symbol.iterator]: () => values[Symbol.iterator](),
 
-    add: (value: A): Set<A> => createSet([...values, value]),
+    add: <B>(value: B): Set<A | B> => createSet<A | B>([...(values as NativeSet<A | B>), value]),
 
-    remove: (value: A): Set<A> => {
+    remove: (value: unknown): Set<A> => {
       const newSet = new NativeSet(values)
-      newSet.delete(value)
+      newSet.delete(value as A)
       return createSet(newSet)
     },
 
-    contains: (value: A): boolean => values.has(value),
+    contains: (value: unknown): boolean => values.has(value as A),
 
-    has: (value: A): boolean => values.has(value),
+    has: (value: unknown): boolean => values.has(value as A),
 
     map: <B>(f: (a: A) => B): Set<B> => createSet(Array.from(values).map(f)),
 
@@ -112,16 +120,16 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return values.size === 0
     },
 
-    reduce: (f: (prev: A, curr: A) => A) => {
+    reduce: <B = A>(op: (b: B, a: B) => B): B => {
       const arr = Array.from(values)
       if (arr.length === 0) throw new Error("Cannot reduce empty Set")
-      return arr.reduce(f)
+      return arr.reduce(op as unknown as (prev: A, curr: A) => A) as unknown as B
     },
 
-    reduceRight: (f: (prev: A, curr: A) => A) => {
+    reduceRight: <B = A>(op: (b: B, a: B) => B): B => {
       const arr = Array.from(values)
       if (arr.length === 0) throw new Error("Cannot reduceRight empty Set")
-      return arr.reduceRight(f)
+      return arr.reduceRight(op as unknown as (prev: A, curr: A) => A) as unknown as B
     },
 
     count: (p: (x: A) => boolean) => {

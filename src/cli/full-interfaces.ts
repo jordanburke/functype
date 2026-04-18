@@ -6,7 +6,7 @@
 
 export const FULL_INTERFACES: Record<string, string> = {
   Option: `export interface Option<out T extends Type>
-  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Omit<Reshapeable<T>, "toList"> {
+  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -124,6 +124,11 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns true if this Option contains the value, false otherwise
    */
   contains(value: T): boolean
+  /**
+   * Converts this Option to a List.
+   * @returns A List containing the value if Some, or empty List if None
+   */
+  toList(): List<T>
   /** The number of elements in this Option (0 or 1) */
   size: number
   /**
@@ -186,6 +191,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   ): Promise<Either<L | L2, U>> =>
     f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
   toOption: () => Some<R>(value),
+  toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
@@ -243,7 +249,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
     FunctypeSum<R, "Left" | "Right">,
     Promisable<R>,
     Doable<R>,
-    Omit<Reshapeable<R>, "toList">,
+    Reshapeable<R>,
     Omit<Extractable<R>, "or" | "orElse"> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
@@ -314,7 +320,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
     Pipe<T>,
     Promisable<T>,
     Doable<T>,
-    Omit<Reshapeable<T>, "toList"> {
+    Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -367,7 +373,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toValue(): { _tag: TypeNames; value: T | Error }
 }`,
 
-  List: `export interface List<A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
+  List: `export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
   readonly length: number
   readonly [Symbol.iterator]: () => Iterator<A>
   // Override these to return List instead of FunctypeCollection
@@ -382,11 +388,14 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   // List-specific methods
   /** @internal */
   filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
-  remove: (value: A) => List<A>
+  /** Remove a value. Accepts \`unknown\` so an unrelated-type arg is a safe no-op (Scala: \`-(elem: Any)\`). */
+  remove: (value: unknown) => List<A>
   removeAt: (index: number) => List<A>
-  add: (item: A) => List<A>
+  /** Add a value, possibly widening the element type (Scala: \`:+[B >: A]\`). */
+  add<B>(item: B): List<A | B>
   get: (index: number) => Option<A>
-  concat: (other: List<A>) => List<A>
+  /** Concatenate with another list, possibly widening (Scala: \`++[B >: A]\`). */
+  concat<B>(other: List<B>): List<A | B>
   take: (n: number) => List<A>
   takeWhile: (p: (a: A) => boolean) => List<A>
   takeRight: (n: number) => List<A>
@@ -395,8 +404,10 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   get tail(): List<A>
   get init(): List<A>
   reverse: () => List<A>
-  indexOf: (value: A) => number
-  prepend: (item: A) => List<A>
+  /** Find the index of a value. Accepts \`unknown\` (Scala: \`indexOf(elem: Any)\`). */
+  indexOf: (value: unknown) => number
+  /** Prepend a value, possibly widening (Scala: \`+:[B >: A]\`). */
+  prepend<B>(item: B): List<A | B>
   distinct: () => List<A>
   sorted: (compareFn?: (a: A, b: A) => number) => List<A>
   sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
@@ -406,6 +417,11 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   partition: (p: (a: A) => boolean) => [List<A>, List<A>]
   span: (p: (a: A) => boolean) => [List<A>, List<A>]
   slice: (start: number, end: number) => List<A>
+  /** Contains check. Accepts \`unknown\` (Scala: \`contains(elem: Any)\`). */
+  contains(value: unknown): boolean
+  /** Reduce with a possibly-wider accumulator type (Scala: \`reduce[B >: A]\`). Defaults to \`B = A\`. */
+  reduce<B = A>(op: (b: B, a: B) => B): B
+  reduceRight<B = A>(op: (b: B, a: B) => B): B
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -414,16 +430,18 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 }`,
 
-  Set: `export interface Set<A> extends FunctypeCollection<A, "Set">, Collection<A> {
-  add: (value: A) => Set<A>
-  remove: (value: A) => Set<A>
-  contains: (value: A) => boolean
-  has: (value: A) => boolean
+  Set: `export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
+  add<B>(value: B): Set<A | B>
+  remove: (value: unknown) => Set<A>
+  contains(value: unknown): boolean
+  has(value: unknown): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
+  reduce<B = A>(op: (b: B, a: B) => B): B
+  reduceRight<B = A>(op: (b: B, a: B) => B): B
   toList: () => List<A>
   toSet: () => Set<A>
   toArray: <B = A>() => B[]

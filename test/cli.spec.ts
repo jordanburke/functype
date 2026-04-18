@@ -258,7 +258,7 @@ describe("Full Interfaces", () => {
 
   it("should include List interface", () => {
     expect(FULL_INTERFACES.List).toBeDefined()
-    expect(FULL_INTERFACES.List).toContain("export interface List<A")
+    expect(FULL_INTERFACES.List).toContain("export interface List<out A")
   })
 
   it("should include type definitions (not just interfaces)", () => {
