@@ -539,6 +539,40 @@ pnpm compile
 pnpm analyze:size
 ```
 
+## Variance (covariance — `<out T>`)
+
+Most functype containers are declared covariant in their type parameter(s) —
+`List<out A>`, `Either<out L, out R>`, etc. When adding a new container or a
+new method, follow these four rules and the variance declaration will hold:
+
+1. **Element-query / removal** (`contains`, `indexOf`, `remove`, `has`) → accept
+   `unknown`. Equality with an unrelated value is a safe `false` at runtime.
+2. **Additive** (`add`, `prepend`, `concat`, `push`, `set`) → widen via
+   `<B>(item: B): C<A | B>`. The return union accurately reflects runtime.
+3. **Aggregation** (`reduce`, `reduceRight`) → guard with `Widen<A, B>`:
+   ```ts
+   import { type Widen, reduceWiden } from "@/typeclass"
+   reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> =>
+     reduceWiden<A, Widen<A, B>>(array, op)
+   ```
+   `Widen<A, B> = A extends B ? B : never`. Blocks `list.reduce<UnrelatedType>(...)`
+   at compile time.
+4. **Recovery / fallback** (`or`, `orElse`, `recover`) → widen via
+   `<T2>(...): T | T2` or `C<T | T2>`.
+
+**When to stay invariant:** mutable cells (`Ref<A>`), record types with
+`keyof` dependence (`Obj<T>`), equality-sensitive keys (`Map<K, _>`). Document
+the choice in JSDoc with a brief "why".
+
+**When TS rejects `<out>`:** the compiler names the offending method. Fix it
+using the rules above and re-annotate.
+
+**Regression tests:** add `test/<path>/<type>-variance.spec.ts` patterned after
+`test/either/either-variance.spec.ts` (comprehensive) or `test/list/list-variance.spec.ts`
+(minimal). Type-only assertions run in milliseconds and catch silent regressions.
+
+Full recipe: **`docs/variance-guide.md`**.
+
 ## Resources
 
 ### scripts/
@@ -558,3 +592,4 @@ pnpm analyze:size
 - **GitHub**: https://github.com/jordanburke/functype
 - **Docs**: https://jordanburke.github.io/functype/
 - **Feature Matrix**: `docs/FUNCTYPE_FEATURE_MATRIX.md`
+- **Variance Guide**: `docs/variance-guide.md`
