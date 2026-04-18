@@ -239,7 +239,7 @@ describe("Full Interfaces", () => {
 
   it("should include Option interface with JSDoc", () => {
     expect(FULL_INTERFACES.Option).toBeDefined()
-    expect(FULL_INTERFACES.Option).toContain("export interface Option<T")
+    expect(FULL_INTERFACES.Option).toContain("export interface Option<out T")
     expect(FULL_INTERFACES.Option).toContain("Returns true if this Option is a Some")
     expect(FULL_INTERFACES.Option).toContain("isSome()")
     expect(FULL_INTERFACES.Option).toContain("map<U")

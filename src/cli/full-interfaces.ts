@@ -5,7 +5,8 @@
  */
 
 export const FULL_INTERFACES: Record<string, string> = {
-  Option: `export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
+  Option: `export interface Option<out T extends Type>
+  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Omit<Reshapeable<T>, "toList"> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -21,11 +22,12 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   isNone(): this is Option<T> & { value: undefined; isEmpty: true }
   /**
-   * Returns the contained value or a default value if None
+   * Returns the contained value or a default value if None. The default may be of a
+   * different type; the result widens to \`T | T2\` so Option stays covariant in T.
    * @param defaultValue - The value to return if this Option is None
-   * @returns The contained value or defaultValue
+   * @returns The contained value or defaultValue, typed as \`T | T2\`
    */
-  orElse(defaultValue: T): T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional custom error to throw. If not provided, throws a default error
@@ -34,11 +36,12 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Option if it contains a value, otherwise returns the alternative container
+   * Returns this Option if it contains a value, otherwise returns the alternative container.
+   * The alternative may hold a different type; the result widens to \`Option<T | T2>\`.
    * @param alternative - The alternative Option to return if this is None
-   * @returns This Option or the alternative
+   * @returns This Option or the alternative, typed as \`Option<T | T2>\`
    */
-  or(alternative: Option<T>): Option<T>
+  or<T2 extends Type>(alternative: Option<T2>): Option<T | T2>
   /**
    * Returns the contained value or null if None
    * @returns The contained value or null
@@ -116,11 +119,6 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   /**
-   * Converts this Option to a List
-   * @returns A List containing the value if Some, or empty List if None
-   */
-  toList(): List<T>
-  /**
    * Checks if this Option contains the specified value
    * @param value - The value to check for
    * @returns true if this Option contains the value, false otherwise
@@ -166,9 +164,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   isRight(): this is RightOf<L, R> {
     return true
   },
-  orElse: (_defaultValue: R) => value,
+  orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
   orThrow: () => value,
-  or: <L2 extends Type>(_alternative: Either<L2, R>): Either<L | L2, R> => Right<L | L2, R>(value),
+  or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
+    Right<L | L2, R | R2>(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
@@ -187,7 +186,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   ): Promise<Either<L | L2, U>> =>
     f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
   toOption: () => Some<R>(value),
-  toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
@@ -205,9 +203,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]> => {
     const result = f(value)
     return result.isLeft() ? Left<L | L2, U[]>(result.value as L2) : Right<L | L2, U[]>([result.value as U])
-  },
-  *lazyMap<U extends Type>(f: (value: R) => U) {
-    yield Right<L, U>(f(value))
   },
   tap: (f: (value: R) => void) => {
     f(value)
@@ -234,17 +229,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
   serialize: () => createSerializer("Right", value),
-  get size() {
-    return 1
-  },
-  get isEmpty() {
-    return false
-  },
   contains: (v: R) => value === v,
-  reduce: (_f: (b: R, a: R) => R) => value,
-  reduceRight: (_f: (b: R, a: R) => R) => value,
-  count: (p: (x: R) => boolean) => (p(value) ? 1 : 0),
-  find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
   // Implement Doable interface for Do-notation
@@ -253,13 +238,18 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
 })
 
-export interface EitherBase<L extends Type, R extends Type>
-  extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
+export interface EitherBase<out L extends Type, out R extends Type>
+  extends
+    FunctypeSum<R, "Left" | "Right">,
+    Promisable<R>,
+    Doable<R>,
+    Omit<Reshapeable<R>, "toList">,
+    Omit<Extractable<R>, "or" | "orElse"> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
-  orElse: (defaultValue: R) => R
+  orElse<R2 extends Type>(defaultValue: R2): R | R2
   orThrow: (error?: Error) => R
-  or<L2 extends Type>(alternative: Either<L2, R>): Either<L | L2, R>
+  or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
   orNull: () => R | null
   orUndefined: () => R | undefined
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
@@ -269,12 +259,10 @@ export interface EitherBase<L extends Type, R extends Type>
   flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
   flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
-  toList: () => List<R>
   toString: () => string
   [Symbol.iterator]: () => Iterator<R>
   yield: () => Generator<R, void, unknown>
   traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U[]>
-  lazyMap: <U extends Type>(f: (value: R) => U) => Generator<Either<L, U>, void, unknown>
   tap: (f: (value: R) => void) => Either<L, R>
   tapLeft: (f: (value: L) => void) => Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
@@ -309,30 +297,35 @@ export interface EitherBase<L extends Type, R extends Type>
   toJSON(): { _tag: "Left" | "Right"; value: L | R }
 }
 
-export interface LeftOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+export interface LeftOf<out L extends Type, out R extends Type> extends EitherBase<L, R> {
   readonly _tag: "Left"
   readonly value: L
 }
 
-export interface RightOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+export interface RightOf<out L extends Type, out R extends Type> extends EitherBase<L, R> {
   readonly _tag: "Right"
   readonly value: R
 }`,
 
-  Try: `export interface Try<T>
-  extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
+  Try: `export interface Try<out T>
+  extends
+    FunctypeSum<T, TypeNames>,
+    Omit<Extractable<T>, "or" | "orElse">,
+    Pipe<T>,
+    Promisable<T>,
+    Doable<T>,
+    Omit<Reshapeable<T>, "toList"> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
-  orElse: (defaultValue: T) => T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   orThrow: (error?: Error) => T
-  or: (alternative: Try<T>) => Try<T>
+  or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
   orNull: () => T | null
   orUndefined: () => T | undefined
   toOption: () => Option<T>
   toEither: <E extends Type>(leftValue: E) => Either<E, T>
-  toList: () => List<T>
   toTry: () => Try<T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>
@@ -361,17 +354,16 @@ export interface RightOf<L extends Type, R extends Type> extends EitherBase<L, R
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
   /**
-   * Recovers from a Failure by applying a function to the error, returning a new Try
-   * @param f - Function to apply to the error to produce a recovery value
-   * @returns Success with the recovery value if Failure, otherwise this
+   * Recovers from a Failure by applying a function to the error, returning a new Try.
+   * The recovery value may be a wider type; the result is \`Try<T | U>\`, matching
+   * Scala's \`recover[U >: T]\` shape so Try stays covariant in T.
    */
-  recover: (f: (error: Error) => T) => Try<T>
+  recover<U extends Type>(f: (error: Error) => U): Try<T | U>
   /**
-   * Recovers from a Failure by applying a function that returns a new Try
-   * @param f - Function to apply to the error to produce a new Try
-   * @returns The result of f if Failure, otherwise this
+   * Recovers from a Failure by applying a function that returns a new Try.
+   * As with \`recover\`, the recovery Try may carry a wider type; the result widens accordingly.
    */
-  recoverWith: (f: (error: Error) => Try<T>) => Try<T>
+  recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
   toValue(): { _tag: TypeNames; value: T | Error }
 }`,
 

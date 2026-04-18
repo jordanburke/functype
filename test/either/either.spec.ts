@@ -99,26 +99,14 @@ describe("Either", () => {
   it("toOption on Right", () => {
     const right = Right<string, number>(5)
     const option = right.toOption()
-    expect(!option.isEmpty).toBe(true)
+    expect(option.isSome()).toBe(true)
     expect(option.orElse(0)).toBe(5)
   })
 
   it("toOption on Left", () => {
     const left = Left<string, number>("error")
     const option = left.toOption()
-    expect(option.isEmpty).toBe(true)
-  })
-
-  it("toList on Right", () => {
-    const right = Right<string, number>(5)
-    const list = right.toList()
-    expect(list.toArray()).toEqual([5])
-  })
-
-  it("toList on Left", () => {
-    const left = Left<string, number>("error")
-    const list = left.toList()
-    expect(list.toArray()).toEqual([])
+    expect(option.isNone()).toBe(true)
   })
 
   it("toString on Right", () => {
@@ -186,25 +174,6 @@ describe("Either", () => {
     const traversed = left.traverse((x) => Right<string, string>(x.toString()))
     expect(traversed.isLeft()).toBe(true)
     expect(traversed.value).toBe("error")
-  })
-
-  // Tests for lazyMap method
-  it("should lazyMap a Right value", () => {
-    const right = Right<string, number>(5)
-    const lazyMapped = [...right.lazyMap((x) => x * 2)]
-    expect(lazyMapped.length).toBeGreaterThan(0)
-    const firstEither = lazyMapped[0]
-    expect(firstEither?.isRight()).toBe(true)
-    expect(firstEither?.value).toBe(10)
-  })
-
-  it("should not lazyMap a Left value", () => {
-    const left = Left<string, number>("error")
-    const lazyMapped = [...left.lazyMap((x) => x * 2)]
-    expect(lazyMapped.length).toBeGreaterThan(0)
-    const firstEither = lazyMapped[0]
-    expect(firstEither?.isLeft()).toBe(true)
-    expect(firstEither?.value).toBe("error")
   })
 
   // Tests for Either.sequence

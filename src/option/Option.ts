@@ -8,7 +8,7 @@ import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Either } from "../index"
-import { Left, List, Right, Try } from "../index"
+import { Left, Right, Try } from "../index"
 
 /**
  * Option type module
@@ -21,7 +21,8 @@ import { Left, List, Right, Try } from "../index"
  * It's used to handle potentially null or undefined values in a type-safe way.
  * @typeParam T - The type of the value contained in the Option
  */
-export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
+export interface Option<out T extends Type>
+  extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Omit<Reshapeable<T>, "toList"> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
@@ -37,11 +38,12 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    */
   isNone(): this is Option<T> & { value: undefined; isEmpty: true }
   /**
-   * Returns the contained value or a default value if None
+   * Returns the contained value or a default value if None. The default may be of a
+   * different type; the result widens to `T | T2` so Option stays covariant in T.
    * @param defaultValue - The value to return if this Option is None
-   * @returns The contained value or defaultValue
+   * @returns The contained value or defaultValue, typed as `T | T2`
    */
-  orElse(defaultValue: T): T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional custom error to throw. If not provided, throws a default error
@@ -50,11 +52,12 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Option if it contains a value, otherwise returns the alternative container
+   * Returns this Option if it contains a value, otherwise returns the alternative container.
+   * The alternative may hold a different type; the result widens to `Option<T | T2>`.
    * @param alternative - The alternative Option to return if this is None
-   * @returns This Option or the alternative
+   * @returns This Option or the alternative, typed as `Option<T | T2>`
    */
-  or(alternative: Option<T>): Option<T>
+  or<T2 extends Type>(alternative: Option<T2>): Option<T | T2>
   /**
    * Returns the contained value or null if None
    * @returns The contained value or null
@@ -132,11 +135,6 @@ export interface Option<T extends Type> extends Functype<T, "Some" | "None">, Pr
    */
   foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   /**
-   * Converts this Option to a List
-   * @returns A List containing the value if Some, or empty List if None
-   */
-  toList(): List<T>
-  /**
    * Checks if this Option contains the specified value
    * @param value - The value to check for
    * @returns true if this Option contains the value, false otherwise
@@ -185,9 +183,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   isNone(): this is Option<T> & { value: undefined; isEmpty: true } {
     return false
   },
-  orElse: () => value,
+  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
   orThrow: () => value,
-  or: (_alternative: Option<T>) => Some(value),
+  or: <T2 extends Type>(_alternative: Option<T2>): Option<T | T2> => Some<T | T2>(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
@@ -226,7 +224,6 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
     <B>(z: B) =>
     (op: (a: T, b: B) => B) =>
       op(value, z),
-  toList: () => List<T>([value]),
   contains: (val: T) => val === value,
   size: 1,
   toOption: () => Some(value),
@@ -254,11 +251,11 @@ const NONE: Option<never> = {
   isNone(): this is Option<never> & { value: undefined; isEmpty: true } {
     return true
   },
-  orElse: <T>(defaultValue: T) => defaultValue,
+  orElse: <T2 extends Type>(defaultValue: T2): never | T2 => defaultValue,
   orThrow<T>(error?: Error): T {
     throw error ?? new Error("Cannot extract value from None")
   },
-  or: (alternative: Option<never>) => alternative,
+  or: <T2 extends Type>(alternative: Option<T2>): Option<never | T2> => alternative,
   orNull: () => null,
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,
@@ -292,7 +289,6 @@ const NONE: Option<never> = {
     <B>(z: B) =>
     () =>
       z,
-  toList: () => List([]),
   contains: () => false,
   size: 0,
   toOption: <T>() => NONE as unknown as Option<T>,

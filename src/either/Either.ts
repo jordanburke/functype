@@ -1,9 +1,8 @@
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
-import type { FunctypeBase } from "@/functype"
+import type { FunctypeSum } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
-import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -25,13 +24,18 @@ import type { Type } from "@/types"
  * union. After `if (e.isLeft())`, the else branch narrows `e` to RightOf<L,R> and
  * `e.value` narrows to R without a cast.
  */
-export interface EitherBase<L extends Type, R extends Type>
-  extends FunctypeBase<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
+export interface EitherBase<out L extends Type, out R extends Type>
+  extends
+    FunctypeSum<R, "Left" | "Right">,
+    Promisable<R>,
+    Doable<R>,
+    Omit<Reshapeable<R>, "toList">,
+    Omit<Extractable<R>, "or" | "orElse"> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
-  orElse: (defaultValue: R) => R
+  orElse<R2 extends Type>(defaultValue: R2): R | R2
   orThrow: (error?: Error) => R
-  or<L2 extends Type>(alternative: Either<L2, R>): Either<L | L2, R>
+  or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
   orNull: () => R | null
   orUndefined: () => R | undefined
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
@@ -41,12 +45,10 @@ export interface EitherBase<L extends Type, R extends Type>
   flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
   flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
-  toList: () => List<R>
   toString: () => string
   [Symbol.iterator]: () => Iterator<R>
   yield: () => Generator<R, void, unknown>
   traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U[]>
-  lazyMap: <U extends Type>(f: (value: R) => U) => Generator<Either<L, U>, void, unknown>
   tap: (f: (value: R) => void) => Either<L, R>
   tapLeft: (f: (value: L) => void) => Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
@@ -84,7 +86,7 @@ export interface EitherBase<L extends Type, R extends Type>
 /**
  * Left variant of Either. Discriminated by `_tag: "Left"` with `value: L`.
  */
-export interface LeftOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+export interface LeftOf<out L extends Type, out R extends Type> extends EitherBase<L, R> {
   readonly _tag: "Left"
   readonly value: L
 }
@@ -92,14 +94,16 @@ export interface LeftOf<L extends Type, R extends Type> extends EitherBase<L, R>
 /**
  * Right variant of Either. Discriminated by `_tag: "Right"` with `value: R`.
  */
-export interface RightOf<L extends Type, R extends Type> extends EitherBase<L, R> {
+export interface RightOf<out L extends Type, out R extends Type> extends EitherBase<L, R> {
   readonly _tag: "Right"
   readonly value: R
 }
 
 /**
  * Either is a discriminated union of LeftOf and RightOf. TypeScript narrows
- * across both branches of `isLeft()` / `isRight()` and `_tag` checks.
+ * across both branches of `isLeft()` / `isRight()` and `_tag` checks. Variance
+ * is inherited from LeftOf/RightOf (both covariant in L and R) — union type
+ * aliases cannot carry their own variance annotations in TS.
  */
 export type Either<L extends Type, R extends Type> = LeftOf<L, R> | RightOf<L, R>
 
@@ -115,9 +119,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   isRight(): this is RightOf<L, R> {
     return true
   },
-  orElse: (_defaultValue: R) => value,
+  orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
   orThrow: () => value,
-  or: <L2 extends Type>(_alternative: Either<L2, R>): Either<L | L2, R> => Right<L | L2, R>(value),
+  or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
+    Right<L | L2, R | R2>(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
@@ -136,7 +141,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   ): Promise<Either<L | L2, U>> =>
     f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
   toOption: () => Some<R>(value),
-  toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
@@ -154,9 +158,6 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]> => {
     const result = f(value)
     return result.isLeft() ? Left<L | L2, U[]>(result.value as L2) : Right<L | L2, U[]>([result.value as U])
-  },
-  *lazyMap<U extends Type>(f: (value: R) => U) {
-    yield Right<L, U>(f(value))
   },
   tap: (f: (value: R) => void) => {
     f(value)
@@ -183,17 +184,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
   serialize: () => createSerializer("Right", value),
-  get size() {
-    return 1
-  },
-  get isEmpty() {
-    return false
-  },
   contains: (v: R) => value === v,
-  reduce: (_f: (b: R, a: R) => R) => value,
-  reduceRight: (_f: (b: R, a: R) => R) => value,
-  count: (p: (x: R) => boolean) => (p(value) ? 1 : 0),
-  find: (p: (a: R) => boolean) => (p(value) ? Some(value) : None<R>()),
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
   // Implement Doable interface for Do-notation
@@ -212,11 +203,12 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   isRight(): this is RightOf<L, R> {
     return false
   },
-  orElse: (defaultValue: R): R => defaultValue,
+  orElse: <R2 extends Type>(defaultValue: R2): R | R2 => defaultValue,
   orThrow: (error?: Error) => {
     throw error ?? value
   },
-  or: <L2 extends Type>(alternative: Either<L2, R>): Either<L | L2, R> => alternative as Either<L | L2, R>,
+  or: <L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
+    alternative as Either<L | L2, R | R2>,
   orNull: () => null,
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
@@ -231,7 +223,6 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
     _f: (value: R) => Promise<Either<L2, U>>,
   ): Promise<Either<L | L2, U>> => Promise.resolve(Left<L | L2, U>(value)) as Promise<Either<L | L2, U>>,
   toOption: () => None<R>(),
-  toList: () => List<R>(),
   toEither: <E extends Type>(leftValue: E) => Left<E, R>(leftValue),
   toTry: () =>
     Try<R>(() => {
@@ -249,9 +240,6 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   },
   traverse: <L2 extends Type, U extends Type>(_f: (value: R) => Either<L2, U>): Either<L | L2, U[]> =>
     Left<L | L2, U[]>(value),
-  *lazyMap<U extends Type>(_f: (value: R) => U) {
-    yield Left<L, U>(value)
-  },
   tap: (_f: (value: R) => void) => Left<L, R>(value),
   tapLeft: (f: (value: L) => void) => {
     f(value)
@@ -277,21 +265,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
   serialize: () => createSerializer("Left", value),
-  get size() {
-    return 0
-  },
-  get isEmpty() {
-    return true
-  },
   contains: (_v: R) => false,
-  reduce: (_f: (b: R, a: R) => R) => {
-    throw new Error("Cannot reduce a Left")
-  },
-  reduceRight: (_f: (b: R, a: R) => R) => {
-    throw new Error("Cannot reduceRight a Left")
-  },
-  count: (_p: (x: R) => boolean) => 0,
-  find: (_p: (a: R) => boolean) => None<R>(),
   exists: (_p: (a: R) => boolean) => false,
   forEach: (_f: (a: R) => void) => {},
   // Implement Doable interface for Do-notation

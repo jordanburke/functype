@@ -3,10 +3,9 @@ import { type Doable, type DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
-import type { FunctypeBase } from "@/functype"
+import type { FunctypeSum } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
-import { List } from "@/list"
-import { None, Option, Some } from "@/option"
+import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Reshapeable } from "@/reshapeable"
 import { createCustomSerializer, createSerializer } from "@/serialization"
@@ -18,20 +17,25 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<T>
-  extends FunctypeBase<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
+export interface Try<out T>
+  extends
+    FunctypeSum<T, TypeNames>,
+    Omit<Extractable<T>, "or" | "orElse">,
+    Pipe<T>,
+    Promisable<T>,
+    Doable<T>,
+    Omit<Reshapeable<T>, "toList"> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
-  orElse: (defaultValue: T) => T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   orThrow: (error?: Error) => T
-  or: (alternative: Try<T>) => Try<T>
+  or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
   orNull: () => T | null
   orUndefined: () => T | undefined
   toOption: () => Option<T>
   toEither: <E extends Type>(leftValue: E) => Either<E, T>
-  toList: () => List<T>
   toTry: () => Try<T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>
@@ -60,17 +64,16 @@ export interface Try<T>
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
   /**
-   * Recovers from a Failure by applying a function to the error, returning a new Try
-   * @param f - Function to apply to the error to produce a recovery value
-   * @returns Success with the recovery value if Failure, otherwise this
+   * Recovers from a Failure by applying a function to the error, returning a new Try.
+   * The recovery value may be a wider type; the result is `Try<T | U>`, matching
+   * Scala's `recover[U >: T]` shape so Try stays covariant in T.
    */
-  recover: (f: (error: Error) => T) => Try<T>
+  recover<U extends Type>(f: (error: Error) => U): Try<T | U>
   /**
-   * Recovers from a Failure by applying a function that returns a new Try
-   * @param f - Function to apply to the error to produce a new Try
-   * @returns The result of f if Failure, otherwise this
+   * Recovers from a Failure by applying a function that returns a new Try.
+   * As with `recover`, the recovery Try may carry a wider type; the result widens accordingly.
    */
-  recoverWith: (f: (error: Error) => Try<T>) => Try<T>
+  recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
   toValue(): { _tag: TypeNames; value: T | Error }
 }
 
@@ -84,9 +87,9 @@ const Success = <T>(value: T): Try<T> => ({
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return false
   },
-  orElse: (_defaultValue: T) => value,
+  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
   orThrow: (_error?: Error) => value,
-  or: (_alternative: Try<T>) => Success(value),
+  or: <T2 extends Type>(_alternative: Try<T2>): Try<T | T2> => Success<T | T2>(value),
   orNull: () => value,
   orUndefined: () => value,
   toEither: <E extends Type>(_leftValue: E) => Right<E, T>(value),
@@ -100,8 +103,8 @@ const Success = <T>(value: T): Try<T> => ({
     onSuccess: (value: T) => U | Promise<U>,
   ) => onSuccess(value),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
-  recover: (_f: (error: Error) => T) => Success(value),
-  recoverWith: (_f: (error: Error) => Try<T>) => Success(value),
+  recover: <U extends Type>(_f: (error: Error) => U): Try<T | U> => Success<T | U>(value),
+  recoverWith: <U extends Type>(_f: (error: Error) => Try<U>): Try<T | U> => Success<T | U>(value),
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: T) => B) =>
@@ -114,21 +117,10 @@ const Success = <T>(value: T): Try<T> => ({
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
   toOption: () => Some(value),
-  toList: () => List([value]),
   toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => createSerializer("Success", value),
-  get size() {
-    return 1
-  },
-  get isEmpty() {
-    return false
-  },
   contains: (v: T) => value === v,
-  reduce: (_f: (b: T, a: T) => T) => value,
-  reduceRight: (_f: (b: T, a: T) => T) => value,
-  count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
-  find: (p: (a: T) => boolean) => (p(value) ? Option(value) : Option(undefined)) as Option<T>,
   exists: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),
   // Implement Doable interface for Do-notation
@@ -147,11 +139,11 @@ const Failure = <T>(error: Error): Try<T> => ({
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
     return true
   },
-  orElse: (defaultValue: T) => defaultValue,
+  orElse: <T2 extends Type>(defaultValue: T2): T | T2 => defaultValue,
   orThrow: (e?: Error) => {
     throw e ?? error
   },
-  or: (alternative: Try<T>) => alternative,
+  or: <T2 extends Type>(alternative: Try<T2>): Try<T | T2> => alternative as Try<T | T2>,
   orNull: () => null,
   orUndefined: () => undefined,
   toEither: <E extends Type>(_leftValue: E) => Left<E, T>(error as E),
@@ -165,12 +157,12 @@ const Failure = <T>(error: Error): Try<T> => ({
     _onSuccess: (value: T) => U | Promise<U>,
   ) => onFailure(error),
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
-  recover: (f: (error: Error) => T) => Try(() => f(error)),
-  recoverWith: (f: (error: Error) => Try<T>) => {
+  recover: <U extends Type>(f: (error: Error) => U): Try<T | U> => Try(() => f(error)),
+  recoverWith: <U extends Type>(f: (error: Error) => Try<U>): Try<T | U> => {
     try {
       return f(error)
     } catch (e) {
-      return Failure<T>(e instanceof Error ? e : new Error(String(e)))
+      return Failure<T | U>(e instanceof Error ? e : new Error(String(e)))
     }
   },
   foldLeft:
@@ -184,28 +176,13 @@ const Failure = <T>(error: Error): Try<T> => ({
   toString: () => `Failure(${safeStringify(error)}))`,
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
-  toOption: () => None<T>(),
-  toList: () => List<T>([]),
+  toOption: () => Option<T>(null),
   toTry: () => Failure<T>(error),
   pipe: <U>(_f: (value: T) => U) => {
     throw error
   },
   serialize: () => createCustomSerializer({ _tag: "Failure", error: error.message, stack: error.stack }),
-  get size() {
-    return 0
-  },
-  get isEmpty() {
-    return true
-  },
   contains: (_v: T) => false,
-  reduce: (_f: (b: T, a: T) => T) => {
-    throw new Error("Cannot reduce a Failure")
-  },
-  reduceRight: (_f: (b: T, a: T) => T) => {
-    throw new Error("Cannot reduceRight a Failure")
-  },
-  count: (_p: (x: T) => boolean) => 0,
-  find: (_p: (a: T) => boolean) => Option<T>(null),
   exists: (_p: (a: T) => boolean) => false,
   forEach: (_f: (a: T) => void) => {},
   // Implement Doable interface for Do-notation
