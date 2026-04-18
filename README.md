@@ -769,10 +769,10 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 
 ### Performance Optimizations
 
-- [ ] Add memoization utilities
+- [x] Add memoization utilities (via `Lazy` — memoized deferred computation)
 - [ ] Improve recursive operations for large collections
 - [ ] Implement immutable data structures with structural sharing
-- [ ] Add performance benchmarks
+- [x] Add performance benchmarks (`bench/` — Do-notation, monad detection, optimization targets)
 - [x] Optimize TreeShaking with sideEffects flag in package.json
 - [x] Support selective module imports for smaller bundles
 - [x] Add bundle size monitoring to CI/CD
@@ -784,14 +784,14 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - Object methods for common operations
   - Companion functions for additional utilities
 - [x] Align Task API with other monadic structures
-- [ ] Standardize import patterns (@ imports vs relative paths)
+- [x] Standardize import patterns (@ imports vs relative paths)
 - [x] Implement consistent error handling strategy for async operations
 
 ### Testing and Documentation
 
 - [ ] Add observable test coverage metrics
 - [x] Implement property-based testing
-- [ ] Expand error handling tests
+- [x] Expand error handling tests (`test/error/` — typed errors, pino integration, stack traces)
 - [ ] Add interoperability tests with other libraries
 
 ### TypeScript Improvements
@@ -802,8 +802,33 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - Current type parameters work well for first-order types
   - Expand to support type constructors as parameters (F<A> => F<B>)
 - [x] Add branded/nominal types for stronger type safety
-- [ ] Implement more type-level utilities (conditional types, template literals)
+- [x] Implement more type-level utilities — partial (`Widen<A, B>` conditional-type helper in `src/typeclass/variance.ts`; more in `src/types/`, `src/typeable/`)
 - [ ] Leverage newer TypeScript features (const type parameters, tuple manipulation)
+
+### Completed Major Features (0.60.0 audit)
+
+Work that shipped but wasn't captured in the planned roadmap above:
+
+- [x] **Scala-aligned covariance for the container family** (0.57.2 → 0.60.0)
+  - ✓ `<out T>` / `<out K, out V>` across Option, Either, Try, List, Set, Map, Lazy, LazyList, Tuple, Identity, Task/TaskOutcome
+  - ✓ `FunctypeSum` hierarchy separating sum types (Either, Try) from iterables
+  - ✓ `Widen<A, B>` conditional-type helper enforcing Scala's `[B >: A]` lower-bound semantics in `reduce` / `reduceRight`
+  - ✓ Method-level widening patterns (`or`, `orElse`, `recover`, `add`, `concat`, etc.)
+  - ✓ Contributor guide at [`docs/variance-guide.md`](docs/variance-guide.md)
+  - Deferred: ZIO-style `<in R, out E, out A>` for IO
+- [x] **Do-notation with generator comprehensions** (`src/do/`)
+- [x] **HTTP module** — typed fetch wrapper with validator support (`src/fetch/` — Http, HttpClient, HttpError, HttpRequest)
+- [x] **Throwable** — enhanced error wrapper preserving stack traces and context (`src/core/throwable/`)
+- [x] **Task / TaskOutcome** — sync/async with cancellation + progress tracking (`src/core/task/`)
+- [x] **IO effect system companions** — Context, Tag, Layer, Exit, TestClock (`src/io/`)
+- [x] **Ref** — mutable reference for controlled mutability (`src/ref/`)
+- [x] **Identity** — trivial covariant container (`src/identity/`)
+- [x] **Conditional module** (`src/conditional/`)
+- [x] **Valuable module** (`src/valuable/`)
+- [x] **MCP server for functype documentation** (`mcp-server/`)
+- [x] **CLI — `npx functype`** (`src/cli/`)
+- [x] **Claude Code skills** — `functype` (user guide) and `functype-developer` (contributor guide)
+- [x] **Serialization infrastructure** — JSON / YAML / binary (`src/serialization/`)
 
 ## Claude Code Skills
 
