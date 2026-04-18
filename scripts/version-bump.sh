@@ -37,7 +37,8 @@ cd "$ROOT_DIR"
 # Update llms-full.txt version header
 LLMS_FILE="$ROOT_DIR/site/public/llms-full.txt"
 if [ -f "$LLMS_FILE" ]; then
-  sed -i '' "1s/# Functype v.*/# Functype v$VERSION/" "$LLMS_FILE"
+  sed -i.bak "1s/# Functype v.*/# Functype v$VERSION/" "$LLMS_FILE"
+  rm "$LLMS_FILE.bak"
   echo "  Updated llms-full.txt to $VERSION"
 fi
 
