@@ -91,6 +91,7 @@ Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toS
 All containers declared with `<out T>` variance where their type parameter is semantically covariant. Exceptions: `Ref<A>` (mutable cell — invariant), `Obj<T>` (record with `keyof` — invariant), `Map<K, out V>` (K invariant for equality, V covariant), `IO<R, E, A>` (still invariant; ZIO-style `<in R, out E, out A>` deferred).
 
 `src/typeclass/variance.ts` exposes:
+
 - `Widen<A, B>` — TS equivalent of Scala's `[B >: A]`; used in `reduce`/`reduceRight` to enforce that B is a supertype of A.
 - `reduceWiden` / `reduceRightWiden` — centralized runtime-safe helpers for container implementers.
 
@@ -128,13 +129,17 @@ Strict mode with additional safety:
 ## Adding New Data Structures
 
 1. Create module directory under `src/` (e.g., `src/mynewtype/`)
-2. Implement the type extending `Functype<A, Tag>` or `FunctypeCollection<A, Tag>`
+2. Implement the type extending the appropriate base:
+   - **`Functype<A, Tag>`** — single-value containers with Iterable API (like Option, Lazy)
+   - **`FunctypeSum<A, Tag>`** — sum types / disjoint unions (like Either, Try). Excludes collection ops.
+   - **`FunctypeCollection<A, Tag>`** — multi-element collections (like List, Set)
 3. Use `Companion()` utility to combine constructor with companion methods
-4. Create `index.ts` that re-exports the main type
-5. Add export to `src/index.ts` and `package.json` exports field
-6. Create tests in `test/mynewtype.spec.ts`
-7. Update `docs/FUNCTYPE_FEATURE_MATRIX.md` with interface support
-8. Run `pnpm validate`
+4. If the new type has a type parameter, follow the patterns in `docs/variance-guide.md` (covariance via `<out T>`, Scala-aligned method shapes, `Widen<A, B>` for reduce-family methods)
+5. Create `index.ts` that re-exports the main type
+6. Add export to `src/index.ts` and `package.json` exports field
+7. Create tests in `test/mynewtype.spec.ts` — include a `test/mynewtype-variance.spec.ts` if the type is meant to be covariant
+8. Update `docs/FUNCTYPE_FEATURE_MATRIX.md` with interface support + variance row
+9. Run `pnpm validate`
 
 ## Adding Methods to Existing Data Structures
 
@@ -158,11 +163,12 @@ See `.claude/skills/functype-developer/references/adding-methods.md` for the ful
 When changing public APIs:
 
 - Update JSDoc comments in source (appears in TypeDoc automatically)
-- Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support changes
+- Update `docs/FUNCTYPE_FEATURE_MATRIX.md` if interface support or variance changes
+- Update `docs/variance-guide.md` if the change affects the variance patterns (new method shape, new type-level helper)
 - Run `pnpm docs:sync` to sync feature matrix to site
 - Run `pnpm validate` before committing
 
-## Functype API Quick Reference (v0.44.0+)
+## Functype API Quick Reference (v0.60.0+)
 
 ```typescript
 // List - immutable array
