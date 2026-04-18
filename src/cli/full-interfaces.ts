@@ -172,17 +172,20 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
-  ap: <U extends Type>(ff: Either<L, (value: R) => U>): Either<L, U> =>
-    ff._tag === "Right" ? Right((ff.value as (value: R) => U)(value)) : Left(ff.value as L),
+  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
+    ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
     f(value)
       .then((result) => Right<L, U>(result))
       .catch((error: unknown) => Promise.resolve(Left<L, U>(error as L))) as Promise<Either<L, U>>,
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
     other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U> => f(value),
-  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>): Promise<Either<L, U>> =>
-    f(value).catch((error: unknown) => Left<L, U>(error as L)) as Promise<Either<L, U>>,
+  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
+    f(value) as Either<L | L2, U>,
+  flatMapAsync: <L2 extends Type, U extends Type>(
+    f: (value: R) => Promise<Either<L2, U>>,
+  ): Promise<Either<L | L2, U>> =>
+    f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
@@ -199,9 +202,9 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   *yield() {
     yield value
   },
-  traverse: <U extends Type>(f: (value: R) => Either<L, U>): Either<L, U[]> => {
+  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]> => {
     const result = f(value)
-    return result.isLeft() ? Left(result.value as L) : Right([result.value as U])
+    return result.isLeft() ? Left<L | L2, U[]>(result.value as L2) : Right<L | L2, U[]>([result.value as U])
   },
   *lazyMap<U extends Type>(f: (value: R) => U) {
     yield Right<L, U>(f(value))
@@ -260,17 +263,17 @@ export interface EitherBase<L extends Type, R extends Type>
   orNull: () => R | null
   orUndefined: () => R | undefined
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
-  ap: <U extends Type>(ff: Either<L, (value: R) => U>) => Either<L, U>
+  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>) => Either<L | L2, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
-  flatMap: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U>
-  flatMapAsync: <U extends Type>(f: (value: R) => Promise<Either<L, U>>) => Promise<Either<L, U>>
+  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
+  flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
   toList: () => List<R>
   toString: () => string
   [Symbol.iterator]: () => Iterator<R>
   yield: () => Generator<R, void, unknown>
-  traverse: <U extends Type>(f: (value: R) => Either<L, U>) => Either<L, U[]>
+  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U[]>
   lazyMap: <U extends Type>(f: (value: R) => U) => Generator<Either<L, U>, void, unknown>
   tap: (f: (value: R) => void) => Either<L, R>
   tapLeft: (f: (value: L) => void) => Either<L, R>
