@@ -8,6 +8,7 @@ import type { Option } from "@/option"
 import { None, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import { Try } from "@/try"
+import type { Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**
@@ -27,11 +28,10 @@ export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractab
   /** Whether the computation has been evaluated */
   readonly isEvaluated: boolean
   /**
-   * Returns the computed value or a default value if computation fails
-   * @param defaultValue - The value to return if computation fails
-   * @returns The computed value or defaultValue
+   * Returns the computed value or a default value if computation fails.
+   * Result widens to `T | T2` (Scala: `getOrElse[B >: A](default: B): B`).
    */
-  orElse(defaultValue: T): T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
@@ -45,11 +45,10 @@ export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractab
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy
-   * @param alternative - The alternative Lazy to use if computation fails
-   * @returns This Lazy or the alternative
+   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy.
+   * The alternative may carry a different type; result is `Lazy<T | T2>`.
    */
-  or(alternative: Lazy<T>): Lazy<T>
+  or<T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2>
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function
@@ -207,7 +206,7 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     get isEvaluated() {
       return evaluated
     },
-    orElse: (defaultValue: T): T => {
+    orElse: <T2 extends Type>(defaultValue: T2): T | T2 => {
       try {
         return evaluate()
       } catch {
@@ -228,8 +227,8 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         throw err ?? e
       }
     },
-    or: (alternative: Lazy<T>): Lazy<T> =>
-      Lazy(() => {
+    or: <T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2> =>
+      Lazy<T | T2>(() => {
         try {
           return evaluate()
         } catch {
@@ -365,15 +364,17 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return true
       }
     },
-    contains: (v: T): boolean => {
+    contains: (v: unknown): boolean => {
       try {
         return evaluate() === v
       } catch {
         return false
       }
     },
-    reduce: (_f: (b: T, a: T) => T): T => evaluate(),
-    reduceRight: (_f: (b: T, a: T) => T): T => evaluate(),
+    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      evaluate() as unknown as Widen<T, B>,
+    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      evaluate() as unknown as Widen<T, B>,
     count: (p: (x: T) => boolean): number => {
       try {
         return p(evaluate()) ? 1 : 0

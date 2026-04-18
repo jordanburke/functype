@@ -7,7 +7,7 @@ import type { Type } from "@/types"
  * - Identity: fa.map(x => x) ≡ fa
  * - Composition: fa.map(f).map(g) ≡ fa.map(x => g(f(x)))
  */
-export interface Functor<A extends Type> {
+export interface Functor<out A extends Type> {
   map<B extends Type>(f: (value: A) => B): Functor<B>
 }
 
@@ -20,7 +20,7 @@ export interface Functor<A extends Type> {
  * - Homomorphism: pure(f).ap(pure(x)) ≡ pure(f(x))
  * - Interchange: u.ap(pure(y)) ≡ pure(f => f(y)).ap(u)
  */
-export interface Applicative<A extends Type> extends Functor<A> {
+export interface Applicative<out A extends Type> extends Functor<A> {
   ap<B extends Type>(ff: Applicative<(value: A) => B>): Applicative<B>
 }
 
@@ -32,7 +32,7 @@ export interface Applicative<A extends Type> extends Functor<A> {
  * - Right identity: m.flatMap(pure) ≡ m
  * - Associativity: m.flatMap(f).flatMap(g) ≡ m.flatMap(x => f(x).flatMap(g))
  */
-export interface Monad<A extends Type> extends Applicative<A> {
+export interface Monad<out A extends Type> extends Applicative<A> {
   flatMap<B extends Type>(f: (value: A) => Monad<B>): Monad<B>
 }
 
@@ -40,6 +40,6 @@ export interface Monad<A extends Type> extends Applicative<A> {
  * Async monad - supports asynchronous monadic operations
  * Extends Monad so it has map, ap, and flatMap in addition to flatMapAsync
  */
-export interface AsyncMonad<A extends Type> extends Monad<A> {
+export interface AsyncMonad<out A extends Type> extends Monad<A> {
   flatMapAsync<B extends Type>(f: (value: A) => PromiseLike<AsyncMonad<B>>): PromiseLike<AsyncMonad<B>>
 }

@@ -37,7 +37,7 @@ import type { Type } from "@/types"
  * const asOption = result.toOption()
  * asOption.map(x => x * 2).orElse(0)
  */
-export interface Reshapeable<T extends Type> {
+export interface Reshapeable<out T extends Type> {
   /**
    * Converts this monad to an Option.
    *

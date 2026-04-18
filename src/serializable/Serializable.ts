@@ -7,6 +7,6 @@ export interface SerializationMethods<T> {
   toBinary(): string
 }
 
-export interface Serializable<T> {
+export interface Serializable<out T> {
   serialize(): SerializationMethods<T>
 }

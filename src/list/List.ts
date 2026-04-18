@@ -10,6 +10,7 @@ import { Set } from "@/set/Set"
 import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
+import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**
@@ -69,11 +70,6 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   partition: (p: (a: A) => boolean) => [List<A>, List<A>]
   span: (p: (a: A) => boolean) => [List<A>, List<A>]
   slice: (start: number, end: number) => List<A>
-  /** Contains check. Accepts `unknown` (Scala: `contains(elem: Any)`). */
-  contains(value: unknown): boolean
-  /** Reduce with a possibly-wider accumulator type (Scala: `reduce[B >: A]`). Defaults to `B = A`. */
-  reduce<B = A>(op: (b: B, a: B) => B): B
-  reduceRight<B = A>(op: (b: B, a: B) => B): B
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -144,10 +140,11 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     toArray: <B = A>(): B[] => [...array] as unknown as B[],
 
-    reduce: <B = A>(op: (b: B, a: B) => B): B => array.reduce(op as unknown as (prev: A, curr: A) => A) as unknown as B,
+    reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> =>
+      reduceWiden<A, Widen<A, B>>(array, op),
 
-    reduceRight: <B = A>(op: (b: B, a: B) => B): B =>
-      array.reduceRight(op as unknown as (prev: A, curr: A) => A) as unknown as B,
+    reduceRight: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> =>
+      reduceRightWiden<A, Widen<A, B>>(array, op),
 
     fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => array.reduce(fn, initial),
 

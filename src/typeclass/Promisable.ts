@@ -20,7 +20,7 @@ import type { Type } from "@/types"
  * // Promise rejects with "error"
  * ```
  */
-export interface Promisable<A extends Type> {
+export interface Promisable<out A extends Type> {
   /**
    * Converts this container to a Promise
    *

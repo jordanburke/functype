@@ -83,18 +83,6 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   flatMapAsync<U extends Type>(f: (value: T) => Promise<Option<U>>): Promise<Option<U>>
   /**
-   * Applies a binary operator to a start value and the contained value
-   * @param f - The binary operator
-   * @returns The result of the reduction
-   */
-  reduce<U>(f: (acc: U, value: T) => U): U
-  /**
-   * Applies a binary operator to the contained value and a start value
-   * @param f - The binary operator
-   * @returns The result of the reduction
-   */
-  reduceRight<U>(f: (acc: U, value: T) => U): U
-  /**
    * Pattern matches over the Option, applying onNone if None and onSome if Some
    * @param onNone - Function to apply if the Option is None
    * @param onSome - Function to apply if the Option has a value
@@ -245,12 +233,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
 })
 
 export interface EitherBase<out L extends Type, out R extends Type>
-  extends
-    FunctypeSum<R, "Left" | "Right">,
-    Promisable<R>,
-    Doable<R>,
-    Reshapeable<R>,
-    Omit<Extractable<R>, "or" | "orElse"> {
+  extends FunctypeSum<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
@@ -314,13 +297,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
 }`,
 
   Try: `export interface Try<out T>
-  extends
-    FunctypeSum<T, TypeNames>,
-    Omit<Extractable<T>, "or" | "orElse">,
-    Pipe<T>,
-    Promisable<T>,
-    Doable<T>,
-    Reshapeable<T> {
+  extends FunctypeSum<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
@@ -417,11 +394,6 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   partition: (p: (a: A) => boolean) => [List<A>, List<A>]
   span: (p: (a: A) => boolean) => [List<A>, List<A>]
   slice: (start: number, end: number) => List<A>
-  /** Contains check. Accepts \`unknown\` (Scala: \`contains(elem: Any)\`). */
-  contains(value: unknown): boolean
-  /** Reduce with a possibly-wider accumulator type (Scala: \`reduce[B >: A]\`). Defaults to \`B = A\`. */
-  reduce<B = A>(op: (b: B, a: B) => B): B
-  reduceRight<B = A>(op: (b: B, a: B) => B): B
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -433,15 +405,12 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   Set: `export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add<B>(value: B): Set<A | B>
   remove: (value: unknown) => Set<A>
-  contains(value: unknown): boolean
   has(value: unknown): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
-  reduce<B = A>(op: (b: B, a: B) => B): B
-  reduceRight<B = A>(op: (b: B, a: B) => B): B
   toList: () => List<A>
   toSet: () => Set<A>
   toArray: <B = A>() => B[]
@@ -486,11 +455,10 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   /** Whether the computation has been evaluated */
   readonly isEvaluated: boolean
   /**
-   * Returns the computed value or a default value if computation fails
-   * @param defaultValue - The value to return if computation fails
-   * @returns The computed value or defaultValue
+   * Returns the computed value or a default value if computation fails.
+   * Result widens to \`T | T2\` (Scala: \`getOrElse[B >: A](default: B): B\`).
    */
-  orElse(defaultValue: T): T
+  orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
@@ -504,11 +472,10 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy
-   * @param alternative - The alternative Lazy to use if computation fails
-   * @returns This Lazy or the alternative
+   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy.
+   * The alternative may carry a different type; result is \`Lazy<T | T2>\`.
    */
-  or(alternative: Lazy<T>): Lazy<T>
+  or<T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2>
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function

@@ -1,12 +1,13 @@
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
+import type { Extractable } from "@/extractable/Extractable"
 import type { Functype } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
 import { Tuple } from "@/tuple"
-import type { Promisable } from "@/typeclass"
+import type { Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 import { List, Right, Try } from "../index"
@@ -264,16 +265,17 @@ const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => ({
   exists: (p: (a: T) => boolean) => p(data),
   forEach: (f: (a: T) => void) => f(data),
 
-  reduce: (_f: (b: T, a: T) => T) => data,
-  reduceRight: (_f: (b: T, a: T) => T) => data,
+  reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => data as unknown as Widen<T, B>,
+  reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+    data as unknown as Widen<T, B>,
 
-  contains: (value: T) => JSON.stringify(data) === JSON.stringify(value),
+  contains: (value: unknown) => JSON.stringify(data) === JSON.stringify(value),
 
   // --- Extractable ---
 
-  orElse: (_defaultValue: T) => data,
+  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => data,
   orThrow: (_error?: Error) => data,
-  or: (_alternative: Obj<T>) => ObjObject(data),
+  or: <T2 extends Type>(_alternative: Extractable<T2>): Extractable<T | T2> => ObjObject(data) as Extractable<T | T2>,
   orNull: () => data,
   orUndefined: () => data,
 

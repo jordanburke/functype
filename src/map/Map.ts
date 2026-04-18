@@ -9,6 +9,7 @@ import { createSerializer } from "@/serialization"
 import { Set } from "@/set/Set"
 import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
+import type { Widen } from "@/typeclass"
 
 import { ESMap, type ESMapType } from "./shim"
 
@@ -64,8 +65,9 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     return newMap.delete(value) ? MapObject(newMap.entries()) : MapObject(state.values.entries())
   }
 
-  const contains = (value: Tuple<[K, V]>): boolean => {
-    const tuple = value.toArray()
+  const contains = (value: unknown): boolean => {
+    if (!value || typeof (value as { toArray?: unknown }).toArray !== "function") return false
+    const tuple = (value as Tuple<[K, V]>).toArray()
     return state.values.get(tuple[0]) === tuple[1]
   }
 
@@ -103,11 +105,13 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     return MapObject(results.entries())
   }
 
-  const reduce = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
-    List(getEntries()).reduce(f)
+  const reduce = <B = Tuple<[K, V]>>(
+    op: (b: Widen<Tuple<[K, V]>, B>, a: Widen<Tuple<[K, V]>, B>) => Widen<Tuple<[K, V]>, B>,
+  ): Widen<Tuple<[K, V]>, B> => List(getEntries()).reduce(op)
 
-  const reduceRight = (f: (acc: Tuple<[K, V]>, value: Tuple<[K, V]>) => Tuple<[K, V]>): Tuple<[K, V]> =>
-    List(getEntries()).reduceRight(f)
+  const reduceRight = <B = Tuple<[K, V]>>(
+    op: (b: Widen<Tuple<[K, V]>, B>, a: Widen<Tuple<[K, V]>, B>) => Widen<Tuple<[K, V]>, B>,
+  ): Widen<Tuple<[K, V]>, B> => List(getEntries()).reduceRight(op)
 
   const foldLeft =
     <B>(z: B) =>

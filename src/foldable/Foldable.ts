@@ -11,7 +11,7 @@
  *
  * @typeParam A - The type of elements in the data structure
  */
-export interface Foldable<A> {
+export interface Foldable<out A> {
   /**
    * Left-associative fold using the provided zero value and operation
    * @param z - Zero/identity value

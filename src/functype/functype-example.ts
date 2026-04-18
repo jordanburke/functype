@@ -1,5 +1,6 @@
 import type { Extractable } from "@/extractable"
 import { None, Option } from "@/option"
+import type { Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Functype } from "./Functype"
@@ -51,22 +52,22 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
   size = this._tag === "Full" ? 1 : 0
   isEmpty = this._tag === "Empty"
 
-  contains(value: T): boolean {
+  contains(value: unknown): boolean {
     return this._tag === "Full" && this._value === value
   }
 
-  reduce(_f: (b: T, a: T) => T): T {
+  reduce<B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> {
     if (this._tag === "Empty" || this._value === undefined) {
       throw new Error("Cannot reduce an empty Box")
     }
-    return this._value
+    return this._value as unknown as Widen<T, B>
   }
 
-  reduceRight(_f: (b: T, a: T) => T): T {
+  reduceRight<B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> {
     if (this._tag === "Empty" || this._value === undefined) {
       throw new Error("Cannot reduceRight an empty Box")
     }
-    return this._value
+    return this._value as unknown as Widen<T, B>
   }
 
   // Extractable methods
@@ -95,12 +96,12 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._value
   }
 
-  orElse(defaultValue: T): T {
+  orElse<T2 extends Type>(defaultValue: T2): T | T2 {
     return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue
   }
 
-  or(alternative: Extractable<T>): Extractable<T> {
-    return this._tag === "Full" ? this : alternative
+  or<T2 extends Type>(alternative: Extractable<T2>): Extractable<T | T2> {
+    return this._tag === "Full" ? (this as unknown as Extractable<T | T2>) : alternative
   }
 
   orNull(): T | null {

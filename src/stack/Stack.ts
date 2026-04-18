@@ -7,6 +7,7 @@ import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import type { Traversable } from "@/traversable/Traversable"
+import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 import type { Valuable } from "@/valuable/Valuable"
 
@@ -112,20 +113,20 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
   const size = (): number => items.length
   const isEmpty = (): boolean => items.length === 0
 
-  const contains = (value: A): boolean => items.includes(value)
+  const contains = (value: unknown): boolean => items.includes(value as A)
 
-  const reduce = (f: (prev: A, curr: A) => A): A => {
+  const reduce = <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
     if (items.length === 0) {
       throw new Error("Cannot reduce an empty stack")
     }
-    return items.reduce(f)
+    return reduceWiden<A, Widen<A, B>>(items, op)
   }
 
-  const reduceRight = (f: (prev: A, curr: A) => A): A => {
+  const reduceRight = <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
     if (items.length === 0) {
       throw new Error("Cannot reduce an empty stack")
     }
-    return items.reduceRight(f)
+    return reduceRightWiden<A, Widen<A, B>>(items, op)
   }
 
   // Stack-specific operations

@@ -4,7 +4,7 @@ import type { Functype } from "@/functype"
 import { safeStringify } from "@/internal/stringify"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
-import type { Promisable } from "@/typeclass"
+import type { Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 import type { Either } from "../index"
@@ -98,18 +98,6 @@ export interface Option<out T extends Type>
    * @returns Promise of the result of applying f to the contained value, or None if this Option is None
    */
   flatMapAsync<U extends Type>(f: (value: T) => Promise<Option<U>>): Promise<Option<U>>
-  /**
-   * Applies a binary operator to a start value and the contained value
-   * @param f - The binary operator
-   * @returns The result of the reduction
-   */
-  reduce<U>(f: (acc: U, value: T) => U): U
-  /**
-   * Applies a binary operator to the contained value and a start value
-   * @param f - The binary operator
-   * @returns The result of the reduction
-   */
-  reduceRight<U>(f: (acc: U, value: T) => U): U
   /**
    * Pattern matches over the Option, applying onNone if None and onSome if Some
    * @param onNone - Function to apply if the Option is None
@@ -219,8 +207,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Option<U>>) => {
     return await f(value)
   },
-  reduce: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
-  reduceRight: <U>(f: (acc: U, value: T) => U) => f(undefined as never, value),
+  reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => value as unknown as Widen<T, B>,
+  reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+    value as unknown as Widen<T, B>,
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: T) => B) =>
@@ -277,8 +266,12 @@ const NONE: Option<never> = {
   flatMapAsync: <U extends Type>(_f: (value: never) => Promise<Option<U>>): Promise<Option<U>> => {
     return Promise.resolve(NONE as unknown as Option<U>)
   },
-  reduce: () => undefined as never,
-  reduceRight: () => undefined as never,
+  reduce: <B = never>(_op: (b: Widen<never, B>, a: Widen<never, B>) => Widen<never, B>): Widen<never, B> => {
+    throw new Error("Cannot reduce an empty Option")
+  },
+  reduceRight: <B = never>(_op: (b: Widen<never, B>, a: Widen<never, B>) => Widen<never, B>): Widen<never, B> => {
+    throw new Error("Cannot reduceRight an empty Option")
+  },
   fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {
     return onNone()
   },

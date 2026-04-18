@@ -7,7 +7,7 @@ import type { Type } from "@/types"
  *
  * @typeParam A - The type of value(s) in the container
  */
-export interface ContainerOps<A extends Type> {
+export interface ContainerOps<out A extends Type> {
   /**
    * Counts elements that satisfy the predicate.
    * For single-value containers: returns 0 or 1
@@ -44,7 +44,7 @@ export interface ContainerOps<A extends Type> {
  * @typeParam A - The element type
  * @typeParam Self - The collection type itself for proper return types
  */
-export interface CollectionOps<A extends Type, Self> {
+export interface CollectionOps<out A extends Type, Self> {
   /**
    * Left-associative fold over all elements using an initial value and combining function.
    * Unlike foldLeft (which is curried), this provides a convenient uncurried signature.

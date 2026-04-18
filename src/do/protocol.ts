@@ -19,6 +19,6 @@ export type DoResult<T> =
  * The doUnwrap method should return a DoResult indicating success/failure
  * and the contained value or error information
  */
-export interface Doable<T> {
+export interface Doable<out T> {
   doUnwrap(): DoResult<T>
 }

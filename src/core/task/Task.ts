@@ -14,7 +14,8 @@ import { None, Some } from "@/option/Option"
 import { Ref } from "@/ref/Ref"
 import type { Try } from "@/try/Try"
 import { Try as TryConstructor } from "@/try/Try"
-import type { AsyncMonad, Promisable } from "@/typeclass"
+import type { AsyncMonad, Promisable, Widen } from "@/typeclass"
+import type { Type } from "@/types"
 
 /**
  * Type definition for errors with a _tag property that identifies them as Throwables
@@ -178,8 +179,8 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
     orThrow: (error?: Error) => {
       throw error ?? throwable
     },
-    orElse: (defaultValue: T) => defaultValue,
-    or: (alternative: TaskOutcome<T>) => alternative,
+    orElse: <T2 extends Type>(defaultValue: T2): T | T2 => defaultValue,
+    or: <T2 extends Type>(alternative: TaskOutcome<T2>): TaskOutcome<T | T2> => alternative as TaskOutcome<T | T2>,
     orNull: () => null as T | null,
     orUndefined: () => undefined as T | undefined,
 
@@ -209,11 +210,11 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
     // Traversable methods
     size: 0,
     isEmpty: true,
-    contains: (_value: T) => false,
-    reduce: (_f: (b: T, a: T) => T) => {
+    contains: (_value: unknown) => false,
+    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => {
       throw new Error("Cannot reduce empty Err")
     },
-    reduceRight: (_f: (b: T, a: T) => T) => {
+    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => {
       throw new Error("Cannot reduceRight empty Err")
     },
     count: (_p: (value: T) => boolean) => 0,
@@ -302,8 +303,9 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
 
     // Extractable methods
     orThrow: (_error?: Error) => data,
-    orElse: (_defaultValue: T) => data,
-    or: (_alternative: TaskOutcome<T>) => Ok(data, params),
+    orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => data,
+    or: <T2 extends Type>(_alternative: TaskOutcome<T2>): TaskOutcome<T | T2> =>
+      Ok(data, params) as TaskOutcome<T | T2>,
     orNull: () => data as T | null,
     orUndefined: () => data as T | undefined,
 
@@ -330,9 +332,11 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
     // Traversable methods
     size: 1,
     isEmpty: false,
-    contains: (value: T) => data === value,
-    reduce: (_f: (b: T, a: T) => T) => data,
-    reduceRight: (_f: (b: T, a: T) => T) => data,
+    contains: (value: unknown) => data === value,
+    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      data as unknown as Widen<T, B>,
+    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      data as unknown as Widen<T, B>,
     count: (p: (value: T) => boolean) => (p(data) ? 1 : 0),
     find: (p: (value: T) => boolean) => (p(data) ? Some(data) : None<T>()),
     exists: (p: (value: T) => boolean) => p(data),

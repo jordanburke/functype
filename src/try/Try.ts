@@ -19,13 +19,7 @@ import type { Type } from "@/types"
 export type TypeNames = "Success" | "Failure"
 
 export interface Try<out T>
-  extends
-    FunctypeSum<T, TypeNames>,
-    Omit<Extractable<T>, "or" | "orElse">,
-    Pipe<T>,
-    Promisable<T>,
-    Doable<T>,
-    Reshapeable<T> {
+  extends FunctypeSum<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
   readonly error: Error | undefined
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }

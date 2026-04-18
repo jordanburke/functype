@@ -26,12 +26,7 @@ import type { Type } from "@/types"
  * `e.value` narrows to R without a cast.
  */
 export interface EitherBase<out L extends Type, out R extends Type>
-  extends
-    FunctypeSum<R, "Left" | "Right">,
-    Promisable<R>,
-    Doable<R>,
-    Reshapeable<R>,
-    Omit<Extractable<R>, "or" | "orElse"> {
+  extends FunctypeSum<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
