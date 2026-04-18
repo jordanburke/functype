@@ -168,7 +168,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
   orElse: (_defaultValue: R) => value,
   orThrow: () => value,
-  or: (_alternative: Either<L, R>) => Right<L, R>(value),
+  or: <L2 extends Type>(_alternative: Either<L2, R>): Either<L | L2, R> => Right<L | L2, R>(value),
   orNull: () => value,
   orUndefined: () => value,
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
@@ -256,7 +256,7 @@ export interface EitherBase<L extends Type, R extends Type>
   isRight(): this is RightOf<L, R>
   orElse: (defaultValue: R) => R
   orThrow: (error?: Error) => R
-  or(alternative: Either<L, R>): Either<L, R>
+  or<L2 extends Type>(alternative: Either<L2, R>): Either<L | L2, R>
   orNull: () => R | null
   orUndefined: () => R | undefined
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
