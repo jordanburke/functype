@@ -1,6 +1,10 @@
 # Changelog
 
-## [0.6.0] — Variance across the container family
+## [0.60.0] — Variance across the container family
+
+> Note: originally tagged as `0.6.0` but retagged as `0.60.0` because
+> `0.59.1 > 0.6.0` by semver numeric comparison (59 > 6). `0.60.0` is the
+> correct successor to the `0.59.x` line.
 
 End of a three-release arc that made every functype container covariant in its
 type parameter(s). What started as a surface-level fix to `Either.or` in
