@@ -78,12 +78,23 @@ Option.none() // Companion methods
 
 ### Key Interfaces
 
-Two base interfaces define the type hierarchy (see `src/functype/Functype.ts`):
+Three base interfaces define the type hierarchy:
 
-- **`Functype<A, Tag>`**: Single-value containers (Option, Either, Try, Lazy) with Extractable + Matchable
-- **`FunctypeCollection<A, Tag>`**: Collections (List, Set) with Iterable + CollectionOps
+- **`Functype<A, Tag>`** (`src/functype/Functype.ts`): Single-value containers with full Iterable API (Option, Lazy). Includes Traversable.
+- **`FunctypeSum<A, Tag>`** (`src/functype/FunctypeSum.ts`): Sum types — no collection ops (Either, Try). Scala-aligned: Either/Try are disjoint unions, not iterables.
+- **`FunctypeCollection<A, Tag>`** (`src/functype/Functype.ts`): Collections (List, Set) with Iterable + CollectionOps.
 
-Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toString`
+Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toString`, `contains`, `exists`, `forEach`.
+
+### Variance (0.60.0+)
+
+All containers declared with `<out T>` variance where their type parameter is semantically covariant. Exceptions: `Ref<A>` (mutable cell — invariant), `Obj<T>` (record with `keyof` — invariant), `Map<K, out V>` (K invariant for equality, V covariant), `IO<R, E, A>` (still invariant; ZIO-style `<in R, out E, out A>` deferred).
+
+`src/typeclass/variance.ts` exposes:
+- `Widen<A, B>` — TS equivalent of Scala's `[B >: A]`; used in `reduce`/`reduceRight` to enforce that B is a supertype of A.
+- `reduceWiden` / `reduceRightWiden` — centralized runtime-safe helpers for container implementers.
+
+See `docs/variance-guide.md` for the contributor recipe.
 
 ### Error Handling
 
