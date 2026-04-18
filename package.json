@@ -50,10 +50,10 @@
     "@types/node": "~24.10.15",
     "eslint-config-functype": "2.2.0",
     "eslint-plugin-functional": "^9.0.4",
-    "fast-check": "^4.6.0",
+    "fast-check": "^4.7.0",
     "globals": "^17.5.0",
-    "ts-builds": "^2.6.4",
-    "tsdown": "^0.21.8",
+    "ts-builds": "^2.7.0",
+    "tsdown": "^0.21.9",
     "tsx": "^4.21.0",
     "typedoc": "^0.28.19"
   },

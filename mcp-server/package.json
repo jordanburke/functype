@@ -61,15 +61,15 @@
     "LICENSE"
   ],
   "dependencies": {
-    "fastmcp": "^3.35.0",
+    "fastmcp": "^4.0.0",
     "functype": "workspace:*",
-    "typescript": "^6.0.2",
+    "typescript": "^6.0.3",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
-    "ts-builds": "^2.6.4",
-    "tsdown": "^0.21.8",
+    "ts-builds": "^2.7.0",
+    "tsdown": "^0.21.9",
     "tsx": "^4.21.0"
   },
   "prettier": "ts-builds/prettier"
