@@ -45,7 +45,7 @@ fi
 # Stage and commit
 git add package.json mcp-server/package.json site/public/llms-full.txt
 git commit -m "v$VERSION"
-git tag "v$VERSION"
+git tag -a "v$VERSION" -m "v$VERSION"
 
 echo ""
 echo "Done! Version $VERSION committed and tagged."
