@@ -1,34 +1,39 @@
 {
   "name": "functype-skills",
-  "description": "Skills and MCP tools for the functype functional programming library for TypeScript",
   "owner": {
     "name": "Jordan Burke",
     "email": "jordan.burke@gmail.com"
+  },
+  "metadata": {
+    "description": "Skills and MCP tools for the functype functional programming library for TypeScript",
+    "version": "1.0.1"
   },
   "plugins": [
     {
       "name": "functype",
       "description": "Help developers use functype patterns in their TypeScript projects - pattern conversion, API lookup, common use cases",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Jordan Burke",
         "email": "jordan.burke@gmail.com"
       },
       "source": "./",
       "category": "development",
-      "strict": false
+      "strict": false,
+      "skills": ["./.claude/skills/functype"]
     },
     {
       "name": "functype-developer",
       "description": "Assist contributors developing the functype library - architecture patterns, creating new types, testing strategies",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "Jordan Burke",
         "email": "jordan.burke@gmail.com"
       },
       "source": "./",
       "category": "development",
-      "strict": false
+      "strict": false,
+      "skills": ["./.claude/skills/functype-developer"]
     }
   ]
 }
