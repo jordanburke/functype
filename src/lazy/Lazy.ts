@@ -22,7 +22,7 @@ import type { Type } from "@/types"
  * It provides memoization and safe evaluation with integration to Option, Either, and Try.
  * @typeParam T - The type of the value to be computed
  */
-export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T> {
+export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T> {
   /** Tag identifying this as a Lazy type */
   readonly _tag: "Lazy"
   /** Whether the computation has been evaluated */

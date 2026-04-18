@@ -39,6 +39,10 @@ import { List, Right, Try } from "../index"
  *   .value()
  * ```
  */
+// Note: Obj is invariant in T by design — T is a record type and
+// `values()` / `keys()` / `entries()` depend on `keyof T`, which is
+// contravariant. Widening T would lose key-type fidelity. Users get
+// narrower Obj types that are NOT assignable to wider ones.
 export interface Obj<T extends Record<string, Type>>
   extends
     Omit<Functype<T, "Obj">, "map" | "flatMap" | "flatMapAsync" | "ap">,

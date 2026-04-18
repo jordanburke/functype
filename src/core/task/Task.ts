@@ -48,7 +48,7 @@ export interface TaskMetadata {
 }
 
 // Standalone TaskOutcome interface - no longer extends Either
-export interface TaskOutcome<T>
+export interface TaskOutcome<out T>
   extends FunctypeBase<T, "Ok" | "Err">, Extractable<T>, AsyncMonad<T>, Promisable<T>, Doable<T> {
   readonly _tag: "Ok" | "Err"
   readonly _meta: TaskMetadata
@@ -66,8 +66,8 @@ export interface TaskOutcome<T>
 
   // Error handling methods
   readonly mapError: (f: (error: Throwable) => Throwable) => TaskOutcome<T>
-  readonly recover: (value: T) => Ok<T>
-  readonly recoverWith: (f: (error: Throwable) => T) => Ok<T>
+  recover<U extends Type>(value: U): Ok<T | U>
+  recoverWith<U extends Type>(f: (error: Throwable) => U): Ok<T | U>
 
   // Type guards
   readonly isSuccess: () => this is Ok<T>
@@ -87,14 +87,14 @@ export interface TaskOutcome<T>
 }
 
 // Success case interface - extends TaskOutcome
-export interface Ok<T> extends TaskOutcome<T> {
+export interface Ok<out T> extends TaskOutcome<T> {
   readonly _tag: "Ok"
   readonly value: T
   readonly error: undefined
 }
 
 // Failure case interface - extends TaskOutcome
-export interface Err<T> extends TaskOutcome<T> {
+export interface Err<out T> extends TaskOutcome<T> {
   readonly _tag: "Err"
   readonly value: undefined
   readonly error: Throwable
@@ -172,8 +172,8 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
 
     // Error handling methods
     mapError: (f: (error: Throwable) => Throwable) => Err<T>(f(throwable), data, params),
-    recover: (value: T) => Ok(value, params),
-    recoverWith: (f: (error: Throwable) => T) => Ok(f(throwable), params),
+    recover: <U extends Type>(value: U): Ok<T | U> => Ok<T | U>(value, params),
+    recoverWith: <U extends Type>(f: (error: Throwable) => U): Ok<T | U> => Ok<T | U>(f(throwable), params),
 
     // Extractable methods
     orThrow: (error?: Error) => {
@@ -298,8 +298,8 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
 
     // Error handling methods (no-ops for success)
     mapError: (_f: (error: Throwable) => Throwable) => Ok(data, params),
-    recover: (_value: T) => Ok(data, params),
-    recoverWith: (_f: (error: Throwable) => T) => Ok(data, params),
+    recover: <U extends Type>(_value: U): Ok<T | U> => Ok<T | U>(data, params),
+    recoverWith: <U extends Type>(_f: (error: Throwable) => U): Ok<T | U> => Ok<T | U>(data, params),
 
     // Extractable methods
     orThrow: (_error?: Error) => data,

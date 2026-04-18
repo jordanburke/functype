@@ -417,7 +417,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toString: () => string
 }`,
 
-  Map: `export interface Map<K, V>
+  Map: `export interface Map<K, out V>
   extends
     KVTraversable<Tuple<[K, V]>>,
     Collection<Tuple<[K, V]>>,
@@ -449,7 +449,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toValue(): { _tag: "Map"; value: [K, V][] }
 }`,
 
-  Lazy: `export interface Lazy<T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T> {
+  Lazy: `export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extractable<T>, Pipe<T> {
   /** Tag identifying this as a Lazy type */
   readonly _tag: "Lazy"
   /** Whether the computation has been evaluated */
@@ -600,7 +600,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
 }`,
 
-  LazyList: `export interface LazyList<A extends Type>
+  LazyList: `export interface LazyList<out A extends Type>
   extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
   readonly [Symbol.toStringTag]: string
   // Iterator protocol
@@ -614,7 +614,8 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   drop(n: number): LazyList<A>
   takeWhile(predicate: (a: A) => boolean): LazyList<A>
   dropWhile(predicate: (a: A) => boolean): LazyList<A>
-  concat(other: LazyList<A>): LazyList<A>
+  /** Concatenate with another lazy list, possibly widening (Scala: \`++[B >: A]\`). */
+  concat<B extends Type>(other: LazyList<B>): LazyList<A | B>
   zip<B extends Type>(other: LazyList<B>): LazyList<[A, B]>
 
   takeRight(n: number): LazyList<A>
@@ -647,7 +648,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toString(): string
 }`,
 
-  TaskOutcome: `export interface TaskOutcome<T>
+  TaskOutcome: `export interface TaskOutcome<out T>
   extends FunctypeBase<T, "Ok" | "Err">, Extractable<T>, AsyncMonad<T>, Promisable<T>, Doable<T> {
   readonly _tag: "Ok" | "Err"
   readonly _meta: TaskMetadata
@@ -665,8 +666,8 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
 
   // Error handling methods
   readonly mapError: (f: (error: Throwable) => Throwable) => TaskOutcome<T>
-  readonly recover: (value: T) => Ok<T>
-  readonly recoverWith: (f: (error: Throwable) => T) => Ok<T>
+  recover<U extends Type>(value: U): Ok<T | U>
+  recoverWith<U extends Type>(f: (error: Throwable) => U): Ok<T | U>
 
   // Type guards
   readonly isSuccess: () => this is Ok<T>
@@ -685,7 +686,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
 }`,
 
-  Tuple: `export interface Tuple<T extends Type[]>
+  Tuple: `export interface Tuple<out T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
@@ -710,11 +711,12 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   Stack: `export type Stack<A extends Type> = {
   readonly [Symbol.toStringTag]: string
   /**
-   * Push a value onto the top of the stack
+   * Push a value onto the top of the stack. The value may be a wider type;
+   * the result widens to \`Stack<A | B>\` (Scala: \`:+[B >: A]\`).
    * @param value - The value to push
    * @returns A new Stack with the value added
    */
-  push(value: A): Stack<A>
+  push<B extends Type>(value: B): Stack<A | B>
 
   /**
    * Remove and return the top value from the stack

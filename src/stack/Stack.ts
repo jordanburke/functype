@@ -15,14 +15,18 @@ import type { Valuable } from "@/valuable/Valuable"
  * Stack data structure - Last In, First Out (LIFO)
  * Implements the Traversable interface for working with ordered collections
  */
+// Note: Stack is structurally covariant in A (all methods use A in covariance-safe
+// positions), but TS variance annotations can't be applied to intersection type
+// aliases. Subtyping still works via structural checks.
 export type Stack<A extends Type> = {
   readonly [Symbol.toStringTag]: string
   /**
-   * Push a value onto the top of the stack
+   * Push a value onto the top of the stack. The value may be a wider type;
+   * the result widens to `Stack<A | B>` (Scala: `:+[B >: A]`).
    * @param value - The value to push
    * @returns A new Stack with the value added
    */
-  push(value: A): Stack<A>
+  push<B extends Type>(value: B): Stack<A | B>
 
   /**
    * Remove and return the top value from the stack
@@ -130,8 +134,8 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
   }
 
   // Stack-specific operations
-  const push = (value: A): Stack<A> => {
-    return StackObject<A>([...items, value])
+  const push = <B extends Type>(value: B): Stack<A | B> => {
+    return StackObject<A | B>([...(items as (A | B)[]), value])
   }
 
   const pop = (): [Stack<A>, Option<A>] => {

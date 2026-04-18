@@ -29,7 +29,7 @@ import { List } from "./List"
  *   .take(10)
  *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]
  */
-export interface LazyList<A extends Type>
+export interface LazyList<out A extends Type>
   extends Foldable<A>, Pipe<LazyList<A>>, Serializable<LazyList<A>>, Typeable<"LazyList"> {
   readonly [Symbol.toStringTag]: string
   // Iterator protocol
@@ -43,7 +43,8 @@ export interface LazyList<A extends Type>
   drop(n: number): LazyList<A>
   takeWhile(predicate: (a: A) => boolean): LazyList<A>
   dropWhile(predicate: (a: A) => boolean): LazyList<A>
-  concat(other: LazyList<A>): LazyList<A>
+  /** Concatenate with another lazy list, possibly widening (Scala: `++[B >: A]`). */
+  concat<B extends Type>(other: LazyList<B>): LazyList<A | B>
   zip<B extends Type>(other: LazyList<B>): LazyList<[A, B]>
 
   takeRight(n: number): LazyList<A>
@@ -158,10 +159,10 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
         })(),
       ),
 
-    concat: (other: LazyList<A>) =>
-      LazyListObject(
+    concat: <B extends Type>(other: LazyList<B>): LazyList<A | B> =>
+      LazyListObject<A | B>(
         (function* () {
-          yield* iterable
+          yield* iterable as Iterable<A | B>
           yield* other
         })(),
       ),

@@ -1,12 +1,19 @@
 import { Companion } from "@/companion/Companion"
 
-export type Identity<T> = {
-  id: T
-  isSame?: (other: Identity<T>) => boolean
+/**
+ * Identity — a trivial container carrying a single tagged value.
+ * Covariant in T (`<out T>`). `isSame` takes `Identity<unknown>` so that
+ * cross-type equality checks (semantically always `false` for unrelated types)
+ * don't block variance — mirroring the `contains(unknown)` pattern used on
+ * List/Set/Map.
+ */
+export type Identity<out T> = {
+  readonly id: T
+  isSame?: (other: Identity<unknown>) => boolean
 }
 
 const IdentityConstructor = <T>(value: T): Identity<T> => {
-  const isSame = (other: Identity<T>): boolean => {
+  const isSame = (other: Identity<unknown>): boolean => {
     return other.id === value
   }
   return {

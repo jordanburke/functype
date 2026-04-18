@@ -5,6 +5,14 @@ import type { Type } from "@/types"
  * A mutable reference container that holds a value of type A.
  * This provides controlled mutability in a functional context.
  *
+ * **Variance: invariant in A by design.** Ref is a mutable cell — `set(A)`
+ * writes A (contravariant) and `get(): A` reads A (covariant), so A is
+ * genuinely invariant. Unlike the other containers in functype, Ref has no
+ * `<out A>` annotation and cannot be widened via subtyping. This mirrors
+ * Scala's `scala.concurrent.stm.Ref` and reflects the fundamental nature of
+ * mutable state: you can't safely treat a `Ref[Narrow]` as a `Ref[Wide]`
+ * because someone could `set` a Wide value that isn't a Narrow.
+ *
  * @example
  * const counter = Ref(0)
  * counter.get() // 0

@@ -13,7 +13,7 @@ import type { Widen } from "@/typeclass"
 
 import { ESMap, type ESMapType } from "./shim"
 
-export interface Map<K, V>
+export interface Map<K, out V>
   extends
     KVTraversable<Tuple<[K, V]>>,
     Collection<Tuple<[K, V]>>,

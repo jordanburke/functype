@@ -6,7 +6,7 @@ import type { Serializable } from "@/serializable/Serializable"
 import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
-export interface Tuple<T extends Type[]>
+export interface Tuple<out T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   readonly [Symbol.toStringTag]: string
   get<K extends number>(index: K): T[K]
