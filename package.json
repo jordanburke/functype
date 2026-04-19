@@ -43,7 +43,8 @@
     "site:build": "cd site && pnpm build",
     "site:preview": "cd site && pnpm preview",
     "cli-example": "npx . Option",
-    "version:bump": "bash scripts/version-bump.sh"
+    "version:bump": "bash scripts/version-bump.sh",
+    "version": "bash scripts/version-sync-satellites.sh"
   },
   "devDependencies": {
     "@eslint/compat": "^2.0.5",
