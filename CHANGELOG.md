@@ -1,5 +1,46 @@
 # Changelog
 
+## [0.60.1] — IO covariant in E and A
+
+Completes the covariance story for the error and success channels of `IO<R, E, A>`.
+`IO<R, never, A>` now assigns to `IO<R, AnyError, A>` without a cast, removing a class
+of `apiSucceed`-style wrappers that downstream consumers (e.g. dokploy's SomaMCP) had
+to carry.
+
+### Highlights
+
+- **`IO<in out R extends Type, out E extends Type, out A extends Type>`** — E and A
+  covariant; R invariant (ZIO-style `<in R>` still deferred, tracked separately).
+- **`IOEffect.RecoverWith` and `IOEffect.Fold`** widen the input positions of their
+  stored callbacks to `unknown`. Matches the pre-existing pattern already used on
+  `IOEffect.Map`/`FlatMap`/`MapError`. The public `IO.recoverWith` / `IO.fold`
+  methods keep their typed callback signatures — only the internal tagged-union
+  representation forgets the input type (the interpreter doesn't need it).
+- **Interpreter**: three `unsafeCoerce` sites in `runEffectSync` / `runEffect` to
+  recover the erased return type after widening.
+
+### Why it was invariant before
+
+`IOEffect` stored `f: (e: E) => IO<R, E, A>` in two branches. Using `E` as _both_ a
+parameter and part of the return of one function type makes that stored function
+invariant in `E`, which propagated through the `readonly [IOEffectKey]` field and
+locked the whole `IO` interface into invariance. Widening the stored input to
+`unknown` eliminates the contravariant use; only the return position holds `E`, so
+the whole union is covariant in `E` again.
+
+### Tests
+
+- New `test/io/io-variance.spec.ts` — six `expectTypeOf` / `@ts-expect-error`
+  assertions guarding E and A covariance and rejecting narrowing.
+- All 1569 existing tests pass unchanged.
+
+### Still to do
+
+- **`<in R>` (ZIO-style contravariant R)** — scoped as a follow-up PR. The
+  union-based R encoding (functype uses `R | R2`, ZIO uses `R & R2`) interacts with
+  `provideContext<R2 extends R>` and `Exclude<R, R2>` in ways that need their own
+  audit before flipping the annotation.
+
 ## [0.60.0] — Variance across the container family
 
 > Note: originally tagged as `0.6.0` but retagged as `0.60.0` because

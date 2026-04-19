@@ -92,11 +92,14 @@ type IOEffect<R, E, A> =
   | { readonly _tag: "Map"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => A }
   | { readonly _tag: "MapError"; readonly effect: IO<R, unknown, A>; readonly f: (e: unknown) => E }
   | { readonly _tag: "Recover"; readonly effect: IO<R, E, A>; readonly fallback: A }
-  | { readonly _tag: "RecoverWith"; readonly effect: IO<R, E, A>; readonly f: (e: E) => IO<R, E, A> }
+  // E widened to `unknown` in input positions: stored callbacks don't need the static type
+  // (the interpreter passes through whatever the failed effect produced), and keeping E only
+  // in the return position makes IOEffect covariant in E — required for `<out E>` on IO.
+  | { readonly _tag: "RecoverWith"; readonly effect: IO<R, unknown, unknown>; readonly f: (e: unknown) => IO<R, E, A> }
   | {
       readonly _tag: "Fold"
-      readonly effect: IO<R, E, unknown>
-      readonly onFailure: (e: E) => A
+      readonly effect: IO<R, unknown, unknown>
+      readonly onFailure: (e: unknown) => A
       readonly onSuccess: (a: unknown) => A
     }
   | {
@@ -134,7 +137,7 @@ export interface IOYieldable {
   readonly [Symbol.toStringTag]: string
 }
 
-export interface IO<R extends Type, E extends Type, A extends Type> {
+export interface IO<in out R extends Type, out E extends Type, out A extends Type> {
   readonly [Symbol.toStringTag]: string
   /**
    * Internal effect representation (symbol-keyed for opacity)
@@ -677,9 +680,11 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
     }
     case "RecoverWith": {
       try {
-        return runEffectSync(_fx(effect.effect), context)
+        // effect.effect is IO<R, unknown, unknown> (E-erased for variance); success value
+        // is known at runtime to match A since RecoverWith preserves the outer A.
+        return unsafeCoerce(runEffectSync(_fx(effect.effect), context))
       } catch (e) {
-        const recoveryIO = effect.f(e as E)
+        const recoveryIO = effect.f(e)
         return runEffectSync(_fx(recoveryIO), context)
       }
     }
@@ -688,7 +693,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         const a = runEffectSync(_fx(effect.effect), context)
         return effect.onSuccess(a)
       } catch (e) {
-        return effect.onFailure(e as E)
+        return effect.onFailure(e)
       }
     }
     case "Service": {
@@ -781,15 +786,17 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return Exit.succeed(effect.fallback)
       }
       case "RecoverWith": {
+        // effect.effect is IO<R, unknown, unknown> (E-erased for variance). Exit branches
+        // are re-wrapped via unsafeCoerce — outer A/E are preserved by RecoverWith's semantics.
         const exitA = await runEffect(_fx(effect.effect), context)
         if (exitA.isSuccess()) {
-          return exitA
+          return unsafeCoerce(exitA)
         }
         if (exitA.isFailure()) {
-          const recoveryIO = effect.f((exitA.toValue() as { error: E }).error)
+          const recoveryIO = effect.f((exitA.toValue() as { error: unknown }).error)
           return runEffect(_fx(recoveryIO), context)
         }
-        return exitA
+        return unsafeCoerce(exitA)
       }
       case "Fold": {
         const exitA = await runEffect(_fx(effect.effect), context)
@@ -797,7 +804,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return Exit.succeed(effect.onSuccess(exitA.orThrow()))
         }
         if (exitA.isFailure()) {
-          return Exit.succeed(effect.onFailure((exitA.toValue() as { error: E }).error))
+          return Exit.succeed(effect.onFailure((exitA.toValue() as { error: unknown }).error))
         }
         return exitA as ExitType<E, A>
       }

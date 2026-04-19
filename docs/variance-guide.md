@@ -123,9 +123,38 @@ export interface Either<out L extends Type, out R extends Type> ...
 
 Useful for "requirements" channels — types representing dependencies/inputs where widening the requirement means accepting **more** contexts.
 
-**Example (planned):** `IO<in R, out E, out A>` — R is the environment a computation needs. Widening R means the computation runs in more environments, so R is contravariant.
+**Example (planned):** `IO<in R, out E, out A>` — R is the environment a computation needs. Widening R means the computation runs in more environments, so R is contravariant. Currently `IO` is declared `<in out R, out E, out A>` — R invariant, E and A covariant. ZIO-style `<in R>` is a scoped follow-up because the union-based R encoding interacts with `provideContext<R2 extends R>` / `Exclude<R, R2>` in ways that need their own audit.
 
 Not widely used in functype; only IO currently warrants it.
+
+## Erasing the type param from an internal tagged-union (the IO pattern)
+
+`IO<R, E, A>`'s interpreter is a single switch over an `IOEffect` union. Some branches historically stored callbacks that used `E` in both input _and_ output positions of the same function type:
+
+```ts
+// invariant in E — makes the whole union invariant → forces IO to be invariant
+{
+  _tag: "RecoverWith"
+  effect: IO<R, E, A>
+  f: (e: E) => IO<R, E, A>
+}
+```
+
+`E` appearing as a parameter (contravariant) _and_ as part of the return (covariant) inside one stored function makes that function type invariant in E. Because `IOEffect<R, E, A>` is referenced as a `readonly` field on the outer `IO` interface, invariance propagates up and blocks `<out E>`.
+
+**Fix:** widen the stored callback's _input_ positions to `unknown` so `E` only appears in the return. The runtime interpreter calls these callbacks blindly — it doesn't need the static input type.
+
+```ts
+{
+  _tag: "RecoverWith"
+  effect: IO<R, unknown, unknown>
+  f: (e: unknown) => IO<R, E, A>
+}
+```
+
+The public `IO.recoverWith` method keeps its typed signature `(f: (e: E) => IO<R2, E2, B>) => ...` — user-facing safety is preserved. Only the internal tagged-union forgets E on the way in. The interpreter recovers the return type via `unsafeCoerce` at 2–3 sites (same pattern already used for `Map`/`FlatMap`/`MapError`).
+
+Applies anywhere you have: (a) an internal representation stored as a field on the public type, (b) tagged-union branches holding callbacks, (c) a type param used both ways inside one callback's signature.
 
 ## Writing the regression test
 
@@ -173,6 +202,7 @@ The variance story was painful to get right. Past mistakes worth remembering:
 - **0.57.3**: L-widening worked for direct cases but `swap()` propagates L into R, so R also had to become covariant. Fixed in 0.58.0 via sum-type hierarchy split + method widening.
 - **0.58.0**: `toList()` on sum types poisoned covariance because `List` was still invariant (via `List.remove(A)`). Fixed in 0.58.1 by making List/Set covariant via the patterns above.
 - **Pre-0.59**: `reduce<B>` was unconstrained — `list.reduce<string>(...)` on `List<number>` compiled silently. Fixed with `Widen<A, B>`.
+- **0.60.1**: `IO<R, E, A>` was invariant because `IOEffect`'s `RecoverWith`/`Fold` branches stored `f: (e: E) => IO<R, E, A>` — E used in both param and return of one stored callback → invariant. Fixed by widening stored inputs to `unknown` (matches the pre-existing pattern on `Map`/`FlatMap`/`MapError`). `<out E>` lets `IO<never, never, A>` assign to `IO<never, SomeError, A>` without the double-cast consumer code previously needed.
 
 ## Cheat sheet
 

@@ -88,7 +88,7 @@ Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toS
 
 ### Variance (0.60.0+)
 
-All containers declared with `<out T>` variance where their type parameter is semantically covariant. Exceptions: `Ref<A>` (mutable cell — invariant), `Obj<T>` (record with `keyof` — invariant), `Map<K, out V>` (K invariant for equality, V covariant), `IO<R, E, A>` (still invariant; ZIO-style `<in R, out E, out A>` deferred).
+All containers declared with `<out T>` variance where their type parameter is semantically covariant. Exceptions: `Ref<A>` (mutable cell — invariant), `Obj<T>` (record with `keyof` — invariant), `Map<K, out V>` (K invariant for equality, V covariant), `IO<in out R, out E, out A>` (E and A covariant; R invariant — ZIO-style `<in R>` still deferred).
 
 `src/typeclass/variance.ts` exposes:
 

@@ -1125,23 +1125,23 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Variance (0.6.0+)
 
-| Data Structure     | Variance              | Notes                                                                                                                                    |
-| ------------------ | :-------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Option<T>**      | `<out T>`             | covariant                                                                                                                                |
-| **Either<L,R>**    | `<out L, out R>`      | covariant in both                                                                                                                        |
-| **Try<T>**         | `<out T>`             | covariant                                                                                                                                |
-| **List<A>**        | `<out A>`             | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
-| **Set<A>**         | `<out A>`             | covariant. Same patterns as List                                                                                                         |
-| **LazyList<A>**    | `<out A>`             | covariant. `concat<B>` widens                                                                                                            |
-| **Lazy<T>**        | `<out T>`             | covariant                                                                                                                                |
-| **Identity<T>**    | `<out T>`             | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
-| **Tuple<T[]>**     | `<out T>`             | covariant                                                                                                                                |
-| **Map<K,V>**       | `<K, out V>`          | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
-| **TaskOutcome<T>** | `<out T>`             | covariant. `recover<U>` / `recoverWith<U>` widen to `Ok<T \| U>`                                                                         |
-| **Stack<A>**       | structural covariant  | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
-| **Obj<T>**         | invariant (by design) | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
-| **Ref<A>**         | invariant (by design) | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
-| **IO<R,E,A>**      | invariant (deferred)  | proper ZIO-style `<in R, out E, out A>` pending                                                                                          |
+| Data Structure     | Variance                   | Notes                                                                                                                                    |
+| ------------------ | :------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Option<T>**      | `<out T>`                  | covariant                                                                                                                                |
+| **Either<L,R>**    | `<out L, out R>`           | covariant in both                                                                                                                        |
+| **Try<T>**         | `<out T>`                  | covariant                                                                                                                                |
+| **List<A>**        | `<out A>`                  | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
+| **Set<A>**         | `<out A>`                  | covariant. Same patterns as List                                                                                                         |
+| **LazyList<A>**    | `<out A>`                  | covariant. `concat<B>` widens                                                                                                            |
+| **Lazy<T>**        | `<out T>`                  | covariant                                                                                                                                |
+| **Identity<T>**    | `<out T>`                  | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
+| **Tuple<T[]>**     | `<out T>`                  | covariant                                                                                                                                |
+| **Map<K,V>**       | `<K, out V>`               | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
+| **TaskOutcome<T>** | `<out T>`                  | covariant. `recover<U>` / `recoverWith<U>` widen to `Ok<T \| U>`                                                                         |
+| **Stack<A>**       | structural covariant       | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
+| **Obj<T>**         | invariant (by design)      | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
+| **Ref<A>**         | invariant (by design)      | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
+| **IO<R,E,A>**      | `<in out R, out E, out A>` | E and A covariant; R invariant. `IO<R, never, A>` widens to `IO<R, AnyError, A>` without a cast. ZIO-style `<in R>` still deferred.      |
 
 All base typeclasses (`Traversable`, `Extractable`, `Functor`, `Applicative`, `Monad`, `AsyncMonad`, `ContainerOps`, `CollectionOps`, `Foldable`, `Serializable`, `Pipe`, `Matchable`, `Promisable`, `Doable`, `Reshapeable`) declared `<out T>` / `<out A>`.
 
