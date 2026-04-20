@@ -1,3 +1,14 @@
+# Block search engines from TypeDoc output and raw .md files
+# (kept accessible to LLM consumers per llms.txt standard)
+
+User-agent: Googlebot
+Disallow: /api-docs/
+Disallow: /*.md$
+
+User-agent: Bingbot
+Disallow: /api-docs/
+Disallow: /*.md$
+
 User-agent: *
 Allow: /
 

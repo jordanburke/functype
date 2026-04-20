@@ -2,13 +2,18 @@ export async function GET() {
   const baseUrl = "https://functype.org"
   const pages = [
     { loc: "/", priority: "1.0", changefreq: "weekly" },
-    { loc: "/option", priority: "0.8", changefreq: "monthly" },
-    { loc: "/either", priority: "0.8", changefreq: "monthly" },
-    { loc: "/list", priority: "0.8", changefreq: "monthly" },
-    { loc: "/task", priority: "0.8", changefreq: "monthly" },
-    { loc: "/do-notation", priority: "0.8", changefreq: "monthly" },
-    { loc: "/match", priority: "0.8", changefreq: "monthly" },
-    { loc: "/mcp-server", priority: "0.8", changefreq: "monthly" },
+    { loc: "/option/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/either/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/try/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/list/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/task/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/io/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/http/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/obj/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/do-notation/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/match/", priority: "0.8", changefreq: "monthly" },
+    { loc: "/feature-matrix/", priority: "0.7", changefreq: "monthly" },
+    { loc: "/mcp-server/", priority: "0.8", changefreq: "monthly" },
   ]
 
   const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
