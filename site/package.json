@@ -15,20 +15,20 @@
     "copy:md": "cp src/content/*.md public/"
   },
   "dependencies": {
-    "@astrojs/react": "^5.0.3",
+    "@astrojs/react": "^5.0.4",
     "@astrojs/sitemap": "^3.7.2",
     "@tailwindcss/vite": "^4.2.4",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "astro": "^6.1.8",
+    "astro": "^6.1.10",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "shiki": "^4.0.2",
     "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.8",
-    "@astrojs/mdx": "^5.0.3",
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/mdx": "^5.0.4",
     "prettier": "^3.8.3",
     "typescript": "^6.0.3"
   }
