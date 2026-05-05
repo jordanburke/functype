@@ -384,6 +384,33 @@ const OptionCompanion = {
     const json = Buffer.from(binary, "base64").toString()
     return OptionCompanion.fromJSON<T>(json)
   },
+  /**
+   * Combines an array of Options into a single Option containing an array.
+   * Short-circuits on the first None.
+   * @param options - Array of Option values
+   * @returns Some with array of values, or None if any element is None
+   */
+  sequence: <T extends Type>(options: Option<T>[]): Option<T[]> =>
+    options.reduce<Option<T[]>>(
+      (acc, opt) => (acc.isEmpty || opt.isEmpty ? None<T[]>() : Some([...(acc.value as T[]), opt.value as T])),
+      Some<T[]>([]),
+    ),
+  /**
+   * Maps an array through a function returning Option, then sequences the results.
+   * Short-circuits on the first None — `f` is not invoked for elements after the
+   * first None result.
+   * @param arr - Array of values
+   * @param f - Function returning Option
+   * @returns Some with array of mapped values, or None if any application returned None
+   */
+  traverse: <T extends Type, U extends Type>(
+    arr: ReadonlyArray<T>,
+    f: (value: T, index: number) => Option<U>,
+  ): Option<U[]> =>
+    arr.reduce<Option<U[]>>(
+      (acc, item, i) => acc.flatMap((acc_) => f(item, i).map((u) => [...acc_, u])),
+      Some<U[]>([]),
+    ),
 }
 
 export const Option = Companion(OptionConstructor, OptionCompanion)

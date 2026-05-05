@@ -221,4 +221,78 @@ describe("Try", () => {
       expect(result).toBe("nope")
     })
   })
+
+  describe("Try.sequence", () => {
+    it("returns Success with array when all elements are Success", () => {
+      const result = Try.sequence([Try.success(1), Try.success(2), Try.success(3)])
+      expect(result.isSuccess()).toBe(true)
+      expect(
+        result.fold(
+          () => [] as number[],
+          (vs) => vs,
+        ),
+      ).toEqual([1, 2, 3])
+    })
+
+    it("returns first Failure with original error", () => {
+      const err = new Error("boom")
+      const result = Try.sequence<number>([Try.success(1), Try.failure(err), Try.success(3)])
+      expect(result.isFailure()).toBe(true)
+      expect(result.error).toBe(err)
+    })
+
+    it("returns Success with empty array for empty input", () => {
+      const result = Try.sequence<number>([])
+      expect(result.isSuccess()).toBe(true)
+      expect(
+        result.fold(
+          () => [] as number[],
+          (vs) => vs,
+        ),
+      ).toEqual([])
+    })
+  })
+
+  describe("Try.traverse", () => {
+    it("maps and sequences when all results are Success", () => {
+      const result = Try.traverse([1, 2, 3], (x) => Try.success(x * 2))
+      expect(result.isSuccess()).toBe(true)
+      expect(
+        result.fold(
+          () => [] as number[],
+          (vs) => vs,
+        ),
+      ).toEqual([2, 4, 6])
+    })
+
+    it("short-circuits on first Failure", () => {
+      const calls: number[] = []
+      const err = new Error("stop at 2")
+      const result = Try.traverse([1, 2, 3, 4], (x) => {
+        calls.push(x)
+        return x === 2 ? Try.failure<number>(err) : Try.success(x * 2)
+      })
+      expect(result.isFailure()).toBe(true)
+      expect(result.error).toBe(err)
+      expect(calls).toEqual([1, 2])
+    })
+
+    it("captures synchronous throws from f as Failure", () => {
+      const result = Try.traverse([1, 2, 3], (x) => {
+        if (x === 2) throw new Error("thrown")
+        return Try.success(x * 2)
+      })
+      expect(result.isFailure()).toBe(true)
+      expect(result.error?.message).toBe("thrown")
+    })
+
+    it("passes the index to the mapping function", () => {
+      const indices: number[] = []
+      Try.traverse(["a", "b", "c"], (_v, i) => {
+        indices.push(i)
+        return Try.success(i)
+      })
+      expect(indices).toEqual([0, 1, 2])
+    })
+  })
 })

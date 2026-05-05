@@ -33,6 +33,7 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
       extract: [".fold(n, s)", ".foldAsync(n, s)", ".orElse(d)", ".orThrow()", ".orNull()", ".match({Some, None})"],
       check: [".isSome", ".isNone", ".isDefined", ".isEmpty"],
+      other: ["Option.sequence(arr)", "Option.traverse(arr, f)"],
     },
   },
 
@@ -44,6 +45,7 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
       extract: [".fold(l, r)", ".foldAsync(l, r)", ".orElse(d)", ".orThrow()", ".match({Left, Right})"],
       check: [".isRight", ".isLeft"],
+      other: ["Either.sequence(arr)", "Either.traverse(arr, f)", "Either.fromNullable(v, e)"],
     },
   },
 
@@ -55,6 +57,7 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
       extract: [".fold(f, s)", ".foldAsync(f, s)", ".orElse(d)", ".orThrow()", ".toOption()", ".toEither()"],
       check: [".isSuccess", ".isFailure"],
+      other: ["Try.sequence(arr)", "Try.traverse(arr, f)"],
     },
   },
 

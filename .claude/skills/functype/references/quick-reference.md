@@ -162,6 +162,28 @@ const result = List(array)
   .toArray()
 ```
 
+### Traverse / Sequence (effectful array processing)
+
+Apply an effectful function to each element and collect into a single effect.
+Short-circuits on the first failure.
+
+```typescript
+// traverse: Array<T> -> (T => Effect<U>) => Effect<U[]>
+Either.traverse(items, parseRow) // Either<E, Row[]>
+Option.traverse(ids, lookupUser) // Option<User[]>
+Try.traverse(paths, readFileSync) // Try<string[]>
+
+// sequence: Array<Effect<T>> => Effect<T[]>
+Either.sequence(eithers) // Either<E, T[]>
+Option.sequence(options) // Option<T[]>
+Try.sequence(tries) // Try<T[]>
+
+// Avoid this footgun:
+const results = items.map(parseRow) // Array<Either<E, Row>>  <- now what?
+// Use traverse instead:
+const result = Either.traverse(items, parseRow) // Either<E, Row[]>
+```
+
 ## Pipeline Composition
 
 ### Option Pipeline

@@ -198,11 +198,15 @@ map.get(key)                 // get value (returns Option)
 Option(value)                // wrap value (None if null/undefined)
 Option.none()                // explicit None
 option.map(fn).orElse(default)
+Option.sequence(opts)        // Option<T>[] → Option<T[]> (None if any None)
+Option.traverse(arr, f)      // T[] → (T => Option<U>) → Option<U[]>
 
 // Either - error handling
 Right(value)                 // success
 Left(error)                  // error
 either.fold(onLeft, onRight)
+Either.sequence(eithers)     // Either<E,T>[] → Either<E, T[]> (first Left wins)
+Either.traverse(arr, f)      // T[] → (T => Either<E,U>) → Either<E, U[]>
 
 // Try - exception handling
 Try(() => riskyCode())       // catches exceptions
@@ -212,6 +216,8 @@ Try.fromPromise(promise)     // async: Promise<T> → Promise<Try<T>>
 try_.recover(e => fallback)  // map over failure
 try_.recoverWith(e => Try.success(alt)) // flatMap over failure
 try_.toEither()              // convert to Either
+Try.sequence(tries)          // Try<T>[] → Try<T[]> (first Failure wins)
+Try.traverse(arr, f)         // T[] → (T => Try<U>) → Try<U[]>
 
 // IO - lazy effect type with typed errors and dependency injection
 IO.sync(() => value)         // wrap sync computation

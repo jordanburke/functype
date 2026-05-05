@@ -294,6 +294,22 @@ const TryCompanion = {
     const json = Buffer.from(binary, "base64").toString()
     return TryCompanion.fromJSON<T>(json)
   },
+  /**
+   * Combines an array of Trys into a single Try containing an array.
+   * Short-circuits on the first Failure, preserving its error.
+   * @param tries - Array of Try values
+   * @returns Success with array of values, or first Failure
+   */
+  sequence: <T>(tries: Try<T>[]): Try<T[]> => Try(() => tries.map((t) => t.orThrow())),
+  /**
+   * Maps an array through a function returning Try, then sequences the results.
+   * Short-circuits on the first Failure.
+   * @param arr - Array of values
+   * @param f - Function returning Try
+   * @returns Success with array of mapped values, or first Failure
+   */
+  traverse: <T, U>(arr: ReadonlyArray<T>, f: (value: T, index: number) => Try<U>): Try<U[]> =>
+    Try(() => arr.map((item, i) => f(item, i).orThrow())),
 }
 
 export const Try = Companion(TryConstructor, TryCompanion)

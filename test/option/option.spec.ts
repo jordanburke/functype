@@ -336,4 +336,50 @@ describe("Option", () => {
       expect(result).toBe(-1)
     })
   })
+
+  describe("Option.sequence", () => {
+    it("returns Some with array when all elements are Some", () => {
+      const result = Option.sequence([Option(1), Option(2), Option(3)])
+      expect(result.isSome()).toBe(true)
+      expect(result.value).toEqual([1, 2, 3])
+    })
+
+    it("returns None when any element is None", () => {
+      const result = Option.sequence([Option(1), Option<number>(null), Option(3)])
+      expect(result.isNone()).toBe(true)
+    })
+
+    it("returns Some with empty array for empty input", () => {
+      const result = Option.sequence<number>([])
+      expect(result.isSome()).toBe(true)
+      expect(result.value).toEqual([])
+    })
+  })
+
+  describe("Option.traverse", () => {
+    it("maps and sequences when all results are Some", () => {
+      const result = Option.traverse([1, 2, 3], (x) => Option(x * 2))
+      expect(result.isSome()).toBe(true)
+      expect(result.value).toEqual([2, 4, 6])
+    })
+
+    it("short-circuits on first None", () => {
+      const calls: number[] = []
+      const result = Option.traverse([1, 2, 3, 4], (x) => {
+        calls.push(x)
+        return x === 2 ? Option<number>(null) : Option(x * 2)
+      })
+      expect(result.isNone()).toBe(true)
+      expect(calls).toEqual([1, 2])
+    })
+
+    it("passes the index to the mapping function", () => {
+      const indices: number[] = []
+      Option.traverse(["a", "b", "c"], (_v, i) => {
+        indices.push(i)
+        return Option(i)
+      })
+      expect(indices).toEqual([0, 1, 2])
+    })
+  })
 })
