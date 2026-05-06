@@ -48,6 +48,15 @@ Quick lookup guide for common functype operations.
 | Pattern match       | `fold(onEmpty, onValue)`      | `option.fold(() => 0, x => x)`                             | `R`              |
 | Async pattern match | `foldAsync(onEmpty, onValue)` | `await either.foldAsync(e => msg(e), async v => fetch(v))` | `Promise<R>`     |
 
+> **Coming from Scala / cats / fp-ts?** functype follows **Rust** convention here, not Scala. Translation table:
+>
+> | Scala / cats / fp-ts  | functype          | Purpose                              |
+> | --------------------- | ----------------- | ------------------------------------ |
+> | `getOrElse(default)`  | `orElse(default)` | Extract value with default           |
+> | `orElse(alternative)` | `or(alternative)` | Return this or alternative container |
+>
+> This was an intentional rename in 0.16.0 — see `MIGRATION_EXTRACTABLE_API.md`. There is no `getOrElse` alias; the TS error "Did you mean 'orElse'?" is the rescue.
+
 ## Predicates
 
 | Check               | Method            | Returns   |
