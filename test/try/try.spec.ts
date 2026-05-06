@@ -54,14 +54,36 @@ describe("Try", () => {
       const myTry = Try(() => 1 + 1)
       const either = myTry.toEither("error")
       expect(either.isRight()).toBe(true)
+      expect(either.value).toBe(2)
     })
 
-    it("should convert to Left on failure", () => {
-      const myTry = Try(() => {
-        throw new Error("Something went wrong")
+    it("should convert to Left with the eager value on failure", () => {
+      const myTry = Try<number>(() => {
+        throw new Error("yaml: bad colon")
       })
-      const either = myTry.toEither("error")
+      const either = myTry.toEither("parse error")
       expect(either.isLeft()).toBe(true)
+      expect(either.value).toBe("parse error")
+    })
+
+    it("should convert to Left using the builder on failure", () => {
+      const myTry = Try<number>(() => {
+        throw new Error("yaml: bad colon")
+      })
+      const either = myTry.toEither((e) => `parse error: ${e.message}`)
+      expect(either.isLeft()).toBe(true)
+      expect(either.value).toBe("parse error: yaml: bad colon")
+    })
+
+    it("should not invoke the builder on success", () => {
+      const calls: Error[] = []
+      const myTry = Try(() => 42)
+      const either = myTry.toEither((e) => {
+        calls.push(e)
+        return "unreachable"
+      })
+      expect(either.isRight()).toBe(true)
+      expect(calls).toEqual([])
     })
   })
 

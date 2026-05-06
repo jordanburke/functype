@@ -308,7 +308,15 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   orNull: () => T | null
   orUndefined: () => T | undefined
   toOption: () => Option<T>
-  toEither: <E extends Type>(leftValue: E) => Either<E, T>
+  /**
+   * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
+   * or Left(leftValue) when given a value. Success becomes Right(value).
+   *
+   * Prefer the function form to thread the underlying Error's context into the Left:
+   *
+   *   Try.fromYAML(text).toEither((e) => \`parse failed: \${e.message}\`)
+   */
+  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) => Either<E, T>
   toTry: () => Try<T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>

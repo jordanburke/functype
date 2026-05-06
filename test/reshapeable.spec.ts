@@ -175,10 +175,15 @@ describe("Reshapeable interface", () => {
       const opt = tryVal.toOption()
       expect(opt.isNone()).toBe(true)
 
-      // toEither - uses error as left value
+      // toEither - eager form uses leftValue
       const either = tryVal.toEither("default")
       expect(either.isLeft()).toBe(true)
-      expect(either.value).toBe(error)
+      expect(either.value).toBe("default")
+
+      // toEither - builder form threads the underlying Error
+      const eitherWithCause = tryVal.toEither((e) => `wrapped: ${e.message}`)
+      expect(eitherWithCause.isLeft()).toBe(true)
+      expect(eitherWithCause.value).toBe(`wrapped: ${error.message}`)
 
       // toList
       const list = tryVal.toList()

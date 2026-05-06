@@ -215,7 +215,8 @@ Try.failure(error)           // direct Failure (Error or string)
 Try.fromPromise(promise)     // async: Promise<T> → Promise<Try<T>>
 try_.recover(e => fallback)  // map over failure
 try_.recoverWith(e => Try.success(alt)) // flatMap over failure
-try_.toEither()              // convert to Either
+try_.toEither(left)          // → Either<L, T>; Failure → Left(left)
+try_.toEither(e => buildL(e))// → Either<L, T>; Failure → Left(buildL(error)) — preserves cause
 Try.sequence(tries)          // Try<T>[] → Try<T[]> (first Failure wins)
 Try.traverse(arr, f)         // T[] → (T => Try<U>) → Try<U[]>
 

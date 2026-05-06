@@ -58,7 +58,8 @@ export interface Reshapeable<out T extends Type> {
    * - Option: Some → Right, None → Left(leftValue)
    * - Either: returns self
    * - List: non-empty → Right(head), empty → Left(leftValue)
-   * - Try: Success → Right, Failure → Left(error)
+   * - Try: Success → Right, Failure → Left(leftValue). Try also accepts a builder
+   *   `(err: Error) => E` to thread the underlying Error's context into the Left.
    *
    * @param leftValue - The value to use for the Left case when the source is empty/none/failure
    * @returns An Either with the value as Right or the provided leftValue as Left

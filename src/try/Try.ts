@@ -30,7 +30,15 @@ export interface Try<out T>
   orNull: () => T | null
   orUndefined: () => T | undefined
   toOption: () => Option<T>
-  toEither: <E extends Type>(leftValue: E) => Either<E, T>
+  /**
+   * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
+   * or Left(leftValue) when given a value. Success becomes Right(value).
+   *
+   * Prefer the function form to thread the underlying Error's context into the Left:
+   *
+   *   Try.fromYAML(text).toEither((e) => `parse failed: ${e.message}`)
+   */
+  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) => Either<E, T>
   toTry: () => Try<T>
   map: <U>(f: (value: T) => U) => Try<U>
   ap: <U>(ff: Try<(value: T) => U>) => Try<U>
@@ -87,7 +95,7 @@ const Success = <T>(value: T): Try<T> => ({
   or: <T2 extends Type>(_alternative: Try<T2>): Try<T | T2> => Success<T | T2>(value),
   orNull: () => value,
   orUndefined: () => value,
-  toEither: <E extends Type>(_leftValue: E) => Right<E, T>(value),
+  toEither: <E extends Type>(_leftOrBuilder: E | ((err: Error) => E)) => Right<E, T>(value),
   map: <U>(f: (value: T) => U) => Try(() => f(value)),
   ap: <U>(ff: Try<(value: T) => U>) => ff.map((f) => f(value)),
   flatMap: <U>(f: (value: T) => Try<U>) => f(value),
@@ -142,7 +150,8 @@ const Failure = <T>(error: Error): Try<T> => ({
   or: <T2 extends Type>(alternative: Try<T2>): Try<T | T2> => alternative as Try<T | T2>,
   orNull: () => null,
   orUndefined: () => undefined,
-  toEither: <E extends Type>(_leftValue: E) => Left<E, T>(error as E),
+  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) =>
+    Left<E, T>(typeof leftOrBuilder === "function" ? (leftOrBuilder as (e: Error) => E)(error) : leftOrBuilder),
   map: <U>(_f: (value: T) => U) => Failure<U>(error),
   ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
   flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
