@@ -1,6 +1,6 @@
 {
   "name": "functype-mcp-server",
-  "version": "0.60.3",
+  "version": "0.60.4",
   "description": "MCP server for functype documentation lookup and TypeScript code validation",
   "keywords": [
     "mcp",
