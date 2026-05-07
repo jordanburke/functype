@@ -24,6 +24,7 @@
   "bugs": {
     "url": "https://github.com/jordanburke/functype/issues"
   },
+  "mcpName": "io.github.jordanburke/functype-mcp-server",
   "scripts": {
     "validate": "ts-builds validate",
     "format": "ts-builds format",

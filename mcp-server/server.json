@@ -1,0 +1,43 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.jordanburke/functype-mcp-server",
+  "description": "MCP server for functype documentation lookup and TypeScript code validation.",
+  "repository": {
+    "url": "https://github.com/jordanburke/functype",
+    "source": "github"
+  },
+  "version": "0.60.4",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "functype-mcp-server",
+      "version": "0.60.4",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "TRANSPORT_TYPE",
+          "description": "Transport mode: 'stdio' (default) or 'httpStream'",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        },
+        {
+          "name": "PORT",
+          "description": "HTTP port (default: 3000) — only used with httpStream transport",
+          "isRequired": false,
+          "format": "number",
+          "isSecret": false
+        },
+        {
+          "name": "HOST",
+          "description": "HTTP host (default: 0.0.0.0) — only used with httpStream transport",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}
