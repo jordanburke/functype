@@ -65,10 +65,10 @@
     "fastmcp": "^4.0.1",
     "functype": "workspace:*",
     "typescript": "^6.0.3",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^24.12.2",
+    "@types/node": "^24.12.3",
     "ts-builds": "^2.7.2",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0"

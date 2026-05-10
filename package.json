@@ -47,12 +47,12 @@
     "version": "bash scripts/version-sync-satellites.sh"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.0.5",
+    "@eslint/compat": "^2.1.0",
     "@types/node": "~24.10.15",
     "eslint-config-functype": "2.3.0",
     "eslint-plugin-functional": "^9.0.4",
     "fast-check": "^4.7.0",
-    "globals": "^17.5.0",
+    "globals": "^17.6.0",
     "ts-builds": "^2.7.2",
     "tsdown": "^0.21.10",
     "tsx": "^4.21.0",
