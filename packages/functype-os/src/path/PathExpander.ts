@@ -14,8 +14,11 @@ export const expandTilde = (p: string): string => {
 
 export const expandVars = (p: string): Either<PathError, string> => {
   const unresolvedVars: string[] = []
+  // Factor out the leading `$` and forbid `$` inside `${...}` so the engine
+  // can't backtrack catastrophically on inputs like `${{${{${{...` (CodeQL
+  // js/polynomial-redos).
   const result = p.replace(
-    /\$\{([^}]+)\}|\$([A-Za-z_][A-Za-z0-9_]*)/g,
+    /\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g,
     (_match, braced: string | undefined, bare: string | undefined) => {
       const varName = braced ?? bare ?? ""
       const value = process.env[varName]

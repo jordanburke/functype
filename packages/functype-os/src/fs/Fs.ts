@@ -32,8 +32,11 @@ const toFsError = (p: string, op: string, error: unknown): FsError =>
   FsError(p, op, error instanceof Error ? error : new Error(String(error)))
 
 const matchGlob = (filePath: string, pattern: string): boolean => {
-  const regex = pattern
-    .replace(/\./g, "\\.")
+  // Escape every regex metachar EXCEPT '*' first, so the subsequent
+  // '*' transformations are the only special characters in the output.
+  // Order matters: backslashes must be escaped before any '\\' insertion below.
+  const escaped = pattern.replace(/[\\^$+?.()|[\]{}]/g, "\\$&")
+  const regex = escaped
     .replace(/\*\*\//g, "{{GLOBSTAR}}")
     .replace(/\*\*/g, "{{GLOBSTAR}}")
     .replace(/\*/g, "[^/]*")

@@ -10,10 +10,15 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Validate (lint + test + build)
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
@@ -38,6 +43,9 @@ jobs:
     name: Bundle size report (packages/functype)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write    # for the bundle-size PR comment
     steps:
       - uses: actions/checkout@v4
 
