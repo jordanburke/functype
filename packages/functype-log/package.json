@@ -13,10 +13,11 @@
   ],
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
-  "homepage": "https://github.com/jordanburke/functype-log",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-log",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jordanburke/functype-log"
+    "url": "https://github.com/jordanburke/functype",
+    "directory": "packages/functype-log"
   },
   "scripts": {
     "validate": "ts-builds validate",
@@ -33,16 +34,16 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": ">=0.60.0"
+    "functype": "workspace:^"
   },
   "dependencies": {
     "loglayer": "^9.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
-    "functype": "^0.60.0",
-    "ts-builds": "^2.7.0",
-    "tsdown": "^0.21.9"
+    "functype": "workspace:^",
+    "ts-builds": "^2.7.2",
+    "tsdown": "^0.21.10"
   },
   "type": "module",
   "main": "./dist/index.js",
@@ -85,8 +86,11 @@
     "dist"
   ],
   "prettier": "ts-builds/prettier",
-  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "engines": {
     "node": ">=18.17.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
