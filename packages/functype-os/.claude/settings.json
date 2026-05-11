@@ -1,5 +1,0 @@
-{
-  "permissions": {
-    "allow": ["Edit", "Write", "Bash", "mcp__plugin_functype_functype__*"]
-  }
-}
