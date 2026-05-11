@@ -5,17 +5,23 @@ const mcpJson = `{
       "args": ["-y", "functype-mcp-server"]
     }
   }
-}`
+}`;
 
 export default function ClaudeCodeSkills() {
   return (
-    <section id="ai-tools" className="px-6 py-20 bg-gradient-to-b from-gray-50 to-white">
+    <section
+      id="ai-tools"
+      className="px-6 py-20 bg-gradient-to-b from-gray-50 to-white"
+    >
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">AI-Powered Development</h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            AI-Powered Development
+          </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            AI-powered tools to supercharge your functype workflow. Install Claude Code skills for intelligent code
-            assistance or add the MCP server for live documentation in any AI agent.
+            AI-powered tools to supercharge your functype workflow. Install
+            Claude Code skills for intelligent code assistance or add the MCP
+            server for live documentation in any AI agent.
           </p>
         </div>
 
@@ -24,7 +30,12 @@ export default function ClaudeCodeSkills() {
           <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-blue-500 transition-all hover:shadow-lg">
             <div className="flex items-start mb-6">
               <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -34,14 +45,19 @@ export default function ClaudeCodeSkills() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Functype</h3>
-                <p className="text-sm text-blue-600 font-medium">For Application Developers</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Functype
+                </h3>
+                <p className="text-sm text-blue-600 font-medium">
+                  For Application Developers
+                </p>
               </div>
             </div>
 
             <p className="text-gray-600 mb-6">
-              Transform imperative TypeScript code to functional patterns with AI guidance. Get instant pattern
-              suggestions, API lookups, and debugging help while working with Option, Either, List, and more.
+              Transform imperative TypeScript code to functional patterns with
+              AI guidance. Get instant pattern suggestions, API lookups, and
+              debugging help while working with Option, Either, List, and more.
             </p>
 
             <div className="space-y-3 mb-6">
@@ -57,7 +73,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Pattern conversion examples (imperative → functional)</span>
+                <span className="text-sm text-gray-700">
+                  Pattern conversion examples (imperative → functional)
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -71,7 +89,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Quick API reference and method lookup</span>
+                <span className="text-sm text-gray-700">
+                  Quick API reference and method lookup
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -85,13 +105,17 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Common use cases and debugging tips</span>
+                <span className="text-sm text-gray-700">
+                  Common use cases and debugging tips
+                </span>
               </div>
             </div>
 
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
               <div className="font-mono text-sm">
-                <div className="text-green-400 mb-2"># Install via marketplace</div>
+                <div className="text-green-400 mb-2">
+                  # Install via marketplace
+                </div>
                 <div className="text-gray-300">/plugin install functype</div>
               </div>
             </div>
@@ -101,7 +125,12 @@ export default function ClaudeCodeSkills() {
           <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-purple-500 transition-all hover:shadow-lg">
             <div className="flex items-start mb-6">
               <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -111,14 +140,19 @@ export default function ClaudeCodeSkills() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Functype Developer</h3>
-                <p className="text-sm text-purple-600 font-medium">For Library Contributors</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  Functype Developer
+                </h3>
+                <p className="text-sm text-purple-600 font-medium">
+                  For Library Contributors
+                </p>
               </div>
             </div>
 
             <p className="text-gray-600 mb-6">
-              Comprehensive guide for contributing to functype. Learn the architecture patterns, create new data
-              structures, implement functional interfaces, and follow library conventions.
+              Comprehensive guide for contributing to functype. Learn the
+              architecture patterns, create new data structures, implement
+              functional interfaces, and follow library conventions.
             </p>
 
             <div className="space-y-3 mb-6">
@@ -134,7 +168,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Base pattern, HKT system, and Companion utilities</span>
+                <span className="text-sm text-gray-700">
+                  Base pattern, HKT system, and Companion utilities
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -148,7 +184,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Step-by-step guide for creating new types</span>
+                <span className="text-sm text-gray-700">
+                  Step-by-step guide for creating new types
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -162,14 +200,20 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Testing patterns and validation scripts</span>
+                <span className="text-sm text-gray-700">
+                  Testing patterns and validation scripts
+                </span>
               </div>
             </div>
 
             <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
               <div className="font-mono text-sm">
-                <div className="text-green-400 mb-2"># Install via marketplace</div>
-                <div className="text-gray-300">/plugin install functype-developer</div>
+                <div className="text-green-400 mb-2">
+                  # Install via marketplace
+                </div>
+                <div className="text-gray-300">
+                  /plugin install functype-developer
+                </div>
               </div>
             </div>
           </div>
@@ -178,7 +222,12 @@ export default function ClaudeCodeSkills() {
           <div className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-green-500 transition-all hover:shadow-lg">
             <div className="flex items-start mb-6">
               <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -188,14 +237,19 @@ export default function ClaudeCodeSkills() {
                 </svg>
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">MCP Server</h3>
-                <p className="text-sm text-green-600 font-medium">For Any AI Agent</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  MCP Server
+                </h3>
+                <p className="text-sm text-green-600 font-medium">
+                  For Any AI Agent
+                </p>
               </div>
             </div>
 
             <p className="text-gray-600 mb-6">
-              Live documentation lookup and compile-time code validation via the Model Context Protocol. Works with
-              Claude Code, Cursor, Windsurf, and any MCP-compatible tool.
+              Live documentation lookup and compile-time code validation via the
+              Model Context Protocol. Works with Claude Code, Cursor, Windsurf,
+              and any MCP-compatible tool.
             </p>
 
             <div className="space-y-3 mb-6">
@@ -211,7 +265,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Search docs and type API references</span>
+                <span className="text-sm text-gray-700">
+                  Search docs and type API references
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -225,7 +281,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Compile-time code validation</span>
+                <span className="text-sm text-gray-700">
+                  Compile-time code validation
+                </span>
               </div>
               <div className="flex items-start">
                 <svg
@@ -239,7 +297,9 @@ export default function ClaudeCodeSkills() {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span className="text-sm text-gray-700">Runtime version switching</span>
+                <span className="text-sm text-gray-700">
+                  Runtime version switching
+                </span>
               </div>
             </div>
 
@@ -250,7 +310,10 @@ export default function ClaudeCodeSkills() {
               </div>
             </div>
 
-            <a href="/mcp-server" className="mt-4 inline-block text-sm text-green-600 hover:text-green-700 font-medium">
+            <a
+              href="/mcp-server"
+              className="mt-4 inline-block text-sm text-green-600 hover:text-green-700 font-medium"
+            >
               View full documentation →
             </a>
           </div>
@@ -259,29 +322,54 @@ export default function ClaudeCodeSkills() {
         {/* Installation Instructions */}
         <div className="mt-12 bg-gray-900 text-gray-100 p-8 rounded-2xl max-w-4xl mx-auto">
           <h3 className="text-xl font-bold mb-4 flex items-center">
-            <svg className="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            <svg
+              className="w-6 h-6 mr-2 text-blue-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              ></path>
             </svg>
             Quick Installation
           </h3>
 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <p className="text-gray-300 mb-3 text-sm font-medium">Claude Code Skills</p>
+              <p className="text-gray-300 mb-3 text-sm font-medium">
+                Claude Code Skills
+              </p>
               <div className="bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto">
-                <div className="text-green-400"># Add the functype marketplace</div>
-                <div className="text-gray-300 mt-2">/plugin marketplace add jordanburke/functype</div>
+                <div className="text-green-400">
+                  # Add the functype marketplace
+                </div>
+                <div className="text-gray-300 mt-2">
+                  /plugin marketplace add jordanburke/functype
+                </div>
                 <div className="text-green-400 mt-3"># Install skills</div>
-                <div className="text-gray-300 mt-2">/plugin install functype</div>
-                <div className="text-gray-300">/plugin install functype-developer</div>
+                <div className="text-gray-300 mt-2">
+                  /plugin install functype
+                </div>
+                <div className="text-gray-300">
+                  /plugin install functype-developer
+                </div>
               </div>
             </div>
 
             <div>
-              <p className="text-gray-300 mb-3 text-sm font-medium">MCP Server</p>
+              <p className="text-gray-300 mb-3 text-sm font-medium">
+                MCP Server
+              </p>
               <div className="bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto">
                 <div className="text-green-400"># Add to your .mcp.json</div>
-                <pre className="text-gray-300 mt-2 whitespace-pre" style={{ margin: 0 }}>
+                <pre
+                  className="text-gray-300 mt-2 whitespace-pre"
+                  style={{ margin: 0 }}
+                >
                   {mcpJson}
                 </pre>
               </div>
@@ -302,5 +390,5 @@ export default function ClaudeCodeSkills() {
         </div>
       </div>
     </section>
-  )
+  );
 }

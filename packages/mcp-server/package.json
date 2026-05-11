@@ -1,0 +1,79 @@
+{
+  "name": "functype-mcp-server",
+  "version": "0.60.4",
+  "description": "MCP server for functype documentation lookup and TypeScript code validation",
+  "keywords": [
+    "mcp",
+    "functype",
+    "typescript",
+    "functional-programming",
+    "model-context-protocol",
+    "claude",
+    "ai-assistant",
+    "fastmcp",
+    "type-checking"
+  ],
+  "author": "Jordan Burke <jordan.burke@gmail.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/mcp-server#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "packages/mcp-server"
+  },
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "mcpName": "io.github.jordanburke/functype-mcp-server",
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "NODE_ENV=production ts-builds build",
+    "dev": "ts-builds dev",
+    "sync:registry": "tsx scripts/sync-server-json.ts",
+    "sync:registry:check": "tsx scripts/sync-server-json.ts --check",
+    "prepublishOnly": "pnpm sync:registry:check && pnpm validate",
+    "inspect": "pnpm build && npx @modelcontextprotocol/inspector dist/index.js",
+    "serve": "pnpm build && node dist/index.js",
+    "serve:dev": "tsx watch src/index.ts"
+  },
+  "bin": {
+    "functype-mcp-server": "dist/bin.js"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "fastmcp": "^4.0.1",
+    "functype": "workspace:*",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.3",
+    "ts-builds": "^2.7.2",
+    "tsdown": "^0.22.0",
+    "tsx": "^4.21.0"
+  },
+  "prettier": "ts-builds/prettier"
+}

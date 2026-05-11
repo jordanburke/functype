@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (lint + test + build)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run turbo validate
+        run: pnpm turbo run validate
+
+  bundle-size:
+    name: Bundle size report (packages/functype)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write    # for the bundle-size PR comment
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build functype
+        run: pnpm --filter functype build
+
+      - name: Calculate bundle sizes
+        run: |
+          REPORT=packages/functype/bundle-size-report.md
+          {
+            echo "# Bundle Size Report (packages/functype)"
+            echo ""
+            echo "## Current Build"
+            echo ""
+            echo "| File | Size |"
+            echo "|------|------|"
+          } > "$REPORT"
+          for file in packages/functype/dist/*.js; do
+            size=$(du -h "$file" | cut -f1)
+            printf "| %s | %s |\n" "$(basename "$file")" "$size" >> "$REPORT"
+          done
+          {
+            echo ""
+            echo "## Gzipped Size (production)"
+            echo ""
+            echo "| File | Size |"
+            echo "|------|------|"
+          } >> "$REPORT"
+          for file in packages/functype/dist/*.js; do
+            gzip -c "$file" > "$file.gz"
+            size=$(du -h "$file.gz" | cut -f1)
+            printf "| %s | %s |\n" "$(basename "$file")" "$size" >> "$REPORT"
+            rm "$file.gz"
+          done
+
+      - name: Upload bundle size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-size-report
+          path: packages/functype/bundle-size-report.md
+
+      - name: Comment on PR with bundle size
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('packages/functype/bundle-size-report.md', 'utf8');
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report,
+            });

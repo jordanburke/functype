@@ -9,21 +9,21 @@ Either represents a value that can be one of two types: `Left` (typically for er
 ## Basic Usage
 
 ```typescript
-import { Either, Left, Right } from "functype/either"
+import { Either, Left, Right } from "functype/either";
 
 // Creating Either values
-const success = Right(42) // Right(42)
-const failure = Left("error") // Left("error")
+const success = Right(42); // Right(42)
+const failure = Left("error"); // Left("error")
 
 // Checking state
-success.isRight() // true
-failure.isLeft() // true
+success.isRight(); // true
+failure.isLeft(); // true
 
 // Extracting values
-success.orElse(0) // 42
-failure.orElse(0) // 0
-success.orThrow() // 42
-failure.orThrow() // throws Error
+success.orElse(0); // 42
+failure.orElse(0); // 0
+success.orThrow(); // 42
+failure.orThrow(); // throws Error
 ```
 
 ## Constructors
@@ -39,21 +39,21 @@ failure.orThrow() // throws Error
 
 ```typescript
 // Map - transform the Right value
-Right(5).map((x) => x * 2) // Right(10)
-Left("err").map((x) => x * 2) // Left("err") - unchanged
+Right(5).map((x) => x * 2); // Right(10)
+Left("err").map((x) => x * 2); // Left("err") - unchanged
 
 // MapLeft - transform the Left value
-Left("err").mapLeft((e) => e.toUpperCase()) // Left("ERR")
-Right(5).mapLeft((e) => e.toUpperCase()) // Right(5) - unchanged
+Left("err").mapLeft((e) => e.toUpperCase()); // Left("ERR")
+Right(5).mapLeft((e) => e.toUpperCase()); // Right(5) - unchanged
 
 // FlatMap - chain operations
-Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")))
+Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")));
 
 // Bimap - transform both sides
 either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
-)
+);
 ```
 
 ## Pattern Matching
@@ -63,38 +63,42 @@ either.bimap(
 const result = either.fold(
   (error) => `Failed: ${error}`,
   (value) => `Success: ${value}`,
-)
+);
 
 // Using match pattern
 const message = validateUser(input).fold(
   (errors) => `Validation failed: ${errors.join(", ")}`,
   (user) => `Welcome, ${user.name}!`,
-)
+);
 ```
 
 ## Validation Pipeline
 
 ```typescript
-const validateAge = (age: number): Either<string, number> => (age >= 0 && age <= 120 ? Right(age) : Left("Invalid age"))
+const validateAge = (age: number): Either<string, number> =>
+  age >= 0 && age <= 120 ? Right(age) : Left("Invalid age");
 
-const validateName = (name: string): Either<string, string> => (name.length > 0 ? Right(name) : Left("Name required"))
+const validateName = (name: string): Either<string, string> =>
+  name.length > 0 ? Right(name) : Left("Name required");
 
 // Chain validations
 const validateUser = (data: UserInput) =>
-  validateName(data.name).flatMap((name) => validateAge(data.age).map((age) => ({ name, age })))
+  validateName(data.name).flatMap((name) =>
+    validateAge(data.age).map((age) => ({ name, age })),
+  );
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const name = yield* $(validateName(input.name))
-  const age = yield* $(validateAge(input.age))
-  const email = yield* $(validateEmail(input.email))
-  return { name, age, email }
-})
+  const name = yield* $(validateName(input.name));
+  const age = yield* $(validateAge(input.age));
+  const email = yield* $(validateEmail(input.email));
+  return { name, age, email };
+});
 
 // Short-circuits on first Left
 ```
@@ -116,9 +120,9 @@ const result = Do(function* () {
 ## Type Conversions
 
 ```typescript
-either.toOption() // None for Left, Some(value) for Right
-either.toTry() // Failure for Left, Success for Right
-either.toPromise() // Rejected for Left, Resolved for Right
+either.toOption(); // None for Left, Some(value) for Right
+either.toTry(); // Failure for Left, Success for Right
+either.toPromise(); // Rejected for Left, Resolved for Right
 ```
 
 ## API Reference

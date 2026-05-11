@@ -1453,24 +1453,24 @@ Option is a container that either holds a value (`Some`) or represents the absen
 ## Basic Usage
 
 ```typescript
-import { Option } from "functype/option"
+import { Option } from "functype/option";
 
 // Creating Options
-const some = Option(42) // Some(42)
-const none = Option(null) // None
-const explicit = Option.none() // None
+const some = Option(42); // Some(42)
+const none = Option(null); // None
+const explicit = Option.none(); // None
 
 // Checking state
-some.isSome() // true
-none.isNone() // true
+some.isSome(); // true
+none.isNone(); // true
 
 // Extracting values
-some.orElse(0) // 42
-none.orElse(0) // 0
-some.orThrow() // 42
-none.orThrow() // throws Error
-some.orNull() // 42
-none.orNull() // null
+some.orElse(0); // 42
+none.orElse(0); // 0
+some.orThrow(); // 42
+none.orThrow(); // throws Error
+some.orNull(); // 42
+none.orNull(); // null
 ```
 
 ## Constructors
@@ -1486,18 +1486,18 @@ none.orNull() // null
 
 ```typescript
 // Map - transform the value if present
-Option(5).map((x) => x * 2) // Some(10)
-Option(null).map((x) => x * 2) // None
+Option(5).map((x) => x * 2); // Some(10)
+Option(null).map((x) => x * 2); // None
 
 // FlatMap - chain operations that return Options
-Option(5).flatMap((x) => (x > 0 ? Option(x) : Option.none()))
+Option(5).flatMap((x) => (x > 0 ? Option(x) : Option.none()));
 
 // Filter - keep value only if predicate passes
-Option(5).filter((x) => x > 3) // Some(5)
-Option(5).filter((x) => x > 10) // None
+Option(5).filter((x) => x > 3); // Some(5)
+Option(5).filter((x) => x > 10); // None
 
 // Tap - side effect without changing value
-Option(5).tap((x) => console.log(x)) // logs 5, returns Some(5)
+Option(5).tap((x) => console.log(x)); // logs 5, returns Some(5)
 ```
 
 ## Pattern Matching
@@ -1507,34 +1507,34 @@ Option(5).tap((x) => console.log(x)) // logs 5, returns Some(5)
 const result = Option(user).fold(
   () => "No user found",
   (u) => `Hello, ${u.name}`,
-)
+);
 
 // Using match
 const greeting = Option(name).match({
   Some: (n) => `Hello, ${n}`,
   None: () => "Hello, stranger",
-})
+});
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option(2))
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // Some(6)
+  const a = yield* $(Option(1));
+  const b = yield* $(Option(2));
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // Some(6)
 
 // Short-circuits on None
 const failed = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option.none<number>()) // stops here
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // None
+  const a = yield* $(Option(1));
+  const b = yield* $(Option.none<number>()); // stops here
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // None
 ```
 
 ## Key Features
@@ -1554,10 +1554,10 @@ const failed = Do(function* () {
 ## Type Conversions
 
 ```typescript
-option.toEither("Error message") // Left("Error message") or Right(value)
-option.toList() // List([]) or List([value])
-option.toTry() // Failure or Success(value)
-option.toPromise() // Rejected or Resolved Promise
+option.toEither("Error message"); // Left("Error message") or Right(value)
+option.toList(); // List([]) or List([value])
+option.toTry(); // Failure or Success(value)
+option.toPromise(); // Rejected or Resolved Promise
 ```
 
 ## API Reference
@@ -1580,21 +1580,21 @@ Either represents a value that can be one of two types: `Left` (typically for er
 ## Basic Usage
 
 ```typescript
-import { Either, Left, Right } from "functype/either"
+import { Either, Left, Right } from "functype/either";
 
 // Creating Either values
-const success = Right(42) // Right(42)
-const failure = Left("error") // Left("error")
+const success = Right(42); // Right(42)
+const failure = Left("error"); // Left("error")
 
 // Checking state
-success.isRight() // true
-failure.isLeft() // true
+success.isRight(); // true
+failure.isLeft(); // true
 
 // Extracting values
-success.orElse(0) // 42
-failure.orElse(0) // 0
-success.orThrow() // 42
-failure.orThrow() // throws Error
+success.orElse(0); // 42
+failure.orElse(0); // 0
+success.orThrow(); // 42
+failure.orThrow(); // throws Error
 ```
 
 ## Constructors
@@ -1610,21 +1610,21 @@ failure.orThrow() // throws Error
 
 ```typescript
 // Map - transform the Right value
-Right(5).map((x) => x * 2) // Right(10)
-Left("err").map((x) => x * 2) // Left("err") - unchanged
+Right(5).map((x) => x * 2); // Right(10)
+Left("err").map((x) => x * 2); // Left("err") - unchanged
 
 // MapLeft - transform the Left value
-Left("err").mapLeft((e) => e.toUpperCase()) // Left("ERR")
-Right(5).mapLeft((e) => e.toUpperCase()) // Right(5) - unchanged
+Left("err").mapLeft((e) => e.toUpperCase()); // Left("ERR")
+Right(5).mapLeft((e) => e.toUpperCase()); // Right(5) - unchanged
 
 // FlatMap - chain operations
-Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")))
+Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")));
 
 // Bimap - transform both sides
 either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
-)
+);
 ```
 
 ## Pattern Matching
@@ -1634,38 +1634,42 @@ either.bimap(
 const result = either.fold(
   (error) => `Failed: ${error}`,
   (value) => `Success: ${value}`,
-)
+);
 
 // Using match pattern
 const message = validateUser(input).fold(
   (errors) => `Validation failed: ${errors.join(", ")}`,
   (user) => `Welcome, ${user.name}!`,
-)
+);
 ```
 
 ## Validation Pipeline
 
 ```typescript
-const validateAge = (age: number): Either<string, number> => (age >= 0 && age <= 120 ? Right(age) : Left("Invalid age"))
+const validateAge = (age: number): Either<string, number> =>
+  age >= 0 && age <= 120 ? Right(age) : Left("Invalid age");
 
-const validateName = (name: string): Either<string, string> => (name.length > 0 ? Right(name) : Left("Name required"))
+const validateName = (name: string): Either<string, string> =>
+  name.length > 0 ? Right(name) : Left("Name required");
 
 // Chain validations
 const validateUser = (data: UserInput) =>
-  validateName(data.name).flatMap((name) => validateAge(data.age).map((age) => ({ name, age })))
+  validateName(data.name).flatMap((name) =>
+    validateAge(data.age).map((age) => ({ name, age })),
+  );
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const name = yield* $(validateName(input.name))
-  const age = yield* $(validateAge(input.age))
-  const email = yield* $(validateEmail(input.email))
-  return { name, age, email }
-})
+  const name = yield* $(validateName(input.name));
+  const age = yield* $(validateAge(input.age));
+  const email = yield* $(validateEmail(input.email));
+  return { name, age, email };
+});
 
 // Short-circuits on first Left
 ```
@@ -1687,9 +1691,9 @@ const result = Do(function* () {
 ## Type Conversions
 
 ```typescript
-either.toOption() // None for Left, Some(value) for Right
-either.toTry() // Failure for Left, Success for Right
-either.toPromise() // Rejected for Left, Resolved for Right
+either.toOption(); // None for Left, Some(value) for Right
+either.toTry(); // Failure for Left, Success for Right
+either.toPromise(); // Rejected for Left, Resolved for Right
 ```
 
 ## API Reference
@@ -1712,19 +1716,19 @@ Try wraps operations that might throw exceptions, converting them to `Success` o
 ## Basic Usage
 
 ```typescript
-import { Try } from "functype/try"
+import { Try } from "functype/try";
 
 // Wrap potentially throwing code
-const result = Try(() => JSON.parse(jsonString))
+const result = Try(() => JSON.parse(jsonString));
 
 // Check state
-result.isSuccess() // true if no exception
-result.isFailure() // true if exception thrown
+result.isSuccess(); // true if no exception
+result.isFailure(); // true if exception thrown
 
 // Extract values
-result.orElse({}) // value or default
-result.orThrow() // value or re-throw
-result.toEither() // Either<Error, T>
+result.orElse({}); // value or default
+result.orThrow(); // value or re-throw
+result.toEither(); // Either<Error, T>
 ```
 
 ## Constructors
@@ -1741,21 +1745,21 @@ result.toEither() // Either<Error, T>
 
 ```typescript
 // Map - transform success value
-Try(() => "hello").map((s) => s.toUpperCase()) // Success("HELLO")
+Try(() => "hello").map((s) => s.toUpperCase()); // Success("HELLO")
 Try(() => {
-  throw new Error()
-}).map((s) => s.toUpperCase()) // Failure
+  throw new Error();
+}).map((s) => s.toUpperCase()); // Failure
 
 // FlatMap - chain Try operations
 Try(() => readFile(path))
   .flatMap((content) => Try(() => JSON.parse(content)))
-  .flatMap((data) => Try(() => validate(data)))
+  .flatMap((data) => Try(() => validate(data)));
 
 // Recover - handle failures by mapping over the error
-Try(() => riskyOperation()).recover((error) => fallbackValue)
+Try(() => riskyOperation()).recover((error) => fallbackValue);
 
 // RecoverWith - handle with another Try
-Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()))
+Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
 ```
 
 ## Pattern Matching
@@ -1765,13 +1769,13 @@ Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()))
 const message = Try(() => fetchData()).fold(
   (error) => `Failed: ${error.message}`,
   (data) => `Got ${data.length} items`,
-)
+);
 
 // Using match
 result.match({
   Success: (value) => console.log("Got:", value),
   Failure: (error) => console.error("Error:", error),
-})
+});
 ```
 
 ## Error Handling Patterns
@@ -1781,29 +1785,29 @@ result.match({
 const result = Try(() => readConfig())
   .flatMap((config) => Try(() => connectDB(config)))
   .flatMap((db) => Try(() => db.query("SELECT * FROM users")))
-  .recover(() => []) // Return empty array on any failure
+  .recover(() => []); // Return empty array on any failure
 
 // Transform errors
-Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message))
+Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message));
 
 // Filter with predicate
 Try(() => parseInt(input)).filter(
   (n) => n > 0,
   () => new Error("Must be positive"),
-)
+);
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const config = yield* $(Try(() => readConfig()))
-  const db = yield* $(Try(() => connectDB(config)))
-  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
-  return users
-}) // Try<User[]>
+  const config = yield* $(Try(() => readConfig()));
+  const db = yield* $(Try(() => connectDB(config)));
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")));
+  return users;
+}); // Try<User[]>
 ```
 
 ## Key Features
@@ -1823,9 +1827,9 @@ const result = Do(function* () {
 ## Type Conversions
 
 ```typescript
-tryValue.toOption() // None for Failure, Some for Success
-tryValue.toEither() // Left(error) or Right(value)
-tryValue.toPromise() // Rejected or Resolved Promise
+tryValue.toOption(); // None for Failure, Some for Success
+tryValue.toEither(); // Left(error) or Right(value)
+tryValue.toPromise(); // Rejected or Resolved Promise
 ```
 
 ## API Reference
@@ -1848,18 +1852,18 @@ List is an immutable collection that wraps arrays and provides functional operat
 ## Basic Usage
 
 ```typescript
-import { List } from "functype/list"
+import { List } from "functype/list";
 
 // Creating Lists
-const nums = List([1, 2, 3, 4, 5])
-const empty = List.empty<number>()
-const single = List.of(42)
+const nums = List([1, 2, 3, 4, 5]);
+const empty = List.empty<number>();
+const single = List.of(42);
 
 // Basic operations
-nums.head // 1
-nums.tail // List([2, 3, 4, 5])
-nums.size // 5
-nums.isEmpty // false
+nums.head; // 1
+nums.tail; // List([2, 3, 4, 5])
+nums.size; // 5
+nums.isEmpty; // false
 ```
 
 ## Constructors
@@ -1875,86 +1879,86 @@ nums.isEmpty // false
 
 ```typescript
 // Map - transform each element
-List([1, 2, 3]).map((x) => x * 2) // List([2, 4, 6])
+List([1, 2, 3]).map((x) => x * 2); // List([2, 4, 6])
 
 // Filter - keep matching elements
-List([1, 2, 3, 4]).filter((x) => x % 2 === 0) // List([2, 4])
+List([1, 2, 3, 4]).filter((x) => x % 2 === 0); // List([2, 4])
 
 // FlatMap - flatten nested results
-List([1, 2]).flatMap((x) => List([x, x * 10])) // List([1, 10, 2, 20])
+List([1, 2]).flatMap((x) => List([x, x * 10])); // List([1, 10, 2, 20])
 
 // Fold - reduce to single value
-List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x) // 6
+List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x); // 6
 ```
 
 ## Collection Operations
 
 ```typescript
 // Take and drop
-List([1, 2, 3, 4, 5]).take(3) // List([1, 2, 3])
-List([1, 2, 3, 4, 5]).takeRight(2) // List([4, 5])
-List([1, 2, 3, 4, 5]).drop(2) // List([3, 4, 5])
-List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4) // List([1, 2, 3])
-List([1, 2, 3, 4, 5]).slice(1, 4) // List([2, 3, 4])
+List([1, 2, 3, 4, 5]).take(3); // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).takeRight(2); // List([4, 5])
+List([1, 2, 3, 4, 5]).drop(2); // List([3, 4, 5])
+List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4); // List([1, 2, 3])
+List([1, 2, 3, 4, 5]).slice(1, 4); // List([2, 3, 4])
 
 // Element access
-List([1, 2, 3]).head // 1
-List([1, 2, 3]).headOption // Option(1)
-List([1, 2, 3]).last // 3
-List([1, 2, 3]).lastOption // Option(3)
-List([1, 2, 3]).tail // List([2, 3])
-List([1, 2, 3]).init // List([1, 2])
+List([1, 2, 3]).head; // 1
+List([1, 2, 3]).headOption; // Option(1)
+List([1, 2, 3]).last; // 3
+List([1, 2, 3]).lastOption; // Option(3)
+List([1, 2, 3]).tail; // List([2, 3])
+List([1, 2, 3]).init; // List([1, 2])
 
 // Find and contains
-List([1, 2, 3]).find((x) => x > 1) // 2 (or undefined)
-List([1, 2, 3]).contains(2) // true
-List([1, 2, 3]).exists((x) => x > 2) // true
+List([1, 2, 3]).find((x) => x > 1); // 2 (or undefined)
+List([1, 2, 3]).contains(2); // true
+List([1, 2, 3]).exists((x) => x > 2); // true
 
 // Combine and reorder
-List([1, 2]).concat(List([3, 4])) // List([1, 2, 3, 4])
-List([1, 2]).append(3) // List([1, 2, 3])
-List([1, 2]).prepend(0) // List([0, 1, 2])
-List([1, 2, 3]).reverse() // List([3, 2, 1])
+List([1, 2]).concat(List([3, 4])); // List([1, 2, 3, 4])
+List([1, 2]).append(3); // List([1, 2, 3])
+List([1, 2]).prepend(0); // List([0, 1, 2])
+List([1, 2, 3]).reverse(); // List([3, 2, 1])
 ```
 
 ## Grouping and Sorting
 
 ```typescript
 // Group by key
-List([1, 2, 3, 4]).groupBy((x) => (x % 2 === 0 ? "even" : "odd"))
+List([1, 2, 3, 4]).groupBy((x) => (x % 2 === 0 ? "even" : "odd"));
 // Map { "odd" => List([1, 3]), "even" => List([2, 4]) }
 
 // Partition - split by predicate [matching, non-matching]
-List([1, 2, 3, 4, 5]).partition((x) => x % 2 === 0)
+List([1, 2, 3, 4, 5]).partition((x) => x % 2 === 0);
 // [List([2, 4]), List([1, 3, 5])]
 
 // Span - split at first non-matching [prefix, rest]
-List([1, 2, 3, 4, 1]).span((x) => x < 3)
+List([1, 2, 3, 4, 1]).span((x) => x < 3);
 // [List([1, 2]), List([3, 4, 1])]
 
 // Sort
-List([3, 1, 2]).sorted() // List([1, 2, 3])
-List(["b", "a"]).sortBy((s) => s) // List(["a", "b"])
+List([3, 1, 2]).sorted(); // List([1, 2, 3])
+List(["b", "a"]).sortBy((s) => s); // List(["a", "b"])
 
 // Distinct
-List([1, 2, 2, 3, 3, 3]).distinct() // List([1, 2, 3])
+List([1, 2, 2, 3, 3, 3]).distinct(); // List([1, 2, 3])
 
 // Zip
-List([1, 2, 3]).zip(List(["a", "b", "c"])) // List([[1, "a"], [2, "b"], [3, "c"]])
-List(["a", "b", "c"]).zipWithIndex() // List([["a", 0], ["b", 1], ["c", 2]])
+List([1, 2, 3]).zip(List(["a", "b", "c"])); // List([[1, "a"], [2, "b"], [3, "c"]])
+List(["a", "b", "c"]).zipWithIndex(); // List([["a", 0], ["b", 1], ["c", 2]])
 ```
 
 ## Do-Notation (Cartesian Products)
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 // Generate all combinations
 const result = Do(function* () {
-  const x = yield* $(List([1, 2]))
-  const y = yield* $(List(["a", "b"]))
-  return `${x}${y}`
-}) // List(["1a", "1b", "2a", "2b"])
+  const x = yield* $(List([1, 2]));
+  const y = yield* $(List(["a", "b"]));
+  return `${x}${y}`;
+}); // List(["1a", "1b", "2a", "2b"])
 
 // Performance: 175x faster than nested flatMaps
 ```
@@ -1976,9 +1980,9 @@ const result = Do(function* () {
 ## Type Conversions
 
 ```typescript
-list.toArray() // Convert to native array
-list.toSet() // Convert to Set<A>
-list.headOption // Option<A> for first element
+list.toArray(); // Convert to native array
+list.toSet(); // Convert to Set<A>
+list.headOption; // Option<A> for first element
 ```
 
 ## API Reference
@@ -2001,25 +2005,25 @@ Task provides structured async operations with built-in cancellation, progress t
 ## Basic Usage
 
 ```typescript
-import { Task } from "functype/task"
+import { Task } from "functype/task";
 
 // Synchronous task
-const syncTask = Task.sync("myTask", () => computeValue())
+const syncTask = Task.sync("myTask", () => computeValue());
 
 // Async task
 const asyncTask = Task.async("fetchData", async () => {
-  const response = await fetch(url)
-  return response.json()
-})
+  const response = await fetch(url);
+  return response.json();
+});
 
 // Run and get result
-const result = await asyncTask.run() // TaskOutcome<T>
+const result = await asyncTask.run(); // TaskOutcome<T>
 
 // Check outcome
 if (result.isOk()) {
-  console.log(result.value)
+  console.log(result.value);
 } else {
-  console.error(result.error)
+  console.error(result.error);
 }
 ```
 
@@ -2040,19 +2044,19 @@ const task = Task.async("longOperation", async (signal) => {
   // Check signal periodically
   for (let i = 0; i < 1000; i++) {
     if (signal.aborted) {
-      throw new Error("Cancelled")
+      throw new Error("Cancelled");
     }
-    await processChunk(i)
+    await processChunk(i);
   }
-})
+});
 
 // Run with timeout
-const result = await task.run({ timeout: 5000 })
+const result = await task.run({ timeout: 5000 });
 
 // Manual cancellation
-const controller = new AbortController()
-const promise = task.run({ signal: controller.signal })
-controller.abort() // Cancel the task
+const controller = new AbortController();
+const promise = task.run({ signal: controller.signal });
+controller.abort(); // Cancel the task
 ```
 
 ## Progress Tracking
@@ -2060,30 +2064,32 @@ controller.abort() // Cancel the task
 ```typescript
 const task = Task.async("upload", async (signal, progress) => {
   for (let i = 0; i <= 100; i += 10) {
-    await uploadChunk(i)
-    progress(i / 100) // Report progress 0-1
+    await uploadChunk(i);
+    progress(i / 100); // Report progress 0-1
   }
-  return "complete"
-})
+  return "complete";
+});
 
 // Subscribe to progress
 task.run({
   onProgress: (p) => console.log(`${p * 100}% complete`),
-})
+});
 ```
 
 ## Transformations
 
 ```typescript
 // Map - transform success value
-task.map((data) => data.items)
+task.map((data) => data.items);
 
 // FlatMap - chain tasks
-Task.async("getUser", () => fetchUser(id)).flatMap((user) => Task.async("getPosts", () => fetchPosts(user.id)))
+Task.async("getUser", () => fetchUser(id)).flatMap((user) =>
+  Task.async("getPosts", () => fetchPosts(user.id)),
+);
 
 // Recover - handle errors
-task.recover(defaultValue)
-task.recoverWith((error) => Task.of(fallback))
+task.recover(defaultValue);
+task.recoverWith((error) => Task.of(fallback));
 ```
 
 ## TaskOutcome
@@ -2091,39 +2097,41 @@ task.recoverWith((error) => Task.of(fallback))
 Task returns `TaskOutcome<T>` which is either `Ok<T>` or `Err<Error>`:
 
 ```typescript
-const outcome = await task.run()
+const outcome = await task.run();
 
 // Pattern matching
 outcome.fold(
   (error) => `Failed: ${error.message}`,
   (value) => `Success: ${value}`,
-)
+);
 
 // Type guards
 if (outcome.isOk()) {
-  console.log(outcome.value)
+  console.log(outcome.value);
 }
 
 // Extract with default
-const value = outcome.orElse(defaultValue)
+const value = outcome.orElse(defaultValue);
 
 // Convert to other types
-outcome.toEither() // Either<Error, T>
-outcome.toOption() // Option<T>
-outcome.toTry() // Try<T>
+outcome.toEither(); // Either<Error, T>
+outcome.toOption(); // Option<T>
+outcome.toTry(); // Try<T>
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const user = yield* $(Task.async("getUser", () => fetchUser()))
-  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)))
-  const comments = yield* $(Task.async("getComments", () => fetchComments(posts)))
-  return { user, posts, comments }
-})
+  const user = yield* $(Task.async("getUser", () => fetchUser()));
+  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)));
+  const comments = yield* $(
+    Task.async("getComments", () => fetchComments(posts)),
+  );
+  return { user, posts, comments };
+});
 ```
 
 ## Key Features
@@ -2144,14 +2152,14 @@ const result = Do(function* () {
 
 ```typescript
 // TaskOutcome conversions
-outcome.toEither() // Either<Error, T>
-outcome.toOption() // Option<T>
-outcome.toTry() // Try<T>
-outcome.toPromise() // Promise<T>
+outcome.toEither(); // Either<Error, T>
+outcome.toOption(); // Option<T>
+outcome.toTry(); // Try<T>
+outcome.toPromise(); // Promise<T>
 
 // Create from other types
-Task.fromEither(either)
-Task.fromTry(tryValue)
+Task.fromEither(either);
+Task.fromTry(tryValue);
 ```
 
 ## API Reference
@@ -2180,27 +2188,27 @@ Nothing runs until explicitly executed.
 ## Basic Usage
 
 ```typescript
-import { IO } from "functype/io"
+import { IO } from "functype/io";
 
 // Synchronous effect
-const sync = IO.sync(() => 42)
+const sync = IO.sync(() => 42);
 
 // Async effect
-const async = IO.async(async () => fetchData())
+const async = IO.async(async () => fetchData());
 
 // Effect that may fail
 const safe = IO.tryCatch(
   () => JSON.parse(input),
   (e) => new ParseError(e),
-)
+);
 
 // Running effects - safe by default
-const either = await sync.run() // Either<E, A> - never throws
-const value = await sync.runOrThrow() // A - throws on error
+const either = await sync.run(); // Either<E, A> - never throws
+const value = await sync.runOrThrow(); // A - throws on error
 
 // Synchronous execution
-const syncEither = sync.runSync() // Either<E, A> - never throws
-const syncValue = sync.runSyncOrThrow() // A - throws on error
+const syncEither = sync.runSync(); // Either<E, A> - never throws
+const syncValue = sync.runSyncOrThrow(); // A - throws on error
 ```
 
 ## Constructors
@@ -2220,34 +2228,34 @@ const syncValue = sync.runSyncOrThrow() // A - throws on error
 
 ```typescript
 // Map over success value
-io.map((x) => x * 2)
+io.map((x) => x * 2);
 
 // Chain effects
-io.flatMap((x) => IO.succeed(x + 1))
+io.flatMap((x) => IO.succeed(x + 1));
 
 // Handle errors
-io.mapError((e) => new WrappedError(e))
-io.catchAll((e) => IO.succeed(fallback))
-io.recover(defaultValue)
+io.mapError((e) => new WrappedError(e));
+io.catchAll((e) => IO.succeed(fallback));
+io.recover(defaultValue);
 
 // Provide fallback
-io.orElse(fallbackIO)
+io.orElse(fallbackIO);
 ```
 
 ## Combining Effects
 
 ```typescript
 // Run in parallel
-IO.all([io1, io2, io3]) // All must succeed
-IO.race([io1, io2]) // First to complete wins
-IO.any([io1, io2, io3]) // First success wins
+IO.all([io1, io2, io3]); // All must succeed
+IO.race([io1, io2]); // First to complete wins
+IO.any([io1, io2, io3]); // First success wins
 
 // Zip effects
-io1.zip(io2) // [A, B]
-io1.zipWith(io2, (a, b) => c) // C
+io1.zip(io2); // [A, B]
+io1.zipWith(io2, (a, b) => c); // C
 
 // Sequential
-io1.andThen(io2) // Run io2 after io1
+io1.andThen(io2); // Run io2 after io1
 ```
 
 ## Dependency Injection
@@ -2255,36 +2263,44 @@ io1.andThen(io2) // Run io2 after io1
 IO has built-in dependency injection using Tags, Contexts, and Layers.
 
 ```typescript
-import { IO, Tag, Context } from "functype/io"
+import { IO, Tag, Context } from "functype/io";
 
 // Define service interface
 interface Logger {
-  log(message: string): void
+  log(message: string): void;
 }
 
 // Create a Tag for the service
-const Logger = Tag<Logger>("Logger")
+const Logger = Tag<Logger>("Logger");
 
 // Use the service
-const program = IO.service(Logger).flatMap((logger) => IO.sync(() => logger.log("Hello!")))
+const program = IO.service(Logger).flatMap((logger) =>
+  IO.sync(() => logger.log("Hello!")),
+);
 
 // Provide implementation
-const result = await program.provideService(Logger, { log: console.log }).runOrThrow()
+const result = await program
+  .provideService(Logger, { log: console.log })
+  .runOrThrow();
 ```
 
 ### Context and Layer
 
 ```typescript
 // Build context with multiple services
-const context = Context.empty().add(Logger, consoleLogger).add(Config, appConfig)
+const context = Context.empty()
+  .add(Logger, consoleLogger)
+  .add(Config, appConfig);
 
 // Provide full context
-program.provideContext(context)
+program.provideContext(context);
 
 // Use Layer for complex dependency graphs
-const AppLayer = Layer.succeed(Logger, consoleLogger).merge(Layer.succeed(Config, appConfig))
+const AppLayer = Layer.succeed(Logger, consoleLogger).merge(
+  Layer.succeed(Config, appConfig),
+);
 
-program.provideLayer(AppLayer)
+program.provideLayer(AppLayer);
 ```
 
 ## Do-Notation
@@ -2293,13 +2309,13 @@ program.provideLayer(AppLayer)
 
 ```typescript
 const program = IO.gen(function* () {
-  const a = yield* IO.succeed(1)
-  const b = yield* IO.succeed(2)
-  const c = yield* IO.succeed(3)
-  return a + b + c
-})
+  const a = yield* IO.succeed(1);
+  const b = yield* IO.succeed(2);
+  const c = yield* IO.succeed(3);
+  return a + b + c;
+});
 
-await program.runOrThrow() // 6
+await program.runOrThrow(); // 6
 ```
 
 ### Builder Syntax (IO.Do)
@@ -2308,7 +2324,7 @@ await program.runOrThrow() // 6
 const program = IO.Do.bind("user", () => getUser("123"))
   .bind("posts", ({ user }) => getPosts(user.id))
   .let("count", ({ posts }) => posts.length)
-  .map(({ user, posts, count }) => ({ user, posts, count }))
+  .map(({ user, posts, count }) => ({ user, posts, count }));
 ```
 
 ## Resource Management
@@ -2319,33 +2335,33 @@ IO.bracket(
   IO.sync(() => openFile(path)), // acquire
   (file) => IO.sync(() => file.close()), // release
   (file) => IO.sync(() => file.read()), // use
-)
+);
 
 // Acquire/Release
 IO.acquireRelease(
   IO.sync(() => openConnection()),
   (conn) => IO.sync(() => conn.close()),
-)
+);
 ```
 
 ## Error Handling Patterns
 
 ```typescript
 // Catch specific errors
-io.catch("NotFound", () => IO.succeed(null))
+io.catch("NotFound", () => IO.succeed(null));
 
 // Fold over success/failure
 io.fold(
   (error) => `Failed: ${error}`,
   (value) => `Success: ${value}`,
-)
+);
 
 // Ensure cleanup
-io.ensuring(IO.sync(() => cleanup()))
+io.ensuring(IO.sync(() => cleanup()));
 
 // Retry on failure
-io.retry(3)
-io.retryWithDelay(3, 1000)
+io.retry(3);
+io.retryWithDelay(3, 1000);
 ```
 
 ## IO vs Task
@@ -2397,32 +2413,38 @@ Nothing runs until you call `.run()` or `.runOrThrow()`.
 ## Basic Usage
 
 ```typescript
-import { Http } from "functype/fetch"
+import { Http } from "functype/fetch";
 
 // Without validator — data is unknown
-const effect = Http.get("/api/users/1")
-const result = await effect.run() // Either<HttpError, HttpResponse<unknown>>
+const effect = Http.get("/api/users/1");
+const result = await effect.run(); // Either<HttpError, HttpResponse<unknown>>
 
 // With validator — T inferred from validate return type
 const typedEffect = Http.get("/api/users/1", {
   validate: (data) => UserSchema.parse(data),
-})
-const typedResult = await typedEffect.run() // Either<HttpError, HttpResponse<User>>
+});
+const typedResult = await typedEffect.run(); // Either<HttpError, HttpResponse<User>>
 
 // POST with body — auto-serialized as JSON
 const create = Http.post("/api/users", {
   body: { name: "Alice", email: "alice@example.com" },
   validate: (data) => UserSchema.parse(data),
-})
+});
 
 // PUT, PATCH, DELETE
-Http.put("/api/users/1", { body: { name: "Alice Updated" }, validate: (data) => UserSchema.parse(data) })
-Http.patch("/api/users/1", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
-Http.delete("/api/users/1")
+Http.put("/api/users/1", {
+  body: { name: "Alice Updated" },
+  validate: (data) => UserSchema.parse(data),
+});
+Http.patch("/api/users/1", {
+  body: { name: "Alice" },
+  validate: (data) => UserSchema.parse(data),
+});
+Http.delete("/api/users/1");
 
 // HEAD and OPTIONS (return HttpResponse<void>)
-Http.head("/api/users")
-Http.options("/api/users")
+Http.head("/api/users");
+Http.options("/api/users");
 
 // Low-level request with full control
 Http.request({
@@ -2430,7 +2452,7 @@ Http.request({
   method: "GET",
   headers: { "X-Request-Id": "abc123" },
   validate: (data) => UserSchema.parse(data),
-})
+});
 ```
 
 ## Validation
@@ -2439,13 +2461,13 @@ Without a `validate` function, response data is `unknown`. This is intentional �
 
 ```typescript
 // Without validate — data is unknown, you must narrow it yourself
-const effect = Http.get("/api/users")
+const effect = Http.get("/api/users");
 // effect: IO<never, HttpError, HttpResponse<unknown>>
 
 // With validate — T is inferred from the validator's return type
 const typedEffect = Http.get("/api/users", {
   validate: (data) => z.array(UserSchema).parse(data),
-})
+});
 // typedEffect: IO<never, HttpError, HttpResponse<User[]>>
 ```
 
@@ -2453,21 +2475,21 @@ const typedEffect = Http.get("/api/users", {
 
 ```typescript
 // Zod
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) });
 
 // TypeBox
-Http.get("/api/users", { validate: (data) => Value.Decode(UserSchema, data) })
+Http.get("/api/users", { validate: (data) => Value.Decode(UserSchema, data) });
 
 // Valibot
-Http.get("/api/users", { validate: (data) => parse(UserSchema, data) })
+Http.get("/api/users", { validate: (data) => parse(UserSchema, data) });
 
 // Manual validation
 Http.get("/api/users", {
   validate: (data) => {
-    if (!Array.isArray(data)) throw new Error("Expected array")
-    return data as User[]
+    if (!Array.isArray(data)) throw new Error("Expected array");
+    return data as User[];
   },
-})
+});
 ```
 
 ## HttpResponse\<T\>
@@ -2476,23 +2498,23 @@ Every successful request resolves to `HttpResponse<T>` (where `T` is `unknown` w
 
 ```typescript
 type HttpResponse<T> = {
-  readonly data: T // Parsed response body (unknown without validate)
-  readonly status: number // HTTP status code (e.g. 200)
-  readonly statusText: string // HTTP status text (e.g. "OK")
-  readonly headers: Headers // Response headers (standard Web API)
-}
+  readonly data: T; // Parsed response body (unknown without validate)
+  readonly status: number; // HTTP status code (e.g. 200)
+  readonly statusText: string; // HTTP status text (e.g. "OK")
+  readonly headers: Headers; // Response headers (standard Web API)
+};
 
 // Accessing response fields with a validator
 const effect = Http.get("/api/users", {
   validate: (data) => z.array(UserSchema).parse(data),
-})
-const either = await effect.run()
+});
+const either = await effect.run();
 
 if (either._tag === "Right") {
-  const { data, status, headers } = either.value
-  console.log(status) // 200
-  console.log(data[0].name) // "Alice" — data is User[], not unknown
-  console.log(headers.get("x-total-count"))
+  const { data, status, headers } = either.value;
+  console.log(status); // 200
+  console.log(data[0].name); // "Alice" — data is User[], not unknown
+  console.log(headers.get("x-total-count"));
 }
 ```
 
@@ -2502,36 +2524,38 @@ All HTTP errors are typed as `HttpError`, a union of three variants:
 
 ```typescript
 type NetworkError = {
-  _tag: "NetworkError"
-  url: string
-  method: HttpMethod
-  cause: unknown // The underlying fetch error
-}
+  _tag: "NetworkError";
+  url: string;
+  method: HttpMethod;
+  cause: unknown; // The underlying fetch error
+};
 
 type HttpStatusError = {
-  _tag: "HttpStatusError"
-  url: string
-  method: HttpMethod
-  status: number // e.g. 404, 500
-  statusText: string
-  body: string // Raw response body text
-}
+  _tag: "HttpStatusError";
+  url: string;
+  method: HttpMethod;
+  status: number; // e.g. 404, 500
+  statusText: string;
+  body: string; // Raw response body text
+};
 
 type DecodeError = {
-  _tag: "DecodeError"
-  url: string
-  method: HttpMethod
-  body: string // The text that failed to parse
-  cause: unknown
-}
+  _tag: "DecodeError";
+  url: string;
+  method: HttpMethod;
+  body: string; // The text that failed to parse
+  cause: unknown;
+};
 ```
 
 ### Pattern Matching with HttpError.match
 
 ```typescript
-import { Http, HttpError } from "functype/fetch"
+import { Http, HttpError } from "functype/fetch";
 
-const effect = Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
+const effect = Http.get("/api/users/1", {
+  validate: (data) => UserSchema.parse(data),
+});
 
 const result = await effect
   .mapError((err) =>
@@ -2541,41 +2565,50 @@ const result = await effect
       DecodeError: (e) => `Parse failed: ${e.body}`,
     }),
   )
-  .run()
+  .run();
 ```
 
 ### Catching Specific Error Tags
 
 ```typescript
 // Recover from 404 with a default value
-const user = Http.get("/api/users/99", { validate: (data) => UserSchema.parse(data) }).catchTag(
-  "HttpStatusError",
-  (e) =>
-    e.status === 404
-      ? IO.succeed({ data: null, status: 404, statusText: "Not Found", headers: new Headers() })
-      : IO.fail(e),
-)
+const user = Http.get("/api/users/99", {
+  validate: (data) => UserSchema.parse(data),
+}).catchTag("HttpStatusError", (e) =>
+  e.status === 404
+    ? IO.succeed({
+        data: null,
+        status: 404,
+        statusText: "Not Found",
+        headers: new Headers(),
+      })
+    : IO.fail(e),
+);
 
 // Handle network errors separately
-const resilient = Http.get("/api/data").catchTag("NetworkError", () => Http.get("/api/data/fallback"))
+const resilient = Http.get("/api/data").catchTag("NetworkError", () =>
+  Http.get("/api/data/fallback"),
+);
 ```
 
 ### Type Guards
 
 ```typescript
-import { HttpError } from "functype/fetch"
+import { HttpError } from "functype/fetch";
 
-const either = await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).run()
+const either = await Http.get("/api/users/1", {
+  validate: (data) => UserSchema.parse(data),
+}).run();
 
 if (either._tag === "Left") {
-  const err = either.value
+  const err = either.value;
 
   if (HttpError.isHttpStatusError(err)) {
-    console.log(err.status, err.body) // typed as HttpStatusError
+    console.log(err.status, err.body); // typed as HttpStatusError
   } else if (HttpError.isNetworkError(err)) {
-    console.log(err.cause) // typed as NetworkError
+    console.log(err.cause); // typed as NetworkError
   } else if (HttpError.isDecodeError(err)) {
-    console.log(err.body) // typed as DecodeError
+    console.log(err.body); // typed as DecodeError
   }
 }
 ```
@@ -2585,7 +2618,7 @@ if (either._tag === "Left") {
 Create a configured client with a base URL, default headers, or a custom fetch implementation:
 
 ```typescript
-import { Http } from "functype/fetch"
+import { Http } from "functype/fetch";
 
 const api = Http.client({
   baseUrl: "https://api.example.com/v1",
@@ -2593,29 +2626,33 @@ const api = Http.client({
     Authorization: `Bearer ${token}`,
     "X-App-Version": "2.0.0",
   },
-})
+});
 
 // Paths are resolved relative to baseUrl
-const users = api.get("/users", { validate: (data) => z.array(UserSchema).parse(data) }) // → https://api.example.com/v1/users
-const user = api.get("/users/1", { validate: (data) => UserSchema.parse(data) }) // → https://api.example.com/v1/users/1
+const users = api.get("/users", {
+  validate: (data) => z.array(UserSchema).parse(data),
+}); // → https://api.example.com/v1/users
+const user = api.get("/users/1", {
+  validate: (data) => UserSchema.parse(data),
+}); // → https://api.example.com/v1/users/1
 
 // Absolute URLs bypass baseUrl
-const ext = api.get("https://other.com/data") // → https://other.com/data (data is unknown)
+const ext = api.get("https://other.com/data"); // → https://other.com/data (data is unknown)
 
 // Custom fetch for testing or proxying
 const testApi = Http.client({
   baseUrl: "http://localhost:3000",
   fetch: myMockFetch,
-})
+});
 ```
 
 ### HttpClientConfig
 
 ```typescript
 interface HttpClientConfig {
-  readonly baseUrl?: string // Base URL prepended to relative paths
-  readonly defaultHeaders?: Record<string, string> // Merged with per-request headers
-  readonly fetch?: typeof globalThis.fetch // Override the fetch implementation
+  readonly baseUrl?: string; // Base URL prepended to relative paths
+  readonly defaultHeaders?: Record<string, string>; // Merged with per-request headers
+  readonly fetch?: typeof globalThis.fetch; // Override the fetch implementation
 }
 ```
 
@@ -2634,19 +2671,22 @@ Response bodies are parsed based on the `Content-Type` response header:
 Override auto-detection with the `parseAs` option:
 
 ```typescript
-type ParseMode = "json" | "text" | "blob" | "arrayBuffer" | "raw"
+type ParseMode = "json" | "text" | "blob" | "arrayBuffer" | "raw";
 
 // Force JSON parsing regardless of Content-Type header
-Http.get("/api/config", { parseAs: "json", validate: (data) => ConfigSchema.parse(data) })
+Http.get("/api/config", {
+  parseAs: "json",
+  validate: (data) => ConfigSchema.parse(data),
+});
 
 // Get raw Blob for file downloads
-Http.get("/api/export/report.pdf", { parseAs: "blob" })
+Http.get("/api/export/report.pdf", { parseAs: "blob" });
 
 // Get ArrayBuffer for binary data
-Http.get("/api/binary", { parseAs: "arrayBuffer" })
+Http.get("/api/binary", { parseAs: "arrayBuffer" });
 
 // Get the raw Response object
-Http.get("/api/stream", { parseAs: "raw" })
+Http.get("/api/stream", { parseAs: "raw" });
 ```
 
 ## IO Composition
@@ -2654,35 +2694,45 @@ Http.get("/api/stream", { parseAs: "raw" })
 Because `Http` returns `IO` effects, the full IO operator set is available:
 
 ```typescript
-import { Http } from "functype/fetch"
+import { Http } from "functype/fetch";
 
 // Retry on failure
-Http.get("/api/data").retry(3)
+Http.get("/api/data").retry(3);
 
 // Retry with delay between attempts (ms)
-Http.get("/api/data").retryWithDelay(3, 1000)
+Http.get("/api/data").retryWithDelay(3, 1000);
 
 // Timeout after N milliseconds
-Http.get("/api/data").timeout(5000)
+Http.get("/api/data").timeout(5000);
 
 // Transform the response data (with validator for typed access)
-Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).map((res) => res.data.name)
+Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).map(
+  (res) => res.data.name,
+);
 
 // Chain requests — use result of first to drive second
-Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).flatMap((res) =>
-  Http.get(`/api/users/${res.data.id}/posts`, { validate: (data) => z.array(PostSchema).parse(data) }),
-)
+Http.get("/api/users/1", {
+  validate: (data) => UserSchema.parse(data),
+}).flatMap((res) =>
+  Http.get(`/api/users/${res.data.id}/posts`, {
+    validate: (data) => z.array(PostSchema).parse(data),
+  }),
+);
 
 // Parallel requests
-import { IO } from "functype/io"
+import { IO } from "functype/io";
 
 const [users, posts] = await IO.all([
-  Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) }),
-  Http.get("/api/posts", { validate: (data) => z.array(PostSchema).parse(data) }),
-]).run()
+  Http.get("/api/users", {
+    validate: (data) => z.array(UserSchema).parse(data),
+  }),
+  Http.get("/api/posts", {
+    validate: (data) => z.array(PostSchema).parse(data),
+  }),
+]).run();
 
 // Map over errors
-Http.get("/api/data").mapError((err) => new AppError(err))
+Http.get("/api/data").mapError((err) => new AppError(err));
 ```
 
 ## Body Serialization
@@ -2702,20 +2752,20 @@ Http.post("/api/orders", {
   body: { productId: 42, quantity: 3 },
   validate: (data) => OrderSchema.parse(data),
   // Content-Type: application/json is added automatically
-})
+});
 
 // String body → sent as-is, no Content-Type added
 Http.post("/api/graphql", {
   body: '{"query":"{ users { id name } }"}',
   headers: { "Content-Type": "application/json" },
   validate: (data) => GraphQLResultSchema.parse(data),
-})
+});
 
 // FormData or URLSearchParams — pass as string or handle manually
 Http.post("/api/form", {
   body: new URLSearchParams({ key: "value" }).toString(),
   headers: { "Content-Type": "application/x-www-form-urlencoded" },
-})
+});
 ```
 
 ## API Reference
@@ -2738,19 +2788,21 @@ Do-notation provides generator-based monadic comprehensions inspired by Scala's 
 ## Basic Usage
 
 ```typescript
-import { Do, $ } from "functype/do"
-import { Option } from "functype/option"
+import { Do, $ } from "functype/do";
+import { Option } from "functype/option";
 
 // Instead of nested flatMaps
-const nested = Option(1).flatMap((a) => Option(2).flatMap((b) => Option(3).map((c) => a + b + c)))
+const nested = Option(1).flatMap((a) =>
+  Option(2).flatMap((b) => Option(3).map((c) => a + b + c)),
+);
 
 // Use Do-notation
 const clean = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option(2))
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // Some(6)
+  const a = yield* $(Option(1));
+  const b = yield* $(Option(2));
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // Some(6)
 ```
 
 ## The $ Helper
@@ -2758,12 +2810,12 @@ const clean = Do(function* () {
 The `$` function enables TypeScript type inference with generators:
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const x = yield* $(Option(42)) // x is number, not unknown
-  return x * 2
-})
+  const x = yield* $(Option(42)); // x is number, not unknown
+  return x * 2;
+});
 ```
 
 ## Short-Circuiting
@@ -2773,18 +2825,18 @@ Do-notation automatically propagates None/Left/Failure:
 ```typescript
 // Option - stops on None
 const result = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option.none<number>()) // stops here
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // None
+  const a = yield* $(Option(1));
+  const b = yield* $(Option.none<number>()); // stops here
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // None
 
 // Either - stops on Left
 const validated = Do(function* () {
-  const name = yield* $(validateName(input)) // Left stops chain
-  const email = yield* $(validateEmail(input))
-  return { name, email }
-})
+  const name = yield* $(validateName(input)); // Left stops chain
+  const email = yield* $(validateEmail(input));
+  return { name, email };
+});
 ```
 
 ## Supported Types
@@ -2795,43 +2847,43 @@ Do-notation works with any monad in functype:
 
 ```typescript
 const result = Do(function* () {
-  const user = yield* $(findUser(id))
-  const profile = yield* $(user.profile)
-  const email = yield* $(profile.email)
-  return email
-}) // Option<string>
+  const user = yield* $(findUser(id));
+  const profile = yield* $(user.profile);
+  const email = yield* $(profile.email);
+  return email;
+}); // Option<string>
 ```
 
 ### Either
 
 ```typescript
 const result = Do(function* () {
-  const name = yield* $(validateName(input.name))
-  const age = yield* $(validateAge(input.age))
-  const email = yield* $(validateEmail(input.email))
-  return { name, age, email }
-}) // Either<ValidationError, User>
+  const name = yield* $(validateName(input.name));
+  const age = yield* $(validateAge(input.age));
+  const email = yield* $(validateEmail(input.email));
+  return { name, age, email };
+}); // Either<ValidationError, User>
 ```
 
 ### Try
 
 ```typescript
 const result = Do(function* () {
-  const config = yield* $(Try(() => readConfig()))
-  const db = yield* $(Try(() => connectDB(config)))
-  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
-  return users
-}) // Try<User[]>
+  const config = yield* $(Try(() => readConfig()));
+  const db = yield* $(Try(() => connectDB(config)));
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")));
+  return users;
+}); // Try<User[]>
 ```
 
 ### List (Cartesian Products)
 
 ```typescript
 const combinations = Do(function* () {
-  const x = yield* $(List([1, 2, 3]))
-  const y = yield* $(List(["a", "b"]))
-  return `${x}${y}`
-}) // List(["1a", "1b", "2a", "2b", "3a", "3b"])
+  const x = yield* $(List([1, 2, 3]));
+  const y = yield* $(List(["a", "b"]));
+  return `${x}${y}`;
+}); // List(["1a", "1b", "2a", "2b", "3a", "3b"])
 ```
 
 ## Async Do-Notation
@@ -2839,13 +2891,13 @@ const combinations = Do(function* () {
 For async operations, use `DoAsync`:
 
 ```typescript
-import { DoAsync, $ } from "functype/do"
+import { DoAsync, $ } from "functype/do";
 
 const result = await DoAsync(async function* () {
-  const user = yield* $(Task.async("getUser", () => fetchUser()))
-  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)))
-  return { user, posts }
-})
+  const user = yield* $(Task.async("getUser", () => fetchUser()));
+  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)));
+  return { user, posts };
+});
 ```
 
 ## Performance
@@ -2876,17 +2928,21 @@ Do-notation is highly optimized:
 // Without Do-notation
 const result = getUser(id).flatMap((user) =>
   getProfile(user.profileId).flatMap((profile) =>
-    getSettings(profile.settingsId).map((settings) => ({ user, profile, settings })),
+    getSettings(profile.settingsId).map((settings) => ({
+      user,
+      profile,
+      settings,
+    })),
   ),
-)
+);
 
 // With Do-notation
 const result = Do(function* () {
-  const user = yield* $(getUser(id))
-  const profile = yield* $(getProfile(user.profileId))
-  const settings = yield* $(getSettings(profile.settingsId))
-  return { user, profile, settings }
-})
+  const user = yield* $(getUser(id));
+  const profile = yield* $(getProfile(user.profileId));
+  const settings = yield* $(getSettings(profile.settingsId));
+  return { user, profile, settings };
+});
 ```
 
 ## API Reference
@@ -2911,13 +2967,13 @@ Match provides exhaustive pattern matching for Scala-style case expressions, whi
 ### Basic Usage
 
 ```typescript
-import { Match } from "functype/conditional"
+import { Match } from "functype/conditional";
 
 const result = Match(statusCode)
   .case(200, () => "OK")
   .case(404, () => "Not Found")
   .case(500, () => "Server Error")
-  .default(() => "Unknown")
+  .default(() => "Unknown");
 ```
 
 ### Pattern Matching on Types
@@ -2936,7 +2992,7 @@ const describe = Match(value)
     (v): v is boolean => typeof v === "boolean",
     (b) => `Boolean: ${b}`,
   )
-  .default(() => "Unknown type")
+  .default(() => "Unknown type");
 ```
 
 ### With Functype Types
@@ -2948,19 +3004,19 @@ Option, Either, Try, and other types have built-in match methods:
 const greeting = Option(name).match({
   Some: (n) => `Hello, ${n}!`,
   None: () => "Hello, stranger!",
-})
+});
 
 // Either match
 const message = result.match({
   Left: (error) => `Error: ${error}`,
   Right: (value) => `Success: ${value}`,
-})
+});
 
 // Try match
 const output = tryValue.match({
   Success: (v) => `Got: ${v}`,
   Failure: (e) => `Failed: ${e.message}`,
-})
+});
 ```
 
 ## Cond
@@ -2970,14 +3026,14 @@ Cond provides conditional expressions without early returns:
 ### Basic Usage
 
 ```typescript
-import { Cond } from "functype/conditional"
+import { Cond } from "functype/conditional";
 
 const grade = Cond<string>()
   .when(score >= 90, () => "A")
   .when(score >= 80, () => "B")
   .when(score >= 70, () => "C")
   .when(score >= 60, () => "D")
-  .otherwise(() => "F")
+  .otherwise(() => "F");
 ```
 
 ### With Predicates
@@ -2987,7 +3043,7 @@ const category = Cond<string>()
   .when(age < 13, () => "child")
   .when(age < 20, () => "teenager")
   .when(age < 65, () => "adult")
-  .otherwise(() => "senior")
+  .otherwise(() => "senior");
 ```
 
 ### Lazy Evaluation
@@ -2998,7 +3054,7 @@ Cond evaluates lazily - only the matching branch runs:
 const result = Cond<number>()
   .when(true, () => 1) // This runs
   .when(true, () => expensiveCompute()) // This doesn't run
-  .otherwise(() => 0)
+  .otherwise(() => 0);
 ```
 
 ## Match vs Cond
@@ -3017,14 +3073,14 @@ Match(httpMethod)
   .case("GET", () => handleGet())
   .case("POST", () => handlePost())
   .case("PUT", () => handlePut())
-  .default(() => handleOther())
+  .default(() => handleOther());
 
 // Matching on discriminated unions
 Match(action.type)
   .case("INCREMENT", () => state + 1)
   .case("DECREMENT", () => state - 1)
   .case("RESET", () => 0)
-  .default(() => state)
+  .default(() => state);
 ```
 
 ### When to Use Cond
@@ -3035,13 +3091,13 @@ const shipping = Cond<number>()
   .when(order.total > 100, () => 0)
   .when(order.isPrime, () => 0)
   .when(order.isLocal, () => 5)
-  .otherwise(() => 10)
+  .otherwise(() => 10);
 
 // Replacing if-else chains
 const message = Cond<string>()
   .when(errors.length > 0, () => `${errors.length} errors found`)
   .when(warnings.length > 0, () => `${warnings.length} warnings`)
-  .otherwise(() => "All good!")
+  .otherwise(() => "All good!");
 ```
 
 ## Key Features
@@ -3062,20 +3118,20 @@ const message = Cond<string>()
 
 ```typescript
 // Traditional if-else (imperative)
-let result: string
+let result: string;
 if (status === 200) {
-  result = "OK"
+  result = "OK";
 } else if (status === 404) {
-  result = "Not Found"
+  result = "Not Found";
 } else {
-  result = "Unknown"
+  result = "Unknown";
 }
 
 // Match (functional expression)
 const result = Match(status)
   .case(200, () => "OK")
   .case(404, () => "Not Found")
-  .default(() => "Unknown")
+  .default(() => "Unknown");
 ```
 
 ## API Reference

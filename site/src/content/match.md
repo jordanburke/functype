@@ -11,13 +11,13 @@ Match provides exhaustive pattern matching for Scala-style case expressions, whi
 ### Basic Usage
 
 ```typescript
-import { Match } from "functype/conditional"
+import { Match } from "functype/conditional";
 
 const result = Match(statusCode)
   .case(200, () => "OK")
   .case(404, () => "Not Found")
   .case(500, () => "Server Error")
-  .default(() => "Unknown")
+  .default(() => "Unknown");
 ```
 
 ### Pattern Matching on Types
@@ -36,7 +36,7 @@ const describe = Match(value)
     (v): v is boolean => typeof v === "boolean",
     (b) => `Boolean: ${b}`,
   )
-  .default(() => "Unknown type")
+  .default(() => "Unknown type");
 ```
 
 ### With Functype Types
@@ -48,19 +48,19 @@ Option, Either, Try, and other types have built-in match methods:
 const greeting = Option(name).match({
   Some: (n) => `Hello, ${n}!`,
   None: () => "Hello, stranger!",
-})
+});
 
 // Either match
 const message = result.match({
   Left: (error) => `Error: ${error}`,
   Right: (value) => `Success: ${value}`,
-})
+});
 
 // Try match
 const output = tryValue.match({
   Success: (v) => `Got: ${v}`,
   Failure: (e) => `Failed: ${e.message}`,
-})
+});
 ```
 
 ## Cond
@@ -70,14 +70,14 @@ Cond provides conditional expressions without early returns:
 ### Basic Usage
 
 ```typescript
-import { Cond } from "functype/conditional"
+import { Cond } from "functype/conditional";
 
 const grade = Cond<string>()
   .when(score >= 90, () => "A")
   .when(score >= 80, () => "B")
   .when(score >= 70, () => "C")
   .when(score >= 60, () => "D")
-  .otherwise(() => "F")
+  .otherwise(() => "F");
 ```
 
 ### With Predicates
@@ -87,7 +87,7 @@ const category = Cond<string>()
   .when(age < 13, () => "child")
   .when(age < 20, () => "teenager")
   .when(age < 65, () => "adult")
-  .otherwise(() => "senior")
+  .otherwise(() => "senior");
 ```
 
 ### Lazy Evaluation
@@ -98,7 +98,7 @@ Cond evaluates lazily - only the matching branch runs:
 const result = Cond<number>()
   .when(true, () => 1) // This runs
   .when(true, () => expensiveCompute()) // This doesn't run
-  .otherwise(() => 0)
+  .otherwise(() => 0);
 ```
 
 ## Match vs Cond
@@ -117,14 +117,14 @@ Match(httpMethod)
   .case("GET", () => handleGet())
   .case("POST", () => handlePost())
   .case("PUT", () => handlePut())
-  .default(() => handleOther())
+  .default(() => handleOther());
 
 // Matching on discriminated unions
 Match(action.type)
   .case("INCREMENT", () => state + 1)
   .case("DECREMENT", () => state - 1)
   .case("RESET", () => 0)
-  .default(() => state)
+  .default(() => state);
 ```
 
 ### When to Use Cond
@@ -135,13 +135,13 @@ const shipping = Cond<number>()
   .when(order.total > 100, () => 0)
   .when(order.isPrime, () => 0)
   .when(order.isLocal, () => 5)
-  .otherwise(() => 10)
+  .otherwise(() => 10);
 
 // Replacing if-else chains
 const message = Cond<string>()
   .when(errors.length > 0, () => `${errors.length} errors found`)
   .when(warnings.length > 0, () => `${warnings.length} warnings`)
-  .otherwise(() => "All good!")
+  .otherwise(() => "All good!");
 ```
 
 ## Key Features
@@ -162,20 +162,20 @@ const message = Cond<string>()
 
 ```typescript
 // Traditional if-else (imperative)
-let result: string
+let result: string;
 if (status === 200) {
-  result = "OK"
+  result = "OK";
 } else if (status === 404) {
-  result = "Not Found"
+  result = "Not Found";
 } else {
-  result = "Unknown"
+  result = "Unknown";
 }
 
 // Match (functional expression)
 const result = Match(status)
   .case(200, () => "OK")
   .case(404, () => "Not Found")
-  .default(() => "Unknown")
+  .default(() => "Unknown");
 ```
 
 ## API Reference

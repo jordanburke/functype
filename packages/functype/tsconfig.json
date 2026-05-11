@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "outDir": "lib"
+  },
+  "include": ["src/**/*", "test/**/*", "examples/**/*", "bench/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "lib"]
+}

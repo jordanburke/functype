@@ -27,19 +27,22 @@ export default function CoreTypes() {
     {
       name: "Obj<T>",
       href: "/obj",
-      description: "Immutable object wrapper with fluent operations like set, assign, when, omit, pick",
+      description:
+        "Immutable object wrapper with fluent operations like set, assign, when, omit, pick",
       icon: "{}",
     },
     {
       name: "IO<R,E,A>",
       href: "/io",
-      description: "Lazy, composable effects with typed errors and dependency injection",
+      description:
+        "Lazy, composable effects with typed errors and dependency injection",
       icon: "λ",
     },
     {
       name: "Http",
       href: "/http",
-      description: "Typed HTTP fetch wrapper with IO integration, auto content-type detection, and HttpError ADT",
+      description:
+        "Typed HTTP fetch wrapper with IO integration, auto content-type detection, and HttpError ADT",
       icon: "↗",
     },
     {
@@ -54,15 +57,18 @@ export default function CoreTypes() {
       description: "Powerful pattern matching and conditional expressions",
       icon: "⊢",
     },
-  ]
+  ];
 
   return (
     <section id="core-types" className="px-6 py-20 bg-gray-50">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Core Data Structures</h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            Core Data Structures
+          </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Explore the foundational types that power functional programming in TypeScript
+            Explore the foundational types that power functional programming in
+            TypeScript
           </p>
         </div>
 
@@ -78,7 +84,9 @@ export default function CoreTypes() {
                   {type.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{type.name}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {type.name}
+                  </h3>
                   <p className="text-sm text-gray-600">{type.description}</p>
                 </div>
               </div>
@@ -87,5 +95,5 @@ export default function CoreTypes() {
         </div>
       </div>
     </section>
-  )
+  );
 }
