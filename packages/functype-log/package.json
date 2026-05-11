@@ -1,0 +1,92 @@
+{
+  "name": "functype-log",
+  "version": "0.60.0",
+  "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
+  "keywords": [
+    "functype",
+    "functional",
+    "logging",
+    "loglayer",
+    "io",
+    "dependency-injection",
+    "typescript"
+  ],
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype-log",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/functype-log"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "peerDependencies": {
+    "functype": ">=0.60.0"
+  },
+  "dependencies": {
+    "loglayer": "^9.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "functype": "^0.60.0",
+    "ts-builds": "^2.7.0",
+    "tsdown": "^0.21.9"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./logger": {
+      "types": "./dist/logger/index.d.ts",
+      "import": "./dist/logger/index.js",
+      "default": "./dist/logger/index.js"
+    },
+    "./layers": {
+      "types": "./dist/layers/index.d.ts",
+      "import": "./dist/layers/index.js",
+      "default": "./dist/layers/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./middleware": {
+      "types": "./dist/middleware/index.d.ts",
+      "import": "./dist/middleware/index.js",
+      "default": "./dist/middleware/index.js"
+    },
+    "./direct": {
+      "types": "./dist/direct/index.d.ts",
+      "import": "./dist/direct/index.js",
+      "default": "./dist/direct/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "dist"
+  ],
+  "prettier": "ts-builds/prettier",
+  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}
