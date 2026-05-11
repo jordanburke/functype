@@ -11,15 +11,17 @@
   },
   "homepage": "https://functype.org/",
   "scripts": {
-    "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
-    "lint:check": "pnpm -r lint:check",
-    "format": "pnpm -r format",
-    "format:check": "pnpm -r format:check",
-    "validate": "pnpm -r validate",
-    "compile": "pnpm -r compile",
-    "clean": "pnpm -r clean"
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "lint:check": "turbo run lint:check",
+    "format": "turbo run format",
+    "format:check": "turbo run format:check",
+    "validate": "turbo run validate",
+    "compile": "turbo run compile",
+    "typecheck": "turbo run typecheck",
+    "dev": "turbo run dev",
+    "clean": "pnpm -r clean && rimraf .turbo"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "engines": {
@@ -29,5 +31,8 @@
     "overrides": {
       "unrun": "0.2.37"
     }
+  },
+  "devDependencies": {
+    "turbo": "^2.9.12"
   }
 }

@@ -1,1 +1,1 @@
-../../../docs/FUNCTYPE_FEATURE_MATRIX.md
+../../../packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md

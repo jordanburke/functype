@@ -5,13 +5,14 @@ import { fileURLToPath } from "node:url"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const siteDir = resolve(__dirname, "..")
 const rootDir = resolve(siteDir, "..")
+const functypeDir = resolve(rootDir, "packages/functype")
 
-const pkg = JSON.parse(readFileSync(resolve(rootDir, "package.json"), "utf-8"))
+const pkg = JSON.parse(readFileSync(resolve(functypeDir, "package.json"), "utf-8"))
 
 const sections: Array<{ label: string; path: string }> = [
-  { label: "AI Guide", path: resolve(rootDir, "docs/ai-guide.md") },
-  { label: "Quick Reference", path: resolve(rootDir, "docs/quick-reference.md") },
-  { label: "Feature Matrix", path: resolve(rootDir, "docs/FUNCTYPE_FEATURE_MATRIX.md") },
+  { label: "AI Guide", path: resolve(functypeDir, "docs/ai-guide.md") },
+  { label: "Quick Reference", path: resolve(functypeDir, "docs/quick-reference.md") },
+  { label: "Feature Matrix", path: resolve(functypeDir, "docs/FUNCTYPE_FEATURE_MATRIX.md") },
   { label: "Option", path: resolve(siteDir, "src/content/option.md") },
   { label: "Either", path: resolve(siteDir, "src/content/either.md") },
   { label: "Try", path: resolve(siteDir, "src/content/try.md") },
