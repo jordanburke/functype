@@ -15,11 +15,11 @@
   ],
   "author": "Jordan Burke <jordan.burke@gmail.com>",
   "license": "MIT",
-  "homepage": "https://github.com/jordanburke/functype/tree/main/mcp-server#readme",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/mcp-server#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jordanburke/functype.git",
-    "directory": "mcp-server"
+    "directory": "packages/mcp-server"
   },
   "bugs": {
     "url": "https://github.com/jordanburke/functype/issues"

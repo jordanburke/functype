@@ -804,5 +804,5 @@ const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkE
   url,
   method,
   cause,
-})`
+})`,
 }

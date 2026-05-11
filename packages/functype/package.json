@@ -1,0 +1,182 @@
+{
+  "name": "functype",
+  "version": "0.60.4",
+  "type": "module",
+  "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "packages/functype"
+  },
+  "homepage": "https://functype.org/",
+  "url": "https://github.com/jordanburke/functype",
+  "scripts": {
+    "prevalidate": "bash scripts/version-check.sh",
+    "validate": "ts-builds validate",
+    "validate:core": "ts-builds validate:core",
+    "validate:site": "ts-builds validate:site",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "test:ui": "ts-builds test:ui",
+    "build": "ts-builds build",
+    "extract:interfaces": "ts-builds extract:interfaces",
+    "build:watch": "ts-builds dev",
+    "dev": "ts-builds dev",
+    "compile": "ts-builds compile",
+    "clean": "rimraf dist",
+    "prepublishOnly": "pnpm validate",
+    "bench": "vitest bench",
+    "bench:ui": "vitest bench --ui",
+    "docs:preprocess": "tsx scripts/preprocess-docs.ts",
+    "docs": "ts-builds docs",
+    "docs:watch": "typedoc --watch",
+    "docs:sync": "tsx scripts/sync-docs.ts",
+    "docs:validate": "ts-builds docs:validate",
+    "analyze:size": "pnpm build && node ./scripts/analyze-bundle-size.js",
+    "cli-example": "npx . Option"
+  },
+  "devDependencies": {
+    "@eslint/compat": "^2.1.0",
+    "@types/node": "~24.10.15",
+    "eslint-config-functype": "2.3.0",
+    "eslint-plugin-functional": "^9.0.4",
+    "fast-check": "^4.7.0",
+    "globals": "^17.6.0",
+    "ts-builds": "^2.7.2",
+    "tsdown": "^0.21.10",
+    "tsx": "^4.21.0",
+    "typedoc": "^0.28.19"
+  },
+  "types": "./dist/index.d.ts",
+  "module": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./cli": {
+      "types": "./dist/cli/exports.d.ts",
+      "import": "./dist/cli/exports.js",
+      "default": "./dist/cli/exports.js"
+    },
+    "./option": {
+      "types": "./dist/option/index.d.ts",
+      "import": "./dist/option/index.js",
+      "default": "./dist/option/index.js"
+    },
+    "./either": {
+      "types": "./dist/either/index.d.ts",
+      "import": "./dist/either/index.js",
+      "default": "./dist/either/index.js"
+    },
+    "./try": {
+      "types": "./dist/try/index.d.ts",
+      "import": "./dist/try/index.js",
+      "default": "./dist/try/index.js"
+    },
+    "./list": {
+      "types": "./dist/list/index.d.ts",
+      "import": "./dist/list/index.js",
+      "default": "./dist/list/index.js"
+    },
+    "./conditional": {
+      "types": "./dist/conditional/index.d.ts",
+      "import": "./dist/conditional/index.js",
+      "default": "./dist/conditional/index.js"
+    },
+    "./do": {
+      "types": "./dist/do/index.d.ts",
+      "import": "./dist/do/index.js",
+      "default": "./dist/do/index.js"
+    },
+    "./lazy": {
+      "types": "./dist/lazy/index.d.ts",
+      "import": "./dist/lazy/index.js",
+      "default": "./dist/lazy/index.js"
+    },
+    "./task": {
+      "types": "./dist/core/task/index.d.ts",
+      "import": "./dist/core/task/index.js",
+      "default": "./dist/core/task/index.js"
+    },
+    "./io": {
+      "types": "./dist/io/index.d.ts",
+      "import": "./dist/io/index.js",
+      "default": "./dist/io/index.js"
+    },
+    "./functype": {
+      "types": "./dist/functype/index.d.ts",
+      "import": "./dist/functype/index.js",
+      "default": "./dist/functype/index.js"
+    },
+    "./typeclass": {
+      "types": "./dist/typeclass/index.d.ts",
+      "import": "./dist/typeclass/index.js",
+      "default": "./dist/typeclass/index.js"
+    },
+    "./map": {
+      "types": "./dist/map/index.d.ts",
+      "import": "./dist/map/index.js",
+      "default": "./dist/map/index.js"
+    },
+    "./obj": {
+      "types": "./dist/obj/index.d.ts",
+      "import": "./dist/obj/index.js",
+      "default": "./dist/obj/index.js"
+    },
+    "./set": {
+      "types": "./dist/set/index.d.ts",
+      "import": "./dist/set/index.js",
+      "default": "./dist/set/index.js"
+    },
+    "./tuple": {
+      "types": "./dist/tuple/index.d.ts",
+      "import": "./dist/tuple/index.js",
+      "default": "./dist/tuple/index.js"
+    },
+    "./branded": {
+      "types": "./dist/branded/index.d.ts",
+      "import": "./dist/branded/index.js",
+      "default": "./dist/branded/index.js"
+    },
+    "./companion": {
+      "types": "./dist/companion/index.d.ts",
+      "import": "./dist/companion/index.js",
+      "default": "./dist/companion/index.js"
+    },
+    "./serialization": {
+      "types": "./dist/serialization/index.d.ts",
+      "import": "./dist/serialization/index.js",
+      "default": "./dist/serialization/index.js"
+    },
+    "./util": {
+      "types": "./dist/util/index.d.ts",
+      "import": "./dist/util/index.js",
+      "default": "./dist/util/index.js"
+    },
+    "./fetch": {
+      "types": "./dist/fetch/index.d.ts",
+      "import": "./dist/fetch/index.js",
+      "default": "./dist/fetch/index.js"
+    }
+  },
+  "bin": {
+    "functype": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
