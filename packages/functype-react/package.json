@@ -1,0 +1,97 @@
+{
+  "name": "functype-react",
+  "version": "0.1.0",
+  "description": "React bindings for functype — ADT-aware hooks and exhaustive pattern matching components",
+  "keywords": [
+    "functype",
+    "react",
+    "hooks",
+    "pattern-matching",
+    "adt",
+    "option",
+    "either",
+    "task",
+    "typescript",
+    "functional"
+  ],
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-react",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/functype",
+    "directory": "packages/functype-react"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "peerDependencies": {
+    "functype": "workspace:^",
+    "react": ">=18.0.0 <20.0.0",
+    "react-dom": ">=18.0.0 <20.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "functype": "workspace:^",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "ts-builds": "^2.7.2",
+    "tsdown": "^0.21.10"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./match": {
+      "types": "./dist/match/index.d.ts",
+      "import": "./dist/match/index.js",
+      "default": "./dist/match/index.js"
+    },
+    "./async": {
+      "types": "./dist/async/index.d.ts",
+      "import": "./dist/async/index.js",
+      "default": "./dist/async/index.js"
+    },
+    "./forms": {
+      "types": "./dist/forms/index.d.ts",
+      "import": "./dist/forms/index.js",
+      "default": "./dist/forms/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "prettier": "ts-builds/prettier",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
