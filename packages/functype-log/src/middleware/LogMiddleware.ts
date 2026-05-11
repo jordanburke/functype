@@ -12,7 +12,7 @@ export const withLogging = <R, E, A>(name: string, effect: IO<R, E, A>): IO<R | 
     const result = yield* effect
     yield* log.debug(`${name}: completed`)
     return result
-  }) as IO<R | Logger, E, A>
+  }) as unknown as IO<R | Logger, E, A>
 
 /** Create a tap function that logs at the specified level */
 export const tapLog =
@@ -24,4 +24,4 @@ export const tapLog =
       const msg = typeof message === "string" ? message : message(result)
       yield* log[level](msg)
       return result
-    }) as IO<R | Logger, E, A>
+    }) as unknown as IO<R | Logger, E, A>

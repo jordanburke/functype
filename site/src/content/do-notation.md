@@ -9,19 +9,21 @@ Do-notation provides generator-based monadic comprehensions inspired by Scala's 
 ## Basic Usage
 
 ```typescript
-import { Do, $ } from "functype/do"
-import { Option } from "functype/option"
+import { Do, $ } from "functype/do";
+import { Option } from "functype/option";
 
 // Instead of nested flatMaps
-const nested = Option(1).flatMap((a) => Option(2).flatMap((b) => Option(3).map((c) => a + b + c)))
+const nested = Option(1).flatMap((a) =>
+  Option(2).flatMap((b) => Option(3).map((c) => a + b + c)),
+);
 
 // Use Do-notation
 const clean = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option(2))
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // Some(6)
+  const a = yield* $(Option(1));
+  const b = yield* $(Option(2));
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // Some(6)
 ```
 
 ## The $ Helper
@@ -29,12 +31,12 @@ const clean = Do(function* () {
 The `$` function enables TypeScript type inference with generators:
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const x = yield* $(Option(42)) // x is number, not unknown
-  return x * 2
-})
+  const x = yield* $(Option(42)); // x is number, not unknown
+  return x * 2;
+});
 ```
 
 ## Short-Circuiting
@@ -44,18 +46,18 @@ Do-notation automatically propagates None/Left/Failure:
 ```typescript
 // Option - stops on None
 const result = Do(function* () {
-  const a = yield* $(Option(1))
-  const b = yield* $(Option.none<number>()) // stops here
-  const c = yield* $(Option(3))
-  return a + b + c
-}) // None
+  const a = yield* $(Option(1));
+  const b = yield* $(Option.none<number>()); // stops here
+  const c = yield* $(Option(3));
+  return a + b + c;
+}); // None
 
 // Either - stops on Left
 const validated = Do(function* () {
-  const name = yield* $(validateName(input)) // Left stops chain
-  const email = yield* $(validateEmail(input))
-  return { name, email }
-})
+  const name = yield* $(validateName(input)); // Left stops chain
+  const email = yield* $(validateEmail(input));
+  return { name, email };
+});
 ```
 
 ## Supported Types
@@ -66,43 +68,43 @@ Do-notation works with any monad in functype:
 
 ```typescript
 const result = Do(function* () {
-  const user = yield* $(findUser(id))
-  const profile = yield* $(user.profile)
-  const email = yield* $(profile.email)
-  return email
-}) // Option<string>
+  const user = yield* $(findUser(id));
+  const profile = yield* $(user.profile);
+  const email = yield* $(profile.email);
+  return email;
+}); // Option<string>
 ```
 
 ### Either
 
 ```typescript
 const result = Do(function* () {
-  const name = yield* $(validateName(input.name))
-  const age = yield* $(validateAge(input.age))
-  const email = yield* $(validateEmail(input.email))
-  return { name, age, email }
-}) // Either<ValidationError, User>
+  const name = yield* $(validateName(input.name));
+  const age = yield* $(validateAge(input.age));
+  const email = yield* $(validateEmail(input.email));
+  return { name, age, email };
+}); // Either<ValidationError, User>
 ```
 
 ### Try
 
 ```typescript
 const result = Do(function* () {
-  const config = yield* $(Try(() => readConfig()))
-  const db = yield* $(Try(() => connectDB(config)))
-  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
-  return users
-}) // Try<User[]>
+  const config = yield* $(Try(() => readConfig()));
+  const db = yield* $(Try(() => connectDB(config)));
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")));
+  return users;
+}); // Try<User[]>
 ```
 
 ### List (Cartesian Products)
 
 ```typescript
 const combinations = Do(function* () {
-  const x = yield* $(List([1, 2, 3]))
-  const y = yield* $(List(["a", "b"]))
-  return `${x}${y}`
-}) // List(["1a", "1b", "2a", "2b", "3a", "3b"])
+  const x = yield* $(List([1, 2, 3]));
+  const y = yield* $(List(["a", "b"]));
+  return `${x}${y}`;
+}); // List(["1a", "1b", "2a", "2b", "3a", "3b"])
 ```
 
 ## Async Do-Notation
@@ -110,13 +112,13 @@ const combinations = Do(function* () {
 For async operations, use `DoAsync`:
 
 ```typescript
-import { DoAsync, $ } from "functype/do"
+import { DoAsync, $ } from "functype/do";
 
 const result = await DoAsync(async function* () {
-  const user = yield* $(Task.async("getUser", () => fetchUser()))
-  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)))
-  return { user, posts }
-})
+  const user = yield* $(Task.async("getUser", () => fetchUser()));
+  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)));
+  return { user, posts };
+});
 ```
 
 ## Performance
@@ -147,17 +149,21 @@ Do-notation is highly optimized:
 // Without Do-notation
 const result = getUser(id).flatMap((user) =>
   getProfile(user.profileId).flatMap((profile) =>
-    getSettings(profile.settingsId).map((settings) => ({ user, profile, settings })),
+    getSettings(profile.settingsId).map((settings) => ({
+      user,
+      profile,
+      settings,
+    })),
   ),
-)
+);
 
 // With Do-notation
 const result = Do(function* () {
-  const user = yield* $(getUser(id))
-  const profile = yield* $(getProfile(user.profileId))
-  const settings = yield* $(getSettings(profile.settingsId))
-  return { user, profile, settings }
-})
+  const user = yield* $(getUser(id));
+  const profile = yield* $(getProfile(user.profileId));
+  const settings = yield* $(getSettings(profile.settingsId));
+  return { user, profile, settings };
+});
 ```
 
 ## API Reference

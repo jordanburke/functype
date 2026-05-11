@@ -7,10 +7,8 @@ const makeMethod =
   (logLayer: ILogLayer, level: LogLevel, baseError?: Error) =>
   (message: string, metadata?: LogMetadata): IO<never, never, void> =>
     IO.sync(() => {
-      let entry = metadata ? logLayer.withMetadata(metadata) : logLayer
-      if (baseError) {
-        entry = entry.withError(baseError)
-      }
+      const base = metadata ? logLayer.withMetadata(metadata) : logLayer
+      const entry = baseError ? base.withError(baseError) : base
       entry[level](message)
     })
 

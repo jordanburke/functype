@@ -10,13 +10,13 @@ Push the same ADTs (`Option`, `Either`, `Try`, `Task`, `Validated`) you already 
 
 ## Planned v0.1 surface
 
-| Primitive | Purpose |
-|---|---|
+| Primitive                                                    | Purpose                                                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | `<Match>` / `<MatchOption>` / `<MatchEither>` / `<MatchTry>` | Exhaustive ADT pattern matching for JSX — adding a domain case becomes a UI compile error. |
-| `useTask` returning `TaskState<E,A>` | Discriminated async state — no `data && error && isLoading` nonsense states. |
-| `<TaskBoundary>` | Suspense + error boundary integration for Task. |
-| `useValidated` / `useValidatedForm` over `Validated<E,A>` | Applicative form validation that accumulates errors instead of short-circuiting. |
-| Branded / phantom-typed lifecycle helpers | Invalid state transitions don't compile. |
+| `useTask` returning `TaskState<E,A>`                         | Discriminated async state — no `data && error && isLoading` nonsense states.               |
+| `<TaskBoundary>`                                             | Suspense + error boundary integration for Task.                                            |
+| `useValidated` / `useValidatedForm` over `Validated<E,A>`    | Applicative form validation that accumulates errors instead of short-circuiting.           |
+| Branded / phantom-typed lifecycle helpers                    | Invalid state transitions don't compile.                                                   |
 
 ## Installation (once published)
 

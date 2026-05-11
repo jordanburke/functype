@@ -22,7 +22,7 @@
 In `Navigation.tsx`, line 9, change the scroll-detection sections array:
 
 ```typescript
-const sections = ["home", "features", "core-types", "quick-start", "ai-tools"]
+const sections = ["home", "features", "core-types", "quick-start", "ai-tools"];
 ```
 
 **Step 2: Update navItems array**
@@ -61,8 +61,9 @@ Lines 7-9: Change subtitle to:
 
 ```tsx
 <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-  Supercharge your functype workflow with AI-powered tools. Install Claude Code skills for intelligent code assistance
-  or add the MCP server for live documentation in any AI agent.
+  Supercharge your functype workflow with AI-powered tools. Install Claude Code
+  skills for intelligent code assistance or add the MCP server for live
+  documentation in any AI agent.
 </p>
 ```
 
@@ -100,7 +101,7 @@ git commit -m "feat(landing): rename section to AI-Powered Development, fix skil
 Line 13: Change `className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"` to:
 
 ```tsx
-className = "grid md:grid-cols-3 gap-8 max-w-6xl mx-auto"
+className = "grid md:grid-cols-3 gap-8 max-w-6xl mx-auto";
 ```
 
 **Step 2: Add MCP Server card after the functype-developer card (after line 166)**
@@ -111,10 +112,15 @@ Insert a third card inside the grid div, right after the closing `</div>` of the
 {
   /* MCP Server */
 }
-;<div className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-green-500 transition-all hover:shadow-lg">
+<div className="bg-white p-8 rounded-2xl border-2 border-gray-200 hover:border-green-500 transition-all hover:shadow-lg">
   <div className="flex items-start mb-6">
     <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0 mr-4">
-      <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg
+        className="w-8 h-8 text-green-600"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -130,33 +136,50 @@ Insert a third card inside the grid div, right after the closing `</div>` of the
   </div>
 
   <p className="text-gray-600 mb-6">
-    Live documentation lookup and compile-time code validation via the Model Context Protocol. Works with Claude Code,
-    Cursor, Windsurf, and any MCP-compatible tool.
+    Live documentation lookup and compile-time code validation via the Model
+    Context Protocol. Works with Claude Code, Cursor, Windsurf, and any
+    MCP-compatible tool.
   </p>
 
   <div className="space-y-3 mb-6">
     <div className="flex items-start">
-      <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <svg
+        className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
         <path
           fillRule="evenodd"
           d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
           clipRule="evenodd"
         />
       </svg>
-      <span className="text-sm text-gray-700">Search docs and type API references</span>
+      <span className="text-sm text-gray-700">
+        Search docs and type API references
+      </span>
     </div>
     <div className="flex items-start">
-      <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <svg
+        className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
         <path
           fillRule="evenodd"
           d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
           clipRule="evenodd"
         />
       </svg>
-      <span className="text-sm text-gray-700">Compile-time code validation</span>
+      <span className="text-sm text-gray-700">
+        Compile-time code validation
+      </span>
     </div>
     <div className="flex items-start">
-      <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <svg
+        className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0"
+        fill="currentColor"
+        viewBox="0 0 20 20"
+      >
         <path
           fillRule="evenodd"
           d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -179,10 +202,13 @@ Insert a third card inside the grid div, right after the closing `</div>` of the
     </div>
   </div>
 
-  <a href="/mcp-server" className="mt-4 inline-block text-sm text-green-600 hover:text-green-700 font-medium">
+  <a
+    href="/mcp-server"
+    className="mt-4 inline-block text-sm text-green-600 hover:text-green-700 font-medium"
+  >
     View full documentation →
   </a>
-</div>
+</div>;
 ```
 
 **Step 3: Update the Quick Installation box to include MCP setup**
@@ -193,20 +219,34 @@ Replace the installation box content (lines 170-186) to add MCP server setup:
 {
   /* Installation Instructions */
 }
-;<div className="mt-12 bg-gray-900 text-gray-100 p-8 rounded-2xl max-w-4xl mx-auto">
+<div className="mt-12 bg-gray-900 text-gray-100 p-8 rounded-2xl max-w-4xl mx-auto">
   <h3 className="text-xl font-bold mb-4 flex items-center">
-    <svg className="w-6 h-6 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+    <svg
+      className="w-6 h-6 mr-2 text-blue-400"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        d="M13 10V3L4 14h7v7l9-11h-7z"
+      ></path>
     </svg>
     Quick Installation
   </h3>
 
   <div className="grid md:grid-cols-2 gap-6">
     <div>
-      <p className="text-gray-300 mb-3 text-sm font-medium">Claude Code Skills</p>
+      <p className="text-gray-300 mb-3 text-sm font-medium">
+        Claude Code Skills
+      </p>
       <div className="bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto">
         <div className="text-green-400"># Add the functype marketplace</div>
-        <div className="text-gray-300 mt-2">/plugin marketplace add jordanburke/functype</div>
+        <div className="text-gray-300 mt-2">
+          /plugin marketplace add jordanburke/functype
+        </div>
         <div className="text-green-400 mt-3"># Install skills</div>
         <div className="text-gray-300 mt-2">/plugin install functype</div>
         <div className="text-gray-300">/plugin install functype-developer</div>
@@ -225,7 +265,9 @@ Replace the installation box content (lines 170-186) to add MCP server setup:
           {"    "}"functype": {"{"}
         </div>
         <div className="text-gray-300">{"      "}"command": "npx",</div>
-        <div className="text-gray-300">{"      "}"args": ["-y", "functype-mcp-server"]</div>
+        <div className="text-gray-300">
+          {"      "}"args": ["-y", "functype-mcp-server"]
+        </div>
         <div className="text-gray-300">
           {"    "}
           {"}"}
@@ -238,7 +280,7 @@ Replace the installation box content (lines 170-186) to add MCP server setup:
       </div>
     </div>
   </div>
-</div>
+</div>;
 ```
 
 **Step 4: Verify dev server**

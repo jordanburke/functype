@@ -1,18 +1,26 @@
-import { readFileSync, writeFileSync } from "node:fs"
-import { resolve, dirname } from "node:path"
-import { fileURLToPath } from "node:url"
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const siteDir = resolve(__dirname, "..")
-const rootDir = resolve(siteDir, "..")
-const functypeDir = resolve(rootDir, "packages/functype")
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const siteDir = resolve(__dirname, "..");
+const rootDir = resolve(siteDir, "..");
+const functypeDir = resolve(rootDir, "packages/functype");
 
-const pkg = JSON.parse(readFileSync(resolve(functypeDir, "package.json"), "utf-8"))
+const pkg = JSON.parse(
+  readFileSync(resolve(functypeDir, "package.json"), "utf-8"),
+);
 
 const sections: Array<{ label: string; path: string }> = [
   { label: "AI Guide", path: resolve(functypeDir, "docs/ai-guide.md") },
-  { label: "Quick Reference", path: resolve(functypeDir, "docs/quick-reference.md") },
-  { label: "Feature Matrix", path: resolve(functypeDir, "docs/FUNCTYPE_FEATURE_MATRIX.md") },
+  {
+    label: "Quick Reference",
+    path: resolve(functypeDir, "docs/quick-reference.md"),
+  },
+  {
+    label: "Feature Matrix",
+    path: resolve(functypeDir, "docs/FUNCTYPE_FEATURE_MATRIX.md"),
+  },
   { label: "Option", path: resolve(siteDir, "src/content/option.md") },
   { label: "Either", path: resolve(siteDir, "src/content/either.md") },
   { label: "Try", path: resolve(siteDir, "src/content/try.md") },
@@ -20,9 +28,12 @@ const sections: Array<{ label: string; path: string }> = [
   { label: "Task", path: resolve(siteDir, "src/content/task.md") },
   { label: "IO", path: resolve(siteDir, "src/content/io.md") },
   { label: "Http", path: resolve(siteDir, "src/content/http.md") },
-  { label: "Do-notation", path: resolve(siteDir, "src/content/do-notation.md") },
+  {
+    label: "Do-notation",
+    path: resolve(siteDir, "src/content/do-notation.md"),
+  },
   { label: "Pattern Matching", path: resolve(siteDir, "src/content/match.md") },
-]
+];
 
 const header = `# Functype v${pkg.version}
 
@@ -33,22 +44,25 @@ const header = `# Functype v${pkg.version}
 - Repository: ${pkg.url}
 
 This file contains the complete functype documentation concatenated into a single file for LLM consumption.
-`
+`;
 
-const separator = (label: string) => `\n${"─".repeat(80)}\n## ${label}\n${"─".repeat(80)}\n`
+const separator = (label: string) =>
+  `\n${"─".repeat(80)}\n## ${label}\n${"─".repeat(80)}\n`;
 
-const parts = [header]
+const parts = [header];
 
 for (const section of sections) {
-  const content = readFileSync(section.path, "utf-8")
-  parts.push(separator(section.label))
-  parts.push(content.trim())
-  parts.push("")
+  const content = readFileSync(section.path, "utf-8");
+  parts.push(separator(section.label));
+  parts.push(content.trim());
+  parts.push("");
 }
 
-const output = parts.join("\n")
-const outputPath = resolve(siteDir, "public/llms-full.txt")
+const output = parts.join("\n");
+const outputPath = resolve(siteDir, "public/llms-full.txt");
 
-writeFileSync(outputPath, output, "utf-8")
+writeFileSync(outputPath, output, "utf-8");
 
-console.log(`Generated llms-full.txt (${output.length} bytes, ${output.split("\n").length} lines)`)
+console.log(
+  `Generated llms-full.txt (${output.length} bytes, ${output.split("\n").length} lines)`,
+);

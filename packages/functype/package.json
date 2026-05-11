@@ -13,10 +13,7 @@
   "homepage": "https://functype.org/",
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
-    "prevalidate": "bash scripts/version-check.sh",
     "validate": "ts-builds validate",
-    "validate:core": "ts-builds validate:core",
-    "validate:site": "ts-builds validate:site",
     "format": "ts-builds format",
     "format:check": "ts-builds format:check",
     "lint": "ts-builds lint",

@@ -9,19 +9,19 @@ Try wraps operations that might throw exceptions, converting them to `Success` o
 ## Basic Usage
 
 ```typescript
-import { Try } from "functype/try"
+import { Try } from "functype/try";
 
 // Wrap potentially throwing code
-const result = Try(() => JSON.parse(jsonString))
+const result = Try(() => JSON.parse(jsonString));
 
 // Check state
-result.isSuccess() // true if no exception
-result.isFailure() // true if exception thrown
+result.isSuccess(); // true if no exception
+result.isFailure(); // true if exception thrown
 
 // Extract values
-result.orElse({}) // value or default
-result.orThrow() // value or re-throw
-result.toEither() // Either<Error, T>
+result.orElse({}); // value or default
+result.orThrow(); // value or re-throw
+result.toEither(); // Either<Error, T>
 ```
 
 ## Constructors
@@ -38,21 +38,21 @@ result.toEither() // Either<Error, T>
 
 ```typescript
 // Map - transform success value
-Try(() => "hello").map((s) => s.toUpperCase()) // Success("HELLO")
+Try(() => "hello").map((s) => s.toUpperCase()); // Success("HELLO")
 Try(() => {
-  throw new Error()
-}).map((s) => s.toUpperCase()) // Failure
+  throw new Error();
+}).map((s) => s.toUpperCase()); // Failure
 
 // FlatMap - chain Try operations
 Try(() => readFile(path))
   .flatMap((content) => Try(() => JSON.parse(content)))
-  .flatMap((data) => Try(() => validate(data)))
+  .flatMap((data) => Try(() => validate(data)));
 
 // Recover - handle failures by mapping over the error
-Try(() => riskyOperation()).recover((error) => fallbackValue)
+Try(() => riskyOperation()).recover((error) => fallbackValue);
 
 // RecoverWith - handle with another Try
-Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()))
+Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
 ```
 
 ## Pattern Matching
@@ -62,13 +62,13 @@ Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()))
 const message = Try(() => fetchData()).fold(
   (error) => `Failed: ${error.message}`,
   (data) => `Got ${data.length} items`,
-)
+);
 
 // Using match
 result.match({
   Success: (value) => console.log("Got:", value),
   Failure: (error) => console.error("Error:", error),
-})
+});
 ```
 
 ## Error Handling Patterns
@@ -78,29 +78,29 @@ result.match({
 const result = Try(() => readConfig())
   .flatMap((config) => Try(() => connectDB(config)))
   .flatMap((db) => Try(() => db.query("SELECT * FROM users")))
-  .recover(() => []) // Return empty array on any failure
+  .recover(() => []); // Return empty array on any failure
 
 // Transform errors
-Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message))
+Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message));
 
 // Filter with predicate
 Try(() => parseInt(input)).filter(
   (n) => n > 0,
   () => new Error("Must be positive"),
-)
+);
 ```
 
 ## Do-Notation
 
 ```typescript
-import { Do, $ } from "functype/do"
+import { Do, $ } from "functype/do";
 
 const result = Do(function* () {
-  const config = yield* $(Try(() => readConfig()))
-  const db = yield* $(Try(() => connectDB(config)))
-  const users = yield* $(Try(() => db.query("SELECT * FROM users")))
-  return users
-}) // Try<User[]>
+  const config = yield* $(Try(() => readConfig()));
+  const db = yield* $(Try(() => connectDB(config)));
+  const users = yield* $(Try(() => db.query("SELECT * FROM users")));
+  return users;
+}); // Try<User[]>
 ```
 
 ## Key Features
@@ -120,9 +120,9 @@ const result = Do(function* () {
 ## Type Conversions
 
 ```typescript
-tryValue.toOption() // None for Failure, Some for Success
-tryValue.toEither() // Left(error) or Right(value)
-tryValue.toPromise() // Rejected or Resolved Promise
+tryValue.toOption(); // None for Failure, Some for Success
+tryValue.toEither(); // Left(error) or Right(value)
+tryValue.toPromise(); // Rejected or Resolved Promise
 ```
 
 ## API Reference

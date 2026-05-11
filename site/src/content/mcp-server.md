@@ -88,7 +88,7 @@ const result = Option(42)
   .fold(
     () => "nothing",
     (x) => `got ${x}`,
-  )
+  );
 // Validation PASSED
 ```
 
@@ -97,7 +97,7 @@ const result = Option(42)
 ```typescript
 const result = Option(42)
   .map((x) => x * 2)
-  .flatMap((x) => (x > 50 ? Option(x) : Option.none()))
+  .flatMap((x) => (x > 50 ? Option(x) : Option.none()));
 // Validation FAILED — Option.none() without type parameter
 // creates Option<unknown>, incompatible with Option<number>
 ```

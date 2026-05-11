@@ -6,9 +6,15 @@ export default function Footer() {
           {/* About */}
           <div>
             <h3 className="text-white font-semibold text-lg mb-4">Functype</h3>
-            <p className="text-sm text-gray-400">Scala-inspired functional programming for TypeScript</p>
+            <p className="text-sm text-gray-400">
+              Scala-inspired functional programming for TypeScript
+            </p>
             <div className="mt-4 flex gap-2">
-              <img src="https://img.shields.io/npm/v/functype?style=flat-square" alt="npm version" className="h-5" />
+              <img
+                src="https://img.shields.io/npm/v/functype?style=flat-square"
+                alt="npm version"
+                className="h-5"
+              />
               <img
                 src="https://img.shields.io/github/stars/jordanburke/functype?style=flat-square"
                 alt="GitHub stars"
@@ -22,12 +28,18 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4">Core Types</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="/option" className="hover:text-white transition-colors">
+                <a
+                  href="/option"
+                  className="hover:text-white transition-colors"
+                >
                   Option&lt;T&gt;
                 </a>
               </li>
               <li>
-                <a href="/either" className="hover:text-white transition-colors">
+                <a
+                  href="/either"
+                  className="hover:text-white transition-colors"
+                >
                   Either&lt;L,R&gt;
                 </a>
               </li>
@@ -47,7 +59,10 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/do-notation" className="hover:text-white transition-colors">
+                <a
+                  href="/do-notation"
+                  className="hover:text-white transition-colors"
+                >
                   Do-Notation
                 </a>
               </li>
@@ -121,12 +136,18 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/feature-matrix" className="hover:text-white transition-colors">
+                <a
+                  href="/feature-matrix"
+                  className="hover:text-white transition-colors"
+                >
                   Feature Matrix
                 </a>
               </li>
               <li>
-                <a href="/mcp-server" className="hover:text-white transition-colors">
+                <a
+                  href="/mcp-server"
+                  className="hover:text-white transition-colors"
+                >
                   MCP Server
                 </a>
               </li>
@@ -156,7 +177,9 @@ export default function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-gray-400">© 2025 Jordan Burke. Open source under the MIT License.</p>
+          <p className="text-sm text-gray-400">
+            © 2025 Jordan Burke. Open source under the MIT License.
+          </p>
           <div className="flex gap-4 text-sm">
             <a
               href="https://github.com/jordanburke"
@@ -170,5 +193,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
