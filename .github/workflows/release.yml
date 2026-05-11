@@ -44,6 +44,11 @@ jobs:
         id: changesets
         uses: changesets/action@v1
         with:
+          # `version-packages` runs `changeset version` followed by the
+          # functype-mcp-server sync:registry script so server.json's
+          # version + identifier track package.json. Without this wrapper
+          # the MCP registry manifest would drift on every release.
+          version: pnpm run version-packages
           publish: pnpm -r publish --no-git-checks
           createGithubReleases: true
         env:

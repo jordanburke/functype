@@ -37,7 +37,9 @@
     "test:coverage": "ts-builds test:coverage",
     "build": "NODE_ENV=production ts-builds build",
     "dev": "ts-builds dev",
-    "prepublishOnly": "pnpm validate",
+    "sync:registry": "tsx scripts/sync-server-json.ts",
+    "sync:registry:check": "tsx scripts/sync-server-json.ts --check",
+    "prepublishOnly": "pnpm sync:registry:check && pnpm validate",
     "inspect": "pnpm build && npx @modelcontextprotocol/inspector dist/index.js",
     "serve": "pnpm build && node dist/index.js",
     "serve:dev": "tsx watch src/index.ts"

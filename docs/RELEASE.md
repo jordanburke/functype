@@ -16,12 +16,20 @@ Pick the affected packages, choose major/minor/patch, write a 1–2 sentence not
 
 1. PR merges to `main` carrying one or more `.changeset/*.md` files.
 2. `release.yml` runs and finds queued changesets.
-3. The workflow opens (or updates) a "Version Packages" PR that:
-   - Bumps each affected package's `version` in `package.json`
+3. The workflow opens (or updates) a "Version Packages" PR by running
+   `pnpm run version-packages`, which:
+   - Bumps each affected package's `version` in `package.json` (`changeset version`)
    - Bumps consumer packages' workspace peer-dep ranges (because `updateInternalDependencies: "patch"`)
+   - **Syncs `packages/mcp-server/server.json`** so the MCP registry manifest
+     tracks the new `functype-mcp-server` version (`pnpm -F functype-mcp-server sync:registry`).
+     Without this step the MCP registry would point at the previous npm tarball.
    - Appends entries to each package's `CHANGELOG.md`
    - Deletes the consumed changesets from `.changeset/`
 4. When that PR merges, `release.yml` runs again, sees no pending changesets, and instead runs `pnpm -r publish --no-git-checks`. Only packages whose `version` differs from npm get published. GitHub releases are created automatically via `createGithubReleases: true`.
+5. `functype-mcp-server`'s `prepublishOnly` runs `sync:registry:check` as a
+   belt-and-braces guard. If anyone bypasses the version-packages step and
+   triggers publish with drifted server.json, the publish hard-fails before
+   anything reaches npm.
 
 ## npm trusted-publisher reconfig — REQUIRED before first release from the monorepo
 
