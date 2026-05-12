@@ -51,12 +51,13 @@ jobs:
         run: pnpm --filter site build
 
       - name: Build TypeDoc
+        working-directory: packages/functype
         env:
           BROWSER: none
           CI: true
         run: |
           npm config set browser false
-          node packages/functype/docs-ci.js
+          node docs-ci.js
 
       - name: Prepare combined deployment
         run: |
