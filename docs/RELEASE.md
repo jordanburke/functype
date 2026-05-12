@@ -15,7 +15,7 @@ Pick the affected packages, choose major/minor/patch, write a 1–2 sentence not
 ## Release flow
 
 1. PR merges to `main` carrying one or more `.changeset/*.md` files.
-2. `release.yml` runs and finds queued changesets.
+2. `publish.yml` runs and finds queued changesets.
 3. The workflow opens (or updates) a "Version Packages" PR by running
    `pnpm run version-packages`, which:
    - Bumps each affected package's `version` in `package.json` (`changeset version`)
@@ -25,7 +25,7 @@ Pick the affected packages, choose major/minor/patch, write a 1–2 sentence not
      Without this step the MCP registry would point at the previous npm tarball.
    - Appends entries to each package's `CHANGELOG.md`
    - Deletes the consumed changesets from `.changeset/`
-4. When that PR merges, `release.yml` runs again, sees no pending changesets, and instead runs `pnpm -r publish --no-git-checks`. Only packages whose `version` differs from npm get published. GitHub releases are created automatically via `createGithubReleases: true`.
+4. When that PR merges, `publish.yml` runs again, sees no pending changesets, and instead runs `pnpm -r publish --no-git-checks`. Only packages whose `version` differs from npm get published. GitHub releases are created automatically via `createGithubReleases: true`.
 5. `functype-mcp-server`'s `prepublishOnly` runs `sync:registry:check` as a
    belt-and-braces guard. If anyone bypasses the version-packages step and
    triggers publish with drifted server.json, the publish hard-fails before
@@ -37,20 +37,20 @@ Pick the affected packages, choose major/minor/patch, write a 1–2 sentence not
 
 For each of the four provenance-enabled packages, log into [npmjs.com](https://www.npmjs.com), navigate to the package, then **Settings → "Publishing access" → "Trusted Publisher"**, and apply:
 
-| Package | New GitHub repository | New workflow filename | Notes |
+| Package | GitHub repository | Workflow filename | Notes |
 |---|---|---|---|
-| `functype` | `jordanburke/functype` | `release.yml` | Repo unchanged; just update workflow filename if previously `publish.yml`. |
-| `functype-os` | `jordanburke/functype` | `release.yml` | Was scoped to `jordanburke/functype-os` + `publish.yml`. |
-| `functype-log` | `jordanburke/functype` | `release.yml` | Was scoped to `jordanburke/functype-log` + `publish.yml`. |
-| `functype-react` | `jordanburke/functype` | `release.yml` | First publish — configure trusted publisher before running. |
+| `functype` | `jordanburke/functype` | `publish.yml` | Repo unchanged from pre-migration. |
+| `functype-os` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-os` + `publish.yml`; repo updated to monorepo, filename unchanged. |
+| `functype-log` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-log` + `publish.yml`; repo updated to monorepo, filename unchanged. |
+| `functype-react` | `jordanburke/functype` | `publish.yml` | Deferred until first publish has real content (currently marked `private: true`). |
 
 Environment: leave blank unless previously set. Already-published versions retain their existing provenance attestations (per-version, immutable) — only new publishes are affected.
 
-`functype-mcp-server` does **not** use trusted publishing today; it publishes via `NPM_TOKEN`. The new `release.yml` preserves that pattern through the `NODE_AUTH_TOKEN` env var on the changesets step. No npm admin action needed for it.
+`functype-mcp-server` does **not** use trusted publishing today; it publishes via `NPM_TOKEN`. `publish.yml` preserves that pattern through the `NODE_AUTH_TOKEN` env var on the changesets step. No npm admin action needed for it.
 
 ## Node version requirement
 
-`release.yml` reads from the repo-root `.nvmrc`, currently pinned to Node **24**. This sidesteps the npm 10.x OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) that surfaces on Node 22 as `E404 PUT https://registry.npmjs.org/<pkg>` immediately after a successful sigstore signing — npm 11.5.1+ (bundled with Node 24 LTS) is required.
+`publish.yml` reads from the repo-root `.nvmrc`, currently pinned to Node **24**. This sidesteps the npm 10.x OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) that surfaces on Node 22 as `E404 PUT https://registry.npmjs.org/<pkg>` immediately after a successful sigstore signing — npm 11.5.1+ (bundled with Node 24 LTS) is required.
 
 ## Snapshot releases (testing pre-publish)
 
