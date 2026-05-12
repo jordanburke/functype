@@ -19,7 +19,7 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 - **Task runner:** Turborepo (`turbo.json`) — pipelines: `build`, `test`, `lint`, `lint:check`, `format`, `format:check`, `typecheck`, `compile`, `validate`, `dev`. `build`/`test`/`validate` declare `^build` deps so workspace consumers wait for producers.
 - **Build:** Each package builds via `ts-builds` (calls `tsdown` under the hood) — uniform across the workspace.
 - **Versioning + publish:** [Changesets](https://github.com/changesets/changesets) — independent versions per package, peer-dep range bumps automated via `updateInternalDependencies: "patch"`. See [`docs/RELEASE.md`](./docs/RELEASE.md) for the full release runbook including the one-time npm trusted-publisher reconfig.
-- **Node version:** Read from `.nvmrc` (currently `24`). Required by `release.yml` to avoid the npm 10.x OIDC bug.
+- **Node version:** Read from `.nvmrc` (currently `24`). Required by `publish.yml` to avoid the npm 10.x OIDC bug.
 - **Shared TS config:** `tsconfig.base.json` at the repo root; each package's `tsconfig.json` extends it.
 
 ## Quick commands
@@ -45,7 +45,7 @@ pnpm changeset status              # see what's queued
 ## Workflows
 
 - **`.github/workflows/ci.yml`** — runs on PR + push to main. `pnpm turbo run validate`. Includes a path-filtered bundle-size job for `packages/functype/**`.
-- **`.github/workflows/release.yml`** — runs on push to main. Uses `changesets/action@v1` to either open a "Version Packages" PR (when changesets are queued) or run `pnpm -r publish` when that PR merges. Provenance + OIDC for `functype`, `functype-os`, `functype-log`, `functype-react`; token auth for `functype-mcp-server`.
+- **`.github/workflows/publish.yml`** — runs on push to main. Uses `changesets/action@v1` to either open a "Version Packages" PR (when changesets are queued) or run `pnpm -r publish` when that PR merges. Provenance + OIDC for `functype`, `functype-os`, `functype-log`, `functype-react`; token auth for `functype-mcp-server`.
 - **`.github/workflows/deploy-docs.yml`** — builds the Astro site + TypeDoc on push to main, publishes to GitHub Pages.
 - **`.github/workflows/auto-merge-dependabot.yml`** — auto-merges patch/minor Dependabot PRs.
 
