@@ -5,7 +5,7 @@
     "extract:interfaces": "tsx scripts/extract-interfaces.ts",
     "docs": "pnpm docs:preprocess && typedoc",
     "docs:validate": "tsx scripts/validate-docs.ts && tsx scripts/sync-docs.ts",
-    "build": "rimraf dist && tsx scripts/extract-interfaces.ts && cross-env NODE_ENV=production tsdown"
+    "build": "tsx scripts/extract-interfaces.ts && NODE_ENV=production tsdown"
   },
   "chains": {
     "validate": ["format", "lint", "compile", "test", "build"]
