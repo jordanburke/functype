@@ -2,7 +2,7 @@
 
 React bindings for the [functype](../functype) functional programming library — ADT-aware hooks and exhaustive pattern matching components.
 
-> **v0.1: scaffold only.** The primitives that carry the package's thesis are tracked in a separate spec. This package currently exists to reserve the npm name, lock the family conventions, and unblock cross-package iteration during functype core development.
+> **v0.1: scaffold only — not yet published.** The primitives that carry the package's thesis are tracked in a separate spec. This package currently exists in-tree to lock the family conventions and unblock cross-package iteration during functype core development. It's marked `private: true` in `package.json` so it's skipped by the workspace's release flow until there's real content to ship; first publish + npm trusted-publisher setup happen at the same time.
 
 ## Thesis
 
