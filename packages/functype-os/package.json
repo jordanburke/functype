@@ -1,6 +1,6 @@
 {
   "name": "functype-os",
-  "version": "0.60.0",
+  "version": "0.60.5",
   "description": "Functional OS utilities using functype data structures — env vars, path expansion, file ops, platform detection",
   "keywords": [
     "functype",

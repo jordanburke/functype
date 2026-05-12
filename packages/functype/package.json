@@ -1,8 +1,24 @@
 {
   "name": "functype",
-  "version": "0.60.4",
+  "version": "0.60.5",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
+  "keywords": [
+    "functype",
+    "functional",
+    "functional-programming",
+    "typescript",
+    "monad",
+    "adt",
+    "option",
+    "either",
+    "try",
+    "task",
+    "io",
+    "list",
+    "immutable",
+    "scala"
+  ],
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
   "repository": {
