@@ -43,7 +43,7 @@
     "build:watch": "ts-builds dev",
     "dev": "ts-builds dev",
     "compile": "ts-builds compile",
-    "clean": "rimraf dist",
+    "clean": "rm -rf dist",
     "prepublishOnly": "pnpm validate",
     "bench": "vitest bench",
     "bench:ui": "vitest bench --ui",
