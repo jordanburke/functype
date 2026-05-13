@@ -1,7 +1,7 @@
 # Functype
 
-![NPM Version](https://img.shields.io/npm/v/functype?link=https%3A%2F%2Fwww.npmjs.com%2Fpackage%2Ffunctype)
-[![Node.js Build](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml/badge.svg)](https://github.com/jordanburke/functype/actions/workflows/pnpm-build.yml)
+[![NPM Version](https://img.shields.io/npm/v/functype)](https://www.npmjs.com/package/functype)
+[![CI](https://github.com/jordanburke/functype/actions/workflows/ci.yml/badge.svg)](https://github.com/jordanburke/functype/actions/workflows/ci.yml)
 
 ## A Functional Programming Library for TypeScript
 
