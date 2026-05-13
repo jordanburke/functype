@@ -1,12 +1,10 @@
 /**
- * functype-react: React bindings for the functype FP library.
+ * `functype-react` — React bindings for the functype FP library.
  *
- * v0.1: scaffold only — primitives in progress.
- *
- * Planned v0.1 surface (separate spec):
- * - Match family: <Match>, <MatchOption>, <MatchEither>, <MatchTry>
- * - Async: useTask returning discriminated TaskState<E,A>, <TaskBoundary>
- * - Forms: useValidatedField, useValidatedForm over Validated<E,A>
- * - Lifecycle: branded/phantom-typed component helpers
+ * The main entry re-exports Tier 1 (stable hooks + ADT hooks) and Tier 2
+ * (Match family components) — the surface most apps will touch. Tier 3
+ * (`./async`) and Tier 4 (`./forms`) stay subpath-only so that consumers
+ * who don't need Suspense/Task or applicative forms tree-shake them out.
  */
-export const FUNCTYPE_REACT_VERSION = "0.1.0"
+export * from "./hooks"
+export * from "./match"

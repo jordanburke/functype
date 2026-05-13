@@ -42,7 +42,7 @@ For each of the four provenance-enabled packages, log into [npmjs.com](https://w
 | `functype` | `jordanburke/functype` | `publish.yml` | Repo unchanged from pre-migration. |
 | `functype-os` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-os` + `publish.yml`; repo updated to monorepo, filename unchanged. |
 | `functype-log` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-log` + `publish.yml`; repo updated to monorepo, filename unchanged. |
-| `functype-react` | `jordanburke/functype` | `publish.yml` | Deferred until first publish has real content (currently marked `private: true`). |
+| `functype-react` | `jordanburke/functype` | `publish.yml` | **Required before first publish.** v0.1 ships Tier 1–4 hooks/components; package was `private: true` through scaffolding and is now unblocked. Configure the trusted publisher on npmjs.com BEFORE merging the v0.1 PR or the first publish will be rejected by npm. |
 
 Environment: leave blank unless previously set. Already-published versions retain their existing provenance attestations (per-version, immutable) — only new publishes are affected.
 
