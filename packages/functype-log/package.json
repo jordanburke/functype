@@ -37,10 +37,10 @@
     "functype": "workspace:^"
   },
   "dependencies": {
-    "loglayer": "^9.1.0"
+    "loglayer": "^9.1.1"
   },
   "devDependencies": {
-    "@types/node": "^24.12.2",
+    "@types/node": "^24.12.4",
     "functype": "workspace:^",
     "ts-builds": "^2.8.0",
     "tsdown": "^0.22.0"

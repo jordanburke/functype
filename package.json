@@ -36,6 +36,6 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "turbo": "^2.9.12"
+    "turbo": "^2.9.14"
   }
 }

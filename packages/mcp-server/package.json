@@ -70,10 +70,10 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^24.12.3",
+    "@types/node": "^24.12.4",
     "ts-builds": "^2.8.0",
     "tsdown": "^0.22.0",
-    "tsx": "^4.21.0"
+    "tsx": "^4.22.0"
   },
   "prettier": "ts-builds/prettier"
 }
