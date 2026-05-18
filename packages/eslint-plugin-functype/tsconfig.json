@@ -1,0 +1,10 @@
+{
+  "extends": "ts-builds/tsconfig",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib",
+    "types": ["node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "lib", "tests"]
+}
