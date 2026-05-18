@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-functype",
-  "version": "2.3.0",
+  "version": "2.60.6",
   "description": "Custom ESLint rules for functional TypeScript programming with functype library patterns including Do notation (ESLint 10+)",
   "type": "module",
   "main": "./dist/index.js",
@@ -62,9 +62,13 @@
     "@types/node": "^24.12.2",
     "@typescript-eslint/rule-tester": "^8.59.1",
     "eslint-config-prettier": "^10.1.8",
-    "functype": "^0.60.2",
-    "ts-builds": "^2.7.1",
-    "tsdown": "^0.21.10"
+    "functype": "workspace:^",
+    "ts-builds": "^2.8.0",
+    "tsdown": "^0.22.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "author": {
     "name": "Jordan Burke",
@@ -73,15 +77,14 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/jordanburke/eslint-functype",
-    "directory": "packages/plugin"
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "packages/eslint-plugin-functype"
   },
   "bugs": {
-    "url": "https://github.com/jordanburke/eslint-functype/issues"
+    "url": "https://github.com/jordanburke/functype/issues"
   },
-  "homepage": "https://github.com/jordanburke/eslint-functype#readme",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/eslint-plugin-functype#readme",
   "engines": {
     "node": ">=24.0.0"
-  },
-  "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
+  }
 }

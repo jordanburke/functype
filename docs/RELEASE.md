@@ -43,10 +43,22 @@ For each of the four provenance-enabled packages, log into [npmjs.com](https://w
 | `functype-os` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-os` + `publish.yml`; repo updated to monorepo, filename unchanged. |
 | `functype-log` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-log` + `publish.yml`; repo updated to monorepo, filename unchanged. |
 | `functype-react` | `jordanburke/functype` | `publish.yml` | **Required before first publish.** v0.1 ships Tier 1–4 hooks/components; package was `private: true` through scaffolding and is now unblocked. Configure the trusted publisher on npmjs.com BEFORE merging the v0.1 PR or the first publish will be rejected by npm. |
+| `eslint-config-functype` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/eslint-functype` + `publish.yml`; repo updated to monorepo, filename unchanged. **Required before first publish from the monorepo at `2.60.6`** (the cadence-mirror version — see *Mirror invariant* below). |
+| `eslint-plugin-functype` | `jordanburke/functype` | `publish.yml` | Same as above. |
 
 Environment: leave blank unless previously set. Already-published versions retain their existing provenance attestations (per-version, immutable) — only new publishes are affected.
 
 `functype-mcp-server` does **not** use trusted publishing today; it publishes via `NPM_TOKEN`. `publish.yml` preserves that pattern through the `NODE_AUTH_TOKEN` env var on the changesets step. No npm admin action needed for it.
+
+## Mirror invariant for eslint packages
+
+The two eslint packages mirror functype's minor and patch positions: `eslint-{config,plugin}-functype` versions are always `2.<functype-minor>.<functype-patch>`. Major stays at `2` until functype reaches `1.0`, at which point both eslint packages catch up to `3.0.0` and the family converges on a single version line.
+
+Enforcement: `scripts/check-eslint-mirror.ts` runs:
+- After every `changeset version` (chained into the `version-packages` script) — fails a release before publish if the mirror is broken.
+- On every PR via CI (`ci.yml` → `pnpm check-eslint-mirror`) — surfaces drift at PR-author time, not release-author time.
+
+**Rule for authoring changesets:** every release that touches functype must include all 7 publishable packages at the same bump level. Per-package or mismatched-level changesets break the mirror and the script will reject the release.
 
 ## Node version requirement
 

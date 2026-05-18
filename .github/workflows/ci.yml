@@ -39,6 +39,9 @@ jobs:
       - name: Run turbo validate
         run: pnpm turbo run validate
 
+      - name: Check eslint-mirror invariant
+        run: pnpm check-eslint-mirror
+
   bundle-size:
     name: Bundle size report (packages/functype)
     runs-on: ubuntu-latest
