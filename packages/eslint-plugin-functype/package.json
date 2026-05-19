@@ -20,7 +20,7 @@
     "LICENSE"
   ],
   "bin": {
-    "functype-list-rules": "dist/cli/list-rules.js"
+    "functype-plugin-rules": "dist/cli/list-rules.js"
   },
   "keywords": [
     "eslint",
@@ -85,6 +85,6 @@
   },
   "homepage": "https://github.com/jordanburke/functype/tree/main/packages/eslint-plugin-functype#readme",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=20.20.0"
   }
 }

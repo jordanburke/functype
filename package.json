@@ -31,7 +31,8 @@
   },
   "pnpm": {
     "overrides": {
-      "unrun": "0.2.37"
+      "unrun": "0.2.37",
+      "yaml": "^2.8.3"
     }
   },
   "devDependencies": {

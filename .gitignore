@@ -148,3 +148,4 @@ typedocs/
 
 # Generated files
 README.processed.md
+.claude/
