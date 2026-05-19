@@ -128,6 +128,15 @@ export const Fs = {
     }
   },
 
+  appendFile: async (p: string, data: string, encoding: BufferEncoding = "utf8"): TaskResult<void> => {
+    try {
+      await fs.appendFile(p, data, { encoding })
+      return Ok(undefined as void)
+    } catch (error) {
+      return Err(toFsError(p, "appendFile", error))
+    }
+  },
+
   mkdir: async (p: string, options?: { recursive?: boolean }): TaskResult<void> => {
     try {
       await fs.mkdir(p, options)
@@ -207,6 +216,15 @@ export const Fs = {
       return Right(undefined as void)
     } catch (error) {
       return Left(toFsError(p, "writeFileSync", error))
+    }
+  },
+
+  appendFileSync: (p: string, data: string, encoding: BufferEncoding = "utf8"): Either<FsError, void> => {
+    try {
+      fsSync.appendFileSync(p, data, { encoding })
+      return Right(undefined as void)
+    } catch (error) {
+      return Left(toFsError(p, "appendFileSync", error))
     }
   },
 

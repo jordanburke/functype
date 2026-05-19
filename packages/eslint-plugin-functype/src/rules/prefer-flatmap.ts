@@ -56,12 +56,27 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    /**
+     * Heuristic for array literals that look like flatten candidates.
+     * Skips append/identity patterns (`[...arr, x]`, `[...arr]`) and tuple
+     * shapes (`[k, v]`) — those are not nested arrays, so .flatMap()
+     * doesn't apply. Only flag when at least one element is itself an
+     * ArrayExpression, signaling a true nested-array shape.
+     */
+    function isFlattenCandidateArrayLiteral(arrayExpr: ASTNode): boolean {
+      const elements = arrayExpr.elements ?? []
+      if (elements.some((el: ASTNode | null) => el && el.type === "SpreadElement")) {
+        return false
+      }
+      return elements.some((el: ASTNode | null) => el && el.type === "ArrayExpression")
+    }
+
     function returnsArray(functionNode: ASTNode): boolean {
       if (!functionNode || !functionNode.body) return false
 
       // Arrow function with expression body
       if (functionNode.body.type === "ArrayExpression") {
-        return true
+        return isFlattenCandidateArrayLiteral(functionNode.body)
       }
 
       // Arrow function with call expression body
@@ -84,7 +99,8 @@ const rule: Rule.RuleModule = {
         for (const stmt of statements) {
           if (stmt.type === "ReturnStatement" && stmt.argument) {
             if (stmt.argument.type === "ArrayExpression") {
-              return true
+              if (isFlattenCandidateArrayLiteral(stmt.argument)) return true
+              continue
             }
 
             // Check for method calls that return arrays

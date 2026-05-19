@@ -84,6 +84,25 @@ describe("Option", () => {
     })
   })
 
+  describe("expect", () => {
+    it("returns the value on Some without calling the handler", () => {
+      let called = false
+      const handler = (): never => {
+        called = true
+        throw new Error("should not be called")
+      }
+      expect(something.expect(handler)).toBe("hello")
+      expect(called).toBe(false)
+    })
+
+    it("calls the never-returning handler on None", () => {
+      const handler = (): never => {
+        throw new Error("missing required value")
+      }
+      expect(() => nothing.expect(handler)).toThrow("missing required value")
+    })
+  })
+
   describe("flatMapAsync", () => {
     it("should handle Some with async function", async () => {
       const asyncFunction = async (value: string) => {

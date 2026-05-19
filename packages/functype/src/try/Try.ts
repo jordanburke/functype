@@ -26,6 +26,14 @@ export interface Try<out T>
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   orThrow: (error?: Error) => T
+  /**
+   * Returns the success value, or calls the never-returning handler with the Failure's error.
+   * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the program —
+   * the result type is unconditionally `T`, so you avoid the TypeScript narrowing trap where
+   * `if (t.isFailure()) fail(...)` fails to narrow `t.value` when `fail` is an arrow function
+   * typed as `(...): never`.
+   */
+  expect: (handler: (error: Error) => never) => T
   or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
   orNull: () => T | null
   orUndefined: () => T | undefined
@@ -92,6 +100,7 @@ const Success = <T>(value: T): Try<T> => ({
   },
   orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
   orThrow: (_error?: Error) => value,
+  expect: (_handler: (error: Error) => never): T => value,
   or: <T2 extends Type>(_alternative: Try<T2>): Try<T | T2> => Success<T | T2>(value),
   orNull: () => value,
   orUndefined: () => value,
@@ -147,6 +156,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   orThrow: (e?: Error) => {
     throw e ?? error
   },
+  expect: (handler: (error: Error) => never): T => handler(error),
   or: <T2 extends Type>(alternative: Try<T2>): Try<T | T2> => alternative as Try<T | T2>,
   orNull: () => null,
   orUndefined: () => undefined,
