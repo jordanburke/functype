@@ -1,0 +1,90 @@
+{
+  "name": "eslint-plugin-functype",
+  "version": "2.60.6",
+  "description": "Custom ESLint rules for functional TypeScript programming with functype library patterns including Do notation (ESLint 10+)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "lib",
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "functype-list-rules": "dist/cli/list-rules.js"
+  },
+  "keywords": [
+    "eslint",
+    "eslintplugin",
+    "eslint-plugin",
+    "functional",
+    "typescript",
+    "immutable",
+    "functype",
+    "option",
+    "either",
+    "list"
+  ],
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:ui": "ts-builds test:ui",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate",
+    "list-rules": "node dist/cli/list-rules.js",
+    "list-rules:verbose": "node dist/cli/list-rules.js --verbose",
+    "list-rules:usage": "node dist/cli/list-rules.js --usage",
+    "check-deps": "node dist/cli/list-rules.js --check-deps",
+    "cli:help": "node dist/cli/list-rules.js --help"
+  },
+  "prettier": "ts-builds/prettier",
+  "peerDependencies": {
+    "eslint": "^10.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "@typescript-eslint/rule-tester": "^8.59.1",
+    "eslint-config-prettier": "^10.1.8",
+    "functype": "workspace:^",
+    "ts-builds": "^2.8.0",
+    "tsdown": "^0.22.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "author": {
+    "name": "Jordan Burke",
+    "url": "https://github.com/jordanburke"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "packages/eslint-plugin-functype"
+  },
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/eslint-plugin-functype#readme",
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
