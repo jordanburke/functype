@@ -109,6 +109,12 @@ type IOEffect<R, E, A> =
       readonly release: (a: unknown) => IO<R, never, void>
     }
   | {
+      readonly _tag: "BracketExit"
+      readonly acquire: IO<R, E, unknown>
+      readonly use: (a: unknown) => IO<R, E, A>
+      readonly release: (a: unknown, exit: ExitType<unknown, unknown>) => IO<R, never, void>
+    }
+  | {
       readonly _tag: "Race"
       readonly effects: readonly IO<R, E, A>[]
     }
@@ -717,6 +723,20 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         runEffectSync(_fx(effect.release(resource)), context)
       }
     }
+    case "BracketExit": {
+      const resource = runEffectSync(_fx(effect.acquire), context)
+      let exit: ExitType<E, A>
+      try {
+        const useResult = runEffectSync(_fx(effect.use(resource)), context)
+        exit = unsafeCoerce(Exit.succeed(useResult))
+        return useResult
+      } catch (e) {
+        exit = unsafeCoerce(Exit.fail(e as E))
+        throw e
+      } finally {
+        runEffectSync(_fx(effect.release(resource, exit!)), context)
+      }
+    }
     case "Race":
       throw new Error("Cannot run race effect synchronously")
     case "Timeout":
@@ -833,6 +853,17 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           // Release always runs, even if use fails
           await runEffect(_fx(effect.release(resource)), context)
         }
+      }
+      case "BracketExit": {
+        const acquireExit = await runEffect(_fx(effect.acquire), context)
+        if (!acquireExit.isSuccess()) {
+          return acquireExit as ExitType<E, A>
+        }
+        const resource = acquireExit.orThrow()
+        const useExit = await runEffect(_fx(effect.use(resource)), context)
+        // Release always runs and receives the use-step's Exit
+        await runEffect(_fx(effect.release(resource, useExit as ExitType<E, A>)), context)
+        return useExit
       }
       case "Race": {
         if (effect.effects.length === 0) {
@@ -1267,6 +1298,38 @@ const IOCompanion = {
     use: (a: A) => IO<R, E, B>,
     release: (a: A) => IO<R, never, void>,
   ): IO<R, E, B> => IOCompanion.bracket(acquire, use, release),
+
+  /**
+   * Like `bracket`, but the release callback receives the Exit of the use-step.
+   * Use this when cleanup needs to branch on whether `use` succeeded or failed —
+   * e.g., emit a different audit event on `Success` vs `Failure`.
+   *
+   * The release effect always runs (whether use succeeded, failed, or was
+   * interrupted). If `acquire` itself fails, release is not called.
+   *
+   * @example
+   * ```typescript
+   * IO.bracketExit(
+   *   appendEvent({ event: "job_start" }),
+   *   () => body,
+   *   (_a, exit) =>
+   *     exit.isSuccess()
+   *       ? appendEvent({ event: "job_complete" })
+   *       : appendEvent({ event: "job_failed", error: String(exit.toValue().value) })
+   * )
+   * ```
+   */
+  bracketExit: <R extends Type, E extends Type, A extends Type, B extends Type>(
+    acquire: IO<R, E, A>,
+    use: (a: A) => IO<R, E, B>,
+    release: (a: A, exit: ExitType<E, B>) => IO<R, never, void>,
+  ): IO<R, E, B> =>
+    createIO({
+      _tag: "BracketExit",
+      acquire: acquire as IO<R, E, unknown>,
+      use: use as (a: unknown) => IO<R, E, B>,
+      release: release as (a: unknown, exit: ExitType<unknown, unknown>) => IO<R, never, void>,
+    }),
 
   /**
    * Races multiple effects, returning the first to complete.

@@ -322,6 +322,30 @@ describe("Fs", () => {
     })
   })
 
+  describe("mkdir magic-FS guard", () => {
+    it("refuses recursive mkdir under /proc with a Left(FsError)", async () => {
+      const result = await Fs.mkdir("/proc/no-write-here/a/b/c", { recursive: true })
+      expect(result.isErr()).toBe(true)
+      if (result.isErr()) {
+        expect(result.error.message).toContain("magic filesystem root")
+      }
+    })
+
+    it("refuses recursive mkdirSync under /sys with a Left(FsError)", () => {
+      const result = Fs.mkdirSync("/sys/something/nested", { recursive: true })
+      expect(result.isLeft()).toBe(true)
+      if (result.isLeft()) {
+        expect(result.value.message).toContain("magic filesystem root")
+      }
+    })
+
+    it("allows non-recursive mkdirSync under /proc (lets node return its own error)", () => {
+      const result = Fs.mkdirSync("/proc/no-write-here-x", {})
+      // node returns EACCES/EPERM/ENOENT depending on platform — we only assert it didn't hang and produced a Left.
+      expect(result.isLeft()).toBe(true)
+    })
+  })
+
   describe("mkdirSync", () => {
     it("should create directory and return Right(undefined)", () => {
       const target = path.join(tmpDir, "new-dir-sync")

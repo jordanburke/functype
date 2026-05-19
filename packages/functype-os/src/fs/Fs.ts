@@ -31,6 +31,16 @@ const toFileInfo = (stats: fsSync.Stats): FileInfo => ({
 const toFsError = (p: string, op: string, error: unknown): FsError =>
   FsError(p, op, error instanceof Error ? error : new Error(String(error)))
 
+/**
+ * Linux magic filesystems where recursive mkdir can hang indefinitely against
+ * unwritable subpaths (libuv quirk; macOS errors immediately instead).
+ * Refusing recursive mkdir under these prefixes keeps `mkdir({ recursive: true })`
+ * fast-failing and predictable across platforms. See issue #135.
+ */
+const MAGIC_FS_PREFIXES: ReadonlyArray<string> = ["/proc/", "/sys/", "/dev/"]
+
+const isMagicFsPath = (p: string): boolean => MAGIC_FS_PREFIXES.some((prefix) => p.startsWith(prefix))
+
 const matchGlob = (filePath: string, pattern: string): boolean => {
   // Escape every regex metachar EXCEPT '*' first, so the subsequent
   // '*' transformations are the only special characters in the output.
@@ -138,6 +148,11 @@ export const Fs = {
   },
 
   mkdir: async (p: string, options?: { recursive?: boolean }): TaskResult<void> => {
+    if (options?.recursive && isMagicFsPath(p)) {
+      return Err(
+        toFsError(p, "mkdir", new Error("recursive mkdir refused under magic filesystem root (/proc, /sys, /dev)")),
+      )
+    }
     try {
       await fs.mkdir(p, options)
       return Ok(undefined as void)
@@ -229,6 +244,11 @@ export const Fs = {
   },
 
   mkdirSync: (p: string, options?: { recursive?: boolean }): Either<FsError, void> => {
+    if (options?.recursive && isMagicFsPath(p)) {
+      return Left(
+        toFsError(p, "mkdirSync", new Error("recursive mkdir refused under magic filesystem root (/proc, /sys, /dev)")),
+      )
+    }
     try {
       fsSync.mkdirSync(p, options)
       return Right(undefined as void)
