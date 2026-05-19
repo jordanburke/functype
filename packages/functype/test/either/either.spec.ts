@@ -82,6 +82,25 @@ describe("Either", () => {
     expect(() => left.orThrow()).toThrow("error")
   })
 
+  it("expect on Right returns the value, handler not called", () => {
+    const right = Right<string, number>(5)
+    let called = false
+    const handler = (_e: string): never => {
+      called = true
+      throw new Error("should not be called")
+    }
+    expect(right.expect(handler)).toBe(5)
+    expect(called).toBe(false)
+  })
+
+  it("expect on Left calls the handler with the left value", () => {
+    const left = Left<string, number>("missing-config")
+    const handler = (e: string): never => {
+      throw new Error(`fatal: ${e}`)
+    }
+    expect(() => left.expect(handler)).toThrow("fatal: missing-config")
+  })
+
   it("flatMap on Right", () => {
     const right = Right<string, number>(5)
     const result = right.flatMap((x) => Right<string, string>(x.toString()))

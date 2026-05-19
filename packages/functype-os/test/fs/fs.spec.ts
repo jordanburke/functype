@@ -243,6 +243,50 @@ describe("Fs", () => {
     })
   })
 
+  describe("appendFile", () => {
+    it("should append to existing file and return Ok(undefined)", async () => {
+      const target = path.join(tmpDir, "append-test.txt")
+      fs.writeFileSync(target, "first")
+      const result = await Fs.appendFile(target, "-second")
+      expect(result.isOk()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("first-second")
+    })
+
+    it("should create the file if it does not exist", async () => {
+      const target = path.join(tmpDir, "append-create.txt")
+      const result = await Fs.appendFile(target, "hello")
+      expect(result.isOk()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("hello")
+    })
+
+    it("should return Err for invalid path", async () => {
+      const result = await Fs.appendFile("/no-such-dir/append.txt", "data")
+      expect(result.isErr()).toBe(true)
+    })
+  })
+
+  describe("appendFileSync", () => {
+    it("should append to existing file and return Right(undefined)", () => {
+      const target = path.join(tmpDir, "append-sync-test.txt")
+      fs.writeFileSync(target, "first")
+      const result = Fs.appendFileSync(target, "-second")
+      expect(result.isRight()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("first-second")
+    })
+
+    it("should create the file if it does not exist", () => {
+      const target = path.join(tmpDir, "append-sync-create.txt")
+      const result = Fs.appendFileSync(target, "hello")
+      expect(result.isRight()).toBe(true)
+      expect(fs.readFileSync(target, "utf8")).toBe("hello")
+    })
+
+    it("should return Left for invalid path", () => {
+      const result = Fs.appendFileSync("/no-such-dir/append.txt", "data")
+      expect(result.isLeft()).toBe(true)
+    })
+  })
+
   describe("writeFileSync", () => {
     it("should write content and return Right(undefined)", () => {
       const target = path.join(tmpDir, "write-sync-test.txt")

@@ -31,6 +31,14 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
   orThrow: (error?: Error) => R
+  /**
+   * Returns the right value, or calls the never-returning handler with the Left's value.
+   * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the
+   * program — the result type is unconditionally `R`, so you avoid the TypeScript
+   * narrowing trap where `if (e.isLeft()) fail(...)` fails to narrow `e.value` when
+   * `fail` is an arrow function typed as `(...): never`.
+   */
+  expect: (handler: (value: L) => never) => R
   or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
   orNull: () => R | null
   orUndefined: () => R | undefined
@@ -117,6 +125,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
   orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
   orThrow: () => value,
+  expect: (_handler: (value: L) => never): R => value,
   or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
     Right<L | L2, R | R2>(value),
   orNull: () => value,
@@ -204,6 +213,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   orThrow: (error?: Error) => {
     throw error ?? value
   },
+  expect: (handler: (value: L) => never): R => handler(value),
   or: <L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
     alternative as Either<L | L2, R | R2>,
   orNull: () => null,

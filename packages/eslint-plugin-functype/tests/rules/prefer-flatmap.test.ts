@@ -25,6 +25,31 @@ describe("prefer-flatmap", () => {
         name: "Other functional methods are allowed",
         code: "const filtered = items.filter(item => item.active)",
       },
+      // Tuple-shaped literal (Object.fromEntries pattern) — not a flatten candidate
+      {
+        name: "Tuple literal [k, v] is not a flatten candidate",
+        code: "const pairs = items.map(item => [item.id, item.name])",
+      },
+      // Append/identity with spread — not a flatten candidate
+      {
+        name: "Spread + appended element is not a flatten candidate",
+        code: "const acc = items.reduce((out, item) => [...out, item], [])",
+      },
+      // Spread-only — not a flatten candidate
+      {
+        name: "Spread-only array literal is not a flatten candidate",
+        code: "const copy = items.map(arr => [...arr])",
+      },
+      // Either-flatMap accumulator pattern (Either<E, U[]>)
+      {
+        name: "Either-flatMap accumulator with [...out, u] is not a flatten candidate",
+        code: `
+          const result = items.reduce(
+            (acc, item, i) => acc.flatMap(out => f(item, i).map(u => [...out, u])),
+            Right([])
+          )
+        `,
+      },
     ],
     invalid: [
       // map().flat() pattern
@@ -70,10 +95,10 @@ describe("prefer-flatmap", () => {
           },
         ],
       },
-      // Map with array return in arrow function
+      // Map returning a literal containing nested array literal — true flatten candidate
       {
-        name: "Map with array literal return should consider flatMap",
-        code: "const pairs = items.map(item => [item.id, item.name])",
+        name: "Map returning literal with nested array element should consider flatMap",
+        code: "const grouped = items.map(item => [[item.id, item.value], [item.id, item.label]])",
         errors: [
           {
             messageId: "preferFlatMapNested",

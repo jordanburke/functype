@@ -36,6 +36,14 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   orThrow(error?: Error): T
   /**
+   * Returns the contained value, or calls the never-returning handler if None.
+   * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the
+   * program — the result type is unconditionally \`T\`, so you avoid the TypeScript
+   * narrowing trap where \`if (o.isNone()) fail(...)\` fails to narrow \`o.value\` when
+   * \`fail\` is an arrow function typed as \`(...): never\`.
+   */
+  expect(handler: () => never): T
+  /**
    * Returns this Option if it contains a value, otherwise returns the alternative container.
    * The alternative may hold a different type; the result widens to \`Option<T | T2>\`.
    * @param alternative - The alternative Option to return if this is None
@@ -159,6 +167,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
   orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
   orThrow: () => value,
+  expect: (_handler: (value: L) => never): R => value,
   or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
     Right<L | L2, R | R2>(value),
   orNull: () => value,
@@ -238,6 +247,14 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
   orThrow: (error?: Error) => R
+  /**
+   * Returns the right value, or calls the never-returning handler with the Left's value.
+   * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the
+   * program — the result type is unconditionally \`R\`, so you avoid the TypeScript
+   * narrowing trap where \`if (e.isLeft()) fail(...)\` fails to narrow \`e.value\` when
+   * \`fail\` is an arrow function typed as \`(...): never\`.
+   */
+  expect: (handler: (value: L) => never) => R
   or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
   orNull: () => R | null
   orUndefined: () => R | undefined
@@ -304,6 +321,14 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   orThrow: (error?: Error) => T
+  /**
+   * Returns the success value, or calls the never-returning handler with the Failure's error.
+   * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the program —
+   * the result type is unconditionally \`T\`, so you avoid the TypeScript narrowing trap where
+   * \`if (t.isFailure()) fail(...)\` fails to narrow \`t.value\` when \`fail\` is an arrow function
+   * typed as \`(...): never\`.
+   */
+  expect: (handler: (error: Error) => never) => T
   or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
   orNull: () => T | null
   orUndefined: () => T | undefined

@@ -31,7 +31,15 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["Option(v)", "Option.none()", "Some(v)", "None()"],
       transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
-      extract: [".fold(n, s)", ".foldAsync(n, s)", ".orElse(d)", ".orThrow()", ".orNull()", ".match({Some, None})"],
+      extract: [
+        ".fold(n, s)",
+        ".foldAsync(n, s)",
+        ".orElse(d)",
+        ".orThrow()",
+        ".expect(() => never)",
+        ".orNull()",
+        ".match({Some, None})",
+      ],
       check: [".isSome", ".isNone", ".isDefined", ".isEmpty"],
       other: ["Option.sequence(arr)", "Option.traverse(arr, f)"],
     },
@@ -43,7 +51,14 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
       transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
-      extract: [".fold(l, r)", ".foldAsync(l, r)", ".orElse(d)", ".orThrow()", ".match({Left, Right})"],
+      extract: [
+        ".fold(l, r)",
+        ".foldAsync(l, r)",
+        ".orElse(d)",
+        ".orThrow()",
+        ".expect((l) => never)",
+        ".match({Left, Right})",
+      ],
       check: [".isRight", ".isLeft"],
       other: ["Either.sequence(arr)", "Either.traverse(arr, f)", "Either.fromNullable(v, e)"],
     },
@@ -55,7 +70,15 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["Try(() => expr)", "Try.success(v)", "Try.failure(e)", "Try.fromPromise(p)"],
       transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
-      extract: [".fold(f, s)", ".foldAsync(f, s)", ".orElse(d)", ".orThrow()", ".toOption()", ".toEither()"],
+      extract: [
+        ".fold(f, s)",
+        ".foldAsync(f, s)",
+        ".orElse(d)",
+        ".orThrow()",
+        ".expect((e) => never)",
+        ".toOption()",
+        ".toEither()",
+      ],
       check: [".isSuccess", ".isFailure"],
       other: ["Try.sequence(arr)", "Try.traverse(arr, f)"],
     },
@@ -378,7 +401,13 @@ export const INTERFACES: Record<string, InterfaceData> = {
 
   Extractable: {
     description: "Get contained value with fallback",
-    methods: [".orElse(d: T): T", ".orThrow(e?: Error): T", ".orNull(): T | null", ".orUndefined(): T | undefined"],
+    methods: [
+      ".orElse(d: T): T",
+      ".orThrow(e?: Error): T",
+      ".expect(handler: (e?) => never): T",
+      ".orNull(): T | null",
+      ".orUndefined(): T | undefined",
+    ],
   },
 
   Matchable: {

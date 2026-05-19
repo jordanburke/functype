@@ -117,6 +117,29 @@ describe("Try", () => {
     })
   })
 
+  describe("expect()", () => {
+    it("returns the value on Success without calling the handler", () => {
+      let called = false
+      const handler = (_e: Error): never => {
+        called = true
+        throw new Error("should not be called")
+      }
+      const myTry = Try(() => 42)
+      expect(myTry.expect(handler)).toBe(42)
+      expect(called).toBe(false)
+    })
+
+    it("calls the handler with the underlying Error on Failure", () => {
+      const myTry = Try<number>(() => {
+        throw new Error("yaml parse failed: unexpected indent")
+      })
+      const handler = (e: Error): never => {
+        throw new Error(`scope error: ${e.message}`)
+      }
+      expect(() => myTry.expect(handler)).toThrow("scope error: yaml parse failed: unexpected indent")
+    })
+  })
+
   describe("Try.success()", () => {
     it("should create a Success directly", () => {
       const result = Try.success(42)

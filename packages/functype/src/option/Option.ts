@@ -52,6 +52,14 @@ export interface Option<out T extends Type>
    */
   orThrow(error?: Error): T
   /**
+   * Returns the contained value, or calls the never-returning handler if None.
+   * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the
+   * program — the result type is unconditionally `T`, so you avoid the TypeScript
+   * narrowing trap where `if (o.isNone()) fail(...)` fails to narrow `o.value` when
+   * `fail` is an arrow function typed as `(...): never`.
+   */
+  expect(handler: () => never): T
+  /**
    * Returns this Option if it contains a value, otherwise returns the alternative container.
    * The alternative may hold a different type; the result widens to `Option<T | T2>`.
    * @param alternative - The alternative Option to return if this is None
@@ -178,6 +186,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   },
   orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
   orThrow: () => value,
+  expect: (_handler: () => never): T => value,
   or: <T2 extends Type>(_alternative: Option<T2>): Option<T | T2> => Some<T | T2>(value),
   orNull: () => value,
   orUndefined: () => value,
@@ -249,6 +258,9 @@ const NONE: Option<never> = {
   orElse: <T2 extends Type>(defaultValue: T2): never | T2 => defaultValue,
   orThrow<T>(error?: Error): T {
     throw error ?? new Error("Cannot extract value from None")
+  },
+  expect(handler: () => never): never {
+    return handler()
   },
   or: <T2 extends Type>(alternative: Option<T2>): Option<never | T2> => alternative,
   orNull: () => null,
