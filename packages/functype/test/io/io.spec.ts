@@ -1574,6 +1574,97 @@ describe("Dependency Injection", () => {
     })
   })
 
+  describe("IO.bracketExit", () => {
+    it("release receives a Success Exit when use succeeds", async () => {
+      const events: string[] = []
+
+      const program = IO.bracketExit(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`use:${resource}`)
+            return "result"
+          }),
+        (resource, exit) =>
+          IO.sync(() => {
+            events.push(exit.isSuccess() ? `release-ok:${resource}` : `release-fail:${resource}`)
+          }),
+      )
+
+      const result = await program.runOrThrow()
+      expect(result).toBe("result")
+      expect(events).toEqual(["acquire", "use:resource", "release-ok:resource"])
+    })
+
+    it("release receives a Failure Exit when use fails", async () => {
+      const events: string[] = []
+
+      const program = IO.bracketExit(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }) as unknown as IO<never, Error, string>,
+        () => IO.fail(new Error("use failed")) as unknown as IO<never, Error, string>,
+        (resource, exit) =>
+          IO.sync(() => {
+            events.push(exit.isFailure() ? `release-fail:${resource}` : `release-ok:${resource}`)
+          }),
+      )
+
+      const exit = await program.runExit()
+      expect(exit.isFailure()).toBe(true)
+      expect(events).toEqual(["acquire", "release-fail:resource"])
+    })
+
+    it("release is not called when acquire fails", async () => {
+      const events: string[] = []
+
+      const program = IO.bracketExit(
+        IO.fail(new Error("acquire failed")) as unknown as IO<never, Error, string>,
+        (resource) =>
+          IO.sync(() => {
+            events.push(`use:${resource}`)
+            return "result"
+          }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`release:${resource}`)
+          }),
+      )
+
+      const exit = await program.runExit()
+      expect(exit.isFailure()).toBe(true)
+      expect(events).toEqual([])
+    })
+
+    it("works synchronously and passes Exit to release", () => {
+      const events: string[] = []
+
+      const program = IO.bracketExit(
+        IO.sync(() => {
+          events.push("acquire")
+          return "resource"
+        }),
+        (resource) =>
+          IO.sync(() => {
+            events.push(`use:${resource}`)
+            return "result"
+          }),
+        (resource, exit) =>
+          IO.sync(() => {
+            events.push(exit.isSuccess() ? `release-ok:${resource}` : `release-fail:${resource}`)
+          }),
+      )
+
+      const result = program.runSyncOrThrow()
+      expect(result).toBe("result")
+      expect(events).toEqual(["acquire", "use:resource", "release-ok:resource"])
+    })
+  })
+
   describe("IO.race", () => {
     it("should return first effect to complete", async () => {
       const result = await IO.race([IO.sleep(100).map(() => "slow"), IO.sleep(10).map(() => "fast")]).runOrThrow()
