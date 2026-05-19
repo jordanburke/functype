@@ -250,8 +250,8 @@ importers:
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
       astro:
-        specifier: ^6.3.3
-        version: 6.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0)
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0)
       react:
         specifier: ^19.2.6
         version: 19.2.6
@@ -270,7 +270,7 @@ importers:
         version: 0.9.9(prettier@3.8.3)(typescript@6.0.3)
       '@astrojs/mdx':
         specifier: ^5.0.6
-        version: 5.0.6(astro@6.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0))
+        version: 5.0.6(astro@6.3.5(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0))
       prettier:
         specifier: ^3.8.3
         version: 3.8.3
@@ -2217,8 +2217,8 @@ packages:
     resolution: {integrity: sha512-LElXdjswlqjWrPpJFg1Fx4wpkOCxj1TDHlSV4PlaRxHGWko024xICaa97ZkMfs6DRKlCguiAI+rbXv5GWwXIkg==}
     hasBin: true
 
-  astro@6.3.3:
-    resolution: {integrity: sha512-wvLIZQYbBZt6U8gyflBW4SLBypaqdwLZUH93rT3oT53cmQ0bTGubvMAGjqBRoheOYzYcTJZtW6czztzbu4kQ5g==}
+  astro@6.3.5:
+    resolution: {integrity: sha512-gU+4KedkbTuVgz7YoVAN+9Ftnq0GaYwejxK2NbqDzB0M9dWd0f3kXZBuaM9hzbchRFoRAJfJjFtdX9LK6Ir7ZA==}
     engines: {node: '>=22.12.0', npm: '>=9.6.5', pnpm: '>=7.1.0'}
     hasBin: true
 
@@ -3519,8 +3519,8 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
-  lru-cache@11.3.6:
-    resolution: {integrity: sha512-Gf/KoL3C/MlI7Bt0PGI9I+TeTC/I6r/csU58N4BSNc4lppLBeKsOdFYkK+dX0ABDUMJNfCHTyPpzwwO21Awd3A==}
+  lru-cache@11.4.0:
+    resolution: {integrity: sha512-W+R+kFL4HgVxONq2bhXPi3bGpzGe/yEhVOp233qw9wCRtgncJ15P3bC+e4zZMu4Cq7d+WAJjXGW0uUkifhcatA==}
     engines: {node: 20 || >=22}
 
   lru-cache@5.1.1:
@@ -5252,12 +5252,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@astrojs/mdx@5.0.6(astro@6.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0))':
+  '@astrojs/mdx@5.0.6(astro@6.3.5(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0))':
     dependencies:
       '@astrojs/markdown-remark': 7.1.2
       '@mdx-js/mdx': 3.1.1
       acorn: 8.16.0
-      astro: 6.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0)
+      astro: 6.3.5(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0)
       es-module-lexer: 2.1.0
       estree-util-visit: 2.0.0
       hast-util-to-html: 9.0.5
@@ -7082,7 +7082,7 @@ snapshots:
 
   ast-kit@3.0.0-beta.1:
     dependencies:
-      '@babel/parser': 8.0.0-rc.4
+      '@babel/parser': 8.0.0-rc.5
       estree-walker: 3.0.3
       pathe: 2.0.3
 
@@ -7094,7 +7094,7 @@ snapshots:
 
   astring@1.9.0: {}
 
-  astro@6.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0):
+  astro@6.3.5(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.2)(yaml@2.9.0):
     dependencies:
       '@astrojs/compiler': 4.0.0
       '@astrojs/internal-helpers': 0.9.1
@@ -8616,7 +8616,7 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
-  lru-cache@11.3.6: {}
+  lru-cache@11.4.0: {}
 
   lru-cache@5.1.1:
     dependencies:
@@ -10012,7 +10012,7 @@ snapshots:
       ts-node: 10.9.2(@types/node@24.10.15)(typescript@6.0.3)
       typescript: 6.0.3
       typescript-eslint: 8.59.3(eslint@10.4.0(jiti@2.7.0))(typescript@6.0.3)
-      vitest: 4.1.6(@types/node@24.10.15)(@vitest/coverage-v8@4.1.6)(@vitest/ui@4.1.6)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.2)(yaml@2.9.0))
+      vitest: 4.1.6(@types/node@24.12.4)(@vitest/coverage-v8@4.1.6)(@vitest/ui@4.1.6)(jsdom@26.1.0)(vite@7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.2)(yaml@2.9.0))
     optionalDependencies:
       tsdown: 0.22.0(tsx@4.22.2)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.12))
       vite: 7.3.3(@types/node@24.12.4)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.2)(yaml@2.9.0)
@@ -10327,7 +10327,7 @@ snapshots:
       chokidar: 5.0.0
       destr: 2.0.5
       h3: 1.15.11
-      lru-cache: 11.3.6
+      lru-cache: 11.4.0
       node-fetch-native: 1.6.7
       ofetch: 1.5.1
       ufo: 1.6.4
