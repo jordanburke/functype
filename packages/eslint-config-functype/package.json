@@ -74,13 +74,13 @@
     "@eslint/js": "^10.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24.12.2",
-    "@typescript-eslint/eslint-plugin": "^8.59.1",
-    "@typescript-eslint/parser": "^8.59.1",
+    "@types/node": "^24.12.4",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-simple-import-sort": "^13.0.0",
-    "ts-builds": "^2.8.0",
+    "ts-builds": "^2.8.1",
     "tsdown": "^0.22.0"
   },
   "publishConfig": {
