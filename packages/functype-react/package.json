@@ -55,7 +55,7 @@
     "@types/react-dom": "^19.2.3",
     "fast-check": "^4.8.0",
     "functype": "workspace:^",
-    "jsdom": "^26.1.0",
+    "jsdom": "^29.1.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "ts-builds": "^2.8.0",
