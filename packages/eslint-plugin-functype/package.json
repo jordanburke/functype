@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.2",
-    "@typescript-eslint/rule-tester": "^8.59.1",
+    "@typescript-eslint/rule-tester": "^8.60.0",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
     "ts-builds": "^2.8.0",
