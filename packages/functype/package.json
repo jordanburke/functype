@@ -40,6 +40,7 @@
     "test:ui": "ts-builds test:ui",
     "build": "ts-builds build",
     "extract:interfaces": "ts-builds extract:interfaces",
+    "generate:interfaces": "tsx scripts/generate-interfaces.ts",
     "build:watch": "ts-builds dev",
     "dev": "ts-builds dev",
     "compile": "ts-builds compile",
