@@ -338,7 +338,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Http: {
     description:
-      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default. Provide a validate function to get typed responses (BYOV: bring your own validator). Works with Zod, TypeBox, Valibot, or manual validators.",
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default. Provide a validate function to get typed responses (BYOV: bring your own validator). Works with Zod, TypeBox, Valibot, or manual validators. The returned IO supports the full IO chain (.tap, .map, .flatMap, .catchTag, .mapError, .retry, .timeout). Http.client config accepts a beforeRequest hook — an effectful (IO-returning) transformer that closes the symmetry with the response chain so request-side concerns (auth refresh, request IDs, entry logging) compose via IO operators rather than fetch-wrapper substitution.",
     interfaces: [],
     methods: {
       create: [
@@ -348,12 +348,25 @@ export const TYPES: Record<string, TypeData> = {
         "Http.patch(url, { body, validate }?)",
         "Http.delete(url, { validate }?)",
         "Http.request({ url, validate })",
-        "Http.client(config)",
+        "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest })",
       ],
-      transform: [".map(f)", ".flatMap(f)", ".retry(n)", ".retryWithDelay(n, ms)", ".timeout(ms)"],
-      extract: [".run()", ".runOrThrow()", ".runOption()", ".runTry()"],
+      transform: [
+        ".tap(f)",
+        ".map(f)",
+        ".flatMap(f)",
+        ".mapError(f)",
+        ".retry(n)",
+        ".retryWithDelay(n, ms)",
+        ".timeout(ms)",
+      ],
+      extract: [".run()", ".runOrThrow()", ".runOption()", ".runTry()", ".runExit()"],
       check: [],
-      other: [".catchTag(tag, handler)", ".catchAll(handler)", ".mapError(f)", ".recover(fallback)"],
+      other: [
+        ".catchTag(tag, handler)",
+        ".catchAll(handler)",
+        ".recover(fallback)",
+        "beforeRequest: (req) => IO<never, HttpError, HttpRequestView>",
+      ],
     },
   },
 

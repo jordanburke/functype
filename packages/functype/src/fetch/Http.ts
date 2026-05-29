@@ -5,7 +5,7 @@ import type { HttpClientConfig } from "./HttpClient"
 import { defaultHttpClientConfig } from "./HttpClient"
 import type { HttpError, HttpMethod } from "./HttpError"
 import { HttpError as HttpErrorCompanion } from "./HttpError"
-import type { HttpMethodOptions, HttpRequestOptions, HttpResponse, ParseMode } from "./HttpRequest"
+import type { HttpMethodOptions, HttpRequestOptions, HttpRequestView, HttpResponse, ParseMode } from "./HttpRequest"
 
 const resolveUrl = (baseUrl: string | undefined, url: string): string => {
   if (!baseUrl) return url
@@ -88,35 +88,59 @@ const doRequest = <T>(
   config: HttpClientConfig,
   options: HttpRequestOptions<T>,
 ): IO<never, HttpError, HttpResponse<T>> => {
-  const url = resolveUrl(config.baseUrl, options.url)
-  const { serialized, contentType } = serializeBody(options.body)
-  const headers: Record<string, string> = {
-    ...config.defaultHeaders,
-    ...options.headers,
-    ...(contentType ? { "Content-Type": contentType } : {}),
+  // Assemble the pre-wire view: URL resolved against baseUrl, headers merged
+  // from defaultHeaders + per-call headers. Body is left raw — Content-Type
+  // is decided after beforeRequest runs (in case the hook swapped the body).
+  const assembled: HttpRequestView = {
+    url: resolveUrl(config.baseUrl, options.url),
+    method: options.method,
+    headers: { ...config.defaultHeaders, ...options.headers },
+    body: options.body,
+    signal: options.signal,
+    parseAs: options.parseAs,
   }
 
-  return IO.tryAsync<HttpResponse<T>, HttpError>(
-    (signal) =>
-      (config.fetch ?? globalThis.fetch)(url, {
-        method: options.method,
-        headers,
-        body: serialized,
-        signal: options.signal ?? signal,
-      }).then(async (response) => {
-        if (!response.ok) {
-          const body = await response.text().catch(() => "")
-          throw HttpErrorCompanion.httpStatusError(url, options.method, response.status, response.statusText, body)
+  const prepared: IO<never, HttpError, HttpRequestView> = config.beforeRequest
+    ? config.beforeRequest(assembled)
+    : IO.succeed(assembled)
+
+  return prepared.flatMap((request) => {
+    const { serialized, contentType } = serializeBody(request.body)
+    const headers: Record<string, string> = {
+      ...request.headers,
+      ...(contentType ? { "Content-Type": contentType } : {}),
+    }
+
+    return IO.tryAsync<HttpResponse<T>, HttpError>(
+      (signal) =>
+        (config.fetch ?? globalThis.fetch)(request.url, {
+          method: request.method,
+          headers,
+          body: serialized,
+          signal: request.signal ?? signal,
+        }).then(async (response) => {
+          if (!response.ok) {
+            const body = await response.text().catch(() => "")
+            throw HttpErrorCompanion.httpStatusError(
+              request.url,
+              request.method,
+              response.status,
+              response.statusText,
+              body,
+            )
+          }
+          // `validate` lives on the response side, so it's taken from the
+          // original typed options — the hook can't touch it.
+          return parseResponse<T>(response, request.parseAs, request.url, request.method, options.validate)
+        }),
+      (error) => {
+        if (typeof error === "object" && error !== null && "_tag" in error) {
+          return error as HttpError
         }
-        return parseResponse<T>(response, options.parseAs, url, options.method, options.validate)
-      }),
-    (error) => {
-      if (typeof error === "object" && error !== null && "_tag" in error) {
-        return error as HttpError
-      }
-      return HttpErrorCompanion.networkError(url, options.method, error)
-    },
-  )
+        return HttpErrorCompanion.networkError(request.url, request.method, error)
+      },
+    )
+  })
 }
 
 const request = <T = unknown>(options: HttpRequestOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
