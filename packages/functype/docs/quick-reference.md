@@ -430,6 +430,21 @@ const http = Http.client({
 })
 const user = http.get("/users/1", { validate: (data) => UserSchema.parse(data) })
 
+// Configured client with effectful request transformer (auth refresh, request IDs, logging)
+const api = Http.client({
+  baseUrl: "https://api.example.com",
+  beforeRequest: (r) =>
+    IO.succeed(r)
+      .map((req) => ({ ...req, headers: { ...req.headers, "x-request-id": crypto.randomUUID() } }))
+      .flatMap((req) =>
+        IO.tryPromise({
+          try: () => getToken(),
+          catch: (e) => HttpError.networkError(req.url, req.method, e),
+        }).map((token) => ({ ...req, headers: { ...req.headers, Authorization: `Bearer ${token}` } })),
+      )
+      .tap((req) => logger.info(req.method, req.url)),
+})
+
 // Compose with IO
 Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
   .map((res) => res.data.filter((u) => u.active))

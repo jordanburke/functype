@@ -131,7 +131,7 @@ Http.put(url, opts?)          // PUT
 Http.patch(url, opts?)        // PATCH
 Http.delete(url, opts?)       // DELETE
 Http.request(fullOpts)        // Full control
-Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch
+Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch, beforeRequest (effectful request transformer)
 
 // Example with validator (works with Zod, TypeBox, Valibot, or manual validators)
 Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })

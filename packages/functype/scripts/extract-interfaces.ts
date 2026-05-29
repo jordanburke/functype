@@ -49,6 +49,10 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   Tuple: { file: "src/tuple/Tuple.ts" },
   Stack: { file: "src/stack/Stack.ts", isType: true },
   HttpError: { file: "src/fetch/HttpError.ts", isType: true },
+  // CLI --full Http surfaces the client config so the beforeRequest JSDoc
+  // (the primary discoverability surface for request-side composition) is
+  // visible from `npx functype Http --full`.
+  Http: { file: "src/fetch/HttpClient.ts", extractName: "HttpClientConfig" },
 }
 
 /** Parsing state for extractDefinition */
