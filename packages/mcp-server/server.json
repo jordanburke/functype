@@ -6,12 +6,12 @@
     "url": "https://github.com/jordanburke/functype",
     "source": "github"
   },
-  "version": "0.60.7",
+  "version": "0.61.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "functype-mcp-server",
-      "version": "0.60.7",
+      "version": "0.61.0",
       "transport": {
         "type": "stdio"
       },
