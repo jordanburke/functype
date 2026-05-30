@@ -19,6 +19,7 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 - **Task runner:** Turborepo (`turbo.json`) — pipelines: `build`, `test`, `lint`, `lint:check`, `format`, `format:check`, `typecheck`, `compile`, `validate`, `dev`. `build`/`test`/`validate` declare `^build` deps so workspace consumers wait for producers.
 - **Build:** Each package builds via `ts-builds` (calls `tsdown` under the hood) — uniform across the workspace.
 - **Versioning + publish:** [Changesets](https://github.com/changesets/changesets) — independent versions per package, peer-dep range bumps automated via `updateInternalDependencies: "patch"`. See [`docs/RELEASE.md`](./docs/RELEASE.md) for the full release runbook including the one-time npm trusted-publisher reconfig.
+  - **Family-cadence rule:** every `.changeset/*.md` must list **all 7 publishable packages** (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`, `eslint-config-functype`, `eslint-plugin-functype`) at the **same bump level**. The two eslint packages mirror functype's minor/patch position, so per-package or mismatched-level changesets break the mirror and `version-packages` will reject the release. `pnpm validate` runs `scripts/check-changesets.ts` to catch violations at PR time.
 - **Node version:** Read from `.nvmrc` (currently `24`). Required by `publish.yml` to avoid the npm 10.x OIDC bug.
 - **Shared TS config:** `tsconfig.base.json` at the repo root; each package's `tsconfig.json` extends it.
 
