@@ -260,10 +260,63 @@ interface HttpClientConfig {
   readonly baseUrl?: string; // Base URL prepended to relative paths
   readonly defaultHeaders?: Record<string, string>; // Merged with per-request headers
   readonly fetch?: typeof globalThis.fetch; // Override the fetch implementation
+  readonly beforeRequest?: (
+    request: HttpRequestView,
+  ) => IO<never, HttpError, HttpRequestView>; // Effectful request transformer
 }
 ```
 
 Per-request headers always override `defaultHeaders` when keys conflict.
+
+## Request-side composition with `beforeRequest`
+
+The response side of an `Http` call composes on the returned `IO` — `.tap`, `.map`, `.flatMap`, `.catchTag`, `.mapError`, `.retry`, `.timeout`. The request side gets the same treatment via `beforeRequest`: an effectful transformer that runs after `defaultHeaders` and per-call headers are merged, but before the request is sent. It receives the assembled `HttpRequestView` and returns an `IO<never, HttpError, HttpRequestView>`, so concerns stack via standard IO operators.
+
+```typescript
+import { Http, HttpError, type HttpRequestView } from "functype/fetch";
+import { IO } from "functype";
+
+// Each concern is a small function; sync ones use plain returns,
+// effectful ones return an IO.
+const addRequestId = (r: HttpRequestView): HttpRequestView => ({
+  ...r,
+  headers: { ...r.headers, "x-request-id": crypto.randomUUID() },
+});
+
+const addBearer =
+  (getToken: () => Promise<string>) =>
+  (r: HttpRequestView): IO<never, HttpError, HttpRequestView> =>
+    IO.tryPromise({
+      try: () => getToken(),
+      catch: (e) => HttpError.networkError(r.url, r.method, e),
+    }).map((token) => ({
+      ...r,
+      headers: { ...r.headers, Authorization: `Bearer ${token}` },
+    }));
+
+const api = Http.client({
+  baseUrl: "https://api.example.com",
+  defaultHeaders: { "x-app": "civala" },
+  beforeRequest: (r) =>
+    IO.succeed(r)
+      .map(addRequestId) // sync header injection
+      .flatMap(addBearer(getToken)) // async, can fail with HttpError
+      .tap((req) => logger.info(req.method, req.url)), // side-effect
+});
+
+// Every call through `api` runs the full transformer stack.
+const user = await api
+  .get("/users/me", { validate: (d) => UserSchema.parse(d) })
+  .runOrThrow();
+```
+
+Notes on the contract:
+
+- **Failure short-circuits.** Returning `IO.fail(httpError)` from `beforeRequest` aborts the call — `fetch` is never invoked and the error surfaces through the normal `.catchTag` / `.run*` paths.
+- **Headers passed in are already merged.** `r.headers` reflects `defaultHeaders` + per-call `headers` — `beforeRequest` is the final word.
+- **Body is raw at hook time.** `r.body` is the pre-serialization value. Content-Type is derived after the hook runs, so swapping `body` for a different shape produces the correct content-type header.
+- **`validate` lives on the response side.** `HttpRequestView` deliberately omits it; the hook can't change response decoding.
+- **Compose vs. replace.** This is additive to `fetch` override — they can coexist if you have a reason. For request-decoration use cases (auth, request IDs, logging), `beforeRequest` is the lighter touch and gives you typed `HttpRequestOptions` instead of raw `(input, init)`.
 
 ## Content-Type Detection
 
