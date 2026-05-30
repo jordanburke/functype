@@ -12,6 +12,8 @@ pnpm changeset
 
 Pick the affected packages, choose major/minor/patch, write a 1–2 sentence note. The CLI drops a markdown file in `.changeset/` — commit it with your PR. Changesets that touch internal-only changes (CI tweaks, doc fixes) don't need one.
 
+**Family-cadence rule:** every non-empty changeset must list **all 7 publishable packages** (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`, `eslint-config-functype`, `eslint-plugin-functype`) at the **same bump level**. The two eslint packages mirror functype's minor/patch position (see [*Mirror invariant*](#mirror-invariant-for-eslint-packages) below). `pnpm validate` runs `scripts/check-changesets.ts` to enforce this at PR time — it will reject changesets that list a subset, mix bump levels, or name unknown packages.
+
 ## Release flow
 
 1. PR merges to `main` carrying one or more `.changeset/*.md` files.

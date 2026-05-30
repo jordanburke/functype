@@ -17,13 +17,14 @@
     "lint:check": "turbo run lint:check",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
-    "validate": "turbo run validate",
+    "validate": "tsx scripts/check-changesets.ts && turbo run validate",
     "compile": "turbo run compile",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev",
     "clean": "pnpm -r clean && rm -rf .turbo",
     "version-packages": "changeset version && tsx scripts/check-eslint-mirror.ts && pnpm -F functype-mcp-server sync:registry",
-    "check-eslint-mirror": "tsx scripts/check-eslint-mirror.ts"
+    "check-eslint-mirror": "tsx scripts/check-eslint-mirror.ts",
+    "check-changesets": "tsx scripts/check-changesets.ts"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "engines": {
