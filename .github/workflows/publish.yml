@@ -49,13 +49,17 @@ jobs:
           # version + identifier track package.json. Without this wrapper
           # the MCP registry manifest would drift on every release.
           #
-          # `check-publish-safety` runs before `pnpm publish` and refuses
-          # major version bumps or downgrades unless explicitly authorized
-          # via ALLOW_MAJOR env var. Added after the 0.60.7 → 1.0.0
-          # cascade caused by a `workspace:^` peerDependency. See
-          # docs/RELEASE.md "Independent cadence" for the post-mortem.
+          # `release` runs `check-publish-safety` (pre-publish gate;
+          # refuses unauthorized majors and downgrades; honors
+          # ALLOW_MAJOR env) and then `pnpm -r publish --no-git-checks`.
+          # NOTE: changesets/action feeds `publish:` to @actions/exec
+          # WITHOUT a shell, so chaining commands with `&&` does NOT work
+          # inline — the second command would be parsed as args. The
+          # `release` script wraps both under one pnpm invocation so
+          # shell semantics apply. See post-mortem in docs/RELEASE.md
+          # "Independent cadence".
           version: pnpm run version-packages
-          publish: pnpm check-publish-safety && pnpm -r publish --no-git-checks
+          publish: pnpm release
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
