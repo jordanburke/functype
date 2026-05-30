@@ -1,5 +1,11 @@
 # eslint-config-functype
 
+## 2.100.1
+
+### Minor Changes (independent cadence)
+
+- Bumped to `2.100.1` as part of the 2026-05-30 family-cadence reset. The previous "mirror invariant" forcing `eslint-{config,plugin}-functype` to track functype's minor/patch (`2.<functype-minor>.<functype-patch>`) was removed; the eslint packages now release on their own cadence. The `2.100.x` jump puts visible distance between this version line and any future functype-cadence intuition. No code changes vs `2.61.0`.
+
 ## 2.61.0
 
 ### Minor Changes

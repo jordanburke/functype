@@ -1,6 +1,6 @@
 {
   "name": "functype-react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React bindings for functype — ADT-aware hooks and exhaustive pattern matching components",
   "keywords": [
     "functype",
@@ -37,7 +37,7 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": "workspace:^",
+    "functype": ">=0.60.0",
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },

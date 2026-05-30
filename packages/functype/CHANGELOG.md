@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Major Changes (family-cadence reset)
+
+- Family-cadence reset to `1.0.1` so functype catches up to `functype-os`/`-log`/`-react` which were unintentionally jumped to `1.0.0` on 2026-05-30 by a `workspace:^` peerDependency + Changesets dependent-update cascade. No code changes vs `0.61.0` — version-number realignment only. See `docs/RELEASE.md` _Independent cadence_ for the full post-mortem and the new `scripts/check-publish-safety.ts` gate that prevents repeats.
+
 ## 0.61.0
 
 ### Minor Changes

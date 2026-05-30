@@ -1,5 +1,11 @@
 # functype-log
 
+## 1.0.1
+
+### Patch Changes
+
+- Widened `peerDependencies.functype` from `workspace:^` to `>=0.60.0` — root-cause fix for the 0.60.7 → 1.0.0 cascade. Functionally equivalent to 1.0.0 otherwise — bump aligns the family cadence at 1.0.1.
+
 ## 1.0.0
 
 ### Minor Changes

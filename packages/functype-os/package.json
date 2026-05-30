@@ -1,6 +1,6 @@
 {
   "name": "functype-os",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Functional OS utilities using functype data structures — env vars, path expansion, file ops, platform detection",
   "keywords": [
     "functype",
@@ -34,7 +34,7 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": "workspace:^"
+    "functype": ">=0.60.0"
   },
   "devDependencies": {
     "@types/node": "^24.12.4",

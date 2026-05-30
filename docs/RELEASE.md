@@ -10,9 +10,11 @@ When you make a user-visible change in any package:
 pnpm changeset
 ```
 
-Pick the affected packages, choose major/minor/patch, write a 1–2 sentence note. The CLI drops a markdown file in `.changeset/` — commit it with your PR. Changesets that touch internal-only changes (CI tweaks, doc fixes) don't need one.
+Pick the affected packages (only the ones the change actually touches — no need to list siblings), choose major/minor/patch, write a 1–2 sentence note. The CLI drops a markdown file in `.changeset/` — commit it with your PR. Changesets that touch internal-only changes (CI tweaks, doc fixes) don't need one.
 
-**Family-cadence rule:** every non-empty changeset must list **all 7 publishable packages** (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`, `eslint-config-functype`, `eslint-plugin-functype`) at the **same bump level**. The two eslint packages mirror functype's minor/patch position (see [*Mirror invariant*](#mirror-invariant-for-eslint-packages) below). `pnpm validate` runs `scripts/check-changesets.ts` to enforce this at PR time — it will reject changesets that list a subset, mix bump levels, or name unknown packages.
+The only constraint `pnpm validate` enforces on changesets is that package names must match known publishable packages — typo guard via `scripts/check-changesets.ts`. Bump levels are per-changeset, per-package decisions. See *Independent cadence* below for the historical "family-cadence" rule that's no longer in effect and why.
+
+**Major bumps require explicit publish-time authorization.** If your change crosses a major version boundary, the publish workflow will reject it unless `ALLOW_MAJOR=<pkg-name>` is set on the publish step env for that release. See *Independent cadence* → rule (4).
 
 ## Release flow
 
@@ -52,15 +54,21 @@ Environment: leave blank unless previously set. Already-published versions retai
 
 `functype-mcp-server` does **not** use trusted publishing today; it publishes via `NPM_TOKEN`. `publish.yml` preserves that pattern through the `NODE_AUTH_TOKEN` env var on the changesets step. No npm admin action needed for it.
 
-## Mirror invariant for eslint packages
+## Independent cadence (post-mortem 2026-05-30)
 
-The two eslint packages mirror functype's minor and patch positions: `eslint-{config,plugin}-functype` versions are always `2.<functype-minor>.<functype-patch>`. Major stays at `2` until functype reaches `1.0`, at which point both eslint packages catch up to `3.0.0` and the family converges on a single version line.
+**Previous rule (REMOVED):** all 7 publishable packages bumped together at the same level — "family-cadence." The two eslint packages mirrored functype's minor/patch as `2.<functype-minor>.<functype-patch>`, and changesets had to list all 7 packages.
 
-Enforcement: `scripts/check-eslint-mirror.ts` runs:
-- After every `changeset version` (chained into the `version-packages` script) — fails a release before publish if the mirror is broken.
-- On every PR via CI (`ci.yml` → `pnpm check-eslint-mirror`) — surfaces drift at PR-author time, not release-author time.
+**Why it was removed:** the rule interacted disastrously with `workspace:^` peerDependencies on `functype-os`/`-log`/`-react`. When functype bumped minor (`0.60.7` → `0.61.0`), the peer range `^0.60.7` (semver-equivalent to `>=0.60.7 <0.61.0` for 0.x) went out of scope. Changesets' dependent-update logic (`@changesets/assemble-release-plan`'s `determineDependents`) responded by force-major-bumping every peer dependent — so those three packages jumped to `1.0.0` instead of `0.61.0`. The `1.0.0` versions are permanently on npm (couldn't be unpublished due to npm's dependent-package policy) and required deprecation + a family-wide reset to `1.0.1`.
 
-**Rule for authoring changesets:** every release that touches functype must include all 7 publishable packages at the same bump level. Per-package or mismatched-level changesets break the mirror and the script will reject the release.
+**Current rules:**
+
+1. **Each changeset bumps only the packages it actually changes.** Per-package bumps are fine. No forced grouping or matched levels.
+2. **Peer dependencies on `functype` use broad ranges (`>=0.60.0`)** rather than `workspace:^`. Stops the same cascade from triggering future force-majors.
+3. **Eslint packages release on their own cadence.** The `2.<functype-minor>.<functype-patch>` mirror is gone. They were bumped to `2.100.1` during the reset to put visible distance between their version line and any future functype-cadence intuition.
+4. **Pre-publish safety gate (`scripts/check-publish-safety.ts`)** runs before `pnpm -r publish` inside the changesets/action publish step. It compares each package's local `version` against the current `latest` on npm and refuses to publish if (a) any package would do a major bump without `ALLOW_MAJOR=<pkg>,...` env authorization, or (b) any package would publish a lower version than npm has. This catches the cascade class of bug at publish-time, before npm locks the version slot.
+5. **Pre-PR changeset typo guard (`scripts/check-changesets.ts`, chained into `pnpm validate`).** Validates each `.changeset/*.md` only references known publishable packages. Typo guard, nothing more. Bump levels and package-list completeness are no longer enforced.
+
+**When a major bump is intentional**, set `ALLOW_MAJOR=<pkg>[,<pkg>]` on the publish workflow step for that release commit, and remove the override in a follow-up PR. Each major bump requires an explicit per-release authorization — there is no "always allow" mode.
 
 ## Node version requirement
 
