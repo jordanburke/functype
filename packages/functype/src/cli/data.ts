@@ -1,10 +1,20 @@
 /**
- * Curated API data for CLI output, optimized for LLM consumption
+ * Curated API data for CLI output, optimized for LLM consumption.
+ *
+ * `interfaces` arrays are composed of (a) the GENERATED_INTERFACES floor
+ * derived from each type's `extends` chain in source, plus (b) optional
+ * hand-curated additions for capabilities declared inline (e.g. `List.map`
+ * lives in the interface body, not via `extends Functor`). The data-sync
+ * spec enforces that no source-declared interface is dropped from this list.
  */
 
 import pkg from "../../package.json"
+import { GENERATED_INTERFACES, type GeneratedTypeName } from "./interfaces.generated"
 
 export const VERSION = pkg.version
+
+const mergeInterfaces = (typeName: GeneratedTypeName, ...extra: string[]): string[] =>
+  Array.from(new Set<string>([...GENERATED_INTERFACES[typeName], ...extra])).sort()
 
 export interface TypeData {
   description: string
@@ -27,7 +37,7 @@ export interface InterfaceData {
 export const TYPES: Record<string, TypeData> = {
   Option: {
     description: "Safe nullable handling - Some<T> or None",
-    interfaces: ["Functor", "Monad", "Foldable", "Extractable", "Matchable", "Serializable", "Traversable"],
+    interfaces: mergeInterfaces("Option"),
     methods: {
       create: ["Option(v)", "Option.none()", "Some(v)", "None()"],
       transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
@@ -47,7 +57,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Either: {
     description: "Error handling with Left (error) or Right (success)",
-    interfaces: ["Functor", "Monad", "Foldable", "Traversable", "PromiseLike"],
+    interfaces: mergeInterfaces("Either", "Traversable"),
     methods: {
       create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
       transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
@@ -66,7 +76,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Try: {
     description: "Wrap operations that may throw - Success<T> or Failure",
-    interfaces: ["Functor", "Monad", "Foldable", "Extractable", "Matchable", "Serializable", "Traversable"],
+    interfaces: mergeInterfaces("Try", "Matchable", "Traversable"),
     methods: {
       create: ["Try(() => expr)", "Try.success(v)", "Try.failure(e)", "Try.fromPromise(p)"],
       transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
@@ -86,7 +96,9 @@ export const TYPES: Record<string, TypeData> = {
 
   List: {
     description: "Immutable array with functional operations",
-    interfaces: ["Functor", "Monad", "Foldable", "Collection", "Serializable", "Traversable"],
+    // List.map / .flatMap / .fold etc. are declared inline on FunctypeCollection,
+    // not via `extends Functor/Monad/Foldable`, so these get merged in manually.
+    interfaces: mergeInterfaces("List", "Functor", "Monad", "Foldable", "Serializable", "Traversable"),
     methods: {
       create: ["List([...])", "List.of(...)", "List.empty()"],
       transform: [
@@ -127,7 +139,8 @@ export const TYPES: Record<string, TypeData> = {
 
   Set: {
     description: "Immutable set of unique values",
-    interfaces: ["Functor", "Foldable", "Collection", "Serializable", "Traversable"],
+    // Same as List — collection ops are inline on FunctypeCollection.
+    interfaces: mergeInterfaces("Set", "Functor", "Foldable", "Serializable", "Traversable"),
     methods: {
       create: ["Set([...])", "Set.of(...)", "Set.empty()"],
       transform: [".map(f)", ".filter(p)", ".union(s)", ".intersection(s)", ".difference(s)", ".add(v)"],
@@ -138,7 +151,9 @@ export const TYPES: Record<string, TypeData> = {
 
   Obj: {
     description: "Immutable object wrapper with fluent operations",
-    interfaces: ["KVTraversable", "Foldable", "Matchable", "Extractable", "Serializable", "Reshapeable", "Doable"],
+    // Obj uses `Omit<Functype, "map" | "flatMap" | ...>` so the Functype tower
+    // doesn't appear in extends, but the methods are re-declared inline.
+    interfaces: mergeInterfaces("Obj", "KVTraversable", "Foldable", "Matchable", "Extractable", "Serializable"),
     methods: {
       create: ["Obj({...})", "Obj.of({...})", "Obj.empty()"],
       transform: [
@@ -158,7 +173,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Map: {
     description: "Immutable key-value store",
-    interfaces: ["KVTraversable", "Collection", "Serializable"],
+    interfaces: mergeInterfaces("Map"),
     methods: {
       create: ["Map([[k, v], ...])", "Map.of([k, v], ...)", "Map.empty()"],
       transform: [".set(k, v)", ".delete(k)", ".map(f)", ".filter(p)", ".add(k, v)"],
@@ -169,7 +184,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Lazy: {
     description: "Deferred computation with memoization",
-    interfaces: ["Functor", "Monad", "Foldable", "Extractable", "Serializable", "Traversable"],
+    interfaces: mergeInterfaces("Lazy"),
     methods: {
       create: ["Lazy(() => expr)"],
       transform: [".map(f)", ".flatMap(f)"],
@@ -180,7 +195,8 @@ export const TYPES: Record<string, TypeData> = {
 
   LazyList: {
     description: "Lazy sequences for large/infinite data",
-    interfaces: ["Functor", "Monad", "Iterable"],
+    // LazyList declares Functor/Monad/Iterable inline rather than via extends.
+    interfaces: mergeInterfaces("LazyList", "Functor", "Monad", "Iterable"),
     methods: {
       create: ["LazyList.from(iter)", "LazyList.range(start, end)", "LazyList.infinite(f)"],
       transform: [
@@ -205,7 +221,7 @@ export const TYPES: Record<string, TypeData> = {
   Task: {
     description:
       "Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable",
-    interfaces: [],
+    interfaces: mergeInterfaces("Task"),
     methods: {
       create: [
         "Task(params).Async(fn, errFn)",
@@ -317,7 +333,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Tuple: {
     description: "Fixed-size typed array",
-    interfaces: ["Typeable", "Valuable", "Iterable"],
+    interfaces: mergeInterfaces("Tuple", "Typeable", "Valuable", "Iterable"),
     methods: {
       create: ["Tuple([a, b, ...])", "Tuple.of(a, b, ...)"],
       extract: [".first", ".second", ".toArray()"],
