@@ -130,4 +130,23 @@ if (surpriseMajors.length > 0) {
   process.exit(1)
 }
 
+// Side-file consistency: functype-mcp-server bakes its version into
+// server.json (MCP registry manifest) in addition to package.json. The
+// package's `prepublishOnly` runs `sync:registry:check` which catches
+// drift, but that fires DURING `pnpm publish` — too late, after this
+// safety gate has already greenlit the release. Invoke it here so a
+// missed `pnpm -F functype-mcp-server sync:registry` after a manual
+// version bump fails the gate up front instead of mid-publish.
+console.log(`\nRunning functype-mcp-server side-file sync check...`)
+const syncCheck = spawnSync("pnpm", ["-F", "functype-mcp-server", "sync:registry:check"], {
+  stdio: "inherit",
+  cwd: repoRoot,
+})
+if (syncCheck.status !== 0) {
+  console.error(
+    `\n✗ check-publish-safety: functype-mcp-server server.json is out of sync with package.json.\n  Run \`pnpm -F functype-mcp-server sync:registry\` and commit the result.`,
+  )
+  process.exit(1)
+}
+
 console.log(`\n✓ check-publish-safety: no surprise majors or downgrades — safe to publish`)
