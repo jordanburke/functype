@@ -1,6 +1,6 @@
 {
   "name": "functype-log",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
   "keywords": [
     "functype",
@@ -34,7 +34,7 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
-    "functype": "workspace:^"
+    "functype": ">=0.60.0"
   },
   "dependencies": {
     "loglayer": "^9.1.1"

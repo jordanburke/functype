@@ -1,5 +1,11 @@
 # functype-os
 
+## 1.0.1
+
+### Patch Changes
+
+- Widened `peerDependencies.functype` from `workspace:^` (published as `^0.60.7`) to `>=0.60.0`. The narrow range was the root cause of the 0.60.7 → 1.0.0 cascade: every functype minor bump pushed the peer out of range and Changesets force-major-bumped this package as a result. The wider range prevents that loop. Functionally equivalent to 1.0.0 otherwise — bump exists to align the family cadence at 1.0.1.
+
 ## 1.0.0
 
 ### Minor Changes

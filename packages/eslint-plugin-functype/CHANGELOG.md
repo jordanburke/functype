@@ -1,5 +1,11 @@
 # eslint-plugin-functype
 
+## 2.100.1
+
+### Minor Changes (independent cadence)
+
+- Bumped to `2.100.1` as part of the 2026-05-30 family-cadence reset. Mirror invariant with functype removed; independent cadence going forward. No code changes vs `2.61.0`.
+
 ## 2.61.0
 
 ### Minor Changes

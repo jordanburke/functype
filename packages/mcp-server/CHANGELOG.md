@@ -1,5 +1,11 @@
 # functype-mcp-server
 
+## 1.0.1
+
+### Major Changes (family-cadence reset)
+
+- Bumped to `1.0.1` to align with the family-cadence reset on 2026-05-30. No code changes vs `0.61.0` — version-number realignment only. See `docs/RELEASE.md` _Independent cadence_ for the post-mortem.
+
 ## 0.61.0
 
 ### Minor Changes

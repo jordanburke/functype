@@ -48,10 +48,23 @@ jobs:
           # functype-mcp-server sync:registry script so server.json's
           # version + identifier track package.json. Without this wrapper
           # the MCP registry manifest would drift on every release.
+          #
+          # `check-publish-safety` runs before `pnpm publish` and refuses
+          # major version bumps or downgrades unless explicitly authorized
+          # via ALLOW_MAJOR env var. Added after the 0.60.7 → 1.0.0
+          # cascade caused by a `workspace:^` peerDependency. See
+          # docs/RELEASE.md "Independent cadence" for the post-mortem.
           version: pnpm run version-packages
-          publish: pnpm -r publish --no-git-checks
+          publish: pnpm check-publish-safety && pnpm -r publish --no-git-checks
           createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # One-time authorization for the family-cadence reset to 1.0.1.
+          # functype and functype-mcp-server intentionally cross 0.x → 1.0
+          # to align with functype-os/-log/-react (already on 1.x after
+          # the accidental cascade). REMOVE THIS LINE in the follow-up PR
+          # after the 1.0.1 release lands; future major bumps must be
+          # re-authorized explicitly per release.
+          ALLOW_MAJOR: functype,functype-mcp-server
