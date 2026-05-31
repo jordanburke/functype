@@ -17,18 +17,16 @@
     "lint:check": "turbo run lint:check",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
-    "validate": "tsx scripts/check-changesets.ts && pnpm sync:eslint-mirror:test && turbo run validate",
+    "validate": "pnpm sync:eslint-mirror:test && turbo run validate",
     "compile": "turbo run compile",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev",
     "clean": "pnpm -r clean && rm -rf .turbo",
-    "version-packages": "changeset version && pnpm sync:eslint-mirror && pnpm -F functype-mcp-server sync:registry",
     "sync:eslint-mirror": "tsx scripts/sync-eslint-mirror.ts",
     "sync:eslint-mirror:check": "tsx scripts/sync-eslint-mirror.ts --check",
     "sync:eslint-mirror:test": "tsx scripts/sync-eslint-mirror.ts --test",
-    "check-changesets": "tsx scripts/check-changesets.ts",
     "check-publish-safety": "tsx scripts/check-publish-safety.ts",
-    "release": "pnpm check-publish-safety && pnpm -r publish --no-git-checks"
+    "release": "tsx scripts/release.ts"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
   "engines": {
@@ -41,8 +39,6 @@
     }
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.7.0",
-    "@changesets/cli": "^2.31.0",
     "tsx": "^4.22.3",
     "turbo": "^2.9.14"
   }

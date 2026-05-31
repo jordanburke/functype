@@ -1,21 +1,34 @@
-name: Release
+name: Publish
+
+# Tag-triggered release. Run `pnpm release patch|minor|major` locally to
+# bump versions, sync mirror, sync server.json, commit, and create the tag.
+# `git push --follow-tags` triggers this workflow.
+#
+# The workflow re-validates everything (independent of local validate), runs
+# `check-publish-safety` as the final gate (5 invariants — see header of
+# scripts/check-publish-safety.ts), then `pnpm -r publish` walks the workspace
+# and publishes any package whose local version differs from npm `latest`.
+#
+# OIDC trusted publishing for functype, functype-os, functype-log, functype-react
+# (provenance attestations). functype-mcp-server publishes with NPM_TOKEN.
+# Eslint packages publish with NPM_TOKEN.
 
 on:
   push:
-    branches: [main]
+    tags:
+      - "v*"
 
 concurrency:
-  group: release-${{ github.workflow }}-${{ github.ref }}
+  group: publish-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Version PR or publish
+  publish:
+    name: Publish to npm
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
-      id-token: write
+      contents: write # for GitHub releases
+      id-token: write # for npm OIDC trusted publishing
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,35 +53,26 @@ jobs:
       - name: Validate
         run: pnpm turbo run validate
 
-      - name: Create release PR or publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          # `version-packages` runs `changeset version` followed by the
-          # functype-mcp-server sync:registry script so server.json's
-          # version + identifier track package.json. Without this wrapper
-          # the MCP registry manifest would drift on every release.
-          #
-          # `release` runs `check-publish-safety` (pre-publish gate;
-          # refuses unauthorized majors and downgrades; honors
-          # ALLOW_MAJOR env) and then `pnpm -r publish --no-git-checks`.
-          # NOTE: changesets/action feeds `publish:` to @actions/exec
-          # WITHOUT a shell, so chaining commands with `&&` does NOT work
-          # inline — the second command would be parsed as args. The
-          # `release` script wraps both under one pnpm invocation so
-          # shell semantics apply. See post-mortem in docs/RELEASE.md
-          # "Independent cadence".
-          version: pnpm run version-packages
-          publish: pnpm release
-          createGithubReleases: true
+      - name: Check publish safety
+        run: pnpm check-publish-safety
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Major bumps require explicit per-release authorization.
+          # When you intentionally do a major, push the tag with the
+          # ALLOW_MAJOR env set on the workflow run (workflow_dispatch
+          # in the Actions UI lets you override env vars), OR add it
+          # here temporarily in a release-prep PR and remove afterwards.
+          ALLOW_MAJOR: ""
+
+      - name: Publish to npm
+        run: pnpm -r publish --no-git-checks --access public
+        env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # One-time authorization for the family-cadence reset to 1.0.1.
-          # functype and functype-mcp-server intentionally cross 0.x → 1.0
-          # to align with functype-os/-log/-react (already on 1.x after
-          # the accidental cascade). REMOVE THIS LINE in the follow-up PR
-          # after the 1.0.1 release lands; future major bumps must be
-          # re-authorized explicitly per release.
-          ALLOW_MAJOR: functype,functype-mcp-server
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

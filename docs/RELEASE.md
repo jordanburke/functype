@@ -1,118 +1,119 @@
 # Releasing from the monorepo
 
-This monorepo uses [Changesets](https://github.com/changesets/changesets) to coordinate independent versioning across `functype`, `functype-os`, `functype-log`, `functype-react`, and `functype-mcp-server`. CI handles version bumps and publishing.
+The functype family (5 packages) ships together on the `1.x` line; the eslint pair (2 packages) ships together on the `2.100.x` line, version-mirrored from functype. All 7 publishable packages release in lockstep from a single git tag.
 
-## Adding a changeset
-
-When you make a user-visible change in any package:
+## TL;DR
 
 ```bash
-pnpm changeset
+# 1. Land your feature PR(s) on main. Write release notes under `## Unreleased`
+#    in packages/functype/CHANGELOG.md as part of each PR.
+
+# 2. From a clean main branch:
+pnpm release patch        # or: minor, major
+git push --follow-tags    # → triggers CI publish
 ```
 
-Pick the affected packages (only the ones the change actually touches — no need to list siblings), choose major/minor/patch, write a 1–2 sentence note. The CLI drops a markdown file in `.changeset/` — commit it with your PR. Changesets that touch internal-only changes (CI tweaks, doc fixes) don't need one.
+That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
 
-The only constraint `pnpm validate` enforces on changesets is that package names must match known publishable packages — typo guard via `scripts/check-changesets.ts`. Bump levels are per-changeset, per-package decisions. See *Independent cadence* below for the historical "family-cadence" rule that's no longer in effect and why.
+## What `pnpm release` does
 
-**Major bumps require explicit publish-time authorization.** If your change crosses a major version boundary, the publish workflow will reject it unless `ALLOW_MAJOR=<pkg-name>` is set on the publish step env for that release. See *Independent cadence* → rule (4).
+1. **Preflight** — verifies the working tree is clean, you're on `main`, and `main` is in sync with `origin/main`.
+2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
+3. **Bump functype family** — applies the new version to all 5 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`).
+4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
+5. **Sync mcp-server `server.json`** — `pnpm -F functype-mcp-server sync:registry` writes the new version to the MCP registry manifest.
+6. **Cut CHANGELOG** — takes `## Unreleased` content in `packages/functype/CHANGELOG.md` and rewrites the heading to `## {version} - {date}`, leaving a fresh empty `## Unreleased` at top.
+7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 5 invariants (see below).
+8. **Commit + tag** — `git commit -m "release: vX.Y.Z"` + `git tag -a vX.Y.Z`.
 
-## Release flow
+## What CI does on tag push
 
-1. PR merges to `main` carrying one or more `.changeset/*.md` files.
-2. `publish.yml` runs and finds queued changesets.
-3. The workflow opens (or updates) a "Version Packages" PR by running
-   `pnpm run version-packages`, which:
-   - Bumps each affected package's `version` in `package.json` (`changeset version`)
-   - Bumps consumer packages' workspace peer-dep ranges (because `updateInternalDependencies: "patch"`)
-   - **Syncs `packages/mcp-server/server.json`** so the MCP registry manifest
-     tracks the new `functype-mcp-server` version (`pnpm -F functype-mcp-server sync:registry`).
-     Without this step the MCP registry would point at the previous npm tarball.
-   - Appends entries to each package's `CHANGELOG.md`
-   - Deletes the consumed changesets from `.changeset/`
-4. When that PR merges, `publish.yml` runs again, sees no pending changesets, and instead runs `pnpm -r publish --no-git-checks`. Only packages whose `version` differs from npm get published. GitHub releases are created automatically via `createGithubReleases: true`.
-5. `functype-mcp-server`'s `prepublishOnly` runs `sync:registry:check` as a
-   belt-and-braces guard. If anyone bypasses the version-packages step and
-   triggers publish with drifted server.json, the publish hard-fails before
-   anything reaches npm.
+`.github/workflows/publish.yml` triggers on `push: tags: ['v*']`:
 
-## npm trusted-publisher reconfig — REQUIRED before first release from the monorepo
+1. **Validate** — same `pnpm validate` as local.
+2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
+3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
+4. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
-`functype-os` and `functype-log` previously published via OIDC trusted publishing from their old GitHub repositories (`jordanburke/functype-os` and `jordanburke/functype-log`). npm's trusted-publisher config is repo-scoped, so it must be updated before the first publish from the monorepo or the publish will be rejected.
+OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`.
 
-For each of the four provenance-enabled packages, log into [npmjs.com](https://www.npmjs.com), navigate to the package, then **Settings → "Publishing access" → "Trusted Publisher"**, and apply:
+## Safety invariants (`scripts/check-publish-safety.ts`)
 
-| Package | GitHub repository | Workflow filename | Notes |
-|---|---|---|---|
-| `functype` | `jordanburke/functype` | `publish.yml` | Repo unchanged from pre-migration. |
-| `functype-os` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-os` + `publish.yml`; repo updated to monorepo, filename unchanged. |
-| `functype-log` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/functype-log` + `publish.yml`; repo updated to monorepo, filename unchanged. |
-| `functype-react` | `jordanburke/functype` | `publish.yml` | **Required before first publish.** v0.1 ships Tier 1–4 hooks/components; package was `private: true` through scaffolding and is now unblocked. Configure the trusted publisher on npmjs.com BEFORE merging the v0.1 PR or the first publish will be rejected by npm. |
-| `eslint-config-functype` | `jordanburke/functype` | `publish.yml` | Was scoped to `jordanburke/eslint-functype` + `publish.yml`; repo updated to monorepo, filename unchanged. **Required before first publish from the monorepo at `2.60.6`** (the cadence-mirror version — see *Mirror invariant* below). |
-| `eslint-plugin-functype` | `jordanburke/functype` | `publish.yml` | Same as above. |
+The publish gate refuses to proceed if any of these holds:
 
-Environment: leave blank unless previously set. Already-published versions retain their existing provenance attestations (per-version, immutable) — only new publishes are affected.
+1. **Unauthorized major.** Any package bumping its major version requires `ALLOW_MAJOR=<pkg>[,<pkg>]` env on the publish step. Per-release authorization, no "always allow" mode.
+2. **Downgrade.** Local version < npm `latest`. Never auto-authorized.
+3. **Family alignment drift.** The 5 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
+4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
+5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
 
-`functype-mcp-server` does **not** use trusted publishing today; it publishes via `NPM_TOKEN`. `publish.yml` preserves that pattern through the `NODE_AUTH_TOKEN` env var on the changesets step. No npm admin action needed for it.
+All 5 are independent gates and all 5 fail closed.
 
-## Independent cadence (post-mortem 2026-05-30)
+## Eslint mirror encoding
 
-**Previous rule (REMOVED):** all 7 publishable packages bumped together at the same level — "family-cadence." The two eslint packages mirrored functype's minor/patch as `2.<functype-minor>.<functype-patch>`, and changesets had to list all 7 packages.
+The eslint pair version is derived from the functype family version per:
 
-**Why it was removed:** the rule interacted disastrously with `workspace:^` peerDependencies on `functype-os`/`-log`/`-react`. When functype bumped minor (`0.60.7` → `0.61.0`), the peer range `^0.60.7` (semver-equivalent to `>=0.60.7 <0.61.0` for 0.x) went out of scope. Changesets' dependent-update logic (`@changesets/assemble-release-plan`'s `determineDependents`) responded by force-major-bumping every peer dependent — so those three packages jumped to `1.0.0` instead of `0.61.0`. The `1.0.0` versions are permanently on npm (couldn't be unpublished due to npm's dependent-package policy) and required deprecation + a family-wide reset to `1.0.1`.
+```
+eslint.major = 2  (fixed offset)
+eslint.minor = functype.major * 100 + functype.minor
+eslint.patch = functype.patch
+```
 
-**Current rules:**
+Examples:
 
-1. **Two `fixed` Changesets groups, with the eslint pair MIRRORING the functype family.**
-   - **Functype family** (5 packages): `functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`. A changeset listing any single member causes Changesets to bump all 5 to the same level. On the `1.x` line.
-   - **Eslint pair** (2 packages): `eslint-config-functype`, `eslint-plugin-functype`. Config + plugin are shipped together. On the `2.100.x` line (intentional offset).
-   
-   **Mirror encoding:** the eslint pair version is derived from the functype family version:
-   ```
-   eslint.major = 2  (fixed offset)
-   eslint.minor = functype.major × 100 + functype.minor
-   eslint.patch = functype.patch
-   ```
-   Examples: `functype@1.0.1` ↔ `eslint@2.100.1`; `functype@1.1.0` ↔ `eslint@2.101.0`; `functype@1.20.1` ↔ `eslint@2.120.1` (the `×100` reserves headroom for double-digit minors). The eventual intent is to re-align at functype 3.x; until then the formula is stable for the 1.x line.
-   
-   The mirror is **auto-maintained** by `pnpm sync:eslint-mirror`, wired into `pnpm run version-packages` so it runs after `changeset version` on every release cycle. Drift is **caught at publish time** by `scripts/check-publish-safety.ts` (which calls `pnpm sync:eslint-mirror:check`). To change the formula (e.g. at the 3.x alignment), update `scripts/sync-eslint-mirror.ts`.
-   
-   Family-cadence is restored after rule (3) below made it safe to do so.
-2. **Peer dependencies on `functype` use broad ranges (`>=0.60.0`)** rather than `workspace:^`. Stops the same cascade from triggering future force-majors.
-3. **Changesets is configured with `onlyUpdatePeerDependentsWhenOutOfRange: true`** (under the verbose `___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH` key in `.changeset/config.json`). Without this option, Changesets's *default* behavior force-major-bumps any package that peer-depends on a changing workspace package — **even when the new version is still inside the peer range**. The `>=0.60.0` peer ranges alone (rule 2) are not enough; without this option, dependents still get majored on every functype change. Added 2026-05-31 after the `functype-os/-log/-react` family unexpectedly bumped to `2.0.0` when `functype` went `1.0.1 → 1.1.0` despite the peer range accepting `1.1.0` cleanly — the Version Packages PR was never published thanks to the safety gate, but the bumps demonstrated the rule-2-alone assumption was wrong. With rule (1)'s `fixed` group plus this option, family-cadence is safe: the group bumps explicitly at the desired level, and this option prevents Changesets from layering force-majors on top.
-4. **Eslint pair mirrors the functype family** per the encoding in rule (1). The naive `2.<functype-minor>.<functype-patch>` from the original cadence was replaced with the `×100` formula to reserve headroom for double-digit minors.
-5. **Pre-publish safety gate (`scripts/check-publish-safety.ts`)** runs before `pnpm -r publish` inside the changesets/action publish step. It refuses to publish if: (a) any package would do a major bump without `ALLOW_MAJOR=<pkg>,...` env authorization, (b) any package would publish a lower version than npm has, (c) any `fixed` group (functype family or eslint pair) is internally out of sync, (d) the eslint pair version doesn't match the encoded mirror of the functype family version, or (e) `packages/mcp-server/server.json` drifts from its package.json. All drift sources outside the Changesets bump step (manual edits, conflict resolution, snapshot leakage, dependabot, etc.) are caught here before npm locks the version slot.
-6. **Pre-PR changeset typo guard (`scripts/check-changesets.ts`, chained into `pnpm validate`).** Validates each `.changeset/*.md` only references known publishable packages. Typo guard, nothing more. Bump-level enforcement is unnecessary — the `fixed` group (rule 1) handles family-cadence completeness automatically.
+| functype | eslint |
+|---|---|
+| `1.0.1` | `2.100.1` |
+| `1.1.0` | `2.101.0` |
+| `1.20.1` | `2.120.1` |
+| `2.0.0` | `2.200.0` |
+| `9.99.0` | `2.999.0` (formula ceiling) |
 
-**When a major bump is intentional**, set `ALLOW_MAJOR=<pkg>[,<pkg>]` on the publish workflow step for that release commit, and remove the override in a follow-up PR. Each major bump requires an explicit per-release authorization — there is no "always allow" mode.
+The `×100` reserves headroom for double-digit minors. At `functype.minor >= 100` the formula would collide (`functype@1.100.x` and `functype@2.0.x` both encode to `eslint@2.200.x`) — `sync-eslint-mirror.ts` throws clearly in that case, and the safety gate blocks publish. Update the formula in `scripts/sync-eslint-mirror.ts` if you hit it.
 
-## Node version requirement
+## Major bumps
 
-`publish.yml` reads from the repo-root `.nvmrc`, currently pinned to Node **24**. This sidesteps the npm 10.x OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) that surfaces on Node 22 as `E404 PUT https://registry.npmjs.org/<pkg>` immediately after a successful sigstore signing — npm 11.5.1+ (bundled with Node 24 LTS) is required.
+When you intentionally do a major:
+
+```bash
+ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-mcp-server" pnpm release major
+git push --follow-tags
+```
+
+And edit `.github/workflows/publish.yml` to set the same `ALLOW_MAJOR` on the `Check publish safety` step env. Remove the override in a follow-up PR after the major lands.
+
+(All 5 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
 
 ## Snapshot releases (testing pre-publish)
 
-To dry-run the version bump without publishing:
+To dry-run a version bump without publishing:
 
 ```bash
-pnpm changeset           # add a changeset describing the change
-pnpm changeset version --snapshot rehearsal
-git diff packages/*/package.json   # confirm only intended version bumps
-git restore .            # undo
+# Manually:
+# 1. Read current functype version (e.g. 1.0.1)
+# 2. Edit packages/functype/package.json to a temp version
+# 3. Run `pnpm sync:eslint-mirror` to see what the mirror would produce
+# 4. Run `pnpm check-publish-safety` to see what the gates say
+# 5. `git checkout HEAD -- packages/` to revert
 ```
 
-To publish a snapshot to npm under a non-default dist-tag (e.g. for downstream testing):
+A more polished snapshot mode could be added to `release.ts` (a `--dry-run` flag); not done today.
 
-```bash
-pnpm changeset version --snapshot rc
-pnpm -r publish --tag rc --no-git-checks
-```
+## npm trusted-publisher setup
 
-## Rolling back
+`functype`, `functype-os`, `functype-log`, `functype-react` use OIDC trusted publishing. For each:
 
-Every Phase 0 commit in the monorepo migration tagged the pre-migration tip of `functype`, `functype-os`, and `functype-log` as `pre-monorepo-migration` on their respective repos. If a rollback is needed:
+- npmjs.com → package → **Settings → Publishing access → Trusted Publisher**
+- GitHub repository: `jordanburke/functype`
+- Workflow filename: `publish.yml`
+- Environment: (blank)
 
-```bash
-git checkout pre-monorepo-migration   # in the old satellite repo
-```
+`functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`. The token is stored as a repo secret; no per-package npm config needed.
 
-restores the satellite to its pre-migration state.
+## Node version requirement
+
+`publish.yml` reads from `.nvmrc` (currently pinned to Node **24**). Required to sidestep the npm 10.x OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) — Node 22 surfaces it as `E404 PUT https://registry.npmjs.org/<pkg>` immediately after sigstore signing. npm 11.5.1+ (Node 24 LTS) fixes it.
+
+## Historical post-mortems
+
+See git history for the 0.60.7 → 1.0.0 cascade (2026-05-30) and the 1.0.1 family-cadence reset. Those incidents motivated the safety gate, the eslint mirror sync script, and ultimately the move from `@changesets/cli` to this tag-based release flow.
