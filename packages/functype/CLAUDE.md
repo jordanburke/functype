@@ -270,21 +270,48 @@ await effect.run()           // execute async
 effect.runSync()             // execute sync
 await effect.runEither()     // execute → Either<E,A>
 
-// Http - typed fetch wrapper (BYOV: bring your own validator)
+// Http - typed fetch wrapper. New in 1.1.0: Decoder<T> + request-side ADT flatten.
 Http.get(url, opts?)              // GET → IO<never, HttpError, HttpResponse<unknown>>
-Http.get(url, { validate })       // GET → IO<never, HttpError, HttpResponse<T>> (T from validate)
-Http.post(url, { body, validate })// POST with auto JSON body serialization
-Http.put(url, { body, validate }) // PUT
-Http.patch(url, { body, validate })// PATCH
+Http.get(url, { decode })         // GET → IO<never, HttpError, HttpResponse<T>> (Either-returning decoder)
+Http.post(url, { body, decode })  // POST with auto JSON body serialization
+Http.put(url, { body, decode })   // PUT
+Http.patch(url, { body, decode }) // PATCH
 Http.delete(url, opts?)           // DELETE
-Http.request({ url, validate })   // Full control (url, method, headers, body, parseAs, validate)
-Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch
-// Without validate, response data is unknown. Provide validate: (data: unknown) => T for typed data.
-// Works with Zod, TypeBox, Valibot, or manual validators.
+Http.request({ url, decode })     // Full control (url, method, headers, body, parseAs, decode, flatten)
+Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch, beforeRequest
+
+// Decoder<T> = (raw: unknown) => Either<DecoderError, T> — the named contract
+// Built-ins (zero-dep, composable):
+const userDecoder = Decoder.object({
+  name: Decoder.string,
+  age: Decoder.option(Decoder.number),          // null → None, else Some(n)
+  tags: Decoder.list(Decoder.string),
+  role: Decoder.either.envelope({ ok: Decoder.string, err: Decoder.number }),
+})
+// For Zod / TypeBox / Valibot / hand-rolled: any (raw) => Either<DecoderError, T> IS a Decoder.
+
+// Deprecated but still supported for back-compat:
+// validate: (data) => T — throw-pattern field from 1.0.x. Prefer `decode` with a Decoder,
+//   or use an adapter package like functype-zod for Zod's schema.parse.
+
+// Request body flatten (new in 1.1.0):
+// - Default `flatten: true` strips functype ADTs to primitives (Option→nullable, List→array,
+//   Either→right-value or throw, Try→success-value or throw, Map→record).
+// - `flatten: false` emits canonical {_tag, value} shape for round-trip with Decoder.tagged.*
+//   in functype-to-functype services.
+
 // HttpError ADT: NetworkError | HttpStatusError | DecodeError
+// (DecodeError also exported as ResponseDecodeError type alias for clarity)
 // Use .catchTag("HttpStatusError", e => ...) for selective error recovery
-// Compose: Http.get(url, { validate }).map(r => r.data).retry(3).timeout(5000)
+// Compose: Http.get(url, { decode }).map(r => r.data).retry(3).timeout(5000)
 await effect.runOrThrow()         // HttpResponse<T> with data, status, headers
+
+// DecoderError - recursive ADT (Leaf | Composite) for structural decode failures
+// (distinct from HttpError.DecodeError — this is the inner cause the wrapper carries)
+DecoderError.leaf(path, message, cause?)      // single failure at a path
+DecoderError.composite(path, children)        // aggregate; paths absolute on leaves after prepend
+DecoderError.flatten(e): List<{path, message}> // collect all leaves
+DecoderError.format(e): string                // multi-line render for display
 ```
 
 ## Functype Refactoring Patterns

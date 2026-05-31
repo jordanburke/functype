@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { Decoder, type DecoderError } from "@/decoder"
+import { Left, Right } from "@/either/Either"
 import { Http } from "@/fetch/Http"
 import { IO } from "@/io"
+import { List } from "@/list/List"
+import { Option } from "@/option/Option"
 
 const mockFetch = (response: {
   status: number
@@ -17,11 +21,11 @@ const mockFetch = (response: {
     }),
   )
 
-/** Simple identity validator for tests — validates shape at runtime */
+/** Identity decoder for tests — wraps raw data into Right (no structural check). */
 const asJson =
-  <T>() =>
-  (data: unknown): T =>
-    data as T
+  <T>(): Decoder<T> =>
+  (raw) =>
+    Right(raw as T)
 
 describe("Http", () => {
   describe("Http.get", () => {
@@ -30,10 +34,7 @@ describe("Http", () => {
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
         .get("https://api.test/users/1", {
-          validate: (data): { id: number; name: string } => {
-            const obj = data as Record<string, unknown>
-            return { id: obj.id as number, name: obj.name as string }
-          },
+          decode: Decoder.object({ id: Decoder.number, name: Decoder.string }),
         })
         .runOrThrow()
 
@@ -59,7 +60,7 @@ describe("Http", () => {
       const fetch = mockFetch({ status: 201, statusText: "Created", body: { id: 42 } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
-        .post("https://api.test/users", { body: { name: "Bob" }, validate: asJson<{ id: number }>() })
+        .post("https://api.test/users", { body: { name: "Bob" }, decode: asJson<{ id: number }>() })
         .runOrThrow()
 
       expect(result.data).toEqual({ id: 42 })
@@ -83,7 +84,7 @@ describe("Http", () => {
       const result = await http
         .put("https://api.test/users/1", {
           body: { name: "Updated" },
-          validate: asJson<{ id: number; name: string }>(),
+          decode: asJson<{ id: number; name: string }>(),
         })
         .runOrThrow()
 
@@ -106,7 +107,7 @@ describe("Http", () => {
       const result = await http
         .patch("https://api.test/users/1", {
           body: { name: "Patched" },
-          validate: asJson<{ id: number; name: string }>(),
+          decode: asJson<{ id: number; name: string }>(),
         })
         .runOrThrow()
 
@@ -126,7 +127,7 @@ describe("Http", () => {
       const fetch = mockFetch({ status: 200, statusText: "OK", body: { deleted: true } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
-        .delete("https://api.test/users/1", { validate: asJson<{ deleted: boolean }>() })
+        .delete("https://api.test/users/1", { decode: asJson<{ deleted: boolean }>() })
         .runOrThrow()
 
       expect(result.data).toEqual({ deleted: true })
@@ -241,7 +242,7 @@ describe("Http", () => {
         }),
       )
       const http = Http.client({ fetch: mockFn as unknown as typeof globalThis.fetch })
-      const result = await http.get("https://api.test/text", { validate: (data) => data as string }).runOrThrow()
+      const result = await http.get("https://api.test/text", { decode: Decoder.string }).runOrThrow()
 
       expect(result.data).toBe("Hello, World!")
     })
@@ -256,7 +257,7 @@ describe("Http", () => {
       )
       const http = Http.client({ fetch: mockFn as unknown as typeof globalThis.fetch })
       const result = await http
-        .get("https://api.test/json-as-text", { parseAs: "text", validate: (data) => data as string })
+        .get("https://api.test/json-as-text", { parseAs: "text", decode: Decoder.string })
         .runOrThrow()
 
       expect(result.data).toBe(JSON.stringify({ key: "value" }))
@@ -336,7 +337,7 @@ describe("Http", () => {
       const fetch = mockFetch({ status: 200, statusText: "OK", body: [1, 2, 3, 4, 5] })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const length = await http
-        .get("https://api.test/items", { validate: (data) => data as number[] })
+        .get("https://api.test/items", { decode: Decoder.array(Decoder.number) })
         .map((response) => response.data.length)
         .runOrThrow()
 
@@ -345,18 +346,12 @@ describe("Http", () => {
   })
 
   describe("Validation", () => {
-    it("should infer T from validate return type", async () => {
+    it("should infer T from decode return type", async () => {
       const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 1, name: "Alice" } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
         .get("https://api.test/users/1", {
-          validate: (data): { id: number; name: string } => {
-            const obj = data as Record<string, unknown>
-            if (typeof obj.id !== "number" || typeof obj.name !== "string") {
-              throw new Error("Invalid user shape")
-            }
-            return { id: obj.id, name: obj.name }
-          },
+          decode: Decoder.object({ id: Decoder.number, name: Decoder.string }),
         })
         .runOrThrow()
 
@@ -364,11 +359,27 @@ describe("Http", () => {
       expect(result.data.name).toBe("Alice")
     })
 
-    it("should return DecodeError when validator throws", async () => {
+    it("should work with post + decode", async () => {
+      const fetch = mockFetch({ status: 201, statusText: "Created", body: { id: 99, created: true } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .post("https://api.test/items", {
+          body: { name: "new item" },
+          decode: Decoder.object({ id: Decoder.number, created: Decoder.boolean }),
+        })
+        .runOrThrow()
+
+      expect(result.data.id).toBe(99)
+      expect(result.data.created).toBe(true)
+    })
+
+    // Back-compat: the deprecated `validate` field still works for throw-pattern callers.
+    it("should still accept the deprecated `validate` field and map throws to HttpError.DecodeError", async () => {
       const fetch = mockFetch({ status: 200, statusText: "OK", body: { wrong: "shape" } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
         .get("https://api.test/users/1", {
+          // eslint-disable-next-line @typescript-eslint/no-deprecated
           validate: (): { id: number } => {
             throw new Error("validation failed")
           },
@@ -390,21 +401,187 @@ describe("Http", () => {
       )
     })
 
-    it("should work with post + validate", async () => {
-      const fetch = mockFetch({ status: 201, statusText: "Created", body: { id: 99, created: true } })
+    // Back-compat: validate works for non-throwing identity validators.
+    it("should still accept the deprecated `validate` field for successful validations", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 1, name: "Alice" } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
       const result = await http
-        .post("https://api.test/items", {
-          body: { name: "new item" },
-          validate: (data): { id: number; created: boolean } => {
+        .get("https://api.test/users/1", {
+          // eslint-disable-next-line @typescript-eslint/no-deprecated
+          validate: (data): { id: number; name: string } => {
             const obj = data as Record<string, unknown>
-            return { id: obj.id as number, created: obj.created as boolean }
+            return { id: obj.id as number, name: obj.name as string }
           },
         })
         .runOrThrow()
 
-      expect(result.data.id).toBe(99)
-      expect(result.data.created).toBe(true)
+      expect(result.data.id).toBe(1)
+      expect(result.data.name).toBe("Alice")
+    })
+  })
+
+  describe("Request body flatten (2.0.0)", () => {
+    it("should flatten Option(value) in body to nullable by default", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/users", { body: { name: "alice", age: Option(30) } }).runOrThrow()
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://api.test/users",
+        expect.objectContaining({
+          body: JSON.stringify({ name: "alice", age: 30 }),
+          headers: expect.objectContaining({ "Content-Type": "application/json" }),
+        }),
+      )
+    })
+
+    it("should flatten None in body to null", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/users", { body: { name: "alice", age: Option.none<number>() } }).runOrThrow()
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://api.test/users",
+        expect.objectContaining({ body: JSON.stringify({ name: "alice", age: null }) }),
+      )
+    })
+
+    it("should flatten List in body to array", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/tags", { body: { tags: List(["a", "b", "c"]) } }).runOrThrow()
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://api.test/tags",
+        expect.objectContaining({ body: JSON.stringify({ tags: ["a", "b", "c"] }) }),
+      )
+    })
+
+    it("should flatten Either(Right) in body to the right value", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/items", { body: { result: Right<string, number>(42) } }).runOrThrow()
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://api.test/items",
+        expect.objectContaining({ body: JSON.stringify({ result: 42 }) }),
+      )
+    })
+
+    it("should recurse into nested ADTs (Option of List)", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/wrapped", { body: { items: Option(List([1, 2, 3])) } }).runOrThrow()
+
+      expect(fetch).toHaveBeenCalledWith(
+        "https://api.test/wrapped",
+        expect.objectContaining({ body: JSON.stringify({ items: [1, 2, 3] }) }),
+      )
+    })
+
+    it("should preserve auto-tagged emission when flatten: false", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      await http.post("https://api.test/internal", { body: { age: Option(30) }, flatten: false }).runOrThrow()
+
+      const callBody = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.body as string
+      expect(JSON.parse(callBody)).toEqual({ age: { _tag: "Some", value: 30 } })
+    })
+
+    it("should reject Left in request body (programmer error)", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http.post("https://api.test/items", { body: { result: Left<string, number>("oops") } }).run()
+
+      // The flatten throws → mapped to NetworkError
+      expect(result.isLeft()).toBe(true)
+      result.fold(
+        (e) => expect(e._tag).toBe("NetworkError"),
+        () => {
+          throw new Error("Expected Left")
+        },
+      )
+    })
+  })
+
+  describe("decode: Decoder<T> (Either-returning, 2.0.0)", () => {
+    it("should decode a typed response on success", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 1, name: "Alice" } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .get("https://api.test/users/1", {
+          decode: Decoder.object({ id: Decoder.number, name: Decoder.string }),
+        })
+        .runOrThrow()
+
+      expect(result.data).toEqual({ id: 1, name: "Alice" })
+    })
+
+    it("should map decoder Left(DecoderError) to HttpError.DecodeError", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: "not-a-number", name: "Alice" } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .get("https://api.test/users/1", {
+          decode: Decoder.object({ id: Decoder.number, name: Decoder.string }),
+        })
+        .run()
+
+      expect(result.isLeft()).toBe(true)
+      result.fold(
+        (e) => {
+          expect(e._tag).toBe("DecodeError")
+          if (e._tag === "DecodeError") {
+            const cause = e.cause as DecoderError
+            expect(cause._tag).toBe("Leaf")
+            if (cause._tag === "Leaf") {
+              expect(cause.path).toEqual(["id"])
+            }
+          }
+        },
+        () => {
+          throw new Error("Expected Left")
+        },
+      )
+    })
+
+    it("should decode nested Option fields via null-bias", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { name: "Bob", age: null } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .get("https://api.test/users/2", {
+          decode: Decoder.object({ name: Decoder.string, age: Decoder.option(Decoder.number) }),
+        })
+        .runOrThrow()
+
+      expect(result.data.name).toBe("Bob")
+      expect(result.data.age.isEmpty).toBe(true)
+    })
+
+    it("should round-trip tagged Option via Decoder.tagged.option + flatten:false", async () => {
+      const wireOut = JSON.stringify({ age: { _tag: "Some", value: 42 } })
+      const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+        new Response(wireOut, {
+          status: 200,
+          statusText: "OK",
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .post("https://api.test/internal", {
+          body: { age: Option(42) },
+          flatten: false,
+          decode: Decoder.object({ age: Decoder.tagged.option(Decoder.number) }),
+        })
+        .runOrThrow()
+
+      // Request body should be tagged
+      const callBody = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.body as string
+      expect(JSON.parse(callBody)).toEqual({ age: { _tag: "Some", value: 42 } })
+
+      // Response should decode back to Option(42)
+      expect(result.data.age.isSome()).toBe(true)
+      expect(result.data.age.value).toBe(42)
     })
   })
 })

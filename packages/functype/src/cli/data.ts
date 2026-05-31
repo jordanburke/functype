@@ -354,16 +354,16 @@ export const TYPES: Record<string, TypeData> = {
 
   Http: {
     description:
-      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default. Provide a validate function to get typed responses (BYOV: bring your own validator). Works with Zod, TypeBox, Valibot, or manual validators. The returned IO supports the full IO chain (.tap, .map, .flatMap, .catchTag, .mapError, .retry, .timeout). Http.client config accepts a beforeRequest hook — an effectful (IO-returning) transformer that closes the symmetry with the response chain so request-side concerns (auth refresh, request IDs, entry logging) compose via IO operators rather than fetch-wrapper substitution.",
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Http.client accepts `beforeRequest` (effectful IO transformer for auth refresh, request IDs, etc.). Composes via .tap/.map/.flatMap/.catchTag/.retry/.timeout.",
     interfaces: [],
     methods: {
       create: [
-        "Http.get(url, { validate }?)",
-        "Http.post(url, { body, validate }?)",
-        "Http.put(url, { body, validate }?)",
-        "Http.patch(url, { body, validate }?)",
-        "Http.delete(url, { validate }?)",
-        "Http.request({ url, validate })",
+        "Http.get(url, { decode }?)",
+        "Http.post(url, { body, decode }?)",
+        "Http.put(url, { body, decode }?)",
+        "Http.patch(url, { body, decode }?)",
+        "Http.delete(url, { decode }?)",
+        "Http.request({ url, decode })",
         "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest })",
       ],
       transform: [
@@ -381,13 +381,17 @@ export const TYPES: Record<string, TypeData> = {
         ".catchTag(tag, handler)",
         ".catchAll(handler)",
         ".recover(fallback)",
+        "decode: Decoder<T> (Either-returning, structural failures preserved)",
+        "validate: (data) => T (deprecated, throws — for back-compat / Zod .parse)",
+        "flatten: boolean (default true; false preserves tagged emission)",
         "beforeRequest: (req) => IO<never, HttpError, HttpRequestView>",
       ],
     },
   },
 
   HttpError: {
-    description: "Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError",
+    description:
+      "Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError (also exported as ResponseDecodeError alias)",
     interfaces: [],
     methods: {
       create: [
@@ -397,6 +401,46 @@ export const TYPES: Record<string, TypeData> = {
       ],
       check: ["HttpError.isNetworkError(e)", "HttpError.isHttpStatusError(e)", "HttpError.isDecodeError(e)"],
       other: ["HttpError.match(error, { NetworkError, HttpStatusError, DecodeError })"],
+    },
+  },
+
+  Decoder: {
+    description:
+      "Either-returning decoder contract: `Decoder<A> = (raw: unknown) => Either<DecoderError, A>`. Bundled combinators for primitives + functype ADTs (Option/Either/List/Map, null-bias). `Decoder.tagged.*` round-trips the `{_tag, value}` shape for functype-to-functype services.",
+    interfaces: [],
+    methods: {
+      create: [
+        "Decoder.string / .number / .boolean / .unknown / .nullable(inner)",
+        "Decoder.option(inner)",
+        "Decoder.either.envelope({ok, err})",
+        "Decoder.either.discriminated({tag, leftTag, rightTag}, l, r)",
+        "Decoder.list(inner) / .array(inner) / .map(inner)",
+        "Decoder.object({k: Decoder<V>, ...}) — accumulates field failures into Composite",
+        "Decoder.tagged.option/either/try/list/map/obj(inner?) — round-trips {_tag, value}",
+      ],
+      other: [
+        "Pluggable by construction: any (raw) => Either<DecoderError, T> IS a Decoder<T>",
+        "Composes across sources: Decoder.object({a: Decoder.fromZod(s), b: Decoder.option(myAjv)})",
+      ],
+    },
+  },
+
+  DecoderError: {
+    description:
+      "Recursive ADT for decoder failures: Leaf | Composite. Children mirror the input tree so multi-field failures preserve structural paths. Distinct from `HttpError.DecodeError` — this is the inner structural cause that the HTTP wrapper carries.",
+    interfaces: [],
+    methods: {
+      create: [
+        "DecoderError.leaf(path, message, cause?)",
+        "DecoderError.composite(path, children: List<DecoderError>)",
+      ],
+      check: ["DecoderError.isLeaf(e)", "DecoderError.isComposite(e)"],
+      other: [
+        "DecoderError.match(e, { Leaf, Composite })",
+        "DecoderError.prepend(segment, e) — used by combinators to attribute child failures",
+        "DecoderError.flatten(e): List<{path, message}> — collect leaves",
+        "DecoderError.format(e): string — render tree as multi-line",
+      ],
     },
   },
 }
@@ -463,6 +507,6 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Task", "Http", "HttpError"],
+  Effect: ["IO", "Task", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
 }
