@@ -17,7 +17,7 @@
     "lint:check": "turbo run lint:check",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
-    "validate": "tsx scripts/check-changesets.ts && turbo run validate",
+    "validate": "tsx scripts/check-changesets.ts && pnpm sync:eslint-mirror:test && turbo run validate",
     "compile": "turbo run compile",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev",
@@ -25,6 +25,7 @@
     "version-packages": "changeset version && pnpm sync:eslint-mirror && pnpm -F functype-mcp-server sync:registry",
     "sync:eslint-mirror": "tsx scripts/sync-eslint-mirror.ts",
     "sync:eslint-mirror:check": "tsx scripts/sync-eslint-mirror.ts --check",
+    "sync:eslint-mirror:test": "tsx scripts/sync-eslint-mirror.ts --test",
     "check-changesets": "tsx scripts/check-changesets.ts",
     "check-publish-safety": "tsx scripts/check-publish-safety.ts",
     "release": "pnpm check-publish-safety && pnpm -r publish --no-git-checks"
