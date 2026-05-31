@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.1.0 - 2026-05-31
+
 `Decoder<T>` API for HTTP responses + request-side ADT flatten bugfix.
 
 **New (additive):**
