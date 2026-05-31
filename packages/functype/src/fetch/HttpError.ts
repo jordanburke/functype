@@ -18,6 +18,14 @@ export type HttpStatusError = {
   readonly body: string
 }
 
+/**
+ * Raised when a successful HTTP response could not be decoded into the
+ * caller's expected shape — JSON parse failure, a `decode: Decoder<T>` that
+ * returned `Left(DecoderError)`, a throwing `decodeUnsafe` / `validate`, etc.
+ * In practice `cause` is a `DecoderError` (when produced by the `decode`
+ * path) or an `Error` (otherwise) — but the field is typed `unknown` for
+ * back-compat with the 1.0.x runtime.
+ */
 export type DecodeError = {
   readonly _tag: "DecodeError"
   readonly url: string
@@ -25,6 +33,14 @@ export type DecodeError = {
   readonly body: string
   readonly cause: unknown
 }
+
+/**
+ * More descriptive alias for `DecodeError` — clarifies that this is the
+ * HTTP-level wrapper for response decoding failures, distinct from the
+ * structural `DecoderError` tree it usually carries in `cause`. Both names
+ * refer to the same `_tag: "DecodeError"` variant.
+ */
+export type ResponseDecodeError = DecodeError
 
 export type HttpError = NetworkError | HttpStatusError | DecodeError
 
