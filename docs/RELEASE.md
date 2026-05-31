@@ -62,12 +62,26 @@ Environment: leave blank unless previously set. Already-published versions retai
 
 **Current rules:**
 
-1. **Each changeset bumps only the packages it actually changes.** Per-package bumps are fine. No forced grouping or matched levels.
+1. **Two `fixed` Changesets groups, with the eslint pair MIRRORING the functype family.**
+   - **Functype family** (5 packages): `functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`. A changeset listing any single member causes Changesets to bump all 5 to the same level. On the `1.x` line.
+   - **Eslint pair** (2 packages): `eslint-config-functype`, `eslint-plugin-functype`. Config + plugin are shipped together. On the `2.100.x` line (intentional offset).
+   
+   **Mirror encoding:** the eslint pair version is derived from the functype family version:
+   ```
+   eslint.major = 2  (fixed offset)
+   eslint.minor = functype.major × 100 + functype.minor
+   eslint.patch = functype.patch
+   ```
+   Examples: `functype@1.0.1` ↔ `eslint@2.100.1`; `functype@1.1.0` ↔ `eslint@2.101.0`; `functype@1.20.1` ↔ `eslint@2.120.1` (the `×100` reserves headroom for double-digit minors). The eventual intent is to re-align at functype 3.x; until then the formula is stable for the 1.x line.
+   
+   The mirror is **auto-maintained** by `pnpm sync:eslint-mirror`, wired into `pnpm run version-packages` so it runs after `changeset version` on every release cycle. Drift is **caught at publish time** by `scripts/check-publish-safety.ts` (which calls `pnpm sync:eslint-mirror:check`). To change the formula (e.g. at the 3.x alignment), update `scripts/sync-eslint-mirror.ts`.
+   
+   Family-cadence is restored after rule (3) below made it safe to do so.
 2. **Peer dependencies on `functype` use broad ranges (`>=0.60.0`)** rather than `workspace:^`. Stops the same cascade from triggering future force-majors.
-3. **Changesets is configured with `onlyUpdatePeerDependentsWhenOutOfRange: true`** (under the verbose `___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH` key in `.changeset/config.json`). Without this option, Changesets's *default* behavior force-major-bumps any package that peer-depends on a changing workspace package — **even when the new version is still inside the peer range**. The `>=0.60.0` peer ranges alone (rule 2) are not enough; without this option, dependents still get majored on every functype change. Added 2026-05-31 after the `functype-os/-log/-react` family unexpectedly bumped to `2.0.0` when `functype` went `1.0.1 → 1.1.0` despite the peer range accepting `1.1.0` cleanly — the Version Packages PR was never published thanks to the safety gate, but the bumps demonstrated the rule-2-alone assumption was wrong.
-4. **Eslint packages release on their own cadence.** The `2.<functype-minor>.<functype-patch>` mirror is gone. They were bumped to `2.100.1` during the reset to put visible distance between their version line and any future functype-cadence intuition.
-5. **Pre-publish safety gate (`scripts/check-publish-safety.ts`)** runs before `pnpm -r publish` inside the changesets/action publish step. It compares each package's local `version` against the current `latest` on npm and refuses to publish if (a) any package would do a major bump without `ALLOW_MAJOR=<pkg>,...` env authorization, or (b) any package would publish a lower version than npm has. This catches the cascade class of bug at publish-time, before npm locks the version slot.
-6. **Pre-PR changeset typo guard (`scripts/check-changesets.ts`, chained into `pnpm validate`).** Validates each `.changeset/*.md` only references known publishable packages. Typo guard, nothing more. Bump levels and package-list completeness are no longer enforced.
+3. **Changesets is configured with `onlyUpdatePeerDependentsWhenOutOfRange: true`** (under the verbose `___experimentalUnsafeOptions_WILL_CHANGE_IN_PATCH` key in `.changeset/config.json`). Without this option, Changesets's *default* behavior force-major-bumps any package that peer-depends on a changing workspace package — **even when the new version is still inside the peer range**. The `>=0.60.0` peer ranges alone (rule 2) are not enough; without this option, dependents still get majored on every functype change. Added 2026-05-31 after the `functype-os/-log/-react` family unexpectedly bumped to `2.0.0` when `functype` went `1.0.1 → 1.1.0` despite the peer range accepting `1.1.0` cleanly — the Version Packages PR was never published thanks to the safety gate, but the bumps demonstrated the rule-2-alone assumption was wrong. With rule (1)'s `fixed` group plus this option, family-cadence is safe: the group bumps explicitly at the desired level, and this option prevents Changesets from layering force-majors on top.
+4. **Eslint pair mirrors the functype family** per the encoding in rule (1). The naive `2.<functype-minor>.<functype-patch>` from the original cadence was replaced with the `×100` formula to reserve headroom for double-digit minors.
+5. **Pre-publish safety gate (`scripts/check-publish-safety.ts`)** runs before `pnpm -r publish` inside the changesets/action publish step. It refuses to publish if: (a) any package would do a major bump without `ALLOW_MAJOR=<pkg>,...` env authorization, (b) any package would publish a lower version than npm has, (c) any `fixed` group (functype family or eslint pair) is internally out of sync, (d) the eslint pair version doesn't match the encoded mirror of the functype family version, or (e) `packages/mcp-server/server.json` drifts from its package.json. All drift sources outside the Changesets bump step (manual edits, conflict resolution, snapshot leakage, dependabot, etc.) are caught here before npm locks the version slot.
+6. **Pre-PR changeset typo guard (`scripts/check-changesets.ts`, chained into `pnpm validate`).** Validates each `.changeset/*.md` only references known publishable packages. Typo guard, nothing more. Bump-level enforcement is unnecessary — the `fixed` group (rule 1) handles family-cadence completeness automatically.
 
 **When a major bump is intentional**, set `ALLOW_MAJOR=<pkg>[,<pkg>]` on the publish workflow step for that release commit, and remove the override in a follow-up PR. Each major bump requires an explicit per-release authorization — there is no "always allow" mode.
 
