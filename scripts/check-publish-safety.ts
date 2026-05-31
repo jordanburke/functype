@@ -2,22 +2,25 @@
 /**
  * Pre-publish safety gate.
  *
- * Compares each workspace package's local `version` against the current
- * `latest` on npm and refuses to proceed if any of the following without
- * explicit authorization:
+ * Refuses to proceed if any of the following holds, unless explicitly
+ * authorized:
  *
  *   1. Major version bump (e.g. 0.60.7 → 1.0.0) — set
  *      `ALLOW_MAJOR=<pkg>,<pkg>` env var to authorize specific packages.
  *   2. Downgrade (local < npm) — never auto-authorized. Will not publish.
+ *   3. Family-cadence drift: the 5 functype-* packages (in the Changesets
+ *      `fixed` group) must publish at the same version. Drift here means
+ *      something bypassed the Changesets bump step (manual edit, conflict
+ *      resolution, snapshot leakage, dependabot, etc.).
+ *   4. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
+ *      manifest) must match the package.json version.
  *
  * Background: on 2026-05-30 a `workspace:^` peerDependency caused
  * functype-os/-log/-react to silently force-major-bump from 0.60.7 →
- * 1.0.0 when functype published 0.61.0 (the dependent-update logic in
- * @changesets/assemble-release-plan major-bumps any dependent whose peer
- * range goes out of scope). Three permanent 1.0.0 versions landed on
- * npm before the cascade was noticed. This gate would have surfaced the
- * surprise in CI before publish, with a clear "set ALLOW_MAJOR=… if
- * intentional" pointer.
+ * 1.0.0 when functype published 0.61.0. Three permanent 1.0.0 versions
+ * landed on npm before the cascade was noticed. The family-cadence check
+ * (rule 3) plus the Changesets `fixed` group restored in PR #167 prevent
+ * the inverse problem (one package drifting out of family alignment).
  *
  * Runs in `publish.yml` before `pnpm -r publish` and locally via
  * `pnpm check-publish-safety`.
@@ -39,6 +42,20 @@ const PACKAGE_DIRS = [
   "packages/eslint-config-functype",
   "packages/eslint-plugin-functype",
 ] as const
+
+/**
+ * The 5 functype-* packages are in a Changesets `fixed` group and must always
+ * publish at the same version. This list mirrors `fixed` in `.changeset/config.json`.
+ * Eslint packages (`eslint-config-functype`, `eslint-plugin-functype`) release
+ * independently on the `2.100.x` line and are NOT in this group.
+ */
+const FAMILY_CADENCE_GROUP = new Set<string>([
+  "functype",
+  "functype-os",
+  "functype-log",
+  "functype-react",
+  "functype-mcp-server",
+])
 
 const allowMajor = new Set(
   (process.env.ALLOW_MAJOR ?? "")
@@ -130,6 +147,29 @@ if (surpriseMajors.length > 0) {
   process.exit(1)
 }
 
+// Family-cadence alignment: the 5 functype-* packages share a Changesets
+// `fixed` group and must publish at the same version. The `fixed` group
+// enforces this at the version-bump step, but drift can be introduced by
+// other paths (manual edits, conflict resolution, snapshot leakage,
+// dependabot bumps, etc.). This check catches drift at publish time before
+// the family lands at inconsistent versions on npm.
+const familyMembers = plans.filter((p) => FAMILY_CADENCE_GROUP.has(p.name))
+const familyVersions = new Set(familyMembers.map((p) => p.local))
+if (familyVersions.size > 1) {
+  console.error(
+    `\n✗ check-publish-safety: ${familyMembers.length} functype-* packages are not at the same version.`,
+  )
+  for (const p of familyMembers) {
+    console.error(`    ${p.name.padEnd(colName)}  ${p.local}`)
+  }
+  console.error(
+    `\n  These packages are in a Changesets \`fixed\` group and must publish together at the same version.`,
+  )
+  console.error(`  Restore alignment with \`pnpm changeset version\` (which respects the fixed group) and commit.`)
+  console.error(`  See docs/RELEASE.md "Independent cadence" rule (1) for the family-cadence policy.`)
+  process.exit(1)
+}
+
 // Side-file consistency: functype-mcp-server bakes its version into
 // server.json (MCP registry manifest) in addition to package.json. The
 // package's `prepublishOnly` runs `sync:registry:check` which catches
@@ -149,4 +189,6 @@ if (syncCheck.status !== 0) {
   process.exit(1)
 }
 
-console.log(`\n✓ check-publish-safety: no surprise majors or downgrades — safe to publish`)
+console.log(
+  `\n✓ check-publish-safety: no surprise majors or downgrades; functype-* family aligned — safe to publish`,
+)
