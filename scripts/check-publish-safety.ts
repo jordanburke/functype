@@ -8,10 +8,14 @@
  *   1. Major version bump (e.g. 0.60.7 → 1.0.0) — set
  *      `ALLOW_MAJOR=<pkg>,<pkg>` env var to authorize specific packages.
  *   2. Downgrade (local < npm) — never auto-authorized. Will not publish.
- *   3. Family-cadence drift: the 5 functype-* packages (in the Changesets
- *      `fixed` group) must publish at the same version. Drift here means
- *      something bypassed the Changesets bump step (manual edit, conflict
- *      resolution, snapshot leakage, dependabot, etc.).
+ *   3. Alignment-group drift: each Changesets `fixed` group must publish at
+ *      the same version. Two groups today:
+ *        - Functype family (5 packages): functype, functype-os, functype-log,
+ *          functype-react, functype-mcp-server — all on the `1.x` line.
+ *        - Eslint pair: eslint-config-functype, eslint-plugin-functype —
+ *          both on the `2.100.x` line (intentional offset from functype).
+ *      Drift here means something bypassed the Changesets bump step (manual
+ *      edit, conflict resolution, snapshot leakage, dependabot, etc.).
  *   4. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
  *      manifest) must match the package.json version.
  *
@@ -44,18 +48,27 @@ const PACKAGE_DIRS = [
 ] as const
 
 /**
- * The 5 functype-* packages are in a Changesets `fixed` group and must always
- * publish at the same version. This list mirrors `fixed` in `.changeset/config.json`.
- * Eslint packages (`eslint-config-functype`, `eslint-plugin-functype`) release
- * independently on the `2.100.x` line and are NOT in this group.
+ * Packages that must publish in lockstep. Each inner group is a `fixed` group
+ * in `.changeset/config.json` — every member of a group must have the same
+ * version at publish time.
+ *
+ * - Functype family: 5 packages on the `1.x` line, bumped together.
+ * - Eslint pair: config + plugin on the `2.100.x` line, bumped together but
+ *   independent from the functype family (intentional version-line offset).
+ *
+ * **Sync rule:** if you change this list, you MUST also update `fixed` in
+ * `.changeset/config.json`. Both lists must mirror each other.
  */
-const FAMILY_CADENCE_GROUP = new Set<string>([
-  "functype",
-  "functype-os",
-  "functype-log",
-  "functype-react",
-  "functype-mcp-server",
-])
+const ALIGNMENT_GROUPS: ReadonlyArray<{ readonly label: string; readonly members: ReadonlySet<string> }> = [
+  {
+    label: "functype-* family",
+    members: new Set<string>(["functype", "functype-os", "functype-log", "functype-react", "functype-mcp-server"]),
+  },
+  {
+    label: "eslint pair",
+    members: new Set<string>(["eslint-config-functype", "eslint-plugin-functype"]),
+  },
+]
 
 const allowMajor = new Set(
   (process.env.ALLOW_MAJOR ?? "")
@@ -147,25 +160,27 @@ if (surpriseMajors.length > 0) {
   process.exit(1)
 }
 
-// Family-cadence alignment: the 5 functype-* packages share a Changesets
-// `fixed` group and must publish at the same version. The `fixed` group
-// enforces this at the version-bump step, but drift can be introduced by
-// other paths (manual edits, conflict resolution, snapshot leakage,
-// dependabot bumps, etc.). This check catches drift at publish time before
-// the family lands at inconsistent versions on npm.
-const familyMembers = plans.filter((p) => FAMILY_CADENCE_GROUP.has(p.name))
-const familyVersions = new Set(familyMembers.map((p) => p.local))
-if (familyVersions.size > 1) {
-  console.error(
-    `\n✗ check-publish-safety: ${familyMembers.length} functype-* packages are not at the same version.`,
-  )
-  for (const p of familyMembers) {
-    console.error(`    ${p.name.padEnd(colName)}  ${p.local}`)
+// Alignment groups: each `fixed` Changesets group must publish in lockstep.
+// The `fixed` config enforces this at the version-bump step, but drift can
+// be introduced by other paths (manual edits, conflict resolution, snapshot
+// leakage, dependabot bumps, etc.). This check catches drift at publish
+// time before any group member lands out of sync on npm.
+const driftedGroups = ALIGNMENT_GROUPS.flatMap((group) => {
+  const members = plans.filter((p) => group.members.has(p.name))
+  const versions = new Set(members.map((p) => p.local))
+  return versions.size > 1 ? [{ group, members }] : []
+})
+if (driftedGroups.length > 0) {
+  for (const { group, members } of driftedGroups) {
+    console.error(`\n✗ check-publish-safety: ${group.label} (${members.length} packages) is out of alignment.`)
+    for (const p of members) {
+      console.error(`    ${p.name.padEnd(colName)}  ${p.local}`)
+    }
   }
   console.error(
-    `\n  These packages are in a Changesets \`fixed\` group and must publish together at the same version.`,
+    `\n  Aligned groups must publish at the same version. Restore alignment with \`pnpm changeset version\``,
   )
-  console.error(`  Restore alignment with \`pnpm changeset version\` (which respects the fixed group) and commit.`)
+  console.error(`  (which respects the \`fixed\` groups in .changeset/config.json) and commit.`)
   console.error(`  See docs/RELEASE.md "Independent cadence" rule (1) for the family-cadence policy.`)
   process.exit(1)
 }
@@ -190,5 +205,5 @@ if (syncCheck.status !== 0) {
 }
 
 console.log(
-  `\n✓ check-publish-safety: no surprise majors or downgrades; functype-* family aligned — safe to publish`,
+  `\n✓ check-publish-safety: no surprise majors or downgrades; all alignment groups in sync — safe to publish`,
 )

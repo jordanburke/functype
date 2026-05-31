@@ -2,7 +2,10 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
   "changelog": ["@changesets/changelog-github", { "repo": "jordanburke/functype" }],
   "commit": false,
-  "fixed": [["functype", "functype-os", "functype-log", "functype-react", "functype-mcp-server"]],
+  "fixed": [
+    ["functype", "functype-os", "functype-log", "functype-react", "functype-mcp-server"],
+    ["eslint-config-functype", "eslint-plugin-functype"]
+  ],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
