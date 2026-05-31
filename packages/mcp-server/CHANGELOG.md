@@ -1,5 +1,12 @@
 # functype-mcp-server
 
+## 1.1.0
+
+### Patch Changes
+
+- Updated dependencies [[`ae95011`](https://github.com/jordanburke/functype/commit/ae950112a073fff2b49bef8d203233f36aa992b2)]:
+  - functype@1.1.0
+
 ## 1.0.1
 
 ### Major Changes (family-cadence reset)
