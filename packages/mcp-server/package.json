@@ -72,8 +72,8 @@
   "devDependencies": {
     "@types/node": "^24.12.4",
     "ts-builds": "^2.8.1",
-    "tsdown": "^0.22.0",
-    "tsx": "^4.22.3"
+    "tsdown": "^0.22.1",
+    "tsx": "^4.22.4"
   },
   "prettier": "ts-builds/prettier"
 }
