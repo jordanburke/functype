@@ -185,6 +185,23 @@ if (driftedGroups.length > 0) {
   process.exit(1)
 }
 
+// Eslint mirror encoding: the eslint pair version is derived from the functype
+// family version per a fixed formula (eslint.minor = functype.major*100 + functype.minor,
+// eslint.patch = functype.patch). The `version-packages` script runs sync:eslint-mirror
+// after `changeset version` to maintain the encoding automatically, but drift here
+// can be introduced by anything that bypasses that script. Verify it.
+console.log(`\nRunning eslint-mirror encoding check...`)
+const mirrorCheck = spawnSync("pnpm", ["sync:eslint-mirror:check"], {
+  stdio: "inherit",
+  cwd: repoRoot,
+})
+if (mirrorCheck.status !== 0) {
+  console.error(
+    `\n✗ check-publish-safety: eslint pair version is not the encoded mirror of functype.\n  See scripts/sync-eslint-mirror.ts for the formula and \`pnpm sync:eslint-mirror\` to fix.`,
+  )
+  process.exit(1)
+}
+
 // Side-file consistency: functype-mcp-server bakes its version into
 // server.json (MCP registry manifest) in addition to package.json. The
 // package's `prepublishOnly` runs `sync:registry:check` which catches
