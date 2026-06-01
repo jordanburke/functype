@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.2.0 - 2026-06-01
+
 Universal-deserialize: a single top-level `Serialization.deserialize(json)` that walks parsed JSON and reconstructs any functype value it encounters — no type argument required by the caller. Closes the asymmetry where 1.1.0 had uniform `serialize()` across all 12 Serializable types but reconstruction required either per-type companions (`Either.fromJSON`, etc) or a caller-supplied `reconstructor`. Drives the DBOS durable-workflow integration (every functype value embedded in a step return survives the JSON round-trip with methods intact); applies to any persistence/RPC boundary that hands you an opaque JSON string and expects a value back.
 
 **New (additive):**
