@@ -6,6 +6,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+Polish on the 1.2.2 type export: `JSONValue` is now reachable two ways — `Serialization.JSONValue` (via the namespace, as before) AND `import type { JSONValue } from "functype"` (top-level, new). Type-only re-export from the serialization barrel — safe across the import cycle that prevents value-level re-exports of the `Serialization` namespace from that path. Conformance suite gains a compile-time assertion that both paths resolve to the same type.
+
+No runtime change. No release cut now — lands when the next patch ships.
+
 ## 1.2.2 - 2026-06-01
 
 Type-tightening on `toEnvelope` output (and new `JSONValue` type export) so the DBOS / SuperJSON consumer recipe slots in with zero casts at the boundary. Asymmetric by design — only the OUTPUT tightens; `fromEnvelope`'s input stays `unknown` to preserve Postel's law (be conservative in what you send, liberal in what you accept — same pattern stdlib uses for `JSON.parse`/`stringify`, `Array.from`, etc.). Tightening the input too would push casts up the chain to every less-typed host plumbing layer for no runtime benefit.

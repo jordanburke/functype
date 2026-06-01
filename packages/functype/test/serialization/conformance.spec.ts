@@ -28,6 +28,11 @@ import { Map as FunctypeMap } from "@/map/Map"
 import { Obj } from "@/obj/Obj"
 import { None, Option, Some } from "@/option"
 import * as Serialization from "@/serialization/Serialization"
+// 1.2.x: JSONValue is reachable two ways — via the `Serialization` namespace
+// (`Serialization.JSONValue`) AND via a direct named import from the
+// serialization barrel. The line below is a compile-time assertion that the
+// top-level path resolves; if the barrel re-export is dropped, this fails.
+import type { JSONValue as TopLevelJSONValue } from "@/serialization"
 import { Set as FunctypeSet } from "@/set/Set"
 import { Stack } from "@/stack/Stack"
 import { Task, type TaskOutcome } from "@/core/task/Task"
@@ -425,6 +430,16 @@ describe("Serialization — DBOS-style consumer pattern (no facade)", () => {
 // ───────────────────────────────────────────────────────────────────────────
 // 1.2.1 additions — envelope helpers + strict deserialize
 // ───────────────────────────────────────────────────────────────────────────
+
+describe("Serialization — JSONValue is reachable from both import paths", () => {
+  it("namespaced (Serialization.JSONValue) and top-level (import type { JSONValue }) resolve to the same type", () => {
+    // Compile-time assertion via mutual assignability — runtime is a no-op.
+    const a: Serialization.JSONValue = { foo: "bar", n: 1, nested: [true, null] }
+    const b: TopLevelJSONValue = a
+    const c: Serialization.JSONValue = b
+    expect(c).toEqual(a)
+  })
+})
 
 describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nesting)", () => {
   it("toEnvelope returns a parsed JSON shape, not a string", () => {
