@@ -32,15 +32,11 @@ describe("SerializationCompanion", () => {
     })
 
     it("handles primitive values", () => {
-      expect(createSerializer("Number", 42).toJSON()).toBe(
-        '{"@functype":"Number","_tag":"Number","value":42}',
-      )
+      expect(createSerializer("Number", 42).toJSON()).toBe('{"@functype":"Number","_tag":"Number","value":42}')
       expect(createSerializer("String", "hello").toJSON()).toBe(
         '{"@functype":"String","_tag":"String","value":"hello"}',
       )
-      expect(createSerializer("Bool", true).toJSON()).toBe(
-        '{"@functype":"Bool","_tag":"Bool","value":true}',
-      )
+      expect(createSerializer("Bool", true).toJSON()).toBe('{"@functype":"Bool","_tag":"Bool","value":true}')
     })
 
     it("emits base64-encoded JSON via toBinary", () => {

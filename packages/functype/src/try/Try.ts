@@ -9,7 +9,8 @@ import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Reshapeable } from "@/reshapeable"
-import { createCustomSerializer, createSerializer } from "@/serialization"
+import type { SerializedError } from "@/serialization"
+import { createSerializer, createTaggedSerializer, deserializeError, serializeError } from "@/serialization"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -86,6 +87,15 @@ export interface Try<out T>
    */
   recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
   toValue(): { _tag: TypeNames; value: T | Error }
+  /**
+   * Custom JSON serialization. Success emits `{"@functype":"Try","_tag":"Success","value":T}`.
+   * Failure emits `{"@functype":"Try","_tag":"Failure","error":SerializedError}` where
+   * SerializedError captures `name`, `message`, `stack`, and the full `cause` chain —
+   * `e.name` survives round-trip but `instanceof SomeError` does not.
+   */
+  toJSON():
+    | { "@functype": "Try"; _tag: "Success"; value: T }
+    | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }
 
 const Success = <T>(value: T): Try<T> => ({
@@ -128,6 +138,7 @@ const Success = <T>(value: T): Try<T> => ({
   toString: () => `Success(${safeStringify(value)})`,
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
+  toJSON: () => ({ "@functype": "Try" as const, _tag: "Success" as const, value }),
   toOption: () => Some(value),
   toList: () => List<T>([value]),
   toTry: () => Success(value),
@@ -191,13 +202,18 @@ const Failure = <T>(error: Error): Try<T> => ({
   toString: () => `Failure(${safeStringify(error)}))`,
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
+  toJSON: () => ({
+    "@functype": "Try" as const,
+    _tag: "Failure" as const,
+    error: serializeError(error),
+  }),
   toOption: () => Option<T>(null),
   toList: () => List<T>([]),
   toTry: () => Failure<T>(error),
   pipe: <U>(_f: (value: T) => U) => {
     throw error
   },
-  serialize: () => createCustomSerializer({ _tag: "Failure", error: error.message, stack: error.stack }),
+  serialize: () => createTaggedSerializer("Try", "Failure", { error: serializeError(error) }),
   contains: (_v: T) => false,
   exists: (_p: (a: T) => boolean) => false,
   forEach: (_f: (a: T) => void) => {},
@@ -257,16 +273,30 @@ const TryCompanion = {
    * @returns Try instance
    */
   fromJSON: <T>(json: string): Try<T> => {
-    const parsed = JSON.parse(json) as { _tag: string; value?: T; error?: string; stack?: string }
+    const parsed = JSON.parse(json) as {
+      "@functype"?: string
+      _tag?: string
+      value?: T
+      error?: SerializedError | string
+      // 1.1.0 back-compat — older Failure envelopes used flat {error, stack} strings.
+      stack?: string
+    }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Try") {
+      throw new Error(`Try.fromJSON: expected @functype="Try", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     if (parsed._tag === "Success") {
       return Success<T>(parsed.value as T)
-    } else {
-      const error = new Error(parsed.error)
-      if (parsed.stack) {
-        error.stack = parsed.stack
-      }
-      return Failure<T>(error)
     }
+    // Failure: prefer the new SerializedError shape (object); fall back to the
+    // 1.1.0 flat shape ({error: string, stack: string}) for back-compat.
+    if (parsed.error !== undefined && typeof parsed.error === "object") {
+      return Failure<T>(deserializeError(parsed.error))
+    }
+    const legacyError = new Error(typeof parsed.error === "string" ? parsed.error : "")
+    if (parsed.stack) {
+      legacyError.stack = parsed.stack
+    }
+    return Failure<T>(legacyError)
   },
 
   /**

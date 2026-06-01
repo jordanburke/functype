@@ -132,16 +132,16 @@ describe("Tuple", () => {
   })
 
   describe("Serializable interface", () => {
-    it("should serialize to JSON", () => {
+    it("should serialize to JSON with the @functype envelope", () => {
       const tuple = Tuple([1, "hello", true])
       const json = tuple.serialize().toJSON()
-      expect(json).toBe('{"_tag":"Tuple","value":[1,"hello",true]}')
+      expect(json).toBe('{"@functype":"Tuple","_tag":"Tuple","value":[1,"hello",true]}')
     })
 
-    it("should serialize to YAML", () => {
+    it("should serialize to YAML with the @functype marker", () => {
       const tuple = Tuple(["a", "b", "c"])
       const yaml = tuple.serialize().toYAML()
-      expect(yaml).toBe('_tag: Tuple\nvalue: ["a","b","c"]')
+      expect(yaml).toBe('@functype: Tuple\n_tag: Tuple\nvalue: ["a","b","c"]')
     })
 
     it("should serialize to binary", () => {

@@ -144,6 +144,12 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   toValue(): { _tag: "Some" | "None"; value: T }
   /**
+   * Custom JSON serialization producing the canonical \`@functype\`-marked
+   * envelope so native \`JSON.stringify\` recursion (e.g. inside a plain
+   * object) emits a round-trip-able shape.
+   */
+  toJSON(): { "@functype": "Option"; _tag: "Some" | "None"; value: T | null }
+  /**
    * Pattern matches over the Option, applying a handler function based on the variant
    * @param patterns - Object with handler functions for Some and None variants
    * @returns The result of applying the matching handler function
@@ -192,7 +198,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
-    return { _tag: "Right", value }
+    return { "@functype": "Either" as const, _tag: "Right" as const, value }
   },
   toString: () => {
     return \`Right(\${safeStringify(value)})\`
@@ -231,7 +237,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   toValue: () => ({ _tag: "Right", value }),
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Right", value),
+  serialize: () => createSerializer("Either", "Right", value),
   contains: (v: R) => value === v,
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
@@ -298,9 +304,13 @@ export interface EitherBase<out L extends Type, out R extends Type>
    */
   toValue(): { _tag: "Left" | "Right"; value: L | R }
   /**
-   * Custom JSON serialization that excludes getter properties
+   * Custom JSON serialization that excludes getter properties.
+   * Emits the canonical functype envelope with \`@functype: "Either"\` so
+   * native \`JSON.stringify\` recursion (e.g. inside a plain object body)
+   * produces a marker-bearing envelope that survives a round-trip through
+   * \`Serialization.deserialize\`.
    */
-  toJSON(): { _tag: "Left" | "Right"; value: L | R }
+  toJSON(): { "@functype": "Either"; _tag: "Left" | "Right"; value: L | R }
 }
 
 export interface LeftOf<out L extends Type, out R extends Type> extends EitherBase<L, R> {
@@ -381,6 +391,15 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    */
   recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
   toValue(): { _tag: TypeNames; value: T | Error }
+  /**
+   * Custom JSON serialization. Success emits \`{"@functype":"Try","_tag":"Success","value":T}\`.
+   * Failure emits \`{"@functype":"Try","_tag":"Failure","error":SerializedError}\` where
+   * SerializedError captures \`name\`, \`message\`, \`stack\`, and the full \`cause\` chain —
+   * \`e.name\` survives round-trip but \`instanceof SomeError\` does not.
+   */
+  toJSON():
+    | { "@functype": "Try"; _tag: "Success"; value: T }
+    | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }`,
 
   List: `export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
@@ -627,10 +646,28 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    */
   toString(): string
   /**
-   * Converts the Lazy to a value object
-   * @returns Object representation of the Lazy with evaluation state
+   * Converts the Lazy to a value object.
+   *
+   * **Forces the thunk** as a side effect — Lazy serialization (and projection
+   * to a plain value object) cannot represent an unevaluated thunk in JSON;
+   * forcing is the only way to produce a complete projection. If the thunk
+   * threw, the failure is captured in the \`error\` field (real Error, with
+   * full prototype intact for in-memory inspection — \`toJSON\` projects to
+   * \`SerializedError\` for the wire).
+   *
+   * Changed in 1.2.0 — pre-1.2.0 Lazy emitted \`{_tag, evaluated, value?}\`
+   * without forcing. See \`docs/proposals/serializable-audit-q1-q2.md\`.
    */
-  toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
+  toValue(): { _tag: "Lazy"; value: T } | { _tag: "Lazy"; error: Error }
+  /**
+   * Custom JSON serialization. Forces the thunk (see \`toValue\` for the
+   * side-effect contract). Emits \`{"@functype":"Lazy","_tag":"Lazy","value":T}\`
+   * on success, or \`{"@functype":"Lazy","_tag":"Lazy","error":SerializedError}\`
+   * if the thunk threw — see error-envelope.ts for round-trip semantics.
+   */
+  toJSON():
+    | { "@functype": "Lazy"; _tag: "Lazy"; value: T }
+    | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
 }`,
 
   LazyList: `export interface LazyList<out A extends Type>
@@ -717,6 +754,14 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   // Pattern matching
   readonly fold: <U>(onErr: (error: Throwable) => U, onOk: (value: T) => U) => U
   readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
+
+  /**
+   * Custom JSON serialization. Ok emits \`{"@functype":"Task","_tag":"Ok","value":T}\`.
+   * Err emits \`{"@functype":"Task","_tag":"Err","error":SerializedError}\` capturing the
+   * Throwable's name, message, stack, and cause chain. See error-envelope.ts —
+   * \`instanceof\` does NOT survive round-trip but \`error.name\` does.
+   */
+  toJSON(): { "@functype": "Task"; _tag: "Ok"; value: T } | { "@functype": "Task"; _tag: "Err"; error: SerializedError }
 }`,
 
   Tuple: `export interface Tuple<out T extends Type[]>
@@ -871,5 +916,5 @@ const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkE
    * \`\`\`
    */
   readonly beforeRequest?: (request: HttpRequestView) => IO<never, HttpError, HttpRequestView>
-}`,
+}`
 }

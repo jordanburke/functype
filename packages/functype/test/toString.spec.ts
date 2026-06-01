@@ -23,7 +23,9 @@ describe("Serialization", () => {
 
     it("should handle nested Either", () => {
       const nested = Right(Right(42))
-      expect(nested.toString()).toBe('Right({"_tag":"Right","value":42})')
+      // Inner Either is serialized via instance toJSON, which emits the
+      // `@functype`-marked envelope used by Serialization.deserialize.
+      expect(nested.toString()).toBe('Right({"@functype":"Either","_tag":"Right","value":42})')
     })
   })
 

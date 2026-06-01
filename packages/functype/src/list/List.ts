@@ -305,6 +305,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     toValue: () => ({ _tag: "List", value: array }),
 
+    toJSON: () => ({ "@functype": "List" as const, _tag: "List" as const, value: [...array] }),
+
     pipe: <U>(f: (value: A[]) => U) => f([...array]),
 
     serialize: () => createSerializer("List", array),
@@ -346,7 +348,10 @@ const ListCompanion = {
    * @returns List instance
    */
   fromJSON: <A>(json: string): List<A> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: A[] }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: A[] }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "List") {
+      throw new Error(`List.fromJSON: expected @functype="List", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return List<A>(parsed.value)
   },
 

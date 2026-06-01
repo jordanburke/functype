@@ -7,11 +7,12 @@ import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
 import { ArrayBuilder } from "@/internal/mutation-utils"
-import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import { Ref } from "@/ref/Ref"
+import type { SerializedError } from "@/serialization"
+import { createSerializer, createTaggedSerializer, deserializeError, serializeError } from "@/serialization"
 import type { Try } from "@/try/Try"
 import { Try as TryConstructor } from "@/try/Try"
 import type { AsyncMonad, Promisable, Widen } from "@/typeclass"
@@ -84,6 +85,14 @@ export interface TaskOutcome<out T>
   // Pattern matching
   readonly fold: <U>(onErr: (error: Throwable) => U, onOk: (value: T) => U) => U
   readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
+
+  /**
+   * Custom JSON serialization. Ok emits `{"@functype":"Task","_tag":"Ok","value":T}`.
+   * Err emits `{"@functype":"Task","_tag":"Err","error":SerializedError}` capturing the
+   * Throwable's name, message, stack, and cause chain. See error-envelope.ts —
+   * `instanceof` does NOT survive round-trip but `error.name` does.
+   */
+  toJSON(): { "@functype": "Task"; _tag: "Ok"; value: T } | { "@functype": "Task"; _tag: "Err"; error: SerializedError }
 }
 
 // Success case interface - extends TaskOutcome
@@ -230,15 +239,15 @@ export const Err = <T>(error: unknown, data?: unknown, params?: TaskParams): Err
       return { ok: false, empty: false, error: throwable }
     },
 
-    // Serializable methods
-    serialize: () => ({
-      toJSON: () => safeStringify({ _tag: "Err", error: throwable.message ?? throwable.toString() }) ?? "{}",
-      toYAML: () => `_tag: Err\nerror: ${throwable.message ?? throwable.toString()}`,
-      toBinary: () =>
-        Buffer.from(JSON.stringify({ _tag: "Err", error: throwable.message ?? throwable.toString() })).toString(
-          "base64",
-        ),
+    // Serializable methods. Failure carries the full SerializedError envelope
+    // (name + message + stack + cause chain) — see error-envelope.ts for the
+    // round-trip semantics.
+    toJSON: () => ({
+      "@functype": "Task" as const,
+      _tag: "Err" as const,
+      error: serializeError(throwable),
     }),
+    serialize: () => createTaggedSerializer("Task", "Err", { error: serializeError(throwable) }),
 
     // Pipe method
     pipe: <U>(f: (value: TaskOutcome<T>) => U) => f(errResult as TaskOutcome<T>),
@@ -351,11 +360,8 @@ export const Ok = <T>(data: T, params?: TaskParams): Ok<T> => {
     },
 
     // Serializable methods
-    serialize: () => ({
-      toJSON: () => safeStringify({ _tag: "Ok", value: data }) ?? "{}",
-      toYAML: () => `_tag: Ok\nvalue: ${safeStringify(data) ?? "undefined"}`,
-      toBinary: () => Buffer.from(JSON.stringify({ _tag: "Ok", value: data })).toString("base64"),
-    }),
+    toJSON: () => ({ "@functype": "Task" as const, _tag: "Ok" as const, value: data }),
+    serialize: () => createSerializer("Task", "Ok", data),
 
     // Pipe method
     pipe: <U>(f: (value: TaskOutcome<T>) => U) => f(okResult as TaskOutcome<T>),
@@ -705,6 +711,37 @@ const TaskCompanion = {
    * Preferred for new code
    */
   err: <T>(error: unknown, data?: unknown, params?: TaskParams): Err<T> => Err<T>(error, data, params),
+
+  /**
+   * Reconstruct a TaskOutcome from a JSON envelope emitted by `serialize().toJSON()`
+   * or instance `toJSON()`. Verifies `@functype === "Task"` and dispatches on `_tag`.
+   *
+   * Err reconstruction goes through `deserializeError` so `name`/`message`/`stack`/`cause`
+   * survive; the resulting Throwable carries the deserialized Error as its underlying
+   * error (subclass identity does NOT round-trip — see error-envelope.ts).
+   */
+  fromJSON: <T>(json: string): TaskOutcome<T> => {
+    const parsed = JSON.parse(json) as {
+      "@functype"?: string
+      _tag?: string
+      value?: T
+      error?: SerializedError | string
+    }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Task") {
+      throw new Error(`Task.fromJSON: expected @functype="Task", got ${JSON.stringify(parsed["@functype"])}`)
+    }
+    if (parsed._tag === "Ok") {
+      return Ok<T>(parsed.value as T)
+    }
+    if (parsed._tag === "Err") {
+      const err =
+        parsed.error !== undefined && typeof parsed.error === "object"
+          ? deserializeError(parsed.error)
+          : new Error(typeof parsed.error === "string" ? parsed.error : "Unknown Task error")
+      return Err<T>(err)
+    }
+    throw new Error(`Task.fromJSON: unrecognized _tag ${JSON.stringify(parsed._tag)}`)
+  },
 
   /**
    * Create TaskOutcome from Either

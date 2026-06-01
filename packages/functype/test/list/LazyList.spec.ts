@@ -307,16 +307,16 @@ describe("LazyList", () => {
   })
 
   describe("Serializable interface", () => {
-    it("should serialize to JSON", () => {
+    it("should serialize to JSON with the @functype envelope", () => {
       const list = LazyList([1, 2, 3])
       const json = list.serialize().toJSON()
-      expect(json).toBe('{"_tag":"LazyList","value":[1,2,3]}')
+      expect(json).toBe('{"@functype":"LazyList","_tag":"LazyList","value":[1,2,3]}')
     })
 
-    it("should serialize to YAML", () => {
+    it("should serialize to YAML with the @functype marker", () => {
       const list = LazyList(["a", "b", "c"])
       const yaml = list.serialize().toYAML()
-      expect(yaml).toBe('_tag: LazyList\nvalue: ["a","b","c"]')
+      expect(yaml).toBe('@functype: LazyList\n_tag: LazyList\nvalue: ["a","b","c"]')
     })
 
     it("should serialize to binary", () => {
@@ -329,7 +329,7 @@ describe("LazyList", () => {
     it("should serialize infinite list by materializing", () => {
       const list = LazyList.iterate(1, (x) => x + 1).take(3)
       const json = list.serialize().toJSON()
-      expect(json).toBe('{"_tag":"LazyList","value":[1,2,3]}')
+      expect(json).toBe('{"@functype":"LazyList","_tag":"LazyList","value":[1,2,3]}')
     })
   })
 

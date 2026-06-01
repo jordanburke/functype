@@ -1,11 +1,11 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import { Counter } from "@/internal/mutation-utils"
-import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
 import { Ref } from "@/ref/Ref"
 import type { Serializable } from "@/serializable/Serializable"
+import { createSerializer } from "@/serialization"
 import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
@@ -344,16 +344,15 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     // Pipe implementation
     pipe: <U extends Type>(f: (value: LazyList<A>) => U): U => f(lazyList),
 
-    // Serializable implementation
-    serialize: () => {
-      // For serialization, we need to materialize the lazy list
-      const array = Array.from(iterable)
-      return {
-        toJSON: () => JSON.stringify({ _tag: "LazyList", value: array }),
-        toYAML: () => `_tag: LazyList\nvalue: ${safeStringify(array)}`,
-        toBinary: () => Buffer.from(JSON.stringify({ _tag: "LazyList", value: array })).toString("base64"),
-      }
-    },
+    // Serializable implementation. Materializes the lazy stream into an
+    // array before stringifying — there's no other way to serialize a
+    // potentially-infinite iterable.
+    serialize: () => createSerializer("LazyList", Array.from(iterable)),
+    toJSON: () => ({
+      "@functype": "LazyList" as const,
+      _tag: "LazyList" as const,
+      value: Array.from(iterable),
+    }),
 
     // Override toString from Base to show elements (limited for infinite lists)
     toString: () => {
@@ -430,6 +429,20 @@ const LazyListCompanion = {
    */
   from: <A extends Type>(...values: A[]): LazyList<A> => {
     return LazyListObject(values)
+  },
+
+  /**
+   * Reconstruct a LazyList from a JSON envelope emitted by `serialize().toJSON()`
+   * or instance `toJSON()`. Verifies `@functype === "LazyList"` when the marker
+   * is present (canonical from 1.2.0). The materialized array becomes the new
+   * LazyList's backing — laziness can't survive JSON serialization.
+   */
+  fromJSON: <A extends Type>(json: string): LazyList<A> => {
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag?: string; value: A[] }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "LazyList") {
+      throw new Error(`LazyList.fromJSON: expected @functype="LazyList", got ${JSON.stringify(parsed["@functype"])}`)
+    }
+    return LazyListObject(parsed.value)
   },
 
   /**
