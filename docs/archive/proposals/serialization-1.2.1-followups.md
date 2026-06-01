@@ -174,7 +174,38 @@ mode in #2.
 
 ---
 
-## Summary / suggested 1.2.1
+## #4 — Precision: `isFunctypeValue` claims structural look-alikes (post-1.2.1, surfaced in review)
+
+**Severity: latent precision gap (no consumer currently triggers it).**
+
+**What.** `isFunctypeValue: (v: unknown) => v is Serializable<unknown>` is
+*structural* — it returns `true` for any object that merely has a string `_tag`
+and a `serialize()` method, not only for genuine functype instances. A
+non-functype value of that shape is therefore "claimed":
+
+- through `serialize`/`toEnvelope`, a look-alike does **not** get the `@functype`
+  marker (the marker is written only for real functype values), so on the way back
+  `deserialize`/`fromEnvelope` passes it through (per #2) as a **plain object with
+  its methods stripped** — silently, no throw.
+- the danger is specifically at a serializer boundary where `isFunctypeValue` is
+  used as the `isApplicable` gate (the documented DBOS recipe): a look-alike is
+  picked up by the transformer and round-trips method-less.
+
+Empirically reproduced with a hand-rolled `{ _tag: "X", serialize() {…} }`. It is
+**latent** for civala — no domain type has that shape — but the gate is exactly
+where it would bite, and consumers reasonably trust `isFunctypeValue` to mean
+"this is one of ours."
+
+**Recommended fix.** Tighten `isFunctypeValue` to a *branded* check rather than
+duck-typing — e.g. verify the value carries functype's own marker/brand (the same
+thing that makes `toEnvelope` stamp `@functype`), so `isFunctypeValue(v) === true`
+iff `serialize(v)` would actually produce a marked envelope. That keeps the guard
+and the codec in agreement: anything the guard claims, the codec can faithfully
+round-trip.
+
+---
+
+## Summary / suggested follow-ups
 
 - [ ] **#1 (enhancement):** add `Serialization.toEnvelope(v): JSONValue` and
       `fromEnvelope(o): Try<unknown>` + a SuperJSON-nesting round-trip test. The
@@ -183,7 +214,13 @@ mode in #2.
       optionally add `{ strict: true }`.
 - [ ] **#3 (doc):** document that `serialize`/`deserialize` are a lenient JSON
       codec that also round-trips functype values.
+- [ ] **#4 (precision):** make `isFunctypeValue` a branded check, not duck-typing,
+      so it claims exactly the values `serialize`/`toEnvelope` can faithfully
+      round-trip (avoids silent method-stripping of structural look-alikes at a
+      serializer boundary).
 
-None are blocking — civala can adopt 1.2.0 today with the inline wrap from #1 and
-drop it once `toEnvelope`/`fromEnvelope` ship. Dependency-free is preserved
-throughout (pure JSON + `@functype` dispatch).
+**Shipped:** 1.2.1 delivered #1 (`toEnvelope`/`fromEnvelope`) + #2's strict variant
+(`deserializeStrict`); 1.2.2 exported `JSONValue` and tightened `toEnvelope`'s
+output type so the consumer recipe needs no casts. #3 (doc) and #4 (precision)
+remain open. Dependency-free is preserved throughout (pure JSON + `@functype`
+dispatch).

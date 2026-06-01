@@ -25,7 +25,7 @@ Type-tightening on `toEnvelope` output (and new `JSONValue` type export) so the 
 
 ## 1.2.1 - 2026-06-01
 
-Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/proposals/serialization-1.2.1-followups.md`.
+Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/archive/proposals/serialization-1.2.1-followups.md`.
 
 **New (additive):**
 
@@ -110,7 +110,7 @@ Plain JSON values (objects without `@functype`, arrays, primitives) walk through
 
 **No DBOS / SuperJSON facade in this package:**
 
-`functype` stays serializer-agnostic per the original proposal. The DBOS integration is ~8 lines in the consumer's code (constructs a `DBOSSerializer` from `Serialization.serialize`/`deserialize`); see `docs/proposals/universal-deserialize.md` for the pattern. functype itself knows only its own types + JSON.
+`functype` stays serializer-agnostic per the original proposal. The DBOS integration is ~8 lines in the consumer's code (constructs a `DBOSSerializer` from `Serialization.serialize`/`deserialize`); see `docs/archive/proposals/universal-deserialize.md` for the pattern. functype itself knows only its own types + JSON.
 
 **Out of scope (intentional):**
 

@@ -18,7 +18,7 @@ export interface SerializationResult {
  * `"Some"`, `"Left"`, `"Success"`). A value WITHOUT this marker is treated
  * as "not ours" by `Serialization.deserialize`.
  *
- * See `docs/proposals/universal-deserialize-changes.md` Change 0 for the
+ * See `docs/archive/proposals/universal-deserialize-changes.md` Change 0 for the
  * full rationale.
  */
 export const FUNCTYPE_MARKER = "@functype" as const

@@ -11,14 +11,14 @@
  *
  * `Serialization.isFunctypeValue` is a runtime type guard for live values,
  * useful when wrapping this API in a host serializer (e.g. a DBOS
- * `stringify`/`parse` recipe — see docs/proposals/universal-deserialize.md).
+ * `stringify`/`parse` recipe — see docs/archive/proposals/universal-deserialize.md).
  *
  * Strict unknown-marker policy: a JSON value carrying an `@functype` marker
  * that doesn't match any known type returns `Failure` from `deserialize`.
  * No silent pass-through. (Plain JSON values without the marker are NOT
  * "unknown" — they just aren't ours; those walk through unchanged.)
  *
- * See `docs/proposals/universal-deserialize.md` for the design rationale.
+ * See `docs/archive/proposals/universal-deserialize.md` for the design rationale.
  */
 
 import { Task } from "@/core/task/Task"

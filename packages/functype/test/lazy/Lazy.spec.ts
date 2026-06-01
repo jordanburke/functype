@@ -445,7 +445,7 @@ describe("Lazy", () => {
   describe("toValue", () => {
     // 1.2.0 behavior change: toValue now FORCES the thunk. There is no longer
     // an "unevaluated" projection — a Lazy without its closure can't be
-    // represented. See docs/proposals/serializable-audit-q1-q2.md.
+    // represented. See docs/archive/proposals/serializable-audit-q1-q2.md.
 
     it("forces the thunk and returns the materialized value", () => {
       const lazy = Lazy(() => 42)
