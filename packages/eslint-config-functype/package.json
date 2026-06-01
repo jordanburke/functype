@@ -39,9 +39,12 @@
     "eslint",
     "eslintplugin",
     "eslint-plugin",
+    "eslint-config",
     "functional",
+    "functional-programming",
     "typescript",
-    "immutable"
+    "immutable",
+    "functype"
   ],
   "prettier": "ts-builds/prettier",
   "scripts": {
