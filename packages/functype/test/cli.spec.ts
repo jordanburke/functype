@@ -210,10 +210,13 @@ describe("CLI Formatters", () => {
 describe("Token Efficiency", () => {
   it("overview should be reasonably compact", () => {
     const output = formatOverview()
-    // Rough word count as token estimate
+    // Rough word count as token estimate.
+    // Target: <750 tokens, so ~600 words. Bumped from 400 in 1.2.0 when the
+    // library added Decoder + DecoderError + Serialization + SerializedError
+    // categories. ~500 words across 22+ types is still very compact for an
+    // LLM-targeted overview.
     const wordCount = output.split(/\s+/).length
-    // Target: <400 tokens, so ~300 words should be safe
-    expect(wordCount).toBeLessThan(400)
+    expect(wordCount).toBeLessThan(600)
   })
 
   it("type output should be compact", () => {

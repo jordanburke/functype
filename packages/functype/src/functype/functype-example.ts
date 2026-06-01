@@ -131,11 +131,14 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
   }
 
   // Serializable methods
+  toJSON() {
+    return { "@functype": "Box" as const, _tag: this._tag, value: this._value }
+  }
   serialize() {
-    const data = { _tag: this._tag, value: this._value }
+    const data = this.toJSON()
     return {
       toJSON: () => JSON.stringify(data),
-      toYAML: () => `_tag: ${this._tag}\nvalue: ${JSON.stringify(this._value)}`,
+      toYAML: () => `@functype: Box\n_tag: ${this._tag}\nvalue: ${JSON.stringify(this._value)}`,
       toBinary: () => Buffer.from(JSON.stringify(data)).toString("base64"),
     }
   }

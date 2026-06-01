@@ -176,6 +176,11 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     toSet,
     toString,
     toValue: () => ({ _tag: "Map" as const, value: Array.from(state.values.entries()) }),
+    toJSON: () => ({
+      "@functype": "Map" as const,
+      _tag: "Map" as const,
+      value: Array.from(state.values.entries()),
+    }),
     pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
     serialize: () => createSerializer("Map", Array.from(state.values.entries())),
   }
@@ -208,7 +213,10 @@ const MapCompanion = {
    * @returns Map instance
    */
   fromJSON: <K, V>(json: string): Map<K, V> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: Array<[K, V]> }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: Array<[K, V]> }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Map") {
+      throw new Error(`Map.fromJSON: expected @functype="Map", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return Map<K, V>(parsed.value)
   },
 

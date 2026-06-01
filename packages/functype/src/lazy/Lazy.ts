@@ -7,6 +7,8 @@ import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option"
 import { None, Some } from "@/option"
 import type { Pipe } from "@/pipe"
+import type { SerializedError } from "@/serialization"
+import { createSerializer, createTaggedSerializer, deserializeError, serializeError } from "@/serialization"
 import { Try } from "@/try"
 import type { Widen } from "@/typeclass"
 import type { Type } from "@/types"
@@ -167,10 +169,28 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
    */
   toString(): string
   /**
-   * Converts the Lazy to a value object
-   * @returns Object representation of the Lazy with evaluation state
+   * Converts the Lazy to a value object.
+   *
+   * **Forces the thunk** as a side effect — Lazy serialization (and projection
+   * to a plain value object) cannot represent an unevaluated thunk in JSON;
+   * forcing is the only way to produce a complete projection. If the thunk
+   * threw, the failure is captured in the `error` field (real Error, with
+   * full prototype intact for in-memory inspection — `toJSON` projects to
+   * `SerializedError` for the wire).
+   *
+   * Changed in 1.2.0 — pre-1.2.0 Lazy emitted `{_tag, evaluated, value?}`
+   * without forcing. See `docs/proposals/serializable-audit-q1-q2.md`.
    */
-  toValue(): { _tag: "Lazy"; evaluated: boolean; value?: T }
+  toValue(): { _tag: "Lazy"; value: T } | { _tag: "Lazy"; error: Error }
+  /**
+   * Custom JSON serialization. Forces the thunk (see `toValue` for the
+   * side-effect contract). Emits `{"@functype":"Lazy","_tag":"Lazy","value":T}`
+   * on success, or `{"@functype":"Lazy","_tag":"Lazy","error":SerializedError}`
+   * if the thunk threw — see error-envelope.ts for round-trip semantics.
+   */
+  toJSON():
+    | { "@functype": "Lazy"; _tag: "Lazy"; value: T }
+    | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
 }
 
 /**
@@ -340,11 +360,16 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         return `Lazy(<not evaluated>)`
       }
     },
-    toValue: (): { _tag: "Lazy"; evaluated: boolean; value?: T } => {
-      if (evaluated && !hasError) {
-        return { _tag: "Lazy" as const, evaluated: true, value: value as T }
-      } else {
-        return { _tag: "Lazy" as const, evaluated: false }
+    toValue: (): { _tag: "Lazy"; value: T } | { _tag: "Lazy"; error: Error } => {
+      // Force the thunk. If it succeeds, project to value; if it throws,
+      // capture the failure as a real Error (with original prototype).
+      try {
+        return { _tag: "Lazy" as const, value: evaluate() }
+      } catch (e) {
+        return {
+          _tag: "Lazy" as const,
+          error: e instanceof Error ? e : new Error(String(e)),
+        }
       }
     },
     // Traversable
@@ -406,23 +431,27 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     },
     // Pipe
     pipe: <U>(f: (value: T) => U): U => f(evaluate()),
-    // Serializable
-    serialize: () => ({
-      toJSON: () =>
-        JSON.stringify(
-          evaluated && !hasError ? { _tag: "Lazy", evaluated: true, value } : { _tag: "Lazy", evaluated: false },
-        ),
-      toYAML: () =>
-        evaluated && !hasError
-          ? `_tag: Lazy\nevaluated: true\nvalue: ${safeStringify(value)}`
-          : `_tag: Lazy\nevaluated: false`,
-      toBinary: () =>
-        Buffer.from(
-          JSON.stringify(
-            evaluated && !hasError ? { _tag: "Lazy", evaluated: true, value } : { _tag: "Lazy", evaluated: false },
-          ),
-        ).toString("base64"),
-    }),
+    // Serializable. Forces the thunk before emitting — the envelope must
+    // carry the materialized value (or the captured failure), since a
+    // closure can't be serialized.
+    toJSON: () => {
+      try {
+        return { "@functype": "Lazy" as const, _tag: "Lazy" as const, value: evaluate() }
+      } catch (e) {
+        return {
+          "@functype": "Lazy" as const,
+          _tag: "Lazy" as const,
+          error: serializeError(e),
+        }
+      }
+    },
+    serialize: () => {
+      try {
+        return createSerializer("Lazy", evaluate())
+      } catch (e) {
+        return createTaggedSerializer("Lazy", "Lazy", { error: serializeError(e) })
+      }
+    },
     // Typeable
     typeable: "Lazy" as const,
   } as Lazy<T>
@@ -495,6 +524,39 @@ const LazyCompanion = {
       throw error
     }
     return LazyConstructor(thunk as () => T) as unknown as Lazy<T>
+  },
+  /**
+   * Creates an already-evaluated Lazy. Used by `fromJSON` to reconstruct a
+   * Lazy whose thunk was forced at serialize time — there is no original
+   * thunk to defer because a closure cannot be JSON-serialized.
+   *
+   * Functionally equivalent to `Lazy.fromValue` but reads with intent at
+   * the call site.
+   */
+  evaluated: <T extends Type>(value: T): Lazy<T> => LazyConstructor(() => value),
+  /**
+   * Reconstruct a Lazy from a JSON envelope emitted by `serialize().toJSON()`
+   * or instance `toJSON()`. Verifies `@functype === "Lazy"`. Success envelopes
+   * become already-evaluated Lazies via `Lazy.evaluated`; failure envelopes
+   * become Lazies whose forcing rethrows the deserialized Error (see
+   * error-envelope.ts — `instanceof SomeError` does NOT survive but `name`
+   * does).
+   */
+  fromJSON: <T extends Type>(json: string): Lazy<T> => {
+    const parsed = JSON.parse(json) as {
+      "@functype"?: string
+      _tag?: string
+      value?: T
+      error?: SerializedError | string
+    }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Lazy") {
+      throw new Error(`Lazy.fromJSON: expected @functype="Lazy", got ${JSON.stringify(parsed["@functype"])}`)
+    }
+    if (parsed.error !== undefined) {
+      const err = typeof parsed.error === "object" ? deserializeError(parsed.error) : new Error(parsed.error)
+      return LazyCompanion.fail<T>(err)
+    }
+    return LazyCompanion.evaluated<T>(parsed.value as T)
   },
 }
 

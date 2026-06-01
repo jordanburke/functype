@@ -255,6 +255,8 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     toValue: (): { _tag: "Set"; value: A[] } => ({ _tag: "Set", value: Array.from(values) }),
 
+    toJSON: () => ({ "@functype": "Set" as const, _tag: "Set" as const, value: Array.from(values) }),
+
     pipe: <U>(f: (value: A[]) => U) => f(Array.from(values)),
 
     serialize: () => createSerializer("Set", Array.from(values)),
@@ -289,7 +291,10 @@ const SetCompanion = {
    * @returns Set instance
    */
   fromJSON: <A>(json: string): Set<A> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: A[] }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: A[] }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Set") {
+      throw new Error(`Set.fromJSON: expected @functype="Set", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return Set<A>(parsed.value)
   },
 

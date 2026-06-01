@@ -55,7 +55,24 @@ Users interact with the `Logger` interface and `LoggerLive` layers. LogLayer is 
 
 ### Subpath Exports
 
-The package exposes subpath imports for tree-shaking: `functype-log/logger`, `functype-log/layers`, `functype-log/testing`, `functype-log/middleware`. The root `functype-log` re-exports everything.
+The package exposes subpath imports for tree-shaking: `functype-log/logger`, `functype-log/layers`, `functype-log/testing`, `functype-log/middleware`, `functype-log/direct`. The root `functype-log` re-exports everything.
+
+### DirectLogger (escape hatch for non-IO codebases)
+
+`functype-log/direct` exposes a `DirectLogger` API: a synchronous/imperative mirror of `Logger` where every method returns `void` instead of `IO<never, never, void>`. Use it when you need to drop a logger into existing imperative code (e.g. a top-level error handler, a CLI bootstrap) without lifting the call site into IO.
+
+```typescript
+import { createDirectConsoleLogger, toDirectLogger } from "functype-log/direct"
+
+const log = createDirectConsoleLogger()
+log.info("starting") // no .runOrThrow() — runs immediately
+log.error("boom", { code: 1 })
+
+// Or convert from an existing IO-shaped Logger:
+const direct = toDirectLogger(loggerFromService)
+```
+
+`directSilentLogger` and `createDirectTestLogger()` (for tests) round out the surface. Prefer the IO-shaped `Logger` for new code in IO-aware codebases.
 
 ### Import Convention
 

@@ -1,11 +1,11 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
+import { createSerializer } from "@/serialization"
 import type { Traversable } from "@/traversable/Traversable"
 import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
@@ -249,14 +249,9 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     foldRight,
     match,
     toValue: () => ({ _tag: "Stack", value: items }),
+    toJSON: () => ({ "@functype": "Stack" as const, _tag: "Stack" as const, value: [...items] }),
     pipe: <U>(f: (value: A[]) => U) => f([...items]),
-    serialize: () => {
-      return {
-        toJSON: () => JSON.stringify({ _tag: "Stack", value: items }),
-        toYAML: () => `_tag: Stack\nvalue: ${safeStringify(items)}`,
-        toBinary: () => Buffer.from(JSON.stringify({ _tag: "Stack", value: items })).toString("base64"),
-      }
-    },
+    serialize: () => createSerializer("Stack", items),
   }
 }
 
@@ -282,7 +277,10 @@ const StackCompanion = {
    * @returns Stack instance
    */
   fromJSON: <A>(json: string): Stack<A> => {
-    const parsed = JSON.parse(json)
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag?: string; value: A[] }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Stack") {
+      throw new Error(`Stack.fromJSON: expected @functype="Stack", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return Stack<A>(parsed.value)
   },
 

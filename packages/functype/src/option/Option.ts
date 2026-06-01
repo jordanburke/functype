@@ -160,6 +160,12 @@ export interface Option<out T extends Type>
    */
   toValue(): { _tag: "Some" | "None"; value: T }
   /**
+   * Custom JSON serialization producing the canonical `@functype`-marked
+   * envelope so native `JSON.stringify` recursion (e.g. inside a plain
+   * object) emits a round-trip-able shape.
+   */
+  toJSON(): { "@functype": "Option"; _tag: "Some" | "None"; value: T | null }
+  /**
    * Pattern matches over the Option, applying a handler function based on the variant
    * @param patterns - Object with handler functions for Some and None variants
    * @returns The result of applying the matching handler function
@@ -236,8 +242,9 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toPromise: (): Promise<T> => Promise.resolve(value),
   toString: () => `Some(${safeStringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
+  toJSON: () => ({ "@functype": "Option" as const, _tag: "Some" as const, value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
-  serialize: () => createSerializer("Some", value),
+  serialize: () => createSerializer("Option", "Some", value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<T> {
     return { ok: true, value }
@@ -312,8 +319,9 @@ const NONE: Option<never> = {
   toPromise: <T>(): Promise<T> => Promise.reject(new Error("Cannot convert None to Promise")),
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
+  toJSON: () => ({ "@functype": "Option" as const, _tag: "None" as const, value: null }),
   pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
-  serialize: () => createSerializer("None", null),
+  serialize: () => createSerializer("Option", "None", null),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<never> {
     return { ok: false, empty: true }
@@ -369,7 +377,10 @@ const OptionCompanion = {
    * @returns Option instance
    */
   fromJSON: <T>(json: string): Option<T> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: T | null }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: T | null }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Option") {
+      throw new Error(`Option.fromJSON: expected @functype="Option", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return parsed._tag === "Some" ? Some<T>(parsed.value as T) : None<T>()
   },
   /**

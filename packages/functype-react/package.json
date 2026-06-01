@@ -17,6 +17,9 @@
   "author": "jordan.burke@gmail.com",
   "license": "MIT",
   "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-react",
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/jordanburke/functype",

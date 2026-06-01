@@ -295,6 +295,7 @@ const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => ({
 
   toString: () => `Obj(${safeStringify(data)})`,
   toValue: () => ({ _tag: "Obj" as const, value: data }),
+  toJSON: () => ({ "@functype": "Obj" as const, _tag: "Obj" as const, value: data }),
   pipe: <U extends Type>(f: (value: T) => U) => f(data),
   serialize: () => createSerializer("Obj", data),
 
@@ -341,7 +342,10 @@ const ObjCompanion = {
    * @returns A new Obj instance
    */
   fromJSON: <T extends Record<string, Type>>(json: string): Obj<T> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: T }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: T }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Obj") {
+      throw new Error(`Obj.fromJSON: expected @functype="Obj", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return ObjObject(parsed.value)
   },
 

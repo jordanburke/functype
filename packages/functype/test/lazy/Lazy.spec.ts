@@ -443,54 +443,79 @@ describe("Lazy", () => {
   })
 
   describe("toValue", () => {
-    it("should return unevaluated state", () => {
+    // 1.2.0 behavior change: toValue now FORCES the thunk. There is no longer
+    // an "unevaluated" projection — a Lazy without its closure can't be
+    // represented. See docs/proposals/serializable-audit-q1-q2.md.
+
+    it("forces the thunk and returns the materialized value", () => {
       const lazy = Lazy(() => 42)
-      expect(lazy.toValue()).toEqual({
-        _tag: "Lazy",
-        evaluated: false,
-      })
+      expect(lazy.toValue()).toEqual({ _tag: "Lazy", value: 42 })
     })
 
-    it("should return evaluated state with value", () => {
-      const lazy = Lazy(() => 42)
-      lazy.orThrow()
-      expect(lazy.toValue()).toEqual({
-        _tag: "Lazy",
-        evaluated: true,
-        value: 42,
-      })
-    })
-
-    it("should return evaluated state without value for errors", () => {
+    it("captures a thrown thunk as an Error in the value object", () => {
       const lazy = Lazy(() => {
         throw new Error("boom")
       })
-      try {
-        lazy.orThrow()
-      } catch {}
-      expect(lazy.toValue()).toEqual({
-        _tag: "Lazy",
-        evaluated: false,
+      const result = lazy.toValue() as { _tag: "Lazy"; error: Error }
+      expect(result._tag).toBe("Lazy")
+      expect(result.error).toBeInstanceOf(Error)
+      expect(result.error.message).toBe("boom")
+    })
+
+    it("forces only once (memoization preserved)", () => {
+      let calls = 0
+      const lazy = Lazy(() => {
+        calls += 1
+        return 7
       })
+      lazy.toValue()
+      lazy.toValue()
+      expect(calls).toBe(1)
     })
   })
 
   describe("serialization", () => {
-    it("should serialize unevaluated lazy", () => {
+    it("forces the thunk and emits the @functype envelope on success", () => {
       const lazy = Lazy(() => 42)
       const serialized = lazy.serialize()
-
-      expect(serialized.toJSON()).toBe('{"_tag":"Lazy","evaluated":false}')
-      expect(serialized.toYAML()).toBe("_tag: Lazy\nevaluated: false")
+      expect(serialized.toJSON()).toBe('{"@functype":"Lazy","_tag":"Lazy","value":42}')
     })
 
-    it("should serialize evaluated lazy", () => {
-      const lazy = Lazy(() => 42)
-      lazy.orThrow()
-      const serialized = lazy.serialize()
+    it("captures the error in the envelope when the thunk throws", () => {
+      const lazy = Lazy(() => {
+        throw new TypeError("nope")
+      })
+      const parsed = JSON.parse(lazy.serialize().toJSON()) as {
+        "@functype": string
+        _tag: string
+        error: { name: string; message: string }
+      }
+      expect(parsed["@functype"]).toBe("Lazy")
+      expect(parsed._tag).toBe("Lazy")
+      expect(parsed.error.name).toBe("TypeError")
+      expect(parsed.error.message).toBe("nope")
+    })
 
-      expect(serialized.toJSON()).toBe('{"_tag":"Lazy","evaluated":true,"value":42}')
-      expect(serialized.toYAML()).toContain("_tag: Lazy\nevaluated: true\nvalue: 42")
+    it("round-trips through fromJSON (success case)", () => {
+      const original = Lazy(() => 42)
+      const round = Lazy.fromJSON<number>(original.serialize().toJSON())
+      expect(round.orThrow()).toBe(42)
+    })
+
+    it("round-trips a failure-case through fromJSON (rethrows on access)", () => {
+      const original = Lazy(() => {
+        throw new TypeError("nope")
+      })
+      const round = Lazy.fromJSON<number>(original.serialize().toJSON())
+      let caught: Error | undefined
+      try {
+        round.orThrow()
+      } catch (e) {
+        caught = e as Error
+      }
+      expect(caught).toBeInstanceOf(Error)
+      expect(caught?.name).toBe("TypeError")
+      expect(caught?.message).toBe("nope")
     })
   })
 

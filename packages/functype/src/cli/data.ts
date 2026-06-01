@@ -183,12 +183,18 @@ export const TYPES: Record<string, TypeData> = {
   },
 
   Lazy: {
-    description: "Deferred computation with memoization",
+    description:
+      "Deferred computation with memoization. Note: `serialize()` and `toValue()` FORCE the thunk (visible side effect) since a closure cannot be JSON-serialized — there is no representable 'unevaluated post-serialize' state. Thunk failures are captured via SerializedError and rethrown on access after fromJSON.",
     interfaces: mergeInterfaces("Lazy"),
     methods: {
-      create: ["Lazy(() => expr)"],
+      create: [
+        "Lazy(() => expr)",
+        "Lazy.fromValue(value) — wrap a non-deferred value",
+        "Lazy.evaluated(value) — reads as 'already-forced'; used by fromJSON",
+        "Lazy.fail(error) — Lazy that throws on access",
+      ],
       transform: [".map(f)", ".flatMap(f)"],
-      extract: [".fold(n, s)", ".orElse(d)", ".orThrow()", ".get()"],
+      extract: [".fold(n, s)", ".orElse(d)", ".orThrow()", ".get()", ".toJSON()", "Lazy.fromJSON(json)"],
       check: [".isEvaluated"],
     },
   },
@@ -198,7 +204,7 @@ export const TYPES: Record<string, TypeData> = {
     // LazyList declares Functor/Monad/Iterable inline rather than via extends.
     interfaces: mergeInterfaces("LazyList", "Functor", "Monad", "Iterable"),
     methods: {
-      create: ["LazyList.from(iter)", "LazyList.range(start, end)", "LazyList.infinite(f)"],
+      create: ["LazyList.from(iter)", "LazyList.range(start, end)", "LazyList.infinite(f)", "LazyList.fromJSON(json)"],
       transform: [
         ".map(f)",
         ".filter(p)",
@@ -213,7 +219,7 @@ export const TYPES: Record<string, TypeData> = {
         ".zip(ll)",
         ".zipWithIndex()",
       ],
-      extract: [".head", ".headOption", ".tail", ".last", ".lastOption", ".init", ".toArray()"],
+      extract: [".head", ".headOption", ".tail", ".last", ".lastOption", ".init", ".toArray()", ".toJSON()"],
       check: [".isEmpty"],
     },
   },
@@ -232,9 +238,18 @@ export const TYPES: Record<string, TypeData> = {
         "Task.fromTry(try)",
         "Task.fromPromise(fn)",
         "Task.fromNodeCallback(fn)",
+        "Task.fromJSON(json) — reconstruct from serialize() output",
       ],
       transform: [".map(f)", ".flatMap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
-      extract: [".fold(onErr, onOk)", ".match({Ok, Err})", ".orElse(v)", ".orThrow()", ".toEither()", ".toOption()"],
+      extract: [
+        ".fold(onErr, onOk)",
+        ".match({Ok, Err})",
+        ".orElse(v)",
+        ".orThrow()",
+        ".toEither()",
+        ".toOption()",
+        ".toJSON()",
+      ],
       other: [
         "Task.cancellable(fn)",
         "Task.withProgress(fn, onProgress)",
@@ -335,8 +350,8 @@ export const TYPES: Record<string, TypeData> = {
     description: "Fixed-size typed array",
     interfaces: mergeInterfaces("Tuple", "Typeable", "Valuable", "Iterable"),
     methods: {
-      create: ["Tuple([a, b, ...])", "Tuple.of(a, b, ...)"],
-      extract: [".first", ".second", ".toArray()"],
+      create: ["Tuple([a, b, ...])", "Tuple.of(a, b, ...)", "Tuple.fromJSON(json)"],
+      extract: [".first", ".second", ".toArray()", ".toJSON()"],
       transform: [".map(f)"],
     },
   },
@@ -443,6 +458,40 @@ export const TYPES: Record<string, TypeData> = {
       ],
     },
   },
+
+  Serialization: {
+    description:
+      "Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision).",
+    interfaces: [],
+    methods: {
+      create: [],
+      transform: [
+        "Serialization.serialize(value: unknown): string",
+        "Serialization.deserialize(json: string): Try<unknown>",
+      ],
+      check: ["Serialization.isFunctypeValue(v): v is Serializable<unknown>"],
+      other: [
+        "Plain JSON passthrough: non-functype data walks through unchanged",
+        "Strict policy: unknown @functype marker → Try.Failure",
+        "Dispatch table covers all 12 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy, Task)",
+        "No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines",
+      ],
+    },
+  },
+
+  SerializedError: {
+    description:
+      "Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.",
+    interfaces: [],
+    methods: {
+      create: ["serializeError(err: unknown): SerializedError", "deserializeError(s: SerializedError | string): Error"],
+      other: [
+        "Shape: { name: string; message: string; stack?: string; cause?: SerializedError | string }",
+        "Non-Error throwables (strings, plain objects) projected under name: 'NonErrorThrowable'",
+        "Cause chain is recursive — arbitrary nesting depth survives",
+      ],
+    },
+  },
 }
 
 export const INTERFACES: Record<string, InterfaceData> = {
@@ -509,4 +558,5 @@ export const CATEGORIES = {
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Task", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
+  Serialization: ["Serialization", "SerializedError"],
 }

@@ -27,6 +27,9 @@
     "directory": "packages/functype"
   },
   "homepage": "https://functype.org/",
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
   "url": "https://github.com/jordanburke/functype",
   "scripts": {
     "validate": "ts-builds validate",

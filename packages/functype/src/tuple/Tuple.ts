@@ -1,8 +1,8 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import { safeStringify } from "@/internal/stringify"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
+import { createSerializer } from "@/serialization"
 import type { Typeable } from "@/typeable/Typeable"
 import type { Type } from "@/types"
 
@@ -92,13 +92,8 @@ const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
     pipe: <U>(f: (value: Tuple<T>) => U): U => f(tuple),
 
     // Serializable implementation
-    serialize: () => {
-      return {
-        toJSON: () => JSON.stringify({ _tag: "Tuple", value: values }),
-        toYAML: () => `_tag: Tuple\nvalue: ${safeStringify(values)}`,
-        toBinary: () => Buffer.from(JSON.stringify({ _tag: "Tuple", value: values })).toString("base64"),
-      }
-    },
+    serialize: () => createSerializer("Tuple", values),
+    toJSON: () => ({ "@functype": "Tuple" as const, _tag: "Tuple" as const, value: [...values] as T }),
 
     // Valuable implementation
     toValue: () => ({ _tag: "Tuple", value: values }),
@@ -161,6 +156,20 @@ const TupleCompanion = {
    */
   from: <T extends Type[]>(values: T): Tuple<T> => {
     return TupleObject(values)
+  },
+
+  /**
+   * Reconstruct a Tuple from a JSON envelope emitted by `serialize().toJSON()`
+   * or instance `toJSON()`. Verifies `@functype === "Tuple"` if the marker is
+   * present (the marker became canonical in 1.2.0; older envelopes are
+   * accepted by leniently treating missing-marker as opt-in legacy).
+   */
+  fromJSON: <T extends Type[]>(json: string): Tuple<T> => {
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag?: string; value: T }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Tuple") {
+      throw new Error(`Tuple.fromJSON: expected @functype="Tuple", got ${JSON.stringify(parsed["@functype"])}`)
+    }
+    return TupleObject(parsed.value)
   },
 }
 

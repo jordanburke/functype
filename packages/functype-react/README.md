@@ -1,6 +1,6 @@
 # functype-react
 
-React bindings for the [functype](../functype) functional programming library — ADT-aware hooks and exhaustive pattern matching components.
+React bindings for the [functype](https://github.com/jordanburke/functype) functional programming library — ADT-aware hooks and exhaustive pattern matching components.
 
 ## Thesis
 

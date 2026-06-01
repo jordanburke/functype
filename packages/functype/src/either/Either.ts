@@ -82,9 +82,13 @@ export interface EitherBase<out L extends Type, out R extends Type>
    */
   toValue(): { _tag: "Left" | "Right"; value: L | R }
   /**
-   * Custom JSON serialization that excludes getter properties
+   * Custom JSON serialization that excludes getter properties.
+   * Emits the canonical functype envelope with `@functype: "Either"` so
+   * native `JSON.stringify` recursion (e.g. inside a plain object body)
+   * produces a marker-bearing envelope that survives a round-trip through
+   * `Serialization.deserialize`.
    */
-  toJSON(): { _tag: "Left" | "Right"; value: L | R }
+  toJSON(): { "@functype": "Either"; _tag: "Left" | "Right"; value: L | R }
 }
 
 /**
@@ -150,7 +154,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
   toTry: () => Try(() => value),
   toJSON() {
-    return { _tag: "Right", value }
+    return { "@functype": "Either" as const, _tag: "Right" as const, value }
   },
   toString: () => {
     return `Right(${safeStringify(value)})`
@@ -189,7 +193,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   toValue: () => ({ _tag: "Right", value }),
   pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Right", value),
+  serialize: () => createSerializer("Either", "Right", value),
   contains: (v: R) => value === v,
   exists: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
@@ -237,7 +241,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
       throw new Error(String(value))
     }),
   toJSON() {
-    return { _tag: "Left", value }
+    return { "@functype": "Either" as const, _tag: "Left" as const, value }
   },
   toString: () => `Left(${safeStringify(value)})`,
   *[Symbol.iterator]() {
@@ -272,7 +276,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   toValue: () => ({ _tag: "Left", value }),
   pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
   pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Left", value),
+  serialize: () => createSerializer("Either", "Left", value),
   contains: (_v: R) => false,
   exists: (_p: (a: R) => boolean) => false,
   forEach: (_f: (a: R) => void) => {},
@@ -439,7 +443,10 @@ const EitherCompanion = {
    * @returns Either instance
    */
   fromJSON: <L extends Type, R extends Type>(json: string): Either<L, R> => {
-    const parsed = JSON.parse(json) as { _tag: string; value: L | R }
+    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: L | R }
+    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Either") {
+      throw new Error(`Either.fromJSON: expected @functype="Either", got ${JSON.stringify(parsed["@functype"])}`)
+    }
     return parsed._tag === "Right" ? Right<L, R>(parsed.value as R) : Left<L, R>(parsed.value as L)
   },
 
