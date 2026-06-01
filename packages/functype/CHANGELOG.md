@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.2.1 - 2026-06-01
+
 Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/proposals/serialization-1.2.1-followups.md`.
 
 **New (additive):**
