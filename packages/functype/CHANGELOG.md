@@ -6,6 +6,73 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+Universal-deserialize: a single top-level `Serialization.deserialize(json)` that walks parsed JSON and reconstructs any functype value it encounters — no type argument required by the caller. Closes the asymmetry where 1.1.0 had uniform `serialize()` across all 12 Serializable types but reconstruction required either per-type companions (`Either.fromJSON`, etc) or a caller-supplied `reconstructor`. Drives the DBOS durable-workflow integration (every functype value embedded in a step return survives the JSON round-trip with methods intact); applies to any persistence/RPC boundary that hands you an opaque JSON string and expects a value back.
+
+**New (additive):**
+
+- `functype/serialization` module: top-level `Serialization` namespace exposing the universal API.
+  - `Serialization.serialize(value): string` — convenience wrapper over `JSON.stringify`. Functype instances self-stringify via their instance `toJSON()` method, so nested functype values inside plain objects and arrays serialize correctly via the standard JSON `toJSON` protocol with no walker needed.
+  - `Serialization.deserialize(json): Try<unknown>` — parses, then walks the result rebuilding any object that carries the `@functype` marker via per-type reconstructors. Plain JSON values walk through unchanged. Strict policy on unknown markers (returns `Failure`, never silently treats foreign data as functype). Returns `Try` so malformed input is an expressible value rather than a throw — matches the functype convention.
+  - `Serialization.isFunctypeValue(v): v is Serializable<unknown>` — runtime guard for host serializer integrations (e.g. `isApplicable` in a DBOS recipe).
+- `Serialization.SerializedError` + `serializeError(unknown)` + `deserializeError(SerializedError | string)`: canonical Error projection used by every Serializable type that carries an `Error` in its failure branch (Try.Failure, Task.Err, Lazy-with-thrown-thunk). Round-trips `name`, `message`, `stack`, and the full `cause` chain (recursively). `e.name === "TypeError"` works after round-trip; `instanceof TypeError` does not (JSON can't reconstruct user-defined classes without arbitrary code execution).
+- Every Serializable type now has an instance-level `toJSON()` method returning the marker-bearing envelope **object** (not a pre-stringified string). Native `JSON.stringify` picks it up via the standard protocol; nested functype values self-stringify recursively for free. The `Serializable<T>` interface (`@/serializable/Serializable`) now requires `toJSON(): SerializableEnvelope` alongside `serialize()`.
+- New per-type `fromJSON` companions: `Tuple.fromJSON`, `LazyList.fromJSON`, `Lazy.fromJSON`, `Task.fromJSON`. Together with the existing eight, every Serializable type can now be reconstructed standalone.
+- New `Lazy.evaluated<T>(value)` constructor — companion to `Lazy.fromValue` with naming that reads as "Lazy whose thunk was already forced." Used internally by `Lazy.fromJSON`; available for any caller who wants to construct an already-resolved Lazy.
+
+**Envelope format change (`@functype` marker):**
+
+Every functype envelope now carries a namespaced marker stamped at the top:
+
+```jsonc
+// 1.1.0:
+{ "_tag": "Right", "value": 5 }
+// 1.2.0:
+{ "@functype": "Either", "_tag": "Right", "value": 5 }
+```
+
+The marker is the **type** discriminator; `_tag` remains the **variant** discriminator (Right vs Left, Some vs None, etc.). Both are kept across the board — variant-less types repeat the type name as `_tag` for back-compat with 1.1.0 readers that did `parsed._tag === "List"`.
+
+Required because Effect and fp-ts use **identical** `_tag` strings as functype (`"Some"`/`"None"`, `"Left"`/`"Right"`, `"Success"`/`"Failure"`). A bare-`_tag` dispatcher could silently rebuild an Effect `Option` as a functype `Option` — the marker makes the value unambiguously functype's. (Same defense SuperJSON, DBOS, and other persistence-layer serializers use.) The collision blast radius is real, not theoretical: 1.1.0 already serialized envelopes that overlap exactly with Effect's wire format.
+
+Migration: minimal — the envelope is additive. Existing readers that check `_tag` keep working. Code that asserts exact envelope strings (test fixtures, debug logs) needs a one-line update to include `"@functype"`.
+
+**Behavior change — `Try.Failure` and `Task.Err` envelope shape:**
+
+Both now carry a structured `SerializedError` object instead of flat string fields:
+
+```jsonc
+// Try.Failure 1.1.0:
+{ "_tag": "Failure", "error": "msg", "stack": "..." }
+// Try.Failure 1.2.0:
+{ "@functype": "Try", "_tag": "Failure", "error": { "name": "TypeError", "message": "msg", "stack": "...", "cause": { ... } } }
+```
+
+`Try.fromJSON` reads the new shape and falls back to the 1.1.0 flat shape for back-compat. `Task.Err` previously lost `stack` entirely; it now survives. Reconstructed errors are plain `Error` instances with `name`/`message`/`stack`/`cause` set — `e.name === "TypeError"` works as a discriminator, `e instanceof TypeError` does not (registry mechanism for custom Error subclasses deferred to a future minor).
+
+**Behavior change — `Lazy.serialize()` forces the thunk:**
+
+Pre-1.2.0, an unevaluated `Lazy` serialized to `{_tag: "Lazy", evaluated: false}` — a shape that could never be reconstructed (you can't recover a closure from JSON). 1.2.0 eliminates this state entirely: `Lazy.serialize()` (and instance `toJSON()`, and `toValue()`) forces the thunk before emitting. If the thunk throws, the failure is captured via `SerializedError`; on deserialize the reconstructed Lazy rethrows the same error on access.
+
+Trade-off: serializing a Lazy now has a **visible side effect** (runs the thunk). This matches Scala's `lazy val` behavior on a serializable class — the alternative is silent data loss. Document this for any code that previously relied on the no-op unevaluated projection.
+
+**Internal — central factory now used everywhere:**
+
+5 types (Lazy, LazyList, Stack, Tuple, Task) previously hand-rolled their `toJSON`/`toYAML`/`toBinary` methods inside `serialize()`, bypassing `createSerializer`. All now route through the central factory (with `createTaggedSerializer` for failure-branch envelopes that don't fit the `{value}` shape). `createCustomSerializer` retained for back-compat but marked `@deprecated` — its single internal caller (`Try.Failure`) is migrated.
+
+**Pluggability for non-functype types in the same JSON:**
+
+Plain JSON values (objects without `@functype`, arrays, primitives) walk through `Serialization.deserialize` unchanged — recursion descends into their children to revive any functype envelopes nested inside, but the surrounding plain data is preserved as-is. This is what makes the DBOS integration work: a step return like `{ user: "alice", score: Right(42), tags: List(["a"]) }` round-trips with `user` as a plain string, `score` as a functype `Either` instance, and `tags` as a functype `List` instance.
+
+**No DBOS / SuperJSON facade in this package:**
+
+`functype` stays serializer-agnostic per the original proposal. The DBOS integration is ~8 lines in the consumer's code (constructs a `DBOSSerializer` from `Serialization.serialize`/`deserialize`); see `docs/proposals/universal-deserialize.md` for the pattern. functype itself knows only its own types + JSON.
+
+**Out of scope (intentional):**
+
+- Custom Error subclass deserialization via a registry — deferred. The plain-Error projection handles the 90% case.
+- YAML/binary universal deserializers parallel to the JSON one — `serialize().toYAML()`/`.toBinary()` still per-type only.
+- Streaming/chunked decoders — `Serialization.deserialize` is value-in/value-out.
+
 ## 1.1.0 - 2026-05-31
 
 `Decoder<T>` API for HTTP responses + request-side ADT flatten bugfix.
