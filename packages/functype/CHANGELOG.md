@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.2.2 - 2026-06-01
+
 Type-tightening on `toEnvelope` output (and new `JSONValue` type export) so the DBOS / SuperJSON consumer recipe slots in with zero casts at the boundary. Asymmetric by design — only the OUTPUT tightens; `fromEnvelope`'s input stays `unknown` to preserve Postel's law (be conservative in what you send, liberal in what you accept — same pattern stdlib uses for `JSON.parse`/`stringify`, `Array.from`, etc.). Tightening the input too would push casts up the chain to every less-typed host plumbing layer for no runtime benefit.
 
 **New (additive):**
