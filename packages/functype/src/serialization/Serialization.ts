@@ -134,10 +134,17 @@ const revive = (value: unknown): unknown => {
 }
 
 /**
- * Reconstruct any value from a JSON string. Walks the parsed structure and
- * rebuilds functype envelopes via the dispatch table. Returns a `Try` so
- * malformed JSON or unknown markers are expressible values rather than
- * thrown — matches the functype convention for expected-failure paths.
+ * Reconstruct any value from a JSON string. Lenient codec: walks the parsed
+ * structure and rebuilds any value carrying an `@functype` marker via the
+ * dispatch table; plain JSON without the marker walks through unchanged.
+ * Returns `Try` so malformed JSON or unknown markers are expressible values
+ * rather than thrown — matches the functype convention for expected-failure
+ * paths.
+ *
+ * **Pass-through policy:** valid JSON without an `@functype` marker is
+ * returned verbatim as `Success(value)`; only marker-carrying values are
+ * reconstructed. Only malformed JSON (or an unknown marker) yields `Failure`.
+ * For a strict variant that rejects unmarked input, see `deserializeStrict`.
  *
  * @example
  *   const result = Serialization.deserialize('{"@functype":"Either","_tag":"Right","value":5}')
@@ -145,21 +152,88 @@ const revive = (value: unknown): unknown => {
  *
  *   // Plain (non-functype) values pass through:
  *   Serialization.deserialize('{"name":"alice","age":30}')  // → Success({name, age})
+ *
+ *   // Embedding in another structured serializer (SuperJSON, DBOS)? See
+ *   // `fromEnvelope` — taking a string here forces the consumer through a
+ *   // JSON.stringify shim and SuperJSON re-walks strings character-by-character.
  */
 export const deserialize = (json: string): Try<unknown> => Try(() => revive(JSON.parse(json)))
 
 /**
- * Serialize any value to a JSON string. Thin convenience over `JSON.stringify`
- * — functype instances self-stringify via their instance `toJSON()` method,
- * which emits the `@functype`-marked envelope. Nested functype values
+ * Strict variant of `deserialize`: returns `Failure` when the parsed JSON
+ * doesn't carry an `@functype` marker at the top level. Use this at API,
+ * queue, or RPC boundaries where the wire format MUST be a functype value
+ * and pass-through silence would be a bug.
+ *
+ * Implementation note: only the top-level value is checked for the marker.
+ * Nested values inside it follow the same lenient pass-through rules as
+ * `deserialize` — a `Right` containing a plain object still reconstructs
+ * fine, you just can't START with a plain object.
+ *
+ * @example
+ *   Serialization.deserializeStrict('{"@functype":"Option","_tag":"Some","value":1}')  // → Success(Some(1))
+ *   Serialization.deserializeStrict('{"_tag":"Some","value":1}')                       // → Failure
+ *   Serialization.deserializeStrict('42')                                              // → Failure
+ */
+export const deserializeStrict = (json: string): Try<unknown> =>
+  Try(() => {
+    const parsed: unknown = JSON.parse(json)
+    if (!hasMarker(parsed)) {
+      throw new Error(
+        "Serialization.deserializeStrict: input is not a functype envelope (no @functype marker at the top level)",
+      )
+    }
+    return revive(parsed)
+  })
+
+/**
+ * Serialize any value to a JSON string. Lenient codec: thin convenience over
+ * `JSON.stringify` — functype instances self-stringify via their instance
+ * `toJSON()` method (which emits the `@functype`-marked envelope), and
+ * non-functype values pass through as plain JSON. Nested functype values
  * embedded in plain objects/arrays serialize correctly via the standard
  * JSON.stringify protocol with no walker needed.
  *
  * `undefined` is converted to `null` (matching the convention DBOS and
- * SuperJSON use; `JSON.stringify(undefined)` returns the string `undefined`
+ * SuperJSON use; `JSON.stringify(undefined)` returns the string `"undefined"`
  * which is not valid JSON).
  */
 export const serialize = (value: unknown): string => JSON.stringify(value ?? null)
+
+/**
+ * Serialize a value to a parsed JSON envelope (object/array/primitive) rather
+ * than a string. Use this when nesting functype values inside another
+ * **structured** serializer (SuperJSON / DBOS custom transformers / similar)
+ * whose custom-transformer hook expects JSON values, not strings — passing a
+ * string to such a hook causes the host to re-walk it character-by-character,
+ * destroying the round-trip.
+ *
+ * Equivalent to `JSON.parse(serialize(value))` but exposed as a named entry
+ * point so consumers don't carry the parse/stringify shim. The output is
+ * pure JSON (object, array, string, number, boolean, or null) — typed as
+ * `unknown` for honesty (TS can't statically prove "JSON-shaped").
+ *
+ * @example
+ *   // Inside a DBOS custom serialization recipe:
+ *   DBOS.registerSerialization({
+ *     name: "functype",
+ *     isApplicable: Serialization.isFunctypeValue,
+ *     serialize:   Serialization.toEnvelope,
+ *     deserialize: (o) => Serialization.fromEnvelope(o).orThrow(),
+ *   })
+ */
+export const toEnvelope = (value: unknown): unknown => JSON.parse(JSON.stringify(value ?? null)) as unknown
+
+/**
+ * Inverse of `toEnvelope`: reconstruct any value from a parsed JSON envelope
+ * (object/array/primitive). Equivalent to `deserialize(JSON.stringify(envelope))`
+ * but skips the stringify/parse roundtrip — the same `revive` walker is
+ * applied directly. Returns `Try` for the same reasons as `deserialize`.
+ *
+ * Pass-through policy matches `deserialize`: a parsed value without an
+ * `@functype` marker is returned verbatim as `Success(value)`.
+ */
+export const fromEnvelope = (envelope: unknown): Try<unknown> => Try(() => revive(envelope))
 
 /**
  * Runtime guard: is this a live functype Serializable? Checks for the

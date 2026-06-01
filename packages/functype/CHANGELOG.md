@@ -6,6 +6,30 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/proposals/serialization-1.2.1-followups.md`.
+
+**New (additive):**
+
+- `Serialization.toEnvelope(value: unknown): unknown` — serialize to a parsed JSON shape (object/array/primitive) instead of a string. The driving use case is nesting functype values inside another _structured_ serializer whose custom-transformer hook expects JSON values, not strings — SuperJSON (which DBOS's `DBOS.registerSerialization` calls underneath) re-walks the transformer's output and explodes a string return character-by-character into `{"0":"{","1":"\"",...}`, destroying the round-trip. With `toEnvelope` the consumer recipe is shim-free; previously they had to inline `JSON.parse(Serialization.serialize(v))`.
+- `Serialization.fromEnvelope(envelope: unknown): Try<unknown>` — inverse of `toEnvelope`. Equivalent to `deserialize(JSON.stringify(envelope))` but bypasses the stringify/parse roundtrip; the same `revive` walker is applied directly to the parsed JSON. The four functions form a clean algebraic square: `serialize ≡ JSON.stringify ∘ toEnvelope`, `deserialize ≡ fromEnvelope ∘ JSON.parse`.
+- `Serialization.deserializeStrict(json: string): Try<unknown>` — strict variant of `deserialize` that returns `Failure` when the parsed JSON doesn't carry an `@functype` marker at the top level. For API/queue/RPC boundaries where the wire format MUST be a functype value and silent pass-through would be a bug. (Implemented as a peer function, not a `{ strict: true }` flag — keeps the one-function-one-purpose convention.)
+
+**Docs (no behavior change):**
+
+- `deserialize`/`serialize` JSDoc clarified: both are described as a **lenient** JSON codec that additionally round-trips functype values. Valid JSON without an `@functype` marker is returned verbatim as `Success(value)` (pass-through); only malformed JSON or unknown markers yield `Failure`. The pass-through is what makes mixed structures work — a step return like `{ user: "alice", score: Right(42) }` round-trips with `user` as a plain string and `score` as a functype `Either` instance.
+- `Serialization` namespace docs note the algebraic-square relationship so the four functions read as a coherent set rather than two pairs.
+
+**Tests:**
+
+- Conformance suite gains 17 cases covering: `toEnvelope`/`fromEnvelope` shape + nested reconstruction + algebraic-square laws + a structured-serializer simulation (mimics the SuperJSON/DBOS custom-transformer protocol without depending on those packages — proves the contract that broke with the string API works with the envelope API); `deserializeStrict` semantics on marked envelopes, Effect/fp-ts-shaped lookalikes, primitives, plain objects, and malformed input. Total suite: 1708 → 1725.
+
+**Out of scope (still):**
+
+- A `strict` parameter on `deserialize` itself (deliberately rejected — boolean flags on option objects are a code smell for "this should be two functions"; `deserializeStrict` is the peer).
+- Custom Error subclass deserialization via a registry — still deferred.
+- YAML/binary universal deserializers — still per-type only.
+- Streaming/chunked decoders — still value-in/value-out.
+
 ## 1.2.0 - 2026-06-01
 
 Universal-deserialize: a single top-level `Serialization.deserialize(json)` that walks parsed JSON and reconstructs any functype value it encounters — no type argument required by the caller. Closes the asymmetry where 1.1.0 had uniform `serialize()` across all 12 Serializable types but reconstruction required either per-type companions (`Either.fromJSON`, etc) or a caller-supplied `reconstructor`. Drives the DBOS durable-workflow integration (every functype value embedded in a step return survives the JSON round-trip with methods intact); applies to any persistence/RPC boundary that hands you an opaque JSON string and expects a value back.

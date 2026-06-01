@@ -461,20 +461,24 @@ export const TYPES: Record<string, TypeData> = {
 
   Serialization: {
     description:
-      "Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision).",
+      "Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Lenient: plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision). 1.2.1 adds `toEnvelope`/`fromEnvelope` for nesting inside structured serializers (SuperJSON, DBOS), and `deserializeStrict` for boundaries that require functype on the wire.",
     interfaces: [],
     methods: {
       create: [],
       transform: [
-        "Serialization.serialize(value: unknown): string",
-        "Serialization.deserialize(json: string): Try<unknown>",
+        "Serialization.serialize(value: unknown): string — lenient JSON codec",
+        "Serialization.deserialize(json: string): Try<unknown> — lenient; pass-through for unmarked JSON",
+        "Serialization.deserializeStrict(json: string): Try<unknown> — Failure if no @functype marker at top level",
+        "Serialization.toEnvelope(value: unknown): unknown — parsed JSON shape (for SuperJSON/DBOS custom transformers)",
+        "Serialization.fromEnvelope(envelope: unknown): Try<unknown> — inverse of toEnvelope",
       ],
       check: ["Serialization.isFunctypeValue(v): v is Serializable<unknown>"],
       other: [
-        "Plain JSON passthrough: non-functype data walks through unchanged",
-        "Strict policy: unknown @functype marker → Try.Failure",
+        "Plain JSON passthrough: non-functype data walks through unchanged (use deserializeStrict to reject)",
+        "Strict policy on unknown markers: unknown @functype marker → Try.Failure",
         "Dispatch table covers all 12 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy, Task)",
-        "No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines",
+        "Algebraic square: serialize ≡ JSON.stringify ∘ toEnvelope; deserialize ≡ fromEnvelope ∘ JSON.parse",
+        "No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines via toEnvelope/fromEnvelope",
       ],
     },
   },
