@@ -39,6 +39,19 @@ import { deserializeError, type SerializedError } from "./error-envelope"
 import { FUNCTYPE_MARKER } from "./SerializationCompanion"
 
 /**
+ * The canonical JSON value type — anything `JSON.parse` can return and
+ * anything `JSON.stringify` can accept as input. Used by `toEnvelope` /
+ * `fromEnvelope` to express the contract precisely: the envelope is a
+ * structured JSON shape, not opaque `unknown`. Lets consumers wiring this
+ * API into another structured serializer (SuperJSON, DBOS custom
+ * transformers) slot it in without a cast at the boundary.
+ *
+ * Added in 1.2.2 — `toEnvelope`/`fromEnvelope` previously typed input/output
+ * as `unknown`, which forced a cast at the consumer side.
+ */
+export type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue }
+
+/**
  * A reconstructor takes an already-revived parsed envelope object (with any
  * nested functype values already materialized into instances) and produces the
  * outer functype value. Distinct from each type's public `fromJSON(string)` —
@@ -209,12 +222,14 @@ export const serialize = (value: unknown): string => JSON.stringify(value ?? nul
  * destroying the round-trip.
  *
  * Equivalent to `JSON.parse(serialize(value))` but exposed as a named entry
- * point so consumers don't carry the parse/stringify shim. The output is
- * pure JSON (object, array, string, number, boolean, or null) — typed as
- * `unknown` for honesty (TS can't statically prove "JSON-shaped").
+ * point so consumers don't carry the parse/stringify shim.
+ *
+ * Returns `JSONValue` (tightened from `unknown` in 1.2.2) so consumers can
+ * drop the result straight into a host serializer's `serialize` hook without
+ * a boundary cast.
  *
  * @example
- *   // Inside a DBOS custom serialization recipe:
+ *   // Inside a DBOS custom serialization recipe — zero casts:
  *   DBOS.registerSerialization({
  *     name: "functype",
  *     isApplicable: Serialization.isFunctypeValue,
@@ -222,7 +237,7 @@ export const serialize = (value: unknown): string => JSON.stringify(value ?? nul
  *     deserialize: (o) => Serialization.fromEnvelope(o).orThrow(),
  *   })
  */
-export const toEnvelope = (value: unknown): unknown => JSON.parse(JSON.stringify(value ?? null)) as unknown
+export const toEnvelope = (value: unknown): JSONValue => JSON.parse(JSON.stringify(value ?? null)) as JSONValue
 
 /**
  * Inverse of `toEnvelope`: reconstruct any value from a parsed JSON envelope
@@ -232,6 +247,13 @@ export const toEnvelope = (value: unknown): unknown => JSON.parse(JSON.stringify
  *
  * Pass-through policy matches `deserialize`: a parsed value without an
  * `@functype` marker is returned verbatim as `Success(value)`.
+ *
+ * Input is `unknown` (intentionally permissive — Postel's law). Host
+ * serializers typically hand the deserialize callback a JSON-shaped value
+ * that they parsed themselves, but their callback typing varies (some are
+ * `JSONValue`, some are `unknown`, some are `any`). Accepting `unknown`
+ * here means the function slots into any host shape without forcing a
+ * cast at the consumer site.
  */
 export const fromEnvelope = (envelope: unknown): Try<unknown> => Try(() => revive(envelope))
 

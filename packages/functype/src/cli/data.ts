@@ -469,8 +469,9 @@ export const TYPES: Record<string, TypeData> = {
         "Serialization.serialize(value: unknown): string — lenient JSON codec",
         "Serialization.deserialize(json: string): Try<unknown> — lenient; pass-through for unmarked JSON",
         "Serialization.deserializeStrict(json: string): Try<unknown> — Failure if no @functype marker at top level",
-        "Serialization.toEnvelope(value: unknown): unknown — parsed JSON shape (for SuperJSON/DBOS custom transformers)",
-        "Serialization.fromEnvelope(envelope: unknown): Try<unknown> — inverse of toEnvelope",
+        "Serialization.toEnvelope(value: unknown): JSONValue — parsed JSON shape (1.2.2 tightened from unknown)",
+        "Serialization.fromEnvelope(envelope: unknown): Try<unknown> — inverse of toEnvelope; input stays permissive (Postel's law)",
+        "Serialization.JSONValue — exported recursive type for the envelope shape",
       ],
       check: ["Serialization.isFunctypeValue(v): v is Serializable<unknown>"],
       other: [
