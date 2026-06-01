@@ -60,10 +60,10 @@
   },
   "devDependencies": {
     "@types/node": "^24.12.4",
-    "@typescript-eslint/rule-tester": "^8.60.0",
+    "@typescript-eslint/rule-tester": "^8.60.1",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^2.8.1",
+    "ts-builds": "^2.8.2",
     "tsdown": "^0.22.1"
   },
   "publishConfig": {

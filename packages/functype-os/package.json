@@ -43,7 +43,7 @@
     "@types/node": "^24.12.4",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^2.8.1",
+    "ts-builds": "^2.8.2",
     "tsdown": "^0.22.1",
     "vitest": "^4.1.8"
   },
