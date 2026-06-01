@@ -505,15 +505,24 @@ describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nes
     expect(project(viaEnvelope)).toBe(project(viaDeserialize))
   })
 
-  it("structured-serializer integration (simulates SuperJSON / DBOS custom transformer)", () => {
+  it("structured-serializer integration (simulates SuperJSON / DBOS custom transformer) — zero casts", () => {
     // SuperJSON / DBOS custom transformers expect their hook to return a JSON
     // VALUE, not a string. If you pass `serialize` (string) the host re-walks
     // the result and explodes the string character-by-character. Simulating
     // that contract: the transformer hook must accept and return plain JSON.
-    const transformer = {
+    //
+    // 1.2.2 type-tightening: `toEnvelope: unknown → JSONValue` slots directly
+    // into the transformer's `serialize` slot — no cast at the boundary.
+    // `fromEnvelope` keeps its `unknown` input (Postel's law); `JSONValue` is
+    // assignable to `unknown` so the deserialize wrapper composes cleanly.
+    const transformer: {
+      isApplicable: (v: unknown) => boolean
+      serialize: (v: unknown) => Serialization.JSONValue
+      deserialize: (o: Serialization.JSONValue) => unknown
+    } = {
       isApplicable: Serialization.isFunctypeValue,
       serialize: Serialization.toEnvelope,
-      deserialize: (o: unknown) => Serialization.fromEnvelope(o).orThrow(),
+      deserialize: (o) => Serialization.fromEnvelope(o).orThrow(),
     }
 
     // Simulate the host: walks a structure, applies the transformer at each
@@ -536,7 +545,10 @@ describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nes
     const hostParseAndRehydrate = (text: string): unknown => {
       const walk = (x: unknown): unknown => {
         if (x !== null && typeof x === "object" && !Array.isArray(x) && "__wrapped" in x) {
-          return transformer.deserialize((x as { __wrapped: unknown }).__wrapped)
+          // The host knows it stored a JSONValue (it walked + stringified its
+          // own structure), so it asserts that at the read boundary. The
+          // transformer itself takes JSONValue — no cast inside the hook.
+          return transformer.deserialize((x as { __wrapped: Serialization.JSONValue }).__wrapped)
         }
         if (Array.isArray(x)) return x.map(walk)
         if (x !== null && typeof x === "object") {

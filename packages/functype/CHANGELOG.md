@@ -6,6 +6,17 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+Type-tightening on `toEnvelope` output (and new `JSONValue` type export) so the DBOS / SuperJSON consumer recipe slots in with zero casts at the boundary. Asymmetric by design — only the OUTPUT tightens; `fromEnvelope`'s input stays `unknown` to preserve Postel's law (be conservative in what you send, liberal in what you accept — same pattern stdlib uses for `JSON.parse`/`stringify`, `Array.from`, etc.). Tightening the input too would push casts up the chain to every less-typed host plumbing layer for no runtime benefit.
+
+**New (additive):**
+
+- `Serialization.JSONValue` — exported recursive type: `string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue }`. The canonical JSON value type — anything `JSON.parse` can return and anything `JSON.stringify` can accept. Used by `toEnvelope` to express its output contract precisely.
+
+**Type-only change (no runtime change, no breaking change):**
+
+- `Serialization.toEnvelope(value: unknown): JSONValue` — output type tightened from `unknown` to `JSONValue`. Consumers wiring `serialize: Serialization.toEnvelope` into a host serializer (DBOS / SuperJSON custom transformer) whose hook expects a JSON-shaped return can now slot it in without a boundary cast.
+- `Serialization.fromEnvelope(envelope: unknown): Try<unknown>` — **unchanged**. Input stays `unknown` (the deliberate asymmetry — see above).
+
 ## 1.2.1 - 2026-06-01
 
 Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/proposals/serialization-1.2.1-followups.md`.
