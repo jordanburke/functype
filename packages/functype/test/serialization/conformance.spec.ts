@@ -421,3 +421,206 @@ describe("Serialization — DBOS-style consumer pattern (no facade)", () => {
     expect(s.stringify(undefined)).toBe("null")
   })
 })
+
+// ───────────────────────────────────────────────────────────────────────────
+// 1.2.1 additions — envelope helpers + strict deserialize
+// ───────────────────────────────────────────────────────────────────────────
+
+describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nesting)", () => {
+  it("toEnvelope returns a parsed JSON shape, not a string", () => {
+    const env = Serialization.toEnvelope(Right<string, number>(5))
+    expect(typeof env).toBe("object")
+    expect(env).toEqual({ "@functype": "Either", _tag: "Right", value: 5 })
+  })
+
+  it("toEnvelope handles non-functype values transparently", () => {
+    expect(Serialization.toEnvelope(42)).toBe(42)
+    expect(Serialization.toEnvelope("hello")).toBe("hello")
+    expect(Serialization.toEnvelope({ a: 1, b: [2, 3] })).toEqual({ a: 1, b: [2, 3] })
+    expect(Serialization.toEnvelope(undefined)).toBe(null)
+  })
+
+  it("toEnvelope recursively materializes nested functype values to envelope shape", () => {
+    const value = Right<string, Option<List<number>>>(Some(List([1, 2, 3])))
+    const env = Serialization.toEnvelope(value) as Record<string, unknown>
+    expect(env["@functype"]).toBe("Either")
+    expect(env._tag).toBe("Right")
+    const inner = env.value as Record<string, unknown>
+    expect(inner["@functype"]).toBe("Option")
+    expect(inner._tag).toBe("Some")
+    const innermost = inner.value as Record<string, unknown>
+    expect(innermost["@functype"]).toBe("List")
+    expect(innermost.value).toEqual([1, 2, 3])
+  })
+
+  it("fromEnvelope reconstructs a single functype value with methods", () => {
+    const env = { "@functype": "Option", _tag: "Some", value: 42 }
+    const round = Serialization.fromEnvelope(env).orThrow() as Option<number>
+    expect(round.isEmpty).toBe(false)
+    expect(round.orElse(0)).toBe(42)
+  })
+
+  it("fromEnvelope rebuilds nested envelopes end-to-end", () => {
+    const original = Right<string, Option<List<number>>>(Some(List([1, 2, 3])))
+    const env = Serialization.toEnvelope(original)
+    const round = Serialization.fromEnvelope(env).orThrow() as Either<string, Option<List<number>>>
+    expect(round.isRight()).toBe(true)
+    const opt = round.fold(
+      () => None<List<number>>(),
+      (v: Option<List<number>>) => v,
+    )
+    expect(opt.isEmpty).toBe(false)
+    expect(opt.orElse(List<number>([])).toArray()).toEqual([1, 2, 3])
+  })
+
+  it("fromEnvelope passes through plain JSON values (matches deserialize)", () => {
+    expect(Serialization.fromEnvelope({ name: "alice" }).orThrow()).toEqual({ name: "alice" })
+    expect(Serialization.fromEnvelope(42).orThrow()).toBe(42)
+    expect(Serialization.fromEnvelope(null).orThrow()).toBe(null)
+  })
+
+  it("fromEnvelope returns Failure on unknown @functype marker", () => {
+    const result = Serialization.fromEnvelope({ "@functype": "Unknown", value: 1 })
+    expect(result.isFailure()).toBe(true)
+    expect(result.error?.message).toContain("unknown @functype marker")
+  })
+
+  it("forms an algebraic square: serialize ≡ JSON.stringify ∘ toEnvelope", () => {
+    const value = Right<string, number>(99)
+    const viaSerialize = Serialization.serialize(value)
+    const viaEnvelope = JSON.stringify(Serialization.toEnvelope(value))
+    expect(viaEnvelope).toBe(viaSerialize)
+  })
+
+  it("forms an algebraic square: deserialize ≡ fromEnvelope ∘ JSON.parse", () => {
+    const json = Serialization.serialize(Right<string, number>(99))
+    const viaDeserialize = Serialization.deserialize(json).orThrow()
+    const viaEnvelope = Serialization.fromEnvelope(JSON.parse(json)).orThrow()
+    // Both are live Either instances; compare via projection.
+    const project = (e: unknown): string =>
+      (e as Either<string, number>).fold(
+        (l) => `L:${l}`,
+        (r) => `R:${r}`,
+      )
+    expect(project(viaEnvelope)).toBe(project(viaDeserialize))
+  })
+
+  it("structured-serializer integration (simulates SuperJSON / DBOS custom transformer)", () => {
+    // SuperJSON / DBOS custom transformers expect their hook to return a JSON
+    // VALUE, not a string. If you pass `serialize` (string) the host re-walks
+    // the result and explodes the string character-by-character. Simulating
+    // that contract: the transformer hook must accept and return plain JSON.
+    const transformer = {
+      isApplicable: Serialization.isFunctypeValue,
+      serialize: Serialization.toEnvelope,
+      deserialize: (o: unknown) => Serialization.fromEnvelope(o).orThrow(),
+    }
+
+    // Simulate the host: walks a structure, applies the transformer at each
+    // value that matches `isApplicable`, then stringifies the WHOLE thing
+    // (including the transformer's already-projected JSON output).
+    const hostWalkAndSerialize = (v: unknown): string => {
+      const walk = (x: unknown): unknown => {
+        if (transformer.isApplicable(x)) return { __wrapped: transformer.serialize(x) }
+        if (Array.isArray(x)) return x.map(walk)
+        if (x !== null && typeof x === "object") {
+          const out: Record<string, unknown> = {}
+          for (const k of Object.keys(x)) out[k] = walk((x as Record<string, unknown>)[k])
+          return out
+        }
+        return x
+      }
+      return JSON.stringify(walk(v))
+    }
+
+    const hostParseAndRehydrate = (text: string): unknown => {
+      const walk = (x: unknown): unknown => {
+        if (x !== null && typeof x === "object" && !Array.isArray(x) && "__wrapped" in x) {
+          return transformer.deserialize((x as { __wrapped: unknown }).__wrapped)
+        }
+        if (Array.isArray(x)) return x.map(walk)
+        if (x !== null && typeof x === "object") {
+          const out: Record<string, unknown> = {}
+          for (const k of Object.keys(x)) out[k] = walk((x as Record<string, unknown>)[k])
+          return out
+        }
+        return x
+      }
+      return walk(JSON.parse(text))
+    }
+
+    const checkpoint = {
+      userId: "u-42",
+      score: Right<string, number>(99),
+      tags: List(["a", "b"]),
+      nested: { result: Some(7), retries: Right<string, number>(3) },
+    }
+
+    const text = hostWalkAndSerialize(checkpoint)
+    const round = hostParseAndRehydrate(text) as typeof checkpoint
+
+    expect(round.userId).toBe("u-42")
+    expect(round.score.isRight()).toBe(true)
+    expect(
+      round.score.fold(
+        (_l: string) => -1,
+        (r: number) => r,
+      ),
+    ).toBe(99)
+    expect(round.tags.toArray()).toEqual(["a", "b"])
+    expect(round.nested.result.orElse(0)).toBe(7)
+    expect(
+      round.nested.retries.fold(
+        (_l: string) => -1,
+        (r: number) => r,
+      ),
+    ).toBe(3)
+  })
+})
+
+describe("Serialization — deserializeStrict", () => {
+  it("succeeds on a marked envelope", () => {
+    const json = Serialization.serialize(Some(42))
+    const round = Serialization.deserializeStrict(json).orThrow() as Option<number>
+    expect(round.orElse(0)).toBe(42)
+  })
+
+  it("fails on a marker-less envelope (Effect/fp-ts collision shape)", () => {
+    const foreign = '{"_tag":"Some","value":42}'
+    const result = Serialization.deserializeStrict(foreign)
+    expect(result.isFailure()).toBe(true)
+    expect(result.error?.message).toContain("not a functype envelope")
+  })
+
+  it("fails on bare primitives", () => {
+    expect(Serialization.deserializeStrict("42").isFailure()).toBe(true)
+    expect(Serialization.deserializeStrict('"hello"').isFailure()).toBe(true)
+    expect(Serialization.deserializeStrict("null").isFailure()).toBe(true)
+    expect(Serialization.deserializeStrict("[1,2,3]").isFailure()).toBe(true)
+  })
+
+  it("fails on plain objects without the marker", () => {
+    const result = Serialization.deserializeStrict('{"hello":"world"}')
+    expect(result.isFailure()).toBe(true)
+  })
+
+  it("fails on malformed JSON (same as deserialize)", () => {
+    expect(Serialization.deserializeStrict("{bad").isFailure()).toBe(true)
+  })
+
+  it("allows nested non-marked values inside a marked top-level (only checks top)", () => {
+    // Right({plain: "object"}) — the top-level Either IS marked, even though
+    // the value inside is a plain object. Strict only checks the outermost
+    // envelope.
+    const original = Right<string, { plain: string }>({ plain: "object" })
+    const json = Serialization.serialize(original)
+    const round = Serialization.deserializeStrict(json).orThrow() as Either<string, { plain: string }>
+    expect(round.isRight()).toBe(true)
+    expect(
+      round.fold(
+        (_l: string) => ({ plain: "?" }),
+        (r: { plain: string }) => r,
+      ),
+    ).toEqual({ plain: "object" })
+  })
+})
