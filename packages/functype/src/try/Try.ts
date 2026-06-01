@@ -132,7 +132,7 @@ const Success = <T>(value: T): Try<T> => ({
   toList: () => List<T>([value]),
   toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
-  serialize: () => createSerializer("Success", value),
+  serialize: () => createSerializer("Try", "Success", value),
   contains: (v: T) => value === v,
   exists: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),

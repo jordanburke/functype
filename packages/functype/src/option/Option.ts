@@ -237,7 +237,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toString: () => `Some(${safeStringify(value)})`,
   toValue: () => ({ _tag: "Some", value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
-  serialize: () => createSerializer("Some", value),
+  serialize: () => createSerializer("Option", "Some", value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<T> {
     return { ok: true, value }
@@ -313,7 +313,7 @@ const NONE: Option<never> = {
   toString: () => "None",
   toValue: () => ({ _tag: "None", value: undefined as never }),
   pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
-  serialize: () => createSerializer("None", null),
+  serialize: () => createSerializer("Option", "None", null),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<never> {
     return { ok: false, empty: true }

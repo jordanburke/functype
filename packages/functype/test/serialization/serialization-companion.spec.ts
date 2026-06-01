@@ -4,53 +4,103 @@ import {
   createCustomSerializer,
   createSerializer,
   createSerializationCompanion,
+  createTaggedSerializer,
+  envelope,
+  FUNCTYPE_MARKER,
   fromBinary,
   fromJSON,
   fromYAML,
+  taggedEnvelope,
 } from "@/serialization"
 
 describe("SerializationCompanion", () => {
-  describe("createSerializer", () => {
-    it("should create a serializer for simple values", () => {
+  describe("createSerializer (variant-less form)", () => {
+    it("stamps the @functype marker and emits {marker, _tag=marker, value}", () => {
       const serializer = createSerializer("Test", { foo: "bar" })
 
-      expect(serializer.toJSON()).toBe('{"_tag":"Test","value":{"foo":"bar"}}')
+      expect(serializer.toJSON()).toBe('{"@functype":"Test","_tag":"Test","value":{"foo":"bar"}}')
+      expect(serializer.toYAML()).toContain("@functype: Test")
       expect(serializer.toYAML()).toContain("_tag: Test")
       expect(serializer.toYAML()).toContain('value: {"foo":"bar"}')
     })
 
-    it("should handle null values", () => {
-      const serializer = createSerializer("None", null)
+    it("handles null values", () => {
+      const serializer = createSerializer("Marker", null)
 
-      expect(serializer.toJSON()).toBe('{"_tag":"None","value":null}')
-      expect(serializer.toYAML()).toBe("_tag: None\nvalue: null")
+      expect(serializer.toJSON()).toBe('{"@functype":"Marker","_tag":"Marker","value":null}')
+      expect(serializer.toYAML()).toBe("@functype: Marker\n_tag: Marker\nvalue: null")
     })
 
-    it("should handle primitive values", () => {
-      const numberSerializer = createSerializer("Number", 42)
-      const stringSerializer = createSerializer("String", "hello")
-      const boolSerializer = createSerializer("Bool", true)
-
-      expect(numberSerializer.toJSON()).toBe('{"_tag":"Number","value":42}')
-      expect(stringSerializer.toJSON()).toBe('{"_tag":"String","value":"hello"}')
-      expect(boolSerializer.toJSON()).toBe('{"_tag":"Bool","value":true}')
+    it("handles primitive values", () => {
+      expect(createSerializer("Number", 42).toJSON()).toBe(
+        '{"@functype":"Number","_tag":"Number","value":42}',
+      )
+      expect(createSerializer("String", "hello").toJSON()).toBe(
+        '{"@functype":"String","_tag":"String","value":"hello"}',
+      )
+      expect(createSerializer("Bool", true).toJSON()).toBe(
+        '{"@functype":"Bool","_tag":"Bool","value":true}',
+      )
     })
 
-    it("should create binary serialization", () => {
+    it("emits base64-encoded JSON via toBinary", () => {
       const serializer = createSerializer("Test", "data")
-      const binary = serializer.toBinary()
-
-      expect(binary).toBeTruthy()
-      expect(typeof binary).toBe("string")
-
-      // Verify it can be decoded
-      const decoded = Buffer.from(binary, "base64").toString()
-      expect(decoded).toBe('{"_tag":"Test","value":"data"}')
+      const decoded = Buffer.from(serializer.toBinary(), "base64").toString()
+      expect(decoded).toBe('{"@functype":"Test","_tag":"Test","value":"data"}')
     })
   })
 
-  describe("createCustomSerializer", () => {
-    it("should serialize custom objects", () => {
+  describe("createSerializer (variant form)", () => {
+    it("emits {marker, _tag, value} when called with three args", () => {
+      const serializer = createSerializer("Either", "Right", 5)
+
+      expect(serializer.toJSON()).toBe('{"@functype":"Either","_tag":"Right","value":5}')
+      expect(serializer.toYAML()).toContain("@functype: Either")
+      expect(serializer.toYAML()).toContain("_tag: Right")
+      expect(serializer.toYAML()).toContain("value: 5")
+    })
+
+    it("round-trips a variant envelope through binary", () => {
+      const serializer = createSerializer("Option", "Some", "hello")
+      const decoded = Buffer.from(serializer.toBinary(), "base64").toString()
+      expect(decoded).toBe('{"@functype":"Option","_tag":"Some","value":"hello"}')
+    })
+  })
+
+  describe("createTaggedSerializer", () => {
+    it("merges arbitrary fields into the envelope under marker + _tag", () => {
+      const serializer = createTaggedSerializer("Try", "Failure", {
+        error: { name: "TypeError", message: "boom" },
+      })
+
+      const json = JSON.parse(serializer.toJSON()) as Record<string, unknown>
+      expect(json[FUNCTYPE_MARKER]).toBe("Try")
+      expect(json._tag).toBe("Failure")
+      expect(json.error).toEqual({ name: "TypeError", message: "boom" })
+    })
+  })
+
+  describe("envelope / taggedEnvelope helpers (object form)", () => {
+    it("envelope() returns the same shape createSerializer stringifies", () => {
+      const obj = envelope("Option", "Some", 30)
+      expect(obj).toEqual({ [FUNCTYPE_MARKER]: "Option", _tag: "Some", value: 30 })
+    })
+
+    it("envelope() defaults _tag to marker when tag is undefined (variant-less)", () => {
+      const obj = envelope("List", undefined, [1, 2, 3])
+      expect(obj).toEqual({ [FUNCTYPE_MARKER]: "List", _tag: "List", value: [1, 2, 3] })
+    })
+
+    it("taggedEnvelope() merges arbitrary fields", () => {
+      const obj = taggedEnvelope("Task", "Err", { error: { name: "Error", message: "x" } })
+      expect(obj[FUNCTYPE_MARKER]).toBe("Task")
+      expect(obj._tag).toBe("Err")
+      expect(obj.error).toEqual({ name: "Error", message: "x" })
+    })
+  })
+
+  describe("createCustomSerializer (deprecated, retained for back-compat)", () => {
+    it("emits the data verbatim — no @functype marker added", () => {
       const data = {
         _tag: "Custom",
         value: 123,
@@ -65,16 +115,14 @@ describe("SerializationCompanion", () => {
       expect(serializer.toYAML()).toContain('metadata: "test"')
     })
 
-    it("should handle complex nested objects", () => {
+    it("handles complex nested objects", () => {
       const data = {
         _tag: "Complex",
         nested: { a: 1, b: 2 },
         array: [1, 2, 3],
       }
 
-      const serializer = createCustomSerializer(data)
-      const json = serializer.toJSON()
-
+      const json = createCustomSerializer(data).toJSON()
       expect(json).toContain('"_tag":"Complex"')
       expect(json).toContain('"nested":{"a":1,"b":2}')
       expect(json).toContain('"array":[1,2,3]')
@@ -82,98 +130,84 @@ describe("SerializationCompanion", () => {
   })
 
   describe("fromJSON", () => {
-    it("should deserialize JSON with reconstructor", () => {
-      const json = '{"_tag":"Test","value":42}'
+    it("passes the parsed envelope to the reconstructor", () => {
+      const json = '{"@functype":"Test","value":42}'
 
       const result = fromJSON(json, (parsed) => {
-        expect(parsed._tag).toBe("Test")
+        expect(parsed[FUNCTYPE_MARKER]).toBe("Test")
         expect(parsed.value).toBe(42)
-        return { type: parsed._tag as string, data: parsed.value as number }
+        return { marker: parsed[FUNCTYPE_MARKER] as string, data: parsed.value as number }
       })
 
-      expect(result.type).toBe("Test")
+      expect(result.marker).toBe("Test")
       expect(result.data).toBe(42)
     })
 
-    it("should handle null values in JSON", () => {
-      const json = '{"_tag":"None","value":null}'
-
-      const result = fromJSON(json, (parsed) => {
-        return { isEmpty: parsed.value === null }
-      })
-
+    it("handles null values in JSON", () => {
+      const json = '{"@functype":"None","value":null}'
+      const result = fromJSON(json, (parsed) => ({ isEmpty: parsed.value === null }))
       expect(result.isEmpty).toBe(true)
     })
   })
 
   describe("fromYAML", () => {
-    it("should deserialize simple YAML", () => {
-      const yaml = "_tag: Test\nvalue: 42"
-
-      const result = fromYAML(yaml, (parsed) => {
-        expect(parsed._tag).toBe("Test")
-        expect(parsed.value).toBe(42)
-        return { type: parsed._tag as string, data: parsed.value as number }
-      })
-
-      expect(result.type).toBe("Test")
+    it("parses simple YAML envelopes", () => {
+      const yaml = "@functype: Test\nvalue: 42"
+      const result = fromYAML(yaml, (parsed) => ({
+        marker: parsed[FUNCTYPE_MARKER] as string,
+        data: parsed.value as number,
+      }))
+      expect(result.marker).toBe("Test")
       expect(result.data).toBe(42)
     })
 
-    it("should handle null values in YAML", () => {
-      const yaml = "_tag: None\nvalue: null"
-
-      const result = fromYAML(yaml, (parsed) => {
-        return { isEmpty: parsed.value === null || parsed.value === "null" }
-      })
-
-      expect(result.isEmpty).toBe(true)
+    it("parses variant YAML envelopes", () => {
+      const yaml = "@functype: Either\n_tag: Right\nvalue: 7"
+      const result = fromYAML(yaml, (parsed) => ({
+        marker: parsed[FUNCTYPE_MARKER] as string,
+        tag: parsed._tag as string,
+        value: parsed.value as number,
+      }))
+      expect(result.marker).toBe("Either")
+      expect(result.tag).toBe("Right")
+      expect(result.value).toBe(7)
     })
 
-    it("should parse JSON values in YAML", () => {
-      const yaml = "_tag: List\nvalue: [1,2,3]"
-
-      const result = fromYAML(yaml, (parsed) => {
-        return { items: parsed.value as number[] }
-      })
-
+    it("parses JSON values embedded in YAML", () => {
+      const yaml = "@functype: List\nvalue: [1,2,3]"
+      const result = fromYAML(yaml, (parsed) => ({ items: parsed.value as number[] }))
       expect(result.items).toEqual([1, 2, 3])
     })
   })
 
   describe("fromBinary", () => {
-    it("should deserialize base64-encoded JSON", () => {
-      const json = '{"_tag":"Test","value":"hello"}'
+    it("decodes base64-encoded JSON envelopes", () => {
+      const json = '{"@functype":"Test","value":"hello"}'
       const binary = Buffer.from(json).toString("base64")
-
-      const result = fromBinary(binary, (parsed) => {
-        return { tag: parsed._tag as string, data: parsed.value as string }
-      })
-
-      expect(result.tag).toBe("Test")
+      const result = fromBinary(binary, (parsed) => ({
+        marker: parsed[FUNCTYPE_MARKER] as string,
+        data: parsed.value as string,
+      }))
+      expect(result.marker).toBe("Test")
       expect(result.data).toBe("hello")
     })
 
-    it("should handle complex data in binary format", () => {
-      const json = '{"_tag":"Complex","value":{"nested":true,"count":5}}'
+    it("handles complex data in binary format", () => {
+      const json = '{"@functype":"Complex","value":{"nested":true,"count":5}}'
       const binary = Buffer.from(json).toString("base64")
-
-      const result = fromBinary(binary, (parsed) => {
-        return parsed.value as { nested: boolean; count: number }
-      })
-
+      const result = fromBinary(binary, (parsed) => parsed.value as { nested: boolean; count: number })
       expect(result.nested).toBe(true)
       expect(result.count).toBe(5)
     })
   })
 
   describe("createSerializationCompanion", () => {
-    it("should create companion methods for a type", () => {
+    it("creates companion methods for a type", () => {
       interface MyType {
         value: number
       }
 
-      const reconstructor = (parsed: { _tag: string; [key: string]: unknown }): MyType => ({
+      const reconstructor = (parsed: { [key: string]: unknown }): MyType => ({
         value: parsed.value as number,
       })
 
@@ -183,75 +217,66 @@ describe("SerializationCompanion", () => {
       expect(companion.fromYAML).toBeDefined()
       expect(companion.fromBinary).toBeDefined()
 
-      // Test fromJSON
-      const json = '{"_tag":"MyType","value":42}'
-      const result1 = companion.fromJSON(json)
-      expect(result1.value).toBe(42)
+      const json = '{"@functype":"MyType","value":42}'
+      expect(companion.fromJSON(json).value).toBe(42)
 
-      // Test fromYAML
-      const yaml = "_tag: MyType\nvalue: 100"
-      const result2 = companion.fromYAML(yaml)
-      expect(result2.value).toBe(100)
+      const yaml = "@functype: MyType\nvalue: 100"
+      expect(companion.fromYAML(yaml).value).toBe(100)
 
-      // Test fromBinary
       const binary = Buffer.from(json).toString("base64")
-      const result3 = companion.fromBinary(binary)
-      expect(result3.value).toBe(42)
+      expect(companion.fromBinary(binary).value).toBe(42)
     })
 
-    it("should work with custom type reconstruction logic", () => {
+    it("supports custom reconstruction logic", () => {
       interface Person {
         name: string
         age: number
       }
 
-      const reconstructor = (parsed: { _tag: string; [key: string]: unknown }): Person => {
+      const reconstructor = (parsed: { [key: string]: unknown }): Person => {
         const data = parsed.value as { name: string; age: number }
         return {
-          name: data.name.toUpperCase(), // Custom logic
+          name: data.name.toUpperCase(),
           age: data.age,
         }
       }
 
       const companion = createSerializationCompanion(reconstructor)
-
-      const json = '{"_tag":"Person","value":{"name":"alice","age":30}}'
+      const json = '{"@functype":"Person","value":{"name":"alice","age":30}}'
       const result = companion.fromJSON(json)
 
-      expect(result.name).toBe("ALICE") // Custom transformation applied
+      expect(result.name).toBe("ALICE")
       expect(result.age).toBe(30)
     })
   })
 
   describe("Round-trip serialization", () => {
-    it("should support JSON round-trip", () => {
+    it("supports JSON round-trip (variant-less)", () => {
       const original = { foo: "bar", num: 42 }
-      const serializer = createSerializer("Test", original)
-      const json = serializer.toJSON()
-
+      const json = createSerializer("Test", original).toJSON()
       const reconstructed = fromJSON(json, (parsed) => parsed.value as typeof original)
-
       expect(reconstructed).toEqual(original)
     })
 
-    it("should support YAML round-trip for simple values", () => {
-      const original = 123
-      const serializer = createSerializer("Number", original)
-      const yaml = serializer.toYAML()
-
+    it("supports YAML round-trip for simple values", () => {
+      const yaml = createSerializer("Number", 123).toYAML()
       const reconstructed = fromYAML(yaml, (parsed) => parsed.value as number)
-
-      expect(reconstructed).toBe(original)
+      expect(reconstructed).toBe(123)
     })
 
-    it("should support binary round-trip", () => {
+    it("supports binary round-trip", () => {
       const original = { data: "test", flag: true }
-      const serializer = createSerializer("Complex", original)
-      const binary = serializer.toBinary()
-
+      const binary = createSerializer("Complex", original).toBinary()
       const reconstructed = fromBinary(binary, (parsed) => parsed.value as typeof original)
-
       expect(reconstructed).toEqual(original)
+    })
+
+    it("supports variant round-trip", () => {
+      const json = createSerializer("Either", "Right", 5).toJSON()
+      const parsed = JSON.parse(json) as Record<string, unknown>
+      expect(parsed[FUNCTYPE_MARKER]).toBe("Either")
+      expect(parsed._tag).toBe("Right")
+      expect(parsed.value).toBe(5)
     })
   })
 })

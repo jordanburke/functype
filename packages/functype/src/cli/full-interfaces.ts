@@ -871,5 +871,5 @@ const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkE
    * \`\`\`
    */
   readonly beforeRequest?: (request: HttpRequestView) => IO<never, HttpError, HttpRequestView>
-}`
+}`,
 }
