@@ -179,7 +179,7 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
    * `SerializedError` for the wire).
    *
    * Changed in 1.2.0 — pre-1.2.0 Lazy emitted `{_tag, evaluated, value?}`
-   * without forcing. See `docs/proposals/serializable-audit-q1-q2.md`.
+   * without forcing. See `docs/archive/proposals/serializable-audit-q1-q2.md`.
    */
   toValue(): { _tag: "Lazy"; value: T } | { _tag: "Lazy"; error: Error }
   /**
