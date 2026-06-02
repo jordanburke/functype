@@ -63,7 +63,7 @@
     "@typescript-eslint/rule-tester": "^8.60.1",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^2.8.2",
+    "ts-builds": "^3.0.0",
     "tsdown": "^0.22.1"
   },
   "publishConfig": {
