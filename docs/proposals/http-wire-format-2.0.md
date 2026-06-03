@@ -20,12 +20,12 @@ The request-side default wire-shape bug (`{age: Option(30)}` serializing as `{"a
 
 ## Why this shape (design rationale)
 
-The decision was: `Decoder<A> = (raw) => Either<DecodeError, A>` with `DecodeError` recursive.
+The decision was: `Decoder<A> = (raw) => Either<DecoderError, A>` with `DecoderError` recursive.
 
 | Rejected option | Why rejected |
 |---|---|
-| `Either<List<DecodeError>, A>` (flat list, paths via strings) | Loses structural info; "user.name and user.age both failed" reads worse than a tree mirroring the input |
-| `Validated<NonEmptyList<DecodeError>, A>` (cats/circe approach) | Adds a wrapper everyone has to learn; doesn't compose with the rest of the HTTP stack which uses Either; the type-level guarantee it buys (no accidental short-circuit via flatMap) is a cats/Haskell consistency-law concern that doesn't apply in TS |
+| `Either<List<DecoderError>, A>` (flat list, paths via strings) | Loses structural info; "user.name and user.age both failed" reads worse than a tree mirroring the input |
+| `Validated<NonEmptyList<DecoderError>, A>` (cats/circe approach) | Adds a wrapper everyone has to learn; doesn't compose with the rest of the HTTP stack which uses Either; the type-level guarantee it buys (no accidental short-circuit via flatMap) is a cats/Haskell consistency-law concern that doesn't apply in TS |
 | Full `Codec<A>` with encode + decode + combinator parallelism | Unified-schema-for-both-directions only pays off when request and response shapes mirror; in real REST they usually don't (POST `{name, email}` → GET returns `{id, name, email, createdAt, updatedAt}`). Combinator suite doubles surface area for rubber-stamp work TypeScript already verifies on the input side. Ship type alias + per-call hook now; grow combinators later if demand appears. |
 | `Encoder<A>` combinator suite NOW (`Encoder.object`, `Encoder.option`, …) | Same logic as Codec: the combinators mostly duplicate what `flatten: true` already does for the 95% case. Type alias + per-call `encode?` hook is the minimum that closes the symmetry gap without committing to a parallel combinator tree. |
 | Keep `validate` field, change signature to Either-returning | Silent type errors on every existing call site; no rename signal |
@@ -69,32 +69,39 @@ Four exhaustive cases — three are shipped 1.3+ behavior, one is the 2.0 additi
 
 ## Approach
 
-### 1. Recursive `DecodeError` ADT in core
+### 1. Recursive `DecoderError` ADT in core — SHIPPED IN 1.1.0, NOT 2.0 WORK
 
-New file `packages/functype/src/decoder/DecodeError.ts`:
+This section is preserved for reference — `DecoderError` shipped in `packages/functype/src/decoder/DecoderError.ts` (1.1.0). Named `DecoderError` (not `DecodeError`) to avoid collision with the existing `HttpError.DecodeError` variant: the HTTP variant is the outer wrapper, this is the structural inner cause.
 
 ```ts
-export type DecodeError =
-  | { readonly _tag: "Leaf"; readonly path: string[]; readonly message: string; readonly cause?: unknown }
-  | { readonly _tag: "Composite"; readonly path: string[]; readonly children: List<DecodeError> }
+export type DecoderError = DecoderErrorLeaf | DecoderErrorComposite
 
-export const DecodeError = {
-  leaf: (path: string[], message: string, cause?: unknown): DecodeError =>
-    ({ _tag: "Leaf", path, message, cause }),
-  composite: (path: string[], children: List<DecodeError>): DecodeError =>
-    ({ _tag: "Composite", path, children }),
-  // helpers: flatten() => List<{path, message}>, format() => string for display
+export type DecoderErrorLeaf = {
+  readonly _tag: "Leaf"
+  readonly path: ReadonlyArray<string>
+  readonly message: string
+  readonly cause?: unknown
 }
+
+export type DecoderErrorComposite = {
+  readonly _tag: "Composite"
+  readonly path: ReadonlyArray<string>
+  readonly children: List<DecoderError>
+}
+
+// Companion (built via `Companion(...)`): leaf, composite, isLeaf, isComposite,
+// match, prepend (attributes a child decoder's failures to its field/index),
+// flatten() => List<{path, message}>, format() => string for display.
 ```
 
-A `Composite` is created by combinators (`Decoder.object`, `Decoder.list`, etc.) when more than one child decoder fails. A single-child failure can be unwrapped to a `Leaf` for cleaner error messages.
+A `Composite` is created by combinators (`Decoder.object`, `Decoder.list`, etc.) when more than one child decoder fails. A single-child failure is unwrapped to a `Leaf` for cleaner error messages.
 
-### 2. `Decoder<A>` interface in core
+### 2. `Decoder<A>` type alias in core — SHIPPED IN 1.1.0, NOT 2.0 WORK
 
-New file `packages/functype/src/decoder/Decoder.ts`:
+`packages/functype/src/decoder/Decoder.ts`:
 
 ```ts
-export type Decoder<A> = (raw: unknown) => Either<DecodeError, A>
+export type Decoder<A> = (raw: unknown) => Either<DecoderError, A>
 ```
 
 Companion `DecoderCompanion` in `packages/functype/src/decoder/DecoderCompanion.ts`. All ADT decoders **accumulate** by gathering errors from child decoders into a `Composite`:
@@ -115,9 +122,9 @@ Companion `DecoderCompanion` in `packages/functype/src/decoder/DecoderCompanion.
 ```ts
 const object = <T>(shape: { [K in keyof T]: Decoder<T[K]> }): Decoder<T> => (raw) => {
   if (typeof raw !== "object" || raw === null) {
-    return Left(DecodeError.leaf([], "expected object", { received: raw }))
+    return Left(DecoderError.leaf([], "expected object", { received: raw }))
   }
-  const errors: DecodeError[] = []
+  const errors: DecoderError[] = []
   const out: Partial<T> = {}
   for (const key in shape) {
     const result = shape[key]((raw as any)[key])
@@ -130,7 +137,7 @@ const object = <T>(shape: { [K in keyof T]: Decoder<T[K]> }): Decoder<T> => (raw
     ? Right(out as T)
     : errors.length === 1
       ? Left(errors[0])  // unwrap single-child composite
-      : Left(DecodeError.composite([], List(errors)))
+      : Left(DecoderError.composite([], List(errors)))
 }
 ```
 
@@ -192,7 +199,7 @@ That's the entire module for 2.0 — no companion, no combinators. The point is 
 
 ### 5. Adapter packages (separate PRs, separate releases)
 
-**Pluggability is structural, not added-on.** `Decoder<T>` is the type alias `(raw: unknown) => Either<DecodeError, T>`. Anything that produces that shape IS a decoder — no registration, no plugin API, no factory. A TypeBox / Valibot / AJV / hand-rolled user writes ~15 lines themselves:
+**Pluggability is structural, not added-on.** `Decoder<T>` is the type alias `(raw: unknown) => Either<DecoderError, T>`. Anything that produces that shape IS a decoder — no registration, no plugin API, no factory. A TypeBox / Valibot / AJV / hand-rolled user writes ~15 lines themselves:
 
 ```ts
 import { TypeCompiler } from "@sinclair/typebox/compiler"
@@ -205,7 +212,7 @@ const myTypeBoxDecoder = <T>(schema: TSchema): Decoder<T> => {
     const errs = [...checked.Errors(raw)]
     return errs.length === 0
       ? Right(raw as T)
-      : Left(DecodeError.leaf(errs[0].path.split("/").filter(Boolean), errs[0].message))
+      : Left(DecoderError.leaf(errs[0].path.split("/").filter(Boolean), errs[0].message))
   }
 }
 ```
@@ -222,7 +229,7 @@ Decoder.object({
 
 **Recommendation: ship `functype-zod` only.** Others stay docs-only. Rationale:
 - Zod has ~30M weekly downloads, de-facto TS schema lib.
-- Bridge ships real value: discoverability, full Zod issue-tree → `DecodeError` recursive mapping (Composite preserves Zod's nested issue tree), type inference (`Decoder.fromZod(s): Decoder<z.infer<typeof s>>`).
+- Bridge ships real value: discoverability, full Zod issue-tree → `DecoderError` recursive mapping (Composite preserves Zod's nested issue tree), type inference (`Decoder.fromZod(s): Decoder<z.infer<typeof s>>`).
 - Sets the `Decoder.fromX` naming template for community adapters.
 - ArkType, TypeBox, Valibot, Effect/Schema: document the 15-line snippet, build only on user request to avoid maintaining N moving targets against schema-lib churn.
 
@@ -280,7 +287,7 @@ Files that change in 2.0:
 - **Client-level default decoder/encoder** — per-call only for v1; add `responseDecoder?` / `requestEncoder?` on `HttpClientConfig` later if asked.
 - **Streaming / chunked body decoders** — `Decoder` is value-in/value-out; streaming is a separate IO problem.
 - **YAML/binary wire formats for HTTP** — `SerializationCompanion` handles these for storage; not an HTTP need.
-- **DecodeError formatting / pretty-printing as a library feature beyond `format()`** — basic format only; rich rendering (colors, source spans) is a separate concern.
+- **DecoderError formatting / pretty-printing as a library feature beyond `format()`** — basic format only; rich rendering (colors, source spans) is a separate concern.
 
 ## Release notes outline (for changeset)
 
