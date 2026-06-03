@@ -64,7 +64,7 @@ Design choices:
 - **No `trace`/`fatal`/`child`/`withContext`.** Half of loggers don't have trace/fatal; child/withContext are fancier features. Richer loggers (`DirectLogger` from `functype-log`) add methods on top and still satisfy `Logger` structurally. Standard contravariance: DirectLogger satisfies Logger; Logger does not satisfy DirectLogger.
 - **`metadata?: Record<string, unknown>`** matches `DirectLogger`'s `LogMetadata` shape for free interop. Verified during exploration: `DirectLogger`'s `info/warn/error(msg, meta?)` signatures structurally satisfy this `Logger` shape.
 - **Type-only ship.** Zero runtime, zero bundle impact, zero opinion on output format. Follows existing functype pattern (`Functor`, `Monad`, `Foldable` are interfaces the ecosystem implements).
-- **`functype/logger` subpath, not auto-exported from the barrel.** `Logger` is a common name; subpath-only access prevents collision with user types. Users explicitly opt in: `import type { Logger } from "functype/logger"`.
+- **Reachable from the top-level `functype` barrel AND the `functype/logger` subpath.** Matches the convention every other functype type follows (`Option`, `Either`, `JSONValue`, etc.) — making `Logger` an outlier would create more friction than the collision risk it avoids. If a consumer already has a local `Logger` type, the TS-standard rename-on-import handles it: `import type { Logger as FunctypeLogger } from "functype"`. The subpath stays for users who prefer narrow imports.
 
 ### 2. `ConfigSource` interface
 
@@ -131,12 +131,11 @@ First-wins precedence. The composed source's `name` reflects the resolution chai
 `packages/functype-os/src/config/consoleBootLogger.ts` — default implementation satisfying core `Logger`, raw ANSI, respects standards:
 
 ```ts
-import type { Logger } from "functype/logger"
+import type { Logger } from "functype"
 
-import { shouldColor, gray, yellow, red } from "./colors"
+import { gray, yellow, red } from "./colors"
 
 const stamp = () => new Date().toISOString()
-const noop = () => {}
 
 export const consoleBootLogger: Logger = {
   debug: (msg, meta) => console.debug(`${gray(stamp())} ${gray("DEBUG")} ${msg}`, meta ?? ""),
@@ -191,8 +190,7 @@ Exported because consumers may want it for ad-hoc masking outside `bootDiagnosti
 `packages/functype-os/src/config/bootDiagnostics.ts`:
 
 ```ts
-import type { Either } from "functype"
-import type { Logger } from "functype/logger"
+import type { Either, Logger } from "functype"
 import { Left, Right, List } from "functype"
 
 import type { ConfigSource } from "./ConfigSource"
@@ -227,8 +225,8 @@ export const bootDiagnostics = (opts: BootDiagnosticsOptions): Either<List<Missi
   logger.info(`${blue("📦")} Boot diagnostics: ${opts.serviceName ?? "service"}`)
   logger.info(`   source: ${opts.source.name}`)
 
-  // Required-key check
-  const missing = required.filter((k) => opts.source.get(k).isEmpty())
+  // Required-key check (`isEmpty` is a property, not a method)
+  const missing = required.filter((k) => opts.source.get(k).isEmpty)
 
   // Sensitive (masked)
   if (sensitive.length > 0) {
@@ -292,7 +290,7 @@ Returns `Either<List<MissingKey>, void>` so non-fatal callers can inspect the re
 export type { Logger } from "./Logger"
 ```
 
-`packages/functype/package.json` adds `"./logger"` subpath export. Not re-exported from the top-level `functype` barrel — `Logger` is a common name; subpath-only access prevents accidental collision with user types.
+`packages/functype/package.json` adds `"./logger"` subpath export. ALSO re-exported from the top-level `functype` barrel (via `export * from "@/logger"` in `src/index.ts`) so that `Logger` is reachable the same way as every other public type — matches the convention every sibling package follows. Users with their own `Logger` type rename on import: `import type { Logger as FunctypeLogger } from "functype"`.
 
 `packages/functype-os/src/config/index.ts`:
 
@@ -307,7 +305,7 @@ export { bootDiagnostics } from "./bootDiagnostics"
 export type { BootDiagnosticsOptions, MissingKey } from "./bootDiagnostics"
 ```
 
-`packages/functype-os/package.json` adds the subpath export `"./config"`. Note: `Logger` is NOT re-exported from `functype-os/config` — consumers import it from `functype/logger` directly to keep one canonical location.
+`packages/functype-os/package.json` adds the subpath export `"./config"`. Note: `Logger` is NOT re-exported from `functype-os/config` — consumers import it directly from `functype` (preferred, matches the workspace barrel convention) or `functype/logger` (subpath, for narrow imports) — `Logger`'s canonical home is in `functype` core, not `functype-os`.
 
 ## Usage (cq-api AppEnv refactored)
 
@@ -368,7 +366,7 @@ For consumers already using `functype-log`:
 
 ```ts
 import { createDirectConsoleLogger } from "functype-log/direct"
-import type { Logger } from "functype/logger"
+import type { Logger } from "functype"
 
 const logger: Logger = createDirectConsoleLogger()  // structurally satisfies Logger
 
@@ -396,7 +394,7 @@ No adapter, no extra import surface. `DirectLogger` has `debug/info/warn/error(m
 | `packages/functype-os/src/config/colors.ts` | NEW (internal) — raw ANSI; respects NO_COLOR/FORCE_COLOR/isTTY |
 | `packages/functype-os/src/config/mask.ts` | NEW — `maskValue` helper |
 | `packages/functype-os/src/config/bootDiagnostics.ts` | NEW — orchestration + log block + fail-fast; logger field typed as core `Logger` |
-| `packages/functype-os/src/config/index.ts` | NEW — barrel export (no `Logger` re-export — canonical from `functype/logger`) |
+| `packages/functype-os/src/config/index.ts` | NEW — barrel export (no `Logger` re-export — `Logger`'s home is `functype` core, reachable from `functype` or `functype/logger`) |
 | `packages/functype-os/package.json` | MODIFY — add `"./config"` subpath export |
 | `packages/functype-os/test/config/ConfigSource.spec.ts` | NEW — Layered precedence, source name composition, ProcessEnvSource via Env, StaticSource lookup |
 | `packages/functype-os/test/config/bootDiagnostics.spec.ts` | NEW — happy path, missing required (Left), masking, env mismatch, failOn behavior; capture logs via test `Logger` |
@@ -428,7 +426,7 @@ No adapter, no extra import surface. `DirectLogger` has `debug/info/warn/error(m
 
 - **`Clock`, `Random`, `Tracer`, or other service-style interfaces in core.** Logger is the only one being added because every production TS app already has one — naming an existing concept, not introducing a new one. The other services are framework-style abstractions (Effect ships them; functype shouldn't follow). If a real use case emerges for any of them, propose individually; do NOT preempt.
 - **Concrete `Logger` implementation in `functype` core.** Default impl belongs in the consumer package (`consoleBootLogger` in `functype-os/config`). Core stays pure types — no `console` global dependency, no opinion on output format, no Bun/Deno/edge-runtime portability questions.
-- **Re-exporting `Logger` from the top-level `functype` barrel.** Subpath-only (`functype/logger`) to prevent collision with user-defined `Logger` types. Explicit opt-in is the right friction.
+- **Restricting `Logger` to subpath-only access.** Decision reversed during impl: `Logger` IS reachable from the top-level barrel, matching the workspace convention every other functype type follows. Restricting `Logger` to the subpath would make it the only outlier in the public surface. Collision with user-defined `Logger` types is handled by TS-standard `import type { Logger as FunctypeLogger }`.
 - **`Logger.child()` / `withContext()` / `withError()` methods.** Not all loggers have them; richer loggers (`DirectLogger`) add them on top and remain assignable to `Logger`. Standard contravariance.
 - **`trace` / `fatal` methods.** Half of loggers don't have these; debug covers the lower tier, error covers the upper. Adding them would force every minimal impl to write more no-ops than it should.
 - **`bootLoggerFromLogLayer` adapter.** Unnecessary cross-package edge — structural typing handles it. `DirectLogger` IS a `Logger`.
@@ -449,7 +447,7 @@ NEW in `functype` core:
 - `functype/logger` subpath: minimal `Logger` interface (type-only, no implementation).
   - 4 methods: debug, info, warn, error — all mandatory.
   - Signature: (message: string, metadata?: Record<string, unknown>) => void
-  - Subpath-only access (not re-exported from top-level barrel) to prevent name collision.
+  - Reachable from both the top-level `functype` barrel AND the `functype/logger` subpath. Workspace-convention parity with every other functype type; collision with user `Logger` types handled by `import type { Logger as FunctypeLogger }`.
   - Shared shape for all functype packages and consumer code.
   - DirectLogger from functype-log structurally satisfies it; no adapter required.
 

@@ -1,21 +1,22 @@
-# HTTP wire-format: flatten bugfix + Decoder/Encoder interface (2.0.0)
+# HTTP wire-format: Decoder/Encoder interface + remove `validate` (2.0.0)
+
+> **Scope note (updated):** The request-side wire-flatten work that originally lived in this proposal already shipped in **1.3.0** as a non-breaking default change (`HttpRequestOptions.flatten?: boolean` default `true`, plus a `normalizeBody` walker). 1.3 was a defensible vehicle for that work because the new default is opt-out-able (`flatten: false` preserves the prior tagged emission). What remains for 2.0 is the truly-breaking surface: removing the deprecated `validate` field in favor of `Decoder<T>` / `decodeUnsafe`, plus the matching minimum `Encoder<A>` type alias.
 
 ## Context
 
-The `functype/fetch` HTTP client today is BYOV (bring your own validator) on the response side and `JSON.stringify`-with-side-effects on the request side. Two problems:
+The `functype/fetch` HTTP client today decodes responses via a `validate: (data: unknown) => T` field — throw-or-pass, no named contract for adapter packages (Zod / ArkType / TypeBox / Valibot) to target, no shared error shape. Every user invents their own error tree.
 
-1. **External-API silent breakage on the request side.** `JSON.stringify` natively invokes `.toJSON()` on any object that defines one. Every functype ADT (`Option`, `Either`, `Try`, `List`, `Map`, `Obj`) defines `.toJSON()` returning `{_tag, value}`. So `client.post("/api/users", {name, age: Option(30)})` against a third-party REST API today silently sends `{"name":"...","age":{"_tag":"Some","value":30}}` — the server rejects it. The 95%-case wire shape is wrong by default.
+The 1.3 release adds `decode?: Decoder<T>` alongside `validate` (Either-returning, recursive `DecoderError`) — but keeps `validate` for back-compat. 2.0 is the version where `validate` goes away and `decode` becomes the only path. That's the breaking change that warrants the major bump.
 
-2. **No first-class, accumulating, Either-returning decoder for response bodies.** The existing `validate: (data: unknown) => T` is throw-or-pass — it doesn't compose with the IO chain that `beforeRequest` just unlocked in 1.0.1, and it has no named contract that adapter packages (Zod/ArkType/TypeBox) can target. There's also no shared error shape, so every user invents their own error tree.
+Intended outcome for 2.0:
+- Remove the deprecated `validate` field. `decode: Decoder<T>` (Either-returning, default) and `decodeUnsafe?: (raw) => T` (throw-or-pass escape hatch for Zod's `.parse` and inline lambdas) replace it.
+- Ship a minimum encode side: `type Encoder<A> = (value: A) => JSONValue` (one-line alias) + `encode?: Encoder<TReq>` per-call hook on `HttpRequestOptions`. Closes the symmetry gap and gives a clean escape hatch for custom Date formats, camelCase↔snake_case, output validation, field-stripping — anything the existing `flatten: true|false` can't express. **Do NOT ship the combinator suite** (`Encoder.object`, `Encoder.option`, etc.) or full bidirectional `Codec<A>`; grow those in 2.1+ only if real usage drives them.
 
-Intended outcome:
-- Fix the latent request-side bug so the default wire shape is what external APIs expect.
-- Name the response-side decoder contract as `Decoder<T>`. Adopt the **Effect-TS Schema design**: `Decoder<A> = (raw: unknown) => Either<DecodeError, A>` where `DecodeError` is a **recursive tagged ADT** (`Leaf | Composite`) that mirrors the structure of the input. Accumulation lives in the error data, not in the wrapper — no `Validated`, no cats/Applicative gymnastics.
-- Ship ADT decoders (`Decoder.option`, `Decoder.either`, `Decoder.list`, etc.) — the only piece a schema lib can't write because they need functype internals.
-- Two field names on `HttpRequestOptions`: `decode: Decoder<T>` (Either-returning, default) and `decodeUnsafe: (raw) => T` (throw-or-pass, escape hatch for Zod's `.parse` and inline lambdas).
-- Ship a minimum encode side: `type Encoder<A> = (value: A) => JSONValue` (one-line alias) + `encode?: Encoder<TReq>` per-call hook on `HttpRequestOptions`. Closes the symmetry gap and gives a clean escape hatch for custom Date formats, camelCase↔snake_case, output validation, field-stripping — anything `flatten: true|false` can't express. **Do NOT ship the combinator suite** (`Encoder.object`, `Encoder.option`, etc.) or full bidirectional `Codec<A>`; grow those in 2.1+ only if real usage drives them.
+The `Decoder<T>` type itself, its `DecoderError` recursive ADT, the `Decoder.object` / `Decoder.option` / `Decoder.list` / etc. companion combinators, and the `Decoder.tagged.*` namespace already shipped in 1.x — those are not new in 2.0. 2.0 is the cleanup pass that removes the deprecated alternative.
 
-This is a 2.0.0 release because the existing `validate` field is removed in favor of `decode`/`decodeUnsafe`.
+### Historical context (mechanism of the pre-1.3 request-side bug)
+
+The request-side default wire-shape bug (`{age: Option(30)}` serializing as `{"age":{"_tag":"Some","value":30,"isEmpty":false,"size":1}}`) was caused not by *every* ADT having a `toJSON()` that returned `{_tag, value}` — only `Either` had a `toJSON()` method pre-fix. The other ADTs leaked their full property bag through `JSON.stringify`'s default object enumeration. The 1.3 fix did two things: (1) added explicit `toJSON()` methods to every ADT (so even without the body walker, raw `JSON.stringify` on an ADT now produces a sane tagged envelope), and (2) added the `normalizeBody` walker in `Http.ts` that strips ADTs to JSON-friendly primitives by default (`Option → nullable`, `List → array`, `Either.Right → value | throw on Left`, etc.). Both are now part of the 1.3+ baseline.
 
 ## Why this shape (design rationale)
 
@@ -37,28 +38,28 @@ Chosen because:
 - **`decode` is the honest verb** for unknown→typed conversion; `Decoder<T>` reads better than `Validator<T>` for combinator composition (`Decoder.option(Decoder.number)`).
 - **Fresh field names** (`decode`/`decodeUnsafe`) mean a missing-field error on upgrade, not a silent type mismatch.
 
-## Priority order
+## Priority order (2.0 surface only)
 
-1. **External-JSON-first is the default.** `Option<T>` in a body flattens to `T | null`. Wire shape is indistinguishable from `fetch + zod`.
-2. **Functype-to-functype is opt-in.** A `{flatten: false}` flag on the request preserves the existing auto-tagged emission for cohesive ecosystems. No new code path on the request side — just disables the new flatten step.
-3. **`decode` is the new BYOV path.** Pure-typed contract: `(raw: unknown) => Either<DecodeError, A>`. Anyone — Zod user, TypeBox user, hand-roller — produces a function of this shape. No plugin registration; it IS the plugin API.
-4. **`encode` is the escape hatch.** Same shape going out: `(value: TReq) => JSONValue`. Only used when `flatten: true|false` isn't expressive enough (custom Date formats, snake_case keys, output validation, field-stripping). Hand-written per-endpoint; no combinator companion in 2.0.
+1. **`validate` is gone.** Existing call sites get a TypeScript error on upgrade — that's the rename signal. Migration: `s/validate:/decodeUnsafe:/g` for callers using Zod's `.parse` or other throw-pattern validators; new code uses `decode:` with `Decoder.fromZod(...)` or a hand-composed `Decoder.object({...})`.
+2. **`encode` is the new escape hatch on the request side.** Shape: `(value: TReq) => JSONValue`. Only used when the existing `flatten: true|false` (shipped 1.3) isn't expressive enough — custom Date formats, snake_case keys, output validation, field-stripping. Hand-written per-endpoint; no combinator companion in 2.0.
+
+The pre-existing 1.3+ behavior — `flatten: true` default (external-JSON-first), `flatten: false` opt-in (tagged round-trip with `Decoder.tagged.*`), `decode: Decoder<T>` as the plugin API — is unchanged in 2.0. 2.0 only removes `validate` and adds `encode` + `Encoder<A>`.
 
 ## Round-trip semantics (both directions of the wire)
 
-Four exhaustive cases, covered by `flatten: true|false` (framework-level structural), the `encode?` per-call escape hatch (user-level custom transforms), and the `decode`/`decodeUnsafe` field on the response side:
+Four exhaustive cases — three are shipped 1.3+ behavior, one is the 2.0 addition. The new field is `encode?: Encoder<TReq>` per-call (`flatten` and `decode` are not changing in 2.0).
 
 | Case | Body in | Wire out | Wire in | Decoded |
 |---|---|---|---|---|
-| **External API, no ADTs** | `{name, age: 30}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age}` (decode optional) |
-| **External API, ADTs in body** (default flatten) | `{name, age: Option(30)}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age: Option(30)}` via `Decoder.option(Decoder.number)` |
-| **External API, custom transform** (per-call `encode`) | `{name, createdAt: Date}` | `{"name":"...","created_at":"2026-06-01"}` | …whatever the server returns | matched `Decoder` |
-| **Functype-to-functype** (`flatten: false`) | `{name, age: Option(30)}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{name, age: Option(30)}` via `Decoder.tagged.option(Decoder.number)` |
+| **External API, no ADTs** *(1.3 baseline)* | `{name, age: 30}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age}` (decode optional) |
+| **External API, ADTs in body** *(1.3 default flatten)* | `{name, age: Option(30)}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age: Option(30)}` via `Decoder.option(Decoder.number)` |
+| **External API, custom transform** *(new in 2.0, per-call `encode`)* | `{name, createdAt: Date}` | `{"name":"...","created_at":"2026-06-01"}` | …whatever the server returns | matched `Decoder` |
+| **Functype-to-functype** *(1.3 `flatten: false`)* | `{name, age: Option(30)}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{name, age: Option(30)}` via `Decoder.tagged.option(Decoder.number)` |
 
 **The encode/decode design (minimum-symmetric, not full Codec):**
-- **Decode side has primitives + ADT combinators** (`Decoder.string`, `Decoder.object`, `Decoder.option`, …) because raw JSON is opaque to TypeScript — combinators do real type-system work.
-- **Encode side ships as type alias + per-call hook only** (`type Encoder<A> = (value: A) => JSONValue`, `encode?: Encoder<TReq>`). TypeScript already enforces the input shape, so combinator parallelism would be rubber-stamp work for the 95% case. The `encode?` hook handles the 5% that `flatten: true|false` can't express — custom Date formats, key renaming, output validation, field-stripping. Hand-written per endpoint when needed.
-- **Resolution rule:** if `encode` is provided, it runs first and its output is JSON-stringified directly (ignores `flatten`). Otherwise the framework runs `flattenFunctype` (or skips it when `flatten: false`).
+- **Decode side already has primitives + ADT combinators** (shipped pre-2.0) — `Decoder.string`, `Decoder.object`, `Decoder.option`, etc. — because raw JSON is opaque to TypeScript and combinators do real type-system work.
+- **Encode side ships in 2.0 as type alias + per-call hook only** (`type Encoder<A> = (value: A) => JSONValue`, `encode?: Encoder<TReq>`). TypeScript already enforces the input shape, so combinator parallelism would be rubber-stamp work for the 95% case. The `encode?` hook handles the 5% that `flatten: true|false` can't express. Hand-written per endpoint when needed.
+- **Resolution rule:** if `encode` is provided, it runs first and its output is JSON-stringified directly (ignores `flatten`). Otherwise the framework runs the 1.3+ `normalizeBody` walker (or skips it when `flatten: false`).
 
 **Explicitly NOT shipping in 2.0:**
 - `Encoder.object` / `Encoder.option` / `Encoder.list` / etc. combinator suite. Gate on real consumer demand; add in 2.1+ if usage shows users hand-writing the same encoders.
@@ -137,52 +138,45 @@ Tagged variants for opt-in functype-to-functype, in `packages/functype/src/decod
 
 - `Decoder.tagged.option<A>(inner)` — decodes `{_tag: "Some" | "None", value}` using `OptionCompanion.fromJSON(JSON.stringify(raw))`. Same shape for `tagged.either`, `tagged.try`, `tagged.list`, `tagged.map`, `tagged.obj`. Pure wrappers over existing `fromJSON` companions.
 
-### 3. Fix the latent request-side bug
+### 3. ~~Fix the latent request-side bug~~ — SHIPPED IN 1.3, NOT 2.0 WORK
 
-`packages/functype/src/fetch/Http.ts` — `serializeBody` (lines 19–28): before `JSON.stringify`, walk the body and replace functype ADTs with their primitive projections. New helper `flattenFunctype(value: unknown): unknown`:
+This section is preserved for historical context only — the request-side wire-flatten work shipped in 1.3 as a non-breaking default change.
 
-- `Option.isOption(v)` → `v.toNullable()`
-- `Either.isEither(v)` → `v.fold(throwLeft, identity)` (Left in a request body is a programmer error — throw at call site)
-- `Try.isTry(v)` → `v.fold(throwFailure, identity)`
-- `List.isList(v)` → `[...v]` then recurse on each element
-- `Map.isMap(v)` → `Object.fromEntries(v.entries())` (string-key maps only; throws otherwise)
-- Plain objects/arrays: recurse
-- Primitives, Dates, etc.: pass through
+- The walker is `normalizeBody` in `packages/functype/src/fetch/Http.ts`. It dispatches on `Symbol.toStringTag` via the `hasToStringTag(value, "Option" | "Either" | "Try" | "List" | "FunctypeMap")` helper (duck-typing on the well-known symbol that each ADT sets on itself). It does NOT use `Option.isOption(v)` / `Either.isEither(v)` predicates — those are not part of the public surface (the closest public alternatives are `HKT.isOption` / `HKT.isList` / `HKT.isEither` / `HKT.isTry` on the `HKT` object; `isMap` doesn't exist as a public predicate). Duck-typing on the `Symbol.toStringTag` works for the request-side use case and avoids importing the predicates.
+- Behavior mirrors the original sketch: `Option → toNullable()`, `Either → right value or throw on Left`, `Try → success value or throw on Failure`, `List → array (recurse)`, `FunctypeMap → record (recurse, throw on non-string keys)`. Two modes — `"primitive"` (default, `flatten: true`) and `"tagged"` (`flatten: false`) — the tagged mode emits canonical `{_tag, value}` envelopes for `Decoder.tagged.*` round-trips with functype-to-functype services.
+- `HttpRequestOptions` already has `readonly flatten?: boolean` (default `true`).
+- Nothing further needed in 2.0 here.
 
-All `isX` predicates already exist (verify during impl in `src/{option,either,try,list,map}/`). Pre-flatten rather than `JSON.stringify` replacer — clearer and gives the response-side decoder a parallel touchpoint.
+### 4. Wire `Encoder<TReq>` into the HTTP request — remove `validate`
 
-`HttpRequestOptions` gains `readonly flatten?: boolean` (default `true`). Setting `flatten: false` skips the walk and preserves the current auto-tagged emission for functype-to-functype services. This is the *opt-in* tagged mode.
-
-**Breaking note for changeset:** the accidental tagged emission was undocumented and almost certainly unintentional; ship as a bug fix with `flatten: false` as the explicit migration path for the rare case anyone was relying on it.
-
-### 4. Wire `Decoder<T>` + `Encoder<TReq>` into the HTTP request — replace `validate`
-
-`packages/functype/src/fetch/HttpRequest.ts` — `HttpRequestOptions<T, TReq = unknown>` gets new fields, drops old:
+`packages/functype/src/fetch/HttpRequest.ts` — `HttpRequestOptions<T, TReq = unknown>`:
 
 ```ts
-// REMOVED:
+// REMOVED (2.0):
 // readonly validate?: (data: unknown) => T
 
-// ADDED (response side):
+// ALREADY IN 1.3 (no change):
 readonly decode?: Decoder<T>            // Either-returning, default path
-readonly decodeUnsafe?: (raw: unknown) => T  // throw-or-pass, for Zod's .parse and inline lambdas
+readonly flatten?: boolean              // default true; false preserves tagged emission via Symbol.toStringTag walker
 
-// ADDED (request side):
+// ADDED (2.0, response side):
+readonly decodeUnsafe?: (raw: unknown) => T  // throw-or-pass; replaces `validate`'s role for adapters whose primary API throws (e.g. Zod's .parse)
+
+// ADDED (2.0, request side):
 readonly encode?: Encoder<TReq>         // typed → JSONValue escape hatch; bypasses flatten if provided
-readonly flatten?: boolean              // default true; false preserves auto-tagged emission
 ```
 
-`Http.ts` `parseResponse` flow:
-- If `decode` provided: `decode(raw).fold(err => throw HttpErrorCompanion.decodeError(url, method, body, err), identity)` — preserves the existing error contract (throw → `HttpError.decodeError` containing the recursive `DecodeError` as `cause`) so no IO-chain breaking change.
-- Else if `decodeUnsafe` provided: existing throw-or-pass path with `decodeUnsafe` instead of `validate`.
+`Http.ts` `parseResponse` flow (2.0):
+- If `decode` provided: existing 1.3+ behavior — `decode(raw).fold(err => throw HttpErrorCompanion.decodeError(url, method, body, err), identity)`. Unchanged.
+- Else if `decodeUnsafe` provided: throw-or-pass. The `validate` path that previously fell here is now gone; `decodeUnsafe` replaces it with a clearer name.
 - Else: cast to `T`.
 
-`Http.ts` `serializeBody` flow:
+`Http.ts` `serializeBody` flow (2.0 addition):
 - If `encode` provided: `JSON.stringify(encode(body))`. `flatten` is ignored.
-- Else if `flatten: false`: `JSON.stringify(body)` (current tagged-emission behavior via native `.toJSON()`).
-- Else (default): `JSON.stringify(flattenFunctype(body))`.
+- Else if `flatten: false`: `JSON.stringify(body)` (1.3+ tagged-emission behavior via the per-ADT `.toJSON()` methods).
+- Else (default): `JSON.stringify(normalizeBody(body, "primitive"))` — the 1.3+ default. Unchanged.
 
-`HttpClientConfig` does NOT gain `decode`/`encode` fields — per-call only for v1; revisit if client-level defaults are asked for.
+`HttpClientConfig` does NOT gain `decode`/`encode` fields — per-call only for 2.0; revisit if client-level defaults are asked for.
 
 ### 4b. `Encoder<A>` type alias
 
@@ -236,43 +230,47 @@ Decoder.object({
 
 ## Critical files
 
+Files that already ship the 1.3+ baseline (NO CHANGE in 2.0):
+
+- `packages/functype/src/decoder/Decoder.ts`, `DecoderError.ts`, `DecoderCompanion.ts`, `tagged.ts`, `index.ts` — `Decoder<T>`, recursive `DecoderError`, primitives, ADT combinators, tagged variants all shipped pre-2.0.
+- `packages/functype/src/fetch/Http.ts` — `normalizeBody` walker, `flatten: true|false` modes, per-ADT `.toJSON()` envelopes all shipped pre-2.0.
+- `packages/functype/src/fetch/HttpRequest.ts.decode` field shipped pre-2.0.
+- `packages/functype/src/fetch/HttpError.ts.decodeError.cause` typed as the recursive `DecoderError` shipped pre-2.0.
+
+Files that change in 2.0:
+
 | File | Change |
 |---|---|
-| `packages/functype/src/decoder/DecodeError.ts` | NEW — recursive tagged ADT + helpers (`flatten`, `format`) |
-| `packages/functype/src/decoder/Decoder.ts` | NEW — `type Decoder<A>` alias |
-| `packages/functype/src/decoder/Encoder.ts` | NEW — `type Encoder<A> = (value: A) => JSONValue` alias (no companion, no combinators in 2.0) |
-| `packages/functype/src/decoder/DecoderCompanion.ts` | NEW — primitives + ADT decoders (null-bias by default, accumulating) |
-| `packages/functype/src/decoder/tagged.ts` | NEW — `Decoder.tagged.*` namespace using existing `fromJSON` |
-| `packages/functype/src/decoder/index.ts` | NEW — barrel; re-exports `Decoder`, `Encoder`, `DecodeError`; re-exported from `src/index.ts` |
-| `packages/functype/src/fetch/Http.ts` | MODIFY — `serializeBody` honors `encode` (highest precedence) → `flatten: false` (raw stringify) → default `flattenFunctype` walk; `parseResponse` honors `decode`/`decodeUnsafe`; remove `validate` path |
-| `packages/functype/src/fetch/HttpRequest.ts` | MODIFY — drop `validate`; add `decode`, `decodeUnsafe`, `encode`, `flatten` |
-| `packages/functype/src/fetch/HttpError.ts` | MODIFY — `decodeError`'s `cause` field typed as `DecodeError \| Error` (was unknown) |
-| `packages/functype/src/cli/data.ts` | MODIFY — update Http description; add Decoder + DecodeError entries |
-| `packages/functype/test/fetch/http.spec.ts` | MODIFY — assert `{age: Option(30)}` body emits `{"age":30}` by default, `{"age":{"_tag":"Some","value":30}}` with `flatten: false`, custom shape with `encode`; update validate→decode call sites |
-| `packages/functype/test/decoder/decoder.spec.ts` | NEW — primitives, ADT decoders, accumulation (multi-field failure → Composite), recursive paths, tagged round-trips |
-| `packages/functype/test/decoder/encoder.spec.ts` | NEW — minimal: type alias assignability + per-call `encode?` precedence over `flatten` in `Http` |
-| `packages/functype/CLAUDE.md` | MODIFY — document Decoder, DecodeError, flatten default, 2.0.0 migration |
-| `site/` | MODIFY — docs page for Decoder + wire format; 2.0.0 migration guide |
-| `.changeset/<slug>.md` | NEW — major bump for `functype`; minor/patch for dependents that re-export anything |
+| `packages/functype/src/decoder/Encoder.ts` | NEW — `type Encoder<A> = (value: A) => JSONValue` alias (no companion, no combinators in 2.0). |
+| `packages/functype/src/decoder/index.ts` | MODIFY — re-export `Encoder` alongside `Decoder` / `DecoderError`. |
+| `packages/functype/src/fetch/HttpRequest.ts` | MODIFY — **remove** `validate?`; **add** `decodeUnsafe?: (raw: unknown) => T` and `encode?: Encoder<TReq>`. `decode?` and `flatten?` stay. |
+| `packages/functype/src/fetch/Http.ts` | MODIFY — `serializeBody` precedence: `encode` (highest) → `flatten: false` → default `normalizeBody`. `parseResponse` drops the `validate` branch (`decode` / `decodeUnsafe` / direct-cast remain). |
+| `packages/functype/src/fetch/index.ts` | MODIFY — re-export `Encoder` type alias. |
+| `packages/functype/src/cli/data.ts` | MODIFY — Http section: remove `validate` entry; add `decodeUnsafe`, `encode`. |
+| `packages/functype/test/fetch/http.spec.ts` and `http-production.spec.ts` | MODIFY — update any remaining `validate:` test sites to `decodeUnsafe:`. Add tests asserting `encode` precedence over `flatten` (custom transform lands on the wire). |
+| `packages/functype/test/decoder/encoder.spec.ts` | NEW — minimal: type alias assignability + per-call `encode?` precedence over `flatten` in `Http`. |
+| `packages/functype/CLAUDE.md` | MODIFY — Quick-ref Http section: remove `validate` deprecation note; add `decodeUnsafe`, `encode`, `Encoder<A>`. 2.0.0 migration callout. |
+| `site/src/content/http.md` | MODIFY — drop the "deprecated `validate`" callout; add `encode` escape-hatch section; 2.0.0 migration note. |
+| `packages/functype/CHANGELOG.md` | MODIFY — 2.0.0 entry documenting the breaking change. |
 
 ## Reuse
 
-- `OptionCompanion.fromJSON`, `EitherCompanion.fromJSON`, `TryCompanion.fromJSON`, `ListCompanion.fromJSON`, `MapCompanion.fromJSON`, `ObjCompanion.fromJSON` — `Decoder.tagged.*` wraps these.
-- `Option.toNullable`, `Either.fold`, `List` spread, `Option.isOption` / `Either.isEither` / `Try.isTry` / `List.isList` / `Map.isMap` — `flattenFunctype` is composed from existing helpers.
-- `HttpError.decodeError` — decoder failures still map to it; cause field now typed as DecodeError for the new path.
-- `SerializationCompanion` — orthogonal; provides YAML/binary serialization that decoder layer does not duplicate.
-- Existing recursive-ADT patterns in functype (`Either`, `Try` themselves are recursive sum types) — `DecodeError` follows the same module conventions.
+- `Decoder.tagged.*` and the `fromJSON` companions on each ADT — shipped pre-2.0; no change.
+- `normalizeBody` in `Http.ts` — dispatches on `Symbol.toStringTag` via the `hasToStringTag(value, "Option" | "Either" | "Try" | "List" | "FunctypeMap")` helper. Public predicates `HKT.isOption` / `HKT.isList` / `HKT.isEither` / `HKT.isTry` exist on the `HKT` object if needed (no `isMap`), but the body walker uses duck-typing on the well-known symbol for performance and to avoid coupling the request-side walker to the higher-kinded-type machinery.
+- `HttpError.decodeError` — decoder failures still map to it; `cause` field already typed as `DecoderError` from the 1.3 work.
+- `JSONValue` (shipped 1.2.2 via `Serialization`, re-exported from the top barrel) — `Encoder<A>` returns this type. No need to redefine.
+- `SerializationCompanion` — orthogonal; provides YAML/binary serialization that the decoder layer does not duplicate.
+- Existing recursive-ADT patterns in functype (`Either`, `Try` themselves are recursive sum types, plus the now-shipped `DecoderError`) — module conventions are consistent.
 
 ## Verification
 
-1. `pnpm -F functype test test/fetch/http.spec.ts` — assert `{age: Option(30)}` body serializes to `{"age":30}` by default; `{age: None}` → `{"age":null}`; `flatten: false` preserves tagged emission; `encode` provided overrides both (custom shape lands on the wire).
-2. `pnpm -F functype test test/decoder/decoder.spec.ts` — primitives, `Decoder.option`, `Decoder.list` (multi-element failure → Composite with index paths), `Decoder.object` (multi-field failure → Composite with field paths), nested accumulation (object inside list inside object → nested Composite tree), single-failure unwrap to Leaf, `Decoder.tagged.option` round-trip.
-3. `pnpm -F functype test test/decoder/encoder.spec.ts` — assert `type Encoder<A>` accepts a hand-written function, returns `JSONValue`, and Http hook precedence works (encode > flatten:false > default flatten).
-4. `pnpm turbo run validate` — full workspace check.
-5. Manual: small client against `httpbin.org` POSTing `{name, age: Option(30)}` and `{name, age: None}` with and without `flatten: false`; verify the echoed body matches expectations. Add one POST with a hand-rolled `encode` doing camelCase → snake_case and confirm.
-6. Manual: trigger a multi-field decode failure on a real response, inspect the `DecodeError` tree shape, confirm `.format()` produces a readable nested error message.
-7. Bundle-size CI job for `packages/functype/**` — confirm decoder module is within budget.
-8. `validate_code` (functype MCP) after publish (against 2.0.0) to confirm the public types compile.
+1. `pnpm -F functype test test/fetch/` — existing flatten / decode tests still pass; new tests cover `encode` precedence (custom shape lands on the wire, ignoring `flatten`).
+2. `pnpm -F functype test test/decoder/encoder.spec.ts` — assert `type Encoder<A>` accepts a hand-written function and returns `JSONValue`.
+3. `pnpm turbo run validate` — full workspace check; confirm no upgrade callers still reference `validate` field.
+4. **Migration grep** in consumer codebases (cq-api, etc.): `grep -r "validate:" packages/*/src` should find zero call sites after migration. Common transform: `s/validate:/decodeUnsafe:/g` for throw-pattern adapters; rewrite for `decode:` + `Decoder.fromZod(...)` for Either-returning paths.
+5. Manual: small client against `httpbin.org` POST with a hand-rolled `encode` doing camelCase → snake_case; verify the echoed body matches the encoded shape.
+6. Bundle-size CI job for `packages/functype/**` — confirm `Encoder.ts` (one-line type alias) adds essentially zero gzipped delta.
+7. `mcp__functype__validate_code` after publish (against 2.0.0) to confirm the post-break public types compile in a fresh consumer.
 
 ## What's deliberately out of scope
 
@@ -290,17 +288,26 @@ Decoder.object({
 Major (functype 2.0.0):
 
 BREAKING:
-- `HttpRequestOptions.validate` removed. Replace with `decode: Decoder<T>` (Either-returning) or `decodeUnsafe: (raw) => T` (throw-or-pass) per call.
-  - Migration: most callers `s/validate:/decodeUnsafe:/g` if they were using Zod's `.parse` or throw patterns. New code should prefer `decode:` with `Decoder.fromZod(...)` or hand-composed `Decoder.object({...})`.
-- Request body auto-flattens functype ADTs to primitives (Option → nullable, List → array, etc.) by default. This fixes a latent bug where bodies containing ADTs were silently serialized in tagged `{_tag, value}` form against external APIs that don't speak functype.
-  - If you were intentionally relying on the tagged emission (functype-to-functype services), pass `flatten: false` per request to preserve the old behavior, or use `Decoder.tagged.*` on the response side for round-trips.
+- `HttpRequestOptions.validate` field removed. Replace with `decode: Decoder<T>` (Either-returning,
+  shipped 1.3) or `decodeUnsafe: (raw) => T` (throw-or-pass, new in 2.0) per call.
+  - Migration: most callers `s/validate:/decodeUnsafe:/g` if they were using Zod's `.parse` or
+    throw patterns. New code prefers `decode:` with `Decoder.fromZod(...)` from `functype-zod`
+    or a hand-composed `Decoder.object({...})`.
 
 NEW:
-- `functype/decoder` module: `Decoder<A> = (raw) => Either<DecodeError, A>` with recursive `DecodeError` (Leaf | Composite) that mirrors input structure on multi-field failures.
-- Primitives: `Decoder.string`, `Decoder.number`, `Decoder.boolean`, `Decoder.unknown`, `Decoder.nullable`.
-- ADT decoders: `Decoder.option`, `Decoder.either.{envelope,discriminated}`, `Decoder.list`, `Decoder.array`, `Decoder.map`, `Decoder.object`.
-- Tagged variants: `Decoder.tagged.option/either/try/list/map/obj` for functype-to-functype round-trips via existing `fromJSON` companions.
-- `Encoder<A> = (value: A) => JSONValue` type alias (no companion combinators in this release — grow in 2.1+ if demand appears).
-- `HttpRequestOptions.encode?: Encoder<TReq>` per-call hook for custom request-body transforms (Date formats, key renaming, output validation, field-stripping). Takes precedence over `flatten`.
-- `HttpRequestOptions.flatten?: boolean` (default true).
+- `HttpRequestOptions.decodeUnsafe?: (raw: unknown) => T` — throw-or-pass replacement for the
+  removed `validate` field. Use for adapters whose primary API throws (Zod's `.parse`).
+- `Encoder<A> = (value: A) => JSONValue` type alias exported from `functype/decoder`. Named
+  contract for request-body transforms; no companion combinators in this release (grow in 2.1+
+  if demand appears).
+- `HttpRequestOptions.encode?: Encoder<TReq>` — per-call hook for custom request-body transforms
+  (Date formats, key renaming, output validation, field-stripping). Takes precedence over
+  `flatten`.
+
+UNCHANGED (shipped pre-2.0; documented here for completeness):
+- `Decoder<T>` interface, recursive `DecoderError` ADT, primitives/combinators
+  (`Decoder.string`, `Decoder.object`, `Decoder.option`, etc.), and `Decoder.tagged.*`
+  namespace — all shipped in 1.x.
+- Request body auto-flatten via `HttpRequestOptions.flatten?: boolean` (default `true`) and the
+  internal `normalizeBody` walker — shipped in 1.3.
 ```
