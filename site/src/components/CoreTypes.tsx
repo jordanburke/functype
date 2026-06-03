@@ -57,6 +57,13 @@ export default function CoreTypes() {
       description: "Powerful pattern matching and conditional expressions",
       icon: "⊢",
     },
+    {
+      name: "Logger",
+      href: "/logger",
+      description:
+        "Minimal 4-method interface shared by every functype-* package. Type-only, zero runtime, DirectLogger from functype-log satisfies structurally",
+      icon: "✎",
+    },
   ];
 
   return (

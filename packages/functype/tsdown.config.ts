@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown"
 const isProduction = process.env.NODE_ENV === "production"
 
 // Define the modules we want to expose as separate entry points
-const modules = ["option", "either", "try", "list", "map", "set", "tuple", "branded", "do"]
+const modules = ["option", "either", "try", "list", "map", "set", "tuple", "branded", "do", "logger"]
 
 // Create entry points for each module
 const entries = {

@@ -211,12 +211,12 @@ describe("Token Efficiency", () => {
   it("overview should be reasonably compact", () => {
     const output = formatOverview()
     // Rough word count as token estimate.
-    // Target: <750 tokens, so ~600 words. Bumped from 400 in 1.2.0 when the
-    // library added Decoder + DecoderError + Serialization + SerializedError
-    // categories. ~500 words across 22+ types is still very compact for an
-    // LLM-targeted overview.
+    // Target: <800 tokens, so ~650 words. Bumped from 400 in 1.2.0 (Decoder +
+    // DecoderError + Serialization + SerializedError) and from 600 in 1.3.0
+    // (Service category + Logger). Still very compact for an LLM-targeted
+    // overview across 23+ types.
     const wordCount = output.split(/\s+/).length
-    expect(wordCount).toBeLessThan(600)
+    expect(wordCount).toBeLessThan(650)
   })
 
   it("type output should be compact", () => {

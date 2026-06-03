@@ -160,7 +160,36 @@ import { Logger } from "functype-log/logger" // types only
 import { LoggerLive } from "functype-log/layers" // layer constructors
 import { createTestLogger } from "functype-log/testing" // test utilities
 import { withLogging } from "functype-log/middleware" // middleware
+import { createDirectConsoleLogger } from "functype-log/direct" // sync/imperative API
 ```
+
+## Interop with `functype`'s core `Logger` (1.3.0+)
+
+The core `functype` package ships a minimal `Logger` interface at `functype` (and `functype/logger`) — 4 mandatory methods (`debug`/`info`/`warn`/`error`) returning `void`, designed as the shared shape for boot-diagnostic / observability hooks across the ecosystem (see `bootDiagnostics` in `functype-os/config`).
+
+`DirectLogger` from `functype-log/direct` **structurally satisfies** that core `Logger` interface — its `debug`/`info`/`warn`/`error` methods are a superset of the core shape. You can pass a `DirectLogger` directly anywhere a core `Logger` is expected, with no adapter:
+
+```typescript
+import { createDirectConsoleLogger } from "functype-log/direct"
+import type { Logger } from "functype"
+
+const logger: Logger = createDirectConsoleLogger() // structural compat — no cast required
+```
+
+This means you can plug `functype-log` into `bootDiagnostics` (or any other functype-ecosystem hook taking a core `Logger`) without coupling the consumer package to LogLayer:
+
+```typescript
+import { bootDiagnostics, Layered, ProcessEnvSource } from "functype-os/config"
+import { createDirectConsoleLogger } from "functype-log/direct"
+
+bootDiagnostics({
+  source: Layered([ProcessEnvSource()]),
+  required: ["DATABASE_URL"],
+  logger: createDirectConsoleLogger(),
+})
+```
+
+The IO-shaped `Logger` (this package's primary API) does NOT structurally satisfy the core `Logger` — its methods return `IO<never, never, void>` instead of `void`. For IO-aware code that needs to also drive boot diagnostics, derive a `DirectLogger` via `toDirectLogger(ioLogger)` and pass that.
 
 ## Requirements
 

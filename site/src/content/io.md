@@ -187,8 +187,23 @@ io.fold(
 io.ensuring(IO.sync(() => cleanup()));
 
 // Retry on failure
-io.retry(3);
-io.retryWithDelay(3, 1000);
+io.retry(3); // any error, no delay
+io.retryWithDelay(3, 1000); // any error, fixed delay
+
+// Retry only when a predicate matches (1.3.0+)
+io.retryWhile({
+  n: 3,
+  while: (e) => e._tag === "HttpStatusError" && e.status >= 500,
+  delayMs: 250,
+});
+
+// Exponential backoff with optional full jitter (1.3.0+)
+// Defaults: factor=2, maxMs=30_000, jitter=true, while=()=>true
+io.retryWithBackoff({
+  n: 5,
+  baseMs: 250,
+  while: (e) => e._tag === "NetworkError",
+});
 ```
 
 ## IO vs Task

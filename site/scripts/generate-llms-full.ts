@@ -28,6 +28,7 @@ const sections: Array<{ label: string; path: string }> = [
   { label: "Task", path: resolve(siteDir, "src/content/task.md") },
   { label: "IO", path: resolve(siteDir, "src/content/io.md") },
   { label: "Http", path: resolve(siteDir, "src/content/http.md") },
+  { label: "Logger", path: resolve(siteDir, "src/content/logger.md") },
   {
     label: "Do-notation",
     path: resolve(siteDir, "src/content/do-notation.md"),

@@ -291,6 +291,61 @@ const pairs = Do(function* () {
 | Run (async)    | `effect.run()`                | `await effect.run()`                       |
 | Run (sync)     | `effect.runSync()`            | `effect.runSync()`                         |
 | Run to Either  | `effect.runEither()`          | `await effect.runEither()`                 |
+| Retry (any)    | `effect.retry(n)` / `retryWithDelay(n, ms)` | `effect.retry(3)` |
+| Retry (predicate, 1.3+) | `effect.retryWhile({n, while, delayMs?})` | `eff.retryWhile({n:3, while:e=>e.status>=500})` |
+| Retry (backoff, 1.3+) | `effect.retryWithBackoff({n, baseMs, maxMs?, factor?, jitter?, while?})` | `eff.retryWithBackoff({n:5, baseMs:250})` |
+| Timeout        | `effect.timeout(ms)`          | `effect.timeout(5000)`                     |
+
+## HTTP (1.3+)
+
+| Operation         | Method / Field                          | Example                                                                 |
+| ----------------- | --------------------------------------- | ----------------------------------------------------------------------- |
+| GET with decoder  | `Http.get(url, { decode })`             | `Http.get("/u", { decode: userDecoder })`                               |
+| With query params | `Http.get(url, { params })`             | `Http.get("/s", { params: { q: "x", tag: ["a","b"] } })` (null dropped) |
+| Client config     | `Http.client({ baseUrl, beforeRequest, afterResponse })` | `Http.client({ baseUrl, afterResponse: r => IO.succeed(r) })` |
+| Production retry  | `.retryWithBackoff({n, baseMs, while})` | `Http.get(url).retryWithBackoff({n:3, baseMs:250, while:isRetryable})`  |
+| Refresh-on-401    | `.catchTag("HttpStatusError", e => …)`  | `e.status===401 ? refresh().flatMap(()=>retry) : IO.fail(e)`            |
+
+`afterResponse` runs on SUCCESS path only (skipped on HttpStatusError / DecodeError / NetworkError). Refresh-on-401 belongs in `.catchTag`, NOT in `afterResponse`.
+
+## Logger (core type, 1.3+)
+
+```typescript
+import type { Logger } from "functype"; // 4-method type-only interface
+// debug / info / warn / error: (message, metadata?) => void
+```
+
+| Operation                        | Where                                              |
+| -------------------------------- | -------------------------------------------------- |
+| Hand-roll any 4-method object    | Anywhere a `Logger` is expected                    |
+| `DirectLogger` (no adapter)      | `createDirectConsoleLogger()` from `functype-log/direct` |
+| `consoleBootLogger` (default)    | `import { consoleBootLogger } from "functype-os/config"` |
+| Avoid name collision             | `import type { Logger as FunctypeLogger } from "functype"` |
+
+## Config (functype-os/config, 1.3+)
+
+```typescript
+import { Layered, ProcessEnvSource, StaticSource, bootDiagnostics } from "functype-os/config";
+
+const source = Layered([
+  ProcessEnvSource(), // primary
+  StaticSource({ ENV: "local" }, "defaults"), // fallback
+]);
+// source.name === "process.env > defaults"; first-wins precedence
+
+bootDiagnostics({
+  serviceName: "my-app",
+  source,
+  required: ["DATABASE_URL", "API_KEY"],
+  sensitive: ["API_KEY"], // masked via maskValue
+  public: ["ENV"], // raw
+  hostEnv: process.env.NODE_ENV ?? "local",
+  vaultEnvKey: "ENV", // optional host-vs-vault mismatch check
+  failOn: process.env.NODE_ENV === "production" ? "missing" : "never",
+  // logger? defaults to consoleBootLogger (raw ANSI, NO_COLOR-aware)
+});
+// returns Either<List<MissingKey>, void>; failOn="missing" → process.exit(1)
+```
 
 ## Task Operations
 

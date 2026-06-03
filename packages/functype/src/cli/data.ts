@@ -503,6 +503,27 @@ export const TYPES: Record<string, TypeData> = {
       ],
     },
   },
+
+  Logger: {
+    description:
+      'Minimal 4-method ecosystem-wide logging interface (1.3.0+). Type-only — no runtime, no `console` dependency, no opinion on output format. Every functype-* package targets this shape. Reachable from `functype` (barrel, like every other type) or `functype/logger` (subpath, narrow). Concrete impls live in consumer packages: `consoleBootLogger` in `functype-os/config`, `DirectLogger` from `functype-log/direct` (structurally satisfies Logger — no adapter). If consumer has its own `Logger` type, rename on import: `import type { Logger as FunctypeLogger } from "functype"`. Clock/Random/Tracer NOT being added — those are framework abstractions; Logger is uniquely justified because every production TS app already has one.',
+    interfaces: [],
+    methods: {
+      create: [
+        "interface Logger { debug, info, warn, error: (msg, meta?) => void }",
+        'import type { Logger } from "functype"',
+        'import type { Logger } from "functype/logger"  // alt',
+      ],
+      check: [],
+      other: [
+        "All 4 methods MANDATORY (no defensive logger.debug?.() at call sites)",
+        "Signature: (message: string, metadata?: Record<string, unknown>) => void",
+        "DirectLogger from functype-log/direct structurally satisfies Logger (superset shape)",
+        "IO-shaped Logger from functype-log does NOT satisfy core Logger (methods return IO<>, not void) — bridge via toDirectLogger(ioLogger)",
+        "Used by: bootDiagnostics({ logger? }) in functype-os/config",
+      ],
+    },
+  },
 }
 
 export const INTERFACES: Record<string, InterfaceData> = {
@@ -570,4 +591,5 @@ export const CATEGORIES = {
   Effect: ["IO", "Task", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
   Serialization: ["Serialization", "SerializedError"],
+  Service: ["Logger"],
 }
