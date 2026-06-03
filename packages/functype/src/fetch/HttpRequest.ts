@@ -4,6 +4,19 @@ import type { HttpMethod } from "./HttpError"
 
 export type ParseMode = "json" | "text" | "blob" | "arrayBuffer" | "raw"
 
+/**
+ * Typed query-parameter record. Scalar values (string | number | boolean) are
+ * `String()`-coerced; arrays repeat the key (`{ tag: ["a", "b"] }` → `tag=a&tag=b`);
+ * `undefined` and `null` values are dropped (so callers can write
+ * `{ foo: maybe.toNullable() }` without conditionals); special characters are
+ * percent-encoded via `URLSearchParams`.
+ *
+ * Nested objects are not supported (the type prevents them at compile time).
+ */
+export type HttpQueryParams = Readonly<
+  Record<string, string | number | boolean | readonly (string | number | boolean)[] | undefined | null>
+>
+
 export interface HttpRequestOptions<T = unknown> {
   readonly url: string
   readonly method: HttpMethod
@@ -11,6 +24,11 @@ export interface HttpRequestOptions<T = unknown> {
   readonly body?: unknown
   readonly signal?: AbortSignal
   readonly parseAs?: ParseMode
+  /**
+   * Query-string parameters appended to the URL. Merges with any query string
+   * already present in `url`. See {@link HttpQueryParams} for encoding rules.
+   */
+  readonly params?: HttpQueryParams
   /**
    * Either-returning response decoder. Returns `Left(DecoderError)` on
    * failure; the framework maps that to `HttpError.DecodeError(cause: DecoderError)`.
@@ -53,6 +71,10 @@ export interface HttpMethodOptions<T = unknown> {
   /** @deprecated Use `decode` (Either-returning) or an adapter package for throw-pattern validators. */
   readonly validate?: (data: unknown) => T
   readonly flatten?: boolean
+  /**
+   * Query-string parameters appended to the URL. See {@link HttpQueryParams}.
+   */
+  readonly params?: HttpQueryParams
 }
 
 export interface HttpResponse<T> {

@@ -265,6 +265,69 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    */
   retryWithDelay(n: number, delayMs: number): IO<R, E, A>
 
+  /**
+   * Retries the effect only while a predicate over the error holds.
+   *
+   * Useful for selective retry policies — e.g. retry HTTP 5xx but not 4xx,
+   * retry network errors but not validation errors. The predicate is evaluated
+   * BEFORE each retry; returning `false` short-circuits and re-fails with the
+   * original error.
+   *
+   * @param opts.n - Maximum number of retry attempts.
+   * @param opts.while - Predicate `(error, attempt) => boolean` (attempt is 1-indexed
+   *   for the first retry; if the predicate returns false, the retry is skipped).
+   * @param opts.delayMs - Optional fixed delay between attempts.
+   *
+   * @example
+   * ```ts
+   * Http.get("/api/users", { decode })
+   *   .retryWhile({
+   *     n: 3,
+   *     while: (e) => e._tag === "HttpStatusError" && e.status >= 500,
+   *     delayMs: 250,
+   *   })
+   * ```
+   */
+  retryWhile(opts: {
+    readonly n: number
+    readonly while: (error: E, attempt: number) => boolean
+    readonly delayMs?: number
+  }): IO<R, E, A>
+
+  /**
+   * Retries the effect with exponential backoff and optional full jitter.
+   *
+   * Delay schedule: `min(maxMs, baseMs * factor^(attempt-1))`. With jitter
+   * enabled, the actual delay is `computed * (0.5 + Math.random() * 0.5)`
+   * (full jitter, 50–100% of the computed value) — prevents thundering herd.
+   *
+   * @param opts.n - Maximum number of retry attempts.
+   * @param opts.baseMs - Initial delay before the first retry.
+   * @param opts.maxMs - Cap on per-attempt delay. Defaults to 30_000.
+   * @param opts.factor - Backoff multiplier per attempt. Defaults to 2.
+   * @param opts.jitter - Apply full jitter (50–100% of computed delay). Defaults to true.
+   * @param opts.while - Optional predicate `(error, attempt) => boolean` gating each retry.
+   *
+   * @example
+   * ```ts
+   * const isRetryable = (e: HttpError): boolean =>
+   *   e._tag === "NetworkError" ||
+   *   (e._tag === "HttpStatusError" && (e.status >= 500 || e.status === 429))
+   *
+   * Http.get("/api/users", { decode })
+   *   .retryWithBackoff({ n: 3, baseMs: 250, while: isRetryable })
+   *   .timeout(10_000)
+   * ```
+   */
+  retryWithBackoff(opts: {
+    readonly n: number
+    readonly baseMs: number
+    readonly maxMs?: number
+    readonly factor?: number
+    readonly jitter?: boolean
+    readonly while?: (error: E, attempt: number) => boolean
+  }): IO<R, E, A>
+
   // ============================================
   // Combinators
   // ============================================
@@ -501,6 +564,48 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     retryWithDelay(n: number, delayMs: number): IO<R, E, A> {
       if (n <= 0) return io
       return io.recoverWith(() => IOCompanion.sleep(delayMs).flatMap(() => io.retryWithDelay(n - 1, delayMs)))
+    },
+
+    retryWhile(opts: {
+      readonly n: number
+      readonly while: (error: E, attempt: number) => boolean
+      readonly delayMs?: number
+    }): IO<R, E, A> {
+      const go = (remaining: number, attempt: number): IO<R, E, A> =>
+        io.recoverWith((e): IO<R, E, A> => {
+          if (remaining <= 0 || !opts.while(e, attempt)) {
+            return unsafeCoerce(IOCompanion.fail(e))
+          }
+          const next = go(remaining - 1, attempt + 1)
+          return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
+        })
+      return go(opts.n, 1)
+    },
+
+    retryWithBackoff(opts: {
+      readonly n: number
+      readonly baseMs: number
+      readonly maxMs?: number
+      readonly factor?: number
+      readonly jitter?: boolean
+      readonly while?: (error: E, attempt: number) => boolean
+    }): IO<R, E, A> {
+      const factor = opts.factor ?? 2
+      const maxMs = opts.maxMs ?? 30_000
+      const jitter = opts.jitter ?? true
+      const whileFn = opts.while ?? ((): boolean => true)
+
+      const go = (remaining: number, attempt: number): IO<R, E, A> =>
+        io.recoverWith((e): IO<R, E, A> => {
+          if (remaining <= 0 || !whileFn(e, attempt)) {
+            return unsafeCoerce(IOCompanion.fail(e))
+          }
+          const computed = Math.min(maxMs, opts.baseMs * Math.pow(factor, attempt - 1))
+          const delay = jitter ? computed * (0.5 + Math.random() * 0.5) : computed
+          const next = go(remaining - 1, attempt + 1)
+          return unsafeCoerce(IOCompanion.sleep(delay).flatMap(() => next))
+        })
+      return go(opts.n, 1)
     },
 
     // Combinators

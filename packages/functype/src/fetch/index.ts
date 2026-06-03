@@ -10,4 +10,11 @@ export type {
   ResponseDecodeError,
 } from "./HttpError"
 export { HttpError as HttpErrors } from "./HttpError"
-export type { HttpMethodOptions, HttpRequestOptions, HttpRequestView, HttpResponse, ParseMode } from "./HttpRequest"
+export type {
+  HttpMethodOptions,
+  HttpQueryParams,
+  HttpRequestOptions,
+  HttpRequestView,
+  HttpResponse,
+  ParseMode,
+} from "./HttpRequest"

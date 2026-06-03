@@ -293,6 +293,8 @@ export const TYPES: Record<string, TypeData> = {
         ".catchAll(f)",
         ".retry(n)",
         ".retryWithDelay(n, ms)",
+        ".retryWhile({ n, while, delayMs? })",
+        ".retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })",
         ".timeout(ms)",
         ".delay(ms)",
         ".zip(io)",
@@ -369,17 +371,17 @@ export const TYPES: Record<string, TypeData> = {
 
   Http: {
     description:
-      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Http.client accepts `beforeRequest` (effectful IO transformer for auth refresh, request IDs, etc.). Composes via .tap/.map/.flatMap/.catchTag/.retry/.timeout.",
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.",
     interfaces: [],
     methods: {
       create: [
-        "Http.get(url, { decode }?)",
-        "Http.post(url, { body, decode }?)",
-        "Http.put(url, { body, decode }?)",
-        "Http.patch(url, { body, decode }?)",
-        "Http.delete(url, { decode }?)",
-        "Http.request({ url, decode })",
-        "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest })",
+        "Http.get(url, { decode, params }?)",
+        "Http.post(url, { body, decode, params }?)",
+        "Http.put(url, { body, decode, params }?)",
+        "Http.patch(url, { body, decode, params }?)",
+        "Http.delete(url, { decode, params }?)",
+        "Http.request({ url, decode, params })",
+        "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest, afterResponse })",
       ],
       transform: [
         ".tap(f)",
@@ -388,6 +390,8 @@ export const TYPES: Record<string, TypeData> = {
         ".mapError(f)",
         ".retry(n)",
         ".retryWithDelay(n, ms)",
+        ".retryWhile({ n, while, delayMs? })",
+        ".retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })",
         ".timeout(ms)",
       ],
       extract: [".run()", ".runOrThrow()", ".runOption()", ".runTry()", ".runExit()"],
@@ -399,7 +403,9 @@ export const TYPES: Record<string, TypeData> = {
         "decode: Decoder<T> (Either-returning, structural failures preserved)",
         "validate: (data) => T (deprecated, throws — for back-compat / Zod .parse)",
         "flatten: boolean (default true; false preserves tagged emission)",
+        "params: HttpQueryParams (scalar | array; undefined/null dropped; percent-encoded)",
         "beforeRequest: (req) => IO<never, HttpError, HttpRequestView>",
+        "afterResponse: (HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>> — success path only; refresh-on-401 uses .catchTag",
       ],
     },
   },

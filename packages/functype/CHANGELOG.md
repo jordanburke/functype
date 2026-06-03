@@ -8,7 +8,33 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 Polish on the 1.2.2 type export: `JSONValue` is now reachable two ways — `Serialization.JSONValue` (via the namespace, as before) AND `import type { JSONValue } from "functype"` (top-level, new). Type-only re-export from the serialization barrel — safe across the import cycle that prevents value-level re-exports of the `Serialization` namespace from that path. Conformance suite gains a compile-time assertion that both paths resolve to the same type.
 
-No runtime change. No release cut now — lands when the next patch ships.
+**HTTP production-readiness (targeted at 1.3.0 alongside the config-coordination proposal):**
+
+`functype/fetch` was functionally complete on the happy path but lacked the operational surface every real client hits in the first week. This release closes those gaps — all backward-compatible, no signature drift on existing methods.
+
+- **`IO.retryWhile({ n, while, delayMs? })`** — predicate-based retry. Only retries when `while(error, attempt)` returns true. The `attempt` argument is 1-indexed. Lets you write "retry network blips and 5xx, never 4xx" as a single call.
+- **`IO.retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })`** — exponential backoff with optional full jitter (50–100% of the computed delay, prevents thundering herd) and predicate gating. Defaults: `factor=2`, `maxMs=30_000`, `jitter=true`, `while = () => true`.
+- **`HttpClientConfig.afterResponse`** — symmetric with `beforeRequest`. Effectful transformer `(HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>>` that runs after the response is parsed and the decoder (if any) succeeds. **Success path only** — `HttpStatusError`, `DecodeError`, `NetworkError` skip the hook and surface directly. Use `.catchTag` / `.tapError` for error-side observability. Refresh-on-401 is a `.catchTag` pattern, not an `afterResponse` pattern (documented).
+- **`HttpRequestOptions.params` / `HttpMethodOptions.params`** — typed query record (`HttpQueryParams` exported from `functype/fetch`). `undefined` / `null` values dropped, arrays repeat the key (`{ tag: ["a", "b"] }` → `tag=a&tag=b`), special chars percent-encoded via `URLSearchParams`. Merges with any query string already in the URL.
+
+**Out of scope (owned by the 2.0 plan in `docs/proposals/http-wire-format-2.0.md`):** removal of the deprecated `validate` field, `encode?` per-call hook + `Encoder<A>` type alias, `Decoder.fromZod` adapter package.
+
+**Config coordination + core `Logger` interface (1.3.0, per `docs/proposals/config-coordination-1.3.md`):**
+
+Every functype-backed service rewrites the same boot-time pattern: load env vars, fetch secrets, merge with defaults, log a diagnostic block with masking + env-mismatch + fail-fast. This release ships the contract + composition + standardized diagnostics. No third-party SDK shipped from functype — `ConfigSource` IS the plugin point.
+
+- **`Logger` interface** — minimal 4-method type (`debug`/`info`/`warn`/`error`), type-only, no implementation. Reachable from the top-level `functype` barrel (the convention every other functype type follows) as well as the dedicated `functype/logger` subpath for users who prefer narrow imports. Common shape every present and future sibling package can reference. `DirectLogger` from `functype-log` structurally satisfies `Logger` — no adapter required. If a consumer already has a local `Logger` type, rename on import via `import type { Logger as FunctypeLogger } from "functype"`.
+- **`functype-os/config` extended** — adds multi-source coordination + boot diagnostics alongside the existing `ConfigResolver`:
+  - **`ConfigSource`** — interface `{ name: string, get(key): Option<string> }`. Any value matching this shape (env, vault, defaults, file-based, user-written adapter) is a `ConfigSource`.
+  - **`ProcessEnvSource()`** — wraps existing `Env` (process.env).
+  - **`StaticSource(entries, name?)`** — in-memory map source for defaults / test fixtures.
+  - **`Layered([sources])`** — first-wins composition over N sources via `Option.isSome()` short-circuit. Composed `name` reflects the resolution chain (`"process.env > infisical > defaults"`).
+  - **`consoleBootLogger`** — default `Logger` impl, raw ANSI colors, zero-dep, respects `NO_COLOR` / `FORCE_COLOR` / `process.stdout.isTTY`.
+  - **`maskValue(s)`** — short values → `"****"`, longer → `"ab****yz"`. Exported for ad-hoc masking.
+  - **`bootDiagnostics({ source, required, sensitive, public, hostEnv, vaultEnvKey, failOn, logger, serviceName })`** — returns `Either<List<MissingKey>, void>`. Always logs the standardized block (header → masked sensitive → raw public → optional env-mismatch). `failOn: "missing"` calls `process.exit(1)` when required keys are absent (production guard); default is `"never"` and returns `Left`.
+- **Out of scope:** vault SDK adapters (Infisical/Doppler/Vault/AWS Secrets Manager/1Password) — user-written ~12-line adapters or community packages satisfying `ConfigSource`. `DotenvSource` — `dotenv` is a known package; `import "dotenv/config"` at boot and `ProcessEnvSource()` picks up the values.
+
+No runtime change to existing APIs. No release cut now — lands when 1.3.0 ships.
 
 ## 1.2.2 - 2026-06-01
 

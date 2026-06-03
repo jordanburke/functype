@@ -191,4 +191,46 @@ describe("Http.client beforeRequest", () => {
       }),
     )
   })
+
+  it("recalculates Content-Type when the hook swaps an object body for another object body", async () => {
+    const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+    const http = Http.client({
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      beforeRequest: (r) =>
+        IO.succeed({
+          ...r,
+          body: { swapped: true },
+        }),
+    })
+
+    await http.post("https://api.test/x", { body: { id: 1 } }).runOrThrow()
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.test/x",
+      expect.objectContaining({
+        body: JSON.stringify({ swapped: true }),
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+      }),
+    )
+  })
+
+  it("does not set Content-Type when the hook swaps an object body for a string body", async () => {
+    const fetch = mockFetch({ status: 200, statusText: "OK", body: {} })
+    const http = Http.client({
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      beforeRequest: (r) =>
+        IO.succeed({
+          ...r,
+          body: "raw=string&body=true",
+        }),
+    })
+
+    await http.post("https://api.test/x", { body: { id: 1 } }).runOrThrow()
+
+    const call = fetch.mock.calls[0]!
+    const init = call[1] as RequestInit
+    expect(init.body).toBe("raw=string&body=true")
+    const headers = init.headers as Record<string, string>
+    expect(headers["Content-Type"]).toBeUndefined()
+  })
 })

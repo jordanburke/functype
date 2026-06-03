@@ -25,7 +25,7 @@ src/
 ├── path/       # expandTilde, expandVars, expandPath — pure sync functions
 ├── fs/         # Fs.exists, readFile, writeFile, mkdir, unlink, stat, copyFile, rename, glob → TaskResult
 ├── platform/   # OS detection + container runtime detection (lazy-cached)
-├── config/     # ConfigResolver — find first existing config from candidates
+├── config/     # ConfigResolver (file-path resolution) + ConfigSource/Layered/bootDiagnostics (1.3.0+, multi-source boot config)
 ├── process/    # Process.exec, Process.execSync → TaskResult/Either<ProcessError, ExecResult>
 └── index.ts    # Barrel export
 ```
@@ -78,6 +78,33 @@ src/
 5. Add subpath export to `package.json` exports field
 6. Write tests in `test/`
 7. Run `pnpm validate`
+
+## `config` module (1.3.0+)
+
+The `config/` subpath hosts two distinct sets of utilities — kept together because both deal with "where does the app's config come from at boot":
+
+1. **`ConfigResolver`** (pre-1.3) — find the first existing config file from a candidate list. File-path resolution only.
+2. **`ConfigSource` ecosystem** (1.3.0+) — multi-source config lookup with first-wins precedence + standardized boot diagnostics.
+
+### ConfigSource ecosystem surface
+
+```
+ConfigSource           - interface: { name: string, get(key): Option<string> }
+ProcessEnvSource()     - wraps Env (process.env)
+StaticSource(map, name?) - in-memory map source for defaults / test fixtures
+Layered([sources])     - first-wins composition; composed name = "s1 > s2 > s3"
+consoleBootLogger      - default Logger impl, raw ANSI, NO_COLOR/FORCE_COLOR/isTTY-respecting
+maskValue(s)           - "****" for ≤8 chars; "ab****yz" for longer
+bootDiagnostics(opts)  - standardized log block + fail-fast; returns Either<List<MissingKey>, void>
+```
+
+### Logger interop
+
+`bootDiagnostics`' `logger` option is typed as `Logger` from `functype` (core, type-only — see `functype/logger` subpath). Defaults to `consoleBootLogger`. Consumers using `functype-log` pass `createDirectConsoleLogger()` directly — `DirectLogger` structurally satisfies `Logger`, no adapter required.
+
+### Vault adapters are NOT shipped
+
+`ConfigSource` IS the plugin point. Infisical/Doppler/Vault/AWS-Secrets-Manager adapters are user-written (~12 lines) or community packages. `functype-os` takes no peer deps on third-party services — keeps the package's release cadence independent of SDK churn.
 
 ## Phase 3 (Future)
 

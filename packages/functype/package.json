@@ -124,6 +124,11 @@
       "import": "./dist/lazy/index.js",
       "default": "./dist/lazy/index.js"
     },
+    "./logger": {
+      "types": "./dist/logger/index.d.ts",
+      "import": "./dist/logger/index.js",
+      "default": "./dist/logger/index.js"
+    },
     "./task": {
       "types": "./dist/core/task/index.d.ts",
       "import": "./dist/core/task/index.js",

@@ -263,6 +263,9 @@ interface HttpClientConfig {
   readonly beforeRequest?: (
     request: HttpRequestView,
   ) => IO<never, HttpError, HttpRequestView>; // Effectful request transformer
+  readonly afterResponse?: (
+    response: HttpResponse<unknown>,
+  ) => IO<never, HttpError, HttpResponse<unknown>>; // Success-path response transformer
 }
 ```
 
@@ -317,6 +320,80 @@ Notes on the contract:
 - **Body is raw at hook time.** `r.body` is the pre-serialization value. Content-Type is derived after the hook runs, so swapping `body` for a different shape produces the correct content-type header.
 - **`validate` lives on the response side.** `HttpRequestView` deliberately omits it; the hook can't change response decoding.
 - **Compose vs. replace.** This is additive to `fetch` override — they can coexist if you have a reason. For request-decoration use cases (auth, request IDs, logging), `beforeRequest` is the lighter touch and gives you typed `HttpRequestOptions` instead of raw `(input, init)`.
+
+## Response-side composition with `afterResponse`
+
+Symmetric with `beforeRequest`, the `afterResponse` hook runs after the response is parsed (and the decoder, if any, succeeds) and before the IO resolves to the caller. Use it for ETag capture, response logging, metrics, or header transformations.
+
+```typescript
+const api = Http.client({
+  baseUrl: "https://api.example.com",
+  afterResponse: (response) =>
+    IO.succeed(response)
+      .tap((r) => logger.info("response", { status: r.status }))
+      .map((r) => ({ ...r, headers: redactSensitiveHeaders(r.headers) })),
+});
+```
+
+The contract differs from `beforeRequest` in one important way: **`afterResponse` only runs on the success path.** Errors — `HttpStatusError` (non-2xx), `DecodeError` (validation failure), `NetworkError` (fetch / abort) — skip the hook entirely. This keeps observability and recovery separate: response transforms live in `afterResponse`; error logging and recovery live in `.catchTag(...)` / `.tapError(...)` chains at the call site.
+
+### Production retry policy
+
+Pair `retryWithBackoff` with the `HttpError` tagged ADT for a sane production retry policy — retry network blips and server errors, never retry validation errors or 4xx:
+
+```typescript
+import { Http, type HttpError } from "functype/fetch";
+
+const isRetryable = (e: HttpError): boolean =>
+  e._tag === "NetworkError" ||
+  (e._tag === "HttpStatusError" && (e.status >= 500 || e.status === 429));
+
+const result = await Http.get("/api/users", { decode: usersDecoder })
+  .retryWithBackoff({ n: 3, baseMs: 250, while: isRetryable })
+  .timeout(10_000)
+  .runOrThrow();
+```
+
+`retryWithBackoff` schedules `min(maxMs, baseMs * factor^(attempt-1))` and applies full jitter (50–100% of the computed delay) by default — prevents thundering herd. `retryWhile` is the simpler sibling for fixed-delay (or no-delay) selective retry.
+
+### Refresh-on-401 pattern
+
+Refresh-on-401 is **not** an `afterResponse` pattern — it's a `.catchTag` pattern, because a 401 is an error, not a successful response:
+
+```typescript
+const api = Http.client({
+  baseUrl: "https://api.example.com",
+  beforeRequest: addBearer,
+});
+
+const me = await api
+  .get("/me", { decode: userDecoder })
+  .catchTag("HttpStatusError", (e) =>
+    e.status === 401
+      ? refreshToken().flatMap(() => api.get("/me", { decode: userDecoder }))
+      : IO.fail(e),
+  )
+  .runOrThrow();
+```
+
+### Query parameters
+
+Pass `params` to any method (or to `Http.request`) — values are properly percent-encoded, arrays repeat the key, and `undefined` / `null` are dropped:
+
+```typescript
+await api
+  .get("/search", {
+    params: {
+      q: "a b&c", // → q=a+b%26c
+      tag: ["x", "y"], // → tag=x&tag=y
+      page: 2, // → page=2
+      cursor: maybeCursor.toNullable(), // null is dropped if None
+    },
+  })
+  .runOrThrow();
+```
+
+If the URL already has a query string, params are merged (existing keys preserved; new keys appended).
 
 ## Content-Type Detection
 

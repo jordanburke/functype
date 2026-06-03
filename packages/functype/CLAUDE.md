@@ -75,6 +75,7 @@ Option.none() // Companion methods
 - **HKT**: Higher-kinded types enable generic programming across containers
 - **Branded types**: Use `Brand` module for nominal typing
 - **Type classes**: Functor, Applicative, Monad, Foldable, Traversable, Matchable, Serializable
+- **Service interfaces**: `Logger` (1.3.0+) — minimal 4-method interface (debug/info/warn/error) shared by every functype-\* package and consumer code. Type-only, no implementation, no runtime. Default impls live in consumer packages (`consoleBootLogger` in `functype-os/config`). DirectLogger from `functype-log` structurally satisfies it. **Clock/Random/Tracer are NOT being added** — those are framework abstractions (Effect ships them; functype shouldn't). Logger is uniquely justified because every production TS app already has one — naming an existing concept, not introducing a new one.
 
 ### Key Interfaces
 
@@ -270,15 +271,51 @@ await effect.run()           // execute async
 effect.runSync()             // execute sync
 await effect.runEither()     // execute → Either<E,A>
 
-// Http - typed fetch wrapper. New in 1.1.0: Decoder<T> + request-side ADT flatten.
+// Retry surface (new in 1.3.0 — pair with HttpError tagged ADT for HTTP retry policy):
+effect.retry(n)                             // retry up to n on any error
+effect.retryWithDelay(n, ms)                // retry with fixed delay between attempts
+effect.retryWhile({ n, while, delayMs? })   // predicate-based retry (only retry when while(e, attempt) === true)
+effect.retryWithBackoff({                   // exponential backoff with optional full jitter
+  n, baseMs,
+  maxMs?, factor?, jitter?,                 // defaults: maxMs=30_000, factor=2, jitter=true
+  while?,                                   // optional predicate gating each retry
+})
+
+// Http - typed fetch wrapper. New in 1.3.0: afterResponse hook, params, retryWhile/retryWithBackoff.
 Http.get(url, opts?)              // GET → IO<never, HttpError, HttpResponse<unknown>>
 Http.get(url, { decode })         // GET → IO<never, HttpError, HttpResponse<T>> (Either-returning decoder)
+Http.get(url, { params })         // GET with query params: { tag: ["a","b"], page: 2 } → ?tag=a&tag=b&page=2
 Http.post(url, { body, decode })  // POST with auto JSON body serialization
 Http.put(url, { body, decode })   // PUT
 Http.patch(url, { body, decode }) // PATCH
 Http.delete(url, opts?)           // DELETE
-Http.request({ url, decode })     // Full control (url, method, headers, body, parseAs, decode, flatten)
-Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch, beforeRequest
+Http.request({ url, decode })     // Full control (url, method, headers, body, parseAs, decode, flatten, params)
+Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch, beforeRequest, afterResponse
+
+// HttpClientConfig hooks:
+//   beforeRequest: (HttpRequestView) => IO<never, HttpError, HttpRequestView>
+//     Auth refresh, request IDs, request logging. Composable via IO operators.
+//   afterResponse: (HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>>
+//     SUCCESS PATH ONLY. Response logging, ETag capture, response transforms.
+//     Skipped on HttpStatusError / DecodeError / NetworkError — use .catchTag for those.
+//
+// Refresh-on-401 is a .catchTag pattern, not afterResponse:
+//   api.get("/me").catchTag("HttpStatusError", e =>
+//     e.status === 401 ? refresh().flatMap(() => api.get("/me")) : IO.fail(e),
+//   )
+
+// HttpQueryParams: typed query record. Drops undefined/null, arrays repeat key, percent-encoded.
+//   type HttpQueryParams = Readonly<Record<string,
+//     string | number | boolean | readonly (string | number | boolean)[] | undefined | null>>
+
+// Production retry policy for HTTP — pair retryWithBackoff with the HttpError tagged ADT:
+const isRetryable = (e: HttpError): boolean =>
+  e._tag === "NetworkError" ||
+  (e._tag === "HttpStatusError" && (e.status >= 500 || e.status === 429))
+
+Http.get("/api/users", { decode: usersDecoder })
+  .retryWithBackoff({ n: 3, baseMs: 250, while: isRetryable })
+  .timeout(10_000)
 
 // Decoder<T> = (raw: unknown) => Either<DecoderError, T> — the named contract
 // Built-ins (zero-dep, composable):

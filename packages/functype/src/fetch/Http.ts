@@ -7,7 +7,14 @@ import type { HttpClientConfig } from "./HttpClient"
 import { defaultHttpClientConfig } from "./HttpClient"
 import type { HttpError, HttpMethod } from "./HttpError"
 import { HttpError as HttpErrorCompanion } from "./HttpError"
-import type { HttpMethodOptions, HttpRequestOptions, HttpRequestView, HttpResponse, ParseMode } from "./HttpRequest"
+import type {
+  HttpMethodOptions,
+  HttpQueryParams,
+  HttpRequestOptions,
+  HttpRequestView,
+  HttpResponse,
+  ParseMode,
+} from "./HttpRequest"
 
 const resolveUrl = (baseUrl: string | undefined, url: string): string => {
   if (!baseUrl) return url
@@ -15,6 +22,28 @@ const resolveUrl = (baseUrl: string | undefined, url: string): string => {
   const base = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl
   const path = url.startsWith("/") ? url : `/${url}`
   return `${base}${path}`
+}
+
+const appendParams = (url: string, params: HttpQueryParams): string => {
+  const search = new URLSearchParams()
+  for (const key of Object.keys(params)) {
+    const value = params[key]
+    if (value === undefined || value === null) continue
+    if (Array.isArray(value)) {
+      for (const v of value) search.append(key, String(v))
+    } else {
+      search.append(key, String(value))
+    }
+  }
+  const query = search.toString()
+  if (!query) return url
+  const separator = url.includes("?") ? "&" : "?"
+  return `${url}${separator}${query}`
+}
+
+const buildUrl = (baseUrl: string | undefined, url: string, params: HttpQueryParams | undefined): string => {
+  const resolved = resolveUrl(baseUrl, url)
+  return params ? appendParams(resolved, params) : resolved
 }
 
 const hasToStringTag = (value: object, tag: string): boolean =>
@@ -208,7 +237,7 @@ const doRequest = <T>(
   // from defaultHeaders + per-call headers. Body is left raw — Content-Type
   // is decided after beforeRequest runs (in case the hook swapped the body).
   const assembled: HttpRequestView = {
-    url: resolveUrl(config.baseUrl, options.url),
+    url: buildUrl(config.baseUrl, options.url, options.params),
     method: options.method,
     headers: { ...config.defaultHeaders, ...options.headers },
     body: options.body,
@@ -243,7 +272,7 @@ const doRequest = <T>(
       ...(contentType ? { "Content-Type": contentType } : {}),
     }
 
-    return IO.tryAsync<HttpResponse<T>, HttpError>(
+    const responseIO = IO.tryAsync<HttpResponse<T>, HttpError>(
       (signal) =>
         (config.fetch ?? globalThis.fetch)(request.url, {
           method: request.method,
@@ -279,6 +308,14 @@ const doRequest = <T>(
         return HttpErrorCompanion.networkError(request.url, request.method, error)
       },
     )
+
+    // afterResponse runs only on the success path. Errors (HttpStatusError,
+    // DecodeError, NetworkError) skip the hook and propagate.
+    return config.afterResponse
+      ? responseIO.flatMap((response) =>
+          config.afterResponse!(response as HttpResponse<unknown>).map((transformed) => transformed as HttpResponse<T>),
+        )
+      : responseIO
   })
 }
 
