@@ -50,7 +50,12 @@ export * from "@/io"
 export * from "@/lazy"
 export * from "@/list/LazyList"
 export * from "@/list/List"
-export * from "@/logger/Logger"
+// Logger is a type-only interface; use explicit `export type` named re-export
+// to keep tsdown's chunk splitter from threading it through the runtime
+// module graph (a previous `export *` from this path caused non-deterministic
+// `Companion$N is not defined` errors in some CI builds — same source, same
+// node, different chunk graph from one tsdown run to another).
+export type { Logger } from "@/logger/Logger"
 export * from "@/map/Map"
 export * from "@/map/shim"
 export * from "@/matchable"
