@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.3.0 - 2026-06-03
+
 Polish on the 1.2.2 type export: `JSONValue` is now reachable two ways — `Serialization.JSONValue` (via the namespace, as before) AND `import type { JSONValue } from "functype"` (top-level, new). Type-only re-export from the serialization barrel — safe across the import cycle that prevents value-level re-exports of the `Serialization` namespace from that path. Conformance suite gains a compile-time assertion that both paths resolve to the same type.
 
 **HTTP production-readiness (targeted at 1.3.0 alongside the config-coordination proposal):**
