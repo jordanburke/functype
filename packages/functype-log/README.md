@@ -37,6 +37,45 @@ await program.provideLayer(LoggerLive.console()).runOrThrow()
 await program.provideLayer(LoggerLive.console({ prefix: "[APP]" })).runOrThrow()
 ```
 
+`ConsoleLoggerOptions` accepts `level`, `prefix`, `stream`, and `console`:
+
+```typescript
+// Default — info/debug → stdout (console.info/console.debug),
+// warn/error → stderr (console.warn/console.error). Matches loglayer's
+// per-level routing and the convention of pino / winston / bunyan.
+LoggerLive.console()
+
+// Route ALL levels through stderr. Required when stdout is reserved as a
+// data/protocol channel — e.g. MCP-over-stdio servers (stdout carries
+// JSON-RPC; any other bytes corrupt the protocol), or CLI tools that emit
+// structured output on stdout.
+LoggerLive.console({ stream: "stderr" })
+
+// Fully override the sink — file streams, structured collectors, in-memory
+// capture for tests. Takes precedence over `stream`. Only the methods
+// loglayer's ConsoleTransport calls need to be present
+// (log / info / debug / trace / warn / error).
+LoggerLive.console({
+  console: {
+    info: (...args) => myStream.write(format(args) + "\n"),
+    warn: (...args) => myStream.write(format(args) + "\n"),
+    error: (...args) => myStream.write(format(args) + "\n"),
+    debug: () => {},
+    trace: () => {},
+    log: (...args) => myStream.write(format(args) + "\n"),
+  },
+})
+```
+
+The same options propagate to `createDirectConsoleLogger`:
+
+```typescript
+import { createDirectConsoleLogger } from "functype-log/direct"
+
+const log = createDirectConsoleLogger({ stream: "stderr" }) // MCP-safe
+log.info("connection established") // → stderr, not stdout
+```
+
 ### Silent (testing/suppression)
 
 ```typescript

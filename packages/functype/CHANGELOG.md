@@ -34,6 +34,18 @@ Every functype-backed service rewrites the same boot-time pattern: load env vars
   - **`bootDiagnostics({ source, required, sensitive, public, hostEnv, vaultEnvKey, failOn, logger, serviceName })`** — returns `Either<List<MissingKey>, void>`. Always logs the standardized block (header → masked sensitive → raw public → optional env-mismatch). `failOn: "missing"` calls `process.exit(1)` when required keys are absent (production guard); default is `"never"` and returns `Left`.
 - **Out of scope:** vault SDK adapters (Infisical/Doppler/Vault/AWS Secrets Manager/1Password) — user-written ~12-line adapters or community packages satisfying `ConfigSource`. `DotenvSource` — `dotenv` is a known package; `import "dotenv/config"` at boot and `ProcessEnvSource()` picks up the values.
 
+**`functype-log` — `createConsoleLogger` / `createDirectConsoleLogger` gain `stream` + `console` options for stdout-as-protocol consumers:**
+
+Latent footgun: the previous shape always passed the global `console` to `loglayer`'s `ConsoleTransport`, which routes `info` / `debug` to `console.info` / `console.debug` (stdout) and `warn` / `error` to stderr. For consumers where stdout is a reserved data/protocol channel — most notably MCP-over-stdio servers, where stdout exclusively carries JSON-RPC — every `logger.info(...)` silently corrupted the protocol. A real incident: `somamcp.createConsoleTelemetry` → `createDirectConsoleLogger` → `console.info` → stdout → MCP client (Claude Desktop) saw non-JSON bytes and disconnected. There was no escape hatch in the library; downstreams had to bypass the factory entirely.
+
+Fix is additive, backward-compatible:
+
+- **`stream?: "stdout" | "stderr"`** on `ConsoleLoggerOptions`. Default `"stdout"` — matches current behavior and the convention of every other Node logging library (pino, winston, bunyan). `"stderr"` routes ALL levels (info/debug/warn/error/trace) through `console.error` so stdout stays clean.
+- **`console?: Partial<Console>`** on `ConsoleLoggerOptions`. Fully override the sink — file streams, structured collectors, anything matching the subset of `Console` that loglayer's `ConsoleTransport` calls. Takes precedence over `stream`.
+- `createDirectConsoleLogger` forwards both options to `createConsoleLogger` (one-line bridge, picks up the new fields for free).
+
+Default behavior is **unchanged** — only consumers who explicitly pass `stream: "stderr"` or `console: customSink` see different routing. Downstream coordination: `somamcp.createConsoleTelemetry` will pass `stream: "stderr"` (ideally as its OWN default — every MCP-stdio server has the same constraint).
+
 No runtime change to existing APIs. No release cut now — lands when 1.3.0 ships.
 
 ## 1.2.2 - 2026-06-01
