@@ -1,4 +1,4 @@
-# Functype v1.2.2
+# Functype v1.3.0
 
 > A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns.
 
