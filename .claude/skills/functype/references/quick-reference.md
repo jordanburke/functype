@@ -311,7 +311,10 @@ const pairs = Do(function* () {
 ## Logger (core type, 1.3+)
 
 ```typescript
-import type { Logger } from "functype"; // 4-method type-only interface
+// Subpath-only in 1.3.x (rolldown chunk-splitter workaround;
+// barrel-parity restored in a future minor once rolldown is fixed)
+import type { Logger } from "functype/logger";
+// 4-method type-only interface:
 // debug / info / warn / error: (message, metadata?) => void
 ```
 
@@ -320,7 +323,6 @@ import type { Logger } from "functype"; // 4-method type-only interface
 | Hand-roll any 4-method object    | Anywhere a `Logger` is expected                    |
 | `DirectLogger` (no adapter)      | `createDirectConsoleLogger()` from `functype-log/direct` |
 | `consoleBootLogger` (default)    | `import { consoleBootLogger } from "functype-os/config"` |
-| Avoid name collision             | `import type { Logger as FunctypeLogger } from "functype"` |
 
 ## Config (functype-os/config, 1.3+)
 

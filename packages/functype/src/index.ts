@@ -50,12 +50,27 @@ export * from "@/io"
 export * from "@/lazy"
 export * from "@/list/LazyList"
 export * from "@/list/List"
-// Logger is a type-only interface; use explicit `export type` named re-export
-// to keep tsdown's chunk splitter from threading it through the runtime
-// module graph (a previous `export *` from this path caused non-deterministic
-// `Companion$N is not defined` errors in some CI builds — same source, same
-// node, different chunk graph from one tsdown run to another).
-export type { Logger } from "@/logger/Logger"
+// TEMPORARY (1.3.x): Logger is NOT re-exported from the top barrel.
+// Users access it via the `functype/logger` subpath only:
+//   import type { Logger } from "functype/logger"
+//
+// Why: rolldown 1.1.0 (the bundler under tsdown) has a non-deterministic
+// chunk-splitter bug — same source, same node, same lockfile, sometimes
+// produces a graph where `Companion$N` is referenced but not defined in
+// the main `src-*.js` chunks, breaking `import { IO } from "functype"`
+// for downstream consumers. The bug triggers more reliably when more
+// type-only re-exports are stitched through the heavily-interconnected
+// Companion graph from this top barrel.
+//
+// Removing the Logger re-export here cuts that graph density slightly
+// and stabilizes CI without affecting runtime behavior. Logger remains
+// fully reachable via the `functype/logger` subpath (advertised in
+// package.json `exports`, emitted as a separate tsdown entry).
+//
+// RESTORE when: rolldown ships a fix for chunk-splitter determinism.
+// Track at https://github.com/rolldown/rolldown/issues — file one with
+// a repro if no matching issue exists. Once fixed, restore parity with
+// every other functype type (top barrel + subpath) for ergonomics.
 export * from "@/map/Map"
 export * from "@/map/shim"
 export * from "@/matchable"

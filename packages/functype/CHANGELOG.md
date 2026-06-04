@@ -6,6 +6,22 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**Logger location — temporarily subpath-only (1.3.x):**
+
+Source-only change (no version-bumped artifact): `Logger` is no longer re-exported from the top-level `functype` barrel. Use the `functype/logger` subpath:
+
+```ts
+import type { Logger } from "functype/logger"
+```
+
+The 1.3.0 published dist on npm has `Logger` reachable from both paths (it was emitted on a "good" rolldown chunk run). Going forward, code that lives in this repo and code that ships in subsequent 1.3.x releases will reach Logger via the subpath only.
+
+**Why:** rolldown 1.1.0 (the bundler tsdown uses under the hood) has a non-deterministic chunk-splitter bug. Re-exporting `Logger` from the top barrel made the rolldown chunk graph dense enough that ~30% of builds emitted `src-*.js` chunks referencing `Companion$N` without a matching definition — `import { IO } from "functype"` would crash with `ReferenceError` at module-evaluation time in downstream consumers (functype-log tests, anywhere). The published 1.3.0 happened to land on a clean build; CI on the same commit hit the broken case. Multiple source-level workarounds (`export * from "@/logger"` → `"@/logger/Logger"`, then `export *` → `export type`) reduced the trigger rate but didn't eliminate it.
+
+**Restore plan:** track rolldown chunk-splitter determinism issues at https://github.com/rolldown/rolldown — file one with a minimal repro if no matching issue exists. Once a fixed rolldown ships, restore the `export type { Logger } from "@/logger/Logger"` line in `packages/functype/src/index.ts` and the `import type { Logger } from "functype"` form in `functype-os/config` / docs / skills. Parity with every other functype type is the target end state.
+
+**Migration for in-repo callers:** the change is mechanical — `import type { Logger } from "functype"` → `import type { Logger } from "functype/logger"`. Already applied to `packages/functype-os/src/config/bootDiagnostics.ts`, `consoleBootLogger.ts`, and `test/config/boot-diagnostics.spec.ts`. Existing consumers on 1.3.0 who imported from the top barrel can keep doing so — their installed artifact carries both paths.
+
 ## 1.3.0 - 2026-06-03
 
 Polish on the 1.2.2 type export: `JSONValue` is now reachable two ways — `Serialization.JSONValue` (via the namespace, as before) AND `import type { JSONValue } from "functype"` (top-level, new). Type-only re-export from the serialization barrel — safe across the import cycle that prevents value-level re-exports of the `Serialization` namespace from that path. Conformance suite gains a compile-time assertion that both paths resolve to the same type.

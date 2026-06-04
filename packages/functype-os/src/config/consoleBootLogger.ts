@@ -1,4 +1,4 @@
-import type { Logger } from "functype"
+import type { Logger } from "functype/logger"
 
 import { gray, red, yellow } from "./colors"
 

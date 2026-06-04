@@ -1,5 +1,9 @@
-import type { Either, List as ListType, Logger } from "functype"
+import type { Either, List as ListType } from "functype"
 import { Left, List, Right } from "functype"
+// Logger is type-only and subpath-only in 1.3.x (rolldown chunk-splitter
+// workaround — see comment in packages/functype/src/index.ts). Restore to
+// `import type { ..., Logger } from "functype"` when rolldown is fixed.
+import type { Logger } from "functype/logger"
 
 import { blue, green, magenta, red, yellow } from "./colors"
 import type { ConfigSource } from "./ConfigSource"

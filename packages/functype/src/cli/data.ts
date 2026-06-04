@@ -506,13 +506,12 @@ export const TYPES: Record<string, TypeData> = {
 
   Logger: {
     description:
-      'Minimal 4-method ecosystem-wide logging interface (1.3.0+). Type-only — no runtime, no `console` dependency, no opinion on output format. Every functype-* package targets this shape. Reachable from `functype` (barrel, like every other type) or `functype/logger` (subpath, narrow). Concrete impls live in consumer packages: `consoleBootLogger` in `functype-os/config`, `DirectLogger` from `functype-log/direct` (structurally satisfies Logger — no adapter). If consumer has its own `Logger` type, rename on import: `import type { Logger as FunctypeLogger } from "functype"`. Clock/Random/Tracer NOT being added — those are framework abstractions; Logger is uniquely justified because every production TS app already has one.',
+      "Minimal 4-method ecosystem-wide logging interface (1.3.0+). Type-only — no runtime, no `console` dependency, no opinion on output format. Every functype-* package targets this shape. SUBPATH-ONLY in 1.3.x (`functype/logger`) as a temporary workaround for a non-deterministic rolldown chunk-splitter bug; barrel-parity will be restored when rolldown is fixed. Concrete impls live in consumer packages: `consoleBootLogger` in `functype-os/config`, `DirectLogger` from `functype-log/direct` (structurally satisfies Logger — no adapter). Clock/Random/Tracer NOT being added — those are framework abstractions; Logger is uniquely justified because every production TS app already has one.",
     interfaces: [],
     methods: {
       create: [
         "interface Logger { debug, info, warn, error: (msg, meta?) => void }",
-        'import type { Logger } from "functype"',
-        'import type { Logger } from "functype/logger"  // alt',
+        'import type { Logger } from "functype/logger"',
       ],
       check: [],
       other: [

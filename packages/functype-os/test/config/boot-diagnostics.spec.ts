@@ -1,4 +1,4 @@
-import type { Logger } from "functype"
+import type { Logger } from "functype/logger"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { bootDiagnostics, Layered, StaticSource } from "../../src/config"

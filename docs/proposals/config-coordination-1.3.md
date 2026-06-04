@@ -64,7 +64,7 @@ Design choices:
 - **No `trace`/`fatal`/`child`/`withContext`.** Half of loggers don't have trace/fatal; child/withContext are fancier features. Richer loggers (`DirectLogger` from `functype-log`) add methods on top and still satisfy `Logger` structurally. Standard contravariance: DirectLogger satisfies Logger; Logger does not satisfy DirectLogger.
 - **`metadata?: Record<string, unknown>`** matches `DirectLogger`'s `LogMetadata` shape for free interop. Verified during exploration: `DirectLogger`'s `info/warn/error(msg, meta?)` signatures structurally satisfy this `Logger` shape.
 - **Type-only ship.** Zero runtime, zero bundle impact, zero opinion on output format. Follows existing functype pattern (`Functor`, `Monad`, `Foldable` are interfaces the ecosystem implements).
-- **Reachable from the top-level `functype` barrel AND the `functype/logger` subpath.** Matches the convention every other functype type follows (`Option`, `Either`, `JSONValue`, etc.) — making `Logger` an outlier would create more friction than the collision risk it avoids. If a consumer already has a local `Logger` type, the TS-standard rename-on-import handles it: `import type { Logger as FunctypeLogger } from "functype"`. The subpath stays for users who prefer narrow imports.
+- **Subpath-only in 1.3.x (`functype/logger`).** Originally planned for both barrel + subpath parity with every other functype type. The published 1.3.0 dist on npm carries both paths (it was built on a "good" rolldown chunk run). But from main going forward, the top-barrel re-export is removed as a temporary workaround for a non-deterministic chunk-splitter bug in rolldown 1.1.0 — the dense Companion-graph in the top barrel triggered occasional `Companion$N is not defined` runtime errors in downstream consumer builds. Restore to barrel-parity when rolldown ships a determinism fix. The collision-with-user-`Logger` story handled by subpath access in the meantime.
 
 ### 2. `ConfigSource` interface
 
@@ -131,7 +131,7 @@ First-wins precedence. The composed source's `name` reflects the resolution chai
 `packages/functype-os/src/config/consoleBootLogger.ts` — default implementation satisfying core `Logger`, raw ANSI, respects standards:
 
 ```ts
-import type { Logger } from "functype"
+import type { Logger } from "functype/logger" // subpath only in 1.3.x (rolldown workaround)
 
 import { gray, yellow, red } from "./colors"
 
@@ -190,7 +190,8 @@ Exported because consumers may want it for ad-hoc masking outside `bootDiagnosti
 `packages/functype-os/src/config/bootDiagnostics.ts`:
 
 ```ts
-import type { Either, Logger } from "functype"
+import type { Either } from "functype"
+import type { Logger } from "functype/logger" // subpath only in 1.3.x (rolldown workaround)
 import { Left, Right, List } from "functype"
 
 import type { ConfigSource } from "./ConfigSource"
@@ -290,7 +291,7 @@ Returns `Either<List<MissingKey>, void>` so non-fatal callers can inspect the re
 export type { Logger } from "./Logger"
 ```
 
-`packages/functype/package.json` adds `"./logger"` subpath export. ALSO re-exported from the top-level `functype` barrel (via `export * from "@/logger"` in `src/index.ts`) so that `Logger` is reachable the same way as every other public type — matches the convention every sibling package follows. Users with their own `Logger` type rename on import: `import type { Logger as FunctypeLogger } from "functype"`.
+`packages/functype/package.json` adds `"./logger"` subpath export. **NOT** currently re-exported from the top-level `functype` barrel — the planned `export type { Logger } from "@/logger/Logger"` line in `src/index.ts` is commented out in 1.3.x as a workaround for rolldown 1.1.0's non-deterministic chunk-splitter (see CHANGELOG Unreleased section + the TEMPORARY comment in `src/index.ts`). Restore to barrel-parity when rolldown is fixed. Users in the meantime: `import type { Logger } from "functype/logger"`.
 
 `packages/functype-os/src/config/index.ts`:
 
@@ -366,7 +367,7 @@ For consumers already using `functype-log`:
 
 ```ts
 import { createDirectConsoleLogger } from "functype-log/direct"
-import type { Logger } from "functype"
+import type { Logger } from "functype/logger" // subpath only in 1.3.x (rolldown workaround)
 
 const logger: Logger = createDirectConsoleLogger()  // structurally satisfies Logger
 
