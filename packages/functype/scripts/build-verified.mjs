@@ -29,8 +29,9 @@
 //   • REMOVAL: restore `"build": "ts-builds build"` in package.json, delete this
 //     file and scripts/check-build-determinism.mjs, and restore the top-barrel
 //     re-exports that were trimmed as earlier workarounds (Logger, see src/index.ts).
-//   • Tracking: see the PR that introduced this guard; file an upstream rolldown
-//     issue (renamer determinism under code-splitting) to track the real fix.
+//   • Tracking: jordanburke/functype#179 (monitoring + removal checklist there).
+//     Upstream: file/track at rolldown/rolldown (renamer determinism under
+//     code-splitting) and link it from #179.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { execFileSync } from "node:child_process"
