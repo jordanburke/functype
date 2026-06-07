@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.3.1 - 2026-06-06
+
 **`exports` subpaths now all build (#180):**
 
 12 of the 24 advertised `exports` subpaths — `functype/conditional`, `/decoder`, `/lazy`, `/task`, `/io`, `/functype`, `/typeclass`, `/obj`, `/companion`, `/serialization`, `/util`, `/fetch` — resolved to `dist/*/index.js` files that were never emitted (only the modules in `tsdown.config.ts`'s entry list were built), so importing any of them failed with `ERR_MODULE_NOT_FOUND`. They now build and resolve. The 12 already-working subpaths and the top-level barrel are unchanged. `tsdown.config.ts` now lists entries explicitly, so a published subpath can't silently drift out of the build again.
