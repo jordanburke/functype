@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`exports` subpaths now all build (#180):**
+
+12 of the 24 advertised `exports` subpaths — `functype/conditional`, `/decoder`, `/lazy`, `/task`, `/io`, `/functype`, `/typeclass`, `/obj`, `/companion`, `/serialization`, `/util`, `/fetch` — resolved to `dist/*/index.js` files that were never emitted (only the modules in `tsdown.config.ts`'s entry list were built), so importing any of them failed with `ERR_MODULE_NOT_FOUND`. They now build and resolve. The 12 already-working subpaths and the top-level barrel are unchanged. `tsdown.config.ts` now lists entries explicitly, so a published subpath can't silently drift out of the build again.
+
+**Build reliability — rolldown renamer guard:**
+
+functype's build now retries until every emitted entry actually loads (`scripts/build-verified.mjs`), working around the non-deterministic rolldown 1.1.0 chunk/renamer bug described below so a broken bundle can't ship. Tooling-only — no change to published artifacts. (Workspace also moved to pnpm 11 + ts-builds 3.0.0; dev-only.)
+
 **Logger location — temporarily subpath-only (1.3.x):**
 
 Source-only change (no version-bumped artifact): `Logger` is no longer re-exported from the top-level `functype` barrel. Use the `functype/logger` subpath:
