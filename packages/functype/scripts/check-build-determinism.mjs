@@ -16,6 +16,7 @@
 //
 // REMOVE the guard once this reports 0 failures across a representative window
 // (ideally under the constrained invocation above) on a fixed rolldown version.
+// Tracking: jordanburke/functype#179.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { execFileSync } from "node:child_process"
