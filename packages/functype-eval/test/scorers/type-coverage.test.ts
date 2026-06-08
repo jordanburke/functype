@@ -1,11 +1,7 @@
-import { fileURLToPath } from "node:url"
-
 import { afterAll, describe, expect, it } from "vitest"
 
 import { resolveTsconfig, scoreTypeCoverage } from "../../src/scorers/type-coverage"
 import { removeProject, writeProject } from "../helpers/tmp"
-
-const ownSrc = fileURLToPath(new URL("../../src/", import.meta.url))
 
 describe("resolveTsconfig", () => {
   const root = writeProject({ "tsconfig.json": "{}", "nested/deep/file.ts": "export const x = 1\n" })
@@ -33,11 +29,32 @@ describe("scoreTypeCoverage", () => {
     removeProject(dir)
   })
 
-  it("computes a coverage ratio against a real project (this package's own src)", () => {
-    const result = scoreTypeCoverage(ownSrc)
+  it("computes a coverage ratio against a self-contained typed project", () => {
+    // A standalone tsconfig (no `extends`, no external deps) keeps this deterministic across
+    // environments — exercises resolve → parse → lintSync without depending on ts-builds resolution.
+    const dir = writeProject({
+      "tsconfig.json": JSON.stringify({
+        compilerOptions: {
+          strict: true,
+          skipLibCheck: true,
+          module: "esnext",
+          moduleResolution: "bundler",
+          target: "es2020",
+        },
+        files: ["index.ts"],
+      }),
+      "index.ts": [
+        'export const greet = (name: string): string => "hi " + name',
+        "export const answer: number = 42",
+        "export const sum = (a: number, b: number): number => a + b",
+        "",
+      ].join("\n"),
+    })
+    const result = scoreTypeCoverage(dir)
     expect(result.skipped).toBe(false)
     expect(result.score).toBeGreaterThan(0)
     expect(result.score).toBeLessThanOrEqual(1)
     expect(result.tsconfigPath).toMatch(/tsconfig\.json$/)
+    removeProject(dir)
   })
 })
