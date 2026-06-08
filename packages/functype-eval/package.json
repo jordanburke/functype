@@ -65,18 +65,18 @@
     "typescript": ">=5.3.0"
   },
   "dependencies": {
-    "@typescript-eslint/parser": "^8.60.1",
+    "@typescript-eslint/parser": "^8.61.0",
     "eslint-plugin-functype": "workspace:^",
-    "ts-morph": "^25.0.0",
-    "type-coverage-core": "^2.29.0"
+    "ts-morph": "^25.0.1",
+    "type-coverage-core": "^2.29.7"
   },
   "devDependencies": {
-    "@types/node": "^24.12.4",
-    "eslint": "^10.2.1",
+    "@types/node": "^24.13.1",
+    "eslint": "^10.4.1",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^3.0.0",
-    "tsdown": "^0.22.1",
+    "ts-builds": "^3.0.1",
+    "tsdown": "^0.22.2",
     "vitest": "^4.1.8"
   },
   "publishConfig": {

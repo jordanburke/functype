@@ -43,10 +43,10 @@
     "loglayer": "^9.3.0"
   },
   "devDependencies": {
-    "@types/node": "^24.12.4",
+    "@types/node": "^24.13.1",
     "functype": "workspace:^",
     "ts-builds": "^3.0.1",
-    "tsdown": "^0.22.1"
+    "tsdown": "^0.22.2"
   },
   "type": "module",
   "main": "./dist/index.js",

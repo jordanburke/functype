@@ -40,11 +40,11 @@
     "functype": ">=0.60.0"
   },
   "devDependencies": {
-    "@types/node": "^24.12.4",
+    "@types/node": "^24.13.1",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
     "ts-builds": "^3.0.1",
-    "tsdown": "^0.22.1",
+    "tsdown": "^0.22.2",
     "vitest": "^4.1.8"
   },
   "type": "module",
