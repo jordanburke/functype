@@ -1,0 +1,89 @@
+{
+  "name": "functype-eval",
+  "version": "1.3.1",
+  "description": "Fitness scoring and LLM evaluation for functional TypeScript codebases using the functype ecosystem",
+  "keywords": [
+    "functype",
+    "functional",
+    "typescript",
+    "eval",
+    "fitness",
+    "score",
+    "llm",
+    "code-quality",
+    "static-analysis"
+  ],
+  "author": {
+    "name": "Jordan Burke",
+    "url": "https://github.com/jordanburke"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-eval#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordanburke/functype.git",
+    "directory": "packages/functype-eval"
+  },
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "ts-builds lint:check",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "NODE_ENV=production ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "bin": {
+    "functype-eval": "dist/cli/index.js"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "README.md"
+  ],
+  "prettier": "ts-builds/prettier",
+  "peerDependencies": {
+    "eslint": "^10.2.1",
+    "typescript": ">=5.3.0"
+  },
+  "dependencies": {
+    "@typescript-eslint/parser": "^8.60.1",
+    "eslint-plugin-functype": "workspace:^",
+    "ts-morph": "^25.0.0",
+    "type-coverage-core": "^2.29.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.4",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "functype": "workspace:^",
+    "ts-builds": "^3.0.0",
+    "tsdown": "^0.22.1",
+    "vitest": "^4.1.8"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=20.20.0"
+  }
+}

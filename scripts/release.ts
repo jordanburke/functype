@@ -14,7 +14,7 @@
  *   1. Verify clean working tree, on main, in sync with origin/main
  *   2. Run `pnpm validate` (full workspace lint + typecheck + test + build)
  *   3. Compute new functype version from current + bump level
- *   4. Apply to all 5 family package.jsons
+ *   4. Apply to all 6 family package.jsons
  *   5. Run `pnpm sync:eslint-mirror` → eslint pair = 2.{major*100+minor}.{patch}
  *   6. Run `pnpm -F functype-mcp-server sync:registry` → server.json tracks pkg.version
  *   7. Cut `## Unreleased` section in packages/functype/CHANGELOG.md to `## {version} - {date}`
@@ -23,7 +23,7 @@
  *  10. Print push instructions
  *
  * CI on tag push runs validate + check-publish-safety + `pnpm -r publish`. The
- * 4 OIDC-trusted-publisher packages (functype, -os, -log, -react) get
+ * 5 OIDC-trusted-publisher packages (functype, -os, -log, -react, -eval) get
  * provenance attestations; functype-mcp-server publishes with NPM_TOKEN.
  *
  * Implementation note: uses spawnSync with argument arrays (not exec/execSync
@@ -45,6 +45,7 @@ const FAMILY_PACKAGE_DIRS = [
   "packages/functype-os",
   "packages/functype-log",
   "packages/functype-react",
+  "packages/functype-eval",
   "packages/mcp-server",
 ] as const
 
@@ -130,7 +131,7 @@ if (!/^\d+\.\d+\.\d+$/.test(next)) {
 
 console.log(`\nReleasing functype family: ${current} → ${next} (${bumpLevel})`)
 
-// 4. Bump all 5 family packages
+// 4. Bump all 6 family packages
 for (const dir of FAMILY_PACKAGE_DIRS) {
   const pkg = readPkg(dir)
   pkg.version = next

@@ -1,10 +1,16 @@
 # Changelog
 
-This CHANGELOG covers the 5-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
+This CHANGELOG covers the 6-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
 
 Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased` as you land changes, and `pnpm release patch|minor|major` cuts that section into a dated version header when you cut a release.
 
 ## Unreleased
+
+**New package: `functype-eval`.** A CLI that scores a TypeScript codebase's functype/FP adherence as
+a 0–100 fitness number with a per-dimension breakdown. It runs `eslint-plugin-functype`'s 12 rules via
+the ESLint Node API, plus `type-coverage-core` and a ts-morph non-null-assertion scan, and aggregates
+them by violation density. `functype-eval score <dir>` supports `--json` and `--threshold N` for CI
+gating; `bench` (the Phase 2 LLM eval harness) ships as a stub. Joins the family release line (1.x).
 
 ## 1.3.1 - 2026-06-06
 
