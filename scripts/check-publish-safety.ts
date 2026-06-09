@@ -10,8 +10,8 @@
  *   2. Downgrade (local < npm) — never auto-authorized. Will not publish.
  *   3. Alignment-group drift: each Changesets `fixed` group must publish at
  *      the same version. Two groups today:
- *        - Functype family (5 packages): functype, functype-os, functype-log,
- *          functype-react, functype-mcp-server — all on the `1.x` line.
+ *        - Functype family (6 packages): functype, functype-os, functype-log,
+ *          functype-react, functype-eval, functype-mcp-server — all on the `1.x` line.
  *        - Eslint pair: eslint-config-functype, eslint-plugin-functype —
  *          both on the `2.100.x` line (intentional offset from functype).
  *      Drift here means something bypassed the Changesets bump step (manual
@@ -42,6 +42,7 @@ const PACKAGE_DIRS = [
   "packages/functype-os",
   "packages/functype-log",
   "packages/functype-react",
+  "packages/functype-eval",
   "packages/mcp-server",
   "packages/eslint-config-functype",
   "packages/eslint-plugin-functype",
@@ -52,7 +53,7 @@ const PACKAGE_DIRS = [
  * in `.changeset/config.json` — every member of a group must have the same
  * version at publish time.
  *
- * - Functype family: 5 packages on the `1.x` line, bumped together.
+ * - Functype family: 6 packages on the `1.x` line, bumped together.
  * - Eslint pair: config + plugin on the `2.100.x` line, bumped together but
  *   independent from the functype family (intentional version-line offset).
  *
@@ -62,7 +63,14 @@ const PACKAGE_DIRS = [
 const ALIGNMENT_GROUPS: ReadonlyArray<{ readonly label: string; readonly members: ReadonlySet<string> }> = [
   {
     label: "functype-* family",
-    members: new Set<string>(["functype", "functype-os", "functype-log", "functype-react", "functype-mcp-server"]),
+    members: new Set<string>([
+      "functype",
+      "functype-os",
+      "functype-log",
+      "functype-react",
+      "functype-eval",
+      "functype-mcp-server",
+    ]),
   },
   {
     label: "eslint pair",
