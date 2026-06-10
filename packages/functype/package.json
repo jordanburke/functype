@@ -67,7 +67,7 @@
     "eslint-plugin-functional": "^9.0.5",
     "fast-check": "^4.8.0",
     "globals": "^17.6.0",
-    "ts-builds": "^3.0.1",
+    "ts-builds": "^3.1.0",
     "tsdown": "^0.22.2",
     "tsx": "^4.22.4",
     "typedoc": "^0.28.19"

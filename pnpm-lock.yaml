@@ -53,8 +53,8 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0(eslint@10.4.1(jiti@2.7.0))
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -78,8 +78,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -105,8 +105,8 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -148,8 +148,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -170,8 +170,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -188,8 +188,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -233,8 +233,8 @@ importers:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -258,8 +258,8 @@ importers:
         specifier: ^24.13.1
         version: 24.13.1
       ts-builds:
-        specifier: ^3.0.1
-        version: 3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.1.0
+        version: 3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.2
         version: 0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -4288,8 +4288,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  ts-builds@3.0.1:
-    resolution: {integrity: sha512-dVPc85D+FaghDKYAJFDmM6fPabxhmLymoSBOG4cQvljEJSZM6z2lE1DaWFYSgXIQN1xSvkTDNzVfTFnWEuPClg==}
+  ts-builds@3.1.0:
+    resolution: {integrity: sha512-atLDOsgWUlzVnTCQm7qJ79gufWdKOwMiNcax5W09FuV2bfRGPS8CiSUFbJatLyHuE11oUbMTOKjcr4uxXMg3JQ==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -9366,7 +9366,7 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
-  ts-builds@3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
+  ts-builds@3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.4.1(jiti@2.7.0))
       '@types/node': 24.10.15
@@ -9408,7 +9408,7 @@ snapshots:
       - msw
       - supports-color
 
-  ts-builds@3.0.1(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
+  ts-builds@3.1.0(@typescript-eslint/eslint-plugin@8.61.0(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(@typescript-eslint/parser@8.61.0(eslint@10.4.1(jiti@2.7.0))(typescript@6.0.3))(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.2(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.1)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.4.1(jiti@2.7.0))
       '@types/node': 24.10.15
