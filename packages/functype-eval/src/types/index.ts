@@ -82,10 +82,12 @@ export type DimensionScore = {
 
 export type ScoreResult = {
   readonly target: string
-  /** Composite fitness score, 0–100 (rounded). */
+  /** Composite fitness score, 0–100 (rounded). Meaningless when `fileCount` is 0 — see CLI guard. */
   readonly score: number
   /** Total non-blank lines of code scanned. */
   readonly loc: number
+  /** Number of TypeScript source files scanned. 0 means nothing was scored (empty / non-TS target). */
+  readonly fileCount: number
   readonly dimensions: ReadonlyArray<DimensionScore>
 }
 

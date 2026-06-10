@@ -77,6 +77,18 @@ export const runScore = async (args: ReadonlyArray<string>): Promise<number> => 
     project: parsed.project ?? config.project,
   })
 
+  // Empty-input guard: with no source files every density dimension is trivially 1.0 and the
+  // composite is a vacuous 100. Don't present that as a passing score — report it and exit 2 (an
+  // error distinct from a threshold failure, which exits 1). JSON callers still get the payload.
+  if (result.fileCount === 0) {
+    console.error(
+      `functype-eval: no TypeScript sources found under ${result.target} — nothing to score.\n` +
+        `  (looked for **/*.ts and **/*.tsx, excluding tests, .d.ts, node_modules, dist, lib)`,
+    )
+    if (parsed.json) console.log(JSON.stringify(result, null, 2))
+    return 2
+  }
+
   console.log(parsed.json ? JSON.stringify(result, null, 2) : formatTable(result))
 
   if (parsed.threshold !== undefined && result.score < parsed.threshold) {

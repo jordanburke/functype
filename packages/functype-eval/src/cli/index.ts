@@ -25,6 +25,11 @@ Global:
   -v, --version         Show version number
   -h, --help            Show help
 
+Exit codes (score):
+  0  scored ok (and at/above --threshold if given)
+  1  score below --threshold
+  2  no TypeScript sources found under the target — nothing to score
+
 Examples:
   functype-eval score ./src
   functype-eval score ./src --json --threshold 80

@@ -24,6 +24,10 @@ functype-eval score ./src --threshold 80   # exit 1 if score < 80 (CI gate)
 functype-eval score ./src --project tsconfig.json   # explicit tsconfig for type-coverage
 ```
 
+**Exit codes:** `0` scored ok (and at/above `--threshold` if given), `1` score below
+`--threshold`, `2` no TypeScript sources found under the target (nothing to score — guards against a
+misleading `100/100` on an empty or non-TS directory).
+
 ### Example
 
 ```

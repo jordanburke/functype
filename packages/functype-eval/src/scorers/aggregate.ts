@@ -103,6 +103,7 @@ export const aggregate = (inputs: AggregateInputs): ScoreResult => {
     target: inputs.target,
     score: Math.round(composite * 100),
     loc,
+    fileCount: inputs.tsMorph.fileCount,
     dimensions,
   }
 }

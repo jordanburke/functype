@@ -62,10 +62,17 @@ describe("aggregate", () => {
     expect(nonNull?.score).toBeLessThan(1)
   })
 
-  it("treats an empty target (0 LOC) as a perfect density score", () => {
+  it("treats an empty target (0 LOC) as a perfect density score but reports fileCount 0", () => {
     const result = aggregate(baseInputs({ tsMorph: { nonNull: 0, loc: 0, fileCount: 0 } }))
     expect(result.score).toBe(100)
     expect(result.loc).toBe(0)
+    // fileCount 0 is how callers (the CLI guard) detect that nothing was actually scored.
+    expect(result.fileCount).toBe(0)
+  })
+
+  it("surfaces the scanned file count", () => {
+    const result = aggregate(baseInputs({ tsMorph: { nonNull: 0, loc: 1000, fileCount: 7 } }))
+    expect(result.fileCount).toBe(7)
   })
 
   it("honors weight overrides passed via the dimensions list", () => {
