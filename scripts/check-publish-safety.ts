@@ -8,14 +8,14 @@
  *   1. Major version bump (e.g. 0.60.7 → 1.0.0) — set
  *      `ALLOW_MAJOR=<pkg>,<pkg>` env var to authorize specific packages.
  *   2. Downgrade (local < npm) — never auto-authorized. Will not publish.
- *   3. Alignment-group drift: each Changesets `fixed` group must publish at
- *      the same version. Two groups today:
+ *   3. Alignment-group drift: each lockstep group must publish at the same
+ *      version. Two groups today:
  *        - Functype family (6 packages): functype, functype-os, functype-log,
  *          functype-react, functype-eval, functype-mcp-server — all on the `1.x` line.
  *        - Eslint pair: eslint-config-functype, eslint-plugin-functype —
  *          both on the `2.100.x` line (intentional offset from functype).
- *      Drift here means something bypassed the Changesets bump step (manual
- *      edit, conflict resolution, snapshot leakage, dependabot, etc.).
+ *      Drift here means something bypassed the `scripts/release.ts` family
+ *      bump (manual edit, conflict resolution, dependabot, etc.).
  *   4. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
  *      manifest) must match the package.json version.
  *
@@ -23,8 +23,9 @@
  * functype-os/-log/-react to silently force-major-bump from 0.60.7 →
  * 1.0.0 when functype published 0.61.0. Three permanent 1.0.0 versions
  * landed on npm before the cascade was noticed. The family-cadence check
- * (rule 3) plus the Changesets `fixed` group restored in PR #167 prevent
- * the inverse problem (one package drifting out of family alignment).
+ * (rule 3) — `scripts/release.ts` bumps the family together and this guard
+ * verifies it — prevents the inverse problem (one package drifting out of
+ * family alignment).
  *
  * Runs in `publish.yml` before `pnpm -r publish` and locally via
  * `pnpm check-publish-safety`.
@@ -49,16 +50,18 @@ const PACKAGE_DIRS = [
 ] as const
 
 /**
- * Packages that must publish in lockstep. Each inner group is a `fixed` group
- * in `.changeset/config.json` — every member of a group must have the same
- * version at publish time.
+ * Packages that must publish in lockstep — every member of a group must have
+ * the same version at publish time.
  *
- * - Functype family: 6 packages on the `1.x` line, bumped together.
- * - Eslint pair: config + plugin on the `2.100.x` line, bumped together but
- *   independent from the functype family (intentional version-line offset).
+ * - Functype family: 6 packages on the `1.x` line, bumped together by
+ *   `FAMILY_PACKAGE_DIRS` in `scripts/release.ts`.
+ * - Eslint pair: config + plugin on the `2.100.x` line, derived from the
+ *   functype family version via `scripts/sync-eslint-mirror.ts` (intentional
+ *   version-line offset).
  *
- * **Sync rule:** if you change this list, you MUST also update `fixed` in
- * `.changeset/config.json`. Both lists must mirror each other.
+ * **Sync rule:** if you change this list, also update the matching bump source
+ * (`FAMILY_PACKAGE_DIRS` in `scripts/release.ts` for the family) so the bump
+ * and this guard stay in agreement.
  */
 const ALIGNMENT_GROUPS: ReadonlyArray<{ readonly label: string; readonly members: ReadonlySet<string> }> = [
   {
@@ -168,11 +171,11 @@ if (surpriseMajors.length > 0) {
   process.exit(1)
 }
 
-// Alignment groups: each `fixed` Changesets group must publish in lockstep.
-// The `fixed` config enforces this at the version-bump step, but drift can
-// be introduced by other paths (manual edits, conflict resolution, snapshot
-// leakage, dependabot bumps, etc.). This check catches drift at publish
-// time before any group member lands out of sync on npm.
+// Alignment groups: each group must publish in lockstep. `scripts/release.ts`
+// bumps them together at the version-bump step, but drift can be introduced by
+// other paths (manual edits, conflict resolution, dependabot bumps, etc.). This
+// check catches drift at publish time before any group member lands out of sync
+// on npm.
 const driftedGroups = ALIGNMENT_GROUPS.flatMap((group) => {
   const members = plans.filter((p) => group.members.has(p.name))
   const versions = new Set(members.map((p) => p.local))
@@ -186,18 +189,19 @@ if (driftedGroups.length > 0) {
     }
   }
   console.error(
-    `\n  Aligned groups must publish at the same version. Restore alignment with \`pnpm changeset version\``,
+    `\n  Aligned groups must publish at the same version. Restore alignment by re-running`,
   )
-  console.error(`  (which respects the \`fixed\` groups in .changeset/config.json) and commit.`)
+  console.error(`  \`pnpm release <patch|minor|major>\` (which bumps the whole family together), or by`)
+  console.error(`  hand-correcting the package.json versions to match, then commit.`)
   console.error(`  See docs/RELEASE.md "Independent cadence" rule (1) for the family-cadence policy.`)
   process.exit(1)
 }
 
 // Eslint mirror encoding: the eslint pair version is derived from the functype
 // family version per a fixed formula (eslint.minor = functype.major*100 + functype.minor,
-// eslint.patch = functype.patch). The `version-packages` script runs sync:eslint-mirror
-// after `changeset version` to maintain the encoding automatically, but drift here
-// can be introduced by anything that bypasses that script. Verify it.
+// eslint.patch = functype.patch). `scripts/release.ts` runs sync:eslint-mirror after the
+// family bump to maintain the encoding automatically, but drift here can be introduced by
+// anything that bypasses that script. Verify it.
 console.log(`\nRunning eslint-mirror encoding check...`)
 const mirrorCheck = spawnSync("pnpm", ["sync:eslint-mirror:check"], {
   stdio: "inherit",
