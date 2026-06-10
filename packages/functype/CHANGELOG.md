@@ -12,6 +12,11 @@ the ESLint Node API, plus `type-coverage-core` and a ts-morph non-null-assertion
 them by violation density. `functype-eval score <dir>` supports `--json` and `--threshold N` for CI
 gating; `bench` (the Phase 2 LLM eval harness) ships as a stub. Joins the family release line (1.x).
 
+**`functype-eval` empty-input guard.** `score` on a directory with no TypeScript sources no longer
+prints a misleading `100/100` (0 LOC trivially scores every density dimension 1.0). It now reports
+"no TypeScript sources found" and exits `2` (distinct from `1` = below `--threshold`). `ScoreResult`
+gains a `fileCount` field so library callers can detect the same condition.
+
 ## 1.3.1 - 2026-06-06
 
 **`exports` subpaths now all build (#180):**
