@@ -45,6 +45,17 @@ npx functype --json       # JSON output for programmatic use
 - **Error Formatting**: Utilities for improved error visualization and logging
 - **Unified Type Classes**: Consistent interfaces across all data structures
 
+## functype vs Effect
+
+**functype is a small, dependency-free library of functional data types you adopt incrementally. Effect is a comprehensive effect system and runtime you build your application around.** Both bring FP to TypeScript and overlap on the surface (an effect type, typed errors, DI), but they solve different problems. If you know Scala: functype is to Effect roughly what the standard library / `cats-core` is to ZIO.
+
+- **Reach for functype** when you want Scala's standard-library ergonomics — `Option`, `Either`, `Try`, `List`, do-notation — with **zero runtime dependencies**, adoptable **one function at a time** (a `List` or `Option` is just a value you can delete from a single file). It includes a lightweight ZIO-shaped `IO` with typed errors and DI, but no runtime to build your app around.
+- **Reach for Effect** when you want **structured concurrency**, streaming, scheduling, and an integrated batteries-included ecosystem you structure your whole application on.
+
+functype deliberately is **not** a framework — no fiber runtime, no structured concurrency, no `Clock`/`Random`/`Tracer`. What it adds instead is an **LLM-native** loop no other FP library has: lint rules that _enforce_ idioms ([`eslint-plugin-functype`](https://www.npmjs.com/package/eslint-plugin-functype)), a scorer/benchmark that _measures_ adherence ([`functype-eval`](https://www.npmjs.com/package/functype-eval)), and an MCP server + skill that _teach_ models the API.
+
+**Full comparison, non-goals, and "choose Effect when…": [docs/vs-effect.md](./docs/vs-effect.md).**
+
 ## Installation
 
 ```bash
