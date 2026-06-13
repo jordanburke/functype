@@ -138,6 +138,56 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    /**
+     * Skip the warning when the receiver (`.map`'s left side) is a known
+     * non-collection monad constructor call. The rule has no type info, so
+     * it can't tell `arr.map(cb => arr2)` (collection, .flatMap is the fix)
+     * from `Try(...).map(cb => arr)` (non-collection — .flatMap on Try
+     * expects Try<T>, not an array, so .flatMap is NOT the fix).
+     *
+     * We can't enumerate every non-collection receiver, but we *can* detect
+     * the unambiguous case: the receiver is literally `Try(...)` /
+     * `Option(...)` / `Either(...)` / `Right(...)` / `Left(...)` / etc.
+     * When that holds, suppress the warning. For bare identifiers (`items`)
+     * or array literals or array-method chains, we can't tell, so the rule
+     * still fires as before.
+     */
+    function isNonCollectionMonadReceiver(node: ASTNode): boolean {
+      const monadConstructors = new Set([
+        "Option",
+        "Some",
+        "None",
+        "Either",
+        "Right",
+        "Left",
+        "Try",
+        "Success",
+        "Failure",
+        "Task",
+        "Ok",
+        "Err",
+        "IO",
+      ])
+      // Bare constructor: Try(...), Option(...), Right(x), etc.
+      if (
+        node.type === "CallExpression" &&
+        node.callee?.type === "Identifier" &&
+        monadConstructors.has(node.callee.name)
+      ) {
+        return true
+      }
+      // Companion call: Either.right(x), Option.none(), Try.success(v)
+      if (
+        node.type === "CallExpression" &&
+        node.callee?.type === "MemberExpression" &&
+        node.callee.object?.type === "Identifier" &&
+        monadConstructors.has(node.callee.object.name)
+      ) {
+        return true
+      }
+      return false
+    }
+
     return {
       CallExpression(node: ASTNode) {
         // Check for .map().flat() pattern first (highest priority)
@@ -211,6 +261,13 @@ const rule: Rule.RuleModule = {
             node.parent.parent.callee?.property?.name === "map"
           ) {
             return // Skip - this feeds into a chain
+          }
+
+          // Don't flag when the receiver is a known non-collection monad
+          // constructor — .flatMap on Try / Option / Either / etc. expects
+          // a wrapped value, not an array, so suggesting it is wrong.
+          if (object && isNonCollectionMonadReceiver(object)) {
+            return
           }
 
           context.report({

@@ -54,6 +54,37 @@ describe("prefer-do-notation", () => {
         `,
           options: [{ detectMixedMonads: false }],
         },
+        // Idiomatic conversion .toEither — NOT a mixed-monad case
+        // (substring scan misfired here because ".toEither" contains "Either")
+        {
+          name: "Try(...).toEither(err) is a conversion, not a mix",
+          code: `
+          const result = Try(() => parse(x)).toEither(buildErr)
+        `,
+        },
+        // Idiomatic conversion .toOption — same false positive
+        {
+          name: "Try(...).toOption() is a conversion, not a mix",
+          code: `
+          const opt = Try(() => parse(x)).toOption()
+        `,
+        },
+        // Option to Either conversion
+        {
+          name: "Option(x).toEither(left) is a conversion, not a mix",
+          code: `
+          const result = Option(value).toEither(missingError)
+        `,
+        },
+        // Conversion in a chain — still not a mix
+        {
+          name: "Option(x).toEither(err).map(f) is a conversion chain",
+          code: `
+          const result = Option(value)
+            .toEither(missing)
+            .map(v => transform(v))
+        `,
+        },
       ],
       invalid: showTransformations([
         // Nested null checks

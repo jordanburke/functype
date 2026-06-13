@@ -159,16 +159,61 @@ const rule: Rule.RuleModule = {
     }
 
     /**
-     * Detect mixed monad usage
+     * Detect mixed monad usage by walking the AST under `node` and counting
+     * *distinct* monad constructor calls — not substring matches.
+     *
+     * A "monad constructor call" is a CallExpression whose callee is either:
+     * - a bare identifier matching a known monad type (`Option(...)`, `Try(...)`),
+     *   or
+     * - a member expression whose object is a known monad type
+     *   (`Option.none()`, `Either.right(...)`, `Try.success(...)`).
+     *
+     * Method calls like `.toEither(...)`, `.toOption()`, `.toTry()` are NOT
+     * constructor calls — they're the idiomatic *conversion* API for crossing
+     * monad boundaries. The old substring-based check fired on these because
+     * `.toEither` contains "Either" as a substring; the AST check correctly
+     * sees them as method calls, not new monad constructions.
      */
     function checkMixedMonads(node: ASTNode): void {
       if (!detectMixedMonads) return
 
-      const text = context.sourceCode.getText(node)
-      const monadTypes = ["Option", "Either", "Try", "Task"]
-      const foundMonads = monadTypes.filter((type) => text.includes(type))
+      const monadTypes = new Set(["Option", "Either", "Try", "Task"])
+      const found = new Set<string>()
 
-      if (foundMonads.length >= 2) {
+      function walk(n: unknown): void {
+        if (!n || typeof n !== "object") return
+        const ast = n as ASTNode
+
+        if (ast.type === "CallExpression") {
+          // Bare constructor: Option(...), Try(...), Either(...), Task(...)
+          if (ast.callee?.type === "Identifier" && monadTypes.has(ast.callee.name)) {
+            found.add(ast.callee.name)
+          }
+          // Companion call: Option.none(), Either.right(x), Try.success(v)
+          if (
+            ast.callee?.type === "MemberExpression" &&
+            ast.callee.object?.type === "Identifier" &&
+            monadTypes.has(ast.callee.object.name)
+          ) {
+            found.add(ast.callee.object.name)
+          }
+        }
+
+        // Recurse into AST children, skipping back-edges and source metadata.
+        for (const key in ast) {
+          if (key === "parent" || key === "loc" || key === "range") continue
+          const child = (ast as Record<string, unknown>)[key]
+          if (Array.isArray(child)) {
+            for (const item of child) walk(item)
+          } else if (child && typeof child === "object") {
+            walk(child)
+          }
+        }
+      }
+
+      walk(node)
+
+      if (found.size >= 2) {
         context.report({
           node,
           messageId: "preferDoForMixedMonads",

@@ -50,6 +50,29 @@ describe("prefer-flatmap", () => {
           )
         `,
       },
+      // Non-collection monad receiver: Try(...).map(cb returning array)
+      // .flatMap on Try expects Try<T>, not an array — don't suggest it.
+      {
+        name: "Try(...).map returning array is not a flatten candidate",
+        code: `
+          const filtered = Try(() => fs.readdirSync(p))
+            .map(entries => entries.filter(name => isReal(name)))
+        `,
+      },
+      // Same shape with Option(...)
+      {
+        name: "Option(...).map returning array is not a flatten candidate",
+        code: `
+          const items = Option(maybeList).map(list => list.filter(p))
+        `,
+      },
+      // Companion call receiver: Either.right(...).map returning array
+      {
+        name: "Either.right(...).map returning array is not a flatten candidate",
+        code: `
+          const result = Either.right(seed).map(arr => arr.filter(p))
+        `,
+      },
     ],
     invalid: [
       // map().flat() pattern
