@@ -3,13 +3,13 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 
-import { List, Option } from "functype"
+import { List, Option, Set as FSet, Try } from "functype"
 
 export type UserInfo = {
   readonly username: string
   readonly uid: number
   readonly gid: number
-  readonly shell: string | null
+  readonly shell: Option<string>
   readonly homedir: string
 }
 
@@ -21,21 +21,16 @@ export type CloudStorageDir = {
   readonly label: string
 }
 
-const hasDockerEnv = (): boolean => {
-  try {
-    fs.statSync("/.dockerenv")
-    return true
-  } catch {
-    return false
-  }
-}
-const hasDockerCGroup = (): boolean => {
-  try {
-    return fs.readFileSync("/proc/self/cgroup", "utf8").includes("docker")
-  } catch {
-    return false
-  }
-}
+const hasDockerEnv = (): boolean => Try(() => fs.statSync("/.dockerenv")).isSuccess()
+
+const hasDockerCGroup = (): boolean =>
+  Try(() => fs.readFileSync("/proc/self/cgroup", "utf8"))
+    .map((contents) => contents.includes("docker"))
+    .toEither((): boolean => false)
+    .fold(
+      () => false,
+      (matched) => matched,
+    )
 
 const memo = <T>(fn: () => T): (() => T) => {
   const cache: { value?: T } = {}
@@ -48,21 +43,22 @@ const memo = <T>(fn: () => T): (() => T) => {
 }
 
 const cachedIsDocker = memo(() => hasDockerEnv() || hasDockerCGroup())
-const cachedIsKube = memo(() => {
-  try {
-    return fs.readFileSync("/proc/self/cgroup", "utf8").includes("kube")
-  } catch {
-    return false
-  }
-})
-const cachedIsWSL = memo(() => {
-  try {
-    const version = fs.readFileSync("/proc/version", "utf8")
-    return version.includes("Microsoft") || version.includes("WSL")
-  } catch {
-    return false
-  }
-})
+const cachedIsKube = memo(() =>
+  Try(() => fs.readFileSync("/proc/self/cgroup", "utf8"))
+    .map((contents) => contents.includes("kube"))
+    .fold(
+      () => false,
+      (matched) => matched,
+    ),
+)
+const cachedIsWSL = memo(() =>
+  Try(() => fs.readFileSync("/proc/version", "utf8"))
+    .map((version) => version.includes("Microsoft") || version.includes("WSL"))
+    .fold(
+      () => false,
+      (matched) => matched,
+    ),
+)
 const cachedIsCI = memo(
   () =>
     process.env["CI"] !== undefined ||
@@ -74,126 +70,122 @@ const cachedIsCI = memo(
     process.env["BUILDKITE"] !== undefined,
 )
 
-const SYSTEM_ACCOUNTS = new Set(["all users", "default", "default user", "public"])
+const SYSTEM_ACCOUNTS = FSet.of("all users", "default", "default user", "public")
 
 const isSystemAccount = (name: string): boolean => {
   const lower = name.toLowerCase()
-  if (SYSTEM_ACCOUNTS.has(lower)) return true
+  if (SYSTEM_ACCOUNTS.contains(lower)) return true
   if (lower.startsWith("defaultuser") || lower.startsWith("desktop.") || lower.startsWith("wsiaccount")) return true
   return false
 }
 
-const isDirectory = (p: string): boolean => {
-  try {
-    return fs.statSync(p).isDirectory()
-  } catch {
-    return false
-  }
+const isDirectory = (p: string): boolean =>
+  Try(() => fs.statSync(p).isDirectory()).fold(
+    () => false,
+    (isDir) => isDir,
+  )
+
+const readRealUsers = (usersDir: string): Option<readonly string[]> => {
+  const filterRealUsers = (entries: readonly string[]): readonly string[] =>
+    entries.filter((name) => !isSystemAccount(name) && isDirectory(path.join(usersDir, name)))
+  return Try(() => fs.readdirSync(usersDir)).fold<Option<readonly string[]>>(
+    () => Option<readonly string[]>(undefined),
+    (entries) => Option(filterRealUsers(entries)),
+  )
 }
 
-const readRealUsers = (usersDir: string): readonly string[] | undefined => {
-  try {
-    const entries = fs.readdirSync(usersDir)
-    return entries.filter((name) => !isSystemAccount(name) && isDirectory(path.join(usersDir, name)))
-  } catch {
-    return undefined
-  }
-}
-
-const resolveViaCmdExe = (usersDir: string, fallback: string): Option<string> => {
-  try {
-    const raw = execSync("cmd.exe /c echo %USERPROFILE%", { timeout: 3000, encoding: "utf8" }).trim()
-    // Convert Windows path C:\Users\foo → /mnt/c/Users/foo
-    const match = raw.match(/^([A-Za-z]):\\(.*)$/)
-    if (match) {
-      const drive = match[1].toLowerCase()
-      const rest = match[2].replace(/\\/g, "/")
+const resolveViaCmdExe = (usersDir: string, fallback: string): Option<string> =>
+  Try(() => execSync("cmd.exe /c echo %USERPROFILE%", { timeout: 3000, encoding: "utf8" }).trim())
+    .map((raw) => {
+      // Convert Windows path C:\Users\foo → /mnt/c/Users/foo
+      const match = raw.match(/^([A-Za-z]):\\(.*)$/)
+      if (!match) return Option<string>(undefined)
+      const drive = (match[1] as string).toLowerCase()
+      const rest = (match[2] as string).replace(/\\/g, "/")
       const wslPath = `/mnt/${drive}/${rest}`
-      if (isDirectory(wslPath)) {
-        return Option(wslPath)
-      }
-    }
-  } catch {
-    // cmd.exe failed, fall through to best guess
-  }
-  return Option(fallback)
-}
+      return isDirectory(wslPath) ? Option(wslPath) : Option<string>(undefined)
+    })
+    .fold<Option<string>>(
+      () => Option(fallback),
+      (opt) =>
+        opt.fold<Option<string>>(
+          () => Option(fallback),
+          (v) => Option(v),
+        ),
+    )
 
 const resolveWindowsHome = (): Option<string> => {
   if (!cachedIsWSL()) return Option<string>(undefined)
 
   const usersDir = "/mnt/c/Users"
-  const realUsers = readRealUsers(usersDir)
-  if (realUsers === undefined) return Option<string>(undefined)
-
-  if (realUsers.length === 1) {
-    return Option(path.join(usersDir, realUsers[0]))
-  }
-
-  if (realUsers.length > 1) {
-    return resolveViaCmdExe(usersDir, path.join(usersDir, realUsers[0]))
-  }
-
-  return Option<string>(undefined)
+  return readRealUsers(usersDir).fold<Option<string>>(
+    () => Option<string>(undefined),
+    (realUsers) => {
+      if (realUsers.length === 1) return Option(path.join(usersDir, realUsers[0] as string))
+      if (realUsers.length > 1) return resolveViaCmdExe(usersDir, path.join(usersDir, realUsers[0] as string))
+      return Option<string>(undefined)
+    },
+  )
 }
 
 const cachedWindowsHome = memo(resolveWindowsHome)
 
-const detectCloudProvider = (name: string): { provider: CloudProvider; label: string } | undefined => {
+type CloudDetection = { readonly provider: CloudProvider; readonly label: string }
+
+const detectCloudProvider = (name: string): Option<CloudDetection> => {
   if (name === "OneDrive" || name.startsWith("OneDrive ") || name.startsWith("OneDrive-")) {
-    return { provider: "onedrive", label: name }
+    return Option({ provider: "onedrive" as const, label: name })
   }
-  if (name === "Google Drive") {
-    return { provider: "gdrive", label: name }
-  }
-  if (name === "Dropbox") {
-    return { provider: "dropbox", label: name }
-  }
-  return undefined
+  if (name === "Google Drive") return Option({ provider: "gdrive" as const, label: name })
+  if (name === "Dropbox") return Option({ provider: "dropbox" as const, label: name })
+  return Option<CloudDetection>(undefined)
 }
 
-const scanCloudStorageDirs = (home: string): CloudStorageDir[] => {
-  const results: CloudStorageDir[] = []
+const scanDirectChildren = (home: string): readonly CloudStorageDir[] =>
+  Try(() => fs.readdirSync(home))
+    .map((entries) =>
+      entries.flatMap((name): CloudStorageDir[] => {
+        const fullPath = path.join(home, name)
+        return detectCloudProvider(name).fold<CloudStorageDir[]>(
+          () => [],
+          (detection) =>
+            isDirectory(fullPath) ? [{ provider: detection.provider, path: fullPath, label: detection.label }] : [],
+        )
+      }),
+    )
+    .fold<readonly CloudStorageDir[]>(
+      () => [],
+      (results) => results,
+    )
 
-  // Direct home children
-  try {
-    const entries = fs.readdirSync(home)
-    for (const name of entries) {
-      const fullPath = path.join(home, name)
-      const detection = detectCloudProvider(name)
-      if (detection && isDirectory(fullPath)) {
-        results.push({ provider: detection.provider, path: fullPath, label: detection.label })
-      }
-    }
-  } catch {
-    // home dir may not exist or be readable
-  }
-
-  // macOS Library/CloudStorage children
+const scanMacCloudStorage = (home: string): readonly CloudStorageDir[] => {
   const cloudStoragePath = path.join(home, "Library", "CloudStorage")
-  try {
-    const entries = fs.readdirSync(cloudStoragePath)
-    for (const name of entries) {
-      const fullPath = path.join(cloudStoragePath, name)
-      if (!isDirectory(fullPath)) continue
-      if (name.startsWith("OneDrive")) {
-        results.push({ provider: "onedrive", path: fullPath, label: name })
-      } else if (name.startsWith("GoogleDrive")) {
-        results.push({ provider: "gdrive", path: fullPath, label: name })
-      }
-    }
-  } catch {
-    // Library/CloudStorage may not exist
-  }
-
-  // macOS iCloud fixed path
-  const icloudPath = path.join(home, "Library", "Mobile Documents", "com~apple~CloudDocs")
-  if (isDirectory(icloudPath)) {
-    results.push({ provider: "icloud", path: icloudPath, label: "iCloud Drive" })
-  }
-
-  return results
+  return Try(() => fs.readdirSync(cloudStoragePath))
+    .map((entries) =>
+      entries.flatMap((name): CloudStorageDir[] => {
+        const fullPath = path.join(cloudStoragePath, name)
+        if (!isDirectory(fullPath)) return []
+        if (name.startsWith("OneDrive")) return [{ provider: "onedrive", path: fullPath, label: name }]
+        if (name.startsWith("GoogleDrive")) return [{ provider: "gdrive", path: fullPath, label: name }]
+        return []
+      }),
+    )
+    .fold<readonly CloudStorageDir[]>(
+      () => [],
+      (results) => results,
+    )
 }
+
+const scanMacICloud = (home: string): readonly CloudStorageDir[] => {
+  const icloudPath = path.join(home, "Library", "Mobile Documents", "com~apple~CloudDocs")
+  return isDirectory(icloudPath) ? [{ provider: "icloud", path: icloudPath, label: "iCloud Drive" }] : []
+}
+
+const scanCloudStorageDirs = (home: string): readonly CloudStorageDir[] => [
+  ...scanDirectChildren(home),
+  ...scanMacCloudStorage(home),
+  ...scanMacICloud(home),
+]
 
 export const Platform = {
   os: (): "darwin" | "linux" | "win32" | string => process.platform,
@@ -208,20 +200,18 @@ export const Platform = {
   isMac: (): boolean => process.platform === "darwin",
   isLinux: (): boolean => process.platform === "linux",
 
-  userInfo: (): Option<UserInfo> => {
-    try {
-      const info = os.userInfo()
-      return Option({
-        username: info.username,
-        uid: info.uid,
-        gid: info.gid,
-        shell: info.shell,
-        homedir: info.homedir,
-      })
-    } catch {
-      return Option<UserInfo>(undefined)
-    }
-  },
+  userInfo: (): Option<UserInfo> =>
+    Try(() => os.userInfo()).fold<Option<UserInfo>>(
+      () => Option<UserInfo>(undefined),
+      (info) =>
+        Option<UserInfo>({
+          username: info.username,
+          uid: info.uid,
+          gid: info.gid,
+          shell: Option(info.shell),
+          homedir: info.homedir,
+        }),
+    ),
 
   isDocker: (): boolean => cachedIsDocker(),
   isKubernetes: (): boolean => cachedIsKube(),
@@ -233,29 +223,28 @@ export const Platform = {
   windowsHomeDir: (): Option<string> => cachedWindowsHome(),
 
   homeDirs: (): List<string> => {
-    const homes: string[] = [os.homedir()]
-    Platform.windowsHomeDir().forEach((winHome) => {
-      if (winHome !== os.homedir()) {
-        homes.push(winHome)
-      }
-    })
-    return List(homes)
+    const primary = os.homedir()
+    const windowsHome = Platform.windowsHomeDir().fold<readonly string[]>(
+      () => [],
+      (h) => (h !== primary ? [h] : []),
+    )
+    return List<string>([primary, ...windowsHome])
   },
 
   cloudStorageDirs: (home?: string): List<CloudStorageDir> => {
-    if (home !== undefined) {
-      return List(scanCloudStorageDirs(home))
-    }
-    const allDirs: CloudStorageDir[] = []
-    const seenPaths = new Set<string>()
-    Platform.homeDirs().forEach((h) => {
-      for (const dir of scanCloudStorageDirs(h)) {
-        if (!seenPaths.has(dir.path)) {
-          seenPaths.add(dir.path)
-          allDirs.push(dir)
-        }
-      }
-    })
-    return List(allDirs)
+    if (home !== undefined) return List(scanCloudStorageDirs(home))
+    const allDirs = Platform.homeDirs()
+      .toArray()
+      .flatMap((h) => [...scanCloudStorageDirs(h)])
+    // Deduplicate by path, first-wins
+    const deduped = allDirs.reduce<{
+      readonly seen: ReadonlyArray<string>
+      readonly results: ReadonlyArray<CloudStorageDir>
+    }>(
+      (acc, dir) =>
+        acc.seen.includes(dir.path) ? acc : { seen: [...acc.seen, dir.path], results: [...acc.results, dir] },
+      { seen: [], results: [] },
+    )
+    return List(deduped.results)
   },
 }

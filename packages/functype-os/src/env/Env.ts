@@ -1,5 +1,5 @@
 import type { Either } from "functype"
-import { Left, List, Option, Right } from "functype"
+import { Left, List, Option, Right, Try } from "functype"
 
 import { EnvError } from "../errors/errors"
 
@@ -8,10 +8,7 @@ const EnvConstructor = (name: string): Option<string> => Option(process.env[name
 const EnvCompanion = {
   get: (name: string): Option<string> => Option(process.env[name]),
 
-  getRequired: (name: string): Either<EnvError, string> => {
-    const value = process.env[name]
-    return value !== undefined ? Right(value) : Left(EnvError(name))
-  },
+  getRequired: (name: string): Either<EnvError, string> => Option(process.env[name]).toEither(EnvError(name)),
 
   getOrDefault: (name: string, defaultValue: string): string => process.env[name] ?? defaultValue,
 
@@ -25,21 +22,17 @@ const EnvCompanion = {
   },
 
   parse: <T>(name: string, parser: (value: string) => T): Either<EnvError, T> => {
-    const value = process.env[name]
-    if (value === undefined) {
-      return Left(EnvError(name))
-    }
-    try {
-      const parsed = parser(value)
-      if (typeof parsed === "number" && isNaN(parsed)) {
-        return Left(EnvError(name, `Cannot parse '${value}' as number for '${name}'`))
-      }
-      return Right(parsed)
-    } catch (error) {
-      return Left(
-        EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`),
-      )
-    }
+    const valueOpt = Option(process.env[name])
+    if (valueOpt.isEmpty) return Left(EnvError(name))
+    const value = valueOpt.orThrow()
+    const parsed = Try(() => parser(value)).toEither((error) =>
+      EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`),
+    )
+    return parsed.flatMap((p) =>
+      typeof p === "number" && isNaN(p)
+        ? Left(EnvError(name, `Cannot parse '${value}' as number for '${name}'`))
+        : Right(p),
+    )
   },
 }
 

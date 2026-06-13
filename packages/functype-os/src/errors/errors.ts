@@ -1,3 +1,5 @@
+import type { Option } from "functype"
+
 export type EnvError = {
   readonly _tag: "EnvError"
   readonly variable: string
@@ -28,7 +30,7 @@ export type ConfigError = {
 export type ProcessError = {
   readonly _tag: "ProcessError"
   readonly command: string
-  readonly exitCode: number | null
+  readonly exitCode: Option<number>
   readonly stderr: string
   readonly message: string
 }
@@ -65,7 +67,7 @@ export const ConfigError = (candidates: readonly string[], message?: string): Co
 
 export const ProcessError = (
   command: string,
-  exitCode: number | null,
+  exitCode: Option<number>,
   stderr: string,
   message?: string,
 ): ProcessError => ({
@@ -73,5 +75,5 @@ export const ProcessError = (
   command,
   exitCode,
   stderr,
-  message: message ?? `Command '${command}' failed (exit ${exitCode}): ${stderr}`,
+  message: message ?? `Command '${command}' failed (exit ${exitCode.fold(() => "?", String)}): ${stderr}`,
 })

@@ -6,6 +6,23 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype-os` — internal FP cleanup; two breaking type changes.** All 58 lint warnings in the package are gone, fixed at the source rather than silenced:
+
+- `Fs.ts` — 23 `try/catch` blocks replaced with `Try(thunk).toEither(buildErr)` (sync) and `Try.fromPromise(promise)` (async). Same runtime behavior; the FP type tells the story instead of a control-flow keyword.
+- `Platform.ts` — all `try/catch` replaced with `Try`. `new Set([...])` swapped for `Set.of(...)`. Imperative for-of loops replaced with `flatMap` / `forEach` chains.
+- `ConfigResolver.ts` + `bootDiagnostics.ts` — imperative for-of loops replaced; deep `List.map → flatMap → find` chains broken into a single helper (`presentPaths`) so they stay under the `prefer-do-notation` chain-depth threshold.
+- `Env.ts` — `Option(x).fold(Left, Right)` collapsed to `Option(x).toEither(left)`. `try { parser(v) }` replaced with `Try(() => parser(v)).toEither(buildErr)`.
+- `PathExpander.ts` — regex callback captures now lifted into `Option` instead of `string | undefined ?? ""`.
+- `colors.ts` — removed an unnecessary optional chain that the TS strict checker flagged.
+- `eslint.config.mjs` — turned off the `prefer-do-notation` rule's `detectMixedMonads` heuristic with an inline rationale. That sub-check is text-based and false-positives on idiomatic conversions (`Try.toEither`, `Option.toEither`, `Try.toOption`) which are the _recommended_ way to cross monad boundaries. The chain-depth sub-check (the genuinely useful one) stays on.
+
+Breaking (TS-visible only):
+
+- `ProcessError.exitCode: number | null` → `Option<number>`. Constructor now takes `Option<number>`. Consumers reading the field directly need `.fold(...)` / `.orElse(default)`.
+- `UserInfo.shell: string | null` → `Option<string>`. Same migration.
+
+Both fields were added in 1.3.x's `Process` and `Platform` modules — they're brand-new public surface that's only had one minor release of exposure. The breakage is mechanical (`x.exitCode === null` → `x.exitCode.isEmpty`, `x.shell ?? ""` → `x.shell.orElse("")`) and consistent with how the rest of `functype-os` models nullables.
+
 **New package: `functype-eval`.** A CLI that scores a TypeScript codebase's functype/FP adherence as
 a 0–100 fitness number with a per-dimension breakdown. It runs `eslint-plugin-functype`'s 12 rules via
 the ESLint Node API, plus `type-coverage-core` and a ts-morph non-null-assertion scan, and aggregates

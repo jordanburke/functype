@@ -2,7 +2,7 @@ import * as os from "node:os"
 import * as nodePath from "node:path"
 
 import type { Either } from "functype"
-import { Left, Right } from "functype"
+import { Left, Option, Right } from "functype"
 
 import { PathError } from "../errors/errors"
 
@@ -17,18 +17,17 @@ export const expandVars = (p: string): Either<PathError, string> => {
   // Factor out the leading `$` and forbid `$` inside `${...}` so the engine
   // can't backtrack catastrophically on inputs like `${{${{${{...` (CodeQL
   // js/polynomial-redos).
-  const result = p.replace(
-    /\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g,
-    (_match, braced: string | undefined, bare: string | undefined) => {
-      const varName = braced ?? bare ?? ""
-      const value = process.env[varName]
-      if (value === undefined) {
-        unresolvedVars.push(varName)
-        return _match
-      }
-      return value
-    },
-  )
+  const result = p.replace(/\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g, (_match: string, ...captures: unknown[]) => {
+    const varName = Option(captures[0] as string | undefined)
+      .or(Option(captures[1] as string | undefined))
+      .orElse("")
+    const value = process.env[varName]
+    if (value === undefined) {
+      unresolvedVars.push(varName)
+      return _match
+    }
+    return value
+  })
 
   if (unresolvedVars.length > 0) {
     return Left(PathError(p, "unresolved_variable", `Unresolved variables: ${unresolvedVars.join(", ")}`))

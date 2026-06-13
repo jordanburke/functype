@@ -88,26 +88,26 @@ export const bootDiagnostics = (opts: BootDiagnosticsOptions): Either<ListType<M
 
   if (sensitive.length > 0) {
     logger.info(yellow("🔐 Sensitive:"))
-    for (const key of sensitive) {
+    sensitive.forEach((key) => {
       const value = opts.source.get(key)
       const display = value.fold(
         () => red("NOT_LOADED"),
         (v) => maskValue(v),
       )
       logger.info(`   ${key.padEnd(28)} ${display}`)
-    }
+    })
   }
 
   if (publicKeys.length > 0) {
     logger.info(green("⚙️  Public:"))
-    for (const key of publicKeys) {
+    publicKeys.forEach((key) => {
       const value = opts.source.get(key)
       const display = value.fold(
         () => red("NOT_LOADED"),
         (v) => v,
       )
       logger.info(`   ${key.padEnd(28)} ${display}`)
-    }
+    })
   }
 
   if (opts.hostEnv !== undefined && opts.vaultEnvKey !== undefined) {
@@ -139,7 +139,7 @@ export const bootDiagnostics = (opts: BootDiagnosticsOptions): Either<ListType<M
   }
 
   logger.error(red(`❌ Missing required keys (${missing.length}):`))
-  for (const key of missing) logger.error(`   ${key}`)
+  missing.forEach((key) => logger.error(`   ${key}`))
 
   const missingList = List(missing.map((key): MissingKey => ({ key, required: true })))
 
