@@ -53,7 +53,10 @@ export const TYPES: Record<string, TypeData> = {
         ".toList()",
         ".toArray()",
       ],
-      check: [".isSome", ".isNone", ".isDefined", ".isEmpty"],
+      // isSome()/isNone() are type-guard METHODS (parens required); isEmpty
+      // is a plain boolean property. `isDefined` was advertised here pre-1.3.1
+      // but never existed in Option.ts — removed.
+      check: [".isSome()", ".isNone()", ".isEmpty"],
       other: ["Option.sequence(arr)", "Option.traverse(arr, f)"],
     },
   },
@@ -268,6 +271,48 @@ export const TYPES: Record<string, TypeData> = {
         "Task.getErrorChain(error)",
         "Task.formatErrorChain(error)",
       ],
+    },
+  },
+
+  TaskOutcome: {
+    description:
+      "Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().",
+    // TaskOutcome is declared inline (no `extends` chain), so its interface
+    // list is curated rather than mergeInterfaces-derived. Source of truth:
+    // the TaskOutcome interface body in src/core/task/Task.ts.
+    interfaces: ["AsyncMonad", "Extractable", "Foldable", "Functor", "Serializable"],
+    methods: {
+      create: ["Ok(value)", "Err(error)", "Task.ok(value)", "Task.err(error)"],
+      transform: [
+        ".map(f)",
+        ".flatMap(f)",
+        ".mapError(f)",
+        ".recover(v)",
+        ".recoverWith(f)",
+        ".mapAsync(f)",
+        ".flatMapAsync(f)",
+      ],
+      extract: [
+        ".fold(onErr, onOk)",
+        ".match({Ok, Err})",
+        ".orElse(v)",
+        ".orThrow()",
+        ".toEither()",
+        ".toOption()",
+        ".toJSON()",
+      ],
+      check: [".isOk()", ".isErr()", ".isSuccess()", ".isFailure()"],
+    },
+  },
+
+  TaskResult: {
+    description:
+      "Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.",
+    // Type alias has no own methods — point users at TaskOutcome.
+    interfaces: [],
+    methods: {
+      create: ["Task(params).Async(fn, errFn) → TaskResult<T>", "Task.fromPromise(fn) → (...args) => TaskResult<U>"],
+      other: ["await taskResult → TaskOutcome<T>", "// then use any TaskOutcome method (.fold, .map, .toEither, ...)"],
     },
   },
 
@@ -598,7 +643,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Task", "Http", "HttpError", "Decoder", "DecoderError"],
+  Effect: ["IO", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
   Serialization: ["Serialization", "SerializedError"],
   Service: ["Logger"],

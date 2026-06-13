@@ -104,4 +104,21 @@ describe("getTypeByName", () => {
     const result = getTypeByName("FooBar")
     expect(result).toBeUndefined()
   })
+
+  // Registry reconciliation: TaskOutcome and TaskResult are public surface
+  // and used to be missing from the curated TYPES registry (only present in
+  // FULL_INTERFACES). Both should now resolve.
+  it("finds TaskOutcome (was missing pre-reconciliation)", () => {
+    const result = getTypeByName("TaskOutcome")
+    expect(result).toBeDefined()
+    expect(result!.name).toBe("TaskOutcome")
+    expect(result!.data.description).toMatch(/Ok|Err/i)
+  })
+
+  it("finds TaskResult (was missing pre-reconciliation)", () => {
+    const result = getTypeByName("TaskResult")
+    expect(result).toBeDefined()
+    expect(result!.name).toBe("TaskResult")
+    expect(result!.data.description).toMatch(/Promise/i)
+  })
 })

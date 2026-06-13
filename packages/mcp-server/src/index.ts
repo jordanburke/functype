@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 import { FastMCP } from "fastmcp"
 import { z } from "zod"
 
-import { FULL_INTERFACES, initDocsData, VERSION } from "./lib/docs/data"
+import { initDocsData, TYPES, VERSION } from "./lib/docs/data"
 import { formatInterfaces, formatOverview, formatType, getTypeByName, searchTypes } from "./lib/docs/formatters"
 import { clearFileCache } from "./lib/validator/compiler-host"
 import { validateCode } from "./lib/validator/validate"
@@ -64,7 +64,11 @@ Use validate_code to verify your functype code is type-correct before presenting
     execute: async (args) => {
       const found = getTypeByName(args.type_name)
       if (!found) {
-        const available = Object.keys(FULL_INTERFACES).join(", ")
+        // Show TYPES keys (the curated source) — that's what get_type_api
+        // can actually answer. FULL_INTERFACES keys were the previous source
+        // and produced a misleading list (some entries had no detailed data
+        // and would fail lookup).
+        const available = Object.keys(TYPES).sort().join(", ")
         return `Type "${args.type_name}" not found. Available types: ${available}`
       }
       return formatType(found.name, found.data, args.include_full_interface)

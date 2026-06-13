@@ -58,7 +58,7 @@ Option<T> [Functor, Monad, Foldable, Extractable, Matchable, Serializable, Trave
 Create:    Option(v), Option.none(), Some(v), None()
 Transform: .map(f), .flatMap(f), .filter(p), .ap(ff)
 Extract:   .fold(n, s), .orElse(d), .orThrow(), .orNull(), .match({Some, None})
-Check:     .isSome, .isNone, .isDefined, .isEmpty
+Check:     .isSome(), .isNone(), .isEmpty
 ```
 
 ### get_interfaces
