@@ -78,8 +78,7 @@ function getChainDepth(node: ASTNode): number {
 function andChainDepth(node: ASTNode): number {
   if (node.type !== "LogicalExpression" || node.operator !== "&&") return 0
   const rhs = node.right
-  const here =
-    rhs.type === "MemberExpression" || (rhs.type === "LogicalExpression" && rhs.operator === "&&") ? 1 : 0
+  const here = rhs.type === "MemberExpression" || (rhs.type === "LogicalExpression" && rhs.operator === "&&") ? 1 : 0
   return here + andChainDepth(node.left as ASTNode)
 }
 

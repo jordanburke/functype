@@ -2,6 +2,9 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 
+/** Array-prototype methods whose call expression always returns an array. */
+const ARRAY_PRODUCING_METHODS: ReadonlySet<string> = new Set(["map", "filter", "slice", "concat", "split"])
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -85,39 +88,31 @@ const rule: Rule.RuleModule = {
         if (call.callee.type === "MemberExpression") {
           const methodName = call.callee.property.name
           // Common methods that return arrays
-          if (["map", "filter", "slice", "concat", "split"].includes(methodName)) {
+          if (ARRAY_PRODUCING_METHODS.has(methodName)) {
             return true
           }
         }
       }
 
-      // Function with block body
+      // Function with block body — any return statement returning an array shape?
       if (functionNode.body.type === "BlockStatement") {
-        const statements = functionNode.body.body
-
-        // Look for return statements that return arrays
-        for (const stmt of statements) {
-          if (stmt.type === "ReturnStatement" && stmt.argument) {
-            if (stmt.argument.type === "ArrayExpression") {
-              if (isFlattenCandidateArrayLiteral(stmt.argument)) return true
-              continue
-            }
-
-            // Check for method calls that return arrays
-            if (stmt.argument.type === "CallExpression") {
-              const call = stmt.argument
-              if (call.callee.type === "MemberExpression") {
-                const methodName = call.callee.property.name
-                // Common methods that return arrays
-                if (["map", "filter", "slice", "concat", "split"].includes(methodName)) {
-                  return true
-                }
-              }
-            }
-          }
-        }
+        return functionNode.body.body.some(returnsArrayShape)
       }
 
+      return false
+    }
+
+    /** A single statement that's `return <array-shaped-expression>`. */
+    function returnsArrayShape(stmt: ASTNode): boolean {
+      if (stmt.type !== "ReturnStatement" || !stmt.argument) return false
+      if (stmt.argument.type === "ArrayExpression") return isFlattenCandidateArrayLiteral(stmt.argument)
+      if (
+        stmt.argument.type === "CallExpression" &&
+        stmt.argument.callee.type === "MemberExpression" &&
+        ARRAY_PRODUCING_METHODS.has(stmt.argument.callee.property.name)
+      ) {
+        return true
+      }
       return false
     }
 

@@ -140,15 +140,9 @@ const rule: Rule.RuleModule = {
         if (isMapImportedFromFunctype()) return
 
         // Extract key/value type params if present (typeArguments for newer TS-ESLint, typeParameters for older)
-        let keyType = "K"
-        let valueType = "V"
         const typeParams = node.typeArguments?.params ?? node.typeParameters?.params
-        if (typeParams && typeParams.length >= 2) {
-          keyType = sourceCode.getText(typeParams[0])
-          valueType = sourceCode.getText(typeParams[1])
-        } else if (typeParams && typeParams.length === 1) {
-          keyType = sourceCode.getText(typeParams[0])
-        }
+        const keyType = typeParams?.[0] ? sourceCode.getText(typeParams[0]) : "K"
+        const valueType = typeParams && typeParams.length >= 2 ? sourceCode.getText(typeParams[1]) : "V"
 
         const suggestions: Rule.SuggestionReportDescriptor[] = [
           {

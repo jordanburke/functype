@@ -115,12 +115,10 @@ const rule: Rule.RuleModule = {
             const objText = sourceCode.getText(node.right)
 
             const left = node.left
-            let keyVar: string
-            if (left.type === "VariableDeclaration" && left.declarations[0]) {
-              keyVar = sourceCode.getText(left.declarations[0].id)
-            } else {
-              keyVar = sourceCode.getText(left)
-            }
+            const keyVar =
+              left.type === "VariableDeclaration" && left.declarations[0]
+                ? sourceCode.getText(left.declarations[0].id)
+                : sourceCode.getText(left)
 
             suggest.push({
               messageId: "suggestObjectKeys",
@@ -153,12 +151,10 @@ const rule: Rule.RuleModule = {
             const iterableText = sourceCode.getText(node.right)
 
             const varDecl = node.left
-            let varName: string
-            if (varDecl.type === "VariableDeclaration" && varDecl.declarations[0]) {
-              varName = sourceCode.getText(varDecl.declarations[0].id)
-            } else {
-              varName = sourceCode.getText(varDecl)
-            }
+            const varName =
+              varDecl.type === "VariableDeclaration" && varDecl.declarations[0]
+                ? sourceCode.getText(varDecl.declarations[0].id)
+                : sourceCode.getText(varDecl)
 
             if (!stmtText.includes(".push(")) {
               suggest.push({

@@ -2,6 +2,36 @@ import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 
+/** Methods on a monadic value that mean "this is the Some/Right/Success path." */
+const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "isSuccess"])
+/** Methods that mean "this is the None/Left/Failure path." */
+const NEGATIVE_PREDICATES: ReadonlySet<string> = new Set(["isNone", "isEmpty", "isLeft", "isFailure"])
+
+/**
+ * If `test` is a monadic predicate call like `option.isSome()` or
+ * `either.isLeft()`, returns the receiver expression's text plus whether the
+ * predicate is the "absence" side. Returns null for anything else.
+ */
+function extractMonadicTest(test: ASTNode, sourceCode: SourceCode): { obj: string; isNegated: boolean } | null {
+  if (test.type !== "CallExpression" || test.callee.type !== "MemberExpression") return null
+  const methodName = test.callee.property.name
+  const obj = sourceCode.getText(test.callee.object)
+  if (POSITIVE_PREDICATES.has(methodName)) return { obj, isNegated: false }
+  if (NEGATIVE_PREDICATES.has(methodName)) return { obj, isNegated: true }
+  return null
+}
+
+/**
+ * Length of an if/else-if/else chain rooted at `node`. Counts the root as 1
+ * and adds 1 per linked alternate IfStatement. Terminates on a non-If
+ * alternate (the final `else { ... }`) which counts as the last branch.
+ */
+function ifElseChainLength(node: ASTNode): number {
+  if (!node.alternate) return 1
+  if (node.alternate.type === "IfStatement") return 1 + ifElseChainLength(node.alternate as ASTNode)
+  return 2 // root + the terminal else
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -65,28 +95,10 @@ const rule: Rule.RuleModule = {
 
       if (!consequent || !alternate) return null
 
-      // Extract the monadic object from the test
-      let monadicObj: string | null = null
-      let isNegated = false
-
-      // Handle patterns like option.isSome(), either.isLeft(), etc.
-      if (test.type === "CallExpression" && test.callee.type === "MemberExpression") {
-        const methodName = test.callee.property.name
-        monadicObj = sourceCode.getText(test.callee.object)
-
-        if (methodName === "isSome" || methodName === "isRight" || methodName === "isSuccess") {
-          isNegated = false
-        } else if (
-          methodName === "isNone" ||
-          methodName === "isEmpty" ||
-          methodName === "isLeft" ||
-          methodName === "isFailure"
-        ) {
-          isNegated = true
-        }
-      }
-
-      if (!monadicObj) return null
+      // Extract the monadic object + negation from the test predicate.
+      const extracted = extractMonadicTest(test, sourceCode)
+      if (!extracted) return null
+      const { obj: monadicObj, isNegated } = extracted
 
       // Only handle simple cases - single return statements in blocks, no nested if statements
       if (consequent.type === "BlockStatement") {
@@ -128,27 +140,10 @@ const rule: Rule.RuleModule = {
       const consequent = node.consequent
       const alternate = node.alternate
 
-      // Extract the monadic object from the test
-      let monadicObj: string | null = null
-      let isNegated = false
-
-      if (test.type === "CallExpression" && test.callee.type === "MemberExpression") {
-        const methodName = test.callee.property.name
-        monadicObj = sourceCode.getText(test.callee.object)
-
-        if (methodName === "isSome" || methodName === "isRight" || methodName === "isSuccess") {
-          isNegated = false
-        } else if (
-          methodName === "isNone" ||
-          methodName === "isEmpty" ||
-          methodName === "isLeft" ||
-          methodName === "isFailure"
-        ) {
-          isNegated = true
-        }
-      }
-
-      if (!monadicObj) return null
+      // Extract the monadic object + negation from the test predicate.
+      const extracted = extractMonadicTest(test, sourceCode)
+      if (!extracted) return null
+      const { obj: monadicObj, isNegated } = extracted
 
       const thenExpr = sourceCode.getText(consequent)
       const elseExpr = sourceCode.getText(alternate)
@@ -225,18 +220,7 @@ const rule: Rule.RuleModule = {
       if (node.parent && node.parent.type === "IfStatement") return
 
       // Count the complexity (if/else if/else chain)
-      let complexity = 1
-      let current = node
-      while (current.alternate) {
-        complexity++
-        if (current.alternate.type === "IfStatement") {
-          current = current.alternate
-        } else {
-          break
-        }
-      }
-
-      if (complexity >= minComplexity) {
+      if (ifElseChainLength(node) >= minComplexity) {
         context.report({
           node,
           messageId: "preferFold",

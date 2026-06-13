@@ -4,6 +4,40 @@ import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
+/** AST keys that don't represent syntax children — back-edges and source metadata. */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
+
+/** AST children of `node`: drops back-edges, flattens array-valued keys, filters non-object leaves. */
+function astChildren(node: ASTNode): readonly unknown[] {
+  return Object.entries(node)
+    .filter(([k]) => !NON_CHILD_KEYS.has(k))
+    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
+    .filter((v) => v !== null && typeof v === "object")
+}
+
+/** True iff any ancestor of `node` satisfies `pred`. Pure tail recursion. */
+function ancestorSatisfies(node: ASTNode | null | undefined, pred: (n: ASTNode) => boolean): boolean {
+  const parent = node?.parent as ASTNode | undefined
+  if (!parent) return false
+  return pred(parent) || ancestorSatisfies(parent, pred)
+}
+
+/** `parent` is `List.from(arr)` or `List.of(...arr)`. */
+function isListFactoryArg(parent: ASTNode | null | undefined): boolean {
+  return (
+    parent?.type === "CallExpression" &&
+    parent.callee.type === "MemberExpression" &&
+    parent.callee.object.type === "Identifier" &&
+    parent.callee.object.name === "List" &&
+    ["from", "of"].includes(parent.callee.property.name)
+  )
+}
+
+/** `node` is a VariableDeclarator with its own type annotation, or a TSTypeAnnotation node directly. */
+function hasOwnTypeAnnotation(node: ASTNode): boolean {
+  return (node.type === "VariableDeclarator" && Boolean(node.id?.typeAnnotation)) || node.type === "TSTypeAnnotation"
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -56,32 +90,17 @@ const rule: Rule.RuleModule = {
     }
 
     function findTypeParameter(node: ASTNode, sourceCode: typeof context.sourceCode): string | null {
-      // Look for TSTypeParameterInstantiation child
+      // Pure pre-order search: look at this node, then recursively at each
+      // child until we find a TSTypeParameterInstantiation with a first param.
       function findInNode(n: ASTNode): string | null {
         if (n.type === "TSTypeParameterInstantiation" && n.params && n.params[0]) {
           return sourceCode.getText(n.params[0])
         }
-
-        // Recursively search child nodes
-        for (const key in n) {
-          if (key === "parent") continue
-          const child = n[key]
-          if (Array.isArray(child)) {
-            for (const item of child) {
-              if (item && typeof item === "object" && item.type) {
-                const result = findInNode(item)
-                if (result) return result
-              }
-            }
-          } else if (child && typeof child === "object" && child.type) {
-            const result = findInNode(child)
-            if (result) return result
-          }
-        }
-
-        return null
+        const results = astChildren(n)
+          .filter((c): c is ASTNode => typeof (c as ASTNode)?.type === "string")
+          .map((child) => findInNode(child))
+        return results.find((r) => r !== null) ?? null
       }
-
       return findInNode(node)
     }
 
@@ -214,52 +233,20 @@ const rule: Rule.RuleModule = {
         // Only flag non-empty arrays to avoid noise
         if (node.elements.length === 0) return
 
-        // Don't flag arrays that are already arguments to List.from() or other functype calls
-        let parent = node.parent
-        if (parent && isFunctypeCall(parent, functypeImports)) {
-          return
-        }
+        const parent = node.parent
 
-        // Additional specific check for List.from/List.of patterns
-        if (
-          parent &&
-          parent.type === "CallExpression" &&
-          parent.callee.type === "MemberExpression" &&
-          parent.callee.object.type === "Identifier" &&
-          parent.callee.object.name === "List" &&
-          ["from", "of"].includes(parent.callee.property.name)
-        ) {
-          return
-        }
+        // Don't flag arrays that are already arguments to functype calls.
+        if (parent && isFunctypeCall(parent, functypeImports)) return
 
-        // Don't flag nested array literals - only flag the outermost one
-        // Check if this array is inside another array literal
-        parent = node.parent
-        while (parent) {
-          if (parent.type === "ArrayExpression") {
-            return // Skip nested arrays, let the outer one handle it
-          }
-          parent = parent.parent
-        }
+        // Don't flag arrays that are arguments to List.from / List.of.
+        if (isListFactoryArg(parent)) return
 
-        // Don't flag array literals that are already part of a type annotation context
-        // (those should be handled by the type checking rules)
-        let hasTypeAnnotation = false
-        parent = node.parent
-        while (parent) {
-          if (parent.type === "VariableDeclarator" && parent.id?.typeAnnotation) {
-            // Skip array literal if there's already a type annotation that would be flagged
-            hasTypeAnnotation = true
-            break
-          }
-          if (parent.type === "TSTypeAnnotation") {
-            hasTypeAnnotation = true
-            break
-          }
-          parent = parent.parent
-        }
+        // Don't flag nested array literals — let the outermost one handle it.
+        if (ancestorSatisfies(node, (n) => n.type === "ArrayExpression")) return
 
-        if (hasTypeAnnotation) return
+        // Don't flag array literals that already live in a type-annotated
+        // context (those are handled by the type-checking rules).
+        if (ancestorSatisfies(node, hasOwnTypeAnnotation)) return
 
         // Check if any element is a SpreadElement — ambiguous semantics, skip suggestions
         const hasSpread = node.elements.some((el) => el !== null && el.type === "SpreadElement")

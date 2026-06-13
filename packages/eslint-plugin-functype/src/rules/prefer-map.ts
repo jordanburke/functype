@@ -2,6 +2,22 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 
+const ITERATION_METHOD_NAMES: ReadonlySet<string> = new Set(["forEach", "for"])
+
+/** True iff any ancestor of `node` is a `.forEach(...)` or `.for(...)` call. */
+function insideIterationCallback(node: ASTNode | null | undefined): boolean {
+  const parent = node?.parent as ASTNode | undefined
+  if (!parent) return false
+  if (
+    parent.type === "CallExpression" &&
+    parent.callee.type === "MemberExpression" &&
+    ITERATION_METHOD_NAMES.has(parent.callee.property.name)
+  ) {
+    return true
+  }
+  return insideIterationCallback(parent)
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -159,23 +175,12 @@ const rule: Rule.RuleModule = {
         }
 
         // Check for manual push patterns in callbacks
-        if (node.callee.type === "MemberExpression" && node.callee.property.name === "push") {
-          // Check if we're inside a forEach or similar iteration
-          let parent = node.parent
-          while (parent) {
-            if (
-              parent.type === "CallExpression" &&
-              parent.callee.type === "MemberExpression" &&
-              (parent.callee.property.name === "forEach" || parent.callee.property.name === "for")
-            ) {
-              context.report({
-                node,
-                messageId: "preferMapOverPush",
-              })
-              break
-            }
-            parent = parent.parent
-          }
+        if (
+          node.callee.type === "MemberExpression" &&
+          node.callee.property.name === "push" &&
+          insideIterationCallback(node)
+        ) {
+          context.report({ node, messageId: "preferMapOverPush" })
         }
       },
     }

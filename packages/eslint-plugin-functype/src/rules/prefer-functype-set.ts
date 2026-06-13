@@ -138,13 +138,9 @@ const rule: Rule.RuleModule = {
         // Skip if Set is already imported from functype
         if (isSetImportedFromFunctype()) return
 
-        // Extract type parameter if present
-        let typeParam = "T"
-        if (node.typeParameters?.params?.[0]) {
-          typeParam = sourceCode.getText(node.typeParameters.params[0])
-        } else if (node.typeArguments?.params?.[0]) {
-          typeParam = sourceCode.getText(node.typeArguments.params[0])
-        }
+        // Extract type parameter if present (typeArguments for newer TS-ESLint, typeParameters for older)
+        const typeParamNode = node.typeParameters?.params?.[0] ?? node.typeArguments?.params?.[0]
+        const typeParam = typeParamNode ? sourceCode.getText(typeParamNode) : "T"
 
         const suggestions: Rule.SuggestionReportDescriptor[] = [
           {

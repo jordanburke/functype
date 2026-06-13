@@ -51,7 +51,8 @@ export function createImportFixer(
 
     if (existingFunctypeImport) {
       // Namespace import (`import * as F from "functype"`) — can't add named.
-      const hasNamespace = existingFunctypeImport.specifiers?.some((s) => s.type === "ImportNamespaceSpecifier") ?? false
+      const hasNamespace =
+        existingFunctypeImport.specifiers?.some((s) => s.type === "ImportNamespaceSpecifier") ?? false
       if (hasNamespace) return null
 
       // Append after the last named specifier if one exists.

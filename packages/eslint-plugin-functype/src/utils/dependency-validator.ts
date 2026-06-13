@@ -76,8 +76,7 @@ export function validatePeerDependencies(): ValidationResult {
     .map((dep) => `Optional plugin '${dep.name}' not found. Some rules will be skipped.`)
 
   const requiredMissing = missing.filter((dep) => dep.required)
-  const installCommand =
-    missing.length > 0 ? `pnpm add -D ${missing.map((dep) => dep.packageName).join(" ")}` : ""
+  const installCommand = missing.length > 0 ? `pnpm add -D ${missing.map((dep) => dep.packageName).join(" ")}` : ""
 
   return {
     isValid: requiredMissing.length === 0,
