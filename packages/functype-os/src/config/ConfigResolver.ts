@@ -25,15 +25,8 @@ const findFirstExistingAsync = async (candidates: readonly string[], startIndex:
 }
 
 // Expand each candidate; drop entries whose env variables didn't resolve.
-const presentPaths = (candidates: readonly string[]): List<string> => {
-  const expanded = candidates.flatMap((c) =>
-    tryExpandPath(c).fold<string[]>(
-      () => [],
-      (p) => [p],
-    ),
-  )
-  return List<string>(expanded)
-}
+const presentPaths = (candidates: readonly string[]): List<string> =>
+  List<string>(candidates.flatMap((c) => tryExpandPath(c).toArray() as string[]))
 
 export const ConfigResolver = {
   // Async methods — return TaskResult<T>

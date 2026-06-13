@@ -5,6 +5,8 @@ packages:
 overrides:
   unrun: 0.2.37
   yaml: ^2.8.3
+  eslint-plugin-functype: "workspace:*"
+  eslint-config-functype: "workspace:*"
 
 publicHoistPattern:
   - "*eslint*"

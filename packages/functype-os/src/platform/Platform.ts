@@ -88,31 +88,28 @@ const isDirectory = (p: string): boolean =>
 const readRealUsers = (usersDir: string): Option<readonly string[]> => {
   const filterRealUsers = (entries: readonly string[]): readonly string[] =>
     entries.filter((name) => !isSystemAccount(name) && isDirectory(path.join(usersDir, name)))
-  return Try(() => fs.readdirSync(usersDir)).fold<Option<readonly string[]>>(
-    () => Option<readonly string[]>(undefined),
-    (entries) => Option(filterRealUsers(entries)),
-  )
+  return Try(() => fs.readdirSync(usersDir))
+    .map(filterRealUsers)
+    .toOption()
 }
 
-const resolveViaCmdExe = (usersDir: string, fallback: string): Option<string> =>
-  Try(() => execSync("cmd.exe /c echo %USERPROFILE%", { timeout: 3000, encoding: "utf8" }).trim())
-    .map((raw) => {
-      // Convert Windows path C:\Users\foo → /mnt/c/Users/foo
-      const match = raw.match(/^([A-Za-z]):\\(.*)$/)
-      if (!match) return Option<string>(undefined)
-      const drive = (match[1] as string).toLowerCase()
-      const rest = (match[2] as string).replace(/\\/g, "/")
-      const wslPath = `/mnt/${drive}/${rest}`
-      return isDirectory(wslPath) ? Option(wslPath) : Option<string>(undefined)
-    })
-    .fold<Option<string>>(
-      () => Option(fallback),
-      (opt) =>
-        opt.fold<Option<string>>(
-          () => Option(fallback),
-          (v) => Option(v),
-        ),
-    )
+const resolveViaCmdExe = (usersDir: string, fallback: string): Option<string> => {
+  // Convert Windows path C:\Users\foo → /mnt/c/Users/foo if it's a directory;
+  // returns None for unparseable output or non-existent directories.
+  const parseCmdOutput = (raw: string): Option<string> => {
+    const match = raw.match(/^([A-Za-z]):\\(.*)$/)
+    if (!match) return Option<string>(undefined)
+    const drive = (match[1] as string).toLowerCase()
+    const rest = (match[2] as string).replace(/\\/g, "/")
+    const wslPath = `/mnt/${drive}/${rest}`
+    return isDirectory(wslPath) ? Option(wslPath) : Option<string>(undefined)
+  }
+  const parsed = Try(() => execSync("cmd.exe /c echo %USERPROFILE%", { timeout: 3000, encoding: "utf8" }).trim())
+    .toOption()
+    .flatMap(parseCmdOutput)
+    .orElse(fallback)
+  return Option(parsed)
+}
 
 const resolveWindowsHome = (): Option<string> => {
   if (!cachedIsWSL()) return Option<string>(undefined)
@@ -200,18 +197,18 @@ export const Platform = {
   isMac: (): boolean => process.platform === "darwin",
   isLinux: (): boolean => process.platform === "linux",
 
-  userInfo: (): Option<UserInfo> =>
-    Try(() => os.userInfo()).fold<Option<UserInfo>>(
-      () => Option<UserInfo>(undefined),
-      (info) =>
-        Option<UserInfo>({
-          username: info.username,
-          uid: info.uid,
-          gid: info.gid,
-          shell: Option(info.shell),
-          homedir: info.homedir,
-        }),
-    ),
+  userInfo: (): Option<UserInfo> => {
+    const toUserInfo = (info: os.UserInfo<string>): UserInfo => ({
+      username: info.username,
+      uid: info.uid,
+      gid: info.gid,
+      shell: Option(info.shell),
+      homedir: info.homedir,
+    })
+    return Try(() => os.userInfo())
+      .map(toUserInfo)
+      .toOption()
+  },
 
   isDocker: (): boolean => cachedIsDocker(),
   isKubernetes: (): boolean => cachedIsKube(),

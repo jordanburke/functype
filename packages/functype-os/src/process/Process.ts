@@ -26,8 +26,20 @@ export const Process = {
     })
   },
 
-  execSync: (command: string, options?: { timeout?: number; cwd?: string }): Either<ProcessError, ExecResult> =>
-    Try(() =>
+  execSync: (command: string, options?: { timeout?: number; cwd?: string }): Either<ProcessError, ExecResult> => {
+    const buildProcessError = (error: unknown): ProcessError => {
+      if (error instanceof Error && "status" in error && "stderr" in error) {
+        const execError = error as Error & { status: number; stderr: string }
+        return ProcessError(command, Option(execError.status), String(execError.stderr))
+      }
+      return ProcessError(
+        command,
+        Option<number>(undefined),
+        "",
+        error instanceof Error ? error.message : String(error),
+      )
+    }
+    return Try(() =>
       nodeExecSync(command, {
         timeout: options?.timeout,
         cwd: options?.cwd,
@@ -35,17 +47,7 @@ export const Process = {
         stdio: ["pipe", "pipe", "pipe"],
       }),
     )
-      .toEither((error) => {
-        if (error instanceof Error && "status" in error && "stderr" in error) {
-          const execError = error as Error & { status: number; stderr: string }
-          return ProcessError(command, Option(execError.status), String(execError.stderr))
-        }
-        return ProcessError(
-          command,
-          Option<number>(undefined),
-          "",
-          error instanceof Error ? error.message : String(error),
-        )
-      })
-      .map((stdout): ExecResult => ({ stdout: String(stdout), stderr: "", exitCode: 0 })),
+      .toEither(buildProcessError)
+      .map((stdout): ExecResult => ({ stdout: String(stdout), stderr: "", exitCode: 0 }))
+  },
 }

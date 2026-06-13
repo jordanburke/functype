@@ -54,9 +54,13 @@ const matchGlob = (filePath: string, pattern: string): boolean => {
   return new RegExp(`^${regex}$`).test(filePath)
 }
 
-// Async helper: lift a Promise into TaskResult, mapping rejections to FsError.
-const liftAsync = async <T>(p: string, op: string, promise: () => Promise<T>): TaskResult<T> => {
-  const result = await Try.fromPromise(promise())
+// Async helper: lift a Promise-returning thunk into TaskResult, mapping
+// rejections to FsError. Uses `Try.async(thunk)` rather than
+// `Try.fromPromise(thunk())` so synchronous throws from inside the thunk
+// (e.g. a bad encoding argument) are caught the same way async rejections
+// are — same Failure path, no unhandled-rejection escape hatch.
+const liftAsync = async <T>(p: string, op: string, thunk: () => Promise<T>): TaskResult<T> => {
+  const result = await Try.async(thunk)
   return result.fold<TaskResult<T>>(
     (err) => Promise.resolve(Err(toFsError(p, op, err))),
     (value) => Promise.resolve(Ok(value)),
@@ -71,7 +75,7 @@ export const Fs = {
   // Async methods — return TaskResult<T>
 
   exists: async (p: string): TaskResult<boolean> => {
-    const result = await Try.fromPromise(fs.access(p))
+    const result = await Try.async(() => fs.access(p))
     return Ok(result.isSuccess())
   },
 
@@ -79,7 +83,7 @@ export const Fs = {
     liftAsync(p, "readFile", () => fs.readFile(p, { encoding })),
 
   readFileOpt: async (p: string, encoding: BufferEncoding = "utf8"): TaskResult<Option<string>> => {
-    const result = await Try.fromPromise(fs.readFile(p, { encoding }))
+    const result = await Try.async(() => fs.readFile(p, { encoding }))
     return result.fold<TaskResult<Option<string>>>(
       (err) => {
         if (err instanceof Error && "code" in err && err.code === "ENOENT") {
@@ -102,7 +106,7 @@ export const Fs = {
     liftAsync(p, "readdir", () => fs.readdir(p).then((entries) => List<string>(entries))),
 
   glob: async (dir: string, pattern: string): TaskResult<List<string>> => {
-    const result = await Try.fromPromise(fs.readdir(dir, { recursive: true, encoding: "utf8" }))
+    const result = await Try.async(() => fs.readdir(dir, { recursive: true, encoding: "utf8" }))
     return result.fold<TaskResult<List<string>>>(
       (err) => Promise.resolve(Err(toFsError(dir, "glob", err))),
       (entries) => {
