@@ -11,9 +11,11 @@
       "outputs": ["coverage/**"]
     },
     "lint": {
+      "dependsOn": ["eslint-plugin-functype#build", "eslint-config-functype#build"],
       "outputs": []
     },
     "lint:check": {
+      "dependsOn": ["eslint-plugin-functype#build", "eslint-config-functype#build"],
       "outputs": []
     },
     "format": {
@@ -31,7 +33,7 @@
       "outputs": []
     },
     "validate": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "eslint-plugin-functype#build", "eslint-config-functype#build"],
       "outputs": ["dist/**", "lib/**"]
     },
     "dev": {
