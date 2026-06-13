@@ -3,6 +3,58 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImports, isChainedMethodCall } from "../utils/functype-detection"
 
+const MONAD_TYPES: ReadonlySet<string> = new Set(["Option", "Either", "Try", "Task"])
+
+/** AST keys that don't represent syntax children — back-edges and source metadata. */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
+
+const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): ReadonlySet<T> => new Set([...a, ...b])
+
+/**
+ * Set of monad names that *this single AST node* names as a constructor call.
+ * Does not look at children. Returns empty set for any non-monad-constructor node.
+ */
+function monadAt(node: ASTNode): ReadonlySet<string> {
+  if (node.type !== "CallExpression") return new Set()
+  const callee = node.callee
+  // Bare constructor: Option(...), Try(...), Either(...), Task(...)
+  if (callee?.type === "Identifier" && MONAD_TYPES.has(callee.name)) {
+    return new Set([callee.name])
+  }
+  // Companion call: Option.none(), Either.right(x), Try.success(v)
+  if (
+    callee?.type === "MemberExpression" &&
+    callee.object?.type === "Identifier" &&
+    MONAD_TYPES.has(callee.object.name)
+  ) {
+    return new Set([callee.object.name])
+  }
+  return new Set()
+}
+
+/**
+ * AST children of `node` worth recursing into. Drops back-edges and source
+ * metadata; flattens array-valued keys (e.g. `arguments`); filters non-object
+ * leaves (literals, raw strings, numbers).
+ */
+function astChildren(node: ASTNode): readonly unknown[] {
+  return Object.entries(node)
+    .filter(([k]) => !NON_CHILD_KEYS.has(k))
+    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
+    .filter((v) => v !== null && typeof v === "object")
+}
+
+/**
+ * Pure recursion: the set of all monad names reachable from `node` (including
+ * `node` itself if it is a monad constructor call). No mutation, no
+ * accumulator parameter — just a fold over the children's results.
+ */
+function monadsIn(node: unknown): ReadonlySet<string> {
+  if (!node || typeof node !== "object") return new Set()
+  const ast = node as ASTNode
+  return astChildren(ast).reduce<ReadonlySet<string>>((acc, child) => union(acc, monadsIn(child)), monadAt(ast))
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -173,51 +225,16 @@ const rule: Rule.RuleModule = {
      * monad boundaries. The old substring-based check fired on these because
      * `.toEither` contains "Either" as a substring; the AST check correctly
      * sees them as method calls, not new monad constructions.
+     *
+     * Implementation is pure recursion over the AST: `monadAt` reports what
+     * a single node names; `monadsIn` returns the union of `monadAt(self)`
+     * with the results from each child. No mutable accumulator, no for-loops
+     * driving state changes.
      */
     function checkMixedMonads(node: ASTNode): void {
       if (!detectMixedMonads) return
-
-      const monadTypes = new Set(["Option", "Either", "Try", "Task"])
-      const found = new Set<string>()
-
-      function walk(n: unknown): void {
-        if (!n || typeof n !== "object") return
-        const ast = n as ASTNode
-
-        if (ast.type === "CallExpression") {
-          // Bare constructor: Option(...), Try(...), Either(...), Task(...)
-          if (ast.callee?.type === "Identifier" && monadTypes.has(ast.callee.name)) {
-            found.add(ast.callee.name)
-          }
-          // Companion call: Option.none(), Either.right(x), Try.success(v)
-          if (
-            ast.callee?.type === "MemberExpression" &&
-            ast.callee.object?.type === "Identifier" &&
-            monadTypes.has(ast.callee.object.name)
-          ) {
-            found.add(ast.callee.object.name)
-          }
-        }
-
-        // Recurse into AST children, skipping back-edges and source metadata.
-        for (const key in ast) {
-          if (key === "parent" || key === "loc" || key === "range") continue
-          const child = (ast as Record<string, unknown>)[key]
-          if (Array.isArray(child)) {
-            for (const item of child) walk(item)
-          } else if (child && typeof child === "object") {
-            walk(child)
-          }
-        }
-      }
-
-      walk(node)
-
-      if (found.size >= 2) {
-        context.report({
-          node,
-          messageId: "preferDoForMixedMonads",
-        })
+      if (monadsIn(node).size >= 2) {
+        context.report({ node, messageId: "preferDoForMixedMonads" })
       }
     }
 
