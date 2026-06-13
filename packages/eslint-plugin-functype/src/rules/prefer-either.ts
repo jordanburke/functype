@@ -3,6 +3,24 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
+/** AST keys that don't represent syntax children — back-edges and source metadata. */
+const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
+
+/** AST children of `node` (drops back-edges, flattens array-valued keys, filters non-object leaves). */
+function astChildren(node: ASTNode): readonly unknown[] {
+  return Object.entries(node)
+    .filter(([k]) => !NON_CHILD_KEYS.has(k))
+    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
+    .filter((v) => v !== null && typeof v === "object")
+}
+
+/** True iff any ancestor of `node` is a `CatchClause`. Pure tail recursion. */
+function insideCatchClause(node: ASTNode | null | undefined): boolean {
+  const parent = node?.parent as ASTNode | undefined
+  if (!parent) return false
+  return parent.type === "CatchClause" || insideCatchClause(parent)
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -51,35 +69,14 @@ const rule: Rule.RuleModule = {
     function hasThrowStatementsOutsideCatch(node: ASTNode): boolean {
       if (!node) return false
 
-      if (node.type === "ThrowStatement") {
-        // Check if this throw is inside a catch block
-        let parent = node.parent
-        while (parent) {
-          if (parent.type === "CatchClause") return false
-          parent = parent.parent
-        }
-        return true
-      }
+      // A throw that's *not* inside a catch is the thing we're looking for.
+      if (node.type === "ThrowStatement") return !insideCatchClause(node)
 
-      // Skip catch blocks when recursing
+      // Catch bodies don't count — re-throws inside them are allowed.
       if (node.type === "CatchClause") return false
 
-      // Recursively check child nodes
-      for (const key in node) {
-        if (key === "parent") continue // Avoid circular references
-        const child = node[key]
-        if (Array.isArray(child)) {
-          for (const item of child) {
-            if (item && typeof item === "object" && hasThrowStatementsOutsideCatch(item)) {
-              return true
-            }
-          }
-        } else if (child && typeof child === "object" && hasThrowStatementsOutsideCatch(child)) {
-          return true
-        }
-      }
-
-      return false
+      // Recurse: true iff any child satisfies the predicate.
+      return astChildren(node).some((child) => hasThrowStatementsOutsideCatch(child as ASTNode))
     }
 
     function checkFunctionForThrows(node: ASTNode): void {
@@ -210,11 +207,7 @@ const rule: Rule.RuleModule = {
         if (allowThrowInTests && isInTestFile()) return
 
         // Allow re-throwing in catch blocks (common pattern)
-        let parent = node.parent
-        while (parent) {
-          if (parent.type === "CatchClause") return
-          parent = parent.parent
-        }
+        if (insideCatchClause(node)) return
 
         const sourceCode = context.sourceCode
         const suggest: Rule.SuggestionReportDescriptor[] = []

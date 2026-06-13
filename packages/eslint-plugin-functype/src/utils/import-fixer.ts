@@ -1,32 +1,33 @@
 import type { Rule } from "eslint"
 import type { SourceCode } from "eslint"
 
+type ImportSpec = {
+  type: string
+  imported?: { type: string; name: string }
+}
+type ImportNode = {
+  type: "ImportDeclaration"
+  source: { type: string; value: string }
+  specifiers?: readonly ImportSpec[]
+}
+
+const isImportDecl = (node: { type: string }): node is ImportNode => node.type === "ImportDeclaration"
+
+const isFunctypeImportDecl = (node: { type: string }): node is ImportNode =>
+  isImportDecl(node) && node.source?.type === "Literal" && node.source.value === "functype"
+
+const specifierMatches = (spec: ImportSpec, symbolName: string): boolean =>
+  spec.type === "ImportNamespaceSpecifier" ||
+  (spec.type === "ImportSpecifier" && spec.imported?.type === "Identifier" && spec.imported.name === symbolName)
+
 /**
  * Check if a given symbol is already imported from functype
  */
 export function hasFunctypeSymbol(sourceCode: SourceCode, symbolName: string): boolean {
-  const program = sourceCode.ast
-
-  for (const node of program.body) {
-    if (node.type === "ImportDeclaration" && node.source.type === "Literal" && node.source.value === "functype") {
-      if (node.specifiers) {
-        for (const spec of node.specifiers) {
-          if (spec.type === "ImportNamespaceSpecifier") {
-            return true
-          }
-          if (
-            spec.type === "ImportSpecifier" &&
-            spec.imported.type === "Identifier" &&
-            spec.imported.name === symbolName
-          ) {
-            return true
-          }
-        }
-      }
-    }
-  }
-
-  return false
+  return (sourceCode.ast.body as readonly unknown[])
+    .filter((n): n is ImportNode => isFunctypeImportDecl(n as { type: string }))
+    .flatMap((node) => node.specifiers ?? [])
+    .some((spec) => specifierMatches(spec, symbolName))
 }
 
 /**
@@ -38,64 +39,37 @@ export function createImportFixer(
   symbolName: string,
 ): (fixer: Rule.RuleFixer) => Rule.Fix | null {
   return (fixer: Rule.RuleFixer): Rule.Fix | null => {
+    // Already imported — nothing to do.
+    if (hasFunctypeSymbol(sourceCode, symbolName)) return null
+
     const program = sourceCode.ast
+    const imports = (program.body as readonly unknown[]).filter((n): n is ImportNode =>
+      isImportDecl(n as { type: string }),
+    )
+    const lastImportNode = imports.at(-1) ?? null
+    const existingFunctypeImport = imports.find((n) => isFunctypeImportDecl(n)) ?? null
 
-    let existingFunctypeImport: (typeof program.body)[number] | null = null
-    let lastImportNode: (typeof program.body)[number] | null = null
+    if (existingFunctypeImport) {
+      // Namespace import (`import * as F from "functype"`) — can't add named.
+      const hasNamespace = existingFunctypeImport.specifiers?.some((s) => s.type === "ImportNamespaceSpecifier") ?? false
+      if (hasNamespace) return null
 
-    for (const node of program.body) {
-      if (node.type === "ImportDeclaration") {
-        lastImportNode = node
-        if (node.source.type === "Literal" && node.source.value === "functype") {
-          existingFunctypeImport = node
-        }
-      }
+      // Append after the last named specifier if one exists.
+      const namedSpecifiers = (existingFunctypeImport.specifiers ?? []).filter((s) => s.type === "ImportSpecifier")
+      const lastSpecifier = namedSpecifiers.at(-1)
+      if (lastSpecifier) return fixer.insertTextAfter(lastSpecifier as never, `, ${symbolName}`)
+
+      // No named specifiers — fill the empty braces.
+      const importText = sourceCode.getText(existingFunctypeImport as never)
+      return fixer.replaceText(existingFunctypeImport as never, importText.replace(/\{(\s*)\}/, `{ ${symbolName} }`))
     }
 
-    // If already imported, nothing to do
-    if (hasFunctypeSymbol(sourceCode, symbolName)) {
-      return null
-    }
-
-    if (existingFunctypeImport && existingFunctypeImport.type === "ImportDeclaration") {
-      const importDecl = existingFunctypeImport
-
-      // Check for namespace import — can't add named imports alongside it
-      const hasNamespace = importDecl.specifiers?.some((s) => s.type === "ImportNamespaceSpecifier") ?? false
-      if (hasNamespace) {
-        return null
-      }
-
-      // Find the last named specifier and append after it
-      const specifiers = importDecl.specifiers ?? []
-      const namedSpecifiers = specifiers.filter((s) => s.type === "ImportSpecifier")
-
-      if (namedSpecifiers.length > 0) {
-        const lastSpecifier = namedSpecifiers[namedSpecifiers.length - 1]
-        if (lastSpecifier) {
-          return fixer.insertTextAfter(lastSpecifier, `, ${symbolName}`)
-        }
-      }
-
-      // No named specifiers yet — insert before closing brace
-      const importText = sourceCode.getText(importDecl)
-      const newText = importText.replace(/\{(\s*)\}/, `{ ${symbolName} }`)
-      return fixer.replaceText(importDecl, newText)
-    }
-
-    // No existing functype import — add a new one
+    // No existing functype import — insert a new one.
     const newImport = `import { ${symbolName} } from "functype"`
+    if (lastImportNode) return fixer.insertTextAfter(lastImportNode as never, `\n${newImport}`)
 
-    if (lastImportNode) {
-      return fixer.insertTextAfter(lastImportNode, `\n${newImport}`)
-    }
-
-    // No imports at all — insert at top of file
     const firstNode = program.body[0]
-    if (firstNode) {
-      return fixer.insertTextBefore(firstNode, `${newImport}\n`)
-    }
-
+    if (firstNode) return fixer.insertTextBefore(firstNode, `${newImport}\n`)
     return fixer.insertTextBeforeRange([0, 0], `${newImport}\n`)
   }
 }

@@ -64,33 +64,23 @@ function tryRequire(packageName: string): boolean {
 }
 
 export function validatePeerDependencies(): ValidationResult {
-  const missing: PeerDependency[] = []
-  const available: PeerDependency[] = []
-  const warnings: string[] = []
+  // Partition each dep into present/absent up-front; downstream calcs are
+  // pure derivations from those two arrays.
+  const [available, missing] = PEER_DEPENDENCIES.reduce<[PeerDependency[], PeerDependency[]]>(
+    ([ok, bad], dep) => (tryRequire(dep.packageName) ? [[...ok, dep], bad] : [ok, [...bad, dep]]),
+    [[], []],
+  )
 
-  for (const dep of PEER_DEPENDENCIES) {
-    if (tryRequire(dep.packageName)) {
-      available.push(dep)
-    } else {
-      missing.push(dep)
-      if (dep.required) {
-        // Required dependency is missing - this will cause errors
-      } else {
-        // Optional dependency is missing - add warning
-        warnings.push(`Optional plugin '${dep.name}' not found. Some rules will be skipped.`)
-      }
-    }
-  }
+  const warnings = missing
+    .filter((dep) => !dep.required)
+    .map((dep) => `Optional plugin '${dep.name}' not found. Some rules will be skipped.`)
 
   const requiredMissing = missing.filter((dep) => dep.required)
-  const isValid = requiredMissing.length === 0
-
-  // Generate install command for missing dependencies
-  const missingPackageNames = missing.map((dep) => dep.packageName)
-  const installCommand = missingPackageNames.length > 0 ? `pnpm add -D ${missingPackageNames.join(" ")}` : ""
+  const installCommand =
+    missing.length > 0 ? `pnpm add -D ${missing.map((dep) => dep.packageName).join(" ")}` : ""
 
   return {
-    isValid,
+    isValid: requiredMissing.length === 0,
     missing,
     available,
     installCommand,

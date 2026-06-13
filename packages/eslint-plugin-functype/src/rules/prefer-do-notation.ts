@@ -55,6 +55,34 @@ function monadsIn(node: unknown): ReadonlySet<string> {
   return astChildren(ast).reduce<ReadonlySet<string>>((acc, child) => union(acc, monadsIn(child)), monadAt(ast))
 }
 
+const CHAIN_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter", "fold"])
+
+/**
+ * Length of the chain of `.flatMap()/.map()/.filter()/.fold()` calls walking
+ * left from `node`. Returns 1 for a single call, N for N stacked calls. Pure
+ * tail recursion — no mutable counter, no `while` loop.
+ */
+function getChainDepth(node: ASTNode): number {
+  if (node.callee.type !== "MemberExpression" || node.callee.object.type !== "CallExpression") return 1
+  const method = node.callee.property
+  const next = node.callee.object as ASTNode
+  const here = method.type === "Identifier" && CHAIN_METHODS.has(method.name) ? 1 : 0
+  return here + getChainDepth(next)
+}
+
+/**
+ * Depth of a logical-AND chain (`a && b && c && ...`) where each right-hand
+ * side is either a MemberExpression or another && chain — the shape that
+ * indicates nested property-access guarding rather than arbitrary booleans.
+ */
+function andChainDepth(node: ASTNode): number {
+  if (node.type !== "LogicalExpression" || node.operator !== "&&") return 0
+  const rhs = node.right
+  const here =
+    rhs.type === "MemberExpression" || (rhs.type === "LogicalExpression" && rhs.operator === "&&") ? 1 : 0
+  return here + andChainDepth(node.left as ASTNode)
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -103,22 +131,8 @@ const rule: Rule.RuleModule = {
     function checkNestedNullChecks(node: ASTNode): void {
       if (node.operator !== "&&") return
 
-      let depth = 0
-      let current: ASTNode = node
-
-      // Count the depth of && chains with property access
-      while (current.type === "LogicalExpression" && current.operator === "&&") {
-        if (
-          current.right.type === "MemberExpression" ||
-          (current.right.type === "LogicalExpression" && current.right.operator === "&&")
-        ) {
-          depth++
-        }
-        current = current.left
-      }
-
       // Check if this looks like nested property access guarding
-      if (depth >= 2 && hasNestedPropertyAccess(node)) {
+      if (andChainDepth(node) >= 2 && hasNestedPropertyAccess(node)) {
         context.report({
           node,
           messageId: "preferDoForNestedChecks",
@@ -131,12 +145,8 @@ const rule: Rule.RuleModule = {
      * Check if logical expression contains nested property access patterns
      */
     function hasNestedPropertyAccess(node: ASTNode): boolean {
-      const text = context.sourceCode.getText(node)
-
       // Look for patterns like: obj && obj.prop && obj.prop.nested
-      const nestedPattern = /\w+(\.\w+){2,}/g
-      const matches = text.match(nestedPattern)
-
+      const matches = context.sourceCode.getText(node).match(/\w+(\.\w+){2,}/g)
       return matches !== null && matches.length > 0
     }
 
@@ -156,24 +166,6 @@ const rule: Rule.RuleModule = {
           fix: hasDoImport ? (fixer) => fixChainedMethods(fixer, node) : undefined,
         })
       }
-    }
-
-    /**
-     * Calculate chain depth for method calls
-     */
-    function getChainDepth(node: ASTNode): number {
-      let depth = 1
-      let current = node
-
-      while (current.callee.type === "MemberExpression" && current.callee.object.type === "CallExpression") {
-        const method = current.callee.property
-        if (method.type === "Identifier" && ["flatMap", "map", "filter", "fold"].includes(method.name)) {
-          depth++
-        }
-        current = current.callee.object
-      }
-
-      return depth
     }
 
     /**
