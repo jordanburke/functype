@@ -30,7 +30,7 @@
     "format": "ts-builds format",
     "format:check": "ts-builds format:check",
     "lint": "ts-builds lint",
-    "lint:check": "ts-builds lint:check",
+    "lint:check": "eslint src --max-warnings 0",
     "typecheck": "ts-builds typecheck",
     "test": "ts-builds test",
     "test:watch": "ts-builds test:watch",
