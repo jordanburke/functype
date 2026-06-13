@@ -40,6 +40,12 @@ export interface Try<out T>
   orUndefined: () => T | undefined
   toOption: () => Option<T>
   /**
+   * Converts to a plain readonly array: `[value]` for Success, `[]` for Failure.
+   * Symmetric with `Try.toList()` but skips the List wrapper for code that
+   * just wants to feed Array.prototype methods or spread into another array.
+   */
+  toArray: () => readonly T[]
+  /**
    * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
    * or Left(leftValue) when given a value. Success becomes Right(value).
    *
@@ -141,6 +147,7 @@ const Success = <T>(value: T): Try<T> => ({
   toJSON: () => ({ "@functype": "Try" as const, _tag: "Success" as const, value }),
   toOption: () => Some(value),
   toList: () => List<T>([value]),
+  toArray: () => [value] as readonly T[],
   toTry: () => Success(value),
   pipe: <U>(f: (value: T) => U) => f(value),
   serialize: () => createSerializer("Try", "Success", value),
@@ -209,6 +216,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   }),
   toOption: () => Option<T>(null),
   toList: () => List<T>([]),
+  toArray: () => [] as readonly T[],
   toTry: () => Failure<T>(error),
   pipe: <U>(_f: (value: T) => U) => {
     throw error
@@ -253,6 +261,34 @@ const TryCompanion = {
     promise
       .then((value) => Success<T>(value))
       .catch((error) => Failure<T>(error instanceof Error ? error : new Error(String(error)))),
+  /**
+   * Creates a Try from a thunk that returns a Promise. The thunk is invoked
+   * when async() is called, so the Promise starts executing under the Try
+   * wrapper — synchronous throws from the thunk are caught the same way
+   * `Try(() => sync)` catches them, and rejections are caught the same way
+   * `Try.fromPromise(promise)` catches them.
+   *
+   * Prefer this over `Try.fromPromise(thunk())` when you want the work to be
+   * deferred until wrapping (e.g. composing a chain of Try-returning thunks
+   * before any of them runs).
+   *
+   * @example
+   *   const result = await Try.async(() => fs.readFile(path, "utf8"))
+   *   result.fold(err => log(err.message), data => process(data))
+   *
+   * @param thunk - Function returning a Promise to be wrapped
+   * @returns Promise resolving to a Try
+   */
+  async: <T>(thunk: () => Promise<T>): Promise<Try<T>> => {
+    try {
+      const promise = thunk()
+      return promise
+        .then((value) => Success<T>(value))
+        .catch((error) => Failure<T>(error instanceof Error ? error : new Error(String(error))))
+    } catch (error) {
+      return Promise.resolve(Failure<T>(error instanceof Error ? error : new Error(String(error))))
+    }
+  },
   /**
    * Type guard to check if a Try is Success
    * @param tryValue - The Try to check

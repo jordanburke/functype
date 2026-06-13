@@ -125,14 +125,24 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns A List containing the value if Some, or empty List if None
    */
   toList(): List<T>
+  /**
+   * Converts this Option to a plain readonly array.
+   * @returns \`[value]\` if Some, \`[]\` if None. Symmetric with \`toList()\` but
+   *   skips the List wrapper for code that just wants Array-prototype methods
+   *   or spread into another array.
+   */
+  toArray(): readonly T[]
   /** The number of elements in this Option (0 or 1) */
   size: number
   /**
    * Converts this Option to an Either
-   * @param left - The value to use for Left if this Option is None
-   * @returns Either.Right with the contained value if Some, or Either.Left with left if None
+   * @param leftOrBuilder - The Left value to use if None, or a thunk producing it.
+   *   Pass a thunk when the Left value is expensive to construct or carries
+   *   context (e.g. \`() => ConfigError(missing)\`) so the cost is paid only
+   *   on the None path. Eager value is fine for cheap errors.
+   * @returns Right(value) if Some, else Left(leftOrBuilder()) / Left(leftOrBuilder)
    */
-  toEither<E>(left: E): Either<E, T>
+  toEither<E>(leftOrBuilder: E | (() => E)): Either<E, T>
   /**
    * Returns a string representation of this Option
    * @returns A string representation
@@ -343,6 +353,12 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   orNull: () => T | null
   orUndefined: () => T | undefined
   toOption: () => Option<T>
+  /**
+   * Converts to a plain readonly array: \`[value]\` for Success, \`[]\` for Failure.
+   * Symmetric with \`Try.toList()\` but skips the List wrapper for code that
+   * just wants to feed Array.prototype methods or spread into another array.
+   */
+  toArray: () => readonly T[]
   /**
    * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
    * or Left(leftValue) when given a value. Success becomes Right(value).

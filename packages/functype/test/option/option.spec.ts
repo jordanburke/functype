@@ -401,4 +401,57 @@ describe("Option", () => {
       expect(indices).toEqual([0, 1, 2])
     })
   })
+
+  describe("toArray", () => {
+    it("Some.toArray() returns [value]", () => {
+      expect(Option(42).toArray()).toEqual([42])
+    })
+    it("None.toArray() returns []", () => {
+      expect(None<number>().toArray()).toEqual([])
+    })
+  })
+
+  describe("toEither", () => {
+    it("Some.toEither(value) returns Right", () => {
+      const result = Option(42).toEither("error")
+      expect(result.isRight()).toBe(true)
+      expect(result.orThrow()).toBe(42)
+    })
+
+    it("None.toEither(value) returns Left with the eager value", () => {
+      const result = None<number>().toEither("missing")
+      expect(result.isLeft()).toBe(true)
+      expect(
+        result.fold(
+          (l) => l,
+          (r) => `right:${r}`,
+        ),
+      ).toBe("missing")
+    })
+
+    it("Some.toEither(builder) returns Right without invoking the builder", () => {
+      let invoked = 0
+      const result = Option(42).toEither(() => {
+        invoked++
+        return "error"
+      })
+      expect(result.isRight()).toBe(true)
+      expect(invoked).toBe(0)
+    })
+
+    it("None.toEither(builder) invokes the builder lazily and uses its result", () => {
+      let invoked = 0
+      const result = None<number>().toEither(() => {
+        invoked++
+        return { _tag: "Missing", at: Date.now() }
+      })
+      expect(result.isLeft()).toBe(true)
+      expect(invoked).toBe(1)
+      const left = result.fold(
+        (l) => l,
+        () => null,
+      ) as { _tag: string }
+      expect(left._tag).toBe("Missing")
+    })
+  })
 })

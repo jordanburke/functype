@@ -141,14 +141,24 @@ export interface Option<out T extends Type>
    * @returns A List containing the value if Some, or empty List if None
    */
   toList(): List<T>
+  /**
+   * Converts this Option to a plain readonly array.
+   * @returns `[value]` if Some, `[]` if None. Symmetric with `toList()` but
+   *   skips the List wrapper for code that just wants Array-prototype methods
+   *   or spread into another array.
+   */
+  toArray(): readonly T[]
   /** The number of elements in this Option (0 or 1) */
   size: number
   /**
    * Converts this Option to an Either
-   * @param left - The value to use for Left if this Option is None
-   * @returns Either.Right with the contained value if Some, or Either.Left with left if None
+   * @param leftOrBuilder - The Left value to use if None, or a thunk producing it.
+   *   Pass a thunk when the Left value is expensive to construct or carries
+   *   context (e.g. `() => ConfigError(missing)`) so the cost is paid only
+   *   on the None path. Eager value is fine for cheap errors.
+   * @returns Right(value) if Some, else Left(leftOrBuilder()) / Left(leftOrBuilder)
    */
-  toEither<E>(left: E): Either<E, T>
+  toEither<E>(leftOrBuilder: E | (() => E)): Either<E, T>
   /**
    * Returns a string representation of this Option
    * @returns A string representation
@@ -235,9 +245,10 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
       op(value, z),
   contains: (val: T) => val === value,
   toList: () => List<T>([value]),
+  toArray: () => [value] as readonly T[],
   size: 1,
   toOption: () => Some(value),
-  toEither: <E>(_left: E) => Right<E, T>(value),
+  toEither: <E>(_leftOrBuilder: E | (() => E)) => Right<E, T>(value),
   toTry: () => Try(() => value),
   toPromise: (): Promise<T> => Promise.resolve(value),
   toString: () => `Some(${safeStringify(value)})`,
@@ -309,9 +320,11 @@ const NONE: Option<never> = {
       z,
   contains: () => false,
   toList: () => List([]),
+  toArray: <T>() => [] as readonly T[],
   size: 0,
   toOption: <T>() => NONE as unknown as Option<T>,
-  toEither: <E>(left: E) => Left<E, never>(left),
+  toEither: <E>(leftOrBuilder: E | (() => E)) =>
+    Left<E, never>(typeof leftOrBuilder === "function" ? (leftOrBuilder as () => E)() : leftOrBuilder),
   toTry: <T>() =>
     Try<T>(() => {
       throw new Error("None")

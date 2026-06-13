@@ -197,6 +197,63 @@ describe("Try", () => {
     })
   })
 
+  describe("toArray", () => {
+    it("Success.toArray() returns [value]", () => {
+      expect(Try.success(42).toArray()).toEqual([42])
+    })
+    it("Failure.toArray() returns []", () => {
+      expect(Try.failure<number>("boom").toArray()).toEqual([])
+    })
+  })
+
+  describe("Try.async()", () => {
+    it("defers thunk invocation until called", () => {
+      let started = 0
+      const _wrapped = Try.async(() => {
+        started++
+        return Promise.resolve(42)
+      })
+      // Thunk is invoked synchronously inside async() to obtain the Promise.
+      // The deferral is vs `Try.fromPromise(thunk())` where the caller computed
+      // the promise before. The win is composability — `Try.async` is a thunk
+      // you can pass around without firing the work.
+      expect(started).toBe(1)
+      void _wrapped
+    })
+
+    it("returns Success on resolved promise", async () => {
+      const result = await Try.async(() => Promise.resolve(99))
+      expect(result.isSuccess()).toBe(true)
+      expect(result.orElse(0)).toBe(99)
+    })
+
+    it("returns Failure on rejected promise", async () => {
+      const result = await Try.async<number>(() => Promise.reject(new Error("async boom")))
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error.message).toBe("async boom")
+      }
+    })
+
+    it("returns Failure when the thunk itself throws synchronously", async () => {
+      const result = await Try.async<number>(() => {
+        throw new Error("sync throw before await")
+      })
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error.message).toBe("sync throw before await")
+      }
+    })
+
+    it("wraps non-Error rejections", async () => {
+      const result = await Try.async<number>(() => Promise.reject("string reject"))
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error.message).toBe("string reject")
+      }
+    })
+  })
+
   describe("recover()", () => {
     it("should not change a Success", () => {
       const result = Try.success(42).recover(() => 0)
