@@ -38,6 +38,38 @@ All commands use `ts-builds` under the hood for standardized tooling.
 - `pnpm format` / `pnpm format:check` - Format code with Prettier
 - `pnpm lint` / `pnpm lint:check` - Fix/check ESLint issues
 
+### Lint policy — health metric, not a gate
+
+Unlike the rest of the family (`functype-os`, `functype-log`, `functype-react`,
+`functype-eval`, `functype-mcp-server`, `eslint-plugin-functype`,
+`eslint-config-functype` — all of which enforce `eslint src --max-warnings 0`),
+**functype core does not gate on warning count**. `lint:check` reports
+warnings but does not fail CI on them.
+
+The reason: functype core is the _implementation layer_ of the patterns the
+rules enforce. Roughly half of the ~170 warnings live in code that is the
+implementation of the pattern being checked — `do/index.ts` is the
+do-notation runtime, `list/List.ts` contains the iteration that
+`no-imperative-loops` would forbid, `core/task/Task.ts` is the Promise
+plumbing. Suppressing those via per-glob eslint overrides would destroy
+useful information: the warning count is a real measurement of how much
+imperative shape lives in the substrate.
+
+Treat the count as a trend: down is healthier (genuine FP refactors are
+landing), up means new imperative code crept in and is worth a look. For
+a richer, weighted version of the same idea, run:
+
+```bash
+pnpm -F functype-eval bin score packages/functype/src --json
+```
+
+functype-eval normalizes by KLOC, weights by dimension, and gives a
+0–100 fitness number — the deliberate health metric.
+
+If you do refactor warnings out organically while touching a file, that's
+exactly the pattern this policy encourages. Just don't reach for a sweep
+that uses per-file overrides to declare false zero.
+
 ### Documentation & Analysis
 
 - `pnpm docs` - Generate TypeDoc documentation

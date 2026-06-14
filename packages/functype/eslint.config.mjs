@@ -97,6 +97,29 @@ export default [
       // stricter immutability enforcement, but the library itself provides immutability guarantees
       // through architectural design rather than type-level constraints.
       "functional/prefer-immutable-types": "off",
+
+      // Why this package doesn't enforce --max-warnings 0:
+      //
+      // The other 7 packages in the family (functype-os, functype-log,
+      // functype-react, functype-eval, functype-mcp-server, eslint-plugin-functype,
+      // eslint-config-functype) all run `eslint src --max-warnings 0` from their
+      // own lint:check scripts. functype core does not — its lint:check stays
+      // `ts-builds lint:check`, which prints warnings without gating CI on them.
+      //
+      // The reason is category-correctness: functype core is the *implementation
+      // layer* of the patterns these rules check. ~half of the ~170 warnings live
+      // in code that IS the implementation of the pattern being checked
+      // (do/index.ts is the do-notation runtime; list/List.ts contains the
+      // iteration that no-imperative-loops would forbid; core/task/Task.ts is
+      // the Promise plumbing). The naive "uniformity" fix would be per-glob
+      // eslint overrides for those files — but that would destroy useful signal.
+      // The warning count is a real measurement of how much imperative shape
+      // lives in the substrate; treating it as a trend (down = healthier, up =
+      // worth investigating) is more informative than a binary 0/N gate.
+      //
+      // For a richer health metric, run `functype-eval score packages/functype/src`
+      // — same signal, weighted and normalized by KLOC. See CLAUDE.md "Lint
+      // policy" section for the full rationale.
     },
   },
 ]
