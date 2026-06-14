@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.4.0 - 2026-06-13
+
 **`functype-os` — internal FP cleanup; two breaking type changes.** All 58 lint warnings in the package are gone, fixed at the source rather than silenced:
 
 - `Fs.ts` — 23 `try/catch` blocks replaced with `Try(thunk).toEither(buildErr)` (sync) and `Try.fromPromise(promise)` (async). Same runtime behavior; the FP type tells the story instead of a control-flow keyword.
@@ -33,6 +35,38 @@ gating; `bench` (the Phase 2 LLM eval harness) ships as a stub. Joins the family
 prints a misleading `100/100` (0 LOC trivially scores every density dimension 1.0). It now reports
 "no TypeScript sources found" and exits `2` (distinct from `1` = below `--threshold`). `ScoreResult`
 gains a `fileCount` field so library callers can detect the same condition.
+
+**`functype` — three additive API surface additions, no breaking changes.**
+
+- **`Option.toEither(E | (() => E))`** — the existing eager form (`toEither(left)`) still works; the new thunk form (`toEither(() => buildLeft())`) defers Left construction until the None path actually fires. Useful when the Left value is expensive or carries context (e.g. `toEither(() => EnvError(name, msg))`). Mirrors the shape `Try.toEither` already supported.
+- **`Try.async(() => Promise<T>)`** — lazy thunk variant of `Try.fromPromise(promise)`. `fromPromise` takes an already-started Promise; `Try.async` takes a thunk so creation can be deferred until wrapping. Synchronous throws from inside the thunk become `Failure` the same way async rejections do — making the wrapper safer for code paths where the producer might throw at promise-creation time.
+- **`Option.toArray()` and `Try.toArray()`** — direct readonly-array conversion methods symmetric with the existing `toList()`. Some/Success → `[value]`, None/Failure → `[]`. Eliminates the `fold(() => [], v => [v])` boilerplate for the common "use this Option/Try as 0-or-1 array elements" pattern.
+
+CLI metadata (`src/cli/data.ts`) updated to surface the new methods. As a related fix, the Either / Try check-method entries now show parens (`.isLeft()`, `.isSuccess()`) — these have always been type-guard methods, not properties, but were listed without parens in the API reference; removed a stale `.isDefined` entry that never existed in `Option.ts`.
+
+**`functype` MCP server — type registry reconciliation.**
+
+`get_type_api("TaskOutcome")` returned "not found" while simultaneously listing `TaskOutcome` in the available-types message — two underlying registries (`cli/data.ts` TYPES, `cli/full-interfaces.ts` FULL_INTERFACES) had drifted apart. Fix:
+
+- Added curated TYPES entries for `TaskOutcome` and `TaskResult` (both public surface; previously only one of the two registries knew about them).
+- Both added to the "Effect" category in the overview.
+- The MCP server's "Available types:" error message now reads from TYPES (the source it can actually answer queries from), not FULL_INTERFACES — eliminates the "listed but not findable" mismatch.
+
+**`eslint-plugin-functype` — two false-positive classes fixed.**
+
+Both surfaced while making functype-os lint-clean. The rules were firing on the package's own recommended conversion patterns.
+
+- **`prefer-do-notation` mixed-monad detection** was a text substring scan: any expression whose source contained 2+ of `{"Option", "Either", "Try", "Task"}` triggered the warning — including the *method names* themselves (`.toEither` contains "Either", `.toOption` contains "Option"). Idiomatic conversions like `Try(...).toEither(buildErr)` always fired. Replaced with AST-aware constructor-call detection: walks the expression looking for distinct monad *constructor* calls (`Option(...)`, `Either.right(...)`, etc.). Method calls no longer count.
+- **`prefer-flatmap` array-returning gate** was flagging any `.map(cb => array)` regardless of the receiver type — including non-collection monads where `.flatMap` expects `Try<T>`/`Option<T>` etc., not an array. Added a receiver-shape gate: when the `.map` receiver is unambiguously a non-collection monad constructor (`Try(...)`, `Option(...)`, etc.), the rule suppresses. Bare identifiers and array literals still fire as before (we don't have type info to disambiguate those).
+
+The eslint pair version bump per the family mirror encoding: `eslint-plugin-functype` and `eslint-config-functype` move from `2.103.x` to `2.104.0`.
+
+**Workspace tooling.**
+
+- All 7 application/library packages in the family (`functype-os`, `-log`, `-react`, `-eval`, `-mcp-server`, `eslint-plugin-functype`, `eslint-config-functype`) now enforce `eslint src --max-warnings 0` in their `lint:check` scripts — any new warning fails CI on those packages. Same discipline applied across the family; consistent regression gate.
+- `functype` core does **not** enforce 0 warnings. ~half of its ~170 warnings live in code that IS the implementation of the pattern being checked (`do/index.ts` is the do-notation runtime; `list/List.ts` contains the iteration that `no-imperative-loops` would forbid). Suppressing via per-glob eslint overrides would destroy useful signal. The count is tracked as a health metric instead — see the new "Lint policy" section in `packages/functype/CLAUDE.md` and the extended Design Philosophy comment in `packages/functype/eslint.config.mjs`. For a richer weighted version, run `functype-eval score packages/functype/src`. (CI integration of that metric over time is tracked in issue #197.)
+- `eslint-plugin-functype` internals canonically refactored to FP shape (pure recursion over the AST, immutable Set returns, `Object.entries().filter().flatMap()` patterns replacing for-loops + mutable accumulators). Native primitives throughout — no functype runtime dep added. Same external behavior, same test coverage (181 tests).
+- Turbo task graph: `lint:check` and `validate` now declare explicit `dependsOn` on `eslint-plugin-functype#build` and `eslint-config-functype#build` so CI on a fresh checkout doesn't race the workspace-linked eslint plugin's dist.
 
 ## 1.3.1 - 2026-06-06
 
