@@ -61,7 +61,7 @@
     "jsdom": "^26.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "ts-builds": "^3.1.0",
+    "ts-builds": "^3.1.1",
     "tsdown": "^0.22.2"
   },
   "type": "module",

@@ -66,7 +66,7 @@
   },
   "dependencies": {
     "@typescript-eslint/parser": "^8.61.0",
-    "eslint-plugin-functype": "workspace:^",
+    "eslint-plugin-functype": "workspace:*",
     "ts-morph": "^25.0.1",
     "type-coverage-core": "^2.29.7"
   },
@@ -75,7 +75,7 @@
     "eslint": "^10.5.0",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^3.1.0",
+    "ts-builds": "^3.1.1",
     "tsdown": "^0.22.2",
     "vitest": "^4.1.8"
   },

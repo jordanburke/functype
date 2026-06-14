@@ -45,7 +45,7 @@
   "devDependencies": {
     "@types/node": "^24.13.2",
     "functype": "workspace:^",
-    "ts-builds": "^3.1.0",
+    "ts-builds": "^3.1.1",
     "tsdown": "^0.22.2"
   },
   "type": "module",
