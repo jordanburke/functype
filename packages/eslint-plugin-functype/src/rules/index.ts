@@ -10,6 +10,7 @@ import preferFunctypeSet from "./prefer-functype-set"
 import preferList from "./prefer-list"
 import preferMap from "./prefer-map"
 import preferOption from "./prefer-option"
+import preferTry from "./prefer-try"
 
 export {
   noGetUnsafe,
@@ -24,11 +25,13 @@ export {
   preferList,
   preferMap,
   preferOption,
+  preferTry,
 }
 
 export default {
   "prefer-option": preferOption,
   "prefer-either": preferEither,
+  "prefer-try": preferTry,
   "prefer-list": preferList,
   "no-get-unsafe": noGetUnsafe,
   "no-let": noLet,

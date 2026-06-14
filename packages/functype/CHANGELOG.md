@@ -6,6 +6,27 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`eslint-plugin-functype` — split `prefer-either` try/catch handling into new `prefer-try` rule.**
+The old `prefer-either` rule's `TryStatement` handler reported "Prefer `Either<Error, T>`" while
+its autofix produced `Try(() => …)` — the message and the fix had been disagreeing since the day
+the handler was written. The fix was right; the branding was wrong, and the underlying conceptual
+model was too: a raw `try/catch` is "run a computation that may throw" (that's `Try`), while
+`Either<E, A>` earns its keep when you _choose_ `E` (typed domain error). The cleanest reflection
+is two rules.
+
+- **New rule: `functype/prefer-try`** — owns try/catch. Reports `preferTryOverTryCatch` ("Prefer
+  `Try(() => …)` over try/catch block"). Autofix suggests `Try(() => …)` for sync return bodies
+  and `Try.fromPromise(…)` for `return await x` bodies. Re-throw-in-catch escape hatch preserved.
+- **`functype/prefer-either` narrowed** — keeps `ThrowStatement` → `Either.left(…)` and
+  function-return-type checks (`preferEitherReturn`); no longer reports on `try/catch`. Description
+  updated to "Use `Either`/`Left`/`Right` for typed domain errors instead of throwing."
+- **`recommended` and `strict` configs add `prefer-try` automatically** — consumers on those configs
+  see no change in warning count, only the rule name in the warning line changes for try/catch.
+- **Migration for custom-config consumers**: if your `.eslintrc` explicitly lists
+  `"functype/prefer-either"`, add `"functype/prefer-try"` alongside it to retain try/catch coverage.
+
+Closes #198.
+
 ## 1.4.0 - 2026-06-13
 
 **`functype-os` — internal FP cleanup; two breaking type changes.** All 58 lint warnings in the package are gone, fixed at the source rather than silenced:
@@ -56,7 +77,7 @@ CLI metadata (`src/cli/data.ts`) updated to surface the new methods. As a relate
 
 Both surfaced while making functype-os lint-clean. The rules were firing on the package's own recommended conversion patterns.
 
-- **`prefer-do-notation` mixed-monad detection** was a text substring scan: any expression whose source contained 2+ of `{"Option", "Either", "Try", "Task"}` triggered the warning — including the *method names* themselves (`.toEither` contains "Either", `.toOption` contains "Option"). Idiomatic conversions like `Try(...).toEither(buildErr)` always fired. Replaced with AST-aware constructor-call detection: walks the expression looking for distinct monad *constructor* calls (`Option(...)`, `Either.right(...)`, etc.). Method calls no longer count.
+- **`prefer-do-notation` mixed-monad detection** was a text substring scan: any expression whose source contained 2+ of `{"Option", "Either", "Try", "Task"}` triggered the warning — including the _method names_ themselves (`.toEither` contains "Either", `.toOption` contains "Option"). Idiomatic conversions like `Try(...).toEither(buildErr)` always fired. Replaced with AST-aware constructor-call detection: walks the expression looking for distinct monad _constructor_ calls (`Option(...)`, `Either.right(...)`, etc.). Method calls no longer count.
 - **`prefer-flatmap` array-returning gate** was flagging any `.map(cb => array)` regardless of the receiver type — including non-collection monads where `.flatMap` expects `Try<T>`/`Option<T>` etc., not an array. Added a receiver-shape gate: when the `.map` receiver is unambiguously a non-collection monad constructor (`Try(...)`, `Option(...)`, etc.), the rule suppresses. Bare identifiers and array literals still fire as before (we don't have type info to disambiguate those).
 
 The eslint pair version bump per the family mirror encoding: `eslint-plugin-functype` and `eslint-config-functype` move from `2.103.x` to `2.104.0`.

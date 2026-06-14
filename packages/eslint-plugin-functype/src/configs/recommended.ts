@@ -2,6 +2,7 @@ const recommendedRules = {
   "functype/no-let": "error",
   "functype/prefer-option": "warn",
   "functype/prefer-either": "warn",
+  "functype/prefer-try": "warn",
   "functype/prefer-fold": "warn",
   "functype/prefer-map": "warn",
   "functype/prefer-flatmap": "warn",

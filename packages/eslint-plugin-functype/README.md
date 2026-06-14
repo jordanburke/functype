@@ -30,7 +30,8 @@ export default [functype.configs.strict]
 | Rule                           | Recommended | Strict | Description                                              |
 | ------------------------------ | :---------: | :----: | -------------------------------------------------------- |
 | `functype/prefer-option`       |    warn     | error  | Use `Option`/`Some`/`None` instead of `null`/`undefined` |
-| `functype/prefer-either`       |    warn     | error  | Use `Either`/`Right`/`Left` instead of throwing          |
+| `functype/prefer-either`       |    warn     | error  | Use `Either`/`Left`/`Right` for typed domain errors      |
+| `functype/prefer-try`          |    warn     | error  | Prefer `Try(() => …)` for computations that may throw    |
 | `functype/prefer-fold`         |    warn     |  warn  | Use `fold`/`match` instead of manual unwrapping          |
 | `functype/prefer-map`          |    warn     |  warn  | Use `map` instead of manual option/either checks         |
 | `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of nested `map`                    |

@@ -26,7 +26,7 @@ const rule: Rule.RuleModule = {
     type: "suggestion",
     hasSuggestions: true,
     docs: {
-      description: "Prefer Either<E, T> over try/catch blocks and throw statements",
+      description: "Use Either/Left/Right for typed domain errors instead of throwing",
       recommended: true,
     },
     schema: [
@@ -42,11 +42,8 @@ const rule: Rule.RuleModule = {
       },
     ],
     messages: {
-      preferEitherOverTryCatch: "Prefer Either<Error, T> over try/catch block",
       preferEitherOverThrow: "Prefer Either.left(error) over throw statement",
       preferEitherReturn: "Consider returning Either<Error, {{type}}> instead of throwing",
-      suggestTry: "Replace with Try(() => ...)",
-      suggestTryFromPromise: "Replace with Try.fromPromise(...)",
       suggestEitherLeft: "Replace with Either.left(...)",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -105,27 +102,6 @@ const rule: Rule.RuleModule = {
       }
     }
 
-    function isSimpleTryBody(node: ASTNode): boolean {
-      return node.block?.body?.length === 1
-    }
-
-    function isSimpleCatch(node: ASTNode): boolean {
-      if (!node.handler?.body) return false
-      const catchBody = node.handler.body.body
-      return (
-        catchBody.length === 0 ||
-        (catchBody.length === 1 &&
-          (catchBody[0].type === "ReturnStatement" || catchBody[0].type === "ExpressionStatement"))
-      )
-    }
-
-    function tryBodyHasAwait(node: ASTNode): boolean {
-      const stmt = node.block.body[0]
-      if (stmt.type === "ReturnStatement" && stmt.argument?.type === "AwaitExpression") return true
-      if (stmt.type === "ExpressionStatement" && stmt.expression?.type === "AwaitExpression") return true
-      return false
-    }
-
     function isFunctionLike(node: ASTNode): boolean {
       if (!node) return false
       return ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(node.type)
@@ -143,65 +119,6 @@ const rule: Rule.RuleModule = {
     }
 
     return {
-      TryStatement(node: ASTNode) {
-        // Allow try/catch in test files
-        if (allowThrowInTests && isInTestFile()) return
-
-        // Allow try/catch that re-throws in the catch block (even with logging)
-        if (node.handler && node.handler.body) {
-          const catchBody = node.handler.body.body
-          const hasRethrow = catchBody.some((stmt: ASTNode) => stmt.type === "ThrowStatement")
-          if (hasRethrow) return
-        }
-
-        const sourceCode = context.sourceCode
-        const suggest: Rule.SuggestionReportDescriptor[] = []
-
-        if (isSimpleTryBody(node) && isSimpleCatch(node)) {
-          const tryStmt = node.block.body[0]
-          const isReturn = tryStmt.type === "ReturnStatement"
-
-          // Only suggest when the try body is a return statement — non-return expression
-          // replacements would produce syntactically ambiguous code without knowing the context
-          if (isReturn) {
-            const expr = tryStmt.argument
-            const exprText = sourceCode.getText(expr)
-
-            if (tryBodyHasAwait(node)) {
-              const awaitExpr = expr.type === "AwaitExpression" ? expr.argument : expr
-              const innerText = sourceCode.getText(awaitExpr)
-              suggest.push({
-                messageId: "suggestTryFromPromise",
-                fix(fixer) {
-                  return fixer.replaceText(node, `return Try.fromPromise(${innerText})`)
-                },
-              })
-            } else {
-              suggest.push({
-                messageId: "suggestTry",
-                fix(fixer) {
-                  return fixer.replaceText(node, `return Try(() => ${exprText})`)
-                },
-              })
-            }
-
-            if (!hasFunctypeSymbol(sourceCode, "Try")) {
-              suggest.push({
-                messageId: "suggestAddImport",
-                data: { symbol: "Try" },
-                fix: createImportFixer(sourceCode, "Try"),
-              })
-            }
-          }
-        }
-
-        context.report({
-          node,
-          messageId: "preferEitherOverTryCatch",
-          suggest,
-        })
-      },
-
       ThrowStatement(node: ASTNode) {
         // Allow throws in test files if configured
         if (allowThrowInTests && isInTestFile()) return

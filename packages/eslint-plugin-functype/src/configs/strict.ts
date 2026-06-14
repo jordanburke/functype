@@ -4,6 +4,7 @@ const strictRules = {
   ...recommendedRules,
   "functype/prefer-option": "error",
   "functype/prefer-either": "error",
+  "functype/prefer-try": "error",
   "functype/no-get-unsafe": "error",
   "functype/prefer-list": "warn",
   "functype/prefer-functype-map": "error",
