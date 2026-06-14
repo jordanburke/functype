@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.4.1 - 2026-06-14
+
 **`eslint-plugin-functype` — split `prefer-either` try/catch handling into new `prefer-try` rule.**
 The old `prefer-either` rule's `TryStatement` handler reported "Prefer `Either<Error, T>`" while
 its autofix produced `Try(() => …)` — the message and the fix had been disagreeing since the day
