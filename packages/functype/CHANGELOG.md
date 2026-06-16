@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.4.2 - 2026-06-16
+
 **`eslint-plugin-functype` — fix `prefer-do-notation` false positives on monad conversions.**
 The `preferDoForMixedMonads` check was firing on any `CallExpression` whose AST subtree contained
 ≥2 distinct monad constructor names, conflating conversion shapes like
