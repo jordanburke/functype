@@ -42,6 +42,35 @@ describe("prefer-try", () => {
           }
         `,
       },
+      // #206: try/finally without catch is resource cleanup, not error handling
+      {
+        name: "try/finally without catch is not Try territory",
+        code: `
+          function boot() {
+            const dispose = createTempKey()
+            try {
+              return unsealSecrets(env).fold(onErr, onOk)
+            } finally {
+              dispose()
+            }
+          }
+        `,
+      },
+      // #206: try/catch/finally is not safely liftable — autofix would drop the finally
+      {
+        name: "try/catch/finally is not safely liftable to Try",
+        code: `
+          function f() {
+            try {
+              return parse(input)
+            } catch (e) {
+              return fallback(e)
+            } finally {
+              cleanup()
+            }
+          }
+        `,
+      },
     ],
     invalid: [
       // Multi-stmt catch — no suggestion offered

@@ -68,6 +68,14 @@ const rule: Rule.RuleModule = {
 
     return {
       TryStatement(node: ASTNode) {
+        // Try cannot model `finally` — bail on any try statement with a finalizer.
+        // Covers two bugs: (1) catch-less try/finally fires a misleading warning
+        // with no useful autofix; (2) try/catch/finally autofix would lift the
+        // catch into Try(() => …) and silently drop the finally clause. The FP
+        // primitive for guaranteed cleanup is IO.bracket, on the lazy IO type.
+        // See #206.
+        if (node.finalizer) return
+
         // Allow try/catch in test files
         if (allowThrowInTests && isInTestFile()) return
 

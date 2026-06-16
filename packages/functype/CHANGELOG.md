@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`eslint-plugin-functype` — fix `prefer-try` false positives and dropped-finally autofix on `try` with a finalizer.**
+Two related bugs around `try` statements with a `finally` block:
+
+- Catch-less `try { } finally { }` triggered a misleading "Prefer `Try(() => …)` over try/catch block" warning despite having no catch to lift, because `context.report` ran unconditionally after the autofix gate.
+- `try { } catch { } finally { }` could pass the autofix gate, with the suggestion `return Try(() => body)` silently dropping both the catch _and_ the finally — defensive code becomes broken code on a single keypress.
+
+Fixed by a single guard at the top of the `TryStatement` handler: `if (node.finalizer) return`. `Try` cannot model `finally` — the FP primitive for guaranteed cleanup is `IO.bracket`, on the lazy IO type. Plain `try { } catch { }` (no finalizer) still fires as designed. Closes #206.
+
 ## 1.4.2 - 2026-06-16
 
 **`eslint-plugin-functype` — fix `prefer-do-notation` false positives on monad conversions.**
