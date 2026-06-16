@@ -1,6 +1,6 @@
 {
   "name": "functype-log",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
   "keywords": [
     "functype",

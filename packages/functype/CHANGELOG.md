@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.4.3 - 2026-06-16
+
 **`eslint-plugin-functype` — fix `prefer-try` false positives and dropped-finally autofix on `try` with a finalizer.**
 Two related bugs around `try` statements with a `finally` block:
 
