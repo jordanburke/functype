@@ -14,16 +14,6 @@
  * signatures are a superset. Pass them directly anywhere a `Logger` is
  * expected; no adapter required.
  *
- * Subpath-only import (1.3.x): `import type { Logger } from "functype/logger"`.
- *
- * **Why subpath-only and not also from the top barrel?** Temporary workaround
- * for a non-deterministic chunk-splitter bug in rolldown 1.1.0 (the bundler
- * tsdown uses under the hood). Re-exporting Logger from the top barrel
- * occasionally caused `Companion$N is not defined` errors in downstream
- * builds — same source, same node, different chunk graph from one rolldown
- * run to another. See the TEMPORARY comment in `packages/functype/src/index.ts`
- * for the restore plan once rolldown stabilizes.
- *
  * @category Logger
  */
 export interface Logger {

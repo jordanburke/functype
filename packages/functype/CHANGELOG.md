@@ -6,6 +6,29 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`eslint-plugin-functype` — fix `prefer-do-notation` false positives on monad conversions.**
+The `preferDoForMixedMonads` check was firing on any `CallExpression` whose AST subtree contained
+≥2 distinct monad constructor names, conflating conversion shapes like
+`Try(...).fold(() => Option.none(), v => Option(v))` with actual composition. Now gated on a
+composition-chain test (`.flatMap`/`.map`/`.filter` stacked ≥2 deep); terminal handlers like
+`fold`/`match`/`getOrElse` and bare co-occurrence in arg lists no longer trip the rule. Closes #205.
+
+**Build reliability — rolldown renamer guard removed; `Logger` restored to top barrel.**
+The non-deterministic chunk-splitter / renamer race that prompted the 1.3.1 build-guard and the
+subpath-only `Logger` workaround appears to be fixed upstream in rolldown 1.1.1 (which tsdown's
+`~1.1.0` constraint now resolves to). Last 10 main CI runs all reported `[build-guard] clean on
+attempt 1`; local determinism harness reports 0/20 unloadable under `RAYON_NUM_THREADS=4`.
+
+- `packages/functype/scripts/build-verified.mjs` and `scripts/check-build-determinism.mjs` removed;
+  `package.json` `build` restored to `ts-builds build`.
+- `packages/functype/src/index.ts` restores `export type { Logger } from "@/logger/Logger"`.
+  `import type { Logger } from "functype"` works again, in addition to the `functype/logger` subpath.
+- In-repo consumers (`functype-os/config/bootDiagnostics.ts`, `consoleBootLogger.ts`, the
+  boot-diagnostics spec) flipped back to top-barrel imports for consistency with the rest of the
+  workspace.
+
+Closes #182 (moot — no upstream repro needed). Closes #179.
+
 ## 1.4.1 - 2026-06-14
 
 **`eslint-plugin-functype` — split `prefer-either` try/catch handling into new `prefer-try` rule.**

@@ -17,18 +17,18 @@ Four methods, all mandatory. No `trace`/`fatal`/`child`/`withContext` in the cor
 
 ## Import
 
-In 1.3.x, `Logger` is reachable only from the `functype/logger` subpath:
+`Logger` is reachable from both the top barrel and the `functype/logger` subpath:
 
 ```typescript
+import type { Logger } from "functype";
+// or
 import type { Logger } from "functype/logger";
 ```
-
-> **Why subpath-only?** Temporary workaround for a non-deterministic chunk-splitter bug in rolldown 1.1.0 (the bundler tsdown uses under the hood). Re-exporting `Logger` from the top-level `functype` barrel made the chunk graph dense enough that ~30% of downstream builds emitted broken chunks with `Companion$N is not defined` references. The published `1.3.0` artifact on npm happens to expose both paths (it was built on a clean run), but subsequent 1.3.x releases will be subpath-only until rolldown ships a determinism fix. Future minor will restore barrel-parity.
 
 If your application already has its own `Logger` type, rename on import:
 
 ```typescript
-import type { Logger as FunctypeLogger } from "functype/logger";
+import type { Logger as FunctypeLogger } from "functype";
 ```
 
 ## Why it lives in core
@@ -42,7 +42,7 @@ The proposal also rejected baking in a default implementation. Concrete loggers 
 Any 4-method object with the right signatures satisfies `Logger`:
 
 ```typescript
-import type { Logger } from "functype/logger";
+import type { Logger } from "functype";
 
 const myLogger: Logger = {
   debug: (msg, meta) => console.debug(msg, meta ?? ""),
@@ -57,8 +57,8 @@ const myLogger: Logger = {
 `functype-log/direct` exposes `DirectLogger` — a sync/imperative logger with `debug`/`info`/`warn`/`error(msg, meta?): void` methods plus extras (`trace`, `fatal`, `withError`, `withContext`, `child`). Its surface is a structural **superset** of core `Logger`, so it assigns directly with no adapter:
 
 ```typescript
+import type { Logger } from "functype";
 import { createDirectConsoleLogger } from "functype-log/direct";
-import type { Logger } from "functype/logger";
 
 const logger: Logger = createDirectConsoleLogger(); // no cast required
 ```

@@ -58,6 +58,14 @@ function monadsIn(node: unknown): ReadonlySet<string> {
 const CHAIN_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter", "fold"])
 
 /**
+ * Methods that *compose* monadic operations (stay in the monad and feed the
+ * next step). Distinct from terminal handlers (`fold`, `match`, `getOrElse`)
+ * which *exit* the monad — those are conversions, not composition, and Do
+ * notation doesn't apply to them.
+ */
+const COMPOSITION_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter"])
+
+/**
  * Length of the chain of `.flatMap()/.map()/.filter()/.fold()` calls walking
  * left from `node`. Returns 1 for a single call, N for N stacked calls. Pure
  * tail recursion — no mutable counter, no `while` loop.
@@ -68,6 +76,32 @@ function getChainDepth(node: ASTNode): number {
   const next = node.callee.object as ASTNode
   const here = method.type === "Identifier" && CHAIN_METHODS.has(method.name) ? 1 : 0
   return here + getChainDepth(next)
+}
+
+/**
+ * Number of composition methods (`flatMap`/`map`/`filter`) stacked under
+ * `node` via `.callee.object`. 0 if the callee isn't a member expression on
+ * another call. Excludes terminal handlers by design.
+ */
+function compositionChainDepth(node: ASTNode): number {
+  if (node.callee?.type !== "MemberExpression" || node.callee.object?.type !== "CallExpression") return 0
+  const method = node.callee.property
+  const next = node.callee.object as ASTNode
+  const here = method.type === "Identifier" && COMPOSITION_METHODS.has(method.name) ? 1 : 0
+  return here + compositionChainDepth(next)
+}
+
+/**
+ * True when `node`'s outermost call is a composition method AND at least one
+ * more composition method appears below it — i.e. this is a real
+ * `.flatMap(...).flatMap(...)`-style chain, not a terminal exit like
+ * `.fold(...)` or a bare receiver like `option.flatMap(...)`.
+ */
+function isCompositionChain(node: ASTNode): boolean {
+  if (node.callee?.type !== "MemberExpression") return false
+  const method = node.callee.property
+  if (method.type !== "Identifier" || !COMPOSITION_METHODS.has(method.name)) return false
+  return compositionChainDepth(node) >= 1
 }
 
 /**
@@ -224,6 +258,11 @@ const rule: Rule.RuleModule = {
      */
     function checkMixedMonads(node: ASTNode): void {
       if (!detectMixedMonads) return
+      // Only flag genuine composition chains (.flatMap/.map/.filter stacked at
+      // least twice deep). Terminal handlers (.fold/.match/.getOrElse) and
+      // bare co-occurrence in arg lists are conversions, not compositions —
+      // Do notation doesn't apply. See issue #205.
+      if (!isCompositionChain(node)) return
       if (monadsIn(node).size >= 2) {
         context.report({ node, messageId: "preferDoForMixedMonads" })
       }

@@ -311,9 +311,8 @@ const pairs = Do(function* () {
 ## Logger (core type, 1.3+)
 
 ```typescript
-// Subpath-only in 1.3.x (rolldown chunk-splitter workaround;
-// barrel-parity restored in a future minor once rolldown is fixed)
-import type { Logger } from "functype/logger";
+// Reachable from both the top barrel and the functype/logger subpath
+import type { Logger } from "functype";
 // 4-method type-only interface:
 // debug / info / warn / error: (message, metadata?) => void
 ```

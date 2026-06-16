@@ -204,15 +204,13 @@ import { createDirectConsoleLogger } from "functype-log/direct" // sync/imperati
 
 ## Interop with `functype`'s core `Logger` (1.3.0+)
 
-The core `functype` package ships a minimal `Logger` interface at the `functype/logger` subpath — 4 mandatory methods (`debug`/`info`/`warn`/`error`) returning `void`, designed as the shared shape for boot-diagnostic / observability hooks across the ecosystem (see `bootDiagnostics` in `functype-os/config`).
-
-> **Note (1.3.x):** `Logger` is reachable only from the `functype/logger` subpath, not the top-level `functype` barrel. Temporary workaround for a non-deterministic chunk-splitter bug in rolldown 1.1.0. Will be restored to barrel-parity in a future minor once rolldown stabilizes. See the TEMPORARY comment in `packages/functype/src/index.ts` upstream.
+The core `functype` package ships a minimal `Logger` interface — 4 mandatory methods (`debug`/`info`/`warn`/`error`) returning `void`, designed as the shared shape for boot-diagnostic / observability hooks across the ecosystem (see `bootDiagnostics` in `functype-os/config`). Reachable from both `functype` (top barrel) and the `functype/logger` subpath.
 
 `DirectLogger` from `functype-log/direct` **structurally satisfies** that core `Logger` interface — its `debug`/`info`/`warn`/`error` methods are a superset of the core shape. You can pass a `DirectLogger` directly anywhere a core `Logger` is expected, with no adapter:
 
 ```typescript
+import type { Logger } from "functype"
 import { createDirectConsoleLogger } from "functype-log/direct"
-import type { Logger } from "functype/logger"
 
 const logger: Logger = createDirectConsoleLogger() // structural compat — no cast required
 ```
@@ -230,7 +228,7 @@ bootDiagnostics({
 })
 ```
 
-`bootDiagnostics`' `logger` parameter is typed as core `Logger` from `functype/logger` — `DirectLogger` satisfies it structurally.
+`bootDiagnostics`' `logger` parameter is typed as core `Logger` from `functype` — `DirectLogger` satisfies it structurally.
 
 The IO-shaped `Logger` (this package's primary API) does NOT structurally satisfy the core `Logger` — its methods return `IO<never, never, void>` instead of `void`. For IO-aware code that needs to also drive boot diagnostics, derive a `DirectLogger` via `toDirectLogger(ioLogger)` and pass that.
 

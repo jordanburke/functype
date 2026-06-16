@@ -85,6 +85,41 @@ describe("prefer-do-notation", () => {
             .map(v => transform(v))
         `,
         },
+        // Issue #205 repro: Try → Option via fold is a conversion, not composition
+        {
+          name: "Try(...).fold(() => Option.none(), v => Option(v)) is a conversion",
+          code: `
+          const ageVersion = () =>
+            Try(() => execFileSync("age", ["--version"]).trim()).fold(
+              () => Option.none(),
+              (v) => Option(v),
+            )
+        `,
+        },
+        // Either.match with monad-constructing branches is a conversion
+        {
+          name: "Either.right(x).match with Option branches is a conversion",
+          code: `
+          const result = Either.right(x).match({
+            Left: () => Option.none(),
+            Right: (v) => Option(v),
+          })
+        `,
+        },
+        // getOrElse with a monad fallback is a conversion/exit, not composition
+        {
+          name: "Try(...).getOrElse(Option.none()) is a conversion",
+          code: `
+          const result = Try(() => parse(x)).getOrElse(Option.none())
+        `,
+        },
+        // Bare co-occurrence in a function arg list isn't composition
+        {
+          name: "Function args mixing monads is not composition",
+          code: `
+          combine(Option(x), Try(() => f()))
+        `,
+        },
       ],
       invalid: showTransformations([
         // Nested null checks
