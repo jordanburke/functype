@@ -28,13 +28,14 @@ Options:
 Environment Variables:
   TRANSPORT_TYPE        Transport mode: "stdio" (default) or "httpStream"
   PORT                  HTTP port (default: 3000)
-  HOST                  HTTP host (default: 0.0.0.0)
+  HOST                  HTTP host (default: 127.0.0.1) — set 0.0.0.0 to bind publicly
 
 Tools:
   search_docs           Search functype documentation
   get_type_api          Get detailed type API reference
   get_interfaces        Get interface hierarchy
   validate_code         Type-check functype code snippets
+  set_functype_version  Switch installed functype version (stdio transport only)
 
 For more information: https://github.com/jordanburke/functype/tree/main/mcp-server
 `)

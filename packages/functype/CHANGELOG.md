@@ -6,6 +6,20 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**Security: `functype-mcp-server` — fix unauthenticated RCE via `set_functype_version` (GHSA-wcjj-9m6g-2fr2).**
+Credit: [@EQSTLab](https://github.com/EQSTLab) (CVSS 7.8 High, CWE-829).
+
+The `set_functype_version` MCP tool accepted an unconstrained `version` string, interpolated it into `functype@<version>`, and passed the result to `pnpm add`. pnpm honors `file:`, `npm:`, `git+`, and URL alias syntaxes, so an attacker who could call the tool — including via indirect prompt injection in an agent context — could install an arbitrary local or remote package as `functype`. The server then dynamic-imported `functype/cli` from the freshly-installed package, executing attacker-controlled code in the MCP server process.
+
+Three changes:
+
+- **Input validation.** `version` is now matched against a strict regex (semver with optional `~`/`^`/`v` prefix and prerelease/build metadata, or the dist-tags `latest`/`next`/`beta`/`alpha`/`canary`/`rc`). Any `:`, `/`, `\`, `@`, or whitespace is rejected — `file:`, `npm:`, `git+`, and URL aliases are refused before they reach pnpm.
+- **`--ignore-scripts`.** The `pnpm add` invocation now passes `--ignore-scripts` as defense in depth, so a malicious npm-published version (one that passes the regex) cannot run lifecycle scripts on install.
+- **Transport gating.** `set_functype_version` is only registered when `TRANSPORT_TYPE=stdio` (the default). Over `httpStream` the tool is not exposed at all — an unauthenticated network caller can no longer downgrade the installed `functype` to a vulnerable version.
+
+**Hardening: `functype-mcp-server` HTTP transport defaults to loopback.**
+The HTTP listener previously defaulted to `HOST=0.0.0.0`, so enabling `TRANSPORT_TYPE=httpStream` silently bound the server to every interface. The default is now `127.0.0.1`; set `HOST=0.0.0.0` explicitly to bind publicly (and front it with auth).
+
 ## 1.4.3 - 2026-06-16
 
 **`eslint-plugin-functype` — fix `prefer-try` false positives and dropped-finally autofix on `try` with a finalizer.**

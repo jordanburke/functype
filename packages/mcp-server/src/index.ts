@@ -18,18 +18,49 @@ const SERVER_VERSION = (
   typeof __VERSION__ !== "undefined" ? __VERSION__ : "0.0.0-dev"
 ) as `${number}.${number}.${number}`
 
+// Accepts: dist-tags (latest|next|beta|alpha|canary|rc), and semver of the form
+// [~^]?v?N(.N(.N)?)? with optional prerelease + build metadata. Refuses anything
+// else — in particular pnpm/npm alias syntaxes (file:, git+, npm:, http(s):, …)
+// that would let an attacker install an arbitrary package as `functype`.
+// See GHSA-wcjj-9m6g-2fr2.
+const SAFE_FUNCTYPE_VERSION =
+  /^(?:latest|next|beta|alpha|canary|rc|[~^]?v?\d+(?:\.\d+){0,2}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/
+
+export const isSafeFunctypeVersion = (version: string): boolean => {
+  if (version.trim() !== version) return false
+  if (/[/:\\@\s]/.test(version)) return false
+  return SAFE_FUNCTYPE_VERSION.test(version)
+}
+
+const isHttpTransport = (): boolean => {
+  const t = process.env.TRANSPORT_TYPE
+  return t === "httpStream" || t === "http"
+}
+
 function createServer() {
+  // set_functype_version installs + dynamic-imports the requested package, so
+  // it is a privileged tool. Only expose it on stdio, where the trust boundary
+  // is the local user. Over HTTP, anyone who can reach the port could downgrade
+  // the installed functype to a vulnerable version. See GHSA-wcjj-9m6g-2fr2.
+  const exposeSetVersion = !isHttpTransport()
+
+  const toolList = [
+    "- search_docs: Search functype documentation by keyword or type name",
+    "- get_type_api: Get detailed API reference for a specific type",
+    "- get_interfaces: Get the interface hierarchy (Functor, Monad, Foldable, etc.)",
+    "- validate_code: Type-check functype code snippets at compile time",
+    ...(exposeSetVersion
+      ? ["- set_functype_version: Switch the functype version at runtime (installs + reloads)"]
+      : []),
+  ].join("\n")
+
   const server = new FastMCP({
     name: "functype-mcp-server",
     version: SERVER_VERSION,
     instructions: `Functype MCP Server — documentation lookup and code validation for the functype TypeScript FP library (v${VERSION}).
 
 Available tools:
-- search_docs: Search functype documentation by keyword or type name
-- get_type_api: Get detailed API reference for a specific type
-- get_interfaces: Get the interface hierarchy (Functor, Monad, Foldable, etc.)
-- validate_code: Type-check functype code snippets at compile time
-- set_functype_version: Switch the functype version at runtime (installs + reloads)
+${toolList}
 
 Use validate_code to verify your functype code is type-correct before presenting it to the user.`,
   })
@@ -112,33 +143,42 @@ Use validate_code to verify your functype code is type-correct before presenting
     },
   })
 
-  server.addTool({
-    name: "set_functype_version",
-    description:
-      "Switch the functype version at runtime. Installs the specified version and reloads all documentation and type definitions.",
-    parameters: z.object({
-      version: z.string().describe('The functype version to install (e.g., "0.46.0", "latest", "^0.45.0")'),
-    }),
-    execute: async (args) => {
-      const spec = `functype@${args.version}`
-      try {
-        execFileSync("pnpm", ["add", spec], { cwd: PROJECT_ROOT, stdio: "pipe", timeout: 60_000 })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        return `Failed to install ${spec}: ${message}`
-      }
+  if (exposeSetVersion) {
+    server.addTool({
+      name: "set_functype_version",
+      description:
+        "Switch the functype version at runtime. Installs the specified version and reloads all documentation and type definitions. Stdio transport only.",
+      parameters: z.object({
+        version: z.string().describe('The functype version to install (e.g., "0.46.0", "latest", "^0.45.0")'),
+      }),
+      execute: async (args) => {
+        if (!isSafeFunctypeVersion(args.version)) {
+          return `Invalid version "${args.version}". Use a semver string (e.g. "1.4.4", "^1.4.0", "~1.4") or a known dist-tag (latest, next, beta, alpha, canary, rc). Alias syntaxes (file:, npm:, git+, URLs) are not allowed.`
+        }
+        const spec = `functype@${args.version}`
+        try {
+          execFileSync("pnpm", ["add", "--ignore-scripts", spec], {
+            cwd: PROJECT_ROOT,
+            stdio: "pipe",
+            timeout: 60_000,
+          })
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err)
+          return `Failed to install ${spec}: ${message}`
+        }
 
-      clearFileCache()
+        clearFileCache()
 
-      try {
-        await initDocsData(true)
-      } catch {
-        return `Installed ${spec}, but this version does not export functype/cli. Documentation and type definitions are unavailable. The validator will still use the installed version's .d.ts files. Consider using functype >= 0.47.0 for full MCP support.`
-      }
+        try {
+          await initDocsData(true)
+        } catch {
+          return `Installed ${spec}, but this version does not export functype/cli. Documentation and type definitions are unavailable. The validator will still use the installed version's .d.ts files. Consider using functype >= 0.47.0 for full MCP support.`
+        }
 
-      return `Switched to functype v${VERSION}. Documentation and type definitions have been reloaded.`
-    },
-  })
+        return `Switched to functype v${VERSION}. Documentation and type definitions have been reloaded.`
+      },
+    })
+  }
 
   return server
 }
@@ -148,9 +188,11 @@ async function main() {
 
   const server = createServer()
 
-  const useHttp = process.env.TRANSPORT_TYPE === "httpStream" || process.env.TRANSPORT_TYPE === "http"
+  const useHttp = isHttpTransport()
   const port = parseInt(process.env.PORT || "3000")
-  const host = process.env.HOST || "0.0.0.0"
+  // Default to loopback so an "I just turned on httpStream" doesn't silently
+  // expose the server to the LAN. Set HOST=0.0.0.0 explicitly to bind public.
+  const host = process.env.HOST || "127.0.0.1"
 
   if (useHttp) {
     console.error(`[functype-mcp] Starting HTTP server on ${host}:${port}`)

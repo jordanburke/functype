@@ -105,11 +105,13 @@ Requires functype >= 0.47.0 for full documentation support. Older versions will 
 
 ## Environment Variables
 
-| Variable         | Default   | Description                             |
-| ---------------- | --------- | --------------------------------------- |
-| `TRANSPORT_TYPE` | `stdio`   | Transport mode: `stdio` or `httpStream` |
-| `PORT`           | `3000`    | HTTP port (when using httpStream)       |
-| `HOST`           | `0.0.0.0` | HTTP host (when using httpStream)       |
+| Variable         | Default     | Description                                                             |
+| ---------------- | ----------- | ----------------------------------------------------------------------- |
+| `TRANSPORT_TYPE` | `stdio`     | Transport mode: `stdio` or `httpStream`                                 |
+| `PORT`           | `3000`      | HTTP port (when using httpStream)                                       |
+| `HOST`           | `127.0.0.1` | HTTP host (when using httpStream). Set `0.0.0.0` to bind all interfaces |
+
+**Security note.** `set_functype_version` installs a package and dynamic-imports it, so it is only registered when `TRANSPORT_TYPE=stdio` (the default). Over HTTP, an unauthenticated caller could otherwise downgrade `functype` to a vulnerable version. The HTTP listener also defaults to `127.0.0.1` — set `HOST=0.0.0.0` explicitly if you really want to bind publicly, and front it with auth.
 
 ## Development
 

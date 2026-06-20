@@ -32,7 +32,7 @@
         },
         {
           "name": "HOST",
-          "description": "HTTP host (default: 0.0.0.0) — only used with httpStream transport",
+          "description": "HTTP host (default: 127.0.0.1) — only used with httpStream transport. Set 0.0.0.0 to bind all interfaces.",
           "isRequired": false,
           "format": "string",
           "isSecret": false
