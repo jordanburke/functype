@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.4.4 - 2026-06-20
+
 **Security: `functype-mcp-server` — fix unauthenticated RCE via `set_functype_version` (GHSA-wcjj-9m6g-2fr2).**
 Credit: [@EQSTLab](https://github.com/EQSTLab) (CVSS 7.8 High, CWE-829).
 
