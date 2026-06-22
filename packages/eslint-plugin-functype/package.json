@@ -59,7 +59,7 @@
     "eslint": "^10.2.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.0.0",
     "@typescript-eslint/rule-tester": "^8.61.1",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
