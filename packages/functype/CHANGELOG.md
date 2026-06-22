@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.5.0 - 2026-06-22
+
 **`functype` — add `filterOrElse(predicate, onUnsatisfied)` to `Try` and `Either`.**
 Turn a value-level guard into a typed failure without writing a manual `throw` inside a `Try(() => …)` body or breaking the chain with an `if/return Left(...)` ladder.
 
