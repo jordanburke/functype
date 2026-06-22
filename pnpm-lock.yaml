@@ -55,8 +55,8 @@ importers:
         specifier: ^13.0.0
         version: 13.0.0(eslint@10.5.0(jiti@2.7.0))
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -80,8 +80,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -107,8 +107,8 @@ importers:
         specifier: ^17.6.0
         version: 17.6.0
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -150,8 +150,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -172,8 +172,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -190,8 +190,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -235,8 +235,8 @@ importers:
         specifier: ^19.2.7
         version: 19.2.7(react@19.2.7)
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -260,8 +260,8 @@ importers:
         specifier: ^24.13.2
         version: 24.13.2
       ts-builds:
-        specifier: ^3.2.0
-        version: 3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        specifier: ^3.2.1
+        version: 3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       tsdown:
         specifier: ^0.22.3
         version: 0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -2841,14 +2841,14 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
-  functype-os@1.4.3:
-    resolution: {integrity: sha512-/bEYOXKV8LX0TRBlYHP3KI4Qfg1/T84EUOt/9Tc5nzGVbpK8Xf+37XSzAI/f22CLnpXMgqpUrizObQO7V78/yw==}
+  functype-os@1.4.4:
+    resolution: {integrity: sha512-10aVBbzEhbRfSdtuTHDLcIqIYeaIpJfCrlFMYGjCrlQL0TnQy30nX8p/Uxfxs0NDpt/1w6Gt9KC5nmGCPQAOhw==}
     engines: {node: '>=18.17.0'}
     peerDependencies:
       functype: '>=0.60.0'
 
-  functype@1.4.3:
-    resolution: {integrity: sha512-YSybL1ixM1iYGoevJC93J+wkhjdDenDQi5Yuphzz/ZLM/UCNUkem6Hsy9kk+P9YW+UrI3yq65vSTNKV7OTVjuw==}
+  functype@1.4.4:
+    resolution: {integrity: sha512-2sgDr5dozwpCq28tm0/nRI+LT8KXtFJ0JgyJIDjDU4L9Q1dfDKs7jYdfx3cGXL6Kxxs7sA+++1brBb9KDPC0fQ==}
     hasBin: true
 
   fuse.js@7.4.2:
@@ -3609,8 +3609,8 @@ packages:
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
 
-  nanoid@3.3.14:
-    resolution: {integrity: sha512-U9kYi5bpVMEI31yC8iw4bJJp0avcHXA0W8/wNfLfnvJYzihQo2ZRPYPvpAAd570HAcCBjCTN7vnr+v4StKl1IQ==}
+  nanoid@3.3.15:
+    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -4277,8 +4277,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  ts-builds@3.2.0:
-    resolution: {integrity: sha512-Ulv0s+TYrWKNzMNvAO6j/RFmoH9EfRibsWVHJlmNxbJJg9cxTDgu2/JcZkjFYpP3EJ7VOpgsJyty+156TOIWcQ==}
+  ts-builds@3.2.1:
+    resolution: {integrity: sha512-j1J3UKfRQ3Ve1viF/OXP15i6U6KAW/2kwgqjKZ4Ajli+/8tqVwxu49T0Wp7SL71LIWo+XS3iFdmeWJHFQd31cQ==}
     engines: {node: '>=22'}
     hasBin: true
     peerDependencies:
@@ -7476,11 +7476,11 @@ snapshots:
 
   function-bind@1.1.2: {}
 
-  functype-os@1.4.3(functype@1.4.3):
+  functype-os@1.4.4(functype@1.4.4):
     dependencies:
-      functype: 1.4.3
+      functype: 1.4.4
 
-  functype@1.4.3: {}
+  functype@1.4.4: {}
 
   fuse.js@7.4.2: {}
 
@@ -8564,7 +8564,7 @@ snapshots:
 
   muggle-string@0.4.1: {}
 
-  nanoid@3.3.14: {}
+  nanoid@3.3.15: {}
 
   natural-compare@1.4.0: {}
 
@@ -8725,7 +8725,7 @@ snapshots:
 
   postcss@8.5.15:
     dependencies:
-      nanoid: 3.3.14
+      nanoid: 3.3.15
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -9356,7 +9356,7 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
-  ts-builds@3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
+  ts-builds@3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.10.15)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.5.0(jiti@2.7.0))
       '@types/node': 24.10.15
@@ -9368,8 +9368,8 @@ snapshots:
       eslint-plugin-functype: link:packages/eslint-plugin-functype
       eslint-plugin-prettier: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.5.0(jiti@2.7.0)))(eslint@10.5.0(jiti@2.7.0))(prettier@3.8.4)
       eslint-plugin-simple-import-sort: 13.0.0(eslint@10.5.0(jiti@2.7.0))
-      functype: 1.4.3
-      functype-os: 1.4.3(functype@1.4.3)
+      functype: 1.4.4
+      functype-os: 1.4.4(functype@1.4.4)
       globals: 17.6.0
       prettier: 3.8.4
       ts-node: 10.9.2(@types/node@24.10.15)(typescript@6.0.3)
@@ -9396,7 +9396,7 @@ snapshots:
       - msw
       - supports-color
 
-  ts-builds@3.2.0(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
+  ts-builds@3.2.1(jiti@2.7.0)(jsdom@26.1.0)(tsdown@0.22.3(tsx@4.22.4)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@7.3.5(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.5.0(jiti@2.7.0))
       '@types/node': 24.10.15
@@ -9408,8 +9408,8 @@ snapshots:
       eslint-plugin-functype: link:packages/eslint-plugin-functype
       eslint-plugin-prettier: 5.5.6(eslint-config-prettier@10.1.8(eslint@10.5.0(jiti@2.7.0)))(eslint@10.5.0(jiti@2.7.0))(prettier@3.8.4)
       eslint-plugin-simple-import-sort: 13.0.0(eslint@10.5.0(jiti@2.7.0))
-      functype: 1.4.3
-      functype-os: 1.4.3(functype@1.4.3)
+      functype: 1.4.4
+      functype-os: 1.4.4(functype@1.4.4)
       globals: 17.6.0
       prettier: 3.8.4
       ts-node: 10.9.2(@types/node@24.10.15)(typescript@6.0.3)
