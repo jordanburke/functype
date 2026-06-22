@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — add `filterOrElse(predicate, onUnsatisfied)` to `Try` and `Either`.**
+Turn a value-level guard into a typed failure without writing a manual `throw` inside a `Try(() => …)` body or breaking the chain with an `if/return Left(...)` ladder.
+
+- `Try<T>.filterOrElse(p, (v) => Error)` — Success with passing predicate stays Success; Success with failing predicate becomes Failure carrying the constructed Error; Failure passes through unchanged (predicate never runs). A throwing predicate surfaces as Failure.
+- `Either<L, R>.filterOrElse<L2>(p, (v) => L2): Either<L | L2, R>` — Right with passing predicate stays Right; Right with failing predicate becomes `Left(onUnsatisfied(value))` and widens the Left channel to `L | L2`; Left passes through unchanged.
+
+Direct namesake of Scala's `Either.filterOrElse`. Closes #208.
+
 ## 1.4.4 - 2026-06-20
 
 **Security: `functype-mcp-server` — fix unauthenticated RCE via `set_functype_version` (GHSA-wcjj-9m6g-2fr2).**

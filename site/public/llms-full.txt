@@ -1,4 +1,4 @@
-# Functype v1.4.3
+# Functype v1.4.4
 
 > A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns.
 
@@ -1640,6 +1640,12 @@ either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
 );
+
+// FilterOrElse - turn a value-level guard into a typed Left without breaking the chain
+Right<string, number>(5).filterOrElse(
+  (n) => n > 10,
+  (n) => `too small: ${n}`,
+); // Left("too small: 5")
 ```
 
 ## Pattern Matching
@@ -1775,6 +1781,14 @@ Try(() => riskyOperation()).recover((error) => fallbackValue);
 
 // RecoverWith - handle with another Try
 Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
+
+// FilterOrElse - turn a value-level guard into a typed Failure (no manual throw)
+Try.success(parse(raw))
+  .filterOrElse(
+    (j) => j.data.children.length > 0,
+    () => new Error("Post not found"),
+  )
+  .map((j) => j.data.children[0].data);
 ```
 
 ## Pattern Matching
@@ -1806,7 +1820,7 @@ const result = Try(() => readConfig())
 Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message));
 
 // Filter with predicate
-Try(() => parseInt(input)).filter(
+Try(() => parseInt(input)).filterOrElse(
   (n) => n > 0,
   () => new Error("Must be positive"),
 );

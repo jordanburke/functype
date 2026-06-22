@@ -243,6 +243,7 @@ Option.traverse(arr, f)      // T[] → (T => Option<U>) → Option<U[]>
 Right(value)                 // success
 Left(error)                  // error
 either.fold(onLeft, onRight)
+either.filterOrElse(p, v => err) // Right→Left(err) when predicate fails; widens L to L | typeof err
 Either.sequence(eithers)     // Either<E,T>[] → Either<E, T[]> (first Left wins)
 Either.traverse(arr, f)      // T[] → (T => Either<E,U>) → Either<E, U[]>
 
@@ -253,6 +254,7 @@ Try.failure(error)           // direct Failure (Error or string)
 Try.fromPromise(promise)     // async: Promise<T> → Promise<Try<T>>
 try_.recover(e => fallback)  // map over failure
 try_.recoverWith(e => Try.success(alt)) // flatMap over failure
+try_.filterOrElse(p, v => new Error("...")) // Success→Failure when predicate fails (no manual throw)
 try_.toEither(left)          // → Either<L, T>; Failure → Left(left)
 try_.toEither(e => buildL(e))// → Either<L, T>; Failure → Left(buildL(error)) — preserves cause
 Try.sequence(tries)          // Try<T>[] → Try<T[]> (first Failure wins)

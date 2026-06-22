@@ -426,6 +426,43 @@ describe("Either", () => {
       ),
     ).toBe("Error: Rejected")
   })
+
+  it("filterOrElse keeps a Right when the predicate passes", () => {
+    const result = Right<string, number>(20).filterOrElse(
+      (n) => n > 10,
+      (n) => `too small: ${n}`,
+    )
+    expect(result.isRight()).toBe(true)
+    expect(result.value).toBe(20)
+  })
+
+  it("filterOrElse converts a Right to a Left when the predicate fails", () => {
+    const result = Right<string, number>(5).filterOrElse(
+      (n) => n > 10,
+      (n) => `too small: ${n}`,
+    )
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("too small: 5")
+  })
+
+  it("filterOrElse leaves a Left unchanged and does not evaluate the predicate", () => {
+    const original = Left<string, number>("upstream")
+    const predicate = (_n: number) => {
+      throw new Error("predicate should not run")
+    }
+    const result = original.filterOrElse(predicate, () => "never")
+    expect(result.isLeft()).toBe(true)
+    expect(result.value).toBe("upstream")
+  })
+
+  it("filterOrElse widens the Left channel to L | L2", () => {
+    const widened: Either<ParseError | string, number> = parseNumber("123").filterOrElse(
+      (n) => n > 1000,
+      (n) => `too small: ${n}`,
+    )
+    expect(widened.isLeft()).toBe(true)
+    expect(widened.value).toBe("too small: 123")
+  })
 })
 
 describe("Either discriminated-union narrowing", () => {

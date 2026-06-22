@@ -54,6 +54,12 @@ either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
 );
+
+// FilterOrElse - turn a value-level guard into a typed Left without breaking the chain
+Right<string, number>(5).filterOrElse(
+  (n) => n > 10,
+  (n) => `too small: ${n}`,
+); // Left("too small: 5")
 ```
 
 ## Pattern Matching

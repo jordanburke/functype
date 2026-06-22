@@ -302,6 +302,53 @@ describe("Try", () => {
     })
   })
 
+  describe("filterOrElse()", () => {
+    it("keeps a Success when the predicate passes", () => {
+      const result = Try.success(42).filterOrElse(
+        (v) => v > 0,
+        () => new Error("non-positive"),
+      )
+      expect(result.isSuccess()).toBe(true)
+      expect(result.orElse(-1)).toBe(42)
+    })
+
+    it("becomes a Failure carrying the constructed Error when the predicate fails", () => {
+      const result = Try.success(0).filterOrElse(
+        (v) => v > 0,
+        (v) => new Error(`non-positive: ${v}`),
+      )
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error.message).toBe("non-positive: 0")
+      }
+    })
+
+    it("leaves a Failure unchanged and does not evaluate the predicate", () => {
+      const original = new Error("boom")
+      const predicate = (_v: number) => {
+        throw new Error("predicate should not run")
+      }
+      const result = Try.failure<number>(original).filterOrElse(predicate, () => new Error("never"))
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error).toBe(original)
+      }
+    })
+
+    it("produces a Failure when the predicate itself throws", () => {
+      const result = Try.success(42).filterOrElse(
+        () => {
+          throw new Error("predicate exploded")
+        },
+        () => new Error("unsatisfied"),
+      )
+      expect(result.isFailure()).toBe(true)
+      if (result.isFailure()) {
+        expect(result.error.message).toBe("predicate exploded")
+      }
+    })
+  })
+
   describe("foldAsync", () => {
     it("awaits an async onSuccess", async () => {
       const t = Try(() => 21)

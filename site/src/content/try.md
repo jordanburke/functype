@@ -53,6 +53,14 @@ Try(() => riskyOperation()).recover((error) => fallbackValue);
 
 // RecoverWith - handle with another Try
 Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
+
+// FilterOrElse - turn a value-level guard into a typed Failure (no manual throw)
+Try.success(parse(raw))
+  .filterOrElse(
+    (j) => j.data.children.length > 0,
+    () => new Error("Post not found"),
+  )
+  .map((j) => j.data.children[0].data);
 ```
 
 ## Pattern Matching
@@ -84,7 +92,7 @@ const result = Try(() => readConfig())
 Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message));
 
 // Filter with predicate
-Try(() => parseInt(input)).filter(
+Try(() => parseInt(input)).filterOrElse(
   (n) => n > 0,
   () => new Error("Must be positive"),
 );

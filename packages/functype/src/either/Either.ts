@@ -56,6 +56,19 @@ export interface EitherBase<out L extends Type, out R extends Type>
   tap: (f: (value: R) => void) => Either<L, R>
   tapLeft: (f: (value: L) => void) => Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
+  /**
+   * Applies a predicate to the Right value. If the predicate fails, short-circuits
+   * to a Left carrying the value produced by `onUnsatisfied`. Left passes through
+   * unchanged (predicate not evaluated). Lets you turn a value-level guard into the
+   * Left channel without breaking the chain with an `if/return Left(...)` ladder.
+   * @param predicate - The predicate to test the Right value
+   * @param onUnsatisfied - Builds the new Left value when the predicate fails
+   * @returns Right if the predicate holds, Left(onUnsatisfied(value)) otherwise
+   */
+  filterOrElse: <L2 extends Type>(
+    predicate: (value: R) => boolean,
+    onUnsatisfied: (value: R) => L2,
+  ) => Either<L | L2, R>
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
   /**
@@ -175,6 +188,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
   tapLeft: (_f: (value: L) => void) => Right<L, R>(value),
   mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
+  filterOrElse: <L2 extends Type>(
+    predicate: (value: R) => boolean,
+    onUnsatisfied: (value: R) => L2,
+  ): Either<L | L2, R> => (predicate(value) ? Right<L | L2, R>(value) : Left<L | L2, R>(onUnsatisfied(value))),
   bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
   fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
   foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
@@ -258,6 +275,10 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
     return Left<L, R>(value)
   },
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Left<L2, R>(f(value)),
+  filterOrElse: <L2 extends Type>(
+    _predicate: (value: R) => boolean,
+    _onUnsatisfied: (value: R) => L2,
+  ): Either<L | L2, R> => Left<L | L2, R>(value),
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, _fr: (value: R) => R2) => Left<L2, R2>(fl(value)),
   fold: <T extends Type>(onLeft: (value: L) => T, _onRight: (value: R) => T) => onLeft(value),
   foldAsync: async <T extends Type>(onLeft: (value: L) => T | Promise<T>, _onRight: (value: R) => T | Promise<T>) =>

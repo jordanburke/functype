@@ -229,6 +229,10 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   },
   tapLeft: (_f: (value: L) => void) => Right<L, R>(value),
   mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
+  filterOrElse: <L2 extends Type>(
+    predicate: (value: R) => boolean,
+    onUnsatisfied: (value: R) => L2,
+  ): Either<L | L2, R> => (predicate(value) ? Right<L | L2, R>(value) : Left<L | L2, R>(onUnsatisfied(value))),
   bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
   fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
   foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
@@ -288,6 +292,19 @@ export interface EitherBase<out L extends Type, out R extends Type>
   tap: (f: (value: R) => void) => Either<L, R>
   tapLeft: (f: (value: L) => void) => Either<L, R>
   mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
+  /**
+   * Applies a predicate to the Right value. If the predicate fails, short-circuits
+   * to a Left carrying the value produced by \`onUnsatisfied\`. Left passes through
+   * unchanged (predicate not evaluated). Lets you turn a value-level guard into the
+   * Left channel without breaking the chain with an \`if/return Left(...)\` ladder.
+   * @param predicate - The predicate to test the Right value
+   * @param onUnsatisfied - Builds the new Left value when the predicate fails
+   * @returns Right if the predicate holds, Left(onUnsatisfied(value)) otherwise
+   */
+  filterOrElse: <L2 extends Type>(
+    predicate: (value: R) => boolean,
+    onUnsatisfied: (value: R) => L2,
+  ) => Either<L | L2, R>
   bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
   fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
   /**
@@ -406,6 +423,16 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * As with \`recover\`, the recovery Try may carry a wider type; the result widens accordingly.
    */
   recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
+  /**
+   * Applies a predicate to the success value. If the predicate fails, short-circuits
+   * to a Failure with the error produced by \`onUnsatisfied\`. Failure passes through
+   * unchanged (predicate not evaluated). Lets you turn a value-level guard into the
+   * error channel without writing a manual \`throw\` inside a \`Try(() => ...)\` body.
+   * @param predicate - The predicate to test the success value
+   * @param onUnsatisfied - Builds the Error for the new Failure when the predicate fails
+   * @returns A Success if the predicate holds, a Failure carrying \`onUnsatisfied(value)\` otherwise
+   */
+  filterOrElse(predicate: (value: T) => boolean, onUnsatisfied: (value: T) => Error): Try<T>
   toValue(): { _tag: TypeNames; value: T | Error }
   /**
    * Custom JSON serialization. Success emits \`{"@functype":"Try","_tag":"Success","value":T}\`.

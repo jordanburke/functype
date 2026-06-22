@@ -92,6 +92,16 @@ export interface Try<out T>
    * As with `recover`, the recovery Try may carry a wider type; the result widens accordingly.
    */
   recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
+  /**
+   * Applies a predicate to the success value. If the predicate fails, short-circuits
+   * to a Failure with the error produced by `onUnsatisfied`. Failure passes through
+   * unchanged (predicate not evaluated). Lets you turn a value-level guard into the
+   * error channel without writing a manual `throw` inside a `Try(() => ...)` body.
+   * @param predicate - The predicate to test the success value
+   * @param onUnsatisfied - Builds the Error for the new Failure when the predicate fails
+   * @returns A Success if the predicate holds, a Failure carrying `onUnsatisfied(value)` otherwise
+   */
+  filterOrElse(predicate: (value: T) => boolean, onUnsatisfied: (value: T) => Error): Try<T>
   toValue(): { _tag: TypeNames; value: T | Error }
   /**
    * Custom JSON serialization. Success emits `{"@functype":"Try","_tag":"Success","value":T}`.
@@ -133,6 +143,13 @@ const Success = <T>(value: T): Try<T> => ({
   match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
   recover: <U extends Type>(_f: (error: Error) => U): Try<T | U> => Success<T | U>(value),
   recoverWith: <U extends Type>(_f: (error: Error) => Try<U>): Try<T | U> => Success<T | U>(value),
+  filterOrElse: (predicate: (value: T) => boolean, onUnsatisfied: (value: T) => Error): Try<T> => {
+    try {
+      return predicate(value) ? Success<T>(value) : Failure<T>(onUnsatisfied(value))
+    } catch (e) {
+      return Failure<T>(e instanceof Error ? e : new Error(String(e)))
+    }
+  },
   foldLeft:
     <B>(z: B) =>
     (op: (b: B, a: T) => B) =>
@@ -198,6 +215,7 @@ const Failure = <T>(error: Error): Try<T> => ({
       return Failure<T | U>(e instanceof Error ? e : new Error(String(e)))
     }
   },
+  filterOrElse: (_predicate: (value: T) => boolean, _onUnsatisfied: (value: T) => Error): Try<T> => Failure<T>(error),
   foldLeft:
     <B>(z: B) =>
     (_op: (b: B, a: T) => B) =>

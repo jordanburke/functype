@@ -29,12 +29,14 @@ Quick lookup guide for common functype operations.
 
 ## Transformation
 
-| Operation           | Method              | Example                                      |
-| ------------------- | ------------------- | -------------------------------------------- |
-| Transform value     | `map(fn)`           | `Option(5).map(x => x * 2)`                  |
-| Flatten nested      | `flatMap(fn)`       | `Option(user).flatMap(u => Option(u.email))` |
-| Filter by condition | `filter(predicate)` | `Option(value).filter(x => x > 0)`           |
-| Combine values      | `ap(wrappedFn)`     | `Option(5).ap(Option(x => x * 2))`           |
+| Operation             | Method                            | Example                                                |
+| --------------------- | --------------------------------- | ------------------------------------------------------ |
+| Transform value       | `map(fn)`                         | `Option(5).map(x => x * 2)`                            |
+| Flatten nested        | `flatMap(fn)`                     | `Option(user).flatMap(u => Option(u.email))`           |
+| Filter (Option)       | `filter(predicate)`               | `Option(value).filter(x => x > 0)`                     |
+| Filter (Try)          | `filterOrElse(p, v => Error)`     | `Try.success(n).filterOrElse(x => x > 0, () => new Error("non-positive"))` |
+| Filter (Either)       | `filterOrElse(p, v => L2)`        | `Right(n).filterOrElse(x => x > 0, x => "non-pos:" + x)` |
+| Combine values        | `ap(wrappedFn)`                   | `Option(5).ap(Option(x => x * 2))`                     |
 
 ## Extraction
 
