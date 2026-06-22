@@ -234,10 +234,12 @@ option.map(fn).orElse(default)
 option.or(otherOption)       // fallback to another Option
 Option.sequence(opts)        // Option<T>[] → Option<T[]> (None if any None)
 Option.traverse(arr, f)      // T[] → (T => Option<U>) → Option<U[]>
-// Scala/cats/fp-ts users: functype follows Rust naming.
-//   Scala getOrElse(default)  → functype orElse(default)
-//   Scala orElse(other)       → functype or(other)
-// Renamed in 0.16.0 (see MIGRATION_EXTRACTABLE_API.md). No getOrElse alias.
+// Scala/cats/fp-ts/Effect users — extraction pair was renamed in 0.16.0:
+//   Scala orElse(other: Option[T])    → functype or(other)         ← matches Rust's or(other)
+//   Scala getOrElse(default)          → functype orElse(default)   ← drops the `get` prefix; matches neither Rust nor Scala
+// Rust's actual API: unwrap_or(default) / unwrap_or_else(f) for the unwrap pair, or(other) / or_else(f) for stay-in-monad.
+// functype's `or(other)` aligns with Rust; functype's `orElse(default)` is an internal naming choice. No getOrElse alias.
+// See MIGRATION_EXTRACTABLE_API.md.
 
 // Either - error handling
 Right(value)                 // success

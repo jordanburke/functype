@@ -37,7 +37,12 @@ import { Option, Either, Try, List, IO, Task } from "functype"
 | `Option.sequence(opts)`     | `A.sequence(O.Applicative)`     | `Option.sequence(opts)`     |
 | `opts.traverse(f)`          | `A.traverse(O.Applicative)(f)`  | `Option.traverse(opts, f)`  |
 
-**Naming gotcha:** functype follows Rust here, not Scala — `getOrElse(default)` → `orElse(default)`, `orElse(other)` → `or(other)`. Renamed in 0.16.0; no alias.
+**Naming gotcha:** functype renamed the extraction pair in 0.16.0:
+
+- Scala `orElse(other: Option[T])` → functype `or(other)` — matches Rust's `or(other)`.
+- Scala `getOrElse(default)` → functype `orElse(default)` — internally-motivated drop of the `get` prefix; matches **neither** Rust (which uses `unwrap_or(default)`) nor Rust's `or_else(f)` (which takes a closure returning `Option<T>`, not a raw default).
+
+No `getOrElse` alias. If you're coming from Scala/cats/fp-ts/Effect and see `opt.orElse(42)`, note it returns `T | 42`, not `Option<T | 42>` — use `opt.or(Option(42))` for the wrapping form.
 
 ---
 

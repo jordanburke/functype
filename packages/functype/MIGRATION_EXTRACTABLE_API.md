@@ -1,7 +1,7 @@
 # Extractable API Migration Guide
 
 **Version:** 0.16.0+
-**Breaking Change:** Renamed extraction methods to follow Rust-style conventions
+**Breaking Change:** Renamed extraction methods — `or(container)` aligns with Rust's `or(other)`; `orElse(default)` is an internally-motivated drop of the `get` prefix.
 
 ## Quick Summary
 
@@ -195,11 +195,14 @@ const value: Option<number> = option.or(Option(42))
 
 ## Rationale
 
-This change aligns functype with Rust's `Option` and `Result` APIs:
+The rename is **partially** Rust-aligned, not fully — earlier versions of this doc overstated it. The honest picture:
 
-- **Consistency**: All `or*` methods extract values
-- **Clarity**: `or()` clearly indicates container operations
-- **Modern**: Follows conventions from Rust, which has proven successful in the FP space
+- **`or(container)` matches Rust's `or(other)`.** Both take a wrapped alternative and return the wrapped type. Direct alignment.
+- **`orElse(default)` matches *neither* Rust nor Scala.** Rust uses `unwrap_or(default)` for that operation (different name); Rust's `or_else(f)` takes a closure returning the wrapped type (different signature). Scala uses `getOrElse(default)` for the operation, and functype dropped the `get` prefix — that's the internal style choice.
+
+So the rename was driven by two things: (1) Rust precedent for the `or(container)` half, and (2) a stylistic preference to drop the `get` prefix on `orElse(default)`. The "no `get` prefix" call is debatable on its own merits; the broader FP ecosystem (Scala, cats, fp-ts, Effect) keeps `getOrElse`.
+
+**Practical note:** if you read `opt.orElse(42)` here and parse it as Scala/cats/fp-ts/Effect's `orElse` (return `Option<T | 42>`), you'll be wrong — functype's `orElse(default)` returns the *unwrapped* `T | 42`. Use `opt.or(Option(42))` for the wrapping form. The TypeScript "Did you mean 'orElse'?" hint catches the literal `getOrElse` typo, but doesn't catch the semantic mismatch.
 
 ## Questions?
 
