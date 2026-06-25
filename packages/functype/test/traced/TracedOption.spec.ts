@@ -148,9 +148,9 @@ describe("TracedOption", () => {
 
   it("full chain emits all events in order with correct ops and variants", () => {
     TracedOption(Some(3), tracer, "full")
-      .map((n) => n * 2, "double")      // Some(3) → Some(6)
-      .filter((n) => n < 5, "lt5")      // Some(6) → None  (6 < 5 is false)
-      .orElse(0, "default")             // None → 0
+      .map((n) => n * 2, "double") // Some(3) → Some(6)
+      .filter((n) => n < 5, "lt5") // Some(6) → None  (6 < 5 is false)
+      .orElse(0, "default") // None → 0
 
     expect(events).toHaveLength(3)
     expect(events.map((e) => e.op)).toEqual(["map", "filter", "orElse"])

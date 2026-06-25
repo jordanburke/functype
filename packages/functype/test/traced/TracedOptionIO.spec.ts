@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { IO } from "../../src/io/IO.js"
-import { None, Option, Some } from "../../src/option/Option.js"
+import { Option, Some } from "../../src/option/Option.js"
 import { Tracer } from "../../src/traced/Tracer.js"
 import { TracedOption } from "../../src/traced/TracedOption.js"
 import { TracerLive } from "../../src/traced/TracerLive.js"
@@ -28,9 +28,7 @@ describe("TracedOption + IO DI wiring", () => {
   it("noop layer produces the same result with zero events captured", async () => {
     const captured: TraceEvent[] = []
 
-    const program = IO.service(Tracer).map((tracer) =>
-      TracedOption(Option.from<number>(null), tracer).orElse(42),
-    )
+    const program = IO.service(Tracer).map((tracer) => TracedOption(Option.from(null), tracer).orElse(42))
 
     const result = await program.provideLayer(TracerLive.noop()).runOrThrow()
 

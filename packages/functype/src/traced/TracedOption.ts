@@ -60,7 +60,12 @@ export function TracedOption<A>(
   spanId: string = crypto.randomUUID(),
   seq = 0,
 ): TracedOption<A> {
-  function emit(op: TraceOp, outTag: string | undefined, label: string | undefined, meta?: Record<string, unknown>): number {
+  function emit(
+    op: TraceOp,
+    outTag: string | undefined,
+    label: string | undefined,
+    meta?: Record<string, unknown>,
+  ): number {
     tracer.emit({
       spanId,
       seq,
