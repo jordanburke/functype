@@ -43,7 +43,7 @@
     "loglayer": "^9.3.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
+    "@types/node": "^26.1.0",
     "functype": "workspace:^",
     "ts-builds": "^3.2.1",
     "tsdown": "^0.22.3"
