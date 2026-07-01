@@ -210,8 +210,8 @@ io.retryWithBackoff({
 // with RepeatExhausted (carrying the last observed value). Composes
 // with retry* — errors and values are independent axes.
 pollJob
-  .retry(3)                                                     // error axis
-  .repeatUntil((job) => job.done, { max: 20, delayMs: 500 });   // value axis
+  .retry(3) // error axis
+  .repeatUntil((job) => job.done, { max: 20, delayMs: 500 }); // value axis
 
 // Symmetric sibling — continue while cont is true, stop when it flips.
 pollUntilReady.repeatWhile((r) => r.status === "pending", { max: 20 });

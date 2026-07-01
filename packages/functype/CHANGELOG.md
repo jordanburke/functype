@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.6.0 - 2026-07-01
+
 **`functype` — value-driven effect repetition on `IO`: `repeatUntil`, `repeatWhile`, `IO.iterate`.**
 
 Adds the value-channel dual of the existing `retry*` family. `retry*` re-runs the effect while it keeps failing; the new combinators re-run while its _successful output_ hasn't yet met a predicate. Both axes compose — a poll can retry on transient network errors _and_ keep repeating until the payload is ready.
