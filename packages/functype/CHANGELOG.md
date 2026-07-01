@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.6.1 - 2026-07-01
+
 **`functype` — `RepeatExhausted.is` runtime type guard for `IO.iterate` / `repeatUntil` / `repeatWhile` (fixes #221).**
 
 When the step effect passed to `IO.iterate` (or the effect that `repeatUntil` / `repeatWhile` are called on) has `E = unknown` — the common shape when lifting a Promise via `IO(() => ...)` or `IO.async(...)` — TypeScript's union algebra collapses `unknown | RepeatExhausted<A>` back to `unknown`, and `RepeatExhausted<A>` is lost from the surface type. The runtime is correct (the `RepeatExhausted` instance still lands in the `Left` at runtime) but consumers couldn't recover it without a cast.

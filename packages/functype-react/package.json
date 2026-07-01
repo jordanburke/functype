@@ -1,6 +1,6 @@
 {
   "name": "functype-react",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "React bindings for functype — ADT-aware hooks and exhaustive pattern matching components",
   "keywords": [
     "functype",
