@@ -9,7 +9,7 @@
  * - Checks for common inconsistencies
  */
 
-import { copyFileSync, existsSync, readFileSync } from "fs"
+import { copyFileSync, existsSync, lstatSync, readFileSync } from "fs"
 import { dirname, resolve } from "path"
 import { fileURLToPath } from "url"
 
@@ -21,12 +21,14 @@ interface ValidationResult {
 }
 
 class DocumentationSyncer {
-  private readonly projectRoot: string
+  private readonly functypeRoot: string
+  private readonly workspaceRoot: string
   private result: ValidationResult
 
   constructor() {
     const __filename = fileURLToPath(import.meta.url)
-    this.projectRoot = resolve(dirname(__filename), "..")
+    this.functypeRoot = resolve(dirname(__filename), "..")
+    this.workspaceRoot = resolve(this.functypeRoot, "../..")
     this.result = {
       success: true,
       errors: [],
@@ -36,15 +38,22 @@ class DocumentationSyncer {
   }
 
   /**
-   * Sync feature matrix from docs/ to site/src/content/
+   * Sync feature matrix from packages/functype/docs/ to site/src/content/.
+   * If the dest is a symlink (the standard workspace setup), the sync is
+   * automatic — no copy needed.
    */
   private syncFeatureMatrix(): void {
-    const sourcePath = resolve(this.projectRoot, "docs/FUNCTYPE_FEATURE_MATRIX.md")
-    const destPath = resolve(this.projectRoot, "site/src/content/feature-matrix.md")
+    const sourcePath = resolve(this.functypeRoot, "docs/FUNCTYPE_FEATURE_MATRIX.md")
+    const destPath = resolve(this.workspaceRoot, "site/src/content/feature-matrix.md")
 
     if (!existsSync(sourcePath)) {
       this.result.errors.push(`Source feature matrix not found: ${sourcePath}`)
       this.result.success = false
+      return
+    }
+
+    if (existsSync(destPath) && lstatSync(destPath).isSymbolicLink()) {
+      this.result.info.push("✓ Feature matrix synced via symlink")
       return
     }
 
@@ -69,7 +78,7 @@ class DocumentationSyncer {
    * Validate links in llms.txt
    */
   private validateLlmsTxt(): void {
-    const llmsTxtPath = resolve(this.projectRoot, "site/public/llms.txt")
+    const llmsTxtPath = resolve(this.workspaceRoot, "site/public/llms.txt")
 
     if (!existsSync(llmsTxtPath)) {
       this.result.warnings.push("⚠ llms.txt not found in site/public/")
@@ -107,9 +116,9 @@ class DocumentationSyncer {
       localLinks.forEach((link) => {
         // Check if markdown file exists in site or docs
         const possiblePaths = [
-          resolve(this.projectRoot, "site/public", link.url),
-          resolve(this.projectRoot, "site/src/pages", link.url),
-          resolve(this.projectRoot, link.url),
+          resolve(this.workspaceRoot, "site/public", link.url),
+          resolve(this.workspaceRoot, "site/src/pages", link.url),
+          resolve(this.workspaceRoot, link.url),
         ]
 
         const exists = possiblePaths.some((path) => existsSync(path))
@@ -132,8 +141,8 @@ class DocumentationSyncer {
    * Check version consistency across files
    */
   private checkVersionConsistency(): void {
-    const packageJsonPath = resolve(this.projectRoot, "package.json")
-    const readmePath = resolve(this.projectRoot, "README.md")
+    const packageJsonPath = resolve(this.functypeRoot, "package.json")
+    const readmePath = resolve(this.workspaceRoot, "README.md")
 
     try {
       const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8"))
