@@ -242,7 +242,12 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * @param tag - The error tag to catch
    * @param handler - Handler for the caught error
    */
-  catchTag<K extends E extends { _tag: string } ? E["_tag"] : never, R2 extends Type, E2 extends Type, B extends Type>(
+  catchTag<
+    K extends (E extends { _tag: string } ? E["_tag"] : never),
+    R2 extends Type,
+    E2 extends Type,
+    B extends Type,
+  >(
     tag: K,
     handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>,
   ): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B>
@@ -536,7 +541,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     catchTag<
-      K extends E extends { _tag: string } ? E["_tag"] : never,
+      K extends (E extends { _tag: string } ? E["_tag"] : never),
       R2 extends Type,
       E2 extends Type,
       B extends Type,

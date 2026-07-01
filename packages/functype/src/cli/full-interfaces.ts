@@ -441,8 +441,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * \`e.name\` survives round-trip but \`instanceof SomeError\` does not.
    */
   toJSON():
-    | { "@functype": "Try"; _tag: "Success"; value: T }
-    | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
+    { "@functype": "Try"; _tag: "Success"; value: T } | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }`,
 
   List: `export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
@@ -709,8 +708,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * if the thunk threw — see error-envelope.ts for round-trip semantics.
    */
   toJSON():
-    | { "@functype": "Lazy"; _tag: "Lazy"; value: T }
-    | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
+    { "@functype": "Lazy"; _tag: "Lazy"; value: T } | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
 }`,
 
   LazyList: `export interface LazyList<out A extends Type>

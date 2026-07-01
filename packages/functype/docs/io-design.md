@@ -55,9 +55,7 @@ type IO<R, E, A> = {
 
 // Exit type for capturing full outcome
 type Exit<E, A> =
-  | { _tag: "Success"; value: A }
-  | { _tag: "Failure"; error: E }
-  | { _tag: "Interrupted"; fiberId: string }
+  { _tag: "Success"; value: A } | { _tag: "Failure"; error: E } | { _tag: "Interrupted"; fiberId: string }
 ```
 
 ### Constructors

@@ -166,9 +166,7 @@ const FunctypeProto = Object.create(Object.prototype)
 
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
-  const list: List<A> = {
-    /* ... */
-  }
+  const list: List<A> = {/* ... */}
   Object.setPrototypeOf(list, FunctypeProto)
   return list
 }

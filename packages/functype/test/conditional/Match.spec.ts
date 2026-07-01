@@ -589,26 +589,20 @@ describe("Match", () => {
 
         const reducer = (state: State, action: Action): State => {
           return Match(action)
-            .case(
-              { type: "SET_USER" },
-              (a): State => ({
-                ...state,
-                user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
-              }),
-            )
+            .case({ type: "SET_USER" }, (a): State => ({
+              ...state,
+              user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
+            }))
             .case({ type: "LOGOUT" }, (): State => ({ ...state, user: null, profile: {} }))
-            .case(
-              { type: "UPDATE_PROFILE" },
-              (a): State => ({
-                ...state,
-                profile: {
-                  ...state.profile,
-                  [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (
-                    a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
-                  ).payload.value,
-                },
-              }),
-            )
+            .case({ type: "UPDATE_PROFILE" }, (a): State => ({
+              ...state,
+              profile: {
+                ...state.profile,
+                [(a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }).payload.field]: (
+                  a as { type: "UPDATE_PROFILE"; payload: { field: string; value: any } }
+                ).payload.value,
+              },
+            }))
             .case(
               { type: "API_REQUEST", payload: { method: "DELETE" } },
               (): State => state, // Ignore deletes

@@ -189,8 +189,7 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
    * if the thunk threw — see error-envelope.ts for round-trip semantics.
    */
   toJSON():
-    | { "@functype": "Lazy"; _tag: "Lazy"; value: T }
-    | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
+    { "@functype": "Lazy"; _tag: "Lazy"; value: T } | { "@functype": "Lazy"; _tag: "Lazy"; error: SerializedError }
 }
 
 /**

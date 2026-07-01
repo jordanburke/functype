@@ -253,8 +253,7 @@ const doRequest = <T>(
   return prepared.flatMap((request) => {
     const flatten = request.flatten ?? true
     const serializeResult = (():
-      | { ok: true; value: ReturnType<typeof serializeBody> }
-      | { ok: false; cause: unknown } => {
+      { ok: true; value: ReturnType<typeof serializeBody> } | { ok: false; cause: unknown } => {
       try {
         return { ok: true, value: serializeBody(request.body, flatten) }
       } catch (cause) {

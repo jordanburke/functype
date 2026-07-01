@@ -64,27 +64,21 @@ type State = {
 function reducer(state: State, action: Action): State {
   return (
     Match(action)
-      .case(
-        { type: "SET_USER" },
-        (a): State => ({
-          ...state,
-          user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
-          loading: false,
-        }),
-      )
+      .case({ type: "SET_USER" }, (a): State => ({
+        ...state,
+        user: (a as { type: "SET_USER"; payload: { id: string; name: string } }).payload,
+        loading: false,
+      }))
       .case({ type: "LOGOUT" }, (): State => ({ ...state, user: null, settings: {} }))
-      .case(
-        { type: "UPDATE_SETTINGS" },
-        (a): State => ({
-          ...state,
-          settings: {
-            ...state.settings,
-            [(a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }).payload.key]: (
-              a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }
-            ).payload.value,
-          },
-        }),
-      )
+      .case({ type: "UPDATE_SETTINGS" }, (a): State => ({
+        ...state,
+        settings: {
+          ...state.settings,
+          [(a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }).payload.key]: (
+            a as { type: "UPDATE_SETTINGS"; payload: { key: string; value: any } }
+          ).payload.value,
+        },
+      }))
       // Match specific API methods
       .case({ type: "API_REQUEST", method: "GET" }, (): State => ({ ...state, loading: true }))
       .case({ type: "API_REQUEST", method: "DELETE" }, (a): State => {

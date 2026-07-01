@@ -110,8 +110,7 @@ export interface Try<out T>
    * `e.name` survives round-trip but `instanceof SomeError` does not.
    */
   toJSON():
-    | { "@functype": "Try"; _tag: "Success"; value: T }
-    | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
+    { "@functype": "Try"; _tag: "Success"; value: T } | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }
 
 const Success = <T>(value: T): Try<T> => ({

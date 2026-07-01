@@ -80,10 +80,7 @@ function handleResponse(response: HttpResponse): Either<string, unknown> {
 // Example 6: State machine with pattern matching
 type State = "idle" | "loading" | "success" | "error"
 type Action =
-  | { type: "fetch" }
-  | { type: "success"; data: unknown }
-  | { type: "fail"; error: string }
-  | { type: "reset" }
+  { type: "fetch" } | { type: "success"; data: unknown } | { type: "fail"; error: string } | { type: "reset" }
 
 function reducer(state: State, action: Action): State {
   // Use Match.exhaustive for union types
