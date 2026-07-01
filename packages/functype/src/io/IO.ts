@@ -50,6 +50,27 @@ export class InterruptedError extends Error {
 }
 
 /**
+ * Error surfaced by value-driven repeat combinators when the iteration bound is
+ * reached without the predicate being satisfied. Carries the last observed
+ * value so callers can report what the loop settled on.
+ *
+ * Type parameter `A` is the value type the loop was producing (or the state
+ * type for `IO.iterate`).
+ */
+// eslint-disable-next-line functional/no-classes
+export class RepeatExhausted<A = unknown> extends Error {
+  readonly _tag = "RepeatExhausted" as const
+  constructor(
+    readonly max: number,
+    readonly lastValue?: A,
+    message?: string,
+  ) {
+    super(message ?? `Repeat exhausted after ${max} iterations`)
+    this.name = "RepeatExhausted"
+  }
+}
+
+/**
  * IO Effect type module - a lazy, composable effect type with typed errors.
  * @module IO
  * @category IO
@@ -333,6 +354,48 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
     readonly while?: (error: E, attempt: number) => boolean
   }): IO<R, E, A>
 
+  /**
+   * Re-runs the effect until its output satisfies `done`, or the `max` bound is hit.
+   *
+   * Value-channel dual of `retryWhile`: this repeats on success values that
+   * haven't yet met the predicate, whereas the retry* family repeats on failure.
+   * The first failure short-circuits and propagates unchanged. Compose the two
+   * axes when both matter:
+   *
+   * @example
+   * ```ts
+   * pollJob
+   *   .retry(3)                                                  // error axis
+   *   .repeatUntil((job) => job.done, { max: 20, delayMs: 500 }) // value axis
+   * ```
+   *
+   * @param done - Pure sync predicate. Loop stops (successfully) when this returns true.
+   * @param opts.max - Maximum iterations before exhaustion is signaled.
+   * @param opts.delayMs - Optional fixed delay between iterations.
+   * @returns The satisfying value, or `RepeatExhausted<A>` in the error channel
+   *   (carrying the last observed value) if the bound is reached first.
+   */
+  repeatUntil(
+    done: (a: A) => boolean,
+    opts: { readonly max: number; readonly delayMs?: number },
+  ): IO<R, E | RepeatExhausted<A>, A>
+
+  /**
+   * Re-runs the effect while `cont` holds, or until the `max` bound is hit.
+   *
+   * Symmetric sibling of `repeatUntil` — mirrors the naming of `retryWhile`.
+   * `repeatWhile(cont)` is equivalent to `repeatUntil((a) => !cont(a))`; the
+   * loop stops successfully as soon as `cont` returns false.
+   *
+   * @param cont - Pure sync predicate. Loop continues while this returns true.
+   * @param opts.max - Maximum iterations before exhaustion is signaled.
+   * @param opts.delayMs - Optional fixed delay between iterations.
+   */
+  repeatWhile(
+    cont: (a: A) => boolean,
+    opts: { readonly max: number; readonly delayMs?: number },
+  ): IO<R, E | RepeatExhausted<A>, A>
+
   // ============================================
   // Combinators
   // ============================================
@@ -611,6 +674,30 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
           return unsafeCoerce(IOCompanion.sleep(delay).flatMap(() => next))
         })
       return go(opts.n, 1)
+    },
+
+    repeatUntil(
+      done: (a: A) => boolean,
+      opts: { readonly max: number; readonly delayMs?: number },
+    ): IO<R, E | RepeatExhausted<A>, A> {
+      if (opts.max <= 0) {
+        return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<A>(opts.max)))
+      }
+      const go = (remaining: number): IO<R, E | RepeatExhausted<A>, A> =>
+        io.flatMap((a): IO<R, E | RepeatExhausted<A>, A> => {
+          if (done(a)) return unsafeCoerce(IOCompanion.succeed(a))
+          if (remaining <= 1) return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<A>(opts.max, a)))
+          const next = go(remaining - 1)
+          return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
+        })
+      return go(opts.max)
+    },
+
+    repeatWhile(
+      cont: (a: A) => boolean,
+      opts: { readonly max: number; readonly delayMs?: number },
+    ): IO<R, E | RepeatExhausted<A>, A> {
+      return io.repeatUntil((a) => !cont(a), opts)
     },
 
     // Combinators
@@ -1344,6 +1431,54 @@ const IOCompanion = {
    */
   sleep: (ms: number): IO<never, never, void> =>
     unsafeCoerce(IOCompanion.async(() => new Promise((resolve) => setTimeout(resolve, ms)))),
+
+  /**
+   * Effectful stateful loop — the value-driven dual of the retry family.
+   *
+   * Threads state `S` through an effectful `step` until `done(state)` holds, or
+   * the `max` bound is reached. Semantics:
+   *
+   * - `done(seed)` is evaluated **before** the first `step` — an already-satisfied
+   *   seed returns immediately without executing the effect.
+   * - The first `E` failure short-circuits the loop and propagates.
+   * - `max` defaults to `10_000` and caps total step invocations to keep every
+   *   loop bounded by construction. Callers running larger iterations must set
+   *   `max` explicitly.
+   * - Stack-safe: recursion happens via IO's `flatMap` trampoline, not the JS
+   *   call stack.
+   *
+   * @example
+   * ```ts
+   * // Poll for a completed job, threading the response through state.
+   * const settled = await IO.iterate(
+   *   { status: "pending" as JobStatus },
+   *   (state) => fetchJob(state.id),
+   *   (state) => state.status === "done" || state.status === "failed",
+   *   { max: 30 },
+   * ).runEither()
+   * ```
+   *
+   * @param seed - Initial state.
+   * @param step - Effect producing the next state from the current state.
+   * @param done - Pure sync predicate over the state.
+   * @param opts.max - Maximum step invocations (default `10_000`).
+   * @returns The satisfying state, or `RepeatExhausted<S>` (carrying the last
+   *   observed state) if the bound is reached first.
+   */
+  iterate: <R extends Type, E extends Type, S extends Type>(
+    seed: S,
+    step: (state: S) => IO<R, E, S>,
+    done: (state: S) => boolean,
+    opts?: { readonly max?: number },
+  ): IO<R, E | RepeatExhausted<S>, S> => {
+    const max = opts?.max ?? 10_000
+    const go = (state: S, remaining: number): IO<R, E | RepeatExhausted<S>, S> => {
+      if (done(state)) return unsafeCoerce(IOCompanion.succeed(state))
+      if (remaining <= 0) return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<S>(max, state)))
+      return step(state).flatMap((next) => go(next, remaining - 1))
+    }
+    return go(seed, max)
+  },
 
   /**
    * Creates an IO that never completes.

@@ -317,6 +317,14 @@ effect.retryWithBackoff({                   // exponential backoff with optional
   while?,                                   // optional predicate gating each retry
 })
 
+// Value-driven repetition (new in 1.6.0 — dual axis to retry*; error and value axes compose):
+effect.repeatUntil(done, { max, delayMs? })         // re-run until done(a) === true or exhaust
+effect.repeatWhile(cont, { max, delayMs? })         // re-run while cont(a) === true or exhaust
+IO.iterate(seed, step, done, { max? })              // stateful loop; done(seed) checked before first step; max defaults 10_000
+// On exhaust: fails with RepeatExhausted<A> (carries lastValue) in the E channel.
+// Compose axes: pollJob.retry(3).repeatUntil(j => j.done, { max: 20, delayMs: 500 })
+// Composable Schedule value type (unifies both axes) tracked separately as functype-schedule package (see #220).
+
 // Http - typed fetch wrapper. New in 1.3.0: afterResponse hook, params, retryWhile/retryWithBackoff.
 Http.get(url, opts?)              // GET → IO<never, HttpError, HttpResponse<unknown>>
 Http.get(url, { decode })         // GET → IO<never, HttpError, HttpResponse<T>> (Either-returning decoder)

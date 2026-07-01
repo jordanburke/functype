@@ -336,7 +336,8 @@ Provides conversion to Promise for async interop:
      - Dependency injection via Tag/Layer/Context
      - Structured concurrency: bracket, race, timeout
      - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
-     - Error handling: catchTag, catchAll, retry, retryWithDelay
+     - Error handling: catchTag, catchAll, retry, retryWithDelay, retryWhile, retryWithBackoff
+     - Value-driven repetition: repeatUntil, repeatWhile, IO.iterate (bounded by RepeatExhausted)
      - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry()
    - Testing utilities:
      - **TestClock**: Controlled time for testing timeouts/delays

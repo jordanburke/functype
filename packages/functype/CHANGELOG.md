@@ -6,6 +6,19 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — value-driven effect repetition on `IO`: `repeatUntil`, `repeatWhile`, `IO.iterate`.**
+
+Adds the value-channel dual of the existing `retry*` family. `retry*` re-runs the effect while it keeps failing; the new combinators re-run while its _successful output_ hasn't yet met a predicate. Both axes compose — a poll can retry on transient network errors _and_ keep repeating until the payload is ready.
+
+- `io.repeatUntil(done, { max, delayMs? })` — re-run until `done(a) === true`.
+- `io.repeatWhile(cont, { max, delayMs? })` — symmetric sibling; re-run while `cont(a) === true`.
+- `IO.iterate(seed, step, done, { max? })` — stateful effectful loop threading `S` through an effectful `step` until `done(state)` holds. `done(seed)` is evaluated before the first step, so an already-satisfied seed returns immediately. `max` defaults to `10_000`.
+- New tagged error `RepeatExhausted<A>` (with `_tag`, `max`, `lastValue`) surfaces in the `E` channel when the bound is reached before the predicate is satisfied — no hangs, no untyped throws.
+
+Exhaustion is bounded by construction: `max` is required on `repeatUntil` / `repeatWhile`, defaulted on `iterate`. Implementations are stack-safe via the existing IO trampoline (verified over 100k iterations). Closes #219.
+
+A composable `Schedule<In, Out>` value type — unifying retry and repeat under one algebra — is tracked separately as a new `functype-schedule` package and gated on ≥2 real consumers (see #220).
+
 ## 1.5.0 - 2026-06-22
 
 **`functype` — add `filterOrElse(predicate, onUnsatisfied)` to `Try` and `Either`.**

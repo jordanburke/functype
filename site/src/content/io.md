@@ -204,6 +204,25 @@ io.retryWithBackoff({
   baseMs: 250,
   while: (e) => e._tag === "NetworkError",
 });
+
+// Value-driven repetition (1.6.0+): re-run until a predicate over the
+// *success value* is satisfied. Bounded by `max`; on exhaustion, fails
+// with RepeatExhausted (carrying the last observed value). Composes
+// with retry* — errors and values are independent axes.
+pollJob
+  .retry(3)                                                     // error axis
+  .repeatUntil((job) => job.done, { max: 20, delayMs: 500 });   // value axis
+
+// Symmetric sibling — continue while cont is true, stop when it flips.
+pollUntilReady.repeatWhile((r) => r.status === "pending", { max: 20 });
+
+// Stateful effectful loop: thread state S through an effectful step
+// until done(state). done(seed) is checked *before* the first step.
+IO.iterate(
+  0,
+  (n) => IO.sync(() => n + 1),
+  (n) => n >= 10,
+); // → IO<never, RepeatExhausted<number>, number> settling on 10
 ```
 
 ## IO vs Task
