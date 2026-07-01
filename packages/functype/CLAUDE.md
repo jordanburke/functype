@@ -325,6 +325,14 @@ IO.iterate(seed, step, done, { max? })              // stateful loop; done(seed)
 // Compose axes: pollJob.retry(3).repeatUntil(j => j.done, { max: 20, delayMs: 500 })
 // Composable Schedule value type (unifies both axes) tracked separately as functype-schedule package (see #220).
 
+// If step's E is unknown (typical for IO(() => promise) or IO.async), TS union
+// algebra collapses unknown | RepeatExhausted<S> → unknown, hiding the tagged
+// exhaustion. Use the guard added in 1.6.1 to narrow at consumption:
+res.fold(
+  (e) => (RepeatExhausted.is<S>(e) ? e.lastValue : /* handle step error */ throw e as Error),
+  (s) => s,
+)
+
 // Http - typed fetch wrapper. New in 1.3.0: afterResponse hook, params, retryWhile/retryWithBackoff.
 Http.get(url, opts?)              // GET → IO<never, HttpError, HttpResponse<unknown>>
 Http.get(url, { decode })         // GET → IO<never, HttpError, HttpResponse<T>> (Either-returning decoder)

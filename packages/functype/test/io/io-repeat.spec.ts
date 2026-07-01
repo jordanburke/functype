@@ -214,4 +214,18 @@ describe("RepeatExhausted", () => {
     expect(err.lastValue).toBe(42)
     expect(err.message).toContain("10")
   })
+
+  it("RepeatExhausted.is narrows unknown to RepeatExhausted<A>", () => {
+    // Positive cases: real instances and plain objects with the tag both pass.
+    expect(RepeatExhausted.is(new RepeatExhausted(5, "last"))).toBe(true)
+    expect(RepeatExhausted.is({ _tag: "RepeatExhausted", max: 5, lastValue: "last" })).toBe(true)
+
+    // Negative cases: nothing else passes.
+    expect(RepeatExhausted.is(null)).toBe(false)
+    expect(RepeatExhausted.is(undefined)).toBe(false)
+    expect(RepeatExhausted.is("RepeatExhausted")).toBe(false)
+    expect(RepeatExhausted.is(new Error("plain"))).toBe(false)
+    expect(RepeatExhausted.is({ _tag: "Other" })).toBe(false)
+    expect(RepeatExhausted.is({})).toBe(false)
+  })
 })

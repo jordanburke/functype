@@ -6,6 +6,25 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — `RepeatExhausted.is` runtime type guard for `IO.iterate` / `repeatUntil` / `repeatWhile` (fixes #221).**
+
+When the step effect passed to `IO.iterate` (or the effect that `repeatUntil` / `repeatWhile` are called on) has `E = unknown` — the common shape when lifting a Promise via `IO(() => ...)` or `IO.async(...)` — TypeScript's union algebra collapses `unknown | RepeatExhausted<A>` back to `unknown`, and `RepeatExhausted<A>` is lost from the surface type. The runtime is correct (the `RepeatExhausted` instance still lands in the `Left` at runtime) but consumers couldn't recover it without a cast.
+
+`RepeatExhausted.is<A>(e): e is RepeatExhausted<A>` narrows an `unknown`-typed error back to `RepeatExhausted<A>` so consumers can read `.max` / `.lastValue` without a cast:
+
+```ts
+const res = await IO.iterate(seed, step, done, { max: 20 }).run()
+res.fold(
+  (e) => {
+    if (RepeatExhausted.is<StepState>(e)) return e.lastValue // typed, no cast
+    throw e as Error
+  },
+  (settled) => settled,
+)
+```
+
+The class-level JSDoc explains the union-collapse mechanic and shows both narrowing paths (`RepeatExhausted.is` and pre-annotating step's `E`) for reference.
+
 ## 1.6.0 - 2026-07-01
 
 **`functype` — value-driven effect repetition on `IO`: `repeatUntil`, `repeatWhile`, `IO.iterate`.**

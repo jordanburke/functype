@@ -56,6 +56,42 @@ export class InterruptedError extends Error {
  *
  * Type parameter `A` is the value type the loop was producing (or the state
  * type for `IO.iterate`).
+ *
+ * ## Narrowing when `E` is `unknown`
+ *
+ * If the step effect has `E = unknown` (common when lifting a Promise via
+ * `IO(() => ...)` or `IO.async(...)` — see the JSDoc on those constructors),
+ * TypeScript's union algebra collapses `unknown | RepeatExhausted<A>` back to
+ * `unknown`, and `RepeatExhausted<A>` is lost from the surface type. The
+ * runtime behavior is still correct (the `RepeatExhausted` instance is in the
+ * `Left` at runtime — see reporter's JSON in issue #221) — but consumers need
+ * a narrowing step to recover it. Use `RepeatExhausted.is`:
+ *
+ * @example
+ * ```ts
+ * const res = await IO.iterate(seed, step, done, { max: 20 }).run()
+ * res.fold(
+ *   (e) => {
+ *     if (RepeatExhausted.is<StepState>(e)) {
+ *       // e is now RepeatExhausted<StepState>; e.lastValue is StepState
+ *       return e.lastValue
+ *     }
+ *     // e is still the collapsed E channel — handle as the caller sees fit
+ *     throw e as Error
+ *   },
+ *   (settled) => settled,
+ * )
+ * ```
+ *
+ * The alternative — annotating `step`'s error channel so `E` is a concrete
+ * tagged type — also works and preserves `RepeatExhausted<A>` in the union:
+ *
+ * @example
+ * ```ts
+ * const step = (s: S): IO<never, never, S> =>
+ *   IO(() => runOnce(s)).mapError((_e) => _e as never)
+ * // iterate result E channel: never | RepeatExhausted<S> === RepeatExhausted<S>
+ * ```
  */
 // eslint-disable-next-line functional/no-classes
 export class RepeatExhausted<A = unknown> extends Error {
@@ -67,6 +103,22 @@ export class RepeatExhausted<A = unknown> extends Error {
   ) {
     super(message ?? `Repeat exhausted after ${max} iterations`)
     this.name = "RepeatExhausted"
+  }
+
+  /**
+   * Runtime type guard. Narrows an `unknown` (or wider) value to
+   * `RepeatExhausted<A>` when the tag matches. Use this to recover typed
+   * exhaustion when the `E` channel has collapsed to `unknown` — a common
+   * situation when the step effect is lifted from a Promise via `IO(...)` or
+   * `IO.async(...)`. See the class-level JSDoc for a full example.
+   *
+   * The type parameter `A` is an unchecked assertion — the guard confirms the
+   * shape is a `RepeatExhausted`, but cannot verify `lastValue` matches `A` at
+   * runtime. Callers pass the state/value type they expect the loop to have
+   * been producing.
+   */
+  static is<A = unknown>(e: unknown): e is RepeatExhausted<A> {
+    return typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: unknown })._tag === "RepeatExhausted"
   }
 }
 
