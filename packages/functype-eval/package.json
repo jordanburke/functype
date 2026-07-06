@@ -77,7 +77,7 @@
     "functype": "workspace:^",
     "ts-builds": "^3.2.1",
     "tsdown": "^0.22.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "publishConfig": {
     "access": "public",
