@@ -64,7 +64,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "fastmcp": "^4.3.2",
+    "fastmcp": "^4.4.0",
     "functype": "workspace:*",
     "typescript": "^6.0.3",
     "zod": "^4.4.3"
@@ -73,7 +73,7 @@
     "@types/node": "^24.13.2",
     "ts-builds": "^3.2.1",
     "tsdown": "^0.22.3",
-    "tsx": "^4.22.4"
+    "tsx": "^4.23.0"
   },
   "prettier": "ts-builds/prettier"
 }
