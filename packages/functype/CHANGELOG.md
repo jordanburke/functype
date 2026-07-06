@@ -6,6 +6,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — surface the `TypedError` / `Validation` / `FormValidation` API in the CLI doc catalog.**
+
+The error-accumulating validation system (`TypedError`, the `Validation` rule DSL, and the `FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T>` result type) was fully exported from the barrel but absent from `src/cli/data.ts` — the catalog that `functype/cli`, the MCP server (`search_docs` / `get_type_api`), and `npx functype` read. Searching the docs for "Validated" therefore returned only the unrelated `ValidatedBrand`, leading consumers to conclude functype lacks applicative validation and hand-roll `Either<List<Error>, _>` reinventions of `FormValidation`.
+
+Register `TypedError` and `Validation` under a new `Validation` category, and document the surface in `docs/FUNCTYPE_FEATURE_MATRIX.md` (prose subsection, following the `HttpError` / `DecoderError` precedent — not a typeclass-grid row). No runtime or API change; docs/discoverability only.
+
 ## 1.6.1 - 2026-07-01
 
 **`functype` — `RepeatExhausted.is` runtime type guard for `IO.iterate` / `repeatUntil` / `repeatWhile` (fixes #221).**
