@@ -98,8 +98,8 @@ importers:
         specifier: workspace:*
         version: link:../eslint-config-functype
       eslint-plugin-functional:
-        specifier: ^9.0.5
-        version: 9.0.5(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
+        specifier: ^10.0.0
+        version: 10.0.0(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
       fast-check:
         specifier: ^4.8.0
         version: 4.8.0
@@ -2547,9 +2547,9 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-plugin-functional@9.0.5:
-    resolution: {integrity: sha512-RYbNpGkGu5mSN7xlezyeE7TE3S9rsliAS5FOorZoxn7126UTslcQnoVOIAOA6fMOlz6dNG3x3cd3tuzrHM6mRA==}
-    engines: {node: '>=v18.18.0'}
+  eslint-plugin-functional@10.0.0:
+    resolution: {integrity: sha512-D/BWdGUvPz5uIC+kZM1BWrELhjHpDiYxIYjzF7a6TZ62KINajjKgOiSYGbGv4fpMT1enEC9yG+0kOaIRTZzpTg==}
+    engines: {node: '>=v20.0.0'}
     peerDependencies:
       eslint: ^9.0.0 || ^10.0.0
       typescript: '>=4.7.4'
@@ -7119,7 +7119,7 @@ snapshots:
     dependencies:
       eslint: 10.6.0(jiti@2.7.0)
 
-  eslint-plugin-functional@9.0.5(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3):
+  eslint-plugin-functional@10.0.0(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3):
     dependencies:
       '@typescript-eslint/utils': 8.62.1(eslint@10.6.0(jiti@2.7.0))(typescript@6.0.3)
       deepmerge-ts: 7.1.5
