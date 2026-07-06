@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.6.2 - 2026-07-06
+
 **`functype` — surface the `TypedError` / `Validation` / `FormValidation` API in the CLI doc catalog.**
 
 The error-accumulating validation system (`TypedError`, the `Validation` rule DSL, and the `FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T>` result type) was fully exported from the barrel but absent from `src/cli/data.ts` — the catalog that `functype/cli`, the MCP server (`search_docs` / `get_type_api`), and `npx functype` read. Searching the docs for "Validated" therefore returned only the unrelated `ValidatedBrand`, leading consumers to conclude functype lacks applicative validation and hand-roll `Either<List<Error>, _>` reinventions of `FormValidation`.
