@@ -582,6 +582,49 @@ export const TYPES: Record<string, TypeData> = {
       ],
     },
   },
+
+  TypedError: {
+    description:
+      "Code-tagged structured error ADT (extends Throwable); TypedError.validation(...) feeds accumulating validation.",
+    interfaces: [],
+    methods: {
+      create: [
+        'TypedError.validation(field, value, rule) → TypedError<"VALIDATION_FAILED">',
+        "TypedError.badRequest(reason, expected?)",
+        "TypedError.notFound(resource, id)",
+        "TypedError.auth(resource, requiredRole?)",
+        "TypedError.permission(action, resource, userId?)",
+        "TypedError.conflict(resource, value) / .rateLimit(limit, window, retryAfter?)",
+        "TypedError.timeout(ms, operation) / .network(url, method, status?) / .internal(errorId)",
+      ],
+      check: ["TypedError.isTypedError(v)", "TypedError.hasCode(e, code)"],
+      other: [
+        "Fields: .code, .message, .status (HTTP), .context, .timestamp, .traceId?",
+        "VALIDATION_FAILED context shape: { field, value, rule }",
+      ],
+    },
+  },
+
+  Validation: {
+    description:
+      "Error-accumulating validation (functype's Validated role) — FormValidation<T> collects all field errors, not fail-fast.",
+    interfaces: [],
+    methods: {
+      create: [
+        "Validation.rule<T>('min:18' | 'email' | 'required' | 'in:a,b' | ...)",
+        "Validation.combine(...validators) / Validation.custom(predicate, message)",
+        "Validation.validators.email / .url / .uuid / .required / .numeric / .positiveNumber / .nonEmptyString",
+      ],
+      transform: [
+        "Validation.form(schema, data) → FormValidation<T> (accumulates all field errors)",
+        "Validator<T> = (value: unknown) => Either<TypedError<'VALIDATION_FAILED'>, T>",
+      ],
+      other: [
+        'FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T> — functype\'s "Validated" accumulating result type',
+        "form() is flat/per-field: for cross-field (lo < hi) or dynamic-key (weights.*) checks, hand-accumulate into a List<TypedError> and return the FormValidation shape",
+      ],
+    },
+  },
 }
 
 export const INTERFACES: Record<string, InterfaceData> = {
@@ -648,6 +691,7 @@ export const CATEGORIES = {
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
+  Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],
   Service: ["Logger"],
 }

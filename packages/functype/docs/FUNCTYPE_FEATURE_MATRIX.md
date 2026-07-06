@@ -145,6 +145,33 @@ HttpError.match(error, { NetworkError, HttpStatusError, DecodeError })
 HttpError.isNetworkError(e) / .isHttpStatusError(e) / .isDecodeError(e)
 ```
 
+### Validation & Typed Errors
+
+Error-accumulating validation — functype's "Validated" applicative role. `Validation`
+collects **all** field errors rather than short-circuiting on the first (unlike
+`Either.sequence`, which fails fast). Not a typeclass-grid container, so it lives
+here rather than in the interface matrix above (same as `HttpError` / `DecoderError`).
+
+```typescript
+// FormValidation<T> — the accumulating result type
+type FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T>
+
+// TypedError — code-tagged structured error (extends Throwable)
+TypedError.validation(field, value, rule)   // → TypedError<"VALIDATION_FAILED">, context { field, value, rule }
+TypedError.isTypedError(v) / TypedError.hasCode(e, code)
+
+// Validation — rule DSL + form validator
+Validation.rule<T>("min:18" | "email" | "required" | "pattern:..." | "in:a,b" | ...)
+Validation.combine(...validators)                 // all must pass (fail-fast per field)
+Validation.custom<T>(predicate, message)          // custom per-field rule
+Validation.validators.email / .url / .required / .positiveNumber / .nonEmptyString
+Validation.form(schema, data)                     // → FormValidation<T>, accumulates every field error
+
+// Validator<T> = (value: unknown) => Either<TypedError<"VALIDATION_FAILED">, T>
+// form() is flat/per-field. For cross-field (lo < hi) or dynamic-key (weights.*) checks,
+// hand-accumulate TypedError.validation(...) into a List and return the same FormValidation shape.
+```
+
 ### Type Guards
 
 Static type guards for narrowing types:
