@@ -8,6 +8,15 @@ const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "
 const NEGATIVE_PREDICATES: ReadonlySet<string> = new Set(["isNone", "isEmpty", "isLeft", "isFailure"])
 
 /**
+ * A literal `null` or the `undefined` identifier. A ternary that yields one of these in a branch is
+ * building an optional value (prefer-option's concern), not folding a monad — so the untyped nullable
+ * heuristic must not treat `x !== undefined ? "a" : undefined` as a fold candidate.
+ */
+function isNullishLiteral(node: ASTNode): boolean {
+  return (node.type === "Literal" && node.value === null) || (node.type === "Identifier" && node.name === "undefined")
+}
+
+/**
  * If `test` is a monadic predicate call like `option.isSome()` or
  * `either.isLeft()`, returns the receiver expression's text plus whether the
  * predicate is the "absence" side. Returns null for anything else.
@@ -168,21 +177,23 @@ const rule: Rule.RuleModule = {
       return false
     }
 
-    function isMonadicCheck(node: ASTNode): { isMonadic: boolean; type: string } {
+    // `via` records HOW we matched: a functype predicate call (`method`, precise) vs the untyped
+    // null/undefined heuristic (`nullable`, a guess that can't tell a real Option from a plain nullable).
+    function isMonadicCheck(node: ASTNode): { isMonadic: boolean; type: string; via: "method" | "nullable" | "" } {
       const sourceCode = context.sourceCode
       const text = sourceCode.getText(node)
 
       // Check for common monadic type checks
       if (/\.(isSome|isNone|isEmpty|isDefined)\s*\(\s*\)/.test(text)) {
-        return { isMonadic: true, type: "Option" }
+        return { isMonadic: true, type: "Option", via: "method" }
       }
 
       if (/\.(isLeft|isRight)\s*\(\s*\)/.test(text)) {
-        return { isMonadic: true, type: "Either" }
+        return { isMonadic: true, type: "Either", via: "method" }
       }
 
       if (/\.(isSuccess|isFailure)\s*\(\s*\)/.test(text)) {
-        return { isMonadic: true, type: "Result" }
+        return { isMonadic: true, type: "Result", via: "method" }
       }
 
       // Check for null/undefined checks on variables that might be Options
@@ -192,7 +203,7 @@ const rule: Rule.RuleModule = {
           ((node.left.type === "Literal" && (node.left.value === null || node.left.value === undefined)) ||
             (node.right.type === "Literal" && (node.right.value === null || node.right.value === undefined)))
         ) {
-          return { isMonadic: true, type: "Option" }
+          return { isMonadic: true, type: "Option", via: "nullable" }
         }
 
         // Check for === or == with undefined identifier
@@ -201,12 +212,12 @@ const rule: Rule.RuleModule = {
           const rightIsUndefined = node.right.type === "Identifier" && node.right.name === "undefined"
 
           if (leftIsUndefined || rightIsUndefined) {
-            return { isMonadic: true, type: "Option" }
+            return { isMonadic: true, type: "Option", via: "nullable" }
           }
         }
       }
 
-      return { isMonadic: false, type: "" }
+      return { isMonadic: false, type: "", via: "" }
     }
 
     function analyzeIfStatement(node: ASTNode) {
@@ -247,6 +258,13 @@ const rule: Rule.RuleModule = {
 
       ConditionalExpression(node: ASTNode) {
         const monadicInfo = isMonadicCheck(node.test)
+        // The untyped nullable heuristic can't distinguish a real Option from a plain nullable primitive.
+        // When it fires on a ternary that yields `undefined`/`null` in a branch, that's optional value
+        // construction (prefer-option's concern), not a fold — skip it. False positive this kills:
+        // `x !== undefined ? "a" : undefined`. Predicate-call matches (`.isSome()` etc.) are unaffected.
+        if (monadicInfo.via === "nullable" && (isNullishLiteral(node.consequent) || isNullishLiteral(node.alternate))) {
+          return
+        }
         if (monadicInfo.isMonadic) {
           context.report({
             node,

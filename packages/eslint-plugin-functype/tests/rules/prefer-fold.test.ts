@@ -50,6 +50,17 @@ describe("prefer-fold", () => {
           }
         `,
       },
+      // The untyped nullable heuristic must NOT fire when a ternary branch is literally undefined/null —
+      // that's optional value construction (prefer-option's concern), not a fold. Regression for a false
+      // positive on plain `T | undefined` ternaries.
+      {
+        name: "Nullable ternary yielding undefined in a branch is not a fold candidate",
+        code: 'const label = title !== undefined ? "t=" + title : undefined',
+      },
+      {
+        name: "Nullable ternary yielding null in a branch is not a fold candidate",
+        code: "const x = value === null ? null : value.toString()",
+      },
     ],
     invalid: [
       // If/else chain with isSome check
