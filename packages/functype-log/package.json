@@ -46,7 +46,7 @@
     "@types/node": "^24.13.2",
     "functype": "workspace:^",
     "ts-builds": "^3.2.1",
-    "tsdown": "^0.22.3"
+    "tsdown": "^0.22.7"
   },
   "type": "module",
   "main": "./dist/index.js",
