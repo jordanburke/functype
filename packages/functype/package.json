@@ -64,7 +64,7 @@
     "@types/node": "~24.10.15",
     "eslint-config-functype": "workspace:*",
     "eslint-plugin-functional": "^9.0.5",
-    "fast-check": "^4.8.0",
+    "fast-check": "^4.9.0",
     "globals": "^17.7.0",
     "ts-builds": "^3.2.1",
     "tsdown": "^0.22.3",
