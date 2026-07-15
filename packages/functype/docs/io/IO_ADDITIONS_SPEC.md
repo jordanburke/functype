@@ -142,7 +142,7 @@ one: (): Promise<TaskOutcome<Option<User>>> => {
 After (with new IO methods):
 
 ```typescript
-one: (): Task<Error, Option<User>> =>
+one: (): IO<never, Error, Option<User>> =>
   IO.asyncResult(() => supabase.from("users").select("*").single(), toError)
     .tapError((err) => log.error(`Query failed: ${err}`))
     .map((data) => Option(data))

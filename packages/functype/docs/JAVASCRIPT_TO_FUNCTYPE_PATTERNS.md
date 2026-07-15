@@ -193,21 +193,22 @@ async function fetchUserData(userId: string): Promise<User | null> {
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchUserData(userId: string): Task<User, Error> {
-  return Task.tryCatchAsync(
-    async () => {
+function fetchUserData(userId: string): IO<never, Error, User> {
+  return IO.tryPromise({
+    try: async () => {
       const response = await fetch(`/api/users/${userId}`)
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status}`)
       }
       return response.json()
     },
-    (error) => new Error(`Fetch failed: ${error}`),
-  )
+    catch: (error) => new Error(`Fetch failed: ${error}`),
+  })
 }
 
-// Usage
-fetchUserData(userId).fold(
+// Usage — IO is lazy; execute with .runEither(), then fold
+const result = await fetchUserData(userId).runEither()
+result.fold(
   (error) => console.error(error.message),
   (user) => console.log("User:", user),
 )
@@ -441,9 +442,10 @@ async function fetchUserWithPosts(userId: string): Promise<UserWithPosts | null>
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchUserWithPosts(userId: string): Task<UserWithPosts, Error> {
-  return Task.tryCatch(() => fetchUser(userId)).flatMap((user) =>
-    Task.tryCatch(() => fetchUserPosts(userId)).map((posts) => ({ ...user, posts })),
+function fetchUserWithPosts(userId: string): IO<never, Error, UserWithPosts> {
+  const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
+  return IO.tryPromise({ try: () => fetchUser(userId), catch: toErr }).flatMap((user) =>
+    IO.tryPromise({ try: () => fetchUserPosts(userId), catch: toErr }).map((posts) => ({ ...user, posts })),
   )
 }
 ```
@@ -466,11 +468,12 @@ async function fetchAllData(): Promise<{ users?: User[]; posts?: Post[]; error?:
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchAllData(): Task<{ users: User[]; posts: Post[] }, Error> {
-  return Task.all([Task.tryCatch(() => fetchUsers()), Task.tryCatch(() => fetchPosts())]).map(([users, posts]) => ({
-    users,
-    posts,
-  }))
+function fetchAllData(): IO<never, Error, { users: User[]; posts: Post[] }> {
+  const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
+  return IO.all([
+    IO.tryPromise({ try: () => fetchUsers(), catch: toErr }),
+    IO.tryPromise({ try: () => fetchPosts(), catch: toErr }),
+  ]).map(([users, posts]) => ({ users, posts }))
 }
 ```
 
@@ -490,8 +493,11 @@ function fetchWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
 **✅ Functype Pattern:**
 
 ```typescript
-function fetchWithTimeout<T>(task: () => Promise<T>, timeout: number): Task<T, Error> {
-  return Task.timeout(Task.tryCatch(task), timeout, () => new Error("Timeout"))
+function fetchWithTimeout<T>(fn: () => Promise<T>, timeout: number): IO<never, Error, T> {
+  const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
+  return IO.tryPromise({ try: fn, catch: toErr })
+    .timeout(timeout)
+    .mapError((e) => (e instanceof TimeoutError ? new Error("Timeout") : e))
 }
 ```
 
@@ -799,12 +805,16 @@ async function processDataFile(filePath: string): Promise<ProcessedData | null> 
 **✅ Functype Pattern:**
 
 ```typescript
-function processDataFile(filePath: string): Task<ProcessedData, Error> {
-  return Task.tryCatchAsync(async () => {
-    const content = await fs.readFile(filePath, "utf-8")
-    return JSON.parse(content)
+function processDataFile(filePath: string): IO<never, Error, ProcessedData> {
+  const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
+  return IO.tryPromise({
+    try: async () => {
+      const content = await fs.readFile(filePath, "utf-8")
+      return JSON.parse(content)
+    },
+    catch: toErr,
   })
-    .flatMap((data) => (Array.isArray(data) ? Task.resolve(data) : Task.reject(new Error("Data must be an array"))))
+    .flatMap((data) => (Array.isArray(data) ? IO.succeed(data) : IO.fail(new Error("Data must be an array"))))
     .map((data) => {
       const processed = List(data)
         .filter((item) => item.value > 0)
@@ -1007,13 +1017,15 @@ getUserById(userId, (err, user) => {
 **✅ Functype Pattern:**
 
 ```typescript
-Task.tryCatch(() => getUserById(userId))
-  .flatMap((user) => Task.tryCatch(() => getOrdersByUser(user.id)))
-  .flatMap((orders) => Task.tryCatch(() => calculateTotal(orders)))
-  .fold(
-    (error) => handleError(error),
-    (total) => displayResult(total),
-  )
+const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))
+const result = await IO.tryPromise({ try: () => getUserById(userId), catch: toErr })
+  .flatMap((user) => IO.tryPromise({ try: () => getOrdersByUser(user.id), catch: toErr }))
+  .flatMap((orders) => IO.tryPromise({ try: () => calculateTotal(orders), catch: toErr }))
+  .runEither()
+result.fold(
+  (error) => handleError(error),
+  (total) => displayResult(total),
+)
 ```
 
 ## Summary
