@@ -10,7 +10,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 **`eslint-plugin-functype` — `prefer-fold` no longer false-positives on nullable ternaries that yield `undefined`/`null`.**
 
-The untyped nullable heuristic couldn't distinguish a real functype `Option` from a plain nullable primitive, so it fired on optional-value ternaries like `title !== undefined ? \`title=${title}\` : undefined` — that's `prefer-option`'s concern (optional value construction), not a fold. Narrow the heuristic: the nullable path now skips when the ternary branch is literally `undefined`/`null`. Predicate-call matches (`.isSome()`, `.isLeft()`) are untouched, so intended nullable nudges still fire on branches that produce a real value. Two regression cases added; all 192 plugin tests pass. Unblocks `microsoft365-mcp-server` dropping its interim repo-local `prefer-fold` override for `planner-tools.ts`. Merged via #226.
+The untyped nullable heuristic couldn't distinguish a real functype `Option` from a plain nullable primitive, so it fired on optional-value ternaries like `title !== undefined ? \`title=${title}\` : undefined`— that's`prefer-option`'s concern (optional value construction), not a fold. Narrow the heuristic: the nullable path now skips when the ternary branch is literally `undefined`/`null`. Predicate-call matches (`.isSome()`, `.isLeft()`) are untouched, so intended nullable nudges still fire on branches that produce a real value. Two regression cases added; all 192 plugin tests pass. Unblocks `microsoft365-mcp-server`dropping its interim repo-local`prefer-fold`override for`planner-tools.ts`. Merged via #226.
 
 ## 1.6.2 - 2026-07-06
 

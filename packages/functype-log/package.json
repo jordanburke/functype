@@ -40,13 +40,13 @@
     "functype": ">=0.60.0"
   },
   "dependencies": {
-    "loglayer": "^9.3.0"
+    "loglayer": "^9.4.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "functype": "workspace:^",
-    "ts-builds": "^3.2.1",
-    "tsdown": "^0.22.7"
+    "ts-builds": "^3.2.2",
+    "tsdown": "^0.22.9"
   },
   "type": "module",
   "main": "./dist/index.js",

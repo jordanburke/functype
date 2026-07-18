@@ -59,12 +59,12 @@
     "eslint": "^10.2.1"
   },
   "devDependencies": {
-    "@types/node": "^24.13.2",
-    "@typescript-eslint/rule-tester": "^8.62.1",
+    "@types/node": "^24.13.3",
+    "@typescript-eslint/rule-tester": "^8.64.0",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^3.2.1",
-    "tsdown": "^0.22.7"
+    "ts-builds": "^3.2.2",
+    "tsdown": "^0.22.9"
   },
   "publishConfig": {
     "access": "public",
