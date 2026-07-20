@@ -63,7 +63,7 @@
     "@eslint/compat": "^2.1.0",
     "@types/node": "~24.10.15",
     "eslint-config-functype": "workspace:*",
-    "eslint-plugin-functional": "^9.0.5",
+    "eslint-plugin-functional": "^10.0.0",
     "fast-check": "^4.9.0",
     "globals": "^17.7.0",
     "ts-builds": "^3.2.2",
