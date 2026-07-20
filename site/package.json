@@ -32,6 +32,6 @@
     "@astrojs/mdx": "^7.0.3",
     "prettier": "^3.9.5",
     "tsx": "^4.23.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
