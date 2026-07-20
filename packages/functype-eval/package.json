@@ -75,7 +75,7 @@
     "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^3.2.2",
+    "ts-builds": "^3.2.3",
     "tsdown": "^0.22.9",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"

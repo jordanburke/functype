@@ -71,7 +71,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "ts-builds": "^3.2.2",
+    "ts-builds": "^3.2.3",
     "tsdown": "^0.22.9",
     "tsx": "^4.23.1"
   },
