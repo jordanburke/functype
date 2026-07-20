@@ -69,7 +69,7 @@
     "@typescript-eslint/parser": "^8.38.0 || ^8.39.0 || ^9.0.0",
     "eslint": "^10.0.3",
     "eslint-plugin-prettier": "^5.0.0",
-    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
     "prettier": "^3.0.0"
   },
   "dependencies": {
@@ -82,7 +82,7 @@
     "@typescript-eslint/parser": "^8.64.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
-    "eslint-plugin-simple-import-sort": "^13.0.0",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
     "ts-builds": "^3.2.2",
     "tsdown": "^0.22.12"
   },
