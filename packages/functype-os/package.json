@@ -44,7 +44,7 @@
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
     "ts-builds": "^3.2.2",
-    "tsdown": "^0.22.9",
+    "tsdown": "^0.22.12",
     "vitest": "^4.1.10"
   },
   "type": "module",
