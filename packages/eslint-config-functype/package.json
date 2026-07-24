@@ -78,13 +78,13 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "@typescript-eslint/eslint-plugin": "^8.64.0",
-    "@typescript-eslint/parser": "^8.64.0",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-simple-import-sort": "^13.0.0",
-    "ts-builds": "^3.2.2",
-    "tsdown": "^0.22.12"
+    "ts-builds": "^3.2.3",
+    "tsdown": "^0.22.14"
   },
   "publishConfig": {
     "access": "public",
