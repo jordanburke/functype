@@ -6,6 +6,18 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype-react` — new `functype-react/query` subpath: TanStack Query adapters for `IO` (closes #239).**
+
+`Http.get(...)` returns `IO<never, HttpError, HttpResponse<T>>`, and neither `IO` terminal fits React Query's contract. `.run()` returns `Promise<Either<E, A>>` and never throws, so React Query never observes a failure — every call site hand-writes the `Either` → throw bridge. `.runOrThrow()` throws the _raw_ tagged object (`{ _tag: "NetworkError", url, method, cause }`), which is not an `Error` instance, so the ubiquitous `error instanceof Error ? error.message : fallback` handler silently degrades to the fallback and status-based branching has no clean equivalent. Migrating a real app off axios onto `functype/fetch` required a bespoke per-app `apiRequest()` shim to close exactly this gap.
+
+The new subpath owns that glue. `useIOQuery` / `useIOMutation` cover the common path; `ioQueryFn` / `ioMutationFn` are framework-agnostic primitives for `useQuery`, `useSuspenseQuery`, `useInfiniteQuery`, and `queryClient.prefetchQuery`. Failures are boxed as `IOQueryError<E> extends Error` — `instanceof Error` and `.message` behave as any React Query consumer expects, while `.error` preserves the fully discriminable functype error (`HttpErrors.match(error.error, { ... })`). `Error.message` is derived structurally by `formatIOError`, so the bridge stays generic over any `IO<never, E, A>` rather than being HTTP-specific; pass `formatError` to override. React Query's `AbortSignal` is handed to the effect factory for cancellation, and the full `useQuery` / `useMutation` options surface passes through untouched.
+
+`useIOQueryState` / `useIOMutationState` return that ADT directly — `TaskState` plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and the trigger (`refetch`, or `mutate`/`mutateAsync`/`reset`), mirroring the shape `useTask` already returns from `functype-react/async`. They read only the fields they project, so React Query's tracked-properties render optimization still applies.
+
+`toQueryState` / `toMutationState` project a React Query result onto the `TaskState` ADT that `functype-react/async` already returns, so a query composes with the `<Match>` family instead of being read through the `data && !error && !isLoading` flag soup this package exists to eliminate. The `Success` branch yields a defined `A` rather than `A | undefined`, and omitting a lifecycle case is a compile error. A disabled query projects to `Idle`, in-flight or paused to `Pending`; React Query's own mutation `idle` status maps directly. Both are pure functions over the result, so `refetch` / `isFetching` / `invalidate` remain available on the original object.
+
+`@tanstack/react-query` (`>=5.0.0`) is an **optional** peer dependency, matching the existing `react-dom` treatment — consumers who don't import `functype-react/query` neither install nor bundle it. Strictly additive; no changes to any existing export.
+
 ## 1.6.3 - 2026-07-13
 
 **`eslint-plugin-functype` — `prefer-fold` no longer false-positives on nullable ternaries that yield `undefined`/`null`.**

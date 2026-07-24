@@ -12,18 +12,19 @@ Push the same ADTs (`Option`, `Either`, `Try`, `Task`, `Validated`) you already 
 pnpm add functype functype-react react react-dom
 ```
 
-`react-dom` is an optional peer (drop it for React Native / RSC-only consumers).
+`react-dom` is an optional peer (drop it for React Native / RSC-only consumers). `@tanstack/react-query` is likewise optional — install it only if you use `functype-react/query`.
 
 ## Surface
 
-| Subpath                 | Contents                                                                                                                            |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers |
-| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                              |
-| `functype-react/async`  | `useTask`, `useTaskPromise`, `useTaskValue` (React 19 `use()` bridge), `<TaskBoundary>`                                             |
-| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                               |
+| Subpath                 | Contents                                                                                                                                    |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers         |
+| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                      |
+| `functype-react/async`  | `useTask`, `useTaskPromise`, `useTaskValue` (React 19 `use()` bridge), `<TaskBoundary>`                                                     |
+| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                       |
+| `functype-react/query`  | `useIOQuery(State)`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
 
-`./async` and `./forms` stay off the main entry so consumers who don't touch Suspense or applicative forms tree-shake them out.
+`./async`, `./forms`, and `./query` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
 
 ## Tier 1 — stable hooks + ADT hooks
 
@@ -134,11 +135,122 @@ function Signup() {
 
 Errors accumulate applicatively — every failing rule is surfaced in one pass, not just the first.
 
+## Tier 5 — React Query
+
+`Http.get(...)` returns `IO<never, HttpError, HttpResponse<T>>`, and neither `IO` terminal fits TanStack Query: `.run()` never throws (so React Query never sees a failure), and `.runOrThrow()` throws the raw tagged object — which is **not** an `Error`, so the ubiquitous `error instanceof Error ? error.message : fallback` handler silently degrades.
+
+`functype-react/query` owns that bridge. Failures arrive boxed as `IOQueryError<E>`: a real `Error` with a populated `.message`, whose `.error` is still the fully discriminable functype error.
+
+```ts
+import { useIOQuery } from "functype-react/query"
+import { Http, HttpErrors, type HttpError } from "functype/fetch"
+
+const { data, error } = useIOQuery(
+  ["connector-limits", userId],
+  ({ signal }) => Http.get<ConnectorLimits>(url, { headers, signal }),
+  { enabled: !!userId },
+)
+
+if (error) {
+  error instanceof Error // true
+  error.message // "HTTP 403 Forbidden — /api/limits"
+
+  HttpErrors.match(error.error, {
+    NetworkError: () => <Offline />,
+    HttpStatusError: (e) => (e.status === 403 ? <UpgradePrompt /> : <Failed />),
+    DecodeError: () => <SchemaDrift />,
+  })
+}
+```
+
+### Matching instead of flag soup
+
+The result above is still React Query's — `data` is `A | undefined`, so the success path needs a `!` or a guard. `toQueryState` projects it onto the same `TaskState` ADT that `functype-react/async` returns, so a query matches exhaustively like any other functype value:
+
+```tsx
+import { Match } from "functype-react"
+import { toQueryState, useIOQuery } from "functype-react/query"
+
+function UserPanel({ id }: { id: string }) {
+  const query = useIOQuery(["user", id], ({ signal }) => Http.get<User>(`/users/${id}`, { signal }))
+
+  return (
+    <Match value={toQueryState(query)}>
+      {{
+        Idle: () => null,
+        Pending: () => <Spinner />,
+        Failure: ({ error }) => <Err e={error.error} />,
+        Success: ({ value }) => <Profile user={value} />,
+      }}
+    </Match>
+  )
+}
+```
+
+`Success` hands you a defined `User` — no `!`, no `| undefined` — and omitting a case is a compile error. A disabled query (`enabled: false`, never fetched) projects to `Idle`, an in-flight or paused one to `Pending`. `toMutationState` does the same for mutations, where React Query's own `idle` status maps straight onto `Idle`.
+
+The projection is a pure function over the result, so you keep everything else React Query gives you (`refetch`, `isFetching`, `invalidate`) on the original object.
+
+If the ADT is all you need, `useIOQueryState` skips the projection step — it returns `TaskState` directly, plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and `refetch`, mirroring what `useTask` returns in Tier 3:
+
+```tsx
+const user = useIOQueryState(["user", id], ({ signal }) => Http.get<User>(url, { signal }))
+
+<Match value={user}>
+  {{
+    Idle: () => null,
+    Pending: () => <Spinner />,
+    Failure: ({ error }) => <Err e={error.error} />,
+    Success: ({ value }) => <Profile user={value} />,
+  }}
+</Match>
+```
+
+`useIOMutationState` is the mutation counterpart, carrying `mutate` / `mutateAsync` / `reset` through alongside the state. Both read only the fields they project, so React Query's tracked-properties optimization still applies — your component isn't subscribed to fields it never renders. Reach for `useIOQuery` + `toQueryState` when you need the rest of the result (`isFetching`, `dataUpdatedAt`).
+
+Mutations mirror the shape (React Query supplies no `AbortSignal` to mutations, so the callback takes only the variables):
+
+```ts
+import { useIOMutation } from "functype-react/query"
+
+const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, { headers, body }), {
+  onError: (e) => toast(e.message, { detail: e.error._tag }),
+})
+```
+
+For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
+
+```ts
+import { ioQueryFn } from "functype-react/query"
+
+useQuery({
+  queryKey: ["connector-limits", userId],
+  queryFn: ioQueryFn(({ signal }) => Http.get<ConnectorLimits>(url, { headers, signal })),
+  enabled: !!userId,
+})
+```
+
+`ioQueryFn` is generic over the query context, so a richer one flows through unchanged — annotate the callback parameter to reach `pageParam` in an infinite query:
+
+```ts
+useInfiniteQuery({
+  queryKey: ["events"],
+  queryFn: ioQueryFn(({ signal, pageParam }: QueryFunctionContext<QueryKey, number>) =>
+    Http.get<Page>(url, { params: { cursor: pageParam }, signal }),
+  ),
+  initialPageParam: 0,
+  getNextPageParam: (last) => last.data.nextCursor,
+})
+```
+
+Both the hooks and the primitives are generic over any `IO<never, E, A>` — nothing here is HTTP-specific. `Error.message` is derived structurally (`formatIOError`); pass `formatError` to override it.
+
 ## Compatibility
 
 - **TypeScript**: `strict: true` + `noUncheckedIndexedAccess: true`. Loose configs will silently lose the type-level exhaustiveness guarantees.
 - **React**: peer dep range `>=18 <20`. Tier 3's `useTaskValue` (and consequently anything that depends on React 19's `use()` hook) is React-19-only at runtime; the rest of the package works on both.
 - **SSR / RSC**: hooks are client-only and marked with `"use client"`. `<Match>` family components are pure and render fine in Server Components.
+- **React Query**: Tier 5 targets `@tanstack/react-query` v5 (`>=5.0.0`), an optional peer. The `ioQueryFn` / `ioMutationFn` primitives type their context structurally, so they carry no `@tanstack` types and are unaffected by its major-version churn.
 
 ## Deferred to v0.2
 
