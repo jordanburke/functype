@@ -1,9 +1,12 @@
-/* eslint-disable functype/prefer-either -- This module IS the Either→throw bridge.
+/* eslint-disable functype/prefer-either -- This module IS the Either→rejection bridge.
  * React Query signals failure exclusively by promise rejection: `isError`, `onError`,
- * and retry all key off a rejected `queryFn`. Returning an `Either` here would be
+ * and retry all key off a rejected queryFn. Returning an `Either` here would be
  * indistinguishable from success to React Query — the very bug (see #239) that makes
  * `.run()` unusable as a `queryFn`. The throw is the contract, and it is confined to
- * these two functions so callers never have to write it themselves. */
+ * `runBoxed` so no caller ever has to write it. Scoped to the file rather than to each
+ * `throw` because the rule also fires on the enclosing function: three scattered
+ * suppressions would read as incidental exceptions rather than one deliberate design. */
+import { Try } from "functype"
 import type { IO } from "functype/io"
 
 import { IOQueryError } from "./IOQueryError"
@@ -28,6 +31,33 @@ export type IOBridgeOptions<E> = {
 }
 
 /**
+ * Runs an effect and returns its value, or throws a boxed {@link IOQueryError}.
+ *
+ * Two failure paths converge here:
+ * - the effect's typed error channel (`Left`) → boxed with `defect: false`
+ * - the factory throwing before an `IO` exists → boxed with `defect: true`
+ *
+ * The second matters because `.run()` itself never throws (defects raised *inside*
+ * the effect are folded into `Left` by the interpreter), but `io(input)` is ordinary
+ * user code that can throw while building the effect. Without this, that throw would
+ * escape unboxed and `error.error` would be `undefined` despite the declared type.
+ */
+const runBoxed = async <E, A>(effect: () => IO<never, E, A>, options?: IOBridgeOptions<E>): Promise<A> => {
+  const result = await Try(() => effect()).fold(
+    (thrown) => {
+      throw new IOQueryError(thrown as E, undefined, true)
+    },
+    (io) => io.run(),
+  )
+
+  if (result.isLeft()) {
+    throw new IOQueryError(result.value, options?.formatError?.(result.value))
+  }
+
+  return result.value
+}
+
+/**
  * Adapts an `IO<never, E, A>` into a React Query `queryFn`.
  *
  * `Right` resolves with the value; `Left` rejects with an {@link IOQueryError} that
@@ -47,15 +77,8 @@ export const ioQueryFn =
     io: (context: TContext) => IO<never, E, A>,
     options?: IOBridgeOptions<E>,
   ) =>
-  async (context: TContext): Promise<A> => {
-    const result = await io(context).run()
-
-    if (result.isLeft()) {
-      throw new IOQueryError(result.value, options?.formatError?.(result.value))
-    }
-
-    return result.value
-  }
+  (context: TContext): Promise<A> =>
+    runBoxed(() => io(context), options)
 
 /**
  * Adapts a variables-taking `IO<never, E, A>` into a React Query `mutationFn`.
@@ -71,12 +94,5 @@ export const ioQueryFn =
  */
 export const ioMutationFn =
   <E, A, V = void>(io: (variables: V) => IO<never, E, A>, options?: IOBridgeOptions<E>) =>
-  async (variables: V): Promise<A> => {
-    const result = await io(variables).run()
-
-    if (result.isLeft()) {
-      throw new IOQueryError(result.value, options?.formatError?.(result.value))
-    }
-
-    return result.value
-  }
+  (variables: V): Promise<A> =>
+    runBoxed(() => io(variables), options)

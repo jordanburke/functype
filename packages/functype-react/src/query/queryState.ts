@@ -42,6 +42,20 @@ export type MutationResultView<E, A> =
  * A disabled query (`enabled: false`, never fetched) projects to `Idle`; an
  * in-flight or paused one to `Pending`. Reuses the same `TaskState` that
  * `functype-react/async`'s `useTask` returns, so both async surfaces match alike.
+ *
+ * **Stale data on a failed refetch.** React Query keeps the last successful `data`
+ * while setting `status: "error"` when a *background refetch* fails. `TaskState` has
+ * no variant for "loaded, but the latest fetch failed", so that squashes to `Failure`
+ * and the still-held data is not surfaced through the ADT — a transient background
+ * failure will flip a loaded view to an error branch. This is the deliberate default:
+ * it never silently hides a failure. If you would rather keep rendering stale data,
+ * read `query.data` directly alongside the projection, or branch on
+ * `query.isRefetchError` before projecting.
+ *
+ * **Interruption.** `IO.run()` maps an interrupted effect to `Left(InterruptedError)`,
+ * which is not an `E`. Nothing in this subpath interrupts effects, so it will not
+ * arise here, but it is worth knowing that `.error` is `E` by construction rather
+ * than by proof.
  */
 export const toQueryState = <E, A>(result: QueryResultView<E, A>): TaskState<E, A> => {
   switch (result.status) {

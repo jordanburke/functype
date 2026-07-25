@@ -206,7 +206,14 @@ const user = useIOQueryState(["user", id], ({ signal }) => Http.get<User>(url, {
 </Match>
 ```
 
-`useIOMutationState` is the mutation counterpart, carrying `mutate` / `mutateAsync` / `reset` through alongside the state. Both read only the fields they project, so React Query's tracked-properties optimization still applies — your component isn't subscribed to fields it never renders. Reach for `useIOQuery` + `toQueryState` when you need the rest of the result (`isFetching`, `dataUpdatedAt`).
+`useIOMutationState` is the mutation counterpart, carrying `mutate` / `mutateAsync` / `reset` through alongside the state. Reach for `useIOQuery` + `toQueryState` when you need the rest of the result (`isFetching`, `dataUpdatedAt`).
+
+Both read only the fields they project. For **queries** that matters: React Query tracks which result properties an observer touches and re-renders only when those change, so projecting a subset keeps that optimization intact rather than subscribing your component to every field. (Tracked props accumulate over an observer's lifetime, so this is a floor, not a guarantee.) **Mutations have no such tracking** in React Query — `MutationObserver` notifies on every change regardless — so for `useIOMutationState` the narrow read is merely tidy, not an optimization.
+
+Two behaviours worth knowing before you rely on the ADT:
+
+- **A failed background refetch projects to `Failure` even though React Query still holds the last successful `data`.** `TaskState` has no "loaded but stale" variant. This is the deliberate default — it never silently hides a failure — but it does mean a transient refetch error flips a loaded view to the error branch. To keep rendering stale data, read `query.data` alongside the projection or branch on `query.isRefetchError` before projecting.
+- **If your effect factory throws synchronously** (before an `IO` is produced), the rejection is still boxed, but with `defect: true` and `.error` holding the raw thrown value rather than an `E`. Check `defect` before matching on `_tag` if that's reachable in your code.
 
 Mutations mirror the shape (React Query supplies no `AbortSignal` to mutations, so the callback takes only the variables):
 

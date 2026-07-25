@@ -15,7 +15,7 @@ import { useIOQuery } from "./useIOQuery"
  *
  * `refetch` keeps React Query's own signature rather than a lossy re-declaration.
  */
-export type UseIOQueryStateResult<E, A> = TaskState<IOQueryError<E>, A> &
+export type UseIOQueryStateResult<A, E> = TaskState<IOQueryError<E>, A> &
   Pick<UseQueryResult<A, IOQueryError<E>>, "refetch"> & {
     readonly isIdle: boolean
     readonly isPending: boolean
@@ -50,7 +50,7 @@ export function useIOQueryState<A, E, TData = A, TQueryKey extends QueryKey = Qu
   queryKey: TQueryKey,
   io: (context: QueryFunctionContext<TQueryKey>) => IO<never, E, A>,
   options?: UseIOQueryOptions<A, E, TData, TQueryKey>,
-): UseIOQueryStateResult<E, TData> {
+): UseIOQueryStateResult<TData, E> {
   const query = useIOQuery(queryKey, io, options)
   const state = toQueryState(query)
 

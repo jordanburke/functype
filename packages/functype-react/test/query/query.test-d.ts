@@ -72,7 +72,7 @@ describe("TaskState projection", () => {
 
 describe("useIOQueryState types", () => {
   it("stays exhaustively matchable despite the flags/refetch intersection", () => {
-    type Cases = MatchCases<UseIOQueryStateResult<HttpError, number>>
+    type Cases = MatchCases<UseIOQueryStateResult<number, HttpError>>
 
     // @ts-expect-error -- `Success` is missing; the intersection must not weaken this.
     const incomplete: Cases = { Idle: () => null, Pending: () => null, Failure: () => null }
@@ -80,14 +80,14 @@ describe("useIOQueryState types", () => {
   })
 
   it("narrows to a defined value on the Success branch", () => {
-    type Success = Extract<UseIOQueryStateResult<HttpError, number>, { _tag: "Success" }>
+    type Success = Extract<UseIOQueryStateResult<number, HttpError>, { _tag: "Success" }>
 
     expectTypeOf<Success["value"]>().toEqualTypeOf<number>()
     expectTypeOf<Success["isSuccess"]>().toEqualTypeOf<boolean>()
   })
 
   it("keeps the typed error reachable on the Failure branch", () => {
-    type Failure = Extract<UseIOQueryStateResult<HttpError, number>, { _tag: "Failure" }>
+    type Failure = Extract<UseIOQueryStateResult<number, HttpError>, { _tag: "Failure" }>
 
     expectTypeOf<Failure["error"]["error"]>().toEqualTypeOf<HttpError>()
   })

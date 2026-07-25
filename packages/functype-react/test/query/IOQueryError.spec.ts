@@ -40,10 +40,21 @@ describe("formatIOError", () => {
     expect(formatIOError({ _tag: "DecodeError" })).toBe("DecodeError")
   })
 
-  it("falls back to String() for untagged values", () => {
+  it("falls back to String() for untagged primitives", () => {
     expect(formatIOError("plain string")).toBe("plain string")
     expect(formatIOError(42)).toBe("42")
     expect(formatIOError(null)).toBe("null")
+  })
+
+  it("renders an untagged plain object as JSON rather than [object Object]", () => {
+    expect(formatIOError({ code: "E_LIMIT", retryable: false })).toBe('{"code":"E_LIMIT","retryable":false}')
+  })
+
+  it("falls back to String() when JSON serialization fails", () => {
+    const cyclic: { self?: unknown } = {}
+    cyclic.self = cyclic
+
+    expect(formatIOError(cyclic)).toBe("[object Object]")
   })
 })
 
@@ -78,6 +89,11 @@ describe("IOQueryError", () => {
 
   it("exposes the raw error as the native Error cause", () => {
     expect(new IOQueryError(error).cause).toBe(error)
+  })
+
+  it("defaults to defect: false, and records a defect when told to", () => {
+    expect(new IOQueryError(error).defect).toBe(false)
+    expect(new IOQueryError(new Error("boom"), undefined, true).defect).toBe(true)
   })
 })
 

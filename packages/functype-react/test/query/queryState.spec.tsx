@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react"
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { IO } from "functype/io"
 import { describe, expect, it } from "vitest"
 
@@ -82,6 +82,31 @@ describe("projection over live hook results", () => {
     if (state._tag === "Failure") {
       expect(state.error.error).toBe(forbidden)
     }
+  })
+
+  // Pins the documented squash: React Query holds the last successful data while
+  // reporting status "error" after a failed background refetch, and TaskState has no
+  // variant for "loaded but stale", so it projects to Failure. Change this test
+  // deliberately if that default is ever revisited.
+  it("projects a failed refetch to Failure even though data is still held", async () => {
+    let attempt = 0
+    const { result } = renderHook(
+      () =>
+        useIOQuery<{ seats: number }, StatusError>(["state", "refetch-fail"], () => {
+          attempt += 1
+          return attempt === 1 ? IO.succeed({ seats: 5 }) : IO.fail(forbidden)
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(toQueryState(result.current)).toEqual({ _tag: "Success", value: { seats: 5 } })
+
+    await act(() => result.current.refetch().then(() => undefined))
+    await waitFor(() => expect(result.current.status).toBe("error"))
+
+    expect(result.current.data).toEqual({ seats: 5 })
+    expect(toQueryState(result.current)._tag).toBe("Failure")
   })
 
   it("projects a real useIOMutation result, starting at Idle", async () => {

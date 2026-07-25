@@ -46,6 +46,29 @@ describe("ioQueryFn", () => {
     expect((error as IOQueryError<StatusError>).message).toBe("tier cap hit (403)")
   })
 
+  // A factory throw happens before any IO exists, so the interpreter's own defect
+  // handling never sees it. Unboxed, it would reject with a raw value while the
+  // declared error type says IOQueryError — leaving `.error` undefined.
+  it("boxes a synchronous throw from the effect factory as a defect", async () => {
+    const queryFn = ioQueryFn<StatusError, number>(() => {
+      throw new Error("factory blew up")
+    })
+
+    const error = await queryFn(context()).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(IOQueryError)
+    expect((error as IOQueryError<unknown>).defect).toBe(true)
+    expect((error as IOQueryError<unknown>).error).toBeInstanceOf(Error)
+    expect((error as IOQueryError<unknown>).message).toBe("factory blew up")
+  })
+
+  it("marks a typed Left as a non-defect", async () => {
+    const queryFn = ioQueryFn<StatusError, number>(() => IO.fail(forbidden))
+    const error = await queryFn(context()).catch((e: unknown) => e)
+
+    expect((error as IOQueryError<StatusError>).defect).toBe(false)
+  })
+
   it("passes the AbortSignal through to the effect factory", async () => {
     const controller = new AbortController()
     let seen: AbortSignal | undefined
@@ -72,5 +95,15 @@ describe("ioMutationFn", () => {
     const error = await mutationFn(undefined).catch((e: unknown) => e)
     expect(error).toBeInstanceOf(IOQueryError)
     expect((error as IOQueryError<StatusError>).error.status).toBe(403)
+  })
+
+  it("boxes a synchronous throw from the effect factory as a defect", async () => {
+    const mutationFn = ioMutationFn<StatusError, string, void>(() => {
+      throw new Error("factory blew up")
+    })
+
+    const error = await mutationFn(undefined).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(IOQueryError)
+    expect((error as IOQueryError<unknown>).defect).toBe(true)
   })
 })
