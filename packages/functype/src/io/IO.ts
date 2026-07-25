@@ -886,6 +886,21 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 }
 
 /**
+ * The sync interpreter signals interruption by throwing `InterruptedError` (see the
+ * `Interrupt` case below), so the recovery combinators' `catch` blocks would otherwise
+ * absorb it and turn a cancelled effect into a successful value. Interruption is
+ * control flow, not a domain failure — it must pass through every recovery boundary.
+ *
+ * The async interpreter gets this for free by branching on `Exit.isFailure()`; the sync
+ * path needs it stated explicitly.
+ */
+const rethrowIfInterrupted = (e: unknown): void => {
+  if (e instanceof InterruptedError) {
+    throw e
+  }
+}
+
+/**
  * Interprets and runs an effect synchronously
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
@@ -929,7 +944,8 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
     case "Recover": {
       try {
         return runEffectSync(_fx(effect.effect), context)
-      } catch {
+      } catch (e) {
+        rethrowIfInterrupted(e)
         return effect.fallback
       }
     }
@@ -939,6 +955,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         // is known at runtime to match A since RecoverWith preserves the outer A.
         return unsafeCoerce(runEffectSync(_fx(effect.effect), context))
       } catch (e) {
+        rethrowIfInterrupted(e)
         const recoveryIO = effect.f(e)
         return runEffectSync(_fx(recoveryIO), context)
       }
@@ -948,6 +965,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         const a = runEffectSync(_fx(effect.effect), context)
         return effect.onSuccess(a)
       } catch (e) {
+        rethrowIfInterrupted(e)
         return effect.onFailure(e)
       }
     }
@@ -1049,8 +1067,12 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "Recover": {
         const exitA = await runEffect(_fx(effect.effect), context)
-        if (exitA.isSuccess()) {
-          return exitA
+        // Only a *failure* is recoverable. Success passes through, and so does
+        // Interrupted — interruption is control flow, not a domain error, so a
+        // fallback must never convert a cancelled effect into a successful value.
+        // Matches the isFailure() guard in MapError / RecoverWith / Fold below.
+        if (!exitA.isFailure()) {
+          return unsafeCoerce(exitA)
         }
         return Exit.succeed(effect.fallback)
       }

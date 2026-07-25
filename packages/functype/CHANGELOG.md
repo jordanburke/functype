@@ -6,6 +6,20 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — interruption is no longer swallowed by recovery combinators (fixes #243).**
+
+`.recover(fallback)` treated any non-success outcome as recoverable, so an interrupted effect silently resolved with the fallback:
+
+```ts
+await IO.interrupt().recover(42).runExit() // was Success(42), now Interrupted
+```
+
+Interruption is control flow, not a domain failure — it must survive every recovery boundary. On the async interpreter `Recover` checked only `isSuccess()`, unlike `MapError` / `RecoverWith` / `Fold`, which all guard on `isFailure()`; it now matches them. The sync interpreter was affected more broadly: it signals interruption by _throwing_ `InterruptedError`, and the bare `catch` blocks in `Recover`, `RecoverWith`, **and** `Fold` all absorbed it. All three now rethrow it first.
+
+`.timeoutTo(ms, fallback)` is built on `.recover`, so it inherited the bug and is fixed with it.
+
+Recovery of genuine failures and of defects is unchanged, and success still passes through untouched — covered by regression tests alongside the fix. Today the bug is reachable only by composing `IO.interrupt()` explicitly; it becomes materially more important once externally-triggered cancellation lands (#242), where it would let a cancelled effect resolve successfully with a fallback value.
+
 ## 1.6.3 - 2026-07-13
 
 **`eslint-plugin-functype` — `prefer-fold` no longer false-positives on nullable ternaries that yield `undefined`/`null`.**
