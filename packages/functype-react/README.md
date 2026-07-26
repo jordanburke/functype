@@ -189,7 +189,7 @@ function UserPanel({ id }: { id: string }) {
 
 `Success` hands you a defined `User` — no `!`, no `| undefined` — and omitting a case is a compile error. A disabled query (`enabled: false`, never fetched) projects to `Idle`, an in-flight or paused one to `Pending`. `toMutationState` does the same for mutations, where React Query's own `idle` status maps straight onto `Idle`.
 
-The projection is a pure function over the result, so you keep everything else React Query gives you (`refetch`, `isFetching`, `invalidate`) on the original object.
+The projection is a pure function over the result, so you keep everything else React Query gives you (`refetch`, `isFetching`, `dataUpdatedAt`) on the original object. (Invalidation is a client-level operation — `queryClient.invalidateQueries()` — not a method on the result.)
 
 If the ADT is all you need, `useIOQueryState` skips the projection step — it returns `TaskState` directly, plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and `refetch`, mirroring what `useTask` returns in Tier 3:
 

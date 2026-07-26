@@ -43,7 +43,7 @@ export type UseIOQueryStateResult<A, E> = TaskState<IOQueryError<E>, A> &
  * Reads only `status` / `fetchStatus` / `data` / `error` / `refetch` off the query, so
  * React Query's tracked-properties optimization still applies — the component is not
  * subscribed to fields it never renders. When you need the rest of the result
- * (`isFetching`, `dataUpdatedAt`, `invalidate`), use {@link useIOQuery} with
+ * (`isFetching`, `dataUpdatedAt`, `failureCount`), use {@link useIOQuery} with
  * {@link toQueryState} instead.
  */
 export function useIOQueryState<A, E, TData = A, TQueryKey extends QueryKey = QueryKey>(
