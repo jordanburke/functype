@@ -45,6 +45,14 @@ describe("interruption is not recoverable", () => {
       expect(exit.isInterrupted()).toBe(true)
     })
 
+    it("mapError passes interruption through unmapped", async () => {
+      const exit = await IO.interrupt()
+        .mapError(() => new Error("mapped"))
+        .runExit()
+
+      expect(exit.isInterrupted()).toBe(true)
+    })
+
     it("surfaces interruption as Left(InterruptedError) from run()", async () => {
       const result = await IO.interrupt().recover(42).run()
 
@@ -106,7 +114,29 @@ describe("interruption is not recoverable", () => {
       expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
     })
 
+    // `mapError` doesn't convert interruption into a *success*, so it reads as harmless —
+    // but it rewrites `InterruptedError` into a domain error of the caller's choosing,
+    // which is just as lossy: downstream `instanceof InterruptedError` checks stop
+    // matching, and the async interpreter disagrees with the sync one about the outcome.
+    it("mapError passes interruption through unmapped", () => {
+      const result = IO.interrupt()
+        .mapError(() => new Error("mapped"))
+        .runSync()
+
+      expect(result.isLeft()).toBe(true)
+      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+    })
+
     // Regressions.
+    it("still maps a genuine failure", () => {
+      const result = IO.fail(new Error("boom"))
+        .mapError(() => new Error("mapped"))
+        .runSync()
+
+      expect(result.isLeft()).toBe(true)
+      expect(result.isLeft() && (result.value as Error).message).toBe("mapped")
+    })
+
     it("still recovers a genuine failure", () => {
       const result = IO.fail(new Error("boom")).recover(42).runSync()
 

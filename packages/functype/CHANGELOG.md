@@ -14,7 +14,18 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 await IO.interrupt().recover(42).runExit() // was Success(42), now Interrupted
 ```
 
-Interruption is control flow, not a domain failure — it must survive every recovery boundary. On the async interpreter `Recover` checked only `isSuccess()`, unlike `MapError` / `RecoverWith` / `Fold`, which all guard on `isFailure()`; it now matches them. The sync interpreter was affected more broadly: it signals interruption by _throwing_ `InterruptedError`, and the bare `catch` blocks in `Recover`, `RecoverWith`, **and** `Fold` all absorbed it. All three now rethrow it first.
+Interruption is control flow, not a domain failure — it must survive every error-handling boundary. On the async interpreter `Recover` checked only `isSuccess()`, unlike `MapError` / `RecoverWith` / `Fold`, which all guard on `isFailure()`; it now matches them. The sync interpreter was affected more broadly: it signals interruption by _throwing_ `InterruptedError`, and the bare `catch` blocks in `Recover`, `RecoverWith`, `Fold`, **and** `MapError` all absorbed it. All four now rethrow it first.
+
+`MapError` is the subtler one, and the only case where the two interpreters disagreed about the outcome rather than merely one of them being wrong:
+
+```ts
+IO.interrupt()
+  .mapError(() => new Error("mapped"))
+  .runSync()
+// was Left(Error("mapped")) — sync only; async already returned Interrupted
+```
+
+It doesn't manufacture a success, so it looks harmless, but rewriting `InterruptedError` into a domain error is just as lossy: downstream `instanceof InterruptedError` checks stop matching.
 
 `.timeoutTo(ms, fallback)` is built on `.recover`, so it inherited the bug and is fixed with it.
 

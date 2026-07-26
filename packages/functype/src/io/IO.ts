@@ -887,9 +887,11 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
 /**
  * The sync interpreter signals interruption by throwing `InterruptedError` (see the
- * `Interrupt` case below), so the recovery combinators' `catch` blocks would otherwise
- * absorb it and turn a cancelled effect into a successful value. Interruption is
- * control flow, not a domain failure — it must pass through every recovery boundary.
+ * `Interrupt` case below), so the error-handling combinators' `catch` blocks would
+ * otherwise absorb it — turning a cancelled effect into a successful value
+ * (`Recover` / `RecoverWith` / `Fold`) or into a domain error of the caller's choosing
+ * (`MapError`). Interruption is control flow, not a domain failure — it must pass
+ * through every such boundary unchanged.
  *
  * The async interpreter gets this for free by branching on `Exit.isFailure()`; the sync
  * path needs it stated explicitly.
@@ -938,6 +940,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       try {
         return runEffectSync(_fx(effect.effect), context)
       } catch (e) {
+        rethrowIfInterrupted(e)
         throw effect.f(e)
       }
     }
