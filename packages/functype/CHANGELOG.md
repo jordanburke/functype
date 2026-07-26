@@ -31,6 +31,20 @@ It doesn't manufacture a success, so it looks harmless, but rewriting `Interrupt
 
 Recovery of genuine failures and of defects is unchanged, and success still passes through untouched — covered by regression tests alongside the fix. Today the bug is reachable only by composing `IO.interrupt()` explicitly; it becomes materially more important once externally-triggered cancellation lands (#242), where it would let a cancelled effect resolve successfully with a fallback value.
 
+**`functype` — `runSync()` no longer returns the fallback when `timeout` / `race` is recovered downstream (fixes #246).**
+
+`timeout` and `race` have no synchronous semantics, and the sync interpreter signalled that by throwing a plain `Error` — indistinguishable from a failed effect, so any recovery combinator downstream absorbed it. Since `timeoutTo(ms, fallback)` is defined as `io.timeout(ms).recover(fallback)`, the two were always paired:
+
+```ts
+IO.succeed(1).timeoutTo(50, 99).runSync() // was Right(99), now Left(UnsupportedSyncOperationError)
+```
+
+A *successful* effect returned the wrong value with no error anywhere. `fold` had the same shape, taking the failure branch for an effect that succeeded.
+
+New exported error type `UnsupportedSyncOperationError` (from `functype/io`), carrying `operation: "timeout" | "race"`. It is a programmer error — the effect was built for the wrong terminal — so it joins `InterruptedError` as non-recoverable: the sync guard is now `rethrowIfNonRecoverable`, and `Recover` / `RecoverWith` / `Fold` / `MapError` all pass it through untouched.
+
+The async interpreter supports both combinators and is entirely unaffected; `await IO.succeed(1).timeoutTo(50, 99).runExit()` is `Success(1)` as before. Recovery of genuine failures is unchanged.
+
 ## 1.6.3 - 2026-07-13
 
 **`eslint-plugin-functype` — `prefer-fold` no longer false-positives on nullable ternaries that yield `undefined`/`null`.**
