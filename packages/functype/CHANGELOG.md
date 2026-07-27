@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.7.0 - 2026-07-27
+
 **`functype` — `bracketExit` reports interruption to `release` as `Interrupted` on the sync interpreter.**
 
 `bracketExit`'s contract is that `release` receives the `Exit` describing how `use` ended, so cleanup can branch on cancellation — a distinct rollback path, or telemetry that shouldn't count cancellations as failures. The sync interpreter built that `Exit` from a caught throw and so always reported `Failure`:
