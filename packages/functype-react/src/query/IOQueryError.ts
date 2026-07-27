@@ -19,6 +19,7 @@ type TaggedError = {
   readonly url?: unknown
   readonly status?: unknown
   readonly statusText?: unknown
+  readonly message?: unknown
 }
 
 const isTaggedError = (e: unknown): e is TaggedError =>
@@ -45,6 +46,16 @@ export const formatIOError = (error: unknown): string => {
       const statusText =
         typeof error.statusText === "string" && error.statusText.length > 0 ? ` ${error.statusText}` : ""
       return `HTTP ${error.status}${statusText}${where}`
+    }
+
+    // A tagged error carrying its own `message` is the normal shape for a domain error
+    // in the `IO` channel, and that message is what the author wrote for a human to
+    // read. Falling back to the bare tag was the one case where information already
+    // present got discarded — a raw `Error` gets `.message`, an untagged object gets
+    // JSON, but a tagged one got neither. None of functype's own `HttpError` variants
+    // carry a `message`, so the HTTP renderings above are unaffected.
+    if (typeof error.message === "string" && error.message.length > 0) {
+      return error.message
     }
 
     return `${error._tag}${where}`
@@ -79,17 +90,26 @@ export class IOQueryError<E> extends Error {
   /**
    * The raw functype error channel value — discriminable via its own `_tag`.
    *
-   * When {@link defect} is `true` this is **not** an `E`: it is whatever the effect
-   * factory threw before an `IO` was ever produced. Check `defect` before matching
-   * on `_tag` if your factory can throw synchronously.
+   * When {@link defect} is `true` this is **not** an `E`. Check `defect` before
+   * matching on `_tag`.
    */
   readonly error: E
 
   /**
-   * `true` when this wraps an unexpected throw rather than a value from the effect's
-   * typed error channel — i.e. the effect factory itself threw. Kept as an explicit
-   * flag rather than widening `E` to `unknown`, which would force every consumer to
-   * handle a case that should never occur.
+   * `true` when {@link error} is *not* a value from the effect's typed error channel.
+   * Three things set it:
+   *
+   * - the effect factory threw before an `IO` was ever produced
+   * - the effect produced a defect (`Exit.Die`) — a throwing `IO.sync` thunk, a
+   *   throwing `map` / `flatMap` / `mapError` callback, or `IO.die`
+   * - the effect was interrupted, so `error` is an `InterruptedError`
+   *
+   * Kept as an explicit flag rather than widening `E` to `unknown`, which would force
+   * every consumer to handle a case that should never occur.
+   *
+   * `defect: false` genuinely means `error` is an `E`. Before 1.8.0 it did not: a
+   * defect reached the adapter as an ordinary `Left` and was indistinguishable from a
+   * typed failure, so the documented guard didn't guard anything (#259).
    */
   readonly defect: boolean
 

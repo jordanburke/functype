@@ -55,7 +55,10 @@ type IO<R, E, A> = {
 
 // Exit type for capturing full outcome
 type Exit<E, A> =
-  { _tag: "Success"; value: A } | { _tag: "Failure"; error: E } | { _tag: "Interrupted"; fiberId: string }
+  | { _tag: "Success"; value: A }
+  | { _tag: "Failure"; error: E } // a value from the declared E channel
+  | { _tag: "Die"; defect: unknown } // a defect — not an E (throwing thunk/callback, IO.die)
+  | { _tag: "Interrupted"; fiberId: string }
 ```
 
 ### Constructors
@@ -278,7 +281,7 @@ Users can choose which to use based on their needs. Integration/migration can be
 ### New Files - Core IO
 
 - `src/io/IO.ts` - Main IO<R, E, A> implementation
-- `src/io/Exit.ts` - Exit<E, A> type (Success/Failure/Interrupted)
+- `src/io/Exit.ts` - Exit<E, A> type (Success/Failure/Die/Interrupted)
 - `src/io/Runtime.ts` - Effect runtime and executors
 - `src/io/index.ts` - Module exports
 

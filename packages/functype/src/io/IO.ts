@@ -821,9 +821,11 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       if (exit.isSuccess()) {
         return Right(exit.orThrow())
       }
-      // All errors including InterruptedError go to Left
-      const error = exit.isFailure() ? (exit.toValue() as { error: E }).error : new InterruptedError()
-      return Left(error as E)
+      // All errors including InterruptedError go to Left. A defect lands here too, as the
+      // raw thrown value — `Either` has no third branch for it. `runExit()` is the
+      // terminal that keeps the distinction.
+      const channel = errorChannel(exit)
+      return Left((channel ? channel.value : new InterruptedError()) as E)
     },
 
     async runOrThrow(this: IO<never, E, A>): Promise<A> {
@@ -831,7 +833,8 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       if (exit.isSuccess()) {
         return exit.orThrow()
       }
-      throw exit.isFailure() ? (exit.toValue() as { error: E }).error : new InterruptedError()
+      const channel = errorChannel(exit)
+      throw channel ? channel.value : new InterruptedError()
     },
 
     runSync(this: IO<never, E, A>): Either<E, A> {
@@ -863,7 +866,8 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       if (exit.isSuccess()) {
         return unsafeCoerce(Try(() => exit.orThrow()))
       }
-      const error = exit.isFailure() ? (exit.toValue() as { error: E }).error : new Error("Effect was interrupted")
+      const channel = errorChannel(exit)
+      const error = channel ? channel.value : new Error("Effect was interrupted")
       return unsafeCoerce(
         Try(() => {
           throw error
@@ -921,13 +925,33 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
  * Both must pass through every recovery boundary unchanged, so callers see the real
  * outcome rather than a plausible-looking substitute.
  *
- * The async interpreter gets this for free by branching on `Exit.isFailure()`; the sync
- * path needs it stated explicitly.
+ * The async interpreter gets this for free by branching on {@link errorChannel}, which
+ * excludes Interrupted; the sync path needs it stated explicitly.
  */
 const rethrowIfNonRecoverable = (e: unknown): void => {
   if (e instanceof InterruptedError || e instanceof UnsupportedSyncOperationError) {
     throw e
   }
+}
+
+/**
+ * The value in an Exit's error channel, if it has one: the typed error of a `Failure`,
+ * or the defect of a `Die`. `undefined` for `Success` and `Interrupted`, which carry
+ * neither.
+ *
+ * Wrapped in a box rather than returned bare because a `Failure` may legitimately carry
+ * `undefined` as its error — `errorChannel(exit) === undefined` must mean "no error
+ * channel", not "an error channel holding `undefined`".
+ *
+ * This is what makes a defect recoverable: every recovery combinator branches on this
+ * rather than on `isFailure()`, so `recover` / `recoverWith` / `fold` / `mapError` see a
+ * `Die` exactly as they saw it before `Die` existed. Interruption stays excluded (#243).
+ */
+const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined => {
+  const raw = exit.toValue()
+  if (raw._tag === "Failure") return { value: raw.error }
+  if (raw._tag === "Die") return { value: raw.defect }
+  return undefined
 }
 
 /**
@@ -1033,9 +1057,18 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         // interrupted `use` must arrive as Interrupted rather than Failure — otherwise a
         // release that branches on cancellation (distinct rollback, telemetry) can't see
         // it. The async interpreter already passes the real Exit through; this keeps the
-        // sync path in agreement. `UnsupportedSyncOperationError` stays a Failure: it is
-        // a defect, not a cancellation, and Exit has no defect variant.
-        exit = e instanceof InterruptedError ? unsafeCoerce(Exit.interrupted()) : unsafeCoerce(Exit.fail(e as E))
+        // sync path in agreement.
+        //
+        // `UnsupportedSyncOperationError` is the one defect the sync interpreter can name
+        // with certainty, so it arrives as Die. Everything else is ambiguous here: the
+        // sync interpreter signals `Fail` and `Die` with the same bare `throw`, so a
+        // thrown value could be either and Failure stays the honest default.
+        exit =
+          e instanceof InterruptedError
+            ? unsafeCoerce(Exit.interrupted())
+            : e instanceof UnsupportedSyncOperationError
+              ? unsafeCoerce(Exit.die(e))
+              : unsafeCoerce(Exit.fail(e as E))
         throw e
       } finally {
         runEffectSync(_fx(effect.release(resource, exit!)), context)
@@ -1062,19 +1095,34 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       case "Fail":
         return unsafeCoerce(Exit.fail(effect.error))
       case "Die":
-        throw effect.defect
+        return unsafeCoerce(Exit.die(effect.defect))
       case "Sync":
+        // `IO.sync` is `IO<never, never, A>` — a throw here cannot be an `E`, so it falls
+        // to the outer catch and becomes a defect.
         return unsafeCoerce(Exit.succeed(effect.thunk()))
       case "Async": {
-        const result = await effect.thunk()
-        return unsafeCoerce(Exit.succeed(result))
+        // `IO.async` is `IO<never, unknown, A>`: a rejection *is* the declared error
+        // channel, not a defect. Caught here so the outer catch doesn't reclassify it —
+        // `IO.tryPromise` is `async(...).mapError(catch)`, and a `Die` would sail past
+        // `MapError`'s error-channel branch, leaving the `catch` handler never invoked.
+        try {
+          const result = await effect.thunk()
+          return unsafeCoerce(Exit.succeed(result))
+        } catch (e) {
+          return unsafeCoerce(Exit.fail(e))
+        }
       }
       case "Auto": {
-        const result = effect.thunk()
-        if (result instanceof Promise) {
-          return unsafeCoerce(Exit.succeed(await result))
-        } else {
-          return unsafeCoerce(Exit.succeed(result))
+        // Same reasoning as `Async` — the `IO(...)` constructor also declares `E = unknown`.
+        try {
+          const result = effect.thunk()
+          if (result instanceof Promise) {
+            return unsafeCoerce(Exit.succeed(await result))
+          } else {
+            return unsafeCoerce(Exit.succeed(result))
+          }
+        } catch (e) {
+          return unsafeCoerce(Exit.fail(e))
         }
       }
       case "Map": {
@@ -1094,21 +1142,21 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "MapError": {
         const exitA = await runEffect(_fx(effect.effect), context)
-        if (exitA.isSuccess()) {
+        const channel = errorChannel(exitA)
+        if (!channel) {
           return unsafeCoerce(exitA)
         }
-        if (exitA.isFailure()) {
-          return unsafeCoerce(Exit.fail(effect.f((exitA.toValue() as { error: unknown }).error)))
-        }
-        return unsafeCoerce(exitA)
+        // A mapped defect becomes a `Failure`: the caller's mapper returns a genuine `E`,
+        // so the outcome really is a typed failure from here on.
+        return unsafeCoerce(Exit.fail(effect.f(channel.value)))
       }
       case "Recover": {
         const exitA = await runEffect(_fx(effect.effect), context)
-        // Only a *failure* is recoverable. Success passes through, and so does
-        // Interrupted — interruption is control flow, not a domain error, so a
+        // Only something in the error channel is recoverable. Success passes through, and
+        // so does Interrupted — interruption is control flow, not a domain error, so a
         // fallback must never convert a cancelled effect into a successful value.
-        // Matches the isFailure() guard in MapError / RecoverWith / Fold below.
-        if (!exitA.isFailure()) {
+        // Matches the errorChannel guard in MapError / RecoverWith / Fold.
+        if (!errorChannel(exitA)) {
           return unsafeCoerce(exitA)
         }
         return Exit.succeed(effect.fallback)
@@ -1117,22 +1165,21 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         // effect.effect is IO<R, unknown, unknown> (E-erased for variance). Exit branches
         // are re-wrapped via unsafeCoerce — outer A/E are preserved by RecoverWith's semantics.
         const exitA = await runEffect(_fx(effect.effect), context)
-        if (exitA.isSuccess()) {
+        const channel = errorChannel(exitA)
+        if (!channel) {
           return unsafeCoerce(exitA)
         }
-        if (exitA.isFailure()) {
-          const recoveryIO = effect.f((exitA.toValue() as { error: unknown }).error)
-          return runEffect(_fx(recoveryIO), context)
-        }
-        return unsafeCoerce(exitA)
+        const recoveryIO = effect.f(channel.value)
+        return runEffect(_fx(recoveryIO), context)
       }
       case "Fold": {
         const exitA = await runEffect(_fx(effect.effect), context)
+        const channel = errorChannel(exitA)
+        if (channel) {
+          return Exit.succeed(effect.onFailure(channel.value))
+        }
         if (exitA.isSuccess()) {
           return Exit.succeed(effect.onSuccess(exitA.orThrow()))
-        }
-        if (exitA.isFailure()) {
-          return Exit.succeed(effect.onFailure((exitA.toValue() as { error: unknown }).error))
         }
         return exitA as ExitType<E, A>
       }
@@ -1190,8 +1237,11 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
     }
   } catch (e) {
-    // Unhandled defects
-    return Exit.fail(e as E)
+    // Everything reaching here threw out of a callback the type system said could not
+    // produce an `E`: a `Sync` thunk, a `map` / `flatMap` / `mapError` function, a `Fold`
+    // handler, a `bracket` release. `Async` and `Auto` rejections are caught at their own
+    // cases above, because those constructors *do* declare `E = unknown`.
+    return Exit.die(e)
   }
 }
 

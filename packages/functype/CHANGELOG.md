@@ -6,6 +6,56 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — `Exit` gains a `Die` variant so defects stop masquerading as typed errors (fixes #259).**
+
+`IO.sync` and `IO.die` are `IO<never, never, A>`: the declared error channel is `never`, so nothing they put there can be an `E`. `Exit` had nowhere to say that — a throwing `IO.sync` thunk, a throwing `map` / `flatMap` / `mapError` callback, and `IO.die` all collapsed into `Failure`, indistinguishable from `IO.fail(e)`:
+
+```ts
+await IO.die(new Error("boom")).runExit() // was Failure(Error), now Die(Error)
+await IO.sync(() => {
+  throw x
+}).runExit() // was Failure(x), now Die(x)
+```
+
+`Exit` now has `isDie()`, `Exit.die(defect)`, an `Exit.isDie` companion guard, an optional fourth `onDie` argument on `fold`, and an optional `Die` key on `match`. Both are appended/optional and fall back to the failure handler, so existing three-argument `fold` calls and three-key `match` objects keep compiling **and** keep receiving defects where they received them before.
+
+Defects stay **recoverable** — `recover` / `recoverWith` / `fold` / `mapError` treat a `Die` exactly as they treated it before, and `mapError` over a defect produces a `Failure` because the supplied mapper returns a genuine `E`. This is where functype parts company with ZIO: promoting defects to uncatchable would silently change what every existing `.recover()` catches. `Die` is an observability fix, not a control-flow one.
+
+The `Either` terminals are unchanged: `run()`, `runSync()`, and `runOrThrow()` still surface a defect as the raw value, because `Either` has no third branch. `runExit()` is the terminal that carries the distinction.
+
+The dividing line is the _declared_ channel, not whether something threw. `IO.async` and the `IO(...)` constructor are `IO<never, unknown, A>`, so their rejections are legitimate errors and remain `Failure` — necessary as well as correct, since `IO.tryPromise` is `async(...).mapError(catch)` and a defect would sail past `mapError`, leaving every `catch` handler in the library uninvoked.
+
+Also supersedes a note in 1.7.0: the sync `bracketExit` now reports `UnsupportedSyncOperationError` to `release` as `Die` rather than `Failure`. It remains the only defect the sync interpreter can name with certainty — `runSync` returns `Either`, and the sync interpreter signals `Fail` and `Die` with the same bare `throw`, so `Die` is observable through the async terminals and through a `bracketExit` release.
+
+**`functype-react` — `IOQueryError.defect` is now accurate (fixes #259).**
+
+`defect: false` is documented to mean "`.error` really is an `E`", and consumers are told to check it before matching on `_tag`. The guard was unsound: `ioQueryFn` / `ioMutationFn` read `run()`, whose `Either` cannot express a defect, so a throwing error-mapper landed in the `Left` and read `defect: false` while carrying something that was not an `E`:
+
+```ts
+ioMutationFn(() =>
+  IO.tryPromise({
+    try: () => Promise.reject(new Error("original")),
+    catch: () => {
+      throw new Error("mapper bug")
+    },
+  }),
+)
+// caught: defect was false, .error was Error("mapper bug") with no _tag
+```
+
+The bridge now reads `runExit()` and sets `defect: true` for a `Die`, for a factory that throws before an `IO` exists, and for interruption (whose `InterruptedError` is no more an `E` than a defect is). `defect: false` now genuinely implies `.error` is an `E`.
+
+**`functype-react` — `formatIOError` no longer discards a tagged error's `message` (fixes #258).**
+
+A raw `Error` had `.message` preferred and an untagged object got a JSON rendering, but a _tagged_ object carrying a `message` fell back to the bare tag — the one shape where information already present was thrown away. Since `formatIOError` supplies `IOQueryError.message`, a dead session surfaced to the user as `"AuthError"` rather than `"No session"`:
+
+```ts
+formatIOError({ _tag: "AuthError", message: "No session" })
+// was "AuthError", now "No session"
+```
+
+The HTTP renderings are unaffected — no `HttpError` variant carries a `message`, and a numeric `status` still wins.
+
 ## 1.7.0 - 2026-07-27
 
 **`functype` — `bracketExit` reports interruption to `release` as `Interrupted` on the sync interpreter.**

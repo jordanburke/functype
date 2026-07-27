@@ -213,7 +213,7 @@ Both read only the fields they project. For **queries** that matters: React Quer
 Two behaviours worth knowing before you rely on the ADT:
 
 - **A failed background refetch projects to `Failure` even though React Query still holds the last successful `data`.** `TaskState` has no "loaded but stale" variant. This is the deliberate default — it never silently hides a failure — but it does mean a transient refetch error flips a loaded view to the error branch. To keep rendering stale data, read `query.data` alongside the projection or branch on `query.isRefetchError` before projecting.
-- **If your effect factory throws synchronously** (before an `IO` is produced), the rejection is still boxed, but with `defect: true` and `.error` holding the raw thrown value rather than an `E`. Check `defect` before matching on `_tag` if that's reachable in your code.
+- **`defect: true` means `.error` is not an `E`** — check it before matching on `_tag`. It is set when the effect factory throws before an `IO` is produced, when the effect produces a defect (`Exit.Die`: a throwing `IO.sync` thunk, a throwing `map`/`flatMap`/`mapError` callback, or `IO.die`), or when the effect is interrupted. Conversely `defect: false` genuinely means `.error` is an `E`; before 1.8.0 it did not, because a defect reached the bridge as an ordinary `Left` indistinguishable from a typed failure.
 
 Mutations mirror the shape (React Query supplies no `AbortSignal` to mutations, so the callback takes only the variables):
 
@@ -250,7 +250,7 @@ useInfiniteQuery({
 })
 ```
 
-Both the hooks and the primitives are generic over any `IO<never, E, A>` — nothing here is HTTP-specific. `Error.message` is derived structurally (`formatIOError`); pass `formatError` to override it.
+Both the hooks and the primitives are generic over any `IO<never, E, A>` — nothing here is HTTP-specific. `Error.message` is derived structurally (`formatIOError`); pass `formatError` to override it. The derivation prefers, in order: a raw `Error`'s `.message`, the HTTP shape (`HTTP 403 Forbidden — /api/x`) for anything carrying a numeric `status`, a tagged error's own `message`, then the bare `_tag`, then JSON.
 
 ## Compatibility
 

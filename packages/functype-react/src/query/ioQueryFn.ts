@@ -7,7 +7,7 @@
  * `throw` because the rule also fires on the enclosing function: three scattered
  * suppressions would read as incidental exceptions rather than one deliberate design. */
 import { Try } from "functype"
-import type { IO } from "functype/io"
+import { InterruptedError, type IO } from "functype/io"
 
 import { IOQueryError } from "./IOQueryError"
 
@@ -33,28 +33,47 @@ export type IOBridgeOptions<E> = {
 /**
  * Runs an effect and returns its value, or throws a boxed {@link IOQueryError}.
  *
- * Two failure paths converge here:
- * - the effect's typed error channel (`Left`) → boxed with `defect: false`
+ * Three failure paths converge here:
+ * - the effect's typed error channel (`Failure`) → boxed with `defect: false`
+ * - a defect raised *inside* the effect (`Die`) → boxed with `defect: true`
  * - the factory throwing before an `IO` exists → boxed with `defect: true`
  *
- * The second matters because `.run()` itself never throws (defects raised *inside*
- * the effect are folded into `Left` by the interpreter), but `io(input)` is ordinary
- * user code that can throw while building the effect. Without this, that throw would
- * escape unboxed and `error.error` would be `undefined` despite the declared type.
+ * The third matters because running an effect never throws, but `io(input)` is
+ * ordinary user code that can throw while building the effect. Without this, that
+ * throw would escape unboxed and `error.error` would be `undefined` despite the
+ * declared type.
+ *
+ * The second is why this uses `runExit()` rather than `run()`. `run()` returns
+ * `Either<E, A>`, which has nowhere to put a defect — a throwing `mapError` handler or
+ * `IO.sync` thunk arrived as `Left` and was indistinguishable from a genuine `E`, so
+ * `defect` read `false` while `.error` held something that was not an `E` at all
+ * (#259). `Exit` keeps the two apart, so the flag can be accurate.
  */
 const runBoxed = async <E, A>(effect: () => IO<never, E, A>, options?: IOBridgeOptions<E>): Promise<A> => {
-  const result = await Try(() => effect()).fold(
+  const exit = await Try(() => effect()).fold(
     (thrown) => {
       throw new IOQueryError(thrown as E, undefined, true)
     },
-    (io) => io.run(),
+    (io) => io.runExit(),
   )
 
-  if (result.isLeft()) {
-    throw new IOQueryError(result.value, options?.formatError?.(result.value))
+  if (exit.isFailure()) {
+    const { error } = exit.toValue() as { error: E }
+    throw new IOQueryError(error, options?.formatError?.(error))
   }
 
-  return result.value
+  if (exit.isDie()) {
+    throw new IOQueryError((exit.toValue() as { defect: unknown }).defect as E, undefined, true)
+  }
+
+  if (exit.isInterrupted()) {
+    // An `InterruptedError` is no more an `E` than a defect is, so it carries the same
+    // flag. `run()` put it in the `Left` with `defect: false`, which had the same problem
+    // the rest of this fix is about.
+    throw new IOQueryError(new InterruptedError() as E, undefined, true)
+  }
+
+  return exit.orThrow()
 }
 
 /**
