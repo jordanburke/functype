@@ -39,7 +39,7 @@ Recovery of genuine failures and of defects is unchanged, and success still pass
 IO.succeed(1).timeoutTo(50, 99).runSync() // was Right(99), now Left(UnsupportedSyncOperationError)
 ```
 
-A *successful* effect returned the wrong value with no error anywhere. `fold` had the same shape, taking the failure branch for an effect that succeeded.
+A _successful_ effect returned the wrong value with no error anywhere. `fold` had the same shape, taking the failure branch for an effect that succeeded.
 
 New exported error type `UnsupportedSyncOperationError` (from `functype/io`), carrying `operation: "timeout" | "race"`. It is a programmer error — the effect was built for the wrong terminal — so it joins `InterruptedError` as non-recoverable: the sync guard is now `rethrowIfNonRecoverable`, and `Recover` / `RecoverWith` / `Fold` / `MapError` all pass it through untouched.
 
