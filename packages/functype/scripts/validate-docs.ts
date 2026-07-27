@@ -89,7 +89,10 @@ class DocumentationValidator {
       console.warn("⚠️  Could not set npm browser config:", error)
     }
 
-    return this.runCommand("pnpm", ["docs"], "Generating TypeDoc documentation with @includeCode references")
+    // `run` is required: bare `pnpm docs` resolves to pnpm's own builtin `docs` command
+    // (which wants a package name) rather than this package's script, so this step failed
+    // unconditionally. `docs:validate` is not in the `validate` chain, so CI never caught it.
+    return this.runCommand("pnpm", ["run", "docs"], "Generating TypeDoc documentation with @includeCode references")
   }
 
   async validateAllTests(): Promise<ValidationResult> {

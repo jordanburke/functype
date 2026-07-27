@@ -316,6 +316,39 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  Exit: {
+    // Kept terse on purpose: `formatOverview` prints every description and the CLI
+    // holds a word budget (test/cli.spec.ts). The full explanation lives in the Exit
+    // interface JSDoc, which `npx functype Exit --full` prints.
+    description:
+      "Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() cannot show it.",
+    // Exit is declared inline (no `extends` chain), so its interface list is
+    // curated. Source of truth: the Exit interface body in src/io/Exit.ts.
+    interfaces: [],
+    methods: {
+      create: ["Exit.succeed(v)", "Exit.fail(e)", "Exit.die(defect)", "Exit.interrupt(fiberId)", "Exit.interrupted()"],
+      transform: [".map(f)", ".mapError(f)", ".mapBoth(onErr, onOk)", ".flatMap(f)"],
+      extract: [
+        ".fold(onFailure, onSuccess, onInterrupted?, onDie?)",
+        ".match({Success, Failure, Interrupted, Die?})",
+        ".orThrow()",
+        ".orElse(v)",
+        ".toOption()",
+        ".toEither()",
+        ".toValue()",
+      ],
+      check: [".isSuccess()", ".isFailure()", ".isDie()", ".isInterrupted()"],
+      other: [
+        "Exit.zip(a, b)",
+        "Exit.all(exits)",
+        "Exit.fromEither(e)",
+        "Exit.fromOption(o, onNone)",
+        "// onDie / Die are optional and fall back to the failure handler",
+        "// defects stay recoverable: .recover/.recoverWith/.fold/.mapError treat Die as Failure",
+      ],
+    },
+  },
+
   IO: {
     description: "Lazy effect type with typed errors and dependency injection",
     interfaces: ["Functor", "Monad", "Foldable", "Matchable"],
@@ -330,14 +363,15 @@ export const TYPES: Record<string, TypeData> = {
         "IO.fromEither(e)",
         "IO.fromOption(o)",
         "IO.fromTry(t)",
+        "IO.die(defect)",
       ],
       transform: [".map(f)", ".flatMap(f)", ".tap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
       extract: [
-        ".run()",
+        ".run() // Either<E,A> — a defect or interruption arrives in the Left, raw",
         ".runOrThrow()",
         ".runSync()",
         ".runSyncOrThrow()",
-        ".runExit()",
+        ".runExit() // Exit<E,A> — the only terminal that distinguishes Failure/Die/Interrupted",
         ".runOption()",
         ".runTry()",
         ".fold(onErr, onOk)",
@@ -689,7 +723,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
+  Effect: ["IO", "Exit", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],

@@ -290,13 +290,41 @@ const pairs = Do(function* () {
 | From promise   | `IO.tryPromise({try, catch})` | `IO.tryPromise({ try: () => fetch(url) })` |
 | Access service | `IO.service(Tag)`             | `IO.service(Database)`                     |
 | Provide deps   | `effect.provide(layer)`       | `program.provide(dbLayer)`                 |
+| Pure defect    | `IO.die(defect)`              | `IO.die(new Error("bug"))`                 |
 | Run (async)    | `effect.run()`                | `await effect.run()`                       |
 | Run (sync)     | `effect.runSync()`            | `effect.runSync()`                         |
 | Run to Either  | `effect.runEither()`          | `await effect.runEither()`                 |
+| Run to Exit    | `effect.runExit()`            | `await effect.runExit()`                   |
 | Retry (any)    | `effect.retry(n)` / `retryWithDelay(n, ms)` | `effect.retry(3)` |
 | Retry (predicate, 1.3+) | `effect.retryWhile({n, while, delayMs?})` | `eff.retryWhile({n:3, while:e=>e.status>=500})` |
 | Retry (backoff, 1.3+) | `effect.retryWithBackoff({n, baseMs, maxMs?, factor?, jitter?, while?})` | `eff.retryWithBackoff({n:5, baseMs:250})` |
 | Timeout        | `effect.timeout(ms)`          | `effect.timeout(5000)`                     |
+
+## Exit — the outcome of `runExit()`
+
+`Either` has two branches; `Exit` has four. Use `run()` when all you need is
+success-or-not, `runExit()` to tell a typed failure from a **defect** or an interruption.
+
+| Operation          | Method                                              | Notes                                                       |
+| ------------------ | --------------------------------------------------- | ----------------------------------------------------------- |
+| Check success      | `exit.isSuccess()`                                   | completed with a value                                       |
+| Check failure      | `exit.isFailure()`                                   | a value from the declared `E` channel                        |
+| Check defect       | `exit.isDie()`                                       | a value that is **not** an `E`                               |
+| Check interrupted  | `exit.isInterrupted()`                               | cancelled                                                    |
+| Pattern match      | `exit.fold(onFail, onOk, onInterrupted?, onDie?)`    | last two optional; fall back to `onFail`                     |
+| Pattern match      | `exit.match({Success, Failure, Interrupted, Die?})`  | `Die` optional; falls back to `Failure`                      |
+| Construct          | `Exit.succeed(v)` / `Exit.fail(e)` / `Exit.die(d)`   | plus `Exit.interrupt(id)` / `Exit.interrupted()`             |
+
+A **defect** is anything in the error channel the declared type says can't be there:
+`IO.sync` and `IO.die` are `IO<never, never, A>`, so a throwing thunk, a throwing
+`map` / `flatMap` / `mapError` callback, and `IO.die` all produce non-`E`s. The line is
+the *declared* channel, not whether something threw — `IO.async` and `IO(...)` declare
+`E = unknown`, so their rejections stay `Failure`.
+
+Defects stay **recoverable**: `recover` / `recoverWith` / `fold` / `mapError` treat a
+`Die` exactly as a `Failure`. `Exit.Die` records what the outcome was when nothing
+recovered it. The sync interpreter can't make the distinction — `runSync()` returns
+`Either` and signals failure by throwing the raw value.
 
 ## HTTP (1.3+)
 

@@ -337,6 +337,24 @@ await effect.run() // Returns Promise<A>
 effect.runSync() // Returns A (throws if async)
 await effect.runEither() // Returns Promise<Either<E,A>>
 await effect.runExit() // Returns Promise<Exit<E,A>>
+
+// run() vs runExit(): Either has two branches, Exit has four. Use run() when all you
+// need is success-or-not; use runExit() to tell a typed failure from a *defect* (a
+// value that is not an E — a throwing IO.sync thunk or map/mapError callback, or
+// IO.die) or from an interruption. run() puts both in the Left, raw.
+const exit = await effect.runExit()
+exit.isSuccess() // completed with a value
+exit.isFailure() // a value from the declared E channel
+exit.isDie() // a defect — NOT an E
+exit.isInterrupted() // cancelled
+
+// Both extra handlers are optional and fall back to the failure branch, so existing
+// three-argument fold / three-key match calls keep working.
+exit.fold(onFailure, onSuccess, onInterrupted?, onDie?)
+exit.match({ Success, Failure, Interrupted, Die? })
+
+// Defects stay recoverable: recover / recoverWith / fold / mapError treat a Die exactly
+// as a Failure. Exit.Die records what the outcome was when nothing recovered it.
 ```
 
 ### Tuple - Type-safe Fixed-length Array

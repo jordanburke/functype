@@ -366,6 +366,13 @@ Provides conversion to Promise for async interop:
      - Error handling: catchTag, catchAll, retry, retryWithDelay, retryWhile, retryWithBackoff
      - Value-driven repetition: repeatUntil, repeatWhile, IO.iterate (bounded by RepeatExhausted)
      - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry()
+     - Outcomes: `Exit<E, A>` = Success | Failure | Die | Interrupted, returned by runExit().
+       `Failure` carries a value from the declared `E` channel; `Die` carries a **defect** —
+       a value that is not an `E` (a throwing `IO.sync` thunk, a throwing map/flatMap/mapError
+       callback, or `IO.die`). `run()` returns `Either`, which has no branch for either a defect
+       or an interruption, so both arrive in the `Left`; `runExit()` is what keeps them apart.
+       Defects stay recoverable — recover/recoverWith/fold/mapError treat `Die` as `Failure`.
+       `fold`'s `onDie` and `match`'s `Die` are optional and fall back to the failure handler.
    - Testing utilities:
      - **TestClock**: Controlled time for testing timeouts/delays
      - **TestContext**: Test environment with mocked services

@@ -277,6 +277,7 @@ effect.retry(3)              // retry on failure
 await effect.run()           // execute the effect
 effect.runSync()             // execute sync effect
 await effect.runEither()     // execute, get Either<E,A>
+await effect.runExit()       // execute, get Exit<E,A> (see the Exit block below)
 IO.gen(function*() {         // generator do-notation
   const db = yield* IO.service(Database)
   const user = yield* IO.tryPromise(() => db.find(id))
@@ -306,6 +307,28 @@ effect.provide(layer)        // provide dependencies
 await effect.run()           // execute async
 effect.runSync()             // execute sync
 await effect.runEither()     // execute → Either<E,A>
+await effect.runExit()       // execute → Exit<E,A>
+
+// Exit — the outcome of runExit(). Either has two branches; Exit has four.
+// Success | Failure | Die | Interrupted
+exit.isSuccess()             // completed with a value
+exit.isFailure()             // a value from the declared E channel
+exit.isDie()                 // a *defect* — a value that is NOT an E
+exit.isInterrupted()         // cancelled
+exit.fold(onFail, onOk, onInterrupted?, onDie?)     // last two optional → fall back to onFail
+exit.match({Success, Failure, Interrupted, Die?})   // Die optional → falls back to Failure
+Exit.succeed(v) / Exit.fail(e) / Exit.die(defect) / Exit.interrupted()
+
+// A defect is anything in the error channel the declared type says can't be there.
+// IO.sync and IO.die are IO<never, never, A>, so a throwing thunk, a throwing
+// map/flatMap/mapError callback, and IO.die all produce non-E values.
+// The line is the *declared* channel, not whether something threw: IO.async and
+// IO(...) declare E = unknown, so their rejections stay Failure.
+// Defects stay RECOVERABLE — recover/recoverWith/fold/mapError treat Die as Failure;
+// mapError over a defect yields a Failure since the mapper returns a real E.
+// run()/runSync() still surface a defect as the raw value in the Left (Either has no
+// third branch); runExit() is the terminal that keeps them apart. The sync interpreter
+// cannot distinguish them at all — it signals Fail and Die with the same bare throw.
 
 // Retry surface (new in 1.3.0 — pair with HttpError tagged ADT for HTTP retry policy):
 effect.retry(n)                             // retry up to n on any error
