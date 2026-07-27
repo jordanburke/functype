@@ -40,16 +40,21 @@
     "prepublishOnly": "pnpm validate"
   },
   "peerDependencies": {
+    "@tanstack/react-query": ">=5.0.0",
     "functype": ">=0.60.0",
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },
   "peerDependenciesMeta": {
+    "@tanstack/react-query": {
+      "optional": true
+    },
     "react-dom": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@tanstack/react-query": "^5.90.5",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.10.0",
     "@testing-library/react": "^16.3.2",
@@ -89,6 +94,11 @@
       "types": "./dist/forms/index.d.ts",
       "import": "./dist/forms/index.js",
       "default": "./dist/forms/index.js"
+    },
+    "./query": {
+      "types": "./dist/query/index.d.ts",
+      "import": "./dist/query/index.js",
+      "default": "./dist/query/index.js"
     }
   },
   "files": [
