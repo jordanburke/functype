@@ -6,6 +6,19 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — `bracketExit` reports interruption to `release` as `Interrupted` on the sync interpreter.**
+
+`bracketExit`'s contract is that `release` receives the `Exit` describing how `use` ended, so cleanup can branch on cancellation — a distinct rollback path, or telemetry that shouldn't count cancellations as failures. The sync interpreter built that `Exit` from a caught throw and so always reported `Failure`:
+
+```ts
+IO.bracketExit(acquire, () => IO.interrupt(), release).runSync()
+// release saw Exit.fail(InterruptedError); now sees Exit.interrupted()
+```
+
+The async interpreter already passed the real `Exit` through, so this only brings the sync path into agreement — no new semantics, and `release` implementations already had to handle an interrupted `Exit`. `UnsupportedSyncOperationError` stays a `Failure`: it is a defect, not a cancellation, and `Exit` has no defect variant.
+
+No error was ever lost (the `catch` rethrows, and the interruption still propagates to the caller); only `release`'s view of _why_ was wrong. Success and genuine-failure reporting are unchanged, covered by regression tests. Noted on #242, where externally-triggered cancellation will make an interrupted `use` ordinary rather than exotic.
+
 **`functype` — interruption is no longer swallowed by recovery combinators (fixes #243).**
 
 `.recover(fallback)` treated any non-success outcome as recoverable, so an interrupted effect silently resolved with the fallback:

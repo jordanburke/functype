@@ -1029,7 +1029,13 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         exit = unsafeCoerce(Exit.succeed(useResult))
         return useResult
       } catch (e) {
-        exit = unsafeCoerce(Exit.fail(e as E))
+        // `release` is contracted to receive the Exit describing how `use` ended, so an
+        // interrupted `use` must arrive as Interrupted rather than Failure — otherwise a
+        // release that branches on cancellation (distinct rollback, telemetry) can't see
+        // it. The async interpreter already passes the real Exit through; this keeps the
+        // sync path in agreement. `UnsupportedSyncOperationError` stays a Failure: it is
+        // a defect, not a cancellation, and Exit has no defect variant.
+        exit = e instanceof InterruptedError ? unsafeCoerce(Exit.interrupted()) : unsafeCoerce(Exit.fail(e as E))
         throw e
       } finally {
         runEffectSync(_fx(effect.release(resource, exit!)), context)
