@@ -4,7 +4,7 @@
 
 **Write new entries in [`packages/functype/CHANGELOG.md`](../functype/CHANGELOG.md), not here.** That
 is the canonical changelog for the family, and the only one `pnpm release` cuts — `scripts/release.ts`
-rewrites that file alone, so an `## Unreleased` section in *this* file would never be dated or
+rewrites that file alone, so an `## Unreleased` section in _this_ file would never be dated or
 released. This file is kept as a historical record of the package's own initial release.
 
 ## 1.6.0 - 2026-07-01
