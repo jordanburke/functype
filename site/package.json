@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
-    "@astrojs/mdx": "^7.0.3",
+    "@astrojs/mdx": "^7.0.4",
     "prettier": "^3.9.6",
     "tsx": "^4.23.1",
     "typescript": "^6.0.3"
