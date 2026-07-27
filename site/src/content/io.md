@@ -32,6 +32,7 @@ const safe = IO.tryCatch(
 // Running effects - safe by default
 const either = await sync.run(); // Either<E, A> - never throws
 const value = await sync.runOrThrow(); // A - throws on error
+const exit = await sync.runExit(); // Exit<E, A> - full outcome (see below)
 
 // Synchronous execution
 const syncEither = sync.runSync(); // Either<E, A> - never throws
@@ -170,6 +171,68 @@ IO.acquireRelease(
   (conn) => IO.sync(() => conn.close()),
 );
 ```
+
+## Outcomes: `Exit`
+
+`.run()` returns `Either<E, A>`, which has exactly two branches — so anything that is
+neither a success nor an `E` has to be crammed into the `Left`. `.runExit()` returns
+`Exit<E, A>`, which names all four outcomes:
+
+```typescript
+const exit = await effect.runExit();
+
+exit.isSuccess(); // completed with a value
+exit.isFailure(); // failed with a value from the declared E channel
+exit.isDie(); // produced a *defect* — a value that is not an E
+exit.isInterrupted(); // was cancelled
+```
+
+A **defect** is what happens when something lands in the error channel that the declared
+type says cannot be there. `IO.sync` and `IO.die` are `IO<never, never, A>` — `E` is
+`never` — so a throwing thunk, a throwing `map` / `flatMap` / `mapError` callback, and
+`IO.die` all produce values that are not `E`s:
+
+```typescript
+await IO.fail(new AuthError()).runExit(); // Failure — an E
+await IO.sync(() => JSON.parse(bad)).runExit(); // Die — a SyntaxError, not an E
+await IO.die(new Error("bug")).runExit(); // Die
+```
+
+The line is the _declared_ channel, not whether something threw. `IO.async` and the
+`IO(...)` constructor are `IO<never, unknown, A>`, so their rejections are legitimate
+errors and stay `Failure`.
+
+Defects remain **recoverable** — `recover`, `recoverWith`, `fold`, and `mapError` treat a
+`Die` exactly as they treat a `Failure`, and `mapError` over a defect produces a `Failure`
+because your mapper returns a real `E`. `Exit.Die` records what the outcome was when
+nothing recovered it; it does not change what recovery catches.
+
+```typescript
+// Both handlers are optional and fall back to the failure branch
+exit.fold(
+  (error) => `failed: ${error}`,
+  (value) => `ok: ${value}`,
+  (fiberId) => `cancelled: ${fiberId}`,
+  (defect) => `bug: ${defect}`,
+);
+
+exit.match({
+  Success: (value) => value,
+  Failure: (error) => report(error),
+  Interrupted: () => null,
+  Die: (defect) => crash(defect), // omit to route defects to Failure
+});
+```
+
+**Reach for `.runExit()` when the difference matters** — telling a real failure from a bug
+in your own code, or a cancellation from either. `.run()` stays the right default when all
+you need is success-or-not; it puts a defect in the `Left` as the raw thrown value, and an
+interruption as an `InterruptedError`.
+
+> The sync interpreter cannot make this distinction. `runSync()` returns `Either`, and it
+> signals failure by throwing the raw value, so `Fail` and `Die` arrive identically.
+> `Die` is observable through `runExit()` and through the `Exit` handed to a
+> `bracketExit` release.
 
 ## Error Handling Patterns
 

@@ -805,6 +805,118 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   toJSON(): { "@functype": "Task"; _tag: "Ok"; value: T } | { "@functype": "Task"; _tag: "Err"; error: SerializedError }
 }`,
 
+  Exit: `export interface Exit<E extends Type, A extends Type> {
+  readonly [Symbol.toStringTag]: string
+  readonly _tag: ExitTag
+
+  /**
+   * Type guard to check if this is a Success
+   */
+  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A }
+
+  /**
+   * Type guard to check if this is a Failure
+   */
+  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E }
+
+  /**
+   * Type guard to check if this is a Die (a defect — the carried value is not an \`E\`)
+   */
+  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown }
+
+  /**
+   * Type guard to check if this is Interrupted
+   */
+  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string }
+
+  /**
+   * Maps the success value
+   */
+  map<B extends Type>(f: (a: A) => B): Exit<E, B>
+
+  /**
+   * Maps the error value
+   */
+  mapError<E2 extends Type>(f: (e: E) => E2): Exit<E2, A>
+
+  /**
+   * Maps both error and success values
+   */
+  mapBoth<E2 extends Type, B extends Type>(onError: (e: E) => E2, onSuccess: (a: A) => B): Exit<E2, B>
+
+  /**
+   * Flat maps the success value
+   */
+  flatMap<B extends Type>(f: (a: A) => Exit<E, B>): Exit<E, B>
+
+  /**
+   * Pattern matches over the Exit.
+   *
+   * \`onDie\` is optional and appended rather than inserted so existing three-argument
+   * calls keep compiling. Omitting it routes a defect to \`onFailure\` — the pre-\`Die\`
+   * behaviour, where defects were indistinguishable from typed failures. Supply it
+   * when the distinction matters; note the value it receives is \`unknown\`, not \`E\`.
+   */
+  fold<T>(
+    onFailure: (e: E) => T,
+    onSuccess: (a: A) => T,
+    onInterrupted?: (fiberId: string) => T,
+    onDie?: (defect: unknown) => T,
+  ): T
+
+  /**
+   * Pattern matches over the Exit with object patterns.
+   *
+   * \`Die\` is optional for the same back-compat reason as {@link fold}'s \`onDie\`, and
+   * falls back to \`Failure\` when absent.
+   */
+  match<T>(patterns: {
+    Success: (value: A) => T
+    Failure: (error: E) => T
+    Interrupted: (fiberId: string) => T
+    Die?: (defect: unknown) => T
+  }): T
+
+  /**
+   * Returns the success value or throws
+   */
+  orThrow(): A
+
+  /**
+   * Returns the success value or a default
+   */
+  orElse(defaultValue: A): A
+
+  /**
+   * Converts to Option (Some for Success, None otherwise)
+   */
+  toOption(): Option<A>
+
+  /**
+   * Converts to Either (Right for Success, Left for Failure)
+   * Throws if Interrupted
+   *
+   * A \`Die\` becomes \`Left(defect)\`, which widens the Left beyond \`E\` — the same
+   * lossiness \`IO.run()\` already has. Use {@link isDie} first if the distinction matters.
+   */
+  toEither(): Either<E, A>
+
+  /**
+   * Returns the raw value for inspection
+   */
+  toValue(): { _tag: ExitTag; value?: A; error?: E; defect?: unknown; fiberId?: string }
+
+  /**
+   * String representation
+   */
+  toString(): string
+
+  /**
+   * JSON serialization
+   */
+  toJSON(): { _tag: ExitTag; value?: A; error?: E; defect?: unknown; fiberId?: string }
+}`,
+
   Tuple: `export interface Tuple<out T extends Type[]>
   extends Foldable<T[number]>, Pipe<Tuple<T>>, Serializable<Tuple<T>>, Typeable<"Tuple"> {
   readonly [Symbol.toStringTag]: string

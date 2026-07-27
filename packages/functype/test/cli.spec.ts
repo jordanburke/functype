@@ -211,13 +211,18 @@ describe("Token Efficiency", () => {
   it("overview should be reasonably compact", () => {
     const output = formatOverview()
     // Rough word count as token estimate.
-    // Target: <800 tokens, so ~700 words. Bumped from 400 in 1.2.0 (Decoder +
+    // Target: ~850 tokens, so ~750 words. Bumped from 400 in 1.2.0 (Decoder +
     // DecoderError + Serialization + SerializedError), from 600 in 1.3.0
-    // (Service category + Logger), and from 650 post-1.3.1 (TaskOutcome +
-    // TaskResult added for MCP registry reconciliation). Still very compact
+    // (Service category + Logger), from 650 post-1.3.1 (TaskOutcome +
+    // TaskResult added for MCP registry reconciliation), and from 700 when
+    // Exit was registered alongside the Die variant. Still very compact
     // for an LLM-targeted overview across 25+ types.
+    //
+    // This is a ratchet, not a cap to design around: keep descriptions terse
+    // (the full prose belongs in the interface JSDoc, which `--full` prints)
+    // and bump this with a reason when a genuinely new type lands.
     const wordCount = output.split(/\s+/).length
-    expect(wordCount).toBeLessThan(700)
+    expect(wordCount).toBeLessThan(750)
   })
 
   it("type output should be compact", () => {
