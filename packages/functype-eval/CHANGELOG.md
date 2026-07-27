@@ -1,11 +1,13 @@
 # Changelog
 
-`functype-eval` is part of the 5-package functype family and bumps in lockstep with `functype`. The
-canonical changelog for the family is [`packages/functype/CHANGELOG.md`](../functype/CHANGELOG.md).
-Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions; `pnpm release` cuts the
-`## Unreleased` section into a dated version header.
+`functype-eval` is part of the 6-package functype family and bumps in lockstep with `functype`.
 
-## Unreleased
+**Write new entries in [`packages/functype/CHANGELOG.md`](../functype/CHANGELOG.md), not here.** That
+is the canonical changelog for the family, and the only one `pnpm release` cuts — `scripts/release.ts`
+rewrites that file alone, so an `## Unreleased` section in *this* file would never be dated or
+released. This file is kept as a historical record of the package's own initial release.
+
+## 1.6.0 - 2026-07-01
 
 ### Added
 

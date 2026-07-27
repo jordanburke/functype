@@ -90,7 +90,9 @@ test/scorers/             # mirrors src/scorers
 - **Don't couple scoring to an LLM.** The scorer is pure static analysis; Phase 2 `bench` calls LLMs
   but scoring stays deterministic.
 - **No `any`.** Use `unknown` and narrow. functype patterns for state (Option/Either/List).
-- **Don't hand-edit CHANGELOG.** The tag-driven release flow (`pnpm release`) manages versions.
+- **Don't hand-edit this package's CHANGELOG.** Write entries under `## Unreleased` in
+  [`packages/functype/CHANGELOG.md`](../functype/CHANGELOG.md) — the family changelog, and the only
+  one `pnpm release` cuts.
 
 ## Conventions
 
@@ -99,6 +101,6 @@ test/scorers/             # mirrors src/scorers
 - **Runtime deps** (`eslint-plugin-functype`, `@typescript-eslint/parser`, `ts-morph`,
   `type-coverage-core`) — this package evaluates code that _uses_ functype, so functype itself is a
   **devDep only**, not a peer.
-- **Versioning:** part of the 5-package functype family on the `1.x` line. It must be listed in
+- **Versioning:** part of the 6-package functype family on the `1.x` line. It must be listed in
   `FAMILY_PACKAGE_DIRS` in [`scripts/release.ts`](../../scripts/release.ts). Release with
   `pnpm release patch|minor|major` from the repo root (tag-driven).
