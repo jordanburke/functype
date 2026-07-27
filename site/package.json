@@ -28,7 +28,7 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "^0.9.10",
     "@astrojs/mdx": "^7.0.3",
     "prettier": "^3.9.6",
     "tsx": "^4.23.1",
