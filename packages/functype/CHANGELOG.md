@@ -6,6 +6,45 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — interruption is no longer swallowed by recovery combinators (fixes #243).**
+
+`.recover(fallback)` treated any non-success outcome as recoverable, so an interrupted effect silently resolved with the fallback:
+
+```ts
+await IO.interrupt().recover(42).runExit() // was Success(42), now Interrupted
+```
+
+Interruption is control flow, not a domain failure — it must survive every error-handling boundary. On the async interpreter `Recover` checked only `isSuccess()`, unlike `MapError` / `RecoverWith` / `Fold`, which all guard on `isFailure()`; it now matches them. The sync interpreter was affected more broadly: it signals interruption by _throwing_ `InterruptedError`, and the bare `catch` blocks in `Recover`, `RecoverWith`, `Fold`, **and** `MapError` all absorbed it. All four now rethrow it first.
+
+`MapError` is the subtler one, and the only case where the two interpreters disagreed about the outcome rather than merely one of them being wrong:
+
+```ts
+IO.interrupt()
+  .mapError(() => new Error("mapped"))
+  .runSync()
+// was Left(Error("mapped")) — sync only; async already returned Interrupted
+```
+
+It doesn't manufacture a success, so it looks harmless, but rewriting `InterruptedError` into a domain error is just as lossy: downstream `instanceof InterruptedError` checks stop matching.
+
+`.timeoutTo(ms, fallback)` is built on `.recover`, so it inherited the bug and is fixed with it.
+
+Recovery of genuine failures and of defects is unchanged, and success still passes through untouched — covered by regression tests alongside the fix. Today the bug is reachable only by composing `IO.interrupt()` explicitly; it becomes materially more important once externally-triggered cancellation lands (#242), where it would let a cancelled effect resolve successfully with a fallback value.
+
+**`functype` — `runSync()` no longer returns the fallback when `timeout` / `race` is recovered downstream (fixes #246).**
+
+`timeout` and `race` have no synchronous semantics, and the sync interpreter signalled that by throwing a plain `Error` — indistinguishable from a failed effect, so any recovery combinator downstream absorbed it. Since `timeoutTo(ms, fallback)` is defined as `io.timeout(ms).recover(fallback)`, the two were always paired:
+
+```ts
+IO.succeed(1).timeoutTo(50, 99).runSync() // was Right(99), now Left(UnsupportedSyncOperationError)
+```
+
+A *successful* effect returned the wrong value with no error anywhere. `fold` had the same shape, taking the failure branch for an effect that succeeded.
+
+New exported error type `UnsupportedSyncOperationError` (from `functype/io`), carrying `operation: "timeout" | "race"`. It is a programmer error — the effect was built for the wrong terminal — so it joins `InterruptedError` as non-recoverable: the sync guard is now `rethrowIfNonRecoverable`, and `Recover` / `RecoverWith` / `Fold` / `MapError` all pass it through untouched.
+
+The async interpreter supports both combinators and is entirely unaffected; `await IO.succeed(1).timeoutTo(50, 99).runExit()` is `Success(1)` as before. Recovery of genuine failures is unchanged.
+
 **`functype-react` — new `functype-react/query` subpath: TanStack Query adapters for `IO` (closes #239).**
 
 `Http.get(...)` returns `IO<never, HttpError, HttpResponse<T>>`, and neither `IO` terminal fits React Query's contract. `.run()` returns `Promise<Either<E, A>>` and never throws, so React Query never observes a failure — every call site hand-writes the `Either` → throw bridge. `.runOrThrow()` throws the _raw_ tagged object (`{ _tag: "NetworkError", url, method, cause }`), which is not an `Error` instance, so the ubiquitous `error instanceof Error ? error.message : fallback` handler silently degrades to the fallback and status-based branching has no clean equivalent. Migrating a real app off axios onto `functype/fetch` required a bespoke per-app `apiRequest()` shim to close exactly this gap.
@@ -14,7 +53,7 @@ The new subpath owns that glue. `useIOQuery` / `useIOMutation` cover the common 
 
 `useIOQueryState` / `useIOMutationState` return that ADT directly — `TaskState` plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and the trigger (`refetch`, or `mutate`/`mutateAsync`/`reset`), mirroring the shape `useTask` already returns from `functype-react/async`. They read only the fields they project, so React Query's tracked-properties render optimization still applies.
 
-`toQueryState` / `toMutationState` project a React Query result onto the `TaskState` ADT that `functype-react/async` already returns, so a query composes with the `<Match>` family instead of being read through the `data && !error && !isLoading` flag soup this package exists to eliminate. The `Success` branch yields a defined `A` rather than `A | undefined`, and omitting a lifecycle case is a compile error. A disabled query projects to `Idle`, in-flight or paused to `Pending`; React Query's own mutation `idle` status maps directly. Both are pure functions over the result, so `refetch` / `isFetching` / `invalidate` remain available on the original object.
+`toQueryState` / `toMutationState` project a React Query result onto the `TaskState` ADT that `functype-react/async` already returns, so a query composes with the `<Match>` family instead of being read through the `data && !error && !isLoading` flag soup this package exists to eliminate. The `Success` branch yields a defined `A` rather than `A | undefined`, and omitting a lifecycle case is a compile error. A disabled query projects to `Idle`, in-flight or paused to `Pending`; React Query's own mutation `idle` status maps directly. Both are pure functions over the result, so `refetch` / `isFetching` / `dataUpdatedAt` remain available on the original object (invalidation is a client-level operation, `queryClient.invalidateQueries()`).
 
 `@tanstack/react-query` (`>=5.0.0`) is an **optional** peer dependency, matching the existing `react-dom` treatment — consumers who don't import `functype-react/query` neither install nor bundle it. Strictly additive; no changes to any existing export.
 

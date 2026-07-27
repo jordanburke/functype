@@ -50,6 +50,27 @@ export class InterruptedError extends Error {
 }
 
 /**
+ * Error thrown when a combinator that cannot run on the synchronous interpreter is
+ * reached by `runSync`. `timeout` and `race` are inherently asynchronous — there is no
+ * sync semantics for "wait `ms` then give up", or for racing concurrent effects.
+ *
+ * This is a **programmer error, not a domain failure**: it says the effect was built
+ * wrong for the terminal it was run with, so recovery combinators deliberately do not
+ * catch it (see {@link rethrowIfNonRecoverable}). Before it had its own type it was a
+ * plain `Error`, indistinguishable from a failed effect, so any downstream `.recover()`
+ * absorbed it and silently produced the fallback — `IO.succeed(1).timeoutTo(50, 99)`
+ * returned `Right(99)` under `runSync()`. See #246.
+ */
+// eslint-disable-next-line functional/no-classes
+export class UnsupportedSyncOperationError extends Error {
+  readonly _tag = "UnsupportedSyncOperationError" as const
+  constructor(readonly operation: "timeout" | "race") {
+    super(`Cannot run ${operation} effect synchronously — use run()/runExit() instead`)
+    this.name = "UnsupportedSyncOperationError"
+  }
+}
+
+/**
  * Error surfaced by value-driven repeat combinators when the iteration bound is
  * reached without the predicate being satisfied. Carries the last observed
  * value so callers can report what the loop settled on.
@@ -886,6 +907,30 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 }
 
 /**
+ * The sync interpreter uses `throw` for two things that are *not* domain failures, so
+ * the error-handling combinators' `catch` blocks would otherwise absorb them — turning
+ * them into a successful value (`Recover` / `RecoverWith` / `Fold`) or into a domain
+ * error of the caller's choosing (`MapError`):
+ *
+ * - `InterruptedError` — interruption is control flow. A cancelled effect must not be
+ *   resurrected by a fallback (#243).
+ * - `UnsupportedSyncOperationError` — the effect contains `timeout` / `race`, which have
+ *   no sync semantics. Recovering from it hides the mistake and hands back the fallback
+ *   as if the effect had genuinely failed (#246).
+ *
+ * Both must pass through every recovery boundary unchanged, so callers see the real
+ * outcome rather than a plausible-looking substitute.
+ *
+ * The async interpreter gets this for free by branching on `Exit.isFailure()`; the sync
+ * path needs it stated explicitly.
+ */
+const rethrowIfNonRecoverable = (e: unknown): void => {
+  if (e instanceof InterruptedError || e instanceof UnsupportedSyncOperationError) {
+    throw e
+  }
+}
+
+/**
  * Interprets and runs an effect synchronously
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
@@ -923,13 +968,15 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       try {
         return runEffectSync(_fx(effect.effect), context)
       } catch (e) {
+        rethrowIfNonRecoverable(e)
         throw effect.f(e)
       }
     }
     case "Recover": {
       try {
         return runEffectSync(_fx(effect.effect), context)
-      } catch {
+      } catch (e) {
+        rethrowIfNonRecoverable(e)
         return effect.fallback
       }
     }
@@ -939,6 +986,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         // is known at runtime to match A since RecoverWith preserves the outer A.
         return unsafeCoerce(runEffectSync(_fx(effect.effect), context))
       } catch (e) {
+        rethrowIfNonRecoverable(e)
         const recoveryIO = effect.f(e)
         return runEffectSync(_fx(recoveryIO), context)
       }
@@ -948,6 +996,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         const a = runEffectSync(_fx(effect.effect), context)
         return effect.onSuccess(a)
       } catch (e) {
+        rethrowIfNonRecoverable(e)
         return effect.onFailure(e)
       }
     }
@@ -987,9 +1036,9 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       }
     }
     case "Race":
-      throw new Error("Cannot run race effect synchronously")
+      throw new UnsupportedSyncOperationError("race")
     case "Timeout":
-      throw new Error("Cannot run timeout effect synchronously")
+      throw new UnsupportedSyncOperationError("timeout")
   }
 }
 
@@ -1049,8 +1098,12 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "Recover": {
         const exitA = await runEffect(_fx(effect.effect), context)
-        if (exitA.isSuccess()) {
-          return exitA
+        // Only a *failure* is recoverable. Success passes through, and so does
+        // Interrupted — interruption is control flow, not a domain error, so a
+        // fallback must never convert a cancelled effect into a successful value.
+        // Matches the isFailure() guard in MapError / RecoverWith / Fold below.
+        if (!exitA.isFailure()) {
+          return unsafeCoerce(exitA)
         }
         return Exit.succeed(effect.fallback)
       }
