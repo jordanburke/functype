@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.8.0 - 2026-07-27
+
 **`functype` — `Exit` gains a `Die` variant so defects stop masquerading as typed errors (fixes #259).**
 
 `IO.sync` and `IO.die` are `IO<never, never, A>`: the declared error channel is `never`, so nothing they put there can be an `E`. `Exit` had nowhere to say that — a throwing `IO.sync` thunk, a throwing `map` / `flatMap` / `mapError` callback, and `IO.die` all collapsed into `Failure`, indistinguishable from `IO.fail(e)`:
