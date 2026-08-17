@@ -78,12 +78,12 @@
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
-    "@typescript-eslint/eslint-plugin": "^8.66.0",
-    "@typescript-eslint/parser": "^8.66.0",
+    "@typescript-eslint/eslint-plugin": "^8.67.0",
+    "@typescript-eslint/parser": "^8.67.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "ts-builds": "^3.2.3",
+    "ts-builds": "^3.4.1",
     "tsdown": "^0.22.14"
   },
   "publishConfig": {
