@@ -3,6 +3,7 @@
 vcs.xml
 lib/
 .turbo/
+*.ts-builds
 
 ### Node template
 # Logs
