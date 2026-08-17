@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.9.0 - 2026-08-17
+
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**
 
 `Wire<T>` is `ReadonlyArray<T>` with an optional phantom-symbol brand — structurally identical, bidirectionally assignable, zero runtime cost, no casts at call sites. Its purpose is to name serialization boundaries (DB rows, HTTP bodies, JSONB payloads, workflow inputs) so they become greppable (`rg 'Wire<'`), self-documenting at the declaration site, and (paired with the new `prefer-list` behavior) actually enforceable via lint.
