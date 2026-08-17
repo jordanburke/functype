@@ -16,6 +16,7 @@ This document provides a comprehensive index of all types and data structures in
 | `IO<R, E, A>`  | Lazy effect with typed errors + DI — the async-with-typed-errors default                   | `functype/io`        |
 | `Task<T>`      | Eager async wrapper for cancellation / progress; errors flow untyped through `TaskOutcome` | `functype/core/task` |
 | `Brand<T, B>`  | Nominal typing for TypeScript                                                              | `functype/branded`   |
+| `Wire<T>`      | Serialization-boundary marker for `ReadonlyArray<T>` — zero runtime                        | `functype/wire`      |
 | `Identity<T>`  | Identity monad                                                                             | `functype/identity`  |
 | `Stack<T>`     | Immutable stack collection                                                                 | `functype/stack`     |
 

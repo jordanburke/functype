@@ -2,14 +2,16 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 
+const DEFAULT_UNSAFE_METHODS: readonly string[] = ["orThrow", "expect", "get", "getOrThrow", "unwrap"]
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "problem",
     docs: {
-      description: "Avoid unsafe .get() calls on Option, Either, and other monadic types",
+      description: "Avoid unsafe extractor calls on Option, Either, and other Extractable types",
       recommended: true,
     },
-    fixable: "code",
+    hasSuggestions: true,
     schema: [
       {
         type: "object",
@@ -21,22 +23,23 @@ const rule: Rule.RuleModule = {
           unsafeMethods: {
             type: "array",
             items: { type: "string" },
-            default: ["get", "getOrThrow", "unwrap", "expect"],
+            default: [...DEFAULT_UNSAFE_METHODS],
           },
         },
         additionalProperties: false,
       },
     ],
     messages: {
-      noUnsafeGet: "Avoid unsafe .{{method}}() call. Use .fold(), .map(), or .getOrElse() instead",
-      noUnsafeGetSuggestion: "Consider using .getOrElse(defaultValue) or .fold() for safe access",
+      noUnsafeGet: "Avoid unsafe .{{method}}() call. Use .fold(), .map(), or .orElse() instead",
+      suggestOrElse: "Replace with .orElse(default) for a value fallback",
+      suggestFold: "Replace with .fold(onNone, onSome) for branch handling",
     },
   },
 
   create(context) {
     const options = context.options[0] || {}
     const allowInTests = options.allowInTests !== false
-    const unsafeMethods = options.unsafeMethods || ["get", "getOrThrow", "unwrap", "expect"]
+    const unsafeMethods: readonly string[] = options.unsafeMethods || DEFAULT_UNSAFE_METHODS
 
     function isInTestFile() {
       const filename = context.filename
@@ -103,35 +106,37 @@ const rule: Rule.RuleModule = {
 
         // Check if this looks like it's being called on a monadic type
         if (isMonadicType(node.callee.object)) {
+          const sourceCode = context.sourceCode
+          const objectText = sourceCode.getText(node.callee.object)
+
+          // Preserve the original call's argument text in the TODO comment so a suggestion
+          // applied to `.expect("Should have a user here")` or `.orThrow(new NotFound())`
+          // doesn't silently drop information the developer intended to keep. Omit the
+          // "was" suffix when the original call had no args (`.get()`, `.unwrap()`, etc.).
+          const argsText = node.arguments.map((a: ASTNode) => sourceCode.getText(a)).join(", ")
+          const wasSuffix = argsText ? `; was ${methodName}(${argsText})` : ""
+
           context.report({
             node,
             messageId: "noUnsafeGet",
             data: { method: methodName },
-            fix(fixer) {
-              const sourceCode = context.sourceCode
-              const objectText = sourceCode.getText(node.callee.object)
-
-              // Choose safer alternative based on method name
-              let replacement: string
-              if (methodName === "get") {
-                // Replace .get() with .getOrElse(/* provide default */)
-                replacement = `${objectText}.getOrElse(/* TODO: provide default value */)`
-              } else if (methodName === "getOrThrow") {
-                // Replace .getOrThrow() with .getOrElse()
-                replacement = `${objectText}.getOrElse(/* TODO: provide default value */)`
-              } else if (methodName === "unwrap") {
-                // Replace .unwrap() with .getOrElse()
-                replacement = `${objectText}.getOrElse(/* TODO: provide default value */)`
-              } else if (methodName === "expect") {
-                // Replace .expect(msg) with .getOrElse()
-                replacement = `${objectText}.getOrElse(/* TODO: provide default value */)`
-              } else {
-                // Generic fallback
-                replacement = `${objectText}.getOrElse(/* TODO: provide default value */)`
-              }
-
-              return fixer.replaceText(node, replacement)
-            },
+            suggest: [
+              {
+                messageId: "suggestOrElse",
+                fix(fixer) {
+                  return fixer.replaceText(node, `${objectText}.orElse(undefined /* TODO: default${wasSuffix} */)`)
+                },
+              },
+              {
+                messageId: "suggestFold",
+                fix(fixer) {
+                  return fixer.replaceText(
+                    node,
+                    `${objectText}.fold(() => undefined /* TODO: onNone${wasSuffix} */, (v) => v /* TODO: onSome */)`,
+                  )
+                },
+              },
+            ],
           })
         }
       },

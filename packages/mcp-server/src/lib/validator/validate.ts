@@ -7,7 +7,7 @@ import ts from "typescript"
 import { compilerOptions, createCompilerHost, VIRTUAL_FILENAME } from "./compiler-host"
 import type { ValidateOptions, ValidationDiagnostic, ValidationResult } from "./types"
 
-const DEFAULT_IMPORTS = `import { Option, Some, None, Either, Right, Left, Try, List, Set, Map, Lazy, LazyList, Task, IO, Cond, Match, Brand, ValidatedBrand, Tuple, Stack, Ok, Err } from "functype"\n`
+const DEFAULT_IMPORTS = `import { Option, Some, None, Either, Right, Left, Try, List, Set, Map, Lazy, LazyList, Task, IO, Cond, Match, Brand, ValidatedBrand, Tuple, Stack, Ok, Err, type Wire } from "functype"\n`
 
 const hasFunctypeImport = (code: string): boolean => /from\s+["']functype(?:\/[^"']*)?["']/.test(code)
 

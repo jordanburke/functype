@@ -58,6 +58,10 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
+          allowArrayLiterals: {
+            type: "boolean",
+            default: false,
+          },
         },
         additionalProperties: false,
       },
@@ -75,6 +79,7 @@ const rule: Rule.RuleModule = {
     const options = context.options[0] || {}
     const allowArraysInTests = options.allowArraysInTests !== false
     const allowReadonlyArrays = options.allowReadonlyArrays !== false
+    const allowArrayLiterals = options.allowArrayLiterals === true
 
     // Get functype imports if available (but still apply rule even without explicit import)
     const functypeImports = getFunctypeImportsLegacy(context)
@@ -108,16 +113,29 @@ const rule: Rule.RuleModule = {
       TSArrayType(node: ASTNode) {
         if (allowArraysInTests && isInTestFile()) return
 
+        // `readonly T[]` parses as TSTypeOperator(operator: "readonly") wrapping TSArrayType.
+        // When the parent is that readonly wrapper, we treat the whole `readonly T[]` as
+        // the reported unit — both for gating (parity with the ReadonlyArray<T> branch
+        // below) and for the suggestion's replacement range. Replacing only the inner
+        // TSArrayType would leave `readonly List<T>` behind, which is invalid TS
+        // (TS1354: `readonly` only applies to array/tuple types).
+        const parent = node.parent as ASTNode | undefined
+        const isReadonly =
+          parent?.type === "TSTypeOperator" && (parent as { operator?: string }).operator === "readonly"
+
+        if (isReadonly && allowReadonlyArrays) return
+
         const sourceCode = context.sourceCode
         const elementType = sourceCode.getText(node.elementType)
-        const fullType = sourceCode.getText(node)
+        const reportNode = isReadonly ? (parent as ASTNode) : node
+        const fullType = sourceCode.getText(reportNode)
 
         const suggest: Rule.SuggestionReportDescriptor[] = [
           {
             messageId: "suggestListType",
             data: { type: elementType },
             fix(fixer: Rule.RuleFixer) {
-              return fixer.replaceText(node, `List<${elementType}>`)
+              return fixer.replaceText(reportNode, `List<${elementType}>`)
             },
           },
         ]
@@ -131,7 +149,7 @@ const rule: Rule.RuleModule = {
         }
 
         context.report({
-          node,
+          node: reportNode,
           messageId: "preferList",
           data: {
             type: elementType,
@@ -156,9 +174,6 @@ const rule: Rule.RuleModule = {
           // Look for type parameters in child nodes
           const typeParam = findTypeParameter(node, sourceCode)
           const fullType = sourceCode.getText(node)
-
-          // Skip if already readonly
-          if (allowReadonlyArrays && fullType.startsWith("readonly")) return
 
           const resolvedType = typeParam || "T"
 
@@ -191,8 +206,10 @@ const rule: Rule.RuleModule = {
           })
         }
 
-        // Handle ReadonlyArray<T> - suggest List even if allowing readonly arrays
+        // Handle ReadonlyArray<T> — gated on allowReadonlyArrays (parity with `readonly T[]`).
         if (typeName === "ReadonlyArray") {
+          if (allowReadonlyArrays) return
+
           const typeParam = findTypeParameter(node, sourceCode)
           const fullType = sourceCode.getText(node)
           const resolvedType = typeParam || "T"
@@ -229,6 +246,7 @@ const rule: Rule.RuleModule = {
 
       ArrayExpression(node: ASTNode) {
         if (allowArraysInTests && isInTestFile()) return
+        if (allowArrayLiterals) return
 
         // Only flag non-empty arrays to avoid noise
         if (node.elements.length === 0) return

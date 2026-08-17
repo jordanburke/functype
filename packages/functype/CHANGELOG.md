@@ -6,6 +6,49 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**
+
+`Wire<T>` is `ReadonlyArray<T>` with an optional phantom-symbol brand — structurally identical, bidirectionally assignable, zero runtime cost, no casts at call sites. Its purpose is to name serialization boundaries (DB rows, HTTP bodies, JSONB payloads, workflow inputs) so they become greppable (`rg 'Wire<'`), self-documenting at the declaration site, and (paired with the new `prefer-list` behavior) actually enforceable via lint.
+
+```ts
+import type { Wire } from "functype"
+// or: import type { Wire } from "functype/wire"
+
+type ClaimedDoc = Wire<Row>
+async function fetchDocs(): Promise<ClaimedDoc> { ... }
+List(await fetchDocs()).filter(...)  // convert to List for transformation
+```
+
+Reachable from both the top barrel and the `functype/wire` subpath, matching `Logger` from 1.3.
+
+**`eslint-plugin-functype` — `prefer-list` option surface fixed and expanded (addresses #285).**
+
+`allowReadonlyArrays` (default `true`) now genuinely gates both `ReadonlyArray<T>` and `readonly T[]` in type positions. Previously the option was effectively inert on real code: the `ReadonlyArray<T>` branch had an explicit "always suggest" override, `readonly T[]` reported unconditionally via `TSArrayType` (no parent-operator check), and the option's only usage — a `startsWith("readonly")` check inside the `Array<T>` branch — was dead code (`getText` of a `TSTypeReference` never includes the parent operator; `readonly Array<T>` is invalid TS anyway).
+
+- **Under the default (`allowReadonlyArrays: true`), consumers will see FEWER reports** — both `ReadonlyArray<T>` and `readonly T[]` are now silenced, as the option name has always promised. This is the largest behavior change in the release; consumers who _were_ relying on the old always-flag behavior (probably nobody, since the option name said otherwise) should set `allowReadonlyArrays: false`.
+- **Under `allowReadonlyArrays: false`, reports are the same as before** — both spellings were and are flagged. What changes is that the option now does something meaningful.
+
+The suggestion for `readonly T[]` now replaces the whole `readonly T[]` expression rather than just the inner `T[]`; previously that would have left invalid `readonly List<T>` in the source (TS1354). Same fix philosophy as this release's `no-get-unsafe` autofix removal — don't ship suggestions that emit broken code.
+
+New option: `allowArrayLiterals` (default `false`) splits array-literal reporting off from type-position reporting. The default preserves existing literal-flagging behavior; flip to `true` when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`.
+
+**Boundary recipe.** Pair `allowReadonlyArrays: false` with the new `Wire<T>` type. The rule inspects `TSTypeReference.typeName` and only recognizes `Array` / `ReadonlyArray`; every other name — `Wire<T>`, consumer aliases like `type ClaimedDoc = Wire<Row>` — passes for free. Result: every unmarked `ReadonlyArray<T>` is a lint error, `Wire<T>` is the sole explicit escape hatch, and boundaries become countable.
+
+**`eslint-plugin-functype` — `no-get-unsafe` defaults, message, and autofix corrected (addresses #285).**
+
+The default `unsafeMethods` list is now `["orThrow", "expect", "get", "getOrThrow", "unwrap"]`. Previously it was `["get", "getOrThrow", "unwrap", "expect"]` — three of those methods don't exist on functype's `Option`, and the real dangerous extractor `.orThrow()` was missing. **Consumers on `configs/strict.ts` (`no-get-unsafe: "error"`) will see new lint errors on `.orThrow()` calls** — that's intentional; the rule previously found nothing on real functype code.
+
+The autofix has been **removed**. The old fixer emitted `.getOrElse(/* TODO */)` — a method that does not exist on any type in the `Extractable` interface (the actual method is `.orElse(default)`). It also silently dropped the message argument on `.expect(msg)`. With the fixer removed, `eslint --fix` no longer rewrites `.orThrow()` calls into build breaks.
+
+Two suggestions are now offered (opt-in via editor UI, not applied by `--fix`):
+
+- `.orElse(undefined /* TODO: default */)` — value fallback
+- `.fold(() => undefined /* TODO: onNone */, (v) => v /* TODO: onSome */)` — branch handling
+
+The message text updates from "Use .fold(), .map(), or .getOrElse() instead" to "Use .fold(), .map(), or .orElse() instead".
+
+**functype-eval note.** Codebases containing `.orThrow()` calls will see their `safety` fitness score drop as those sites become visible. Codebases adopting `Wire<T>` will see their `collections` score rise as `ReadonlyArray<T>` sites move under the marker. Both are intentional signal improvements.
+
 ## 1.8.0 - 2026-07-27
 
 **`functype` — `Exit` gains a `Die` variant so defects stop masquerading as typed errors (fixes #259).**

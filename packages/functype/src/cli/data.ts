@@ -431,6 +431,16 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  Wire: {
+    description:
+      "Serialization-boundary marker for collections crossing DB / HTTP / JSONB boundaries. Zero runtime, structurally identical to ReadonlyArray<T> (bidirectionally assignable, no casts). Value comes from grep-ability (`rg 'Wire<'`), documented intent at the declaration site, and pairing with `functype/prefer-list` set to `allowReadonlyArrays: false` — Wire<T> is the sole explicit boundary escape hatch.",
+    interfaces: [],
+    methods: {
+      create: ["type Row = Wire<{ id: string }>"],
+      other: ["List(rows).filter(...)  // convert to List for transformation"],
+    },
+  },
+
   ValidatedBrand: {
     description: "Branded types with runtime validation",
     interfaces: [],
@@ -724,7 +734,7 @@ export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Exit", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
-  Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand"],
+  Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand", "Wire"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],
   Service: ["Logger"],

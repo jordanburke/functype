@@ -129,6 +129,11 @@
       "import": "./dist/logger/index.js",
       "default": "./dist/logger/index.js"
     },
+    "./wire": {
+      "types": "./dist/wire/index.d.ts",
+      "import": "./dist/wire/index.js",
+      "default": "./dist/wire/index.js"
+    },
     "./task": {
       "types": "./dist/core/task/index.d.ts",
       "import": "./dist/core/task/index.js",

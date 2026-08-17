@@ -353,6 +353,21 @@ import type { Logger } from "functype";
 | `DirectLogger` (no adapter)      | `createDirectConsoleLogger()` from `functype-log/direct` |
 | `consoleBootLogger` (default)    | `import { consoleBootLogger } from "functype-os/config"` |
 
+## Wire (core type, 1.9+)
+
+Serialization-boundary marker for `ReadonlyArray<T>`. Zero runtime, bidirectionally assignable, no casts at call sites. Value comes from grep-ability (`rg 'Wire<'`), intent at the declaration site, and pairing with the `functype/prefer-list` ESLint rule.
+
+```typescript
+// Reachable from both the top barrel and the functype/wire subpath
+import type { Wire } from "functype";
+
+type ClaimedDoc = Wire<Row>;
+async function fetchDocs(): Promise<ClaimedDoc> { ... }
+List(await fetchDocs()).filter(...)  // convert to List for transformation
+```
+
+The boundary recipe: set `prefer-list` to `{ allowReadonlyArrays: false }`. Every unmarked `ReadonlyArray<T>` becomes a lint error; `Wire<T>` is the sole explicit escape hatch. Consumer aliases (`type ClaimedDoc = Wire<Row>`) compose for free — the syntactic rule ignores unrecognized type names.
+
 ## Config (functype-os/config, 1.3+)
 
 ```typescript

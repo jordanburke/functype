@@ -64,6 +64,13 @@ export default function CoreTypes() {
         "Minimal 4-method interface shared by every functype-* package. Type-only, zero runtime, DirectLogger from functype-log satisfies structurally",
       icon: "✎",
     },
+    {
+      name: "Wire<T>",
+      href: "/wire",
+      description:
+        "Serialization-boundary marker for ReadonlyArray at DB / HTTP / JSONB boundaries. Zero runtime, grep-able, and pairs with the prefer-list ESLint rule",
+      icon: "⇢",
+    },
   ];
 
   return (
