@@ -45,7 +45,7 @@
     "functype": "workspace:^",
     "ts-builds": "^3.4.1",
     "tsdown": "^0.22.14",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "type": "module",
   "main": "./dist/index.js",
