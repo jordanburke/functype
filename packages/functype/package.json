@@ -60,7 +60,7 @@
     "cli-example": "npx . Option"
   },
   "devDependencies": {
-    "@eslint/compat": "^2.1.0",
+    "@eslint/compat": "^2.1.1",
     "@types/node": "~24.10.15",
     "eslint-config-functype": "workspace:*",
     "eslint-plugin-functional": "^10.0.0",
