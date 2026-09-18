@@ -1,7 +1,7 @@
 import type { Option } from "@/option/Option"
 
-import type { Tracer } from "./Tracer.js"
 import type { TraceOp } from "./TraceEvent.js"
+import type { Tracer } from "./Tracer.js"
 
 // ── internal helpers ──────────────────────────────────────────────────────────
 

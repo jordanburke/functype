@@ -1,7 +1,7 @@
 import { Layer } from "@/io/Layer"
 
-import { Tracer } from "./Tracer.js"
 import type { TraceEvent } from "./TraceEvent.js"
+import { Tracer } from "./Tracer.js"
 
 /**
  * Built-in Tracer Layer implementations.
@@ -25,7 +25,6 @@ export const TracerLive = {
   console(prefix = "[trace]"): Layer<never, never, Tracer> {
     return Layer.succeed(Tracer, {
       emit: (e) => {
-        // eslint-disable-next-line no-console
         console.log(
           `${prefix} seq=${e.seq} op=${e.op} tag=${e.tag} inTag=${e.inTag}${e.outTag !== undefined ? ` outTag=${e.outTag}` : ""}${e.label !== undefined ? ` label=${e.label}` : ""}`,
         )
