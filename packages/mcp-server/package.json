@@ -67,7 +67,7 @@
     "fastmcp": "^4.20.14",
     "functype": "workspace:*",
     "typescript": "^6.0.3",
-    "zod": "^4.6.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
