@@ -2,9 +2,7 @@
 
 This CHANGELOG covers the 6-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
 
-Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased` as you land changes, and `pnpm release patch|minor|major` cuts that section into a dated version header when you cut a release.
-
-## Unreleased
+Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased
 
 **`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
 
@@ -12,41 +10,52 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ```ts
 import { TracedOption } from "functype"
-import type { Option, TraceEvent } from "functype"
+import type { Option, TraceEvent, Tracer } from "functype"
 
 declare const user: Option<{ name: string }>
 const events: TraceEvent[] = []
+const tracer: Tracer = { emit: (e) => void events.push(e) }
 
-TracedOption(user, { emit: (e) => events.push(e) })
+TracedOption(user, tracer, "greet-span")
   .map((u) => u.name.trim(), "trim")
   .filter((n) => n.length > 0, "non-empty")
   .orElse("anonymous", "fallback")
-// events: map -> filter -> orElse, all sharing one spanId
+// events: map -> filter -> orElse, all sharing spanId "greet-span"
 ```
 
-Structure-preserving ops (`map`, `flatMap`, `filter`) return a fresh `TracedOption<B>` carrying the same `spanId` with `seq` incremented, so state threads forward immutably rather than mutating a shared recorder. Terminal ops (`fold`, `orElse`) emit and return the raw value, exiting the wrapper. `unwrap()` returns the underlying `Option<A>` and emits nothing — the escape hatch back to untraced code.
+Structure-preserving ops (`map`, `flatMap`, `filter`) return a fresh `TracedOption<B>` carrying the same `spanId` with `seq` incremented, so state threads forward immutably rather than mutating a shared recorder. Terminal ops (`fold`, `orElse`, `unwrap`) emit and exit the wrapper; `unwrap()` returns the underlying `Option<A>` and emits an `"unwrap"` event, so a span never ends without a terminal record.
 
-Every op takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain actually took without instrumenting the predicates themselves.
+Every op takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain took without instrumenting the predicates.
 
-New exported types: `TraceEvent`, `TraceOp`, `TraceSpan`, `SpanOutcome`. `TraceOp` is `"construct" | "map" | "flatMap" | "filter" | "fold" | "orElse" | (string & {})` — open, so callers can emit custom ops without a cast.
+`spanId` is **required**. Core does not generate ids, which keeps tracing deterministic and keeps a global `crypto` dependency out of a zero-dependency package. Pass `crypto.randomUUID()` yourself if that is what you want.
 
-**`functype` — `TracerLive` Layer implementations for the `Tracer` service.**
+New exports: `TracedOption`, and the types `Tracer`, `TraceEvent`, `TraceOp`. `TraceOp` is `"map" | "flatMap" | "filter" | "fold" | "orElse" | "unwrap" | (string & {})` — open, so callers can emit custom ops without a cast.
 
-`Tracer` is a `Tag`-backed service, so it plugs into the existing `IO<R, E, A>` DI machinery. Swapping implementations silences or captures traces without touching pipeline code:
+**`Tracer` is type-only, following the `Logger` precedent.** Core names the contract; consumers own the implementation. There is no `Tracer` Tag and no `TracerLive` in core — deliberately, because the implementations are literals:
 
 ```ts
-program.provideLayer(TracerLive.collecting(events)).runSyncOrThrow() // tests, eval harnesses
-program.provideLayer(TracerLive.noop()).runOrThrow() // production, zero overhead
-program.provideLayer(TracerLive.console("[trace]")).runOrThrow() // local dev
+const noop: Tracer = { emit: () => undefined }
+const collecting = (target: TraceEvent[]): Tracer => ({ emit: (e) => void target.push(e) })
+const viaLogger = (logger: Logger): Tracer => ({ emit: (e) => logger.debug("trace", e) })
 ```
 
-All three return `Layer<never, never, Tracer>`.
+Shipping a `console`-flavored default would contradict the rule `Logger` already established — type-only, no opinion on output format, no `console`-global dependency, default impls in consumer packages.
 
-**The `Tracer` Tag is deliberately not re-exported from the top barrel.** It is an implementation detail of `TracedOption`, and the common path — constructing a `TracedOption` and providing a `TracerLive` layer — never needs it. Advanced use (`IO.service(Tracer)`, a custom `Layer.succeed(Tracer, impl)`) imports it directly from `functype/src/traced/Tracer`. Exporting only `TracedOption`, `TracerLive`, and the event types keeps the public surface to what most callers actually compose.
+For dependency injection, declare your own Tag. `Tag` and `Layer` are public from `functype/io`, and core deliberately reserves no service id:
 
-The default `spanId` is `crypto.randomUUID()`, which needs a global `crypto` — present in Node 19+ and browsers. Pass an explicit `spanId` to group events across chains, or to run somewhere without it.
+```ts
+import { IO, Layer, Tag } from "functype/io"
 
-Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` is a follow-on rather than part of this change.
+const TracerTag = Tag<Tracer>("app/Tracer")
+
+const program = IO.service(TracerTag).map((tracer) => TracedOption(user, tracer, "greet-span").orElse("anonymous"))
+
+await program.provideLayer(Layer.succeed(TracerTag, collecting(events))).runOrThrow()
+```
+
+That is the whole of the wiring, and it buys the same R-channel guarantee a core-owned Tag would: the requirement shows up in the type and is satisfied once at the edge.
+
+Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` — and a `TraceSpan` collector that groups events by `spanId` — is a follow-on rather than part of this change.
 
 ## 1.9.0 - 2026-08-17
 

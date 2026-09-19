@@ -2,7 +2,7 @@
  * Identifies which combinator emitted this event.
  * String union is open so callers can extend with custom ops.
  */
-export type TraceOp = "construct" | "map" | "flatMap" | "filter" | "fold" | "orElse" | (string & {})
+export type TraceOp = "map" | "flatMap" | "filter" | "fold" | "orElse" | "unwrap" | (string & {})
 
 /**
  * One observation emitted by a TracedOption combinator.
@@ -25,18 +25,4 @@ export type TraceEvent = {
   readonly outTag?: string
   readonly label?: string
   readonly meta?: Record<string, unknown>
-}
-
-/** The closed-chain outcome emitted by a terminal op (fold / orElse). */
-export type SpanOutcome = {
-  readonly tag: string
-  readonly terminal: TraceOp
-  readonly usedDefault?: boolean
-}
-
-/** Full span — useful for collecting + scoring an entire chain. */
-export type TraceSpan = {
-  readonly spanId: string
-  readonly events: readonly TraceEvent[]
-  readonly outcome?: SpanOutcome
 }

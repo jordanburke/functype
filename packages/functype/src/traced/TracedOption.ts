@@ -16,12 +16,13 @@ function typeTagOf(v: Option<unknown>): string {
 // ── public type ───────────────────────────────────────────────────────────────
 
 /**
- * A transparent wrapper around `Option<A>` that emits a `TraceEvent` to the
+ * A wrapper around `Option<A>` that emits a `TraceEvent` to the
  * injected `Tracer` on every combinator call.
  *
  * Structure-preserving ops return `TracedOption<B>`, carrying the same spanId
  * and incrementing seq. Terminal ops (`fold`, `orElse`) emit and return the
- * raw value, exiting the wrapper. `unwrap()` exits silently.
+ * raw value, exiting the wrapper. `unwrap()` emits a terminal event too, so a
+ * span never ends without one.
  *
  * @example
  * ```ts
@@ -29,7 +30,7 @@ function typeTagOf(v: Option<unknown>): string {
  * const events: TraceEvent[] = []
  * const tracer = { emit: (e: TraceEvent) => void events.push(e) }
  *
- * TracedOption(user, tracer)
+ * TracedOption(user, tracer, "span-1")
  *   .map(u => u.name.trim(), "trim")
  *   .filter(n => n.length > 0, "non-empty")
  *   .orElse("anonymous", "fallback")
@@ -52,15 +53,12 @@ export type TracedOption<A> = {
  *
  * @param inner    - The Option to wrap.
  * @param tracer   - Receives events. Typically obtained via IO.service(Tracer).
- * @param spanId   - Groups all events from one chain. Defaults to a fresh UUID.
+ * @param spanId   - Groups all events from one chain. Required: core does not
+ *                   generate ids, so tracing stays deterministic and free of a
+ *                   global `crypto` dependency.
  * @param seq      - Starting sequence number. Defaults to 0. Increments on each op.
  */
-export function TracedOption<A>(
-  inner: Option<A>,
-  tracer: Tracer,
-  spanId: string = crypto.randomUUID(),
-  seq = 0,
-): TracedOption<A> {
+export function TracedOption<A>(inner: Option<A>, tracer: Tracer, spanId: string, seq = 0): TracedOption<A> {
   function emit(
     op: TraceOp,
     outTag: string | undefined,
@@ -112,6 +110,7 @@ export function TracedOption<A>(
     },
 
     unwrap(): Option<A> {
+      emit("unwrap", undefined, undefined)
       return inner
     },
   }

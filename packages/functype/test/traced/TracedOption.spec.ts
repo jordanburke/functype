@@ -137,11 +137,23 @@ describe("TracedOption", () => {
 
   // ── unwrap ─────────────────────────────────────────────────────────────────
 
-  it("unwrap returns the inner Option without emitting", () => {
+  it("unwrap returns the inner Option and emits a terminal event", () => {
     const inner = Some(7)
     const result = TracedOption(inner, tracer, "s").unwrap()
     expect(result).toBe(inner)
-    expect(events).toHaveLength(0)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.op).toBe("unwrap")
+    expect(events[0]?.inTag).toBe("Some")
+    expect(events[0]).not.toHaveProperty("outTag")
+  })
+
+  it("unwrap closes a span that would otherwise end without a terminal event", () => {
+    TracedOption(Some(1), tracer, "s")
+      .map((n) => n + 1, "inc")
+      .unwrap()
+
+    expect(events.map((e) => e.op)).toEqual(["map", "unwrap"])
+    expect(events.map((e) => e.seq)).toEqual([0, 1])
   })
 
   // ── full chain ─────────────────────────────────────────────────────────────
