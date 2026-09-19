@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { existsSync, readFileSync, statSync } from "node:fs"
+import { dirname, join } from "node:path"
 
 import { describe, expect, it } from "vitest"
 
@@ -56,33 +56,51 @@ const REPO_ROOT = join(import.meta.dirname, "..", "..", "..", "..")
 const read = (rel: string): string => readFileSync(join(REPO_ROOT, rel), "utf8")
 
 /**
- * Identifiers reachable from the package barrel. Resolves the one level of
- * `export * from "@/x"` that `src/index.ts` uses; type-only exports are
- * invisible at runtime, so this reads source text rather than importing.
+ * Identifiers reachable from the package barrel.
+ *
+ * Reads source text rather than importing, because type-only exports are
+ * invisible at runtime — which is precisely how `Tracer` drifted unnoticed.
+ * Follows `export *` and `export * as Ns` transitively; a shallow walk finds
+ * only 102 of the 233 exported names, which would make the NOT_IN_CORE
+ * assertion below quietly vacuous for any module that nests.
  */
 const barrelExports = (): ReadonlySet<string> => {
   const src = join(REPO_ROOT, "packages/functype/src")
-  const collect = (text: string): string[] =>
-    [...text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g)].flatMap((m) =>
-      (m[1] ?? "").split(",").map((s) => (s.split(/\s+as\s+/).pop() ?? "").trim()),
-    )
+  const names = new Set<string>()
+  const seen = new Set<string>()
 
-  const root = readFileSync(join(src, "index.ts"), "utf8")
-  const names = collect(root)
+  const resolve = (fromDir: string, spec: string): string | undefined => {
+    const base = spec.startsWith("@/") ? join(src, spec.slice(2)) : join(fromDir, spec)
+    for (const candidate of [`${base.replace(/\.js$/, "")}.ts`, join(base, "index.ts"), base]) {
+      if (existsSync(candidate) && statSync(candidate).isFile()) return candidate
+    }
+    return undefined
+  }
 
-  for (const m of root.matchAll(/export\s+\*\s+from\s+"@\/([^"]+)"/g)) {
-    const mod = m[1]
-    if (mod === undefined) continue
-    for (const candidate of [join(src, mod, "index.ts"), join(src, `${mod}.ts`)]) {
-      try {
-        names.push(...collect(readFileSync(candidate, "utf8")))
-        break
-      } catch {
-        // module resolves elsewhere; the direct-export scan below still covers it
-      }
+  const walk = (file: string): void => {
+    if (seen.has(file)) return
+    seen.add(file)
+    const text = readFileSync(file, "utf8")
+    const dir = dirname(file)
+
+    for (const m of text.matchAll(/export\s+(?:type\s+)?\{([^}]*)\}/g))
+      for (const part of (m[1] ?? "").split(","))
+        names.add((part.split(/\s+as\s+/).pop() ?? "").replace(/^type\s+/, "").trim())
+
+    for (const m of text.matchAll(/export\s+(?:declare\s+)?(?:const|function|class|interface|type|enum)\s+(\w+)/g))
+      if (m[1] !== undefined) names.add(m[1])
+
+    for (const m of text.matchAll(/export\s+\*\s+as\s+(\w+)\s+from/g)) if (m[1] !== undefined) names.add(m[1])
+
+    for (const m of text.matchAll(/export\s+\*\s+(?:as\s+\w+\s+)?from\s+"([^"]+)"/g)) {
+      const target = m[1] === undefined ? undefined : resolve(dir, m[1])
+      if (target !== undefined) walk(target)
     }
   }
-  return new Set(names.filter((n) => n.length > 0))
+
+  walk(join(src, "index.ts"))
+  names.delete("")
+  return names
 }
 
 const marked = (text: string): boolean => EXCLUSION_MARKERS.some((m) => text.toLowerCase().includes(m))
@@ -117,6 +135,21 @@ const exclusionBulletLeads = (markdown: string): ReadonlyArray<string> => {
 }
 
 describe("service-interface policy", () => {
+  /**
+   * Without this, the check above rots into a no-op. An earlier version of the
+   * parser walked only one level and found 102 of 233 exported names: every
+   * NOT_IN_CORE assertion passed because the parser could not see into a
+   * nested `export *`, not because the name was absent. These sentinels each
+   * live behind a nested re-export, so they fail the moment the walk stops
+   * being transitive.
+   */
+  it("the export scan is not blind — sentinels behind nested re-exports resolve", () => {
+    const exported = barrelExports()
+    for (const sentinel of ["Applicative", "Companion", "Base", "Collection"])
+      expect(exported.has(sentinel), `${sentinel} unreachable — export scan has gone shallow`).toBe(true)
+    expect(exported.size).toBeGreaterThan(200)
+  })
+
   it("core exports exactly the service interfaces the policy admits", () => {
     const exported = barrelExports()
     for (const name of IN_CORE) expect(exported.has(name), `${name} should be exported from the barrel`).toBe(true)
@@ -125,7 +158,9 @@ describe("service-interface policy", () => {
 
   it.each(PUBLIC_DOCS)("%s does not claim an in-core interface is absent", (doc) => {
     const markdown = read(doc)
-    const claims = [...exclusionSentences(markdown), ...exclusionBulletLeads(markdown)]
+    // Prose that legitimately pairs an exclusion with an in-core name can opt out.
+    const optedOut = (c: string): boolean => c.includes("<!-- service-policy: ok -->")
+    const claims = [...exclusionSentences(markdown), ...exclusionBulletLeads(markdown)].filter((c) => !optedOut(c))
     const offenders = claims.flatMap((sentence) =>
       IN_CORE.filter((name) => new RegExp(`\\b${name}\\b`).test(sentence)).map(
         (name) => `${name} named in an exclusion claim: "${sentence.trim().slice(0, 160)}"`,
