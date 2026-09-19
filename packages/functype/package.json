@@ -67,8 +67,8 @@
     "fast-check": "^4.10.0",
     "globals": "^17.11.0",
     "ts-builds": "^3.4.1",
-    "tsdown": "^0.22.14",
-    "tsx": "^4.23.12",
+    "tsdown": "^0.23.0",
+    "tsx": "^4.23.13",
     "typedoc": "^0.28.20"
   },
   "types": "./dist/index.d.ts",
