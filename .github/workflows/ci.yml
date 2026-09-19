@@ -39,6 +39,19 @@ jobs:
       - name: Run turbo validate
         run: pnpm turbo run validate
 
+      # `validate` runs formatters and generators in WRITE mode, so a stale
+      # checked-in artifact is silently rewritten and the job still passes.
+      # That is how site/public/llms-full.txt sat at v1.8.0 on main after the
+      # 1.9.0 release. Fail instead, and say which files drifted.
+      - name: Check for uncommitted changes after validate
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::validate modified tracked files — a generated artifact is stale. Run 'pnpm turbo run validate' locally and commit the result."
+            git status --porcelain
+            git diff
+            exit 1
+          fi
+
   bundle-size:
     name: Bundle size report (packages/functype)
     runs-on: ubuntu-latest

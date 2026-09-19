@@ -27,6 +27,19 @@ updates:
         patterns:
           - "tsdown"
           - "tsx"
+      # react and react-dom must be the exact same version or the site build
+      # aborts. #302 bumped react-dom alone and broke main; grouping makes that
+      # specific failure impossible rather than merely caught.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      astro:
+        patterns:
+          - "astro"
+          - "@astrojs/*"
     commit-message:
       prefix: "chore(deps)"
     labels:
