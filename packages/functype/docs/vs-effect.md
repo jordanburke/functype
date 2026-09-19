@@ -36,10 +36,12 @@ line is drawn deliberately. functype does **not** ship, and does not intend to s
 
 - **A fiber runtime** — no green threads, no scheduler.
 - **Structured concurrency** — no supervised fiber trees, no `fork`/`join` semantics.
-- **`Clock` / `Random` / `Tracer`** — these are framework service abstractions. Effect ships
-  them because Effect _is_ a framework; functype isn't. (The one service interface functype
-  does define is `Logger`, and only because every production app already has one — it names
-  an existing concept rather than introducing a new abstraction.)
+- **`Clock` / `Random`** — these are framework service abstractions. Effect ships
+  them because Effect _is_ a framework; functype isn't. (The service interfaces functype
+  does define are `Logger` and `Tracer` — both type-only, both naming an existing concept
+  rather than introducing a new abstraction. `Logger` exists because every production app
+  already has one; `Tracer` is a one-method sink consumed by `TracedOption`. Neither ships
+  a runtime, a Tag, or a default implementation — those live in consumer packages.)
 - **Persistent (structurally-shared) data structures** — functype's `List`/`Set`/`Map` are
   immutable and array-backed (copy-on-write), not HAMT/finger-tree persistent collections.
   See [performance notes](#performance) below.

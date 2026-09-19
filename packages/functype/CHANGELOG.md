@@ -2,9 +2,66 @@
 
 This CHANGELOG covers the 6-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
 
-Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased` as you land changes, and `pnpm release patch|minor|major` cuts that section into a dated version header when you cut a release.
+Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased
 
-## Unreleased
+**`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
+
+`TracedOption<A>` wraps an `Option<A>` and emits one structured `TraceEvent` to an injected `Tracer` on every combinator call, then delegates to the real `Option`. It is purely additive: no existing constructor, type, or combinator changes, and no runtime dependency is added.
+
+```ts
+import { TracedOption } from "functype"
+import type { Option, TraceEvent, Tracer } from "functype"
+
+declare const user: Option<{ name: string }>
+const events: TraceEvent[] = []
+const tracer: Tracer = { emit: (e) => void events.push(e) }
+
+TracedOption(user, tracer, "greet-span")
+  .map((u) => u.name.trim(), "trim")
+  .filter((n) => n.length > 0, "non-empty")
+  .orElse("anonymous", "fallback")
+// events: map -> filter -> orElse, all sharing spanId "greet-span"
+```
+
+Structure-preserving ops (`map`, `flatMap`, `filter`) return a fresh `TracedOption<B>` carrying the same `spanId` with `seq` incremented, so state threads forward immutably rather than mutating a shared recorder. Terminal ops (`fold`, `orElse`, `unwrap`) emit and exit the wrapper; `unwrap()` returns the underlying `Option<A>` and emits an `"unwrap"` event, so a span never ends without a terminal record.
+
+Every op except `unwrap()` takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain took without instrumenting the predicates.
+
+`spanId` is **required**. Core does not generate ids, which keeps tracing deterministic and keeps a global `crypto` dependency out of a zero-dependency package. Pass `crypto.randomUUID()` yourself if that is what you want.
+
+New exports: `TracedOption`, and the types `Tracer`, `TraceEvent`, `TraceOp`. `TraceOp` is `"map" | "flatMap" | "filter" | "fold" | "orElse" | "unwrap" | (string & {})` — open, so callers can emit custom ops without a cast.
+
+**`Tracer` is type-only, following the `Logger` precedent.** Core names the contract; consumers own the implementation. There is no `Tracer` Tag and no `TracerLive` in core — deliberately, because the implementations are literals:
+
+```ts
+const noop: Tracer = { emit: () => undefined }
+const collecting = (target: TraceEvent[]): Tracer => ({ emit: (e) => void target.push(e) })
+const viaLogger = (logger: Logger): Tracer => ({ emit: (e) => logger.debug("trace", e) })
+```
+
+Shipping a `console`-flavored default would contradict the rule `Logger` already established — type-only, no opinion on output format, no `console`-global dependency, default impls in consumer packages.
+
+For dependency injection, declare your own Tag. `Tag` and `Layer` are public from `functype/io`, and core deliberately reserves no service id:
+
+```ts
+import { IO, Layer, Tag } from "functype/io"
+
+const TracerTag = Tag<Tracer>("app/Tracer")
+
+const program = IO.service(TracerTag).map((tracer) => TracedOption(user, tracer, "greet-span").orElse("anonymous"))
+
+await program.provideLayer(Layer.succeed(TracerTag, collecting(events))).runOrThrow()
+```
+
+That is the whole of the wiring, and it buys the same R-channel guarantee a core-owned Tag would: the requirement shows up in the type and is satisfied once at the edge.
+
+**`functype` — `TestClock` companion no longer evaluates `IO` at module init.**
+
+`TestClock.get` and `TestClock.runAll` were eagerly-evaluated properties. Both are now getters, so the `IO` is built on access rather than while the module is still loading. This fixes an import-order cycle: importing `src/io/IO.js` directly before the `functype/io` barrel crashed at load with `TypeError: Cannot read properties of undefined (reading 'service')`. Type-checking never caught it because the cycle is a runtime initialization order problem.
+
+`runAll`'s declared type is now `IO<TestClock, never, void>`, matching the `as unknown as` assertion its siblings `advance` and `setTime` already used; previously it was inferred as `IO<TestClock, unknown, void>`. Callers relying on the wider `unknown` error channel would see a narrower type, though these operations do not fail in practice — which is why the two siblings already declared `never`.
+
+Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` — and a `TraceSpan` collector that groups events by `spanId` — is a follow-on rather than part of this change.
 
 ## 1.9.0 - 2026-08-17
 

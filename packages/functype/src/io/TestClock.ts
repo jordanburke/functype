@@ -176,7 +176,9 @@ export const TestClock = {
   /**
    * Creates an IO that accesses the TestClock from the environment.
    */
-  get: IOCompanion.service(TestClockTag),
+  get get(): IO<TestClock, never, TestClock> {
+    return IOCompanion.service(TestClockTag)
+  },
 
   /**
    * Creates an IO that advances the TestClock.
@@ -201,7 +203,13 @@ export const TestClock = {
   /**
    * Creates an IO that runs all pending tasks.
    */
-  runAll: IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.runAll())),
+  get runAll(): IO<TestClock, never, void> {
+    return IOCompanion.serviceWithIO(TestClockTag, (clock) => IOCompanion.async(() => clock.runAll())) as unknown as IO<
+      TestClock,
+      never,
+      void
+    >
+  },
 
   /**
    * Creates a context with a TestClock for testing.
