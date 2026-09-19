@@ -25,7 +25,7 @@ TracedOption(user, tracer, "greet-span")
 
 Structure-preserving ops (`map`, `flatMap`, `filter`) return a fresh `TracedOption<B>` carrying the same `spanId` with `seq` incremented, so state threads forward immutably rather than mutating a shared recorder. Terminal ops (`fold`, `orElse`, `unwrap`) emit and exit the wrapper; `unwrap()` returns the underlying `Option<A>` and emits an `"unwrap"` event, so a span never ends without a terminal record.
 
-Every op takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain took without instrumenting the predicates.
+Every op except `unwrap()` takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain took without instrumenting the predicates.
 
 `spanId` is **required**. Core does not generate ids, which keeps tracing deterministic and keeps a global `crypto` dependency out of a zero-dependency package. Pass `crypto.randomUUID()` yourself if that is what you want.
 
@@ -54,6 +54,12 @@ await program.provideLayer(Layer.succeed(TracerTag, collecting(events))).runOrTh
 ```
 
 That is the whole of the wiring, and it buys the same R-channel guarantee a core-owned Tag would: the requirement shows up in the type and is satisfied once at the edge.
+
+**`functype` — `TestClock` companion no longer evaluates `IO` at module init.**
+
+`TestClock.get` and `TestClock.runAll` were eagerly-evaluated properties. Both are now getters, so the `IO` is built on access rather than while the module is still loading. This fixes an import-order cycle: importing `src/io/IO.js` directly before the `functype/io` barrel crashed at load with `TypeError: Cannot read properties of undefined (reading 'service')`. Type-checking never caught it because the cycle is a runtime initialization order problem.
+
+`runAll`'s declared type is now `IO<TestClock, never, void>`, matching the `as unknown as` assertion its siblings `advance` and `setTime` already used; previously it was inferred as `IO<TestClock, unknown, void>`. Callers relying on the wider `unknown` error channel would see a narrower type, though these operations do not fail in practice — which is why the two siblings already declared `never`.
 
 Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` — and a `TraceSpan` collector that groups events by `spanId` — is a follow-on rather than part of this change.
 

@@ -33,7 +33,9 @@ import type { Logger as FunctypeLogger } from "functype";
 
 ## Why it lives in core
 
-Logger is the only service-style interface in `functype` core — and only because every production TypeScript app already has one. The proposal explicitly **rejected** adding `Clock`, `Random`, or `Tracer` (framework abstractions Effect ships) on the same grounds: those aren't universally needed the way logging is.
+Logger was the first service-style interface in `functype` core — and only because every production TypeScript app already has one. The proposal explicitly **rejected** adding `Clock` or `Random` (framework abstractions Effect ships) on the same grounds: those aren't universally needed the way logging is.
+
+`Tracer` was later added on exactly the same terms: type-only, one method, no Tag and no default implementation in core, consumed by `TracedOption`. The test is not "is this a service?" but "does this name a concept the caller already has, without shipping a runtime?"
 
 The proposal also rejected baking in a default implementation. Concrete loggers live in consumer packages (`consoleBootLogger` in `functype-os/config`, `DirectLogger` in `functype-log`). Core stays pure types — Bun/Deno/edge-runtime portability comes for free.
 
