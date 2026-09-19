@@ -61,7 +61,7 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "fast-check": "^4.10.0",
+    "fast-check": "^4.10.1",
     "functype": "workspace:^",
     "jsdom": "^26.1.0",
     "react": "^19.3.0",
