@@ -56,9 +56,10 @@ marketing artifact no competing FP library has.
    you marry; functype is a vocabulary you adopt* — the cats/ZIO split. Functype = Scala's standard
    library for TypeScript; Effect = the application framework.
 2. State **explicit non-goals** publicly: no fiber runtime, no structured concurrency, no
-   Clock/Random (promote the Logger/Tracer rationale already in `packages/functype/CLAUDE.md` to
-   public docs — type-only service interfaces are in scope, runtimes are not), no persistent
-   data structures.
+   Clock/Random, no persistent data structures.
+   Then state the line separately, in its own paragraph: type-only service interfaces are in
+   scope, framework runtimes are not. The reasoning already lives in
+   `packages/functype/CLAUDE.md`; promote it to public docs rather than restating it.
 3. Include an honest **"choose Effect when…"** list (structured concurrency, streaming, ecosystem
    mass). The honesty is what makes the rest credible.
 4. Lead with the **LLM-native differentiator**: the enforce/measure/teach loop
