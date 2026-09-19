@@ -25,10 +25,11 @@ function typeTagOf(v: Option<unknown>): string {
  *
  * @example
  * ```ts
+ * declare const user: Option<{ name: string }>
  * const events: TraceEvent[] = []
- * const tracer = { emit: (e) => events.push(e) }
+ * const tracer = { emit: (e: TraceEvent) => void events.push(e) }
  *
- * TracedOption(Option.from(user), tracer)
+ * TracedOption(user, tracer)
  *   .map(u => u.name.trim(), "trim")
  *   .filter(n => n.length > 0, "non-empty")
  *   .orElse("anonymous", "fallback")

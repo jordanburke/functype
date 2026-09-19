@@ -6,6 +6,48 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
+
+`TracedOption<A>` wraps an `Option<A>` and emits one structured `TraceEvent` to an injected `Tracer` on every combinator call, then delegates to the real `Option`. It is purely additive: no existing constructor, type, or combinator changes, and no runtime dependency is added.
+
+```ts
+import { TracedOption } from "functype"
+import type { Option, TraceEvent } from "functype"
+
+declare const user: Option<{ name: string }>
+const events: TraceEvent[] = []
+
+TracedOption(user, { emit: (e) => events.push(e) })
+  .map((u) => u.name.trim(), "trim")
+  .filter((n) => n.length > 0, "non-empty")
+  .orElse("anonymous", "fallback")
+// events: map -> filter -> orElse, all sharing one spanId
+```
+
+Structure-preserving ops (`map`, `flatMap`, `filter`) return a fresh `TracedOption<B>` carrying the same `spanId` with `seq` incremented, so state threads forward immutably rather than mutating a shared recorder. Terminal ops (`fold`, `orElse`) emit and return the raw value, exiting the wrapper. `unwrap()` returns the underlying `Option<A>` and emits nothing — the escape hatch back to untraced code.
+
+Every op takes an optional trailing `label` for naming a code path at the call site. Two ops record op-specific detail in `meta`: `filter` reports `{ kept }`, and `orElse` reports `{ usedDefault }` — enough to reconstruct which branch a chain actually took without instrumenting the predicates themselves.
+
+New exported types: `TraceEvent`, `TraceOp`, `TraceSpan`, `SpanOutcome`. `TraceOp` is `"construct" | "map" | "flatMap" | "filter" | "fold" | "orElse" | (string & {})` — open, so callers can emit custom ops without a cast.
+
+**`functype` — `TracerLive` Layer implementations for the `Tracer` service.**
+
+`Tracer` is a `Tag`-backed service, so it plugs into the existing `IO<R, E, A>` DI machinery. Swapping implementations silences or captures traces without touching pipeline code:
+
+```ts
+program.provideLayer(TracerLive.collecting(events)).runSyncOrThrow() // tests, eval harnesses
+program.provideLayer(TracerLive.noop()).runOrThrow() // production, zero overhead
+program.provideLayer(TracerLive.console("[trace]")).runOrThrow() // local dev
+```
+
+All three return `Layer<never, never, Tracer>`.
+
+**The `Tracer` Tag is deliberately not re-exported from the top barrel.** It is an implementation detail of `TracedOption`, and the common path — constructing a `TracedOption` and providing a `TracerLive` layer — never needs it. Advanced use (`IO.service(Tracer)`, a custom `Layer.succeed(Tracer, impl)`) imports it directly from `functype/src/traced/Tracer`. Exporting only `TracedOption`, `TracerLive`, and the event types keeps the public surface to what most callers actually compose.
+
+The default `spanId` is `crypto.randomUUID()`, which needs a global `crypto` — present in Node 19+ and browsers. Pass an explicit `spanId` to group events across chains, or to run somewhere without it.
+
+Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` is a follow-on rather than part of this change.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**
