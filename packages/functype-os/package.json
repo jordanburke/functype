@@ -40,10 +40,10 @@
     "functype": ">=0.60.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.6",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",
-    "ts-builds": "^3.4.1",
+    "ts-builds": "^3.4.2",
     "tsdown": "^0.23.0",
     "vitest": "^4.1.11"
   },

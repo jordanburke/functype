@@ -54,19 +54,19 @@
     }
   },
   "devDependencies": {
-    "@tanstack/react-query": "^5.103.1",
+    "@tanstack/react-query": "^5.103.2",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.10.0",
     "@testing-library/react": "^16.3.3",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "fast-check": "^4.10.1",
+    "fast-check": "^4.10.2",
     "functype": "workspace:^",
     "jsdom": "^26.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "ts-builds": "^3.4.1",
+    "ts-builds": "^3.4.2",
     "tsdown": "^0.23.0"
   },
   "type": "module",
