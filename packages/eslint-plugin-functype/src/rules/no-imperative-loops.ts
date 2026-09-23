@@ -112,6 +112,11 @@ const rule: Rule.RuleModule = {
       ForInStatement(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
 
+        if (containsAwait(node.body)) {
+          context.report({ node, messageId: "noAsyncLoop" })
+          return
+        }
+
         const suggest: Rule.SuggestionReportDescriptor[] = []
 
         if (isSingleStatementBody(node) && !hasDestructuringVariable(node) && !bodyContainsBreakOrContinue(node)) {
@@ -158,7 +163,15 @@ const rule: Rule.RuleModule = {
 
         const suggest: Rule.SuggestionReportDescriptor[] = []
 
-        if (isSingleStatementBody(node) && !hasDestructuringVariable(node) && !bodyContainsBreakOrContinue(node)) {
+        // `for (x of await xs())` → `await xs().forEach(...)` would bind `await` to the forEach call, and
+        // `for await` iterates an async iterable, which has no .forEach — neither gets a suggestion.
+        if (
+          isSingleStatementBody(node) &&
+          !hasDestructuringVariable(node) &&
+          !bodyContainsBreakOrContinue(node) &&
+          !containsAwait(node.right) &&
+          !node.await
+        ) {
           const sourceCode = context.sourceCode
           const bodyStmt = node.body.body[0]
 

@@ -5,7 +5,9 @@ import type { ASTNode } from "../types/ast"
 /** Methods on a monadic value that mean "this is the Some/Right/Success path." */
 const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "isSuccess"])
 /** Methods that mean "this is the None/Left/Failure path." */
-const NEGATIVE_PREDICATES: ReadonlySet<string> = new Set(["isNone", "isEmpty", "isLeft", "isFailure"])
+// `isEmpty` is deliberately absent: it is a property on every functype container, never a method, so
+// `x.isEmpty()` is not functype code (and on a List, `.fold` is a reduce, not a branch).
+const NEGATIVE_PREDICATES: ReadonlySet<string> = new Set(["isNone", "isLeft", "isFailure"])
 
 /**
  * How each container's fold exposes its failure side. `fold(onFailure, onSuccess)` everywhere, but
@@ -18,7 +20,6 @@ type FailureSide = { readonly param: string; readonly member: string } | null
 const FAILURE_SIDE: Readonly<Record<string, FailureSide>> = {
   isSome: null,
   isNone: null,
-  isEmpty: null,
   isRight: { param: "left", member: "value" },
   isLeft: { param: "left", member: "value" },
   isSuccess: { param: "error", member: "error" },
@@ -56,14 +57,58 @@ function extractMonadicTest(
   return null
 }
 
-const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+/** Source text with all whitespace removed — receivers match however they are line-broken. */
+const compact = (text: string): string => text.replace(/\s+/g, "")
+
+const isNode = (value: unknown): value is ASTNode =>
+  typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string"
+
+const childNodes = (node: ASTNode): ReadonlyArray<ASTNode> =>
+  Object.entries(node)
+    .filter(([key]) => key !== "parent")
+    .flatMap(([, value]) => (Array.isArray(value) ? value.filter(isNode) : isNode(value) ? [value] : []))
+
+/** Which reads of the narrowed receiver a fold parameter replaces. */
+type Reads = { readonly members: ReadonlyArray<string>; readonly methods: ReadonlyArray<string> }
+
+const SUCCESS_READS: Reads = { members: [SUCCESS_MEMBER], methods: SUCCESS_METHODS }
 
 /**
- * A receiver read at the start of a member chain — `e.value`, `e.orThrow()` — but not the same text
- * reached through another object (`other.e.value`) or a longer name (`ee.value`, `e.valueOf()`).
+ * Source ranges inside `branch` that read the narrowed receiver: `e.value`, `e!.value`, `e?.value`,
+ * `e.orThrow()`. Driven by the AST rather than the text, so a read never matches inside a string or
+ * template literal, a comment, a longer name, or another object's member (`other.e.value`). A member
+ * that is called (`e.value()`) or assigned (`e.value = 3`) is not a read.
  */
-const receiverRead = (receiver: string, read: string): RegExp =>
-  new RegExp(`(?<![\\w$.])${escapeRegExp(receiver)}\\.${read}`, "g")
+function receiverReads(
+  branch: ASTNode,
+  receiver: string,
+  reads: Reads,
+  sourceCode: SourceCode,
+): ReadonlyArray<readonly [number, number]> {
+  const isReceiver = (node: ASTNode): boolean => {
+    const target = node.type === "TSNonNullExpression" ? node.expression : node
+    return compact(sourceCode.getText(target)) === compact(receiver)
+  }
+  const isMember = (node: ASTNode, names: ReadonlyArray<string>): boolean =>
+    node.type === "MemberExpression" &&
+    !node.computed &&
+    node.property.type === "Identifier" &&
+    names.includes(node.property.name) &&
+    isReceiver(node.object)
+
+  const visit = (node: ASTNode): ReadonlyArray<readonly [number, number]> => {
+    const parent = node.parent
+    const isCalled = parent?.type === "CallExpression" && parent.callee === node
+    const isWritten =
+      (parent?.type === "AssignmentExpression" && parent.left === node) || parent?.type === "UpdateExpression"
+    if (isMember(node, reads.members) && !isCalled && !isWritten) return [node.range]
+    if (node.type === "CallExpression" && node.arguments.length === 0 && isMember(node.callee, reads.methods)) {
+      return [node.range]
+    }
+    return childNodes(node).flatMap(visit)
+  }
+  return visit(branch)
+}
 
 /** A parameter name no branch already uses, so the fold never shadows a captured identifier. */
 const freshName = (base: string, branches: ReadonlyArray<string>): string => {
@@ -74,34 +119,54 @@ const freshName = (base: string, branches: ReadonlyArray<string>): string => {
 }
 
 /**
+ * An arrow body must not start with `{` (it would parse as a block) and a comma expression must stay
+ * one argument, so those two shapes are parenthesized. ESTree ranges exclude the source's own parens.
+ */
+const asArrowBody = (node: ASTNode, text: string): string =>
+  node.type === "ObjectExpression" || node.type === "SequenceExpression" ? `(${text})` : text
+
+/**
  * One fold callback. Reads of the narrowed receiver become reads of the callback's parameter — the
  * receiver is NOT narrowed inside the callback, so leaving `e.value` there is a type error (#323).
  * A branch that never reads the value gets a parameterless callback, not an unused parameter.
  */
-function foldCallback(body: string, receiver: string, reads: ReadonlyArray<string>, param: string | null): string {
-  if (param === null) return `() => ${body}`
-  const rewritten = reads.reduce((acc, read) => acc.replace(receiverRead(receiver, read), param), body)
-  return rewritten === body ? `() => ${body}` : `(${param}) => ${rewritten}`
+function foldCallback(
+  branch: ASTNode,
+  receiver: string,
+  reads: Reads | null,
+  param: string,
+  sourceCode: SourceCode,
+): string {
+  const text = sourceCode.getText(branch)
+  const ranges = reads === null ? [] : receiverReads(branch, receiver, reads, sourceCode)
+  if (ranges.length === 0) return `() => ${asArrowBody(branch, text)}`
+  const offset = branch.range[0]
+  // Replace right-to-left so earlier offsets stay valid.
+  const rewritten = [...ranges]
+    .sort((a, b) => b[0] - a[0])
+    .reduce((acc, [start, end]) => acc.slice(0, start - offset) + param + acc.slice(end - offset), text)
+  return `(${param}) => ${asArrowBody(branch, rewritten)}`
 }
 
-/** `receiver.fold(onFailure, onSuccess)` from the two branch texts. */
-function buildFold(receiver: string, failure: FailureSide, failureBody: string, successBody: string): string {
-  const branches = [failureBody, successBody]
-  const successParam = freshName("value", branches)
-  const onSuccess = foldCallback(
-    successBody,
-    receiver,
-    [...SUCCESS_METHODS.map((m) => `${m}\\(\\s*\\)`), `${SUCCESS_MEMBER}(?![\\w$])(?!\\s*\\()`],
-    successParam,
-  )
+/** `receiver.fold(onFailure, onSuccess)` from the two branch nodes. */
+function buildFold(
+  receiver: string,
+  failure: FailureSide,
+  failureNode: ASTNode,
+  successNode: ASTNode,
+  sourceCode: SourceCode,
+): string {
+  const branches = [sourceCode.getText(failureNode), sourceCode.getText(successNode)]
+  const onSuccess = foldCallback(successNode, receiver, SUCCESS_READS, freshName("value", branches), sourceCode)
   const onFailure =
     failure === null
-      ? `() => ${failureBody}`
+      ? foldCallback(failureNode, receiver, null, "", sourceCode)
       : foldCallback(
-          failureBody,
+          failureNode,
           receiver,
-          [`${failure.member}(?![\\w$])(?!\\s*\\()`],
+          { members: [failure.member], methods: [] },
           freshName(failure.param, branches),
+          sourceCode,
         )
   return `${receiver}.fold(${onFailure}, ${onSuccess})`
 }
@@ -173,9 +238,16 @@ const rule: Rule.RuleModule = {
       const elseExpr = returnedExpression(node.alternate)
       if (!thenExpr || !elseExpr) return null
 
+      // The suggestion keeps only the test and the two returned values; a comment anywhere else in the
+      // statement would be silently dropped, so none is offered.
+      const kept = [node.test, thenExpr, elseExpr]
+      const within = (c: { range?: [number, number] }): boolean =>
+        c.range !== undefined && kept.some((n) => c.range![0] >= n.range[0] && c.range![1] <= n.range[1])
+      if (!sourceCode.getCommentsInside(node).every(within)) return null
+
       const { obj, isNegated, failure } = extracted
       const [failureExpr, successExpr] = isNegated ? [thenExpr, elseExpr] : [elseExpr, thenExpr]
-      return `return ${buildFold(obj, failure, sourceCode.getText(failureExpr), sourceCode.getText(successExpr))}`
+      return `return ${buildFold(obj, failure, failureExpr, successExpr, sourceCode)}`
     }
 
     function ternarySuggestions(node: ASTNode): Rule.SuggestionReportDescriptor[] {
@@ -191,8 +263,13 @@ const rule: Rule.RuleModule = {
       const successText = sourceCode.getText(successNode)
 
       // `a.isSome() ? a : b` keeps the container when present and falls back otherwise — that is `.or`,
-      // and a fold would only rebuild it with an unused parameter.
-      if (successText === obj && !isNullishLiteral(failureNode)) {
+      // and a fold would only rebuild it with an unused parameter. `.or` takes a container, so a literal
+      // or `undefined` fallback gets no suggestion at all: neither `.or(5)` nor a fold mixing a container
+      // with a plain value would type-check.
+      if (compact(successText) === compact(obj)) {
+        if (failureNode.type === "Literal" || failureNode.type === "TemplateLiteral" || isNullishLiteral(failureNode)) {
+          return []
+        }
         return [
           {
             messageId: "suggestOr",
@@ -202,7 +279,7 @@ const rule: Rule.RuleModule = {
         ]
       }
 
-      const fold = buildFold(obj, failure, failureText, successText)
+      const fold = buildFold(obj, failure, failureNode, successNode, sourceCode)
       return [{ messageId: "suggestFold", fix: (fixer) => fixer.replaceText(node, fold) }]
     }
 
@@ -211,7 +288,7 @@ const rule: Rule.RuleModule = {
       if (node.type === "CallExpression" && node.callee.type === "MemberExpression") {
         const methodName = node.callee.property.name
         // These methods indicate the object is already a functype instance
-        return ["isSome", "isNone", "isEmpty", "isRight", "isLeft", "isSuccess", "isFailure"].includes(methodName)
+        return ["isSome", "isNone", "isRight", "isLeft", "isSuccess", "isFailure"].includes(methodName)
       }
       return false
     }
@@ -223,7 +300,7 @@ const rule: Rule.RuleModule = {
       const text = sourceCode.getText(node)
 
       // Check for common monadic type checks
-      if (/\.(isSome|isNone|isEmpty|isDefined)\s*\(\s*\)/.test(text)) {
+      if (/\.(isSome|isNone|isDefined)\s*\(\s*\)/.test(text)) {
         return { isMonadic: true, type: "Option", via: "method" }
       }
 

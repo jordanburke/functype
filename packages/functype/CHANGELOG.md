@@ -73,8 +73,13 @@ Scope is `Option` only. The wrapper shape repeats mechanically for the other con
   - the parameter name never shadows an identifier the branches already use (`value1`, …);
   - if/else chains keep their `return` (the old fix emitted a bare `o.fold(…)` statement and discarded the result; unbraced `return` branches produced unparseable code);
   - `a.isSome() ? a : b` suggests `a.or(b)`, not a fold.
+  - rewrites follow the syntax tree, not the source text. Reads inside string and template literals or comments are never touched. `e!.value`, `e?.value` and receivers broken across lines are matched. A called member (`e.value()`) or an assignment target is not treated as a read.
+  - object-literal and comma-expression branches are parenthesized (`() => ({ v: 0 })`), so they stay expressions and single arguments.
+  - `a.isSome() ? a : 5` (or `: undefined`) gets no suggestion, since `.or` takes a container.
+  - an if/else with comments outside the returned values gets no suggestion, because the rewrite would drop them.
+  - `x.isEmpty()` is no longer reported: `isEmpty` is a property on every functype container, so a call is never functype code.
 - **`prefer-try`** reports an async try/catch (one containing `await` outside a nested function) with a message pointing at `Try.fromPromise` / `Either.fromPromise` / `IO.tryPromise`. `Try(() => …)` cannot catch an awaited rejection.
-- **`no-imperative-loops`** reports a `for` / `for..of` loop whose body awaits with a message pointing at `IO.forEach` (sequential, stops at the first failure) or `IO.all`, and no longer offers a `.forEach` suggestion there. That suggestion moved `await` into a non-async callback, which is a syntax error. `prefer-map` no longer reports those loops at all: `.map` cannot await either, and the loop is already reported once.
+- **`no-imperative-loops`** reports a `for` / `for..of` / `for..in` loop whose body awaits with a message pointing at `IO.forEach` (sequential, stops at the first failure) or `IO.all`, and no longer offers a `.forEach` suggestion there. That suggestion moved `await` into a non-async callback, which is a syntax error. `for (x of await xs())` and `for await` loops no longer get a `.forEach` suggestion either. The first bound `await` to the `forEach` call, and an async iterable has no `.forEach`. `prefer-map` no longer reports those loops at all: `.map` cannot await either, and the loop is already reported once.
 
 ## 1.9.0 - 2026-08-17
 

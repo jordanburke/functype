@@ -518,4 +518,193 @@ describe("prefer-fold", () => {
       },
     ],
   })
+
+  // #328 review — rewrites are driven by the AST, so they respect syntax the text never shows.
+  ruleTester.run("prefer-fold (#328 review: AST-driven rewrites)", rule, {
+    valid: [
+      {
+        name: "isEmpty is a property on every functype container, so x.isEmpty() is not functype code",
+        code: "const r = list.isEmpty() ? [] : list.map(f)",
+      },
+    ],
+    invalid: [
+      {
+        name: "Object-literal branches are parenthesized so they stay expressions",
+        code: "const r = o.isSome() ? { v: o.value } : { v: 0 }",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              { messageId: "suggestFold", output: "const r = o.fold(() => ({ v: 0 }), (value) => ({ v: value }))" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Comma-expression branches are parenthesized so they stay one argument",
+        code: "const r = o.isSome() ? (a, b) : c",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [{ messageId: "suggestFold", output: "const r = o.fold(() => c, () => (a, b))" }],
+          },
+        ],
+      },
+      {
+        name: "If/else returning object literals parenthesizes them",
+        code: `function f(o) {
+  if (o.isSome()) {
+    return { v: o.value }
+  } else {
+    return { v: 0 }
+  }
+}`,
+        output: null,
+        errors: [
+          {
+            messageId: "preferFold",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestFold",
+                output: `function f(o) {
+  return o.fold(() => ({ v: 0 }), (value) => ({ v: value }))
+}`,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A receiver-plus-literal choice gets no suggestion (.or takes a container, not a value)",
+        code: "const x = a.isSome() ? a : 5",
+        output: null,
+        errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
+      },
+      {
+        name: "A receiver-plus-undefined choice gets no suggestion",
+        code: "const x = a.isSome() ? a : undefined",
+        output: null,
+        errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
+      },
+      {
+        name: "A call of a member named value is not a narrowed read",
+        code: "const r = e.isRight() ? e.value() : 0",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Either" },
+            suggestions: [{ messageId: "suggestFold", output: "const r = e.fold(() => 0, () => e.value())" }],
+          },
+        ],
+      },
+      {
+        name: "isRight's failure branch reading .value binds the left parameter",
+        code: "const r = e.isRight() ? 1 : e.value",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Either" },
+            suggestions: [{ messageId: "suggestFold", output: "const r = e.fold((left) => left, () => 1)" }],
+          },
+        ],
+      },
+      {
+        name: "isSuccess's failure branch reading .error binds the error parameter",
+        code: "const m = t.isSuccess() ? t.orThrow() : t.error.message",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Result" },
+            suggestions: [
+              { messageId: "suggestFold", output: "const m = t.fold((error) => error.message, (value) => value)" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Text inside string and template literals is never rewritten",
+        code: 'const r = e.isLeft() ? `${e.value} (was e.value)` : "e.value"',
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Either" },
+            suggestions: [
+              {
+                messageId: "suggestFold",
+                output: 'const r = e.fold((left) => `${left} (was e.value)`, () => "e.value")',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Non-null and optional-chained reads of the receiver are rewritten",
+        code: "const r = e.isRight() ? e!.value + (e?.value ?? 0) : 0",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Either" },
+            suggestions: [
+              { messageId: "suggestFold", output: "const r = e.fold(() => 0, (value) => value + (value ?? 0))" },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A multi-line receiver is matched regardless of formatting",
+        code: `const r = e
+  .map(f)
+  .isRight() ? e.map(f).value : 0`,
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Either" },
+            suggestions: [
+              {
+                messageId: "suggestFold",
+                output: `const r = e
+  .map(f).fold(() => 0, (value) => value)`,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An assignment to the receiver's member is not a read",
+        code: "const r = o.isSome() ? (o.value = 3) : 0",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [{ messageId: "suggestFold", output: "const r = o.fold(() => 0, () => o.value = 3)" }],
+          },
+        ],
+      },
+      {
+        name: "If/else with comments outside the returned values gets no suggestion (it would drop them)",
+        code: `function f(o) {
+  if (o.isSome()) {
+    // the happy path
+    return o.value
+  } else {
+    return "d"
+  }
+}`,
+        output: null,
+        errors: [{ messageId: "preferFold", data: { type: "Option" }, suggestions: [] }],
+      },
+    ],
+  })
 })
