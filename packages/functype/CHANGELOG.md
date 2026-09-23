@@ -2,7 +2,9 @@
 
 This CHANGELOG covers the 6-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
 
-Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased
+Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased` as you land changes, and `pnpm release patch|minor|major` cuts that section into a dated version header when you cut a release.
+
+## Unreleased
 
 **`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
 
