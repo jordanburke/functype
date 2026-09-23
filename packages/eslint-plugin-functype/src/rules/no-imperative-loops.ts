@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { containsAwait } from "../utils/async-detection"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -34,6 +35,8 @@ const rule: Rule.RuleModule = {
       noForLoop: "Prefer functional methods (.map, .filter, .forEach, .reduce) over for loops",
       noForInLoop: "Prefer Object.keys().forEach() or functional methods over for..in loops",
       noForOfLoop: "Prefer .forEach() or .map() over for..of loops",
+      noAsyncLoop:
+        "This loop awaits, which .forEach()/.map() cannot do. For sequential effects use IO.forEach(items, f) (runs in order, stops at the first failure); for independent ones, IO.all",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
       noDoWhileLoop: "Prefer functional iteration or recursion over do..while loops",
       suggestForEach: "Replace with {{iterable}}.forEach(...)",
@@ -95,6 +98,11 @@ const rule: Rule.RuleModule = {
         // Allow traditional for loops if they need index access and option is set
         if (allowForIndexAccess && needsIndexAccess(node)) return
 
+        if (containsAwait(node.body)) {
+          context.report({ node, messageId: "noAsyncLoop" })
+          return
+        }
+
         context.report({
           node,
           messageId: "noForLoop",
@@ -139,6 +147,14 @@ const rule: Rule.RuleModule = {
 
       ForOfStatement(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
+
+        // A .forEach suggestion here would move `await` into a non-async callback — a syntax error —
+        // so an awaiting body gets the IO.forEach pointer and no suggestion. `for await` itself is
+        // excluded: it consumes a stream, which is #324's concern, not a sequential traversal.
+        if (!node.await && containsAwait(node.body)) {
+          context.report({ node, messageId: "noAsyncLoop" })
+          return
+        }
 
         const suggest: Rule.SuggestionReportDescriptor[] = []
 

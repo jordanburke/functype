@@ -33,6 +33,46 @@ describe("no-imperative-loops", () => {
       },
     ],
     invalid: [
+      // #323 — a loop that awaits cannot become .forEach/.map (neither awaits), so the message points at
+      // IO.forEach and no .forEach suggestion is offered (it would put `await` in a non-async callback).
+      {
+        name: "for..of that awaits points at IO.forEach and offers no forEach suggestion",
+        code: `async function run(items) {
+  for (const item of items) {
+    await save(item)
+  }
+}`,
+        errors: [{ messageId: "noAsyncLoop" }],
+      },
+      {
+        name: "Classic for loop that awaits points at IO.forEach",
+        code: `async function run(items) {
+  for (let i = 0; i < items.length; i++) {
+    await save(items[i])
+  }
+}`,
+        errors: [{ messageId: "noAsyncLoop" }],
+      },
+      {
+        name: "An await inside a nested async callback does not make the loop async",
+        code: `for (const item of items) {
+  schedule(async () => { await save(item) })
+}`,
+        errors: [
+          {
+            messageId: "noForOfLoop",
+            suggestions: [
+              {
+                messageId: "suggestForEach",
+                data: { iterable: "items" },
+                output: `items.forEach((item) => {
+  schedule(async () => { await save(item) })
+})`,
+              },
+            ],
+          },
+        ],
+      },
       // Basic for loop
       {
         name: "For loop should use functional methods",

@@ -76,6 +76,14 @@ type ClaimedDoc = Wire<Row>
 
 The rule reports each match with two suggestions — `.orElse(default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` / `.orThrow(err)` would silently lose their argument. Apply a suggestion explicitly in your editor when you know which one fits.
 
+### `functype/prefer-fold`
+
+| Option          | Default | Description                                                           |
+| --------------- | ------- | --------------------------------------------------------------------- |
+| `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported. |
+
+Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, and offers `a.or(b)` for `a.isSome() ? a : b`.
+
 ## Combining with eslint-config-functype
 
 For a complete setup with functional rules, TypeScript, Prettier, and import sorting:

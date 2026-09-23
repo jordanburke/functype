@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { containsAwait } from "../utils/async-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 const rule: Rule.RuleModule = {
@@ -25,6 +26,8 @@ const rule: Rule.RuleModule = {
     ],
     messages: {
       preferTryOverTryCatch: "Prefer Try(() => ...) over try/catch block",
+      preferAsyncTryOverTryCatch:
+        "Prefer Try.fromPromise(...), Either.fromPromise(...) or IO.tryPromise(...) over an async try/catch — Try(() => ...) cannot catch an awaited rejection",
       suggestTry: "Replace with Try(() => ...)",
       suggestTryFromPromise: "Replace with Try.fromPromise(...)",
       suggestAddImport: "Add {{symbol}} import from functype",
@@ -129,7 +132,7 @@ const rule: Rule.RuleModule = {
 
         context.report({
           node,
-          messageId: "preferTryOverTryCatch",
+          messageId: containsAwait(node.block) ? "preferAsyncTryOverTryCatch" : "preferTryOverTryCatch",
           suggest,
         })
       },

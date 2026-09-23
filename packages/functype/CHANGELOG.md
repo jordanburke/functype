@@ -65,6 +65,17 @@ That is the whole of the wiring, and it buys the same R-channel guarantee a core
 
 Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` — and a `TraceSpan` collector that groups events by `spanId` — is a follow-on rather than part of this change.
 
+**`eslint-plugin-functype` — `prefer-fold` no longer autofixes, and three rules stop suggesting code that cannot work (#323).**
+
+- **`prefer-fold` is suggestion-only.** Its autofix rewrote `e.isLeft() ? e.value : undefined` into `e.fold(() => e.value, (value) => undefined)`, which fails to compile (TS2322: inside the callback `e` is not narrowed, so `e.value` is `L | R`). Because `ts-builds validate` runs `eslint --fix`, and `--fix` applies fixable rules at warn severity, this rewrote working code in every consumer. The fold is now offered as a suggestion, and the suggested code is correct:
+  - narrowed reads become the callback's parameter: `e.value` → `left` on the Left branch, `t.error` → `error` on the Failure branch, and `.value` / `.orThrow()` / `.get()` → `value` on the success branch;
+  - a branch that ignores the value gets `() => …`, not an unused parameter;
+  - the parameter name never shadows an identifier the branches already use (`value1`, …);
+  - if/else chains keep their `return` (the old fix emitted a bare `o.fold(…)` statement and discarded the result; unbraced `return` branches produced unparseable code);
+  - `a.isSome() ? a : b` suggests `a.or(b)`, not a fold.
+- **`prefer-try`** reports an async try/catch (one containing `await` outside a nested function) with a message pointing at `Try.fromPromise` / `Either.fromPromise` / `IO.tryPromise`. `Try(() => …)` cannot catch an awaited rejection.
+- **`no-imperative-loops`** reports a `for` / `for..of` loop whose body awaits with a message pointing at `IO.forEach` (sequential, stops at the first failure) or `IO.all`, and no longer offers a `.forEach` suggestion there. That suggestion moved `await` into a non-async callback, which is a syntax error. `prefer-map` no longer reports those loops at all: `.map` cannot await either, and the loop is already reported once.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**
