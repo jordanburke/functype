@@ -63,7 +63,7 @@
     "@types/react-dom": "^19.3.0",
     "fast-check": "^4.10.2",
     "functype": "workspace:^",
-    "jsdom": "^26.1.0",
+    "jsdom": "^30.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "ts-builds": "^3.4.2",
