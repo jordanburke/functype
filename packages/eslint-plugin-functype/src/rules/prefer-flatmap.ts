@@ -74,6 +74,30 @@ const rule: Rule.RuleModule = {
       return elements.some((el: ASTNode | null) => el && el.type === "ArrayExpression")
     }
 
+    /**
+     * The base identifier of a call/member chain: `members` in `members.filter(f).map(g)`, `r` in
+     * `r.cells.map(f)`.
+     */
+    function chainRoot(node: ASTNode): ASTNode {
+      if (node.type === "CallExpression") return chainRoot(node.callee)
+      if (node.type === "MemberExpression") return chainRoot(node.object)
+      if (node.type === "ChainExpression" || node.type === "TSNonNullExpression") return chainRoot(node.expression)
+      return node
+    }
+
+    /**
+     * A callback that transforms its OWN element's array (`(r) => r.cells.map(f)`, `(s) => s.split(" ")`,
+     * `(xs) => xs.filter(p).map(g)`) keeps the shape: one array per element, a matrix, or an array inside
+     * an Either/Option/Task being mapped. Nothing is being flattened, so .flatMap is not the fix (#324).
+     */
+    function isShapePreserving(functionNode: ASTNode, returned: ASTNode): boolean {
+      const root = chainRoot(returned)
+      return (
+        root.type === "Identifier" &&
+        functionNode.params.some((p: ASTNode) => p.type === "Identifier" && p.name === root.name)
+      )
+    }
+
     function returnsArray(functionNode: ASTNode): boolean {
       if (!functionNode || !functionNode.body) return false
 
@@ -85,6 +109,7 @@ const rule: Rule.RuleModule = {
       // Arrow function with call expression body
       if (functionNode.body.type === "CallExpression") {
         const call = functionNode.body
+        if (isShapePreserving(functionNode, call)) return false
         if (call.callee.type === "MemberExpression") {
           const methodName = call.callee.property.name
           // Common methods that return arrays
@@ -96,7 +121,11 @@ const rule: Rule.RuleModule = {
 
       // Function with block body — any return statement returning an array shape?
       if (functionNode.body.type === "BlockStatement") {
-        return functionNode.body.body.some(returnsArrayShape)
+        return functionNode.body.body.some(
+          (stmt: ASTNode) =>
+            returnsArrayShape(stmt) &&
+            !(stmt.argument.type === "CallExpression" && isShapePreserving(functionNode, stmt.argument)),
+        )
       }
 
       return false

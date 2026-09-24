@@ -81,6 +81,13 @@ Scope is `Option` only. The wrapper shape repeats mechanically for the other con
 - **`prefer-try`** reports an async try/catch (one containing `await` outside a nested function) with a message pointing at `Try.fromPromise` / `Either.fromPromise` / `IO.tryPromise`. `Try(() => …)` cannot catch an awaited rejection.
 - **`no-imperative-loops`** reports a `for` / `for..of` / `for..in` loop whose body awaits with a message pointing at `IO.forEach` (sequential, stops at the first failure) or `IO.all`, and no longer offers a `.forEach` suggestion there. That suggestion moved `await` into a non-async callback, which is a syntax error. `for (x of await xs())` and `for await` loops no longer get a `.forEach` suggestion either. The first bound `await` to the `forEach` call, and an async iterable has no `.forEach`. `prefer-map` no longer reports those loops at all: `.map` cannot await either, and the loop is already reported once.
 
+**`eslint-plugin-functype` — fewer false positives on code that is correct as written (#324).**
+
+- **`no-imperative-loops` / `prefer-map`** no longer report `for await` loops (a stream consumer) or loops whose body `yield`s (a generator's body). Neither has a callback equivalent. A `yield` inside a nested generator doesn't exempt the enclosing loop.
+- **`prefer-flatmap`** no longer reports a `.map` whose callback transforms its own element's array. Examples: `(r) => r.cells.map(f)`, `(s) => s.split(" ")`, and `either.map((xs) => xs.filter(p).map(g))`. These keep the shape (a matrix, or an array inside an Either/Option/Task); nothing is flattened, and `.flatMap` would change the result or fail to compile. Callbacks that build arrays from another collection are still reported.
+- **`prefer-either`** reports each `throw` once. Previously a throw inside a function with a declared return type was reported twice: at the throw, and again at the function. The function-level check also counted throws in nested functions. The single report now uses the enclosing function's return type, `Consider returning Either<Error, T> instead of throwing`, when it declares a non-Either one.
+- **`prefer-functype-set` / `prefer-functype-map`** gain `allowMutable` (default `true`). The rules skip a native collection the code mutates on purpose, via `.add`/`.set`/`.delete`/`.clear` on the `new` expression, its variable, or `this.<field>`. functype's collections are immutable and can't express a cache or registry. Collections that are only read are still reported.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**

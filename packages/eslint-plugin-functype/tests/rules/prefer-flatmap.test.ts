@@ -5,6 +5,30 @@ import rule from "../../src/rules/prefer-flatmap"
 describe("prefer-flatmap", () => {
   ruleTester.run("prefer-flatmap", rule, {
     valid: [
+      // #324 — a callback that transforms its own element's array keeps the shape (a matrix, or an array
+      // inside an Either/Option/Task); nothing is being flattened, so .flatMap is not the fix.
+      {
+        name: "Either.map wrapping an array chain on its own parameter",
+        code: "listed.map((members) => members.filter((m) => m > 0).map((m) => m * 2))",
+      },
+      {
+        name: "Mapping each row's own cells builds a matrix",
+        code: "const grid = rows.map((r) => r.cells.map(render))",
+      },
+      {
+        name: "Splitting each element keeps one array per element",
+        code: "const words = sentences.map((sentence) => sentence.split(' '))",
+      },
+      {
+        name: "A block-bodied callback returning its own element's mapped array builds a matrix",
+        code: `const result = items.map((item) => {
+  return item.values.map((v) => v * 2)
+})`,
+      },
+      {
+        name: "A split-then-trim chain keeps one array per element",
+        code: `const result = data.map((item) => item.split(",")).map((parts) => parts.map((p) => p.trim()))`,
+      },
       // Using flatMap
       {
         name: "Using flatMap is preferred",
@@ -75,6 +99,17 @@ describe("prefer-flatmap", () => {
       },
     ],
     invalid: [
+      // #324 — still reported when the callback builds arrays from something other than its own element.
+      {
+        name: "Nested map building arrays from another collection",
+        code: "const matches = ids.map((id) => lookup.filter((r) => r.id === id))",
+        errors: [{ messageId: "preferFlatMapNested" }],
+      },
+      {
+        name: "Chain whose first map builds arrays from another collection",
+        code: "const counts = ids.map((id) => lookup.filter((r) => r.id === id)).map((rows) => rows.length)",
+        errors: [{ messageId: "preferFlatMapChain" }],
+      },
       // map().flat() pattern
       {
         name: "map().flat() should use flatMap",
@@ -105,19 +140,6 @@ describe("prefer-flatmap", () => {
         `,
       },
       // Nested map returning arrays
-      {
-        name: "Map returning arrays should consider flatMap",
-        code: `
-          const result = items.map(item => {
-            return item.values.map(v => v * 2)
-          })
-        `,
-        errors: [
-          {
-            messageId: "preferFlatMapNested",
-          },
-        ],
-      },
       // Map returning a literal containing nested array literal — true flatten candidate
       {
         name: "Map returning literal with nested array element should consider flatMap",
@@ -129,19 +151,6 @@ describe("prefer-flatmap", () => {
         ],
       },
       // Chained maps where first returns arrays
-      {
-        name: "Chained maps with array-returning first map",
-        code: `
-          const result = data
-            .map(item => item.split(','))
-            .map(parts => parts.map(p => p.trim()))
-        `,
-        errors: [
-          {
-            messageId: "preferFlatMapChain",
-          },
-        ],
-      },
       // Multiple map().flat() patterns
       {
         name: "Multiple map().flat() patterns should all be flagged",
@@ -163,35 +172,7 @@ describe("prefer-flatmap", () => {
         `,
       },
       // Map returning method calls that return arrays
-      {
-        name: "Map returning array-returning method calls",
-        code: `
-          const words = sentences.map(sentence => sentence.split(' '))
-        `,
-        errors: [
-          {
-            messageId: "preferFlatMapNested",
-          },
-        ],
-      },
       // Complex nested transformation
-      {
-        name: "Complex nested array transformation",
-        code: `
-          const result = users.map(user => {
-            return user.posts.map(post => ({
-              userId: user.id,
-              postTitle: post.title,
-              tags: post.tags
-            }))
-          })
-        `,
-        errors: [
-          {
-            messageId: "preferFlatMapNested",
-          },
-        ],
-      },
     ],
   })
 })

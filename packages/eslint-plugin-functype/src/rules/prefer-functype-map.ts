@@ -3,6 +3,7 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { annotatesMutatedBinding, isMutatedCollection, MAP_MUTATORS } from "../utils/mutable-collection"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -17,6 +18,10 @@ const rule: Rule.RuleModule = {
         type: "object",
         properties: {
           allowInTests: {
+            type: "boolean",
+            default: true,
+          },
+          allowMutable: {
             type: "boolean",
             default: true,
           },
@@ -37,6 +42,9 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = context.options[0] || {}
     const allowInTests = options.allowInTests !== false
+    // A native Map the code mutates on purpose (cache, registry, accumulator) is a deliberate choice —
+    // functype's Map is immutable and cannot express it (#324).
+    const allowMutable = options.allowMutable !== false
 
     function isInTestFile() {
       const filename = context.filename
@@ -60,6 +68,8 @@ const rule: Rule.RuleModule = {
 
         // Only flag `new Map(...)` calls
         if (!node.callee || node.callee.type !== "Identifier" || node.callee.name !== "Map") return
+
+        if (allowMutable && isMutatedCollection(node, MAP_MUTATORS, context.sourceCode)) return
 
         // Skip if Map is already imported from functype
         if (isMapImportedFromFunctype()) return
@@ -135,6 +145,8 @@ const rule: Rule.RuleModule = {
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
         if (typeName !== "Map") return
+
+        if (allowMutable && annotatesMutatedBinding(node, MAP_MUTATORS, context.sourceCode)) return
 
         // Skip if Map is already imported from functype
         if (isMapImportedFromFunctype()) return

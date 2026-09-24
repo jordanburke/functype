@@ -1,7 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { containsAwait } from "../utils/async-detection"
+import { containsAwait, containsYield } from "../utils/async-detection"
 
 const ITERATION_METHOD_NAMES: ReadonlySet<string> = new Set(["forEach", "for"])
 
@@ -112,13 +112,17 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    function suspends(node: ASTNode): boolean {
+      return node.await === true || containsAwait(node.body) || containsYield(node.body)
+    }
+
     return {
       ForStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
-        // reports it with the IO.forEach pointer (#323).
-        if (isTransformationLoop(node) && !containsAwait(node.body)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await (#323), and neither a
+        // `for await` stream nor a generator's yielding loop has a .map form (#324).
+        if (isTransformationLoop(node) && !suspends(node)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",
@@ -130,9 +134,9 @@ const rule: Rule.RuleModule = {
       ForInStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
-        // reports it with the IO.forEach pointer (#323).
-        if (isTransformationLoop(node) && !containsAwait(node.body)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await (#323), and neither a
+        // `for await` stream nor a generator's yielding loop has a .map form (#324).
+        if (isTransformationLoop(node) && !suspends(node)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",
@@ -144,9 +148,9 @@ const rule: Rule.RuleModule = {
       ForOfStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
-        // reports it with the IO.forEach pointer (#323).
-        if (isTransformationLoop(node) && !containsAwait(node.body)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await (#323), and neither a
+        // `for await` stream nor a generator's yielding loop has a .map form (#324).
+        if (isTransformationLoop(node) && !suspends(node)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",

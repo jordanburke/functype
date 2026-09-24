@@ -5,6 +5,40 @@ import rule from "../../src/rules/no-imperative-loops"
 describe("no-imperative-loops", () => {
   ruleTester.run("no-imperative-loops", rule, {
     valid: [
+      // #324 — loops with no functional equivalent are not reported.
+      {
+        name: "for await consumes a stream; collecting it first would defeat the streaming",
+        code: `async function drain(stream) {
+  for await (const chunk of stream) {
+    handle(chunk)
+  }
+}`,
+      },
+      {
+        name: "A generator's for..of that yields cannot become a callback",
+        code: `function* double(xs) {
+  for (const x of xs) {
+    yield x * 2
+  }
+}`,
+      },
+      {
+        name: "A generator's while loop that yields is allowed",
+        code: `function* naturals() {
+  let n = 0
+  while (true) {
+    yield n++
+  }
+}`,
+      },
+      {
+        name: "A generator's classic for loop that delegates with yield* is allowed",
+        code: `function* all(groups) {
+  for (let i = 0; i < groups.length; i++) {
+    yield* groups[i]
+  }
+}`,
+      },
       // Using functional methods
       {
         name: "Using forEach is preferred",
@@ -33,6 +67,26 @@ describe("no-imperative-loops", () => {
       },
     ],
     invalid: [
+      {
+        name: "A yield inside a nested generator does not exempt the enclosing loop",
+        code: `for (const x of xs) {
+  register(function* () { yield x })
+}`,
+        errors: [
+          {
+            messageId: "noForOfLoop",
+            suggestions: [
+              {
+                messageId: "suggestForEach",
+                data: { iterable: "xs" },
+                output: `xs.forEach((x) => {
+  register(function* () { yield x })
+})`,
+              },
+            ],
+          },
+        ],
+      },
       // #328 review — for..in gets the same await handling as for and for..of.
       {
         name: "for..in that awaits points at IO.forEach and offers no Object.keys suggestion",
@@ -47,15 +101,6 @@ describe("no-imperative-loops", () => {
         name: "for..of over an awaited iterable offers no forEach suggestion (it would bind await to .forEach)",
         code: `async function f() {
   for (const x of await xs()) {
-    use(x)
-  }
-}`,
-        errors: [{ messageId: "noForOfLoop" }],
-      },
-      {
-        name: "for await gets no forEach suggestion (forEach cannot iterate an async iterable)",
-        code: `async function f(xs) {
-  for await (const x of xs) {
     use(x)
   }
 }`,
