@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { containsAwait } from "../utils/async-detection"
 
 const ITERATION_METHOD_NAMES: ReadonlySet<string> = new Set(["forEach", "for"])
 
@@ -115,7 +116,9 @@ const rule: Rule.RuleModule = {
       ForStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        if (isTransformationLoop(node)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
+        // reports it with the IO.forEach pointer (#323).
+        if (isTransformationLoop(node) && !containsAwait(node.body)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",
@@ -127,7 +130,9 @@ const rule: Rule.RuleModule = {
       ForInStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        if (isTransformationLoop(node)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
+        // reports it with the IO.forEach pointer (#323).
+        if (isTransformationLoop(node) && !containsAwait(node.body)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",
@@ -139,7 +144,9 @@ const rule: Rule.RuleModule = {
       ForOfStatement(node: ASTNode) {
         if (!checkForLoops) return
 
-        if (isTransformationLoop(node)) {
+        // An awaiting loop is a sequential traversal, not a map: `.map` cannot await. no-imperative-loops
+        // reports it with the IO.forEach pointer (#323).
+        if (isTransformationLoop(node) && !containsAwait(node.body)) {
           context.report({
             node,
             messageId: "preferMapOverLoop",

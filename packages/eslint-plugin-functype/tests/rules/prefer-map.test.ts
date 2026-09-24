@@ -5,6 +5,28 @@ import rule from "../../src/rules/prefer-map"
 describe("prefer-map", () => {
   ruleTester.run("prefer-map", rule, {
     valid: [
+      // #323 — a loop that awaits cannot become .map (the callback cannot await); no-imperative-loops owns
+      // it and points at IO.forEach, so prefer-map must not also tell the reader to use .map.
+      {
+        name: "for..of that awaits while pushing is not a .map candidate",
+        code: `async function saveAll(items, save) {
+  const out = []
+  for (const it of items) {
+    out.push(await save(it))
+  }
+  return out
+}`,
+      },
+      {
+        name: "Classic for loop that awaits while pushing is not a .map candidate",
+        code: `async function saveAll(items, save) {
+  const out = []
+  for (let i = 0; i < items.length; i++) {
+    out.push(await save(items[i]))
+  }
+  return out
+}`,
+      },
       // Using map
       {
         name: "Using map is preferred",

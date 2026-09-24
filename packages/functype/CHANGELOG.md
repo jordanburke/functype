@@ -2,7 +2,9 @@
 
 This CHANGELOG covers the 6-package functype family (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`) — all bumped together. The eslint pair (`eslint-config-functype`, `eslint-plugin-functype`) mirrors functype's version line per the encoding in `docs/RELEASE.md` and ships in lockstep.
 
-Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased
+Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: write notes under `## Unreleased` as you land changes, and `pnpm release patch|minor|major` cuts that section into a dated version header when you cut a release.
+
+## Unreleased
 
 **`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
 
@@ -62,6 +64,22 @@ That is the whole of the wiring, and it buys the same R-channel guarantee a core
 `runAll`'s declared type is now `IO<TestClock, never, void>`, matching the `as unknown as` assertion its siblings `advance` and `setTime` already used; previously it was inferred as `IO<TestClock, unknown, void>`. Callers relying on the wider `unknown` error channel would see a narrower type, though these operations do not fail in practice — which is why the two siblings already declared `never`.
 
 Scope is `Option` only. The wrapper shape repeats mechanically for the other containers; extending it to `Either`, `Try`, and `List` — and a `TraceSpan` collector that groups events by `spanId` — is a follow-on rather than part of this change.
+
+**`eslint-plugin-functype` — `prefer-fold` no longer autofixes, and three rules stop suggesting code that cannot work (#323).**
+
+- **`prefer-fold` is suggestion-only.** Its autofix rewrote `e.isLeft() ? e.value : undefined` into `e.fold(() => e.value, (value) => undefined)`, which fails to compile (TS2322: inside the callback `e` is not narrowed, so `e.value` is `L | R`). Because `ts-builds validate` runs `eslint --fix`, and `--fix` applies fixable rules at warn severity, this rewrote working code in every consumer. The fold is now offered as a suggestion, and the suggested code is correct:
+  - narrowed reads become the callback's parameter: `e.value` → `left` on the Left branch, `t.error` → `error` on the Failure branch, and `.value` / `.orThrow()` / `.get()` → `value` on the success branch;
+  - a branch that ignores the value gets `() => …`, not an unused parameter;
+  - the parameter name never shadows an identifier the branches already use (`value1`, …);
+  - if/else chains keep their `return` (the old fix emitted a bare `o.fold(…)` statement and discarded the result; unbraced `return` branches produced unparseable code);
+  - `a.isSome() ? a : b` suggests `a.or(b)`, not a fold.
+  - rewrites follow the syntax tree, not the source text. Reads inside string and template literals or comments are never touched. `e!.value`, `e?.value` and receivers broken across lines are matched. A called member (`e.value()`) or an assignment target is not treated as a read.
+  - object-literal and comma-expression branches are parenthesized (`() => ({ v: 0 })`), so they stay expressions and single arguments.
+  - `a.isSome() ? a : 5` (or `: undefined`) gets no suggestion, since `.or` takes a container.
+  - an if/else with comments outside the returned values gets no suggestion, because the rewrite would drop them.
+  - `x.isEmpty()` is no longer reported: `isEmpty` is a property on every functype container, so a call is never functype code.
+- **`prefer-try`** reports an async try/catch (one containing `await` outside a nested function) with a message pointing at `Try.fromPromise` / `Either.fromPromise` / `IO.tryPromise`. `Try(() => …)` cannot catch an awaited rejection.
+- **`no-imperative-loops`** reports a `for` / `for..of` / `for..in` loop whose body awaits with a message pointing at `IO.forEach` (sequential, stops at the first failure) or `IO.all`, and no longer offers a `.forEach` suggestion there. That suggestion moved `await` into a non-async callback, which is a syntax error. `for (x of await xs())` and `for await` loops no longer get a `.forEach` suggestion either. The first bound `await` to the `forEach` call, and an async iterable has no `.forEach`. `prefer-map` no longer reports those loops at all: `.map` cannot await either, and the loop is already reported once.
 
 ## 1.9.0 - 2026-08-17
 

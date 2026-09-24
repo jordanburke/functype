@@ -196,7 +196,7 @@ function parse(json: string) {
 }`,
         errors: [
           {
-            messageId: "preferTryOverTryCatch",
+            messageId: "preferAsyncTryOverTryCatch",
             suggestions: [
               {
                 messageId: "suggestTryFromPromise",
@@ -213,6 +213,40 @@ async function fetchJson(url: string) {
     return await fetch(url)
   } catch (e) {}
 }`,
+              },
+            ],
+          },
+        ],
+      },
+      // #323 — Try(() => ...) cannot catch an awaited rejection, so an async try block must not be told to use it.
+      {
+        name: "Multi-statement async try body points at the async constructors, not sync Try",
+        code: `async function load(url: string) {
+  try {
+    const r = await fetch(url)
+    return await r.text()
+  } catch (e) {
+    return undefined
+  }
+}`,
+        errors: [{ messageId: "preferAsyncTryOverTryCatch" }],
+      },
+      {
+        name: "An await inside a nested function does not make the outer try async",
+        code: `function f() { try { return run(async () => { await tick() }) } catch (e) { return null } }`,
+        errors: [
+          {
+            messageId: "preferTryOverTryCatch",
+            suggestions: [
+              {
+                messageId: "suggestTry",
+                output: `function f() { return Try(() => run(async () => { await tick() })) }`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Try" },
+                output: `import { Try } from "functype"
+function f() { try { return run(async () => { await tick() }) } catch (e) { return null } }`,
               },
             ],
           },
