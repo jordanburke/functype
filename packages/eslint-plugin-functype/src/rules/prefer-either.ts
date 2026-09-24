@@ -3,17 +3,6 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
-/** AST keys that don't represent syntax children — back-edges and source metadata. */
-const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
-
-/** AST children of `node` (drops back-edges, flattens array-valued keys, filters non-object leaves). */
-function astChildren(node: ASTNode): readonly unknown[] {
-  return Object.entries(node)
-    .filter(([k]) => !NON_CHILD_KEYS.has(k))
-    .flatMap(([, v]) => (Array.isArray(v) ? v : [v]))
-    .filter((v) => v !== null && typeof v === "object")
-}
-
 /** True iff any ancestor of `node` is a `CatchClause`. Pure tail recursion. */
 function insideCatchClause(node: ASTNode | null | undefined): boolean {
   const parent = node?.parent as ASTNode | undefined
@@ -63,43 +52,19 @@ const rule: Rule.RuleModule = {
       )
     }
 
-    function hasThrowStatementsOutsideCatch(node: ASTNode): boolean {
-      if (!node) return false
-
-      // A throw that's *not* inside a catch is the thing we're looking for.
-      if (node.type === "ThrowStatement") return !insideCatchClause(node)
-
-      // Catch bodies don't count — re-throws inside them are allowed.
-      if (node.type === "CatchClause") return false
-
-      // Recurse: true iff any child satisfies the predicate.
-      return astChildren(node).some((child) => hasThrowStatementsOutsideCatch(child as ASTNode))
+    /** The nearest function the throw belongs to — a nested function owns its own throws. */
+    function enclosingFunction(node: ASTNode): ASTNode | null {
+      const parent = node.parent
+      if (!parent) return null
+      return isFunctionLike(parent) ? parent : enclosingFunction(parent)
     }
 
-    function checkFunctionForThrows(node: ASTNode): void {
-      // Allow functions in test files
-      if (allowThrowInTests && isInTestFile()) return
-
-      if (!node.body) return
-
-      // Only report function-level errors if there are throws NOT in catch blocks
-      const hasThrowsNotInCatch = hasThrowStatementsOutsideCatch(node.body)
-      if (hasThrowsNotInCatch) {
-        const returnType = node.returnType?.typeAnnotation
-        if (returnType) {
-          const sourceCode = context.sourceCode
-          const returnTypeText = sourceCode.getText(returnType)
-
-          // Don't report if already using Either
-          if (!returnTypeText.includes("Either")) {
-            context.report({
-              node: node.id || node,
-              messageId: "preferEitherReturn",
-              data: { type: returnTypeText },
-            })
-          }
-        }
-      }
+    /** The declared return type when the function declares one that is not already an Either. */
+    function nonEitherReturnType(fn: ASTNode | null): string | null {
+      const returnType = fn?.returnType?.typeAnnotation
+      if (!returnType) return null
+      const text = context.sourceCode.getText(returnType)
+      return text.includes("Either") ? null : text
     }
 
     function isFunctionLike(node: ASTNode): boolean {
@@ -154,19 +119,16 @@ const rule: Rule.RuleModule = {
           }
         }
 
+        // One report per throw (#324). When the enclosing function declares a non-Either return type,
+        // the message names the Either it should return instead of reporting the function separately.
+        const returnType = nonEitherReturnType(enclosingFunction(node))
         context.report({
           node,
-          messageId: "preferEitherOverThrow",
+          ...(returnType === null
+            ? { messageId: "preferEitherOverThrow" }
+            : { messageId: "preferEitherReturn", data: { type: returnType } }),
           suggest,
         })
-      },
-
-      FunctionDeclaration(node: ASTNode) {
-        checkFunctionForThrows(node)
-      },
-
-      ArrowFunctionExpression(node: ASTNode) {
-        checkFunctionForThrows(node)
       },
     }
   },

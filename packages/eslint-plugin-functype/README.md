@@ -84,6 +84,30 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
 
+### `functype/prefer-functype-set` / `functype/prefer-functype-map`
+
+| Option         | Default | Description                                                                                     |
+| -------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `allowInTests` | `true`  | Silence the rule inside test files.                                                             |
+| `allowMutable` | `true`  | Don't report a native `Set`/`Map` the code mutates on purpose. Set `false` to report it anyway. |
+
+A collection counts as mutated when `.add` / `.delete` / `.clear` (Set) or `.set` / `.delete` / `.clear` (Map) is called on it:
+
+- directly on the `new` expression (`new Set(prev).add(id)`, the React copy-then-add);
+- through the variable it is bound to;
+- through `this.<field>` in the class that owns it.
+
+functype's collections are immutable, so a cache, registry or in-place accumulator can't use them. A native collection that is only read (`.has`, `.get`, iteration) is still reported.
+
+### `functype/no-imperative-loops` / `functype/prefer-map`
+
+These rules don't report loops that have no functional equivalent:
+
+- `for await` consumes a stream, and collecting it first would defeat the streaming.
+- A loop whose body `yield`s is a generator's body, and a callback can't yield.
+
+A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `IO.forEach`. `prefer-map` doesn't report it.
+
 ## Combining with eslint-config-functype
 
 For a complete setup with functional rules, TypeScript, Prettier, and import sorting:
