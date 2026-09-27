@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { INTEROP_TAG, INVARIANT_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 /** True iff any ancestor of `node` is a `CatchClause`. Pure tail recursion. */
@@ -22,6 +23,14 @@ const rule: Rule.RuleModule = {
       {
         type: "object",
         properties: {
+          allowInteropMarker: {
+            type: "boolean",
+            default: true,
+          },
+          allowInvariantMarker: {
+            type: "boolean",
+            default: true,
+          },
           allowThrowInTests: {
             type: "boolean",
             default: true,
@@ -40,6 +49,13 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
+    const allowInteropMarker = options.allowInteropMarker !== false
+    // `@invariant <reason>` marks throws that signal programmer errors, not expected failures (#325 D).
+    const allowInvariantMarker = options.allowInvariantMarker !== false
+    const isExemptByMarker = (node: ASTNode): boolean =>
+      (allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)) ||
+      (allowInvariantMarker && isInsideTaggedDeclaration(node, INVARIANT_TAG, context.sourceCode))
     const allowThrowInTests = options.allowThrowInTests !== false
 
     function isInTestFile() {
@@ -85,6 +101,7 @@ const rule: Rule.RuleModule = {
 
     return {
       ThrowStatement(node: ASTNode) {
+        if (isExemptByMarker(node)) return
         // Allow throws in test files if configured
         if (allowThrowInTests && isInTestFile()) return
 

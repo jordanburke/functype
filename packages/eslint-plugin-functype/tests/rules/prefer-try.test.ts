@@ -7,6 +7,17 @@ describe("prefer-try", () => {
   ruleTester.run("prefer-try", rule, {
     valid: [
       {
+        name: "A try/catch inside an @interop function",
+        code: `/** @interop Node's stream API reports parse failures by throwing synchronously. */
+function parseChunk(s: string) {
+  try {
+    return JSON.parse(s)
+  } catch (e) {
+    return undefined
+  }
+}`,
+      },
+      {
         name: "Using Try is allowed",
         code: `function safeParse(json: string) { return Try(() => JSON.parse(json)) }`,
       },

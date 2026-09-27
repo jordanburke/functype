@@ -1,5 +1,4 @@
 "use client"
-/* eslint-disable functype/prefer-option -- React hooks must accept idiomatic optional params and use ref-init sentinels; wrapping in Option would change the public API shape consumers expect. */
 
 import { type DependencyList, useCallback, useRef } from "react"
 
@@ -12,6 +11,7 @@ import { type Eq, referenceEq } from "./eq"
 export function useStableCallback<F extends (...args: never[]) => unknown>(
   callback: F,
   deps: DependencyList,
+  // eslint-disable-next-line functype/prefer-option -- an `undefined` slot means "default equality for this dep"; replacing it with Eq.default is a 1.x-breaking API change, deferred to 2.0.
   eqs?: ReadonlyArray<Eq<unknown> | undefined>,
 ): F {
   const prev = useRef<DependencyList | null>(null)

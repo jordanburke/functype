@@ -49,6 +49,37 @@ A rule is **`error` in `recommended` once it is right on ~95–99% of real code*
 
 `prefer-fold` reports only; its rewrite is a suggestion you apply, never an autofix, so `eslint --fix` can't change code on your behalf.
 
+## Boundary markers: `@interop` and `@invariant`
+
+Some code is correct _because_ it isn't FP-shaped: a bridge to a host whose contract is the throw, the rejection or the nullable. Mark the declaration instead of disabling the rule:
+
+```ts
+/**
+ * Runs the effect, or throws a boxed error.
+ *
+ * @interop React Query signals failure only by promise rejection; an Either return reads as success.
+ */
+const runBoxed = async <E, A>(effect: () => IO<never, E, A>): Promise<A> => { … }
+
+/** @invariant Called only inside a DBOS step, where every argument is already validated. */
+function deriveRunId(workflowId: string, step: number): string {
+  if (step < 0) throw new Error("step must be non-negative")
+  …
+}
+```
+
+| Tag                   | Honored by                                                    | Means                                                                                                              |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `@interop <reason>`   | `prefer-either`, `prefer-option`, `prefer-fold`, `prefer-try` | This declaration bridges functype to a host (React, React Query, an SDK) whose contract requires the non-FP shape. |
+| `@invariant <reason>` | `prefer-either`                                               | This declaration throws only for programmer errors, never for expected failures.                                   |
+
+- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered.
+- **The reason is required**, on the same line as the tag. A bare `@interop` exempts nothing.
+- **Only JSDoc (`/** … */`) counts.** A `//` comment mentioning the tag does not.
+- **Opt out** per rule with `allowInteropMarker: false` / `allowInvariantMarker: false`.
+
+Prefer a marker to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". A marker covers one declaration, carries its reason, and `rg '@interop'` gives the complete inventory of places the code touches a throw-based host.
+
 ## Rule options
 
 ### `functype/prefer-list`

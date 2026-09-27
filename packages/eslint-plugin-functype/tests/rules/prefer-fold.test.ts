@@ -5,6 +5,11 @@ import rule from "../../src/rules/prefer-fold"
 describe("prefer-fold", () => {
   ruleTester.run("prefer-fold", rule, {
     valid: [
+      {
+        name: "A predicate ternary inside an @interop function",
+        code: `/** @interop The host callback API wants a plain value or undefined. */
+const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
+      },
       // #325 — a null check on a plain value is not a fold of a functype value. Whether that value should
       // be an Option is prefer-option's call; reporting it here at error fired on JSX, style objects and
       // conditional spreads (31 of 31 hits in CivalaOS). Opt in with { checkNullable: true }.

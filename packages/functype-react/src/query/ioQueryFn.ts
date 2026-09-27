@@ -1,11 +1,3 @@
-/* eslint-disable functype/prefer-either -- This module IS the Either→rejection bridge.
- * React Query signals failure exclusively by promise rejection: `isError`, `onError`,
- * and retry all key off a rejected queryFn. Returning an `Either` here would be
- * indistinguishable from success to React Query — the very bug (see #239) that makes
- * `.run()` unusable as a `queryFn`. The throw is the contract, and it is confined to
- * `runBoxed` so no caller ever has to write it. Scoped to the file rather than to each
- * `throw` because the rule also fires on the enclosing function: three scattered
- * suppressions would read as incidental exceptions rather than one deliberate design. */
 import { Try } from "functype"
 import { InterruptedError, type IO } from "functype/io"
 
@@ -48,6 +40,10 @@ export type IOBridgeOptions<E> = {
  * `IO.sync` thunk arrived as `Left` and was indistinguishable from a genuine `E`, so
  * `defect` read `false` while `.error` held something that was not an `E` at all
  * (#259). `Exit` keeps the two apart, so the flag can be accurate.
+ *
+ * The throws are confined to this function so no caller ever writes one.
+ *
+ * @interop React Query signals failure only by promise rejection; an Either return reads as success (#239).
  */
 const runBoxed = async <E, A>(effect: () => IO<never, E, A>, options?: IOBridgeOptions<E>): Promise<A> => {
   const exit = await Try(() => effect()).fold(

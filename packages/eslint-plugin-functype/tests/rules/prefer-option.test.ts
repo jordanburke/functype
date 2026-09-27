@@ -5,6 +5,20 @@ import rule from "../../src/rules/prefer-option"
 describe("prefer-option", () => {
   ruleTester.run("prefer-option", rule, {
     valid: [
+      // #241 — @interop covers nullables that a host contract requires, in signatures and bodies.
+      {
+        name: "Nullable parameter and return type inside an @interop function",
+        code: `/** @interop This hook converts nullable JS values into Option, so its input must be nullable. */
+export function useOption<A>(initial?: A): { set: (a: A | null | undefined) => void } {
+  const set = (a: A | null | undefined) => undefined
+  return { set }
+}`,
+      },
+      {
+        name: "Nullable field in an @interop type alias",
+        code: `/** @interop Mirrors the shape the payment SDK posts to our webhook. */
+type WebhookBody = { readonly customer: string | null }`,
+      },
       // #325 C — `null` is idiomatic React state; an Option in a hook's type argument buys nothing.
       {
         name: "useState with a nullable type argument",
@@ -45,6 +59,38 @@ describe("prefer-option", () => {
       },
     ],
     invalid: [
+      {
+        name: "@invariant does not exempt a nullable (it is for throws only)",
+        code: `/** @invariant Arguments are validated upstream. */
+function b(x: string | null) {
+  return x
+}`,
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "string", nullable: "string | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: `/** @invariant Arguments are validated upstream. */
+function b(x: Option<string>) {
+  return x
+}`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: `/** @invariant Arguments are validated upstream. */
+import { Option } from "functype"
+function b(x: string | null) {
+  return x
+}`,
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "allowUseState: false reports hook type arguments too",
         code: "const [user, setUser] = useState<User | null>(null)",

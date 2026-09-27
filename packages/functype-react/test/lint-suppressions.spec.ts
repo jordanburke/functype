@@ -17,15 +17,27 @@ import { describe, expect, it } from "vitest"
  *
  * **Adding an entry is not forbidden — it just has to be a decision.** If a new
  * suppression is right, update this map in the same commit and say why in the
- * message. If you can instead make the rule understand the boundary structurally,
- * prefer that: see the `@interop` marker proposal for `eslint-plugin-functype`.
+ * message. Prefer making the boundary structural instead: a host-contract bridge
+ * takes an `@interop <reason>` JSDoc tag (see EXPECTED_INTEROP below), which the
+ * functype rules honor for that declaration only.
+ *
+ * The three left are the `eqs` parameter of the useStable* hooks — an API choice,
+ * not a host contract, so they stay line-level disables until the 2.0 API change.
  */
 const EXPECTED_SUPPRESSIONS: Readonly<Record<string, number>> = {
-  "async/useTaskValue.ts": 1,
-  "hooks/useOption.ts": 1,
   "hooks/useStableCallback.ts": 1,
   "hooks/useStableEffect.ts": 1,
   "hooks/useStableMemo.ts": 1,
+}
+
+/**
+ * Inventory of `@interop` markers (#241) — every place this package bridges functype to a
+ * host whose contract IS the non-FP shape. Pinned like the suppressions, so a new
+ * boundary is visible in review rather than a quiet exemption.
+ */
+const EXPECTED_INTEROP: Readonly<Record<string, number>> = {
+  "async/useTaskValue.ts": 1,
+  "hooks/useOption.ts": 1,
   "query/ioQueryFn.ts": 1,
 }
 
@@ -39,6 +51,16 @@ const sourceFiles = (dir: string): ReadonlyArray<string> =>
   })
 
 const countSuppressions = (file: string): number => (readFileSync(file, "utf8").match(/eslint-disable/g) ?? []).length
+
+const countInteropMarkers = (file: string): number => (readFileSync(file, "utf8").match(/@interop\s+\S/g) ?? []).length
+
+const countBy = (count: (file: string) => number): Record<string, number> =>
+  Object.fromEntries(
+    sourceFiles(SRC_DIR)
+      .map((file) => [relative(SRC_DIR, file).split("\\").join("/"), count(file)] as const)
+      .filter(([, n]) => n > 0)
+      .sort(([a], [b]) => a.localeCompare(b)),
+  )
 
 describe("eslint suppression ratchet", () => {
   it("matches the reviewed set of suppressions exactly", () => {
@@ -63,5 +85,9 @@ describe("eslint suppression ratchet", () => {
 
     // eslint's `--` convention carries the rationale; a bare disable says nothing.
     expect(unjustified).toEqual([])
+  })
+
+  it("matches the reviewed set of @interop boundaries exactly", () => {
+    expect(countBy(countInteropMarkers)).toEqual(EXPECTED_INTEROP)
   })
 })

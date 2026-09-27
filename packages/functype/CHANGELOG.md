@@ -101,6 +101,17 @@ Scope is `Option` only. The wrapper shape repeats mechanically for the other con
 
 **`prefer-option` — new `allowUseState` option (default `true`).** It skips `T | null` inside the type argument of `useState` / `useRef`, whether bare or `React.`-qualified: `null` is idiomatic React state. Nullable component parameters are still reported.
 
+**`eslint-plugin-functype` — `@interop` and `@invariant` boundary markers replace `eslint-disable` (#241, #325 D).**
+
+A JSDoc tag with a reason now exempts one declaration (and what's nested in it) from the rules it concerns:
+
+- `@interop <reason>` — `prefer-either`, `prefer-option`, `prefer-fold`, `prefer-try`. For bridges to a host whose contract is the throw, rejection or nullable (React's `use()`, React Query, a nullable-to-Option converter).
+- `@invariant <reason>` — `prefer-either` only. For throws that signal programmer errors, not expected failures.
+
+A bare tag with no reason exempts nothing, and `//` comments don't count. Opt out per rule with `allowInteropMarker: false` / `allowInvariantMarker: false`. `rg '@interop'` is the inventory of host boundaries.
+
+**`functype-react`** — its six file-level `eslint-disable`s are gone. `useTaskValue`, `runBoxed` (`ioQueryFn`) and `useOption` carry `@interop` markers, pinned in `test/lint-suppressions.spec.ts` alongside the suppression ratchet. The three `useStable*` hooks keep one line-level disable each, on the `eqs` parameter: an `undefined` slot meaning "default equality" is an API choice, and replacing it with `Eq.default` is a 1.x-breaking change deferred to 2.0.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**
