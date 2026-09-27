@@ -27,18 +27,27 @@ export default [functype.configs.strict]
 
 ## Rules
 
-| Rule                           | Recommended | Strict | Description                                              |
-| ------------------------------ | :---------: | :----: | -------------------------------------------------------- |
-| `functype/prefer-option`       |    warn     | error  | Use `Option`/`Some`/`None` instead of `null`/`undefined` |
-| `functype/prefer-either`       |    warn     | error  | Use `Either`/`Left`/`Right` for typed domain errors      |
-| `functype/prefer-try`          |    warn     | error  | Prefer `Try(() => …)` for computations that may throw    |
-| `functype/prefer-fold`         |    warn     |  warn  | Use `fold`/`match` instead of manual unwrapping          |
-| `functype/prefer-map`          |    warn     |  warn  | Use `map` instead of manual option/either checks         |
-| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of nested `map`                    |
-| `functype/no-imperative-loops` |    warn     |  warn  | Use `List` methods instead of imperative loops           |
-| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                 |
-| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe `.get()` on `Option`/`Either`            |
-| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                      |
+| Rule                           | Recommended | Strict | Description                                                |
+| ------------------------------ | :---------: | :----: | ---------------------------------------------------------- |
+| `functype/no-let`              |    error    | error  | Use `const`; no reassignment                               |
+| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops  |
+| `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read |
+| `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read |
+| `functype/prefer-map`          |    error    | error  | Use `map` instead of pushing inside `forEach`              |
+| `functype/prefer-fold`         |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/… |
+| `functype/prefer-option`       |    warn     | error  | Use `Option` instead of `null`/`undefined`                 |
+| `functype/prefer-either`       |    warn     | error  | Use `Either` for typed domain errors instead of `throw`    |
+| `functype/prefer-try`          |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch         |
+| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                    |
+| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                   |
+| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)     |
+| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                        |
+
+### Severity policy
+
+A rule is **`error` in `recommended` once it is right on ~95–99% of real code**, meaning its known false-positive classes are closed. It stays `warn` only while those classes are still open. FP here is governance: a rule that is reliably right should fail the build, not print advice nobody reads. Expect `recommended` to get stricter as boundary markers (`Wire<T>`, `@interop`) close the remaining cases for `prefer-option`, `prefer-either` and `prefer-try`.
+
+`prefer-fold` reports only; its rewrite is a suggestion you apply, never an autofix, so `eslint --fix` can't change code on your behalf.
 
 ## Rule options
 
@@ -78,11 +87,27 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 
 ### `functype/prefer-fold`
 
-| Option          | Default | Description                                                           |
-| --------------- | ------- | --------------------------------------------------------------------- |
-| `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported. |
+| Option          | Default | Description                                                                                                                                                                                                        |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
+| `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+
+### `functype/prefer-option`
+
+| Option          | Default | Description                                                                                              |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `allowUseState` | `true`  | Don't report `T \| null` inside the type argument of `useState` / `useRef` (bare or `React.`-qualified). |
+
+`null` is idiomatic React state, and an `Option` there fights the hook's own API. Nullable component parameters and props are still reported.
+
+### `functype/prefer-map`
+
+| Option              | Default | Description                                                                                                    |
+| ------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `checkArrayMethods` | `true`  | Report `.push` inside `forEach` callbacks and `forEach` used as a map.                                         |
+| `checkForLoops`     | `false` | Also report `for`/`for..of`/`for..in` loops that push. Off because `no-imperative-loops` already reports them. |
 
 ### `functype/prefer-functype-set` / `functype/prefer-functype-map`
 

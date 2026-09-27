@@ -88,6 +88,19 @@ Scope is `Option` only. The wrapper shape repeats mechanically for the other con
 - **`prefer-either`** reports each `throw` once. Previously a throw inside a function with a declared return type was reported twice: at the throw, and again at the function. The function-level check also counted throws in nested functions. The single report now uses the enclosing function's return type, `Consider returning Either<Error, T> instead of throwing`, when it declares a non-Either one. This covers every function form: class methods, getters, object methods and `function` expressions now get that message too. The old function-level check only saw function declarations and arrow functions.
 - **`prefer-functype-set` / `prefer-functype-map`** gain `allowMutable` (default `true`). The rules skip a native collection the code mutates on purpose, via `.add`/`.set`/`.delete`/`.clear` (including `x!.add(…)`). The call can be on a copying `new` expression (`new Set(prev).add(id)`), on the variable, parameter or later-assigned `let` holding it, or on `this.<field>` (a field initializer, constructor assignment or constructor parameter property). An empty-`new` builder chain (`new Map().set(a, 1).set(b, 2)`) is not exempt: it's a `Map.of` candidate. functype's collections are immutable and can't express a cache or registry. Collections that are only read are still reported.
 
+**`eslint-plugin-functype` — `recommended` now errors on the rules that are reliably right (#325). Upgrade note: expect new lint errors.**
+
+`recommended` used to warn on every rule except `no-let`. In CivalaOS that meant 1,143 warnings and an agent shipping 85 new violations under "lint OK", because the gate counts errors. The plugin now follows a stated severity policy: a rule is `error` once it is right on ~95–99% of real code and its known false-positive classes are closed. With #323 and #324 closing those classes, five rules graduate:
+
+- `no-imperative-loops`, `prefer-functype-map`, `prefer-functype-set`, `prefer-map`, `prefer-fold` → **`error`** (joining `no-let`).
+- **`prefer-fold`** now reports only functype checks (`isSome()`, `isLeft()`, `isSuccess()`, …). Its null-check heuristic (`x === null ? a : b` on a plain value) is opt-in via `checkNullable`. Measured on CivalaOS, that path produced 31 of 31 hits on plain nullables (JSX conditionals, style objects, conditional spreads) and none on functype values. Whether such a value should be an `Option` is `prefer-option`'s call.
+- **`prefer-map`** no longer reports `for` loops by default (`checkForLoops` now defaults to `false`). `no-imperative-loops` already reports them, so each such loop used to be two errors. `prefer-map` still reports `.push` inside `forEach`.
+- `prefer-option`, `prefer-either`, `prefer-try` stay `warn` until the boundary cases close (serialization rows/DTOs, invariant throws). `prefer-flatmap` and `prefer-do-notation` stay `warn` because their precision is unmeasured.
+
+**Upgrading:** `lint:check` fails on existing loops, native `Map`/`Set` that are only read, and `isSome()`/`isLeft()` branching. Fix them (`prefer-fold` and `no-imperative-loops` offer suggestions), or downgrade a rule in your own config while you work through them. The plugin's version mirrors functype's, so this ships in a minor.
+
+**`prefer-option` — new `allowUseState` option (default `true`).** It skips `T | null` inside the type argument of `useState` / `useRef`, whether bare or `React.`-qualified: `null` is idiomatic React state. Nullable component parameters are still reported.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**

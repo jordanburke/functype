@@ -201,6 +201,10 @@ const rule: Rule.RuleModule = {
             minimum: 1,
             default: 2,
           },
+          checkNullable: {
+            type: "boolean",
+            default: false,
+          },
         },
         additionalProperties: false,
       },
@@ -217,6 +221,11 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = context.options[0] || {}
     const minComplexity = options.minComplexity || 2
+    // Off by default (#325): a null check on a plain value (`x === null ? a : b`) is not a fold of a
+    // functype value. Whether that value should be an Option is prefer-option's call, and at error this
+    // path fired on JSX conditionals, style objects and conditional spreads (31 of 31 hits in CivalaOS,
+    // 0 of which were functype values). Predicate calls (`o.isSome()`, `e.isLeft()`) are always checked.
+    const checkNullable = options.checkNullable === true
 
     function generateFoldFromIf(node: ASTNode): string | null {
       const sourceCode = context.sourceCode
@@ -306,7 +315,7 @@ const rule: Rule.RuleModule = {
       }
 
       // Check for null/undefined checks on variables that might be Options
-      if (node.type === "BinaryExpression") {
+      if (checkNullable && node.type === "BinaryExpression") {
         if (
           (node.operator === "===" || node.operator === "!==" || node.operator === "==" || node.operator === "!=") &&
           ((node.left.type === "Literal" && (node.left.value === null || node.left.value === undefined)) ||
