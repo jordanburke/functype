@@ -40,6 +40,44 @@ describe("prefer-either", () => {
       },
     ],
     invalid: [
+      // #324 — one report per throw. The enclosing function's return type decides the message; a throw
+      // inside a nested function belongs to that function, not the outer one.
+      {
+        name: "A throw in a nested unannotated function does not make the annotated outer function report",
+        code: `function outer(): number {
+  const f = () => {
+    throw new Error("x")
+  }
+  return 1
+}`,
+        errors: [
+          {
+            messageId: "preferEitherOverThrow",
+            suggestions: [
+              {
+                messageId: "suggestEitherLeft",
+                output: `function outer(): number {
+  const f = () => {
+    return Either.left(new Error("x"))
+  }
+  return 1
+}`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Either" },
+                output: `import { Either } from "functype"
+function outer(): number {
+  const f = () => {
+    throw new Error("x")
+  }
+  return 1
+}`,
+              },
+            ],
+          },
+        ],
+      },
       // Throw statement in function body
       {
         name: "Throw statement should use Either.left",
@@ -69,9 +107,6 @@ describe("prefer-either", () => {
           {
             messageId: "preferEitherReturn",
             data: { type: "number" },
-          },
-          {
-            messageId: "preferEitherOverThrow",
             suggestions: [
               {
                 messageId: "suggestEitherLeft",
@@ -101,9 +136,6 @@ describe("prefer-either", () => {
           {
             messageId: "preferEitherReturn",
             data: { type: "Promise<Array<Record<string, unknown>>>" },
-          },
-          {
-            messageId: "preferEitherOverThrow",
             suggestions: [
               {
                 messageId: "suggestEitherLeft",
@@ -148,9 +180,6 @@ function fetchData(url: string): Promise<Array<Record<string, unknown>>> {
           {
             messageId: "preferEitherReturn",
             data: { type: "number" },
-          },
-          {
-            messageId: "preferEitherOverThrow",
             suggestions: [
               {
                 messageId: "suggestEitherLeft",
@@ -198,9 +227,6 @@ const divide = (a: number, b: number): number => {
           {
             messageId: "preferEitherReturn",
             data: { type: "string" },
-          },
-          {
-            messageId: "preferEitherOverThrow",
             suggestions: [
               {
                 messageId: "suggestEitherLeft",
@@ -235,7 +261,8 @@ function validate(input: string): string {
             ],
           },
           {
-            messageId: "preferEitherOverThrow",
+            messageId: "preferEitherReturn",
+            data: { type: "string" },
             suggestions: [
               {
                 messageId: "suggestEitherLeft",

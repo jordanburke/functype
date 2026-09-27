@@ -5,6 +5,16 @@ import rule from "../../src/rules/prefer-map"
 describe("prefer-map", () => {
   ruleTester.run("prefer-map", rule, {
     valid: [
+      {
+        name: "for await pushing from a stream is not a .map candidate",
+        code: `async function collect(stream) {
+  const out = []
+  for await (const chunk of stream) {
+    out.push(chunk.trim())
+  }
+  return out
+}`,
+      },
       // #323 — a loop that awaits cannot become .map (the callback cannot await); no-imperative-loops owns
       // it and points at IO.forEach, so prefer-map must not also tell the reader to use .map.
       {

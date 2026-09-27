@@ -3,6 +3,7 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { annotatesMutatedBinding, isMutatedCollection, SET_MUTATORS } from "../utils/mutable-collection"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -17,6 +18,10 @@ const rule: Rule.RuleModule = {
         type: "object",
         properties: {
           allowInTests: {
+            type: "boolean",
+            default: true,
+          },
+          allowMutable: {
             type: "boolean",
             default: true,
           },
@@ -37,6 +42,9 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = context.options[0] || {}
     const allowInTests = options.allowInTests !== false
+    // A native Set the code mutates on purpose (cache, registry, accumulator) is a deliberate choice —
+    // functype's Set is immutable and cannot express it (#324).
+    const allowMutable = options.allowMutable !== false
 
     function isInTestFile() {
       const filename = context.filename
@@ -60,6 +68,8 @@ const rule: Rule.RuleModule = {
 
         // Only handle `new Set(...)` calls
         if (!node.callee || node.callee.type !== "Identifier" || node.callee.name !== "Set") return
+
+        if (allowMutable && isMutatedCollection(node, SET_MUTATORS, context.sourceCode)) return
 
         // Skip if Set is already imported from functype
         if (isSetImportedFromFunctype()) return
@@ -134,6 +144,8 @@ const rule: Rule.RuleModule = {
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
         if (typeName !== "Set") return
+
+        if (allowMutable && annotatesMutatedBinding(node, SET_MUTATORS, context.sourceCode)) return
 
         // Skip if Set is already imported from functype
         if (isSetImportedFromFunctype()) return

@@ -1,7 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { containsAwait } from "../utils/async-detection"
+import { containsAwait, containsYield } from "../utils/async-detection"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -85,6 +85,14 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    /**
+     * Loops with no functional equivalent (#324): `for await` consumes a stream, and collecting it first
+     * would defeat the streaming; a loop that yields is a generator's body, and a callback cannot yield.
+     */
+    function hasNoFunctionalEquivalent(node: ASTNode): boolean {
+      return (node.type === "ForOfStatement" && node.await === true) || containsYield(node.body)
+    }
+
     function bodyContainsBreakOrContinue(node: ASTNode): boolean {
       const sourceCode = context.sourceCode
       const bodyText = sourceCode.getText(node.body)
@@ -93,6 +101,7 @@ const rule: Rule.RuleModule = {
 
     return {
       ForStatement(node: ASTNode) {
+        if (hasNoFunctionalEquivalent(node)) return
         if (allowInTests && isInTestFile()) return
 
         // Allow traditional for loops if they need index access and option is set
@@ -110,6 +119,7 @@ const rule: Rule.RuleModule = {
       },
 
       ForInStatement(node: ASTNode) {
+        if (hasNoFunctionalEquivalent(node)) return
         if (allowInTests && isInTestFile()) return
 
         if (containsAwait(node.body)) {
@@ -151,26 +161,25 @@ const rule: Rule.RuleModule = {
       },
 
       ForOfStatement(node: ASTNode) {
+        if (hasNoFunctionalEquivalent(node)) return
         if (allowInTests && isInTestFile()) return
 
         // A .forEach suggestion here would move `await` into a non-async callback — a syntax error —
-        // so an awaiting body gets the IO.forEach pointer and no suggestion. `for await` itself is
-        // excluded: it consumes a stream, which is #324's concern, not a sequential traversal.
-        if (!node.await && containsAwait(node.body)) {
+        // so an awaiting body gets the IO.forEach pointer and no suggestion.
+        if (containsAwait(node.body)) {
           context.report({ node, messageId: "noAsyncLoop" })
           return
         }
 
         const suggest: Rule.SuggestionReportDescriptor[] = []
 
-        // `for (x of await xs())` → `await xs().forEach(...)` would bind `await` to the forEach call, and
-        // `for await` iterates an async iterable, which has no .forEach — neither gets a suggestion.
+        // `for (x of await xs())` → `await xs().forEach(...)` would bind `await` to the forEach call, so an
+        // awaited iterable gets no suggestion.
         if (
           isSingleStatementBody(node) &&
           !hasDestructuringVariable(node) &&
           !bodyContainsBreakOrContinue(node) &&
-          !containsAwait(node.right) &&
-          !node.await
+          !containsAwait(node.right)
         ) {
           const sourceCode = context.sourceCode
           const bodyStmt = node.body.body[0]
@@ -205,6 +214,7 @@ const rule: Rule.RuleModule = {
       },
 
       WhileStatement(node: ASTNode) {
+        if (hasNoFunctionalEquivalent(node)) return
         if (allowWhileLoops) return
         if (allowInTests && isInTestFile()) return
 
@@ -215,6 +225,7 @@ const rule: Rule.RuleModule = {
       },
 
       DoWhileStatement(node: ASTNode) {
+        if (hasNoFunctionalEquivalent(node)) return
         if (allowWhileLoops) return
         if (allowInTests && isInTestFile()) return
 

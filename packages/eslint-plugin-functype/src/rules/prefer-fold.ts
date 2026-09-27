@@ -1,6 +1,7 @@
 import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { childNodes } from "../utils/ast-walk"
 
 /** Methods on a monadic value that mean "this is the Some/Right/Success path." */
 const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "isSuccess"])
@@ -59,14 +60,6 @@ function extractMonadicTest(
 
 /** Source text with all whitespace removed — receivers match however they are line-broken. */
 const compact = (text: string): string => text.replace(/\s+/g, "")
-
-const isNode = (value: unknown): value is ASTNode =>
-  typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string"
-
-const childNodes = (node: ASTNode): ReadonlyArray<ASTNode> =>
-  Object.entries(node)
-    .filter(([key]) => key !== "parent")
-    .flatMap(([, value]) => (Array.isArray(value) ? value.filter(isNode) : isNode(value) ? [value] : []))
 
 /** Which reads of the narrowed receiver a fold parameter replaces. */
 type Reads = { readonly members: ReadonlyArray<string>; readonly methods: ReadonlyArray<string> }
