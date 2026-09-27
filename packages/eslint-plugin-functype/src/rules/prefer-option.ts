@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype, isFunctypeType } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
@@ -18,6 +19,10 @@ const rule: Rule.RuleModule = {
       {
         type: "object",
         properties: {
+          allowInteropMarker: {
+            type: "boolean",
+            default: true,
+          },
           allowNullableIntersections: {
             type: "boolean",
             default: false,
@@ -40,6 +45,10 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
+    const allowInteropMarker = options.allowInteropMarker !== false
+    const isExemptByMarker = (node: ASTNode): boolean =>
+      allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)
     // `null` is idiomatic React state (`useState<User | null>(null)`, `useRef<El | null>(null)`); an
     // Option in a hook's type argument buys nothing and fights the hook's own API (#325).
     const allowUseState = options.allowUseState !== false
@@ -66,6 +75,7 @@ const rule: Rule.RuleModule = {
 
     return {
       TSUnionType(node: ASTNode) {
+        if (isExemptByMarker(node)) return
         if (!node.types || node.types.length < 2) return
         if (allowUseState && isInHookTypeArgument(node)) return
 

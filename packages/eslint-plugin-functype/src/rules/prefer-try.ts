@@ -2,6 +2,7 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { containsAwait } from "../utils/async-detection"
+import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 const rule: Rule.RuleModule = {
@@ -16,6 +17,10 @@ const rule: Rule.RuleModule = {
       {
         type: "object",
         properties: {
+          allowInteropMarker: {
+            type: "boolean",
+            default: true,
+          },
           allowThrowInTests: {
             type: "boolean",
             default: true,
@@ -36,6 +41,10 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
+    const allowInteropMarker = options.allowInteropMarker !== false
+    const isExemptByMarker = (node: ASTNode): boolean =>
+      allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)
     const allowThrowInTests = options.allowThrowInTests !== false
 
     function isInTestFile() {
@@ -71,6 +80,7 @@ const rule: Rule.RuleModule = {
 
     return {
       TryStatement(node: ASTNode) {
+        if (isExemptByMarker(node)) return
         // Try cannot model `finally` — bail on any try statement with a finalizer.
         // Covers two bugs: (1) catch-less try/finally fires a misleading warning
         // with no useful autofix; (2) try/catch/finally autofix would lift the

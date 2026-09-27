@@ -2,6 +2,7 @@ import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { childNodes } from "../utils/ast-walk"
+import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 
 /** Methods on a monadic value that mean "this is the Some/Right/Success path." */
 const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "isSuccess"])
@@ -196,6 +197,10 @@ const rule: Rule.RuleModule = {
       {
         type: "object",
         properties: {
+          allowInteropMarker: {
+            type: "boolean",
+            default: true,
+          },
           minComplexity: {
             type: "integer",
             minimum: 1,
@@ -220,6 +225,10 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
+    const allowInteropMarker = options.allowInteropMarker !== false
+    const isExemptByMarker = (node: ASTNode): boolean =>
+      allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)
     const minComplexity = options.minComplexity || 2
     // Off by default (#325): a null check on a plain value (`x === null ? a : b`) is not a fold of a
     // functype value. Whether that value should be an Option is prefer-option's call, and at error this
@@ -367,10 +376,12 @@ const rule: Rule.RuleModule = {
 
     return {
       IfStatement(node: ASTNode) {
+        if (isExemptByMarker(node)) return
         analyzeIfStatement(node)
       },
 
       ConditionalExpression(node: ASTNode) {
+        if (isExemptByMarker(node)) return
         const monadicInfo = isMonadicCheck(node.test)
         // The untyped nullable heuristic can't distinguish a real Option from a plain nullable primitive.
         // When it fires on a ternary that yields `undefined`/`null` in a branch, that's optional value

@@ -1,11 +1,12 @@
 "use client"
-/* eslint-disable functype/prefer-option -- this hook's job is to convert nullable JS values into Option, so its inputs must be nullable. */
 
 import { Option, type Option as OptionT } from "functype/option"
 import { useCallback, useMemo, useState } from "react"
 
 /**
  * Stateful Option container. `set(null | undefined)` clears to None.
+ *
+ * @interop This hook converts nullable JS values into Option, so `initial` and `set` must accept them.
  */
 export function useOption<A>(initial?: A): {
   readonly value: OptionT<A>

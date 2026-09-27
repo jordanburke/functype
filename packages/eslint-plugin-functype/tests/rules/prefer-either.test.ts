@@ -6,6 +6,41 @@ import { ruleTester } from "../utils/rule-tester"
 describe("prefer-either", () => {
   ruleTester.run("prefer-either", rule, {
     valid: [
+      // #241 — `@interop <reason>` marks a function whose contract with a host library IS the throw.
+      {
+        name: "A throw inside an @interop function is the host contract",
+        code: `/**
+ * Runs the effect, or throws for React Query.
+ *
+ * @interop React Query signals failure only by promise rejection.
+ */
+const runBoxed = async (effect) => {
+  const exit = await effect()
+  if (exit.failed) throw new Error("boxed")
+  return exit.value
+}`,
+      },
+      {
+        name: "@interop on an exported function declaration covers throws in nested callbacks",
+        code: `/** @interop React's use() reaches an ErrorBoundary only through a throw. */
+export function useValue(p) {
+  return p.fold(
+    (e) => {
+      throw e
+    },
+    (a) => a,
+  )
+}`,
+      },
+      // #325 D — `@invariant <reason>` marks a throw that signals a programmer error, not an expected failure.
+      {
+        name: "A throw inside an @invariant function is a documented invariant violation",
+        code: `/** @invariant Called only inside a DBOS step, where every argument is already validated. */
+function deriveRunId(workflowId: string, step: number): string {
+  if (step < 0) throw new Error("step must be non-negative")
+  return workflowId + ":" + step
+}`,
+      },
       // Using Either instead of throwing
       {
         name: "Using Either is allowed",
@@ -40,6 +75,50 @@ describe("prefer-either", () => {
       },
     ],
     invalid: [
+      {
+        name: "A bare @interop tag with no reason does not exempt",
+        code: `/** @interop */
+function f(x: boolean): number {
+  if (x) throw new Error("x")
+  return 1
+}`,
+        errors: [{ messageId: "preferEitherReturn", data: { type: "number" } }],
+      },
+      {
+        name: "@interop on one function does not cover a sibling",
+        code: `/** @interop React Query needs a rejection. */
+const a = () => 1
+function b(x) {
+  if (x) throw new Error("x")
+}`,
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "A plain comment mentioning @interop is not a JSDoc marker",
+        code: `// @interop React Query needs a rejection.
+function b(x) {
+  if (x) throw new Error("x")
+}`,
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "allowInteropMarker: false reports inside an @interop function",
+        code: `/** @interop React Query needs a rejection. */
+function b(x) {
+  if (x) throw new Error("x")
+}`,
+        options: [{ allowInteropMarker: false }],
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "allowInvariantMarker: false reports inside an @invariant function",
+        code: `/** @invariant Arguments are validated upstream. */
+function b(x) {
+  if (x) throw new Error("x")
+}`,
+        options: [{ allowInvariantMarker: false }],
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
       // #324 — one report per throw. The enclosing function's return type decides the message; a throw
       // inside a nested function belongs to that function, not the outer one.
       {

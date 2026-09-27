@@ -1,5 +1,4 @@
 "use client"
-/* eslint-disable functype/prefer-either -- the throw is the contract: React's `use()` semantics require errors to propagate to the nearest ErrorBoundary via throw, not via an Either return. */
 
 import { use } from "react"
 
@@ -17,6 +16,8 @@ import { useTaskPromise } from "./useTaskPromise"
  *    Suspense will catch the thrown error instead of the boundary.
  * 3. Do not call this on the server. Pass the underlying `Task` (or its
  *    promise) into a Client Component and call `useTaskValue` there.
+ *
+ * @interop React's `use()` reaches the nearest ErrorBoundary only through a throw, not an Either return.
  *
  * Testing note: React 19's `use()` does not unsuspend reliably under jsdom +
  * @testing-library/react. End-to-end tests of `useTaskValue` + `<TaskBoundary>`
