@@ -1,5 +1,5 @@
 "use client"
-/* eslint-disable functype/prefer-option, functype/prefer-fold -- React hooks must accept idiomatic optional params and use ref-init sentinels; wrapping in Option would change the public API shape consumers expect. */
+/* eslint-disable functype/prefer-option -- React hooks must accept idiomatic optional params and use ref-init sentinels; wrapping in Option would change the public API shape consumers expect. */
 
 import { type DependencyList, useCallback, useRef } from "react"
 

@@ -5,6 +5,14 @@ import rule from "../../src/rules/prefer-map"
 describe("prefer-map", () => {
   ruleTester.run("prefer-map", rule, {
     valid: [
+      // #325 — loops are no-imperative-loops' job; prefer-map reporting them too doubled every hit.
+      {
+        name: "A push loop is not reported by default (no-imperative-loops reports it)",
+        code: `const results = []
+for (const item of items) {
+  results.push(item.toUpperCase())
+}`,
+      },
       {
         name: "for await pushing from a stream is not a .map candidate",
         code: `async function collect(stream) {
@@ -68,6 +76,7 @@ describe("prefer-map", () => {
             results.push(transform(items[i]))
           }
         `,
+        options: [{ checkForLoops: true }],
         errors: [
           {
             messageId: "preferMapOverLoop",
@@ -84,6 +93,7 @@ describe("prefer-map", () => {
             results.push(item.toUpperCase())
           }
         `,
+        options: [{ checkForLoops: true }],
         errors: [
           {
             messageId: "preferMapOverLoop",
@@ -100,6 +110,7 @@ describe("prefer-map", () => {
             results.push(obj[key].toString())
           }
         `,
+        options: [{ checkForLoops: true }],
         errors: [
           {
             messageId: "preferMapOverLoop",
@@ -146,6 +157,7 @@ describe("prefer-map", () => {
             })
           }
         `,
+        options: [{ checkForLoops: true }],
         errors: [
           {
             messageId: "preferMapOverLoop",
@@ -167,6 +179,7 @@ describe("prefer-map", () => {
             results2.push(list2[i].value)
           }
         `,
+        options: [{ checkForLoops: true }],
         errors: [
           {
             messageId: "preferMapOverLoop",

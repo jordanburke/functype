@@ -5,6 +5,19 @@ import rule from "../../src/rules/prefer-option"
 describe("prefer-option", () => {
   ruleTester.run("prefer-option", rule, {
     valid: [
+      // #325 C — `null` is idiomatic React state; an Option in a hook's type argument buys nothing.
+      {
+        name: "useState with a nullable type argument",
+        code: "const [user, setUser] = useState<User | null>(null)",
+      },
+      {
+        name: "useRef with a nullable type argument",
+        code: "const ref = useRef<HTMLDivElement | null>(null)",
+      },
+      {
+        name: "React.useState with a nullable field in the state shape",
+        code: "const [state, setState] = React.useState<{ readonly user: User | null }>({ user: null })",
+      },
       // Already using Option
       {
         name: "Option type is allowed",
@@ -32,6 +45,53 @@ describe("prefer-option", () => {
       },
     ],
     invalid: [
+      {
+        name: "allowUseState: false reports hook type arguments too",
+        code: "const [user, setUser] = useState<User | null>(null)",
+        options: [{ allowUseState: false }],
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "User", nullable: "User | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "User" },
+                output: "const [user, setUser] = useState<Option<User>>(null)",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: `import { Option } from "functype"
+const [user, setUser] = useState<User | null>(null)`,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A nullable parameter of a component is still reported",
+        code: "const Avatar = (user: User | null) => user",
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "User", nullable: "User | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "User" },
+                output: "const Avatar = (user: Option<User>) => user",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: `import { Option } from "functype"
+const Avatar = (user: User | null) => user`,
+              },
+            ],
+          },
+        ],
+      },
       // Basic nullable type
       {
         name: "String or null should use Option",

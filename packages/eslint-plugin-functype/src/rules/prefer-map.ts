@@ -37,7 +37,7 @@ const rule: Rule.RuleModule = {
           },
           checkForLoops: {
             type: "boolean",
-            default: true,
+            default: false,
           },
         },
         additionalProperties: false,
@@ -53,7 +53,9 @@ const rule: Rule.RuleModule = {
   create(context) {
     const options = context.options[0] || {}
     const checkArrayMethods = options.checkArrayMethods !== false
-    const checkForLoops = options.checkForLoops !== false
+    // Off by default (#325): no-imperative-loops already reports every loop, and reporting the same loop
+    // here too doubled each hit. Opt in when no-imperative-loops is disabled.
+    const checkForLoops = options.checkForLoops === true
 
     function isForEachToMapSafe(node: ASTNode): boolean {
       // Only auto-fix simple forEach → map transformations on expressions that return values

@@ -4,6 +4,8 @@ import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype, isFunctypeType } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
+const REACT_STATE_HOOKS: ReadonlySet<string> = new Set(["useState", "useRef"])
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -20,6 +22,10 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: false,
           },
+          allowUseState: {
+            type: "boolean",
+            default: true,
+          },
         },
         additionalProperties: false,
       },
@@ -33,9 +39,27 @@ const rule: Rule.RuleModule = {
   },
 
   create(context) {
-    // const options = context.options[0] || {}
-    // Remove unused variable
-    // const _allowNullableIntersections = options.allowNullableIntersections || false
+    const options = context.options[0] || {}
+    // `null` is idiomatic React state (`useState<User | null>(null)`, `useRef<El | null>(null)`); an
+    // Option in a hook's type argument buys nothing and fights the hook's own API (#325).
+    const allowUseState = options.allowUseState !== false
+
+    /** Is `node` inside the type argument of a `useState` / `useRef` call (bare or `React.`-qualified)? */
+    function isInHookTypeArgument(node: ASTNode): boolean {
+      const parent = node.parent
+      if (!parent) return false
+      if (parent.type === "TSTypeParameterInstantiation" && parent.parent?.type === "CallExpression") {
+        const callee = parent.parent.callee
+        const name =
+          callee.type === "Identifier"
+            ? callee.name
+            : callee.type === "MemberExpression" && callee.property.type === "Identifier"
+              ? callee.property.name
+              : null
+        if (name !== null && REACT_STATE_HOOKS.has(name)) return true
+      }
+      return isInHookTypeArgument(parent)
+    }
 
     // Get functype imports if available (but still apply rule even without explicit import)
     const functypeImports = getFunctypeImportsLegacy(context)
@@ -43,6 +67,7 @@ const rule: Rule.RuleModule = {
     return {
       TSUnionType(node: ASTNode) {
         if (!node.types || node.types.length < 2) return
+        if (allowUseState && isInHookTypeArgument(node)) return
 
         const hasNull = node.types.some(
           (type: ASTNode) => type.type === "TSNullKeyword" || type.type === "TSUndefinedKeyword",

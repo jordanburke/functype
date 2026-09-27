@@ -5,6 +5,27 @@ import rule from "../../src/rules/prefer-fold"
 describe("prefer-fold", () => {
   ruleTester.run("prefer-fold", rule, {
     valid: [
+      // #325 — a null check on a plain value is not a fold of a functype value. Whether that value should
+      // be an Option is prefer-option's call; reporting it here at error fired on JSX, style objects and
+      // conditional spreads (31 of 31 hits in CivalaOS). Opt in with { checkNullable: true }.
+      {
+        name: "A null check on a plain value is not reported by default",
+        code: 'const label = avg === null ? "—" : `${avg}%`',
+      },
+      {
+        name: "A JSX conditional on a nullable is not reported by default",
+        code: "const el = watchingId !== null ? <Watch id={watchingId} /> : <Empty />",
+      },
+      {
+        name: "An if/else on a loose null check is not reported by default",
+        code: `function f(value) {
+  if (value == null) {
+    return "missing"
+  } else {
+    return value.toString()
+  }
+}`,
+      },
       // Using fold
       {
         name: "Using fold() is preferred",
@@ -133,6 +154,7 @@ describe("prefer-fold", () => {
             return "empty"
           }
         `,
+        options: [{ checkNullable: true }],
         errors: [
           {
             messageId: "preferFold",
@@ -150,6 +172,7 @@ describe("prefer-fold", () => {
             return defaultValue
           }
         `,
+        options: [{ checkNullable: true }],
         errors: [
           {
             messageId: "preferFold",
@@ -161,6 +184,7 @@ describe("prefer-fold", () => {
       {
         name: "Ternary with null check should use fold",
         code: 'const result = value === null ? "empty" : value.toString()',
+        options: [{ checkNullable: true }],
         errors: [
           {
             messageId: "preferFoldTernary",
@@ -272,6 +296,7 @@ describe("prefer-fold", () => {
             return value.toString()
           }
         `,
+        options: [{ checkNullable: true }],
         errors: [
           {
             messageId: "preferFold",
