@@ -81,8 +81,30 @@ const rule: Rule.RuleModule = {
     function chainRoot(node: ASTNode): ASTNode {
       if (node.type === "CallExpression") return chainRoot(node.callee)
       if (node.type === "MemberExpression") return chainRoot(node.object)
-      if (node.type === "ChainExpression" || node.type === "TSNonNullExpression") return chainRoot(node.expression)
+      if (
+        node.type === "ChainExpression" ||
+        node.type === "TSNonNullExpression" ||
+        node.type === "TSAsExpression" ||
+        node.type === "TSSatisfiesExpression"
+      ) {
+        return chainRoot(node.expression)
+      }
       return node
+    }
+
+    /** Every name a parameter binds — plain, destructured, defaulted or rest. */
+    function boundNames(param: ASTNode): ReadonlyArray<string> {
+      if (!param) return []
+      if (param.type === "Identifier") return [param.name]
+      if (param.type === "AssignmentPattern") return boundNames(param.left)
+      if (param.type === "RestElement") return boundNames(param.argument)
+      if (param.type === "ArrayPattern") return param.elements.flatMap((el: ASTNode) => boundNames(el))
+      if (param.type === "ObjectPattern") {
+        return param.properties.flatMap((prop: ASTNode) =>
+          prop.type === "RestElement" ? boundNames(prop.argument) : boundNames(prop.value),
+        )
+      }
+      return []
     }
 
     /**
@@ -92,10 +114,7 @@ const rule: Rule.RuleModule = {
      */
     function isShapePreserving(functionNode: ASTNode, returned: ASTNode): boolean {
       const root = chainRoot(returned)
-      return (
-        root.type === "Identifier" &&
-        functionNode.params.some((p: ASTNode) => p.type === "Identifier" && p.name === root.name)
-      )
+      return root.type === "Identifier" && functionNode.params.flatMap(boundNames).includes(root.name)
     }
 
     function returnsArray(functionNode: ASTNode): boolean {

@@ -40,6 +40,49 @@ export const register = (k: string, f: () => void) => { registry.set(k, f) }`,
       },
     ],
     invalid: [
+      {
+        name: "A builder chain on an empty new Map is a Map.of candidate, not a mutation",
+        code: "const m = new Map().set('a', 1).set('b', 2)",
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              { messageId: "suggestMapEmpty", output: "const m = Map.empty().set('a', 1).set('b', 2)" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output: `import { Map } from "functype"
+const m = new Map().set('a', 1).set('b', 2)`,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "allowMutable: false reports a mutated Map too",
+        code: `const cache = new Map()
+cache.set("k", 1)`,
+        options: [{ allowMutable: false }],
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapEmpty",
+                output: `const cache = Map.empty()
+cache.set("k", 1)`,
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output: `import { Map } from "functype"
+const cache = new Map()
+cache.set("k", 1)`,
+              },
+            ],
+          },
+        ],
+      },
       // new Map() with no args → Map.empty()
       {
         name: "new Map() should use Map.empty()",

@@ -91,11 +91,13 @@ Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite 
 | `allowInTests` | `true`  | Silence the rule inside test files.                                                             |
 | `allowMutable` | `true`  | Don't report a native `Set`/`Map` the code mutates on purpose. Set `false` to report it anyway. |
 
-A collection counts as mutated when `.add` / `.delete` / `.clear` (Set) or `.set` / `.delete` / `.clear` (Map) is called on it:
+A collection counts as mutated when `.add` / `.delete` / `.clear` (Set) or `.set` / `.delete` / `.clear` (Map) is called on it, including `x!.add(…)`. The call can be made:
 
-- directly on the `new` expression (`new Set(prev).add(id)`, the React copy-then-add);
-- through the variable it is bound to;
-- through `this.<field>` in the class that owns it.
+- directly on a `new` expression that copies something (`new Set(prev).add(id)`, the React copy-then-add). An empty-`new` builder chain like `new Map().set(a, 1).set(b, 2)` is not exempt; use `Map.of` / `Set.of`.
+- directly through the variable, parameter or later-assigned `let` holding it, in any nested scope.
+- through `this.<field>` in the owning class: a field initializer, a constructor assignment, or a constructor parameter property.
+
+Not followed: aliases (`const t = s; t.add(x)`), `useRef(new Set()).current.add(x)`, a mutator passed as a callback (`xs.forEach(seen.add, seen)`), and a collection passed into another function. Those are still reported.
 
 functype's collections are immutable, so a cache, registry or in-place accumulator can't use them. A native collection that is only read (`.has`, `.get`, iteration) is still reported.
 

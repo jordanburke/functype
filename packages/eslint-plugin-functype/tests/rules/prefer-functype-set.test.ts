@@ -5,6 +5,42 @@ import rule from "../../src/rules/prefer-functype-set"
 describe("prefer-functype-set", () => {
   ruleTester.run("prefer-functype-set", rule, {
     valid: [
+      // #329 review — more shapes that bind and then mutate a native Set.
+      {
+        name: "A let assigned later and then mutated",
+        code: `let seen: Set<string>
+seen = new Set()
+seen.add("x")`,
+      },
+      {
+        name: "An annotated parameter that is mutated",
+        code: "export const track = (s: Set<string>, k: string) => { s.add(k) }",
+      },
+      {
+        name: "A defaulted parameter that is mutated",
+        code: "export function track(k: string, s = new Set<string>()) { s.add(k); return s }",
+      },
+      {
+        name: "A constructor parameter property that is mutated through this",
+        code: `class Store {
+  constructor(private readonly ids = new Set<string>()) {}
+  track(id: string) { this.ids.add(id) }
+}`,
+      },
+      {
+        name: "An annotated constructor parameter property that is mutated through this",
+        code: `class Store {
+  constructor(private readonly ids: Set<string>) {}
+  track(id: string) { this.ids.add(id) }
+}`,
+      },
+      {
+        name: "A non-null asserted field that is mutated",
+        code: `class Store {
+  private ids?: Set<string> = new Set()
+  track(id: string) { this.ids!.add(id) }
+}`,
+      },
       // #324 — a native Set that is mutated on purpose is a deliberate choice: functype's Set is
       // immutable, so it cannot express a cache, a registry or an in-place accumulator.
       {
@@ -54,6 +90,24 @@ seen.delete("x")`,
       },
     ],
     invalid: [
+      {
+        name: "A builder chain on an empty new Set is a Set.of candidate, not a mutation",
+        code: "const s = new Set().add(1).add(2)",
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              { messageId: "suggestSetEmpty", output: "const s = Set.empty().add(1).add(2)" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Set" },
+                output: `import { Set } from "functype"
+const s = new Set().add(1).add(2)`,
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "allowMutable: false reports a mutated Set too",
         code: `const seen = new Set()

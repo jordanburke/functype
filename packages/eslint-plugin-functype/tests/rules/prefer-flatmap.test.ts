@@ -5,6 +5,27 @@ import rule from "../../src/rules/prefer-flatmap"
 describe("prefer-flatmap", () => {
   ruleTester.run("prefer-flatmap", rule, {
     valid: [
+      // #329 review — the element can be bound by any parameter shape, and reached through a cast or ?.
+      {
+        name: "Destructured parameter",
+        code: "const grid = rows.map(({ cells }) => cells.map(render))",
+      },
+      {
+        name: "Defaulted parameter",
+        code: "const grid = rows.map((cells = []) => cells.map(render))",
+      },
+      {
+        name: "Array-destructured parameter",
+        code: "const grid = pairs.map(([, cells]) => cells.map(render))",
+      },
+      {
+        name: "Optional-chained own element",
+        code: "const grid = rows.map((r) => r?.cells.map(render))",
+      },
+      {
+        name: "Own element reached through a type assertion",
+        code: "const grid = rows.map((r) => (r as Row).cells.map(render))",
+      },
       // #324 — a callback that transforms its own element's array keeps the shape (a matrix, or an array
       // inside an Either/Option/Task); nothing is being flattened, so .flatMap is not the fix.
       {
@@ -99,6 +120,11 @@ describe("prefer-flatmap", () => {
       },
     ],
     invalid: [
+      {
+        name: "A destructured parameter does not exempt arrays built from another collection",
+        code: "const matches = rows.map(({ id }) => lookup.filter((r) => r.id === id))",
+        errors: [{ messageId: "preferFlatMapNested" }],
+      },
       // #324 — still reported when the callback builds arrays from something other than its own element.
       {
         name: "Nested map building arrays from another collection",
