@@ -5,6 +5,20 @@ import rule from "../../src/rules/prefer-option"
 describe("prefer-option", () => {
   ruleTester.run("prefer-option", rule, {
     valid: [
+      // #325 B — nullables inside Wire<…> are the declared serialization shape; `null` survives
+      // JSON.stringify and Option does not.
+      {
+        name: "A wired nullable field",
+        code: "type Row = { readonly email: Wire<string | null> }",
+      },
+      {
+        name: "Every nullable inside a wired row type",
+        code: "type UserRow = Wire<{ readonly email: string | null; readonly phone: string | undefined }>",
+      },
+      {
+        name: "A wired return type",
+        code: "async function load(): Promise<Wire<{ readonly name: string | null }>> { return { name: null } }",
+      },
       // #241 — @interop covers nullables that a host contract requires, in signatures and bodies.
       {
         name: "Nullable parameter and return type inside an @interop function",
@@ -59,6 +73,29 @@ type WebhookBody = { readonly customer: string | null }`,
       },
     ],
     invalid: [
+      {
+        name: "A nullable beside (not inside) a Wire type is still reported",
+        code: "function f(row: Wire<Row>, fallback: string | null) {}",
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "string", nullable: "string | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "function f(row: Wire<Row>, fallback: Option<string>) {}",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: `import { Option } from "functype"
+function f(row: Wire<Row>, fallback: string | null) {}`,
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "@invariant does not exempt a nullable (it is for throws only)",
         code: `/** @invariant Arguments are validated upstream. */

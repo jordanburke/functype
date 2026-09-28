@@ -5,6 +5,28 @@ import rule from "../../src/rules/prefer-list"
 describe("prefer-list", () => {
   ruleTester.run("prefer-list", rule, {
     valid: [
+      // #325 B — Wire<T> wraps any boundary shape; everything inside its type argument is the wire
+      // shape by declaration, so the rule skips it even at allowReadonlyArrays: false.
+      {
+        name: "A ReadonlyArray inside Wire<…> is a declared boundary",
+        code: "type Rows = Wire<ReadonlyArray<Row>>",
+        options: [{ allowReadonlyArrays: false }],
+      },
+      {
+        name: "Arrays nested inside a wired row type are a declared boundary",
+        code: "type UserRow = Wire<{ readonly tags: ReadonlyArray<string>; readonly scores: number[] }>",
+        options: [{ allowReadonlyArrays: false }],
+      },
+      {
+        name: "A qualified functype.Wire is recognized",
+        code: "type Rows = functype.Wire<ReadonlyArray<Row>>",
+        options: [{ allowReadonlyArrays: false }],
+      },
+      {
+        name: "Custom wireTypes names are recognized",
+        code: "type Rows = Dto<ReadonlyArray<Row>>",
+        options: [{ allowReadonlyArrays: false, wireTypes: ["Dto"] }],
+      },
       // Already using List
       {
         name: "List type is allowed",
@@ -55,6 +77,25 @@ describe("prefer-list", () => {
       },
     ],
     invalid: [
+      {
+        name: "wireTypes: [] turns the Wire exemption off",
+        code: "type Rows = Wire<ReadonlyArray<Row>>",
+        options: [{ allowReadonlyArrays: false, wireTypes: [] }],
+        errors: [
+          {
+            messageId: "preferList",
+            data: { type: "Row", arrayType: "ReadonlyArray<Row>" },
+            suggestions: [
+              { messageId: "suggestListType", data: { type: "Row" }, output: "type Rows = Wire<List<Row>>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype Rows = Wire<ReadonlyArray<Row>>',
+              },
+            ],
+          },
+        ],
+      },
       // Array type syntax
       {
         name: "Array type should use List",
@@ -329,7 +370,7 @@ describe("prefer-list", () => {
       // The boundary declaration is silent; the pipeline signature fires.
       {
         name: "Boundary recipe: Wire<T> passes, direct ReadonlyArray<T> in pipeline fires",
-        code: "type ClaimedDoc = Wire<Row>; function process(docs: ReadonlyArray<Row>) {}",
+        code: "type ClaimedDoc = Wire<ReadonlyArray<Row>>; function process(docs: ReadonlyArray<Row>) {}",
         options: [{ allowReadonlyArrays: false }],
         errors: [
           {
@@ -339,13 +380,13 @@ describe("prefer-list", () => {
               {
                 messageId: "suggestListType",
                 data: { type: "Row" },
-                output: "type ClaimedDoc = Wire<Row>; function process(docs: List<Row>) {}",
+                output: "type ClaimedDoc = Wire<ReadonlyArray<Row>>; function process(docs: List<Row>) {}",
               },
               {
                 messageId: "suggestAddImport",
                 data: { symbol: "List" },
                 output:
-                  'import { List } from "functype"\ntype ClaimedDoc = Wire<Row>; function process(docs: ReadonlyArray<Row>) {}',
+                  'import { List } from "functype"\ntype ClaimedDoc = Wire<ReadonlyArray<Row>>; function process(docs: ReadonlyArray<Row>) {}',
               },
             ],
           },

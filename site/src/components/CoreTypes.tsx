@@ -68,7 +68,7 @@ export default function CoreTypes() {
       name: "Wire<T>",
       href: "/wire",
       description:
-        "Serialization-boundary marker for ReadonlyArray at DB / HTTP / JSONB boundaries. Zero runtime, grep-able, and pairs with the prefer-list ESLint rule",
+        "Serialization-boundary marker for rows, collections and nullable fields at DB / HTTP / JSONB boundaries. Zero runtime, grep-able, and exempts its contents from prefer-list and prefer-option",
       icon: "⇢",
     },
   ];

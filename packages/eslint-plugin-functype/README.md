@@ -84,11 +84,11 @@ Prefer a marker to `eslint-disable`. A disable covers a whole file or line and s
 
 ### `functype/prefer-list`
 
-| Option                | Default | Description                                                                                                                                                                                                                                                                                               |
-| --------------------- | :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `allowArraysInTests`  | `true`  | Silence the rule inside test files (`.test.ts`, `.spec.ts`, `__tests__/`, `/test/`, `/tests/`).                                                                                                                                                                                                           |
-| `allowReadonlyArrays` | `true`  | When `true`, `ReadonlyArray<T>` **and** `readonly T[]` pass. When `false`, both are flagged consistently. Use `false` in combination with `Wire<T>` from `functype` to hold the rule at `error` — every unmarked `ReadonlyArray<T>` becomes a lint error and `Wire<T>` is the sole explicit escape hatch. |
-| `allowArrayLiterals`  | `false` | When `true`, `const xs = [1, 2, 3]` is not reported. Useful when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`. Mutable `T[]` in type positions is always reported regardless.                                                                             |
+| Option                | Default | Description                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowArraysInTests`  | `true`  | Silence the rule inside test files (`.test.ts`, `.spec.ts`, `__tests__/`, `/test/`, `/tests/`).                                                                                                                                                                                                                                   |
+| `allowReadonlyArrays` | `true`  | When `true`, `ReadonlyArray<T>` **and** `readonly T[]` pass. When `false`, both are flagged consistently. Use `false` in combination with `Wire<T>` from `functype` to hold the rule at `error` — every unmarked `ReadonlyArray<T>` becomes a lint error, and wrapping a boundary type in `Wire<…>` is the explicit escape hatch. |
+| `allowArrayLiterals`  | `false` | When `true`, `const xs = [1, 2, 3]` is not reported. Useful when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`. Mutable `T[]` in type positions is always reported regardless.                                                                                                     |
 
 **Boundary recipe (recommended for codebases touching serialization boundaries):**
 
@@ -102,10 +102,11 @@ Then annotate boundaries with `Wire<T>` from `functype`:
 
 ```ts
 import type { Wire } from "functype"
-type ClaimedDoc = Wire<Row>
+type ClaimedDocs = Wire<ReadonlyArray<Row>>
+type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArray<string> }>
 ```
 
-`Wire<T>` is `ReadonlyArray<T>` structurally, so no casts. The syntactic rule ignores unrecognized type names — `Wire<T>` passes for free, and consumer aliases stack cleanly.
+`Wire<T>` is assignable both ways with the plain type, so no casts. `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument (`wireTypes` option, default `["Wire"]`; `[]` turns it off), and consumer aliases stack cleanly.
 
 ### `functype/no-get-unsafe`
 

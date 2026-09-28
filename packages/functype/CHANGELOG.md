@@ -112,6 +112,22 @@ A bare tag with no reason exempts nothing, and `//` comments don't count. Opt ou
 
 **`functype-react`** — its six file-level `eslint-disable`s are gone. `useTaskValue`, `runBoxed` (`ioQueryFn`) and `useOption` carry `@interop` markers, pinned in `test/lint-suppressions.spec.ts` alongside the suppression ratchet. The three `useStable*` hooks keep one line-level disable each, on the `eqs` parameter: an `undefined` slot meaning "default equality" is an API choice, and replacing it with `Eq.default` is a 1.x-breaking change deferred to 2.0.
 
+**`functype` — `Wire<T>` wraps any boundary shape, not just arrays (#325 B). Migration: `Wire<Row>` → `Wire<ReadonlyArray<Row>>`.**
+
+`Wire<T>` now marks a value in its serialization-safe shape, whatever that shape is:
+
+```ts
+type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArray<string> }> // a whole row
+type UserRows = Wire<ReadonlyArray<UserRow>> // a collection
+type Invite = { readonly acceptedAt: Wire<string | null> } // one field
+```
+
+Definition: `T extends null | undefined ? T : T & { readonly [WIRE]?: never }`. It stays assignable both ways with the plain type and keeps `null`, the shape that survives `JSON.stringify`.
+
+**Breaking by the letter, compile-loud in practice.** In 1.9, `Wire<Row>` meant `ReadonlyArray<Row>`. It now means one `Row`, so a 1.9 use fails at its first array assignment or `.map`. `Wire` shipped in 1.9.0 on 2026-08-17, and a GitHub code search found no imports outside this repo, so it ships in a minor.
+
+**`eslint-plugin-functype`** — `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument, including qualified `functype.Wire<…>`. Configure with `wireTypes` (default `["Wire"]`; add your own boundary alias, or pass `[]` to turn it off). A whole row type becomes one boundary declaration instead of a suppression per nullable field. This is what `prefer-option` needs before it can graduate to `error`.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**

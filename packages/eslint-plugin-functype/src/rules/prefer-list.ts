@@ -3,6 +3,7 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { DEFAULT_WIRE_TYPES, isInsideWireType, WIRE_TYPES_SCHEMA } from "../utils/wire-types"
 
 /** AST keys that don't represent syntax children — back-edges and source metadata. */
 const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
@@ -54,6 +55,7 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
+          wireTypes: WIRE_TYPES_SCHEMA,
           allowReadonlyArrays: {
             type: "boolean",
             default: true,
@@ -77,6 +79,8 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // Everything inside `Wire<…>` is the declared serialization shape (#325 B).
+    const wireTypes: ReadonlyArray<string> = options.wireTypes ?? DEFAULT_WIRE_TYPES
     const allowArraysInTests = options.allowArraysInTests !== false
     const allowReadonlyArrays = options.allowReadonlyArrays !== false
     const allowArrayLiterals = options.allowArrayLiterals === true
@@ -111,6 +115,7 @@ const rule: Rule.RuleModule = {
 
     return {
       TSArrayType(node: ASTNode) {
+        if (isInsideWireType(node, wireTypes)) return
         if (allowArraysInTests && isInTestFile()) return
 
         // `readonly T[]` parses as TSTypeOperator(operator: "readonly") wrapping TSArrayType.
@@ -160,6 +165,7 @@ const rule: Rule.RuleModule = {
       },
 
       TSTypeReference(node: ASTNode) {
+        if (isInsideWireType(node, wireTypes)) return
         if (allowArraysInTests && isInTestFile()) return
 
         const sourceCode = context.sourceCode

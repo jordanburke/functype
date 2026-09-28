@@ -1,20 +1,24 @@
 # Wire
 
-A serialization-boundary marker for collections crossing DB rows, HTTP bodies, JSONB payloads, and workflow inputs. Structurally identical to `ReadonlyArray<T>` — zero runtime cost, bidirectionally assignable, no casts at call sites.
+A serialization-boundary marker for values crossing DB rows, HTTP bodies, JSONB payloads and workflow inputs. It wraps any boundary shape: a collection, a nullable field, or a whole row type. Zero runtime cost, assignable both ways with the plain type, no casts at call sites.
 
 ## Overview
 
 ```typescript
 declare const WIRE: unique symbol;
 
-export type Wire<T> = ReadonlyArray<T> & { readonly [WIRE]?: never };
+export type Wire<T> = T extends null | undefined
+  ? T
+  : T & { readonly [WIRE]?: never };
 ```
 
-Wire is a **flavored** type, not a branded one — the phantom symbol is optional, so `Wire<T>` and `ReadonlyArray<T>` accept each other without ceremony. That's deliberate. The value doesn't come from type-level enforcement; it comes from three places:
+Wire is a **flavored** type, not a branded one. The phantom symbol is optional, so `Wire<T>` and `T` accept each other without ceremony. `null` and `undefined` pass through unbranded, because an intersection brand on them collapses to `never`, and `null` is exactly the shape that survives `JSON.stringify`.
 
-- **Grep-ability.** `rg 'Wire<'` gives a complete, countable inventory of every serialization boundary in the codebase. Assert the count in CI and boundaries stop growing silently.
-- **Intent at the declaration site.** `type ClaimedDoc = Wire<Row>` documents the shape at exactly one location, replacing "ReadonlyArray, but for-serialization reasons that live in a review thread."
-- **ESLint pairing.** The `functype/prefer-list` rule's `TSTypeReference` handler recognizes `Array` and `ReadonlyArray` only. `Wire<T>` slips past for free, syntactically. With the rule at `allowReadonlyArrays: false`, `Wire<T>` becomes the sole explicit escape hatch and every unmarked `ReadonlyArray<T>` is a lint error.
+The value doesn't come from type-level enforcement. It comes from three places:
+
+- **Grep-ability.** `rg 'Wire<'` is a complete, countable inventory of every serialization boundary in the codebase.
+- **Intent at the declaration site.** `type UserRow = Wire<{ … }>` states the boundary in exactly one place.
+- **ESLint pairing.** `functype/prefer-list` and `functype/prefer-option` skip everything inside a `Wire<…>` type argument. A `ReadonlyArray` or a `T | null` there is the declared wire shape, not a missed `List` or `Option`.
 
 ## Import
 
@@ -24,45 +28,73 @@ import type { Wire } from "functype";
 import type { Wire } from "functype/wire";
 ```
 
+## The three shapes
+
+```typescript
+// A whole row or DTO: every field inside is covered.
+type UserRow = Wire<{
+  readonly id: string;
+  readonly email: string | null;
+  readonly tags: ReadonlyArray<string>;
+}>;
+
+// A collection.
+type UserRows = Wire<ReadonlyArray<UserRow>>;
+
+// A single field on an otherwise domain-shaped type.
+type Invite = {
+  readonly id: InviteId;
+  readonly acceptedAt: Wire<string | null>;
+};
+```
+
 ## The boundary recipe
 
 ```jsonc
 // eslint.config.mjs — hold the enforcement, mark the boundaries
 {
   "functype/prefer-list": ["error", { "allowReadonlyArrays": false }],
+  "functype/prefer-option": "error",
 }
 ```
 
 ```typescript
-// One declaration per boundary — grep-able, self-documenting.
-type ClaimedDoc = Wire<Row>;
-type ClaimedUser = Wire<UserRow>;
-
-// Uses of the alias pass the linter (typeName is "ClaimedDoc", not "ReadonlyArray").
-async function fetchDocs(): Promise<ClaimedDoc> {
-  return db.query("SELECT * FROM docs").rows;
+// Declare the boundary once.
+async function fetchUsers(): Promise<UserRows> {
+  return db.query("SELECT * FROM users").rows;
 }
 
-// Inside the pipeline, convert to List for transformation.
-const active = List(await fetchDocs())
-  .filter((d) => d.status === "active")
+// Inside the pipeline, convert to List and Option for transformation.
+const reachable = List(await fetchUsers())
+  .filter((u) => Option(u.email).isSome())
   .map(enrich);
 ```
 
-## Why aliases work
+## Rule options
 
-The `prefer-list` rule inspects the raw type name — `TSTypeReference.typeName` — and only recognizes `Array` and `ReadonlyArray`. Every other name passes silently. So user aliases stack cleanly on `Wire<T>` (or, if you prefer, directly on `ReadonlyArray<T>` — the alias declaration itself will fire under `allowReadonlyArrays: false`, prompting a one-line fix to `Wire<T>` that every downstream use inherits).
+Both rules take `wireTypes` (default `["Wire"]`). Add your own boundary alias name if you have one, or pass `[]` to turn the exemption off. Qualified references (`functype.Wire<…>`) are recognized.
 
-The tradeoff: the rule can't trace transitive aliases across module boundaries. `type A = ReadonlyArray<X>` declared in a dependency, aliased locally to `B` and `C`, will pass at the use site. Type-aware linting via `@typescript-eslint`'s `ParserServices` could resolve this, but the per-file TS-program cost isn't worth it for this class of check. Explicit `Wire<T>` at your own boundaries is the intended mitigation.
+## Migrating from 1.9
+
+In 1.9, `Wire<T>` meant `ReadonlyArray<T>`. In 1.10 it wraps any shape, so:
+
+```typescript
+type ClaimedDocs = Wire<Row>; // 1.9: an array of Row
+type ClaimedDocs = Wire<ReadonlyArray<Row>>; // 1.10
+```
+
+The break is loud, not silent. A `Wire<Row>` that meant an array fails to compile at the first `.map` or array assignment.
+
+## Caveat
+
+A bare type parameter can't satisfy the conditional brand, so `<T>(x: T): Wire<T> => x` doesn't compile. Wire concrete row and field types, not generic plumbing.
 
 ## When to use
 
-- Function signatures returning DB rows, HTTP response bodies, or any collection that will be JSON-serialized.
-- Type aliases naming a serialization boundary (`type EventBatch = Wire<Event>`).
-- Any collection you know will not be transformed at that boundary — it's about to be handed off, not iterated.
+- Types for DB rows, HTTP request and response bodies, JSONB payloads, queue and workflow inputs.
+- Function signatures that return or accept those shapes at the edge of the system.
 
 ## When NOT to use
 
-- Any collection you're about to `.filter` / `.map` / `.groupBy` — convert to `List<T>` first.
-- Function-local variables that never cross a boundary — a `ReadonlyArray<T>` or `List<T>` is more informative.
-- Method parameters where the caller might want to reuse pipeline machinery — pick `List<T>` and let the boundary marker sit at the outermost signature only.
+- Values you're about to transform. Convert to `List<T>` / `Option<T>` first.
+- Function-local variables that never cross a boundary.
