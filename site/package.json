@@ -30,7 +30,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@astrojs/mdx": "^7.0.8",
-    "prettier": "^3.9.8",
+    "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
