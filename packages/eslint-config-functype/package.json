@@ -83,7 +83,7 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
     "eslint-plugin-simple-import-sort": "^14.0.0",
-    "ts-builds": "^3.4.2",
+    "ts-builds": "^3.4.3",
     "tsdown": "^0.23.0"
   },
   "publishConfig": {
