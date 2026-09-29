@@ -1,6 +1,6 @@
 # Functype
 
-> A functional programming library for TypeScript, using immutable data structures and type classes. Scala-inspired: Option, Either, Try, List, IO and more, with typed errors, dependency injection and do-notation. Version 1.9.0.
+> A functional programming library for TypeScript, using immutable data structures and type classes. Scala-inspired: Option, Either, Try, List, IO and more, with typed errors, dependency injection and do-notation. Version 1.10.0.
 
 Install with `npm install functype`. Every type listed below is also available from the CLI (`npx functype <Type>`) and the functype MCP server.
 

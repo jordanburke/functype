@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.10.0 - 2026-09-29
+
 **`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**
 
 `TracedOption<A>` wraps an `Option<A>` and emits one structured `TraceEvent` to an injected `Tracer` on every combinator call, then delegates to the real `Option`. It is purely additive: no existing constructor, type, or combinator changes, and no runtime dependency is added.
