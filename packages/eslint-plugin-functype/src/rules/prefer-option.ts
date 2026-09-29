@@ -4,6 +4,7 @@ import type { ASTNode } from "../types/ast"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype, isFunctypeType } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { DEFAULT_WIRE_TYPES, isInsideWireType, WIRE_TYPES_SCHEMA } from "../utils/wire-types"
 
 const REACT_STATE_HOOKS: ReadonlySet<string> = new Set(["useState", "useRef"])
 
@@ -23,6 +24,7 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
+          wireTypes: WIRE_TYPES_SCHEMA,
           allowNullableIntersections: {
             type: "boolean",
             default: false,
@@ -45,6 +47,8 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     const options = context.options[0] || {}
+    // Everything inside `Wire<…>` is the declared serialization shape (#325 B).
+    const wireTypes: ReadonlyArray<string> = options.wireTypes ?? DEFAULT_WIRE_TYPES
     // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
     const allowInteropMarker = options.allowInteropMarker !== false
     const isExemptByMarker = (node: ASTNode): boolean =>
@@ -75,6 +79,7 @@ const rule: Rule.RuleModule = {
 
     return {
       TSUnionType(node: ASTNode) {
+        if (isInsideWireType(node, wireTypes)) return
         if (isExemptByMarker(node)) return
         if (!node.types || node.types.length < 2) return
         if (allowUseState && isInHookTypeArgument(node)) return

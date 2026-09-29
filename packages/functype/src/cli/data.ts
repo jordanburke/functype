@@ -433,11 +433,18 @@ export const TYPES: Record<string, TypeData> = {
 
   Wire: {
     description:
-      "Serialization-boundary marker for collections crossing DB / HTTP / JSONB boundaries. Zero runtime, structurally identical to ReadonlyArray<T> (bidirectionally assignable, no casts). Value comes from grep-ability (`rg 'Wire<'`), documented intent at the declaration site, and pairing with `functype/prefer-list` set to `allowReadonlyArrays: false` — Wire<T> is the sole explicit boundary escape hatch.",
+      "Serialization-boundary marker for a row, collection or nullable field at DB / HTTP / JSONB boundaries. Zero runtime, assignable both ways with T. prefer-list and prefer-option skip everything inside it. A collection is Wire<ReadonlyArray<Row>>.",
     interfaces: [],
     methods: {
-      create: ["type Row = Wire<{ id: string }>"],
-      other: ["List(rows).filter(...)  // convert to List for transformation"],
+      create: [
+        "type UserRow = Wire<{ email: string | null }>",
+        "type Rows = Wire<ReadonlyArray<Row>>",
+        "email: Wire<string | null>",
+      ],
+      other: [
+        "List(rows).filter(...)  // convert to List for transformation",
+        "Option(row.email)  // convert to Option",
+      ],
     },
   },
 

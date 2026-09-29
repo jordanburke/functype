@@ -353,20 +353,22 @@ import type { Logger } from "functype";
 | `DirectLogger` (no adapter)      | `createDirectConsoleLogger()` from `functype-log/direct` |
 | `consoleBootLogger` (default)    | `import { consoleBootLogger } from "functype-os/config"` |
 
-## Wire (core type, 1.9+)
+## Wire (core type)
 
-Serialization-boundary marker for `ReadonlyArray<T>`. Zero runtime, bidirectionally assignable, no casts at call sites. Value comes from grep-ability (`rg 'Wire<'`), intent at the declaration site, and pairing with the `functype/prefer-list` ESLint rule.
+Serialization-boundary marker for any shape crossing a DB / HTTP / JSONB boundary: a whole row, a collection, or one nullable field. Zero runtime, assignable both ways with the plain type, no casts. `rg 'Wire<'` is the boundary inventory, and `prefer-list` / `prefer-option` skip everything inside `Wire<…>`.
 
 ```typescript
-// Reachable from both the top barrel and the functype/wire subpath
 import type { Wire } from "functype";
 
-type ClaimedDoc = Wire<Row>;
-async function fetchDocs(): Promise<ClaimedDoc> { ... }
-List(await fetchDocs()).filter(...)  // convert to List for transformation
+type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArray<string> }>; // whole row
+type UserRows = Wire<ReadonlyArray<UserRow>>; // collection — NOT Wire<UserRow>
+type Invite = { readonly acceptedAt: Wire<string | null> }; // one field
+
+async function fetchUsers(): Promise<UserRows> { ... }
+List(await fetchUsers()).filter((u) => Option(u.email).isSome()) // convert inside the pipeline
 ```
 
-The boundary recipe: set `prefer-list` to `{ allowReadonlyArrays: false }`. Every unmarked `ReadonlyArray<T>` becomes a lint error; `Wire<T>` is the sole explicit escape hatch. Consumer aliases (`type ClaimedDoc = Wire<Row>`) compose for free — the syntactic rule ignores unrecognized type names.
+Before 1.10, `Wire<Row>` meant `ReadonlyArray<Row>`; write `Wire<ReadonlyArray<Row>>` now. Pair with `prefer-list: { allowReadonlyArrays: false }` so every unwired `ReadonlyArray<T>` is an error.
 
 ## Config (functype-os/config, 1.3+)
 
