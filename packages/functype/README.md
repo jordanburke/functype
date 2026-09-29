@@ -379,6 +379,35 @@ getUserByEmail("invalid") // Type error: Argument of type 'string' is not assign
 getUserByEmail(userId) // Type error: Argument of type 'UserId' is not assignable to parameter of type 'Email'
 ```
 
+### Wire — serialization boundaries
+
+`Wire<T>` marks a value in its serialization-safe shape: a DB row, an HTTP body, a JSONB payload. Zero runtime, assignable both ways with `T`, and the ESLint plugin's `prefer-option` / `prefer-list` skip everything inside it.
+
+```typescript
+import type { Wire } from "functype"
+
+type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArray<string> }>
+type UserRows = Wire<ReadonlyArray<UserRow>>
+
+// Convert inside the pipeline
+const reachable = List(rows).filter((u) => Option(u.email).isSome())
+```
+
+### TracedOption — code-path introspection
+
+Opt-in wrapper that emits one structured event per Option combinator to an injected `Tracer`:
+
+```typescript
+import { TracedOption, type Tracer, type TraceEvent } from "functype"
+
+const events: TraceEvent[] = []
+const tracer: Tracer = { emit: (e) => void events.push(e) }
+
+TracedOption(user, tracer, "span-1")
+  .map((u) => u.name.trim(), "trim")
+  .orElse("anonymous", "fallback")
+```
+
 ## Conditional Programming
 
 Functype provides `Cond` and `Match` for functional conditional logic without early returns:
@@ -661,6 +690,10 @@ list.exists((x) => x === 3) // true
 opt.forEach(console.log) // Logs: 42
 list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 ```
+
+## ESLint Plugin
+
+[`eslint-plugin-functype`](https://functype.org/eslint) enforces these patterns. `recommended` fails the build on the rules that are reliably right (loops, `let`, native `Map`/`Set` you only read, `isSome()` branching) and warns on the rest. Declare boundaries with `Wire<T>`, `@interop` and `@invariant` instead of `eslint-disable`.
 
 ## Feature Matrix
 

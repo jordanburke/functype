@@ -370,6 +370,35 @@ List(await fetchUsers()).filter((u) => Option(u.email).isSome()) // convert insi
 
 Before 1.10, `Wire<Row>` meant `ReadonlyArray<Row>`; write `Wire<ReadonlyArray<Row>>` now. Pair with `prefer-list: { allowReadonlyArrays: false }` so every unwired `ReadonlyArray<T>` is an error.
 
+## TracedOption (1.10+)
+
+Opt-in Option wrapper for code-path introspection: each combinator emits one `TraceEvent` to an injected `Tracer`, then delegates to the real Option. `Tracer` is type-only (one `emit` method), like `Logger`.
+
+```typescript
+import { TracedOption, type Tracer, type TraceEvent } from "functype";
+
+const events: TraceEvent[] = [];
+const tracer: Tracer = { emit: (e) => void events.push(e) };
+
+TracedOption(user, tracer, "span-1")        // spanId groups one chain's events
+  .map((u) => u.name.trim(), "trim")         // optional label per step
+  .filter((n) => n.length > 0, "non-empty")
+  .orElse("anonymous", "fallback");           // fold / orElse / unwrap() are terminal
+```
+
+## Identity, Ref, Do
+
+```typescript
+Identity(value).id                 // identity monad — a neutral container for generic code
+const counter = Ref(0)             // mutable cell (invariant in A): get / set / update / modify / compareAndSet
+counter.update((n) => n + 1)
+Do(function* () {                  // do-notation over Option / Either / List / Try; DoAsync for promises
+  const a = yield* $(Option(1))
+  const b = yield* $(Option(2))
+  return a + b
+})
+```
+
 ## Config (functype-os/config, 1.3+)
 
 ```typescript

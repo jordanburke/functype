@@ -468,6 +468,60 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  Identity: {
+    description:
+      "The identity monad: wraps a value with no extra effect. Useful as a neutral container in generic code.",
+    interfaces: [],
+    methods: {
+      create: ["Identity(value)", "Identity.of(value)", "Identity.pure(value)"],
+      extract: [".id"],
+      other: [".isSame(other)"],
+    },
+  },
+
+  Ref: {
+    description:
+      "Mutable reference cell for controlled, local mutability. Invariant in A by design (a mutable cell can't be widened).",
+    interfaces: [],
+    methods: {
+      create: ["Ref(initial)", "Ref.of(initial)"],
+      extract: [".get()"],
+      transform: [".set(a)", ".update(f)", ".modify(f)  // returns B, stores A"],
+      other: [".getAndSet(a)", ".updateAndGet(f)", ".getAndUpdate(f)", ".compareAndSet(expected, next)"],
+    },
+  },
+
+  Do: {
+    description:
+      "Generator do-notation across Option, Either, List and Try (DoAsync for promises). Short-circuits on None/Left/Failure/empty List.",
+    interfaces: [],
+    methods: {
+      create: ["Do(function* () { const a = yield* $(opt); return a })", "DoAsync(async function* () { … })"],
+      other: ["$(monad)  // unwrap inside Do", "isDoCapable(value)", "unwrap(monad)"],
+    },
+  },
+
+  TracedOption: {
+    description:
+      "Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tracer, then delegates. For code-path introspection.",
+    interfaces: [],
+    methods: {
+      create: ["TracedOption(option, tracer, spanId, seq?)"],
+      transform: [".map(f, label?)", ".flatMap(f, label?)", ".filter(p, label?)"],
+      extract: [".fold(onNone, onSome, label?)", ".orElse(default, label?)", ".unwrap()  // back to Option"],
+    },
+  },
+
+  Tracer: {
+    description:
+      "One-method trace sink consumed by TracedOption. Type-only, like Logger; declare your own Tag for injection.",
+    interfaces: [],
+    methods: {
+      create: ["const tracer: Tracer = { emit: (e: TraceEvent) => … }"],
+      other: ["TraceEvent: { spanId, seq, op, tag, inTag, outTag?, label?, meta? }"],
+    },
+  },
+
   Stack: {
     description: "Immutable LIFO stack",
     interfaces: ["Foldable", "Collection", "Serializable", "Traversable"],
@@ -616,7 +670,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Logger: {
     description:
-      'Minimal 4-method ecosystem-wide logging interface (1.3.0+). Type-only — no runtime, no `console` dependency, no opinion on output format. Every functype-* package targets this shape. Reachable from the top barrel (`import type { Logger } from "functype"`) and the `functype/logger` subpath. Concrete impls live in consumer packages: `consoleBootLogger` in `functype-os/config`, `DirectLogger` from `functype-log/direct` (structurally satisfies Logger — no adapter). Clock/Random/Tracer NOT being added — those are framework abstractions; Logger is uniquely justified because every production TS app already has one.',
+      "Minimal 4-method logging interface every functype-* package targets. Type-only, no runtime. Impls live in consumers: consoleBootLogger (functype-os/config), DirectLogger (functype-log/direct). Tracer is type-only on the same terms; Clock/Random are not added.",
     interfaces: [],
     methods: {
       create: [
@@ -738,11 +792,11 @@ export const INTERFACES: Record<string, InterfaceData> = {
 }
 
 export const CATEGORIES = {
-  Core: ["Option", "Either", "Try", "Obj"],
+  Core: ["Option", "Either", "Try", "Obj", "Identity"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Exit", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
-  Utility: ["Lazy", "Cond", "Match", "Brand", "ValidatedBrand", "Wire"],
+  Utility: ["Lazy", "Cond", "Match", "Do", "Ref", "Brand", "ValidatedBrand", "Wire", "TracedOption"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],
-  Service: ["Logger"],
+  Service: ["Logger", "Tracer"],
 }

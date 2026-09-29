@@ -61,12 +61,12 @@ eslint.patch = functype.patch
 
 Examples:
 
-| functype | eslint |
-|---|---|
-| `1.0.1` | `2.100.1` |
-| `1.1.0` | `2.101.0` |
-| `1.20.1` | `2.120.1` |
-| `2.0.0` | `2.200.0` |
+| functype | eslint                      |
+| -------- | --------------------------- |
+| `1.0.1`  | `2.100.1`                   |
+| `1.1.0`  | `2.101.0`                   |
+| `1.20.1` | `2.120.1`                   |
+| `2.0.0`  | `2.200.0`                   |
 | `9.99.0` | `2.999.0` (formula ceiling) |
 
 The `×100` reserves headroom for double-digit minors. At `functype.minor >= 100` the formula would collide (`functype@1.100.x` and `functype@2.0.x` both encode to `eslint@2.200.x`) — `sync-eslint-mirror.ts` throws clearly in that case, and the safety gate blocks publish. Update the formula in `scripts/sync-eslint-mirror.ts` if you hit it.
@@ -112,7 +112,7 @@ A more polished snapshot mode could be added to `release.ts` (a `--dry-run` flag
 
 ## Node version requirement
 
-`publish.yml` reads from `.nvmrc` (currently pinned to Node **24**). Required to sidestep the npm 10.x OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) — Node 22 surfaces it as `E404 PUT https://registry.npmjs.org/<pkg>` immediately after sigstore signing. npm 11.5.1+ (Node 24 LTS) fixes it.
+`publish.yml` reads from `.nvmrc`, pinned to an **exact** Node version (currently `24.20.0`, bundling npm 11.19.0). Node 22's npm 10.x has an OIDC handshake bug ([npm/cli#8976](https://github.com/npm/cli/issues/8976)) that surfaces as `E404 PUT https://registry.npmjs.org/<pkg>` right after sigstore signing. A bare `24` isn't enough either: `actions/setup-node` then resolves whatever 24.x the runner has cached, and npm 11.17 (Node 24.19.0) failed OIDC with `E401 … Failed to generate Web Auth URLs` where 11.19 (24.20.0) published. The release job is the one job that can't be safely retried, so its toolchain is pinned. Bump the pin deliberately, on a branch.
 
 ## Historical post-mortems
 

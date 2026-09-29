@@ -127,7 +127,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <a
-                  href="https://github.com/jordanburke/functype/blob/main/docs/quick-reference.md"
+                  href="https://github.com/jordanburke/functype/blob/main/packages/functype/docs/quick-reference.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
@@ -153,7 +153,15 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/jordanburke/functype/blob/main/docs/do-notation.md"
+                  href="/eslint"
+                  className="hover:text-white transition-colors"
+                >
+                  ESLint Plugin
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://github.com/jordanburke/functype/blob/main/packages/functype/docs/do-notation.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"

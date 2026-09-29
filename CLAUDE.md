@@ -4,15 +4,15 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 
 ## What lives here
 
-| Workspace member | Path | Published as | Notes |
-|---|---|---|---|
-| `functype` | `packages/functype` | `functype` | Core FP library — zero runtime deps |
-| `functype-os` | `packages/functype-os` | `functype-os` | OS utilities |
-| `functype-log` | `packages/functype-log` | `functype-log` | IO-native logging via LogLayer |
-| `functype-react` | `packages/functype-react` | `functype-react` | React bindings (v0.1 scaffold) |
-| `functype-eval` | `packages/functype-eval` | `functype-eval` | FP fitness scoring CLI (consumes `eslint-plugin-functype`) |
-| `functype-mcp-server` | `packages/mcp-server` | `functype-mcp-server` | Documentation/validation MCP server |
-| `site` | `site` | (not published) | Astro docs site |
+| Workspace member      | Path                      | Published as          | Notes                                                      |
+| --------------------- | ------------------------- | --------------------- | ---------------------------------------------------------- |
+| `functype`            | `packages/functype`       | `functype`            | Core FP library — zero runtime deps                        |
+| `functype-os`         | `packages/functype-os`    | `functype-os`         | OS utilities                                               |
+| `functype-log`        | `packages/functype-log`   | `functype-log`        | IO-native logging via LogLayer                             |
+| `functype-react`      | `packages/functype-react` | `functype-react`      | React bindings (v0.1 scaffold)                             |
+| `functype-eval`       | `packages/functype-eval`  | `functype-eval`       | FP fitness scoring CLI (consumes `eslint-plugin-functype`) |
+| `functype-mcp-server` | `packages/mcp-server`     | `functype-mcp-server` | Documentation/validation MCP server                        |
+| `site`                | `site`                    | (not published)       | Astro docs site                                            |
 
 ## Tooling
 
@@ -22,7 +22,7 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 - **Versioning + publish:** **tag-driven release flow** (`scripts/release.ts` + `.github/workflows/publish.yml` on tag push). The 6 functype-* packages bump together on the `1.x` line. The eslint pair bumps together on the `2.100.x` line, **mirroring functype** per the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` — so `functype@1.1.0` ↔ `eslint@2.101.0`, `functype@1.20.1` ↔ `eslint@2.120.1`. Run `pnpm release patch|minor|major` locally; it bumps all 8 packages, syncs the mirror, syncs `mcp-server/server.json`, cuts the `## Unreleased` section of `packages/functype/CHANGELOG.md`, commits, and tags. `git push --follow-tags` triggers CI publish. See [`docs/RELEASE.md`](./docs/RELEASE.md) for the full runbook including npm trusted-publisher setup.
   - **Major bumps require explicit publish-time authorization** via the `ALLOW_MAJOR=<pkg>[,<pkg>]` env on `pnpm release major` AND on the publish workflow step. Added after the 2026-05-30 `0.60.7 → 1.0.0` cascade — see history for the post-mortem.
   - **Peer dep convention:** packages in this workspace that peer-depend on `functype` use broad ranges like `">=0.60.0"` (NOT `"workspace:^"`). The narrow `workspace:^` range is what caused the cascade — it published as `^0.60.7` which goes out of scope on a 0.61 bump, and Changesets's auto-cascade force-major-bumped the dependents. The tag-driven flow no longer has Changesets's auto-cascade, but the broad range stays as defensive practice (peer ranges should accept the actual consumer surface).
-- **Node version:** Read from `.nvmrc` (currently `24`). Required by `publish.yml` to avoid the npm 10.x OIDC bug.
+- **Node version:** Read from `.nvmrc`, pinned to an exact patch (currently `24.20.0`). `publish.yml` uses it; a bare major let CI pick an npm whose OIDC exchange failed (see `docs/RELEASE.md`).
 - **Shared TS config:** `tsconfig.base.json` at the repo root; each package's `tsconfig.json` extends it.
 
 ## Quick commands

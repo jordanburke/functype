@@ -1,13 +1,12 @@
 # Functype v1.9.0
 
-> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns.
+> A functional programming library for TypeScript, using immutable data structures and type classes, with Scala-inspired patterns.
 
 - Install: npm install functype
 - Homepage: https://functype.org/
 - Repository: https://github.com/jordanburke/functype
 
 This file contains the complete functype documentation concatenated into a single file for LLM consumption.
-
 
 ────────────────────────────────────────────────────────────────────────────────
 ## AI Guide
@@ -1489,7 +1488,7 @@ Provides conversion to Promise for async interop:
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Option
+## option
 ────────────────────────────────────────────────────────────────────────────────
 
 # Option<T>
@@ -1616,7 +1615,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Either
+## either
 ────────────────────────────────────────────────────────────────────────────────
 
 # Either<L, R>
@@ -1758,7 +1757,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Try
+## try
 ────────────────────────────────────────────────────────────────────────────────
 
 # Try<T>
@@ -1902,7 +1901,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## List
+## list
 ────────────────────────────────────────────────────────────────────────────────
 
 # List<A>
@@ -2055,7 +2054,145 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Task
+## obj
+────────────────────────────────────────────────────────────────────────────────
+
+# Obj<T>
+
+Immutable object wrapper with fluent operations.
+
+## Overview
+
+Obj wraps plain JavaScript objects and provides chainable, immutable operations for building and transforming them. It replaces imperative object mutation patterns (like `headers["key"] = value`) with a fluent functional API.
+
+Obj uses `KVTraversable` — the same pattern as Map — because key-value containers can't freely transform their type parameter like Option or Either can. Map/flatMap are available but constrained to return Record types.
+
+## Basic Usage
+
+```typescript
+import { Obj } from "functype/obj";
+
+// Creating Obj instances
+const user = Obj({ name: "John", age: 30 });
+const empty = Obj.empty<{ name: string }>();
+const fromOf = Obj.of({ x: 1, y: 2 });
+
+// Accessing values
+user.get("name"); // Some("John")
+user.value(); // { name: "John", age: 30 }
+user.has("name"); // true
+user.isEmpty; // false
+user.size; // 2
+```
+
+## Object Operations
+
+```typescript
+const user = Obj({ name: "John", age: 30, role: "admin" });
+
+// Set a single key (existing keys only)
+user.set("age", 31);
+// → Obj({ name: "John", age: 31, role: "admin" })
+
+// Assign partial (same shape, no new keys)
+user.assign({ name: "Jane", age: 25 });
+// → Obj({ name: "Jane", age: 25, role: "admin" })
+
+// Merge (can add new keys, widens type)
+user.merge({ city: "NYC" });
+// → Obj({ name: "John", age: 30, role: "admin", city: "NYC" })
+
+// Conditional merge
+user.when(isAdmin, { permissions: "all" });
+// → merges only if isAdmin is true
+
+// Pick specific keys
+user.pick("name", "role");
+// → Obj({ name: "John", role: "admin" })
+
+// Omit specific keys
+user.omit("role");
+// → Obj({ name: "John", age: 30 })
+```
+
+## Conditional Building with `when`
+
+The primary motivator for Obj — replacing imperative if/assign patterns:
+
+```typescript
+// Before: mutable
+const headers: Record<string, string> = { "User-Agent": userAgent };
+if (requiresAuth && accessToken) {
+  headers["Authorization"] = `Bearer ${accessToken}`;
+}
+
+// After: immutable and fluent
+const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
+  .assign({ "Content-Type": "application/json" })
+  .when(requiresAuth, { Authorization: `Bearer ${accessToken}` })
+  .value();
+```
+
+## Accessors
+
+```typescript
+const obj = Obj({ a: 1, b: 2, c: 3 });
+
+obj.keys(); // List(["a", "b", "c"])
+obj.values(); // List([1, 2, 3])
+obj.entries(); // List([Tuple(["a", 1]), Tuple(["b", 2]), Tuple(["c", 3])])
+```
+
+## Functype Interface
+
+```typescript
+// Fold
+Obj({ x: 1 }).fold(
+  () => "empty",
+  (v) => `value: ${v.x}`,
+); // "value: 1"
+
+// Match
+Obj({ x: 1 }).match({ Obj: (v) => v.x }); // 1
+
+// Pipe
+Obj({ x: 5 }).pipe((v) => v.x * 2); // 10
+
+// Reshapeable
+Obj({ x: 1 }).toOption(); // Some({ x: 1 })
+Obj({ x: 1 }).toEither("err"); // Right({ x: 1 })
+
+// Serialization
+const json = Obj({ x: 1 }).serialize().toJSON();
+Obj.fromJSON<{ x: number }>(json);
+```
+
+## Method Chaining
+
+All operations return new Obj instances, enabling fluent chains:
+
+```typescript
+const result = Obj({ a: 1, b: 2, c: 3 })
+  .set("a", 10)
+  .assign({ b: 20 })
+  .omit("c")
+  .value();
+// { a: 10, b: 20 }
+```
+
+## Companion Methods
+
+| Method                   | Description                      |
+| ------------------------ | -------------------------------- |
+| `Obj(data)`              | Create from plain object         |
+| `Obj.of(data)`           | Create from plain object (alias) |
+| `Obj.empty()`            | Create empty Obj                 |
+| `Obj.fromJSON(json)`     | Deserialize from JSON            |
+| `Obj.fromBinary(binary)` | Deserialize from base64          |
+
+
+────────────────────────────────────────────────────────────────────────────────
+## task
 ────────────────────────────────────────────────────────────────────────────────
 
 # Task<T>
@@ -2232,7 +2369,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## IO
+## io
 ────────────────────────────────────────────────────────────────────────────────
 
 # IO<R,E,A>
@@ -2549,7 +2686,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Http
+## http
 ────────────────────────────────────────────────────────────────────────────────
 
 # Http
@@ -3065,7 +3202,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Logger
+## logger
 ────────────────────────────────────────────────────────────────────────────────
 
 # Logger
@@ -3163,7 +3300,112 @@ bootDiagnostics({
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Do-notation
+## wire
+────────────────────────────────────────────────────────────────────────────────
+
+# Wire
+
+A serialization-boundary marker for values crossing DB rows, HTTP bodies, JSONB payloads and workflow inputs. It wraps any boundary shape: a collection, a nullable field, or a whole row type. Zero runtime cost, assignable both ways with the plain type, no casts at call sites.
+
+## Overview
+
+```typescript
+declare const WIRE: unique symbol;
+export interface WireMark {
+  readonly [WIRE]?: never;
+}
+
+export type Wire<T> = T | (T & WireMark);
+```
+
+Wire is a **flavored** type, not a branded one. The plain `T` member means `Wire<T>` and `T` accept each other without ceremony, including `null`, `undefined` and `unknown`, so generic helpers like `findOne<R>(): Promise<Wire<R | null>>` compile. `null` is exactly the shape that survives `JSON.stringify`.
+
+The `T & WireMark` member is there for naming, not safety. It keeps TypeScript from resolving the alias away, so inferred exports emit `Wire<Row>` in `.d.ts` files and hovers.
+
+The value doesn't come from type-level enforcement. It comes from three places:
+
+- **Grep-ability.** `rg 'Wire<'` is a complete, countable inventory of every serialization boundary in the codebase.
+- **Intent at the declaration site.** `type UserRow = Wire<{ … }>` states the boundary in exactly one place.
+- **ESLint pairing.** `functype/prefer-list` and `functype/prefer-option` skip everything inside a `Wire<…>` type argument. A `ReadonlyArray` or a `T | null` there is the declared wire shape, not a missed `List` or `Option`.
+
+## Import
+
+```typescript
+import type { Wire } from "functype";
+// or
+import type { Wire } from "functype/wire";
+```
+
+## The three shapes
+
+```typescript
+// A whole row or DTO: every field inside is covered.
+type UserRow = Wire<{
+  readonly id: string;
+  readonly email: string | null;
+  readonly tags: ReadonlyArray<string>;
+}>;
+
+// A collection.
+type UserRows = Wire<ReadonlyArray<UserRow>>;
+
+// A single field on an otherwise domain-shaped type.
+type Invite = {
+  readonly id: InviteId;
+  readonly acceptedAt: Wire<string | null>;
+};
+```
+
+## The boundary recipe
+
+```jsonc
+// eslint.config.mjs — hold the enforcement, mark the boundaries
+{
+  "functype/prefer-list": ["error", { "allowReadonlyArrays": false }],
+  "functype/prefer-option": "warn", // "error" once your boundary types are wired
+}
+```
+
+```typescript
+// Declare the boundary once.
+async function fetchUsers(): Promise<UserRows> {
+  return db.query("SELECT * FROM users").rows;
+}
+
+// Inside the pipeline, convert to List and Option for transformation.
+const reachable = List(await fetchUsers())
+  .filter((u) => Option(u.email).isSome())
+  .map(enrich);
+```
+
+## Rule options
+
+Both rules take `wireTypes` (default `["Wire"]`). Add your own boundary alias name if you have one, or pass `[]` to turn the exemption off. Qualified references (`functype.Wire<…>`) are recognized.
+
+## Migrating from 1.9
+
+In 1.9, `Wire<T>` meant `ReadonlyArray<T>`. In 1.10 it wraps any shape, so:
+
+```typescript
+type ClaimedDocs = Wire<Row>; // 1.9: an array of Row
+type ClaimedDocs = Wire<ReadonlyArray<Row>>; // 1.10
+```
+
+The break is loud, not silent: a `Wire<Row>` that meant an array fails to compile at the first `.map` or array assignment. The two exceptions are `Wire<object>` and `Wire<any>`, which accept an array under either meaning; search for them when upgrading.
+
+## When to use
+
+- Types for DB rows, HTTP request and response bodies, JSONB payloads, queue and workflow inputs.
+- Function signatures that return or accept those shapes at the edge of the system.
+
+## When NOT to use
+
+- Values you're about to transform. Convert to `List<T>` / `Option<T>` first.
+- Function-local variables that never cross a boundary.
+
+
+────────────────────────────────────────────────────────────────────────────────
+## do-notation
 ────────────────────────────────────────────────────────────────────────────────
 
 # Do-Notation
@@ -3340,7 +3582,7 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## Pattern Matching
+## match
 ────────────────────────────────────────────────────────────────────────────────
 
 # Match & Cond
@@ -3526,3 +3768,1341 @@ const result = Match(status)
 ## API Reference
 
 See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/conditional.html)
+
+
+────────────────────────────────────────────────────────────────────────────────
+## mcp-server
+────────────────────────────────────────────────────────────────────────────────
+
+# MCP Server
+
+Live documentation and code validation for any AI agent.
+
+## Overview
+
+The functype MCP server gives AI coding assistants direct access to functype's documentation, type APIs, and a compile-time code validator. Instead of relying on training data that may be outdated, your AI tools get live, accurate information from the library itself.
+
+It works with any tool that supports the [Model Context Protocol](https://modelcontextprotocol.io/) — Claude Code, Cursor, Windsurf, and more.
+
+## Setup
+
+Add the MCP server to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "functype": {
+      "command": "npx",
+      "args": ["-y", "functype-mcp-server"]
+    }
+  }
+}
+```
+
+The server is installed automatically via npx — no global installation needed.
+
+## Tools
+
+The MCP server provides 5 tools:
+
+### search_docs
+
+Browse all functype types or search by keyword. Call with no arguments for a full overview of every type and its implemented interfaces.
+
+**Example output:**
+
+```
+Option [Functor, Monad, Foldable, Extractable, Matchable, Serializable, Traversable]
+  Safe nullable handling - Some<T> or None
+
+Either [Functor, Monad, Foldable, Traversable, PromiseLike]
+  Error handling with Left (error) or Right (success)
+
+List [Functor, Monad, Foldable, Collection, Serializable, Traversable]
+  Immutable array with functional operations
+```
+
+### get_type_api
+
+Get detailed API reference for any type, organized by category: Create, Transform, Extract, Check.
+
+**Example** — `get_type_api("Option")`:
+
+```
+Option<T> [Functor, Monad, Foldable, Extractable, Matchable, Serializable, Traversable]
+
+Create:    Option(v), Option.none(), Some(v), None()
+Transform: .map(f), .flatMap(f), .filter(p), .ap(ff)
+Extract:   .fold(n, s), .orElse(d), .orThrow(), .orNull(), .match({Some, None})
+Check:     .isSome(), .isNone(), .isEmpty
+```
+
+### get_interfaces
+
+Get the full interface hierarchy — Functor, Monad, Foldable, Extractable, Matchable, and more — with their method signatures and inheritance relationships.
+
+**Example output:**
+
+```
+Functor<A>        .map<B>(f: A => B): Functor<B>
+Monad<A>          .flatMap<B>(f: A => Monad<B>): Monad<B>
+Foldable<A>       .fold<B>(empty: () => B, f: A => B): B
+Extractable<A>    .orElse(d: T): T
+Matchable<A>      .match<R>(patterns): R
+```
+
+### validate_code
+
+Type-check functype code snippets against the TypeScript compiler. Catches type errors before code is presented or committed. Supports auto-importing all functype types.
+
+**Example** — valid code:
+
+```typescript
+const result = Option(42)
+  .map((x) => x * 2)
+  .flatMap((x) => (x > 50 ? Option(x) : Option.none<number>()))
+  .fold(
+    () => "nothing",
+    (x) => `got ${x}`,
+  );
+// Validation PASSED
+```
+
+**Example** — invalid code:
+
+```typescript
+const result = Option(42)
+  .map((x) => x * 2)
+  .flatMap((x) => (x > 50 ? Option(x) : Option.none()));
+// Validation FAILED — Option.none() without type parameter
+// creates Option<unknown>, incompatible with Option<number>
+```
+
+### set_functype_version
+
+Switch the functype version at runtime. Installs the specified version and reloads all documentation and type definitions. Useful for working with projects pinned to older versions.
+
+**Example:** `set_functype_version("0.46.0")`
+
+## Compatibility
+
+The functype MCP server works with any tool that supports the Model Context Protocol:
+
+| Tool           | Status    |
+| -------------- | --------- |
+| Claude Code    | Supported |
+| Cursor         | Supported |
+| Windsurf       | Supported |
+| Any MCP client | Supported |
+
+
+────────────────────────────────────────────────────────────────────────────────
+## ESLint Plugin
+────────────────────────────────────────────────────────────────────────────────
+
+# eslint-plugin-functype
+
+Custom ESLint rules for functional TypeScript with [functype](https://github.com/jordanburke/functype). Encourages idiomatic functype patterns like `Option`, `Either`, `List`, `Do` notation, and safe data access.
+
+## Install
+
+```bash
+npm install -D eslint-plugin-functype eslint
+```
+
+## Usage
+
+```js
+// eslint.config.mjs
+import functype from "eslint-plugin-functype"
+
+export default [functype.configs.recommended]
+```
+
+### Strict mode
+
+```js
+import functype from "eslint-plugin-functype"
+
+export default [functype.configs.strict]
+```
+
+## Rules
+
+| Rule                           | Recommended | Strict | Description                                                |
+| ------------------------------ | :---------: | :----: | ---------------------------------------------------------- |
+| `functype/no-let`              |    error    | error  | Use `const`; no reassignment                               |
+| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops  |
+| `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read |
+| `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read |
+| `functype/prefer-map`          |    error    | error  | Use `map` instead of pushing inside `forEach`              |
+| `functype/prefer-fold`         |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/… |
+| `functype/prefer-option`       |    warn     | error  | Use `Option` instead of `null`/`undefined`                 |
+| `functype/prefer-either`       |    warn     | error  | Use `Either` for typed domain errors instead of `throw`    |
+| `functype/prefer-try`          |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch         |
+| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                    |
+| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                   |
+| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)     |
+| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                        |
+
+### Severity policy
+
+A rule is **`error` in `recommended` once it is right on ~95–99% of real code**, meaning its known false-positive classes are closed. It stays `warn` only while those classes are still open. FP here is governance: a rule that is reliably right should fail the build, not print advice nobody reads. Expect `recommended` to get stricter as boundary markers (`Wire<T>`, `@interop`) close the remaining cases for `prefer-option`, `prefer-either` and `prefer-try`.
+
+`prefer-fold` reports only; its rewrite is a suggestion you apply, never an autofix, so `eslint --fix` can't change code on your behalf.
+
+## Boundary markers: `@interop` and `@invariant`
+
+Some code is correct _because_ it isn't FP-shaped: a bridge to a host whose contract is the throw, the rejection or the nullable. Mark the declaration instead of disabling the rule:
+
+```ts
+/**
+ * Runs the effect, or throws a boxed error.
+ *
+ * @interop React Query signals failure only by promise rejection; an Either return reads as success.
+ */
+const runBoxed = async <E, A>(effect: () => IO<never, E, A>): Promise<A> => { … }
+
+/** @invariant Called only inside a DBOS step, where every argument is already validated. */
+function deriveRunId(workflowId: string, step: number): string {
+  if (step < 0) throw new Error("step must be non-negative")
+  …
+}
+```
+
+| Tag                   | Honored by                                                    | Means                                                                                                              |
+| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `@interop <reason>`   | `prefer-either`, `prefer-option`, `prefer-fold`, `prefer-try` | This declaration bridges functype to a host (React, React Query, an SDK) whose contract requires the non-FP shape. |
+| `@invariant <reason>` | `prefer-either`                                               | This declaration throws only for programmer errors, never for expected failures.                                   |
+
+- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered.
+- **The reason is required**, on the same line as the tag. A bare `@interop` exempts nothing.
+- **Only JSDoc (`/** … */`) counts.** A `//` comment mentioning the tag does not.
+- **Opt out** per rule with `allowInteropMarker: false` / `allowInvariantMarker: false`.
+
+Prefer a marker to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". A marker covers one declaration, carries its reason, and `rg '@interop'` gives the complete inventory of places the code touches a throw-based host.
+
+## Rule options
+
+### `functype/prefer-list`
+
+| Option                | Default | Description                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | :-----: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowArraysInTests`  | `true`  | Silence the rule inside test files (`.test.ts`, `.spec.ts`, `__tests__/`, `/test/`, `/tests/`).                                                                                                                                                                                                                                   |
+| `allowReadonlyArrays` | `true`  | When `true`, `ReadonlyArray<T>` **and** `readonly T[]` pass. When `false`, both are flagged consistently. Use `false` in combination with `Wire<T>` from `functype` to hold the rule at `error` — every unmarked `ReadonlyArray<T>` becomes a lint error, and wrapping a boundary type in `Wire<…>` is the explicit escape hatch. |
+| `allowArrayLiterals`  | `false` | When `true`, `const xs = [1, 2, 3]` is not reported. Useful when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`. Mutable `T[]` in type positions is always reported regardless.                                                                                                     |
+
+**Boundary recipe (recommended for codebases touching serialization boundaries):**
+
+```jsonc
+{
+  "functype/prefer-list": ["error", { "allowReadonlyArrays": false }],
+}
+```
+
+Then annotate boundaries with `Wire<T>` from `functype`:
+
+```ts
+import type { Wire } from "functype"
+type ClaimedDocs = Wire<ReadonlyArray<Row>>
+type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArray<string> }>
+```
+
+`Wire<T>` is assignable both ways with the plain type, so no casts. `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument (`wireTypes` option, default `["Wire"]`; `[]` turns it off), and consumer aliases stack cleanly.
+
+### `functype/no-get-unsafe`
+
+| Option          | Default                                                | Description                                                                                                                                                                                       |
+| --------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowInTests`  | `true`                                                 | Silence the rule inside test files (same predicate as above).                                                                                                                                     |
+| `unsafeMethods` | `["orThrow", "expect", "get", "getOrThrow", "unwrap"]` | Method names flagged when called on a suspected `Option` / `Either` / other `Extractable` receiver. Includes both current (`orThrow`, `expect`) and legacy (`get`, `getOrThrow`, `unwrap`) names. |
+
+The rule reports each match with two suggestions — `.orElse(default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` / `.orThrow(err)` would silently lose their argument. Apply a suggestion explicitly in your editor when you know which one fits.
+
+### `functype/prefer-fold`
+
+| Option          | Default | Description                                                                                                                                                                                                        |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
+| `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
+
+Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+
+### `functype/prefer-option`
+
+| Option          | Default | Description                                                                                              |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------- |
+| `allowUseState` | `true`  | Don't report `T \| null` inside the type argument of `useState` / `useRef` (bare or `React.`-qualified). |
+
+`null` is idiomatic React state, and an `Option` there fights the hook's own API. Nullable component parameters and props are still reported.
+
+### `functype/prefer-map`
+
+| Option              | Default | Description                                                                                                    |
+| ------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `checkArrayMethods` | `true`  | Report `.push` inside `forEach` callbacks and `forEach` used as a map.                                         |
+| `checkForLoops`     | `false` | Also report `for`/`for..of`/`for..in` loops that push. Off because `no-imperative-loops` already reports them. |
+
+### `functype/prefer-functype-set` / `functype/prefer-functype-map`
+
+| Option         | Default | Description                                                                                     |
+| -------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `allowInTests` | `true`  | Silence the rule inside test files.                                                             |
+| `allowMutable` | `true`  | Don't report a native `Set`/`Map` the code mutates on purpose. Set `false` to report it anyway. |
+
+A collection counts as mutated when `.add` / `.delete` / `.clear` (Set) or `.set` / `.delete` / `.clear` (Map) is called on it, including `x!.add(…)`. The call can be made:
+
+- directly on a `new` expression that copies something (`new Set(prev).add(id)`, the React copy-then-add). An empty-`new` builder chain like `new Map().set(a, 1).set(b, 2)` is not exempt; use `Map.of` / `Set.of`.
+- directly through the variable, parameter or later-assigned `let` holding it, in any nested scope.
+- through `this.<field>` in the owning class: a field initializer, a constructor assignment, or a constructor parameter property.
+
+Not followed: aliases (`const t = s; t.add(x)`), `useRef(new Set()).current.add(x)`, a mutator passed as a callback (`xs.forEach(seen.add, seen)`), and a collection passed into another function. Those are still reported.
+
+functype's collections are immutable, so a cache, registry or in-place accumulator can't use them. A native collection that is only read (`.has`, `.get`, iteration) is still reported.
+
+### `functype/no-imperative-loops` / `functype/prefer-map`
+
+These rules don't report loops that have no functional equivalent:
+
+- `for await` consumes a stream, and collecting it first would defeat the streaming.
+- A loop whose body `yield`s is a generator's body, and a callback can't yield.
+
+A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `IO.forEach`. `prefer-map` doesn't report it.
+
+## Combining with eslint-config-functype
+
+For a complete setup with functional rules, TypeScript, Prettier, and import sorting:
+
+```bash
+npm install -D eslint-config-functype eslint-plugin-functype
+```
+
+```js
+import recommended from "eslint-config-functype/recommended"
+import testOverrides from "eslint-config-functype/test-overrides"
+import functype from "eslint-plugin-functype"
+
+export default [recommended, functype.configs.recommended, testOverrides]
+```
+
+## License
+
+MIT
+
+
+────────────────────────────────────────────────────────────────────────────────
+## API Reference
+────────────────────────────────────────────────────────────────────────────────
+
+# Functype API reference (v1.9.0)
+
+Generated from the functype CLI data — the same source as `npx functype` and the MCP server's `search_docs`. Types are grouped as in the CLI overview.
+
+## Core
+
+### Option
+
+Safe nullable handling - Some<T> or None
+
+Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Matchable, Monad, Promisable, Reshapeable, Serializable, Traversable
+
+**Create**
+
+- `Option(v)`
+- `Option.none()`
+- `Some(v)`
+- `None()`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.filter(p)`
+- `.ap(ff)`
+
+**Extract**
+
+- `.fold(n, s)`
+- `.foldAsync(n, s)`
+- `.orElse(d)`
+- `.orThrow()`
+- `.expect(() => never)`
+- `.orNull()`
+- `.match({Some, None})`
+- `.toEither(left | () => left)`
+- `.toList()`
+- `.toArray()`
+
+**Check**
+
+- `.isSome()`
+- `.isNone()`
+- `.isEmpty`
+
+**Other**
+
+- `Option.sequence(arr)`
+- `Option.traverse(arr, f)`
+
+### Either
+
+Error handling with Left (error) or Right (success)
+
+Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Monad, Promisable, Reshapeable, Serializable, Traversable
+
+**Create**
+
+- `Right(v)`
+- `Left(e)`
+- `Either.right(v)`
+- `Either.left(e)`
+- `Either.void()`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.mapLeft(f)`
+- `.swap()`
+
+**Extract**
+
+- `.fold(l, r)`
+- `.foldAsync(l, r)`
+- `.orElse(d)`
+- `.orThrow()`
+- `.expect((l) => never)`
+- `.match({Left, Right})`
+
+**Check**
+
+- `.isRight()`
+- `.isLeft()`
+
+**Other**
+
+- `Either.sequence(arr)`
+- `Either.traverse(arr, f)`
+- `Either.fromNullable(v, e)`
+
+### Try
+
+Wrap operations that may throw - Success<T> or Failure
+
+Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Matchable, Monad, Promisable, Reshapeable, Serializable, Traversable
+
+**Create**
+
+- `Try(() => expr)`
+- `Try.success(v)`
+- `Try.failure(e)`
+- `Try.fromPromise(p)`
+- `Try.async(() => Promise<T>)`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.recover(f)`
+- `.recoverWith(f)`
+
+**Extract**
+
+- `.fold(f, s)`
+- `.foldAsync(f, s)`
+- `.orElse(d)`
+- `.orThrow()`
+- `.expect((e) => never)`
+- `.toOption()`
+- `.toEither(left | (err) => left)`
+- `.toList()`
+- `.toArray()`
+
+**Check**
+
+- `.isSuccess()`
+- `.isFailure()`
+
+**Other**
+
+- `Try.sequence(arr)`
+- `Try.traverse(arr, f)`
+
+### Obj
+
+Immutable object wrapper with fluent operations
+
+Implements: Doable, Extractable, Foldable, KVTraversable, Matchable, Promisable, Reshapeable, Serializable
+
+**Create**
+
+- `Obj({...})`
+- `Obj.of({...})`
+- `Obj.empty()`
+
+**Transform**
+
+- `.set(k, v)`
+- `.assign(partial)`
+- `.merge(obj)`
+- `.when(cond, partial)`
+- `.omit(...keys)`
+- `.pick(...keys)`
+- `.map(f)`
+- `.flatMap(f)`
+
+**Extract**
+
+- `.get(k)`
+- `.value()`
+- `.keys()`
+- `.values()`
+- `.entries()`
+- `.fold(n, s)`
+- `.match({Obj})`
+
+**Check**
+
+- `.has(k)`
+- `.isEmpty`
+- `.size`
+
+### Identity
+
+The identity monad: wraps a value with no extra effect. Useful as a neutral container in generic code.
+
+**Create**
+
+- `Identity(value)`
+- `Identity.of(value)`
+- `Identity.pure(value)`
+
+**Extract**
+
+- `.id`
+
+**Other**
+
+- `.isSame(other)`
+
+## Collection
+
+### List
+
+Immutable array with functional operations
+
+Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable, Serializable, Traversable
+
+**Create**
+
+- `List([...])`
+- `List.of(...)`
+- `List.empty()`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.filter(p)`
+- `.take(n)`
+- `.takeWhile(p)`
+- `.takeRight(n)`
+- `.drop(n)`
+- `.dropWhile(p)`
+- `.concat(list)`
+- `.reverse()`
+- `.distinct()`
+- `.sorted()`
+- `.sortBy(f)`
+- `.zip(list)`
+- `.zipWithIndex()`
+- `.prepend(v)`
+- `.slice(s, e)`
+
+**Extract**
+
+- `.fold(z, f)`
+- `.reduce(f)`
+- `.head`
+- `.headOption`
+- `.tail`
+- `.last`
+- `.lastOption`
+- `.init`
+- `.indexOf(v)`
+- `.toArray()`
+
+**Check**
+
+- `.isEmpty`
+- `.nonEmpty`
+- `.size`
+- `.contains(v)`
+
+**Other**
+
+- `.groupBy(f)`
+- `.partition(p)`
+- `.span(p)`
+
+### Set
+
+Immutable set of unique values
+
+Implements: Collection, Foldable, Functor, Iterable, Serializable, Traversable
+
+**Create**
+
+- `Set([...])`
+- `Set.of(...)`
+- `Set.empty()`
+
+**Transform**
+
+- `.map(f)`
+- `.filter(p)`
+- `.union(s)`
+- `.intersection(s)`
+- `.difference(s)`
+- `.add(v)`
+
+**Extract**
+
+- `.fold(z, f)`
+- `.toArray()`
+
+**Check**
+
+- `.has(v)`
+- `.isEmpty`
+- `.size`
+
+### Map
+
+Immutable key-value store
+
+Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
+
+**Create**
+
+- `Map([[k, v], ...])`
+- `Map.of([k, v], ...)`
+- `Map.empty()`
+
+**Transform**
+
+- `.set(k, v)`
+- `.delete(k)`
+- `.map(f)`
+- `.filter(p)`
+- `.add(k, v)`
+
+**Extract**
+
+- `.get(k)`
+- `.keys()`
+- `.values()`
+- `.entries()`
+- `.fold(z, f)`
+
+**Check**
+
+- `.has(k)`
+- `.isEmpty`
+- `.size`
+
+### LazyList
+
+Lazy sequences for large/infinite data
+
+Implements: Foldable, Functor, Iterable, Monad, Serializable
+
+**Create**
+
+- `LazyList.from(iter)`
+- `LazyList.range(start, end)`
+- `LazyList.infinite(f)`
+- `LazyList.fromJSON(json)`
+
+**Transform**
+
+- `.map(f)`
+- `.filter(p)`
+- `.take(n)`
+- `.takeRight(n)`
+- `.drop(n)`
+- `.takeWhile(p)`
+- `.dropWhile(p)`
+- `.concat(ll)`
+- `.reverse()`
+- `.distinct()`
+- `.zip(ll)`
+- `.zipWithIndex()`
+
+**Extract**
+
+- `.head`
+- `.headOption`
+- `.tail`
+- `.last`
+- `.lastOption`
+- `.init`
+- `.toArray()`
+- `.toJSON()`
+
+**Check**
+
+- `.isEmpty`
+
+### Tuple
+
+Fixed-size typed array
+
+Implements: Foldable, Iterable, Serializable, Typeable, Valuable
+
+**Create**
+
+- `Tuple([a, b, ...])`
+- `Tuple.of(a, b, ...)`
+- `Tuple.fromJSON(json)`
+
+**Transform**
+
+- `.map(f)`
+
+**Extract**
+
+- `.first`
+- `.second`
+- `.toArray()`
+- `.toJSON()`
+
+### Stack
+
+Immutable LIFO stack
+
+Implements: Foldable, Collection, Serializable, Traversable
+
+**Create**
+
+- `Stack()`
+- `Stack.of(...)`
+
+**Transform**
+
+- `.push(v)`
+- `.pop()`
+
+**Extract**
+
+- `.peek()`
+- `.toArray()`
+
+**Check**
+
+- `.isEmpty`
+- `.size`
+
+## Effect
+
+### IO
+
+Lazy effect type with typed errors and dependency injection
+
+Implements: Functor, Monad, Foldable, Matchable
+
+**Create**
+
+- `IO(() => v)`
+- `IO.succeed(v)`
+- `IO.fail(e)`
+- `IO.sync(f)`
+- `IO.async(f)`
+- `IO.tryPromise({try, catch})`
+- `IO.fromEither(e)`
+- `IO.fromOption(o)`
+- `IO.fromTry(t)`
+- `IO.die(defect)`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.tap(f)`
+- `.mapError(f)`
+- `.recover(v)`
+- `.recoverWith(f)`
+
+**Extract**
+
+- `.run() // Either<E,A> — a defect or interruption arrives in the Left, raw`
+- `.runOrThrow()`
+- `.runSync()`
+- `.runSyncOrThrow()`
+- `.runExit() // Exit<E,A> — the only terminal that distinguishes Failure/Die/Interrupted`
+- `.runOption()`
+- `.runTry()`
+- `.fold(onErr, onOk)`
+- `.match({failure, success})`
+
+**Other**
+
+- `.catchTag(tag, f)`
+- `.catchAll(f)`
+- `.retry(n)`
+- `.retryWithDelay(n, ms)`
+- `.retryWhile({ n, while, delayMs? })`
+- `.retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })`
+- `.repeatUntil(done, { max, delayMs? })`
+- `.repeatWhile(cont, { max, delayMs? })`
+- `.timeout(ms)`
+- `.delay(ms)`
+- `.zip(io)`
+- `.pipe(f)`
+- `IO.all([...])`
+- `IO.race([...])`
+- `IO.iterate(seed, step, done, { max? })`
+- `IO.bracket(acquire, use, release)`
+- `IO.gen(function*() {...})`
+- `IO.Do.bind().map()`
+- `IO.service(Tag)`
+- `.provideService(Tag, impl)`
+- `.provideLayer(layer)`
+
+### Exit
+
+Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() cannot show it.
+
+**Create**
+
+- `Exit.succeed(v)`
+- `Exit.fail(e)`
+- `Exit.die(defect)`
+- `Exit.interrupt(fiberId)`
+- `Exit.interrupted()`
+
+**Transform**
+
+- `.map(f)`
+- `.mapError(f)`
+- `.mapBoth(onErr, onOk)`
+- `.flatMap(f)`
+
+**Extract**
+
+- `.fold(onFailure, onSuccess, onInterrupted?, onDie?)`
+- `.match({Success, Failure, Interrupted, Die?})`
+- `.orThrow()`
+- `.orElse(v)`
+- `.toOption()`
+- `.toEither()`
+- `.toValue()`
+
+**Check**
+
+- `.isSuccess()`
+- `.isFailure()`
+- `.isDie()`
+- `.isInterrupted()`
+
+**Other**
+
+- `Exit.zip(a, b)`
+- `Exit.all(exits)`
+- `Exit.fromEither(e)`
+- `Exit.fromOption(o, onNone)`
+- `// onDie / Die are optional and fall back to the failure handler`
+- `// defects stay recoverable: .recover/.recoverWith/.fold/.mapError treat Die as Failure`
+
+### Task
+
+Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable
+
+Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Monad, Promisable, Serializable, Traversable
+
+**Create**
+
+- `Task(params).Async(fn, errFn)`
+- `Task(params).Sync(fn, errFn)`
+- `Task.ok(value)`
+- `Task.err(error)`
+- `Task.fromEither(either)`
+- `Task.fromTry(try)`
+- `Task.fromPromise(fn)`
+- `Task.fromNodeCallback(fn)`
+- `Task.fromJSON(json) — reconstruct from serialize() output`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.mapError(f)`
+- `.recover(v)`
+- `.recoverWith(f)`
+
+**Extract**
+
+- `.fold(onErr, onOk)`
+- `.match({Ok, Err})`
+- `.orElse(v)`
+- `.orThrow()`
+- `.toEither()`
+- `.toOption()`
+- `.toJSON()`
+
+**Other**
+
+- `Task.cancellable(fn)`
+- `Task.withProgress(fn, onProgress)`
+- `Task.race(tasks, timeout?)`
+- `Task.getErrorChain(error)`
+- `Task.formatErrorChain(error)`
+
+### TaskOutcome
+
+Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().
+
+Implements: AsyncMonad, Extractable, Foldable, Functor, Serializable
+
+**Create**
+
+- `Ok(value)`
+- `Err(error)`
+- `Task.ok(value)`
+- `Task.err(error)`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+- `.mapError(f)`
+- `.recover(v)`
+- `.recoverWith(f)`
+- `.mapAsync(f)`
+- `.flatMapAsync(f)`
+
+**Extract**
+
+- `.fold(onErr, onOk)`
+- `.match({Ok, Err})`
+- `.orElse(v)`
+- `.orThrow()`
+- `.toEither()`
+- `.toOption()`
+- `.toJSON()`
+
+**Check**
+
+- `.isOk()`
+- `.isErr()`
+- `.isSuccess()`
+- `.isFailure()`
+
+### TaskResult
+
+Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.
+
+**Create**
+
+- `Task(params).Async(fn, errFn) → TaskResult<T>`
+- `Task.fromPromise(fn) → (...args) => TaskResult<U>`
+
+**Other**
+
+- `await taskResult → TaskOutcome<T>`
+- `// then use any TaskOutcome method (.fold, .map, .toEither, ...)`
+
+### Http
+
+HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
+
+**Create**
+
+- `Http.get(url, { decode, params }?)`
+- `Http.post(url, { body, decode, params }?)`
+- `Http.put(url, { body, decode, params }?)`
+- `Http.patch(url, { body, decode, params }?)`
+- `Http.delete(url, { decode, params }?)`
+- `Http.request({ url, decode, params })`
+- `Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest, afterResponse })`
+
+**Transform**
+
+- `.tap(f)`
+- `.map(f)`
+- `.flatMap(f)`
+- `.mapError(f)`
+- `.retry(n)`
+- `.retryWithDelay(n, ms)`
+- `.retryWhile({ n, while, delayMs? })`
+- `.retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })`
+- `.timeout(ms)`
+
+**Extract**
+
+- `.run()`
+- `.runOrThrow()`
+- `.runOption()`
+- `.runTry()`
+- `.runExit()`
+
+**Other**
+
+- `.catchTag(tag, handler)`
+- `.catchAll(handler)`
+- `.recover(fallback)`
+- `decode: Decoder<T> (Either-returning, structural failures preserved)`
+- `validate: (data) => T (deprecated, throws — for back-compat / Zod .parse)`
+- `flatten: boolean (default true; false preserves tagged emission)`
+- `params: HttpQueryParams (scalar | array; undefined/null dropped; percent-encoded)`
+- `beforeRequest: (req) => IO<never, HttpError, HttpRequestView>`
+- `afterResponse: (HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>> — success path only; refresh-on-401 uses .catchTag`
+
+### HttpError
+
+Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError (also exported as ResponseDecodeError alias)
+
+**Create**
+
+- `HttpError.networkError(url, method, cause)`
+- `HttpError.httpStatusError(url, method, status, statusText, body)`
+- `HttpError.decodeError(url, method, body, cause)`
+
+**Check**
+
+- `HttpError.isNetworkError(e)`
+- `HttpError.isHttpStatusError(e)`
+- `HttpError.isDecodeError(e)`
+
+**Other**
+
+- `HttpError.match(error, { NetworkError, HttpStatusError, DecodeError })`
+
+### Decoder
+
+Either-returning decoder contract: `Decoder<A> = (raw: unknown) => Either<DecoderError, A>`. Bundled combinators for primitives + functype ADTs (Option/Either/List/Map, null-bias). `Decoder.tagged.*` round-trips the `{_tag, value}` shape for functype-to-functype services.
+
+**Create**
+
+- `Decoder.string / .number / .boolean / .unknown / .nullable(inner)`
+- `Decoder.option(inner)`
+- `Decoder.either.envelope({ok, err})`
+- `Decoder.either.discriminated({tag, leftTag, rightTag}, l, r)`
+- `Decoder.list(inner) / .array(inner) / .map(inner)`
+- `Decoder.object({k: Decoder<V>, ...}) — accumulates field failures into Composite`
+- `Decoder.tagged.option/either/try/list/map/obj(inner?) — round-trips {_tag, value}`
+
+**Other**
+
+- `Pluggable by construction: any (raw) => Either<DecoderError, T> IS a Decoder<T>`
+- `Composes across sources: Decoder.object({a: Decoder.fromZod(s), b: Decoder.option(myAjv)})`
+
+### DecoderError
+
+Recursive ADT for decoder failures: Leaf | Composite. Children mirror the input tree so multi-field failures preserve structural paths. Distinct from `HttpError.DecodeError` — this is the inner structural cause that the HTTP wrapper carries.
+
+**Create**
+
+- `DecoderError.leaf(path, message, cause?)`
+- `DecoderError.composite(path, children: List<DecoderError>)`
+
+**Check**
+
+- `DecoderError.isLeaf(e)`
+- `DecoderError.isComposite(e)`
+
+**Other**
+
+- `DecoderError.match(e, { Leaf, Composite })`
+- `DecoderError.prepend(segment, e) — used by combinators to attribute child failures`
+- `DecoderError.flatten(e): List<{path, message}> — collect leaves`
+- `DecoderError.format(e): string — render tree as multi-line`
+
+## Utility
+
+### Lazy
+
+Deferred computation with memoization. Note: `serialize()` and `toValue()` FORCE the thunk (visible side effect) since a closure cannot be JSON-serialized — there is no representable 'unevaluated post-serialize' state. Thunk failures are captured via SerializedError and rethrown on access after fromJSON.
+
+Implements: Applicative, AsyncMonad, Extractable, Foldable, Functor, Monad, Serializable, Traversable
+
+**Create**
+
+- `Lazy(() => expr)`
+- `Lazy.fromValue(value) — wrap a non-deferred value`
+- `Lazy.evaluated(value) — reads as 'already-forced'; used by fromJSON`
+- `Lazy.fail(error) — Lazy that throws on access`
+
+**Transform**
+
+- `.map(f)`
+- `.flatMap(f)`
+
+**Extract**
+
+- `.fold(n, s)`
+- `.orElse(d)`
+- `.orThrow()`
+- `.get()`
+- `.toJSON()`
+- `Lazy.fromJSON(json)`
+
+**Check**
+
+- `.isEvaluated`
+
+### Cond
+
+Conditional expression builder - replace if-else chains
+
+**Create**
+
+- `Cond<T>()`
+
+**Other**
+
+- `.case(pred, result)`
+- `.otherwise(result)`
+- `.eval()`
+
+### Match
+
+Pattern matching - replace switch statements
+
+**Create**
+
+- `Match(value)`
+
+**Other**
+
+- `.case(pattern, result)`
+- `.when(pred, result)`
+- `.default(result)`
+- `.done()`
+
+### Do
+
+Generator do-notation across Option, Either, List and Try (DoAsync for promises). Short-circuits on None/Left/Failure/empty List.
+
+**Create**
+
+- `Do(function* () { const a = yield* $(opt); return a })`
+- `DoAsync(async function* () { … })`
+
+**Other**
+
+- `$(monad)  // unwrap inside Do`
+- `isDoCapable(value)`
+- `unwrap(monad)`
+
+### Ref
+
+Mutable reference cell for controlled, local mutability. Invariant in A by design (a mutable cell can't be widened).
+
+**Create**
+
+- `Ref(initial)`
+- `Ref.of(initial)`
+
+**Transform**
+
+- `.set(a)`
+- `.update(f)`
+- `.modify(f)  // returns B, stores A`
+
+**Extract**
+
+- `.get()`
+
+**Other**
+
+- `.getAndSet(a)`
+- `.updateAndGet(f)`
+- `.getAndUpdate(f)`
+- `.compareAndSet(expected, next)`
+
+### Brand
+
+Nominal typing without runtime overhead
+
+**Create**
+
+- `Brand<K, T>(value)`
+
+**Extract**
+
+- `.unwrap()`
+- `.toString()`
+
+### ValidatedBrand
+
+Branded types with runtime validation
+
+**Create**
+
+- `ValidatedBrand(validator)`
+- `.of(v)`
+- `.from(v)`
+- `.unsafeOf(v)`
+
+**Check**
+
+- `.is(v)`
+
+**Other**
+
+- `.refine(validator)`
+
+### Wire
+
+Serialization-boundary marker for a row, collection or nullable field at DB / HTTP / JSONB boundaries. Zero runtime, assignable both ways with T. prefer-list and prefer-option skip everything inside it. A collection is Wire<ReadonlyArray<Row>>.
+
+**Create**
+
+- `type UserRow = Wire<{ email: string | null }>`
+- `type Rows = Wire<ReadonlyArray<Row>>`
+- `email: Wire<string | null>`
+
+**Other**
+
+- `List(rows).filter(...)  // convert to List for transformation`
+- `Option(row.email)  // convert to Option`
+
+### TracedOption
+
+Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tracer, then delegates. For code-path introspection.
+
+**Create**
+
+- `TracedOption(option, tracer, spanId, seq?)`
+
+**Transform**
+
+- `.map(f, label?)`
+- `.flatMap(f, label?)`
+- `.filter(p, label?)`
+
+**Extract**
+
+- `.fold(onNone, onSome, label?)`
+- `.orElse(default, label?)`
+- `.unwrap()  // back to Option`
+
+## Validation
+
+### TypedError
+
+Code-tagged structured error ADT (extends Throwable); TypedError.validation(...) feeds accumulating validation.
+
+**Create**
+
+- `TypedError.validation(field, value, rule) → TypedError<"VALIDATION_FAILED">`
+- `TypedError.badRequest(reason, expected?)`
+- `TypedError.notFound(resource, id)`
+- `TypedError.auth(resource, requiredRole?)`
+- `TypedError.permission(action, resource, userId?)`
+- `TypedError.conflict(resource, value) / .rateLimit(limit, window, retryAfter?)`
+- `TypedError.timeout(ms, operation) / .network(url, method, status?) / .internal(errorId)`
+
+**Check**
+
+- `TypedError.isTypedError(v)`
+- `TypedError.hasCode(e, code)`
+
+**Other**
+
+- `Fields: .code, .message, .status (HTTP), .context, .timestamp, .traceId?`
+- `VALIDATION_FAILED context shape: { field, value, rule }`
+
+### Validation
+
+Error-accumulating validation (functype's Validated role) — FormValidation<T> collects all field errors, not fail-fast.
+
+**Create**
+
+- `Validation.rule<T>('min:18' | 'email' | 'required' | 'in:a,b' | ...)`
+- `Validation.combine(...validators) / Validation.custom(predicate, message)`
+- `Validation.validators.email / .url / .uuid / .required / .numeric / .positiveNumber / .nonEmptyString`
+
+**Transform**
+
+- `Validation.form(schema, data) → FormValidation<T> (accumulates all field errors)`
+- `Validator<T> = (value: unknown) => Either<TypedError<'VALIDATION_FAILED'>, T>`
+
+**Other**
+
+- `FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T> — functype's "Validated" accumulating result type`
+- `form() is flat/per-field: for cross-field (lo < hi) or dynamic-key (weights.*) checks, hand-accumulate into a List<TypedError> and return the FormValidation shape`
+
+## Serialization
+
+### Serialization
+
+Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Lenient: plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision). 1.2.1 adds `toEnvelope`/`fromEnvelope` for nesting inside structured serializers (SuperJSON, DBOS), and `deserializeStrict` for boundaries that require functype on the wire.
+
+**Transform**
+
+- `Serialization.serialize(value: unknown): string — lenient JSON codec`
+- `Serialization.deserialize(json: string): Try<unknown> — lenient; pass-through for unmarked JSON`
+- `Serialization.deserializeStrict(json: string): Try<unknown> — Failure if no @functype marker at top level`
+- `Serialization.toEnvelope(value: unknown): JSONValue — parsed JSON shape (1.2.2 tightened from unknown)`
+- `Serialization.fromEnvelope(envelope: unknown): Try<unknown> — inverse of toEnvelope; input stays permissive (Postel's law)`
+- `Serialization.JSONValue — exported recursive type for the envelope shape`
+
+**Check**
+
+- `Serialization.isFunctypeValue(v): v is Serializable<unknown>`
+
+**Other**
+
+- `Plain JSON passthrough: non-functype data walks through unchanged (use deserializeStrict to reject)`
+- `Strict policy on unknown markers: unknown @functype marker → Try.Failure`
+- `Dispatch table covers all 12 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy, Task)`
+- `Algebraic square: serialize ≡ JSON.stringify ∘ toEnvelope; deserialize ≡ fromEnvelope ∘ JSON.parse`
+- `No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines via toEnvelope/fromEnvelope`
+
+### SerializedError
+
+Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
+
+**Create**
+
+- `serializeError(err: unknown): SerializedError`
+- `deserializeError(s: SerializedError | string): Error`
+
+**Other**
+
+- `Shape: { name: string; message: string; stack?: string; cause?: SerializedError | string }`
+- `Non-Error throwables (strings, plain objects) projected under name: 'NonErrorThrowable'`
+- `Cause chain is recursive — arbitrary nesting depth survives`
+
+## Service
+
+### Logger
+
+Minimal 4-method logging interface every functype-* package targets. Type-only, no runtime. Impls live in consumers: consoleBootLogger (functype-os/config), DirectLogger (functype-log/direct). Tracer is type-only on the same terms; Clock/Random are not added.
+
+**Create**
+
+- `interface Logger { debug, info, warn, error: (msg, meta?) => void }`
+- `import type { Logger } from "functype"`
+
+**Other**
+
+- `All 4 methods MANDATORY (no defensive logger.debug?.() at call sites)`
+- `Signature: (message: string, metadata?: Record<string, unknown>) => void`
+- `DirectLogger from functype-log/direct structurally satisfies Logger (superset shape)`
+- `IO-shaped Logger from functype-log does NOT satisfy core Logger (methods return IO<>, not void) — bridge via toDirectLogger(ioLogger)`
+- `Used by: bootDiagnostics({ logger? }) in functype-os/config`
+
+### Tracer
+
+One-method trace sink consumed by TracedOption. Type-only, like Logger; declare your own Tag for injection.
+
+**Create**
+
+- `const tracer: Tracer = { emit: (e: TraceEvent) => … }`
+
+**Other**
+
+- `TraceEvent: { spanId, seq, op, tag, inTag, outTag?, label?, meta? }`
