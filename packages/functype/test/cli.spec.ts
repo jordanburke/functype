@@ -216,14 +216,17 @@ describe("Token Efficiency", () => {
     // (Service category + Logger), from 650 post-1.3.1 (TaskOutcome +
     // TaskResult added for MCP registry reconciliation), from 700 when
     // Exit was registered alongside the Die variant, and from 750 when
-    // Wire<T> landed as the serialization-boundary marker (#285). Still
-    // very compact for an LLM-targeted overview across 25+ types.
+    // Wire<T> landed as the serialization-boundary marker (#285), and from
+    // 800 in 1.10.0 when the module-registry spec forced the five public
+    // types that had shipped unregistered — Do, Identity, Ref, TracedOption,
+    // Tracer — into the data (the Logger entry was trimmed to offset part of
+    // it). Still very compact for an LLM-targeted overview across 35 types.
     //
     // This is a ratchet, not a cap to design around: keep descriptions terse
     // (the full prose belongs in the interface JSDoc, which `--full` prints)
     // and bump this with a reason when a genuinely new type lands.
     const wordCount = output.split(/\s+/).length
-    expect(wordCount).toBeLessThan(800)
+    expect(wordCount).toBeLessThan(840)
   })
 
   it("type output should be compact", () => {

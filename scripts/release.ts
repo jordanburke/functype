@@ -17,6 +17,7 @@
  *   4. Apply to all 6 family package.jsons
  *   5. Run `pnpm sync:eslint-mirror` → eslint pair = 2.{major*100+minor}.{patch}
  *   6. Run `pnpm -F functype-mcp-server sync:registry` → server.json tracks pkg.version
+ *  6b. Run `pnpm -F site generate:llms` → llms.txt / llms-full.txt embed the new version
  *   7. Cut `## Unreleased` section in packages/functype/CHANGELOG.md to `## {version} - {date}`
  *   8. Run `pnpm check-publish-safety` (last safety gate before commit)
  *   9. `git commit -m "release: v{version}"` and `git tag v{version}`
@@ -33,12 +34,12 @@
  * through a compromised file; arg-array form makes that a non-issue.
  */
 
-import { spawnSync } from "node:child_process"
-import { existsSync, readFileSync, writeFileSync } from "node:fs"
-import { dirname, join } from "node:path"
-import { fileURLToPath } from "node:url"
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const FAMILY_PACKAGE_DIRS = [
   "packages/functype",
@@ -47,140 +48,162 @@ const FAMILY_PACKAGE_DIRS = [
   "packages/functype-react",
   "packages/functype-eval",
   "packages/mcp-server",
-] as const
+] as const;
 
-type BumpLevel = "patch" | "minor" | "major"
+type BumpLevel = "patch" | "minor" | "major";
 
-const bumpLevel = process.argv[2] as BumpLevel | undefined
+const bumpLevel = process.argv[2] as BumpLevel | undefined;
 if (!bumpLevel || !["patch", "minor", "major"].includes(bumpLevel)) {
-  console.error("Usage: pnpm release patch|minor|major")
-  process.exit(1)
+  console.error("Usage: pnpm release patch|minor|major");
+  process.exit(1);
 }
 
 const run = (cmd: string, args: readonly string[] = []): void => {
-  console.log(`\n▶ ${cmd}${args.length ? " " + args.join(" ") : ""}`)
-  const result = spawnSync(cmd, args, { cwd: repoRoot, stdio: "inherit" })
+  console.log(`\n▶ ${cmd}${args.length ? " " + args.join(" ") : ""}`);
+  const result = spawnSync(cmd, args, { cwd: repoRoot, stdio: "inherit" });
   if (result.status !== 0) {
-    console.error(`✗ Command failed: ${cmd} ${args.join(" ")}`)
-    process.exit(result.status ?? 1)
+    console.error(`✗ Command failed: ${cmd} ${args.join(" ")}`);
+    process.exit(result.status ?? 1);
   }
-}
+};
 
 const capture = (cmd: string, args: readonly string[] = []): string => {
-  const result = spawnSync(cmd, args, { cwd: repoRoot, encoding: "utf8" })
+  const result = spawnSync(cmd, args, { cwd: repoRoot, encoding: "utf8" });
   if (result.status !== 0) {
-    console.error(`✗ Command failed: ${cmd} ${args.join(" ")}\n${result.stderr ?? ""}`)
-    process.exit(result.status ?? 1)
+    console.error(
+      `✗ Command failed: ${cmd} ${args.join(" ")}\n${result.stderr ?? ""}`,
+    );
+    process.exit(result.status ?? 1);
   }
-  return result.stdout.toString().trim()
-}
+  return result.stdout.toString().trim();
+};
 
-const readPkg = (dir: string): { name: string; version: string; [k: string]: unknown } => {
-  const path = join(repoRoot, dir, "package.json")
-  return JSON.parse(readFileSync(path, "utf8")) as { name: string; version: string; [k: string]: unknown }
-}
+const readPkg = (
+  dir: string,
+): { name: string; version: string; [k: string]: unknown } => {
+  const path = join(repoRoot, dir, "package.json");
+  return JSON.parse(readFileSync(path, "utf8")) as {
+    name: string;
+    version: string;
+    [k: string]: unknown;
+  };
+};
 
 const writePkg = (dir: string, pkg: object): void => {
-  writeFileSync(join(repoRoot, dir, "package.json"), JSON.stringify(pkg, null, 2) + "\n")
-}
+  writeFileSync(
+    join(repoRoot, dir, "package.json"),
+    JSON.stringify(pkg, null, 2) + "\n",
+  );
+};
 
 // 1. Preflight
-const dirty = capture("git", ["status", "--porcelain"])
+const dirty = capture("git", ["status", "--porcelain"]);
 if (dirty) {
-  console.error("✗ Working tree is not clean. Commit or stash changes first.\n" + dirty)
-  process.exit(1)
+  console.error(
+    "✗ Working tree is not clean. Commit or stash changes first.\n" + dirty,
+  );
+  process.exit(1);
 }
-const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"])
+const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
 if (branch !== "main") {
-  console.error(`✗ Not on main (currently on ${branch}). Release from main.`)
-  process.exit(1)
+  console.error(`✗ Not on main (currently on ${branch}). Release from main.`);
+  process.exit(1);
 }
-run("git", ["fetch", "origin", "main", "--quiet"])
-const local = capture("git", ["rev-parse", "HEAD"])
-const remote = capture("git", ["rev-parse", "origin/main"])
+run("git", ["fetch", "origin", "main", "--quiet"]);
+const local = capture("git", ["rev-parse", "HEAD"]);
+const remote = capture("git", ["rev-parse", "origin/main"]);
 if (local !== remote) {
-  console.error(`✗ Local main is not in sync with origin/main.\n  local=${local}\n  remote=${remote}`)
-  process.exit(1)
+  console.error(
+    `✗ Local main is not in sync with origin/main.\n  local=${local}\n  remote=${remote}`,
+  );
+  process.exit(1);
 }
 
 // 2. Validate
-run("pnpm", ["validate"])
+run("pnpm", ["validate"]);
 
 // 3. Compute new version
-const current = readPkg("packages/functype").version
-const parts = current.split(".").map(Number)
+const current = readPkg("packages/functype").version;
+const parts = current.split(".").map(Number);
 if (parts.length !== 3 || parts.some(Number.isNaN)) {
-  console.error(`✗ Cannot parse current functype version: ${current}`)
-  process.exit(1)
+  console.error(`✗ Cannot parse current functype version: ${current}`);
+  process.exit(1);
 }
-const [major, minor, patch] = parts as [number, number, number]
+const [major, minor, patch] = parts as [number, number, number];
 const next =
   bumpLevel === "major"
     ? `${major + 1}.0.0`
     : bumpLevel === "minor"
       ? `${major}.${minor + 1}.0`
-      : `${major}.${minor}.${patch + 1}`
+      : `${major}.${minor}.${patch + 1}`;
 
 // Validate computed version shape — no shell metachars possible from semver,
 // but guard the assumption explicitly so a corrupted package.json can't
 // inject odd content through later argument interpolation.
 if (!/^\d+\.\d+\.\d+$/.test(next)) {
-  console.error(`✗ Computed version ${next} doesn't look like semver.`)
-  process.exit(1)
+  console.error(`✗ Computed version ${next} doesn't look like semver.`);
+  process.exit(1);
 }
 
-console.log(`\nReleasing functype family: ${current} → ${next} (${bumpLevel})`)
+console.log(`\nReleasing functype family: ${current} → ${next} (${bumpLevel})`);
 
 // 4. Bump all 6 family packages
 for (const dir of FAMILY_PACKAGE_DIRS) {
-  const pkg = readPkg(dir)
-  pkg.version = next
-  writePkg(dir, pkg)
-  console.log(`  ${(pkg.name as string).padEnd(22)} ${current} → ${next}`)
+  const pkg = readPkg(dir);
+  pkg.version = next;
+  writePkg(dir, pkg);
+  console.log(`  ${(pkg.name as string).padEnd(22)} ${current} → ${next}`);
 }
 
 // 5. Mirror sync (eslint pair)
-run("pnpm", ["sync:eslint-mirror"])
+run("pnpm", ["sync:eslint-mirror"]);
 
 // 6. server.json sync (mcp-server)
-run("pnpm", ["-F", "functype-mcp-server", "sync:registry"])
+run("pnpm", ["-F", "functype-mcp-server", "sync:registry"]);
+
+// 6b. Regenerate the site's LLM docs. llms.txt / llms-full.txt embed the version and are checked in, and
+// `validate` above ran BEFORE the bump — without this, every release commit carries the previous version
+// and CI's stale-artifact check fails on main (the 1.9.0 release left llms-full.txt at 1.8.0).
+run("pnpm", ["-F", "site", "generate:llms"]);
 
 // 7. Cut CHANGELOG `## Unreleased` → `## {version} - {date}`
-const changelogPath = join(repoRoot, "packages/functype/CHANGELOG.md")
+const changelogPath = join(repoRoot, "packages/functype/CHANGELOG.md");
 if (!existsSync(changelogPath)) {
-  console.warn(`⚠  ${changelogPath} not found — skipping CHANGELOG cut.`)
+  console.warn(`⚠  ${changelogPath} not found — skipping CHANGELOG cut.`);
 } else {
-  const changelog = readFileSync(changelogPath, "utf8")
-  const unreleasedRegex = /## Unreleased\s*\n+([\s\S]*?)(?=\n## |\n$)/
-  const m = changelog.match(unreleasedRegex)
+  const changelog = readFileSync(changelogPath, "utf8");
+  const unreleasedRegex = /## Unreleased\s*\n+([\s\S]*?)(?=\n## |\n$)/;
+  const m = changelog.match(unreleasedRegex);
   if (!m || !m[1] || !m[1].trim()) {
     console.error(
       `✗ No content in \`## Unreleased\` section of packages/functype/CHANGELOG.md.\n` +
         `  Write release notes there before running \`pnpm release\`.`,
-    )
-    process.exit(1)
+    );
+    process.exit(1);
   }
-  const unreleasedContent = m[1].trim()
-  const today = capture("date", ["+%Y-%m-%d"])
-  const replacement = `## Unreleased\n\n## ${next} - ${today}\n\n${unreleasedContent}\n`
-  const updated = changelog.replace(unreleasedRegex, replacement)
-  writeFileSync(changelogPath, updated)
-  console.log(`\n  Cut Unreleased → ## ${next} - ${today}`)
+  const unreleasedContent = m[1].trim();
+  const today = capture("date", ["+%Y-%m-%d"]);
+  const replacement = `## Unreleased\n\n## ${next} - ${today}\n\n${unreleasedContent}\n`;
+  const updated = changelog.replace(unreleasedRegex, replacement);
+  writeFileSync(changelogPath, updated);
+  console.log(`\n  Cut Unreleased → ## ${next} - ${today}`);
 }
 
 // 8. Final safety gate
-run("pnpm", ["check-publish-safety"])
+run("pnpm", ["check-publish-safety"]);
 
 // 9. Commit + tag (arg-array form avoids shell interpolation of `next`)
-run("git", ["add", "-A"])
-run("git", ["commit", "-m", `release: v${next}`])
-run("git", ["tag", "-a", `v${next}`, "-m", `Release v${next}`])
+run("git", ["add", "-A"]);
+run("git", ["commit", "-m", `release: v${next}`]);
+run("git", ["tag", "-a", `v${next}`, "-m", `Release v${next}`]);
 
 // 10. Instructions
-console.log(`\n✓ Released v${next} locally (commit + tag).`)
-console.log(`\nNext steps:`)
-console.log(`  git push --follow-tags`)
-console.log(`\nCI on tag push will:`)
-console.log(`  1. Re-run validate + check-publish-safety`)
-console.log(`  2. pnpm -r publish --no-git-checks (publishes packages with version differing from npm latest)`)
-console.log(`  3. Create GitHub releases per published package`)
+console.log(`\n✓ Released v${next} locally (commit + tag).`);
+console.log(`\nNext steps:`);
+console.log(`  git push --follow-tags`);
+console.log(`\nCI on tag push will:`);
+console.log(`  1. Re-run validate + check-publish-safety`);
+console.log(
+  `  2. pnpm -r publish --no-git-checks (publishes packages with version differing from npm latest)`,
+);
+console.log(`  3. Create GitHub releases per published package`);

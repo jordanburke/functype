@@ -128,6 +128,16 @@ Definition: `T | (T & WireMark)`. The plain `T` member keeps it assignable both 
 
 **`eslint-plugin-functype`** — `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument, including qualified `functype.Wire<…>`. Configure with `wireTypes` (default `["Wire"]`; add your own boundary alias, or pass `[]` to turn it off). A whole row type becomes one boundary declaration instead of a suppression per nullable field. This is what `prefer-option` needs before it can graduate to `error`.
 
+**Docs, CLI and MCP now cover every public type, and stay in sync by construction.**
+
+- **Five public types were invisible** to `npx functype` and the MCP server's `search_docs`: `TracedOption` and `Tracer` (shipped in #304 unregistered), plus `Do`, `Identity` and `Ref`. They're now registered. A new `test/cli/module-registry.spec.ts` maps every module the package exports to its CLI types, or marks it internal with a reason, so a new module can't ship undocumented. `validate_code` imports the new types by default.
+- **`llms.txt` is generated.** The site's `generate:llms` script builds it from `src/cli/data.ts`, grouped by the CLI's categories, and adds a generated `reference.md` with every type's API. `llms-full.txt` now also carries the Wire, Obj and MCP pages, the ESLint plugin docs and the full reference. Every linked file is checked at build time. The hand-written index had nine dead links after the monorepo migration, and the footer had two more; all are fixed.
+- **New site page: [functype.org/eslint](https://functype.org/eslint)**, rendered from the plugin README so the rules and options have one source.
+- **The release script regenerates the LLM docs after bumping.** They embed the version, and `validate` runs before the bump, which is how 1.9.0 left `llms-full.txt` at 1.8.0 and tripped CI's stale-artifact check.
+- **`.nvmrc` pins Node 24.20.0** instead of a bare `24`, so the publish job can't drift onto an npm whose OIDC exchange fails.
+
+**`functype-eval` — scores rise for the same code.** It lints with each rule's defaults, and this release's defaults drop known false positives: `prefer-fold` no longer checks plain null ternaries, `prefer-map` leaves loops to `no-imperative-loops`, `prefer-functype-map/set` skip mutated collections, and loops over streams or generators aren't counted. A higher score after upgrading reflects fewer false hits, not new code.
+
 ## 1.9.0 - 2026-08-17
 
 **`functype` — new `Wire<T>` marker type for serialization boundaries (addresses #285).**

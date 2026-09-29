@@ -1,45 +1,88 @@
 # Functype
 
-> A functional programming library for TypeScript with immutable data structures, type-safe error handling, and Scala-inspired patterns. Provides Option, Either, Try, List, Task, IO, and more with a unified interface hierarchy.
+> A functional programming library for TypeScript, using immutable data structures and type classes. Scala-inspired: Option, Either, Try, List, IO and more, with typed errors, dependency injection and do-notation. Version 1.9.0.
 
-> [llms-full.txt](https://functype.org/llms-full.txt): Complete documentation in a single file
+Install with `npm install functype`. Every type listed below is also available from the CLI (`npx functype <Type>`) and the functype MCP server.
 
-## Getting Started
+- [llms-full.txt](https://functype.org/llms-full.txt): The guides, type pages and full API reference in one file
+- [API reference](https://functype.org/reference.md): Every public type's methods, generated from the CLI data
 
-[README](https://github.com/jordanburke/functype/blob/main/README.md): Complete introduction with installation and usage examples
-[Quick Reference](https://github.com/jordanburke/functype/blob/main/docs/quick-reference.md): Concise guide to common patterns and operations
-[Examples](https://github.com/jordanburke/functype/blob/main/docs/examples.md): Practical code examples for all major features
+## Core
 
-## Core Types
+- [Option](https://functype.org/option.md): Safe nullable handling - Some<T> or None
+- [Either](https://functype.org/either.md): Error handling with Left (error) or Right (success)
+- [Try](https://functype.org/try.md): Wrap operations that may throw - Success<T> or Failure
+- [Obj](https://functype.org/obj.md): Immutable object wrapper with fluent operations
+- [Identity](https://functype.org/reference.md#identity): The identity monad: wraps a value with no extra effect. Useful as a neutral container in generic code.
 
-[Option](https://functype.org/option.md): Handle nullable values safely with Some and None
-[Either](https://functype.org/either.md): Express success/failure with Left and Right
-[Try](https://functype.org/try.md): Safely execute operations that might throw exceptions
-[List](https://functype.org/list.md): Immutable array with functional operations
-[Task](https://functype.org/task.md): Sync/async operations with structured error handling
-[IO](https://functype.org/io.md): Lazy, composable effects with typed errors and dependency injection
+## Collection
 
-## Advanced Features
+- [List](https://functype.org/list.md): Immutable array with functional operations
+- [Set](https://functype.org/reference.md#set): Immutable set of unique values
+- [Map](https://functype.org/reference.md#map): Immutable key-value store
+- [LazyList](https://functype.org/reference.md#lazylist): Lazy sequences for large/infinite data
+- [Tuple](https://functype.org/reference.md#tuple): Fixed-size typed array
+- [Stack](https://functype.org/reference.md#stack): Immutable LIFO stack
 
-[Do-notation](https://functype.org/do-notation.md): Scala-like for-comprehensions with optimized performance
-[Pattern Matching](https://functype.org/match.md): Type-safe pattern matching with Match and Cond
-[Error Formatting](https://github.com/jordanburke/functype/blob/main/docs/error-formatting.md): Utilities for improved error visualization
+## Effect
 
-## API Documentation
+- [IO](https://functype.org/io.md): Lazy effect type with typed errors and dependency injection
+- [Exit](https://functype.org/reference.md#exit): Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() cannot show it.
+- [Task](https://functype.org/task.md): Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable
+- [TaskOutcome](https://functype.org/task.md): Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().
+- [TaskResult](https://functype.org/task.md): Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.
+- [Http](https://functype.org/http.md): HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
+- [HttpError](https://functype.org/http.md): Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError (also exported as ResponseDecodeError alias)
+- [Decoder](https://functype.org/reference.md#decoder): Either-returning decoder contract: `Decoder<A> = (raw: unknown) => Either<DecoderError, A>`. Bundled combinators for primitives + functype ADTs (Option/Either/List/Map, null-bias). `Decoder.tagged.*` round-trips the `{_tag, value}` shape for functype-to-functype services.
+- [DecoderError](https://functype.org/reference.md#decodererror): Recursive ADT for decoder failures: Leaf | Composite. Children mirror the input tree so multi-field failures preserve structural paths. Distinct from `HttpError.DecodeError` — this is the inner structural cause that the HTTP wrapper carries.
 
-[Feature Matrix](https://functype.org/feature-matrix.md): Complete overview of interfaces supported by each data structure
-[API Docs](https://jordanburke.github.io/functype/): Full TypeDoc API documentation
-[AI Guide](https://github.com/jordanburke/functype/blob/main/docs/ai-guide.md): Guide for AI assistants working with functype
-[CLI Reference](https://github.com/jordanburke/functype#cli-documentation): Run `npx functype` for LLM-optimized API reference
+## Utility
 
-## Development
+- [Lazy](https://functype.org/reference.md#lazy): Deferred computation with memoization. Note: `serialize()` and `toValue()` FORCE the thunk (visible side effect) since a closure cannot be JSON-serialized — there is no representable 'unevaluated post-serialize' state. Thunk failures are captured via SerializedError and rethrown on access after fromJSON.
+- [Cond](https://functype.org/match.md): Conditional expression builder - replace if-else chains
+- [Match](https://functype.org/match.md): Pattern matching - replace switch statements
+- [Do](https://functype.org/do-notation.md): Generator do-notation across Option, Either, List and Try (DoAsync for promises). Short-circuits on None/Left/Failure/empty List.
+- [Ref](https://functype.org/reference.md#ref): Mutable reference cell for controlled, local mutability. Invariant in A by design (a mutable cell can't be widened).
+- [Brand](https://functype.org/reference.md#brand): Nominal typing without runtime overhead
+- [ValidatedBrand](https://functype.org/reference.md#validatedbrand): Branded types with runtime validation
+- [Wire](https://functype.org/wire.md): Serialization-boundary marker for a row, collection or nullable field at DB / HTTP / JSONB boundaries. Zero runtime, assignable both ways with T. prefer-list and prefer-option skip everything inside it. A collection is Wire<ReadonlyArray<Row>>.
+- [TracedOption](https://functype.org/reference.md#tracedoption): Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tracer, then delegates. For code-path introspection.
 
-[Companion Pattern](https://github.com/jordanburke/functype/blob/main/docs/companion-pattern.md): Scala-inspired pattern combining constructors with static utilities
-[Architecture](https://github.com/jordanburke/functype/blob/main/docs/HKT.md): Higher-kinded types and core architecture patterns
-[Bundle Optimization](https://github.com/jordanburke/functype/blob/main/docs/BUNDLE_OPTIMIZATION.md): Tree-shaking and import strategies
+## Validation
+
+- [TypedError](https://functype.org/reference.md#typederror): Code-tagged structured error ADT (extends Throwable); TypedError.validation(...) feeds accumulating validation.
+- [Validation](https://functype.org/reference.md#validation): Error-accumulating validation (functype's Validated role) — FormValidation<T> collects all field errors, not fail-fast.
+
+## Serialization
+
+- [Serialization](https://functype.org/reference.md#serialization): Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Lenient: plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision). 1.2.1 adds `toEnvelope`/`fromEnvelope` for nesting inside structured serializers (SuperJSON, DBOS), and `deserializeStrict` for boundaries that require functype on the wire.
+- [SerializedError](https://functype.org/reference.md#serializederror): Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
+
+## Service
+
+- [Logger](https://functype.org/logger.md): Minimal 4-method logging interface every functype-* package targets. Type-only, no runtime. Impls live in consumers: consoleBootLogger (functype-os/config), DirectLogger (functype-log/direct). Tracer is type-only on the same terms; Clock/Random are not added.
+- [Tracer](https://functype.org/reference.md#tracer): One-method trace sink consumed by TracedOption. Type-only, like Logger; declare your own Tag for injection.
+
+## Guides
+
+- [AI Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/ai-guide.md): Guide for AI assistants writing functype code
+- [Quick Reference](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/quick-reference.md): Concise guide to common patterns and operations
+- [Examples](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/examples.md): Practical examples for the major types
+- [functype vs Effect](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/vs-effect.md): How functype relates to Effect-TS
+- [Companion Pattern](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/companion-pattern.md): Scala-style constructors with static utilities
+- [Variance Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/variance-guide.md): Covariance conventions and the Widen helper
+- [Error Formatting](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/error-formatting.md): Utilities for readable error output
+
+## Tooling
+
+- [ESLint Plugin](https://functype.org/eslint): Rules, severity policy, and the Wire / @interop / @invariant boundary markers
+- [MCP Server](https://functype.org/mcp-server): Live type docs and compile-time code validation for AI agents
+- [CLI](https://github.com/jordanburke/functype/blob/main/packages/functype#cli-documentation): `npx functype` prints the LLM-optimized API reference; `npx functype <Type>` for one type
 
 ## Optional
 
-[Roadmap](https://github.com/jordanburke/functype/blob/main/docs/ROADMAP.md): Future features and improvements
-[Tuple Examples](https://github.com/jordanburke/functype/blob/main/docs/TUPLE-EXAMPLES.md): Working with fixed-length arrays
-[Task Migration Guides](https://github.com/jordanburke/functype/blob/main/docs/tasks/v3/TASK_MIGRATION_GUIDE.md): Version upgrade guides
+- [HKT](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/HKT.md): Higher-kinded types and core architecture
+- [Bundle Optimization](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/BUNDLE_OPTIMIZATION.md): Tree-shaking and import strategies
+- [Tuple Examples](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/TUPLE-EXAMPLES.md): Fixed-length typed arrays
+- [Task Migration Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/tasks/v3/TASK_MIGRATION_GUIDE.md): Task version upgrade guide
+- [Roadmap](https://github.com/jordanburke/functype/blob/main/docs/ROADMAP.md): Planned features

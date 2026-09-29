@@ -495,6 +495,22 @@ Option.fromYAML<string>(yamlString)
 Option.fromBinary<string>(binaryData)
 ```
 
+## Lint Conventions (eslint-plugin-functype)
+
+`recommended` **errors** on `no-let`, `no-imperative-loops`, `prefer-map`, `prefer-fold`, `prefer-functype-map` and `prefer-functype-set`. `prefer-option`, `prefer-either` and `prefer-try` warn. Write code that passes, and when code is correct *because* it isn't FP-shaped, declare the boundary instead of disabling the rule:
+
+| Situation | Do this | Not this |
+| --- | --- | --- |
+| DB row / HTTP body / JSONB with `null` fields or arrays | `type UserRow = Wire<{ email: string \| null; tags: ReadonlyArray<string> }>` | `eslint-disable` on each field |
+| A collection at a boundary | `Wire<ReadonlyArray<Row>>` (not `Wire<Row>`, which is one row) | `Row[]` |
+| A bridge whose host requires a throw / rejection / nullable (React `use()`, React Query, a nullable→Option converter) | JSDoc `@interop <reason>` on the function | file-level `eslint-disable` |
+| A throw for a programmer error, not an expected failure | JSDoc `@invariant <reason>` on the function | `Either` for an impossible case, or a disable |
+| React state that may be empty | `useState<User \| null>(null)` — allowed as-is | `Option` inside hook state |
+| A cache or registry that is mutated on purpose | native `Map`/`Set` with `.set`/`.add` — allowed as-is | functype `Map` (immutable) |
+| Loop that awaits sequentially and stops on failure | `IO.forEach(items, f)` | `.forEach` with an async callback |
+
+Markers need a reason on the same line (`@interop React Query needs a rejection.`); a bare tag exempts nothing. They cover the tagged declaration and what is nested inside it.
+
 ## Looking Up Functype APIs
 
 ### Feature Matrix Reference
