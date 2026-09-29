@@ -64,13 +64,13 @@
     "LICENSE"
   ],
   "dependencies": {
-    "fastmcp": "^4.21.2",
+    "fastmcp": "^4.22.0",
     "functype": "workspace:*",
     "typescript": "^6.0.3",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@types/node": "^24.13.6",
+    "@types/node": "^24.19.0",
     "ts-builds": "^3.4.3",
     "tsdown": "^0.23.0",
     "tsx": "^4.23.15"
