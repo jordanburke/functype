@@ -122,9 +122,9 @@ type UserRows = Wire<ReadonlyArray<UserRow>> // a collection
 type Invite = { readonly acceptedAt: Wire<string | null> } // one field
 ```
 
-Definition: `T extends null | undefined ? T : T & { readonly [WIRE]?: never }`. It stays assignable both ways with the plain type and keeps `null`, the shape that survives `JSON.stringify`.
+Definition: `T | (T & WireMark)`. The plain `T` member keeps it assignable both ways with `T`, including `null`, `undefined`, `unknown` and generic `R | null` helpers. The `WireMark` member keeps the alias name through inference, so inferred exports emit `Wire<Row>` in `.d.ts` files rather than failing a consumer's declaration build. `WireMark` is exported for that emit; user code never needs it.
 
-**Breaking by the letter, compile-loud in practice.** In 1.9, `Wire<Row>` meant `ReadonlyArray<Row>`. It now means one `Row`, so a 1.9 use fails at its first array assignment or `.map`. `Wire` shipped in 1.9.0 on 2026-08-17, and a GitHub code search found no imports outside this repo, so it ships in a minor.
+**Breaking by the letter, compile-loud in practice.** In 1.9, `Wire<Row>` meant `ReadonlyArray<Row>`. It now means one `Row`, so a 1.9 use fails at its first array assignment or `.map`. The exceptions are `Wire<object>` and `Wire<any>`, which accept an array under either meaning. `Wire` shipped in 1.9.0 on 2026-08-17, and a GitHub code search found no imports outside this repo, so it ships in a minor.
 
 **`eslint-plugin-functype`** — `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument, including qualified `functype.Wire<…>`. Configure with `wireTypes` (default `["Wire"]`; add your own boundary alias, or pass `[]` to turn it off). A whole row type becomes one boundary declaration instead of a suppression per nullable field. This is what `prefer-option` needs before it can graduate to `error`.
 

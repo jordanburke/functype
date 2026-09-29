@@ -5,6 +5,19 @@ import rule from "../../src/rules/prefer-option"
 describe("prefer-option", () => {
   ruleTester.run("prefer-option", rule, {
     valid: [
+      {
+        name: "A qualified functype.Wire is recognized",
+        code: "type Row = { readonly email: functype.Wire<string | null> }",
+      },
+      {
+        name: "An import-type Wire is recognized",
+        code: 'type Row = { readonly email: import("functype").Wire<string | null> }',
+      },
+      {
+        name: "Custom wireTypes names are recognized",
+        code: "type Row = { readonly email: Dto<string | null> }",
+        options: [{ wireTypes: ["Dto"] }],
+      },
       // #325 B — nullables inside Wire<…> are the declared serialization shape; `null` survives
       // JSON.stringify and Option does not.
       {
@@ -73,6 +86,30 @@ type WebhookBody = { readonly customer: string | null }`,
       },
     ],
     invalid: [
+      {
+        name: "wireTypes: [] turns the Wire exemption off",
+        code: "type Row = { readonly email: Wire<string | null> }",
+        options: [{ wireTypes: [] }],
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "string", nullable: "string | null" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "type Row = { readonly email: Wire<Option<string>> }",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: `import { Option } from "functype"
+type Row = { readonly email: Wire<string | null> }`,
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A nullable beside (not inside) a Wire type is still reported",
         code: "function f(row: Wire<Row>, fallback: string | null) {}",

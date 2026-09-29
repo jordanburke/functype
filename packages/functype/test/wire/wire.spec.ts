@@ -50,4 +50,34 @@ describe("Wire<T>", () => {
     const asArray: ReadonlyArray<Row> = one
     expect(asArray).toBeDefined()
   })
+
+  it("accepts any value under Wire<unknown> (an intersection brand would make it a weak type)", () => {
+    const a: Wire<unknown> = "x"
+    const b: Wire<unknown> = null
+    const c: Wire<unknown> = { a: 1 }
+    expect([a, b, c]).toHaveLength(3)
+  })
+
+  it("works in generic nullable plumbing — the common findOne-style DB helper", async () => {
+    const one = <R>(x: R | null): Wire<R | null> => x
+    const findOne = async <R>(x: R | null): Promise<Wire<R | null>> => x
+    expect(one<Row>(null)).toBeNull()
+    expect(await findOne<Row>({ id: "1", email: null })).toEqual({ id: "1", email: null })
+  })
+
+  it("still type-checks object literals for excess properties", () => {
+    // @ts-expect-error — `extra` is not a field of Row; Wire must not weaken literal checks.
+    const row: Wire<Row> = { id: "1", email: null, extra: true }
+    expect(row).toBeDefined()
+  })
+
+  it("documents the two 1.9 usages that stay silent: Wire<object> and Wire<any> still accept an array", () => {
+    // These compile under both definitions, so the 1.9 → 1.10 change cannot be caught by the compiler
+    // here. Neither was a sensible 1.9 usage (Wire<object> meant ReadonlyArray<object>), so the CHANGELOG
+    // names them rather than the type trying to reject them.
+    const rows: ReadonlyArray<Row> = []
+    const asObject: Wire<object> = rows
+    const asAny: Wire<any> = rows // eslint-disable-line @typescript-eslint/no-explicit-any -- documenting the silent path
+    expect([asObject, asAny]).toHaveLength(2)
+  })
 })

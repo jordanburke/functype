@@ -433,7 +433,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Wire: {
     description:
-      "Serialization-boundary marker for any shape crossing DB / HTTP / JSONB boundaries: a collection, a nullable field, or a whole row type. Zero runtime, assignable both ways with the plain type. prefer-list and prefer-option skip everything inside Wire<…>, so the boundary is declared once. 1.10: Wire<Row> is one row; write Wire<ReadonlyArray<Row>> for a collection.",
+      "Serialization-boundary marker for a row, collection or nullable field at DB / HTTP / JSONB boundaries. Zero runtime, assignable both ways with T. prefer-list and prefer-option skip everything inside it. A collection is Wire<ReadonlyArray<Row>>.",
     interfaces: [],
     methods: {
       create: [

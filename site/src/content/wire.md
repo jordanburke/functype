@@ -6,13 +6,16 @@ A serialization-boundary marker for values crossing DB rows, HTTP bodies, JSONB 
 
 ```typescript
 declare const WIRE: unique symbol;
+export interface WireMark {
+  readonly [WIRE]?: never;
+}
 
-export type Wire<T> = T extends null | undefined
-  ? T
-  : T & { readonly [WIRE]?: never };
+export type Wire<T> = T | (T & WireMark);
 ```
 
-Wire is a **flavored** type, not a branded one. The phantom symbol is optional, so `Wire<T>` and `T` accept each other without ceremony. `null` and `undefined` pass through unbranded, because an intersection brand on them collapses to `never`, and `null` is exactly the shape that survives `JSON.stringify`.
+Wire is a **flavored** type, not a branded one. The plain `T` member means `Wire<T>` and `T` accept each other without ceremony, including `null`, `undefined` and `unknown`, so generic helpers like `findOne<R>(): Promise<Wire<R | null>>` compile. `null` is exactly the shape that survives `JSON.stringify`.
+
+The `T & WireMark` member is there for naming, not safety. It keeps TypeScript from resolving the alias away, so inferred exports emit `Wire<Row>` in `.d.ts` files and hovers.
 
 The value doesn't come from type-level enforcement. It comes from three places:
 
@@ -54,7 +57,7 @@ type Invite = {
 // eslint.config.mjs — hold the enforcement, mark the boundaries
 {
   "functype/prefer-list": ["error", { "allowReadonlyArrays": false }],
-  "functype/prefer-option": "error",
+  "functype/prefer-option": "warn", // "error" once your boundary types are wired
 }
 ```
 
@@ -83,11 +86,7 @@ type ClaimedDocs = Wire<Row>; // 1.9: an array of Row
 type ClaimedDocs = Wire<ReadonlyArray<Row>>; // 1.10
 ```
 
-The break is loud, not silent. A `Wire<Row>` that meant an array fails to compile at the first `.map` or array assignment.
-
-## Caveat
-
-A bare type parameter can't satisfy the conditional brand, so `<T>(x: T): Wire<T> => x` doesn't compile. Wire concrete row and field types, not generic plumbing.
+The break is loud, not silent: a `Wire<Row>` that meant an array fails to compile at the first `.map` or array assignment. The two exceptions are `Wire<object>` and `Wire<any>`, which accept an array under either meaning; search for them when upgrading.
 
 ## When to use
 

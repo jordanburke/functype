@@ -5,6 +5,11 @@ import rule from "../../src/rules/prefer-list"
 describe("prefer-list", () => {
   ruleTester.run("prefer-list", rule, {
     valid: [
+      {
+        name: "An import-type Wire is recognized",
+        code: 'type Rows = import("functype").Wire<ReadonlyArray<Row>>',
+        options: [{ allowReadonlyArrays: false }],
+      },
       // #325 B — Wire<T> wraps any boundary shape; everything inside its type argument is the wire
       // shape by declaration, so the rule skips it even at allowReadonlyArrays: false.
       {

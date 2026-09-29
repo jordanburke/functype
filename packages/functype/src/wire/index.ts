@@ -1,1 +1,1 @@
-export type { Wire } from "./Wire"
+export type { Wire, WireMark } from "./Wire"
