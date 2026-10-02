@@ -5,6 +5,9 @@ packages:
 overrides:
   unrun: 0.2.37
   yaml: ^2.8.3
+  # GHSA alerts #338/#346/#347/#349/#350/#363: fast-uri <3.1.7, reached via fastmcp and the MCP SDK's ajv
+  # (^3.0.1). Drop once their lockfile floor is >=3.1.7.
+  fast-uri: ^3.1.8
   eslint-plugin-functype: "workspace:*"
   eslint-config-functype: "workspace:*"
 
