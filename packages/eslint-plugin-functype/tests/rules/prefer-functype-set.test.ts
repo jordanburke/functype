@@ -5,6 +5,10 @@ import rule from "../../src/rules/prefer-functype-set"
 describe("prefer-functype-set", () => {
   ruleTester.run("prefer-functype-set", rule, {
     valid: [
+      {
+        name: "A type-only import of functype's Set is functype's Set in type positions",
+        code: 'import type { Set } from "functype"\nlet m: Set<string>',
+      },
       // A `new Set` that flows straight into a declared native read-only contract is what that
       // contract requires — the rule already accepts `ReadonlySet` annotations, so it must accept their value.
       {
@@ -132,6 +136,23 @@ seen.delete("x")`,
       },
     ],
     invalid: [
+      {
+        name: "A native Set annotation next to an aliased import points at the alias",
+        code: 'import { Set as FSet } from "functype"\nlet m: Set<string>',
+        errors: [
+          {
+            messageId: "preferFunctypeSet",
+            data: { type: "string" },
+            suggestions: [
+              {
+                messageId: "suggestUseLocalName",
+                data: { name: "FSet" },
+                output: 'import { Set as FSet } from "functype"\nlet m: FSet<string>',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A nested callback does not inherit the outer ReadonlySet return type",
         code: "function f(): ReadonlyArray<ReadonlySet<string>> { return build(() => new Set()) }",

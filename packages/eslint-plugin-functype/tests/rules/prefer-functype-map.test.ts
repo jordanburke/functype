@@ -5,6 +5,10 @@ import rule from "../../src/rules/prefer-functype-map"
 describe("prefer-functype-map", () => {
   ruleTester.run("prefer-functype-map", rule, {
     valid: [
+      {
+        name: "A type-only import of functype's Map is functype's Map in type positions",
+        code: 'import type { Map } from "functype"\nlet m: Map<string, number>',
+      },
       // A `new Map` that flows straight into a declared native read-only contract is what that
       // contract requires — the rule already accepts `ReadonlyMap` annotations, so it must accept their value.
       {
@@ -82,6 +86,23 @@ export const register = (k: string, f: () => void) => { registry.set(k, f) }`,
       },
     ],
     invalid: [
+      {
+        name: "A native Map annotation next to an aliased import points at the alias",
+        code: 'import { Map as FMap } from "functype"\nlet m: Map<string, number>',
+        errors: [
+          {
+            messageId: "preferFunctypeMap",
+            data: { keyType: "string", valueType: "number" },
+            suggestions: [
+              {
+                messageId: "suggestUseLocalName",
+                data: { name: "FMap" },
+                output: 'import { Map as FMap } from "functype"\nlet m: FMap<string, number>',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A nested callback does not inherit the outer ReadonlyMap return type",
         code: "function f(): ReadonlyArray<ReadonlyMap<string, number>> { return build(() => new Map()) }",
