@@ -1,21 +1,37 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "agentGuidance": false,
   "ui": "stream",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "outputs": ["dist/**", "lib/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "dist/**",
+        "lib/**"
+      ]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "dependsOn": [
+        "^build"
+      ],
+      "outputs": [
+        "coverage/**"
+      ]
     },
     "lint": {
-      "dependsOn": ["eslint-plugin-functype#build", "eslint-config-functype#build"],
+      "dependsOn": [
+        "eslint-plugin-functype#build",
+        "eslint-config-functype#build"
+      ],
       "outputs": []
     },
     "lint:check": {
-      "dependsOn": ["eslint-plugin-functype#build", "eslint-config-functype#build"],
+      "dependsOn": [
+        "eslint-plugin-functype#build",
+        "eslint-config-functype#build"
+      ],
       "outputs": []
     },
     "format": {
@@ -25,16 +41,27 @@
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "compile": {
-      "dependsOn": ["^build"],
+      "dependsOn": [
+        "^build"
+      ],
       "outputs": []
     },
     "validate": {
-      "dependsOn": ["^build", "eslint-plugin-functype#build", "eslint-config-functype#build"],
-      "outputs": ["dist/**", "lib/**"]
+      "dependsOn": [
+        "^build",
+        "eslint-plugin-functype#build",
+        "eslint-config-functype#build"
+      ],
+      "outputs": [
+        "dist/**",
+        "lib/**"
+      ]
     },
     "dev": {
       "cache": false,
