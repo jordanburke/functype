@@ -5,6 +5,48 @@ import rule from "../../src/rules/prefer-functype-set"
 describe("prefer-functype-set", () => {
   ruleTester.run("prefer-functype-set", rule, {
     valid: [
+      // A `new Set` that flows straight into a declared native read-only contract is what that
+      // contract requires — the rule already accepts `ReadonlySet` annotations, so it must accept their value.
+      {
+        name: "Returned from a function declared to return ReadonlySet",
+        code: "function f(e): ReadonlySet<string> { return new Set(e) }",
+      },
+      {
+        name: "Returned from an async function declared to return Promise<ReadonlySet>",
+        code: "async function f(): Promise<ReadonlySet<string>> { return new Set() }",
+      },
+      {
+        name: "Arrow expression body with a ReadonlySet return type",
+        code: "const g = (): ReadonlySet<string> => new Set()",
+      },
+      {
+        name: "Ternary branch into a ReadonlySet-annotated binding",
+        code: "const m: ReadonlySet<string> = cond ? g() : new Set()",
+      },
+      {
+        name: "Nullish fallback into a ReadonlySet-annotated binding",
+        code: "const m: ReadonlySet<string> = x ?? new Set()",
+      },
+      {
+        name: "Asserted as ReadonlySet",
+        code: "const m = new Set(e) as ReadonlySet<string>",
+      },
+      {
+        name: "Class field annotated ReadonlySet",
+        code: "class A { readonly m: ReadonlySet<string> = new Set() }",
+      },
+      {
+        name: "Parameter default annotated ReadonlySet",
+        code: "function f(m: ReadonlySet<string> = new Set()) { return m }",
+      },
+      {
+        name: "functype's Set under its own name",
+        code: 'import { Set } from "functype"\nconst m = new Set()',
+      },
+      {
+        name: "A local binding named Set shadows the native one",
+        code: "const Set = makeSet()\nconst m = new Set()",
+      },
       // #329 review — more shapes that bind and then mutate a native Set.
       {
         name: "A let assigned later and then mutated",
@@ -90,6 +132,60 @@ seen.delete("x")`,
       },
     ],
     invalid: [
+      {
+        name: "A nested callback does not inherit the outer ReadonlySet return type",
+        code: "function f(): ReadonlyArray<ReadonlySet<string>> { return build(() => new Set()) }",
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              {
+                messageId: "suggestSetEmpty",
+                data: { name: "Set" },
+                output: "function f(): ReadonlyArray<ReadonlySet<string>> { return build(() => Set.empty()) }",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Set" },
+                output:
+                  'import { Set } from "functype"\nfunction f(): ReadonlyArray<ReadonlySet<string>> { return build(() => new Set()) }',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An alias import of functype's Set does not silence the native Set",
+        code: 'import { Set as FSet } from "functype"\nconst m = new Set(entries)',
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              {
+                messageId: "suggestSetFrom",
+                data: { name: "FSet" },
+                output: 'import { Set as FSet } from "functype"\nconst m = FSet(entries)',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An empty native Set next to an aliased import suggests the alias",
+        code: 'import { Set as FSet } from "functype"\nconst m = new Set()',
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              {
+                messageId: "suggestSetEmpty",
+                data: { name: "FSet" },
+                output: 'import { Set as FSet } from "functype"\nconst m = FSet.empty()',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A builder chain on an empty new Set is a Set.of candidate, not a mutation",
         code: "const s = new Set().add(1).add(2)",

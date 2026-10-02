@@ -1,9 +1,11 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { bindingOf, functypeLocalName } from "../utils/collection-binding"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
-import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { createImportFixer } from "../utils/import-fixer"
 import { annotatesMutatedBinding, isMutatedCollection, MAP_MUTATORS } from "../utils/mutable-collection"
+import { flowsIntoReadonlyContract } from "../utils/readonly-contract"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -32,9 +34,10 @@ const rule: Rule.RuleModule = {
     messages: {
       preferFunctypeMap: "Prefer functype Map<{{keyType}}, {{valueType}}> over native Map",
       preferFunctypeMapLiteral: "Prefer Map.of(...) or Map.empty() over new Map()",
-      suggestMapEmpty: "Replace with Map.empty()",
-      suggestMapOf: "Replace with Map.of(...)",
-      suggestMapFrom: "Replace with Map(...)",
+      suggestMapEmpty: "Replace with {{name}}.empty()",
+      suggestMapOf: "Replace with {{name}}.of(...)",
+      suggestMapFrom: "Replace with {{name}}(...)",
+      suggestUseLocalName: "Replace with {{name}}",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
   },
@@ -58,10 +61,6 @@ const rule: Rule.RuleModule = {
 
     const functypeImports = getFunctypeImportsLegacy(context)
 
-    function isMapImportedFromFunctype(): boolean {
-      return hasFunctypeSymbol(context.sourceCode, "Map")
-    }
-
     return {
       NewExpression(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
@@ -71,13 +70,18 @@ const rule: Rule.RuleModule = {
 
         if (allowMutable && isMutatedCollection(node, MAP_MUTATORS, context.sourceCode)) return
 
-        // Skip if Map is already imported from functype
-        if (isMapImportedFromFunctype()) return
+        // `Map` may be functype's import (under any name), a local shadow, or the native built-in (#350).
+        if (bindingOf(node.callee, "Map", context.sourceCode) !== "native") return
+
+        // A native Map flowing into a declared `ReadonlyMap` contract is what that contract requires (#350).
+        if (flowsIntoReadonlyContract(node, "ReadonlyMap")) return
 
         // Skip if already using functype
         if (isAlreadyUsingFunctype(node, functypeImports)) return
 
         const sourceCode = context.sourceCode
+        const imported = functypeLocalName(sourceCode, "Map")
+        const name = imported ?? "Map"
         const args = node.arguments as ASTNode[]
 
         const suggestions: Rule.SuggestionReportDescriptor[] = []
@@ -86,8 +90,9 @@ const rule: Rule.RuleModule = {
           // new Map() → Map.empty()
           suggestions.push({
             messageId: "suggestMapEmpty",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, "Map.empty()")
+              return fixer.replaceText(node, `${name}.empty()`)
             },
           })
         } else if (args.length === 1 && args[0].type === "ArrayExpression") {
@@ -98,8 +103,9 @@ const rule: Rule.RuleModule = {
           const mapOfArgs = tupleTexts.join(", ")
           suggestions.push({
             messageId: "suggestMapOf",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, `Map.of(${mapOfArgs})`)
+              return fixer.replaceText(node, `${name}.of(${mapOfArgs})`)
             },
           })
         } else if (args.length === 1) {
@@ -107,21 +113,23 @@ const rule: Rule.RuleModule = {
           const argText = sourceCode.getText(args[0])
           suggestions.push({
             messageId: "suggestMapFrom",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, `Map(${argText})`)
+              return fixer.replaceText(node, `${name}(${argText})`)
             },
           })
         } else {
           // Generic fallback for any other args
           suggestions.push({
             messageId: "suggestMapEmpty",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, "Map.empty()")
+              return fixer.replaceText(node, `${name}.empty()`)
             },
           })
         }
 
-        if (!isMapImportedFromFunctype()) {
+        if (imported === null) {
           suggestions.push({
             messageId: "suggestAddImport",
             data: { symbol: "Map" },
@@ -148,21 +156,27 @@ const rule: Rule.RuleModule = {
 
         if (allowMutable && annotatesMutatedBinding(node, MAP_MUTATORS, context.sourceCode)) return
 
-        // Skip if Map is already imported from functype
-        if (isMapImportedFromFunctype()) return
+        if (node.typeName.type === "Identifier" && bindingOf(node.typeName, "Map", context.sourceCode) !== "native")
+          return
 
         // Extract key/value type params if present (typeArguments for newer TS-ESLint, typeParameters for older)
         const typeParams = node.typeArguments?.params ?? node.typeParameters?.params
         const keyType = typeParams?.[0] ? sourceCode.getText(typeParams[0]) : "K"
         const valueType = typeParams && typeParams.length >= 2 ? sourceCode.getText(typeParams[1]) : "V"
 
-        const suggestions: Rule.SuggestionReportDescriptor[] = [
-          {
-            messageId: "suggestAddImport",
-            data: { symbol: "Map" },
-            fix: createImportFixer(sourceCode, "Map"),
-          },
-        ]
+        // Already imported under another name (`Map as FMap`): point at that name instead of adding a
+        // second import that would shadow the native `Map` the rest of the file uses.
+        const imported = functypeLocalName(sourceCode, "Map")
+        const suggestions: Rule.SuggestionReportDescriptor[] =
+          imported === null
+            ? [{ messageId: "suggestAddImport", data: { symbol: "Map" }, fix: createImportFixer(sourceCode, "Map") }]
+            : [
+                {
+                  messageId: "suggestUseLocalName",
+                  data: { name: imported },
+                  fix: (fixer) => fixer.replaceText(node.typeName, imported),
+                },
+              ]
 
         context.report({
           node,

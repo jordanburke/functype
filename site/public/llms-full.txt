@@ -4067,6 +4067,18 @@ Not followed: aliases (`const t = s; t.add(x)`), `useRef(new Set()).current.add(
 
 functype's collections are immutable, so a cache, registry or in-place accumulator can't use them. A native collection that is only read (`.has`, `.get`, iteration) is still reported.
 
+**A declared native read-only contract is also exempt.** The rules never report a `ReadonlyMap` / `ReadonlySet` annotation, so they don't report the constructor such an annotation requires. A `new Map(...)` / `new Set(...)` is skipped when its value flows directly into:
+
+- a `return` in the nearest function declared to return `ReadonlyMap<…>` (or `Promise<ReadonlyMap<…>>`);
+- the expression body of an arrow function with that return type;
+- a variable, class field or parameter default annotated `ReadonlyMap<…>`;
+- an `as ReadonlyMap<…>` / `satisfies ReadonlyMap<…>` assertion;
+- any of the above through a ternary branch or a `??` / `||` / `&&` operand.
+
+This is the escape for an interface that takes a native `ReadonlyMap` — declare the type, don't disable the rule. A callback nested inside such a function doesn't inherit its signature, and a mutable `Map<K, V>` annotation is still reported. To hand a functype `Map` to such an interface, put the conversion in one typed helper: `const toReadonly = <K, V>(m: FMap<K, V>): ReadonlyMap<K, V> => new Map(m)`.
+
+**Imports are resolved where `Map` / `Set` is used.** `import { Map as FMap } from "functype"` no longer silences the file: the bare `Map` there is still the native one and is reported, and the suggestions use your name (`FMap(entries)`, `FMap.empty()`) without adding a second import.
+
 ### `functype/no-imperative-loops` / `functype/prefer-map`
 
 These rules don't report loops that have no functional equivalent:

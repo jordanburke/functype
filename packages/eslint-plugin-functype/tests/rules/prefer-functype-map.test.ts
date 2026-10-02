@@ -5,6 +5,48 @@ import rule from "../../src/rules/prefer-functype-map"
 describe("prefer-functype-map", () => {
   ruleTester.run("prefer-functype-map", rule, {
     valid: [
+      // A `new Map` that flows straight into a declared native read-only contract is what that
+      // contract requires — the rule already accepts `ReadonlyMap` annotations, so it must accept their value.
+      {
+        name: "Returned from a function declared to return ReadonlyMap",
+        code: "function f(e): ReadonlyMap<string, number> { return new Map(e) }",
+      },
+      {
+        name: "Returned from an async function declared to return Promise<ReadonlyMap>",
+        code: "async function f(): Promise<ReadonlyMap<string, number>> { return new Map() }",
+      },
+      {
+        name: "Arrow expression body with a ReadonlyMap return type",
+        code: "const g = (): ReadonlyMap<string, number> => new Map()",
+      },
+      {
+        name: "Ternary branch into a ReadonlyMap-annotated binding",
+        code: "const m: ReadonlyMap<string, number> = cond ? g() : new Map()",
+      },
+      {
+        name: "Nullish fallback into a ReadonlyMap-annotated binding",
+        code: "const m: ReadonlyMap<string, number> = x ?? new Map()",
+      },
+      {
+        name: "Asserted as ReadonlyMap",
+        code: "const m = new Map(e) as ReadonlyMap<string, number>",
+      },
+      {
+        name: "Class field annotated ReadonlyMap",
+        code: "class A { readonly m: ReadonlyMap<string, number> = new Map() }",
+      },
+      {
+        name: "Parameter default annotated ReadonlyMap",
+        code: "function f(m: ReadonlyMap<string, number> = new Map()) { return m }",
+      },
+      {
+        name: "functype's Map under its own name",
+        code: 'import { Map } from "functype"\nconst m = new Map()',
+      },
+      {
+        name: "A local binding named Map shadows the native one",
+        code: "const Map = makeMap()\nconst m = new Map()",
+      },
       // #324 — mutated native Maps are deliberate (caches, registries, DI containers).
       {
         name: "A module-level registry that is .set() later is mutable on purpose",
@@ -40,6 +82,60 @@ export const register = (k: string, f: () => void) => { registry.set(k, f) }`,
       },
     ],
     invalid: [
+      {
+        name: "A nested callback does not inherit the outer ReadonlyMap return type",
+        code: "function f(): ReadonlyArray<ReadonlyMap<string, number>> { return build(() => new Map()) }",
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapEmpty",
+                data: { name: "Map" },
+                output: "function f(): ReadonlyArray<ReadonlyMap<string, number>> { return build(() => Map.empty()) }",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output:
+                  'import { Map } from "functype"\nfunction f(): ReadonlyArray<ReadonlyMap<string, number>> { return build(() => new Map()) }',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An alias import of functype's Map does not silence the native Map",
+        code: 'import { Map as FMap } from "functype"\nconst m = new Map(entries)',
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapFrom",
+                data: { name: "FMap" },
+                output: 'import { Map as FMap } from "functype"\nconst m = FMap(entries)',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An empty native Map next to an aliased import suggests the alias",
+        code: 'import { Map as FMap } from "functype"\nconst m = new Map()',
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapEmpty",
+                data: { name: "FMap" },
+                output: 'import { Map as FMap } from "functype"\nconst m = FMap.empty()',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A builder chain on an empty new Map is a Map.of candidate, not a mutation",
         code: "const m = new Map().set('a', 1).set('b', 2)",

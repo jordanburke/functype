@@ -1,9 +1,11 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { bindingOf, functypeLocalName } from "../utils/collection-binding"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
-import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { createImportFixer } from "../utils/import-fixer"
 import { annotatesMutatedBinding, isMutatedCollection, SET_MUTATORS } from "../utils/mutable-collection"
+import { flowsIntoReadonlyContract } from "../utils/readonly-contract"
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -32,9 +34,10 @@ const rule: Rule.RuleModule = {
     messages: {
       preferFunctypeSet: "Prefer functype Set<{{type}}> over native Set",
       preferFunctypeSetLiteral: "Prefer Set.of(...) or Set.empty() over new Set()",
-      suggestSetEmpty: "Replace with Set.empty()",
-      suggestSetOf: "Replace with Set.of(...)",
-      suggestSetFrom: "Replace with Set(...)",
+      suggestSetEmpty: "Replace with {{name}}.empty()",
+      suggestSetOf: "Replace with {{name}}.of(...)",
+      suggestSetFrom: "Replace with {{name}}(...)",
+      suggestUseLocalName: "Replace with {{name}}",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
   },
@@ -58,10 +61,6 @@ const rule: Rule.RuleModule = {
 
     const functypeImports = getFunctypeImportsLegacy(context)
 
-    function isSetImportedFromFunctype() {
-      return hasFunctypeSymbol(context.sourceCode, "Set")
-    }
-
     return {
       NewExpression(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
@@ -71,13 +70,18 @@ const rule: Rule.RuleModule = {
 
         if (allowMutable && isMutatedCollection(node, SET_MUTATORS, context.sourceCode)) return
 
-        // Skip if Set is already imported from functype
-        if (isSetImportedFromFunctype()) return
+        // `Set` may be functype's import (under any name), a local shadow, or the native built-in (#350).
+        if (bindingOf(node.callee, "Set", context.sourceCode) !== "native") return
+
+        // A native Set flowing into a declared `ReadonlySet` contract is what that contract requires (#350).
+        if (flowsIntoReadonlyContract(node, "ReadonlySet")) return
 
         // Skip if already in a functype context
         if (isAlreadyUsingFunctype(node, functypeImports)) return
 
         const sourceCode = context.sourceCode
+        const imported = functypeLocalName(sourceCode, "Set")
+        const name = imported ?? "Set"
         const args = node.arguments || []
         const suggestions: Rule.SuggestionReportDescriptor[] = []
 
@@ -85,8 +89,9 @@ const rule: Rule.RuleModule = {
           // new Set() → Set.empty()
           suggestions.push({
             messageId: "suggestSetEmpty",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, "Set.empty()")
+              return fixer.replaceText(node, `${name}.empty()`)
             },
           })
         } else if (args.length === 1 && args[0].type === "ArrayExpression") {
@@ -97,8 +102,9 @@ const rule: Rule.RuleModule = {
           const argsText = elementTexts.join(", ")
           suggestions.push({
             messageId: "suggestSetOf",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, `Set.of(${argsText})`)
+              return fixer.replaceText(node, `${name}.of(${argsText})`)
             },
           })
         } else if (args.length === 1) {
@@ -106,21 +112,23 @@ const rule: Rule.RuleModule = {
           const argText = sourceCode.getText(args[0])
           suggestions.push({
             messageId: "suggestSetFrom",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, `Set(${argText})`)
+              return fixer.replaceText(node, `${name}(${argText})`)
             },
           })
         } else {
           // Fallback for unexpected cases
           suggestions.push({
             messageId: "suggestSetEmpty",
+            data: { name },
             fix(fixer) {
-              return fixer.replaceText(node, "Set.empty()")
+              return fixer.replaceText(node, `${name}.empty()`)
             },
           })
         }
 
-        if (!isSetImportedFromFunctype()) {
+        if (imported === null) {
           suggestions.push({
             messageId: "suggestAddImport",
             data: { symbol: "Set" },
@@ -147,20 +155,26 @@ const rule: Rule.RuleModule = {
 
         if (allowMutable && annotatesMutatedBinding(node, SET_MUTATORS, context.sourceCode)) return
 
-        // Skip if Set is already imported from functype
-        if (isSetImportedFromFunctype()) return
+        if (node.typeName.type === "Identifier" && bindingOf(node.typeName, "Set", context.sourceCode) !== "native")
+          return
 
         // Extract type parameter if present (typeArguments for newer TS-ESLint, typeParameters for older)
         const typeParamNode = node.typeParameters?.params?.[0] ?? node.typeArguments?.params?.[0]
         const typeParam = typeParamNode ? sourceCode.getText(typeParamNode) : "T"
 
-        const suggestions: Rule.SuggestionReportDescriptor[] = [
-          {
-            messageId: "suggestAddImport",
-            data: { symbol: "Set" },
-            fix: createImportFixer(sourceCode, "Set"),
-          },
-        ]
+        // Already imported under another name (`Set as FSet`): point at that name instead of adding a
+        // second import that would shadow the native `Set` the rest of the file uses.
+        const imported = functypeLocalName(sourceCode, "Set")
+        const suggestions: Rule.SuggestionReportDescriptor[] =
+          imported === null
+            ? [{ messageId: "suggestAddImport", data: { symbol: "Set" }, fix: createImportFixer(sourceCode, "Set") }]
+            : [
+                {
+                  messageId: "suggestUseLocalName",
+                  data: { name: imported },
+                  fix: (fixer) => fixer.replaceText(node.typeName, imported),
+                },
+              ]
 
         context.report({
           node,

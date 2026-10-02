@@ -6,6 +6,11 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`eslint-plugin-functype` — `prefer-functype-map` / `prefer-functype-set` fixes found by the civala.ai upgrade.**
+
+- **No more reports on a declared native read-only contract.** A `new Map(...)` / `new Set(...)` that flows directly into a `ReadonlyMap` / `ReadonlySet` declared type is exempt. That covers a return from a function declared to return one (or `Promise<…>` of one), an arrow body with that return type, an annotated variable, class field or parameter default, and an `as` / `satisfies` assertion, through ternary and `??` / `||` / `&&` branches. The rules never reported the `ReadonlyMap` annotation, but they reported the constructor it requires, so an interface typed `ReadonlyMap` (civala's fixture-replay engine) left no clean fix. Mutable `Map<K, V>` annotations are still reported, and a nested callback doesn't inherit the outer function's return type.
+- **An aliased import no longer silences the whole file.** The rules decided from the file's import list, so `import { Map as FMap } from "functype"` skipped every native `new Map(...)` in that file. They now resolve `Map` / `Set` where it's used: functype's import (any name) or a local shadow is skipped, and the built-in is reported. Suggestions use the existing name (`FMap(entries)`, `FMap.empty()`, or renaming a `Map<K, V>` annotation to `FMap`) instead of adding a second import. **This adds reports** in files that alias functype's `Map` / `Set`.
+
 ## 1.11.0 - 2026-10-02
 
 **`functype` — `invariant()` for bug checks, and `orThrow` that builds its error (#342).**
