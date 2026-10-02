@@ -40,6 +40,12 @@ updates:
         patterns:
           - "astro"
           - "@astrojs/*"
+    ignore:
+      # @types/node must match the runtime major pinned in .nvmrc. Types for a
+      # newer Node let code compile against APIs the runtime doesn't have
+      # (#337 proposed 26 while .nvmrc pins 24). Bump it with .nvmrc, by hand.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "chore(deps)"
     labels:
