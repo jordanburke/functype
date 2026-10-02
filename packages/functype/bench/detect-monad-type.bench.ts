@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest"
+import { describe, test } from "vitest"
 
 import { Left, Right } from "@/either"
 import { List } from "@/list"
@@ -122,28 +122,36 @@ const testData = [
 const shuffled = [...testData].sort(() => Math.random() - 0.5)
 
 describe("detectMonadType performance comparison", () => {
-  bench("switch statement (current)", () => {
-    for (const item of shuffled) {
-      detectMonadTypeSwitch(item)
-    }
+  test("switch statement (current)", async ({ bench }) => {
+    await bench("switch statement (current)", () => {
+      for (const item of shuffled) {
+        detectMonadTypeSwitch(item)
+      }
+    }).run()
   })
 
-  bench("if/else chain (optimized order)", () => {
-    for (const item of shuffled) {
-      detectMonadTypeIfElse(item)
-    }
+  test("if/else chain (optimized order)", async ({ bench }) => {
+    await bench("if/else chain (optimized order)", () => {
+      for (const item of shuffled) {
+        detectMonadTypeIfElse(item)
+      }
+    }).run()
   })
 
-  bench("object lookup", () => {
-    for (const item of shuffled) {
-      detectMonadTypeObject(item)
-    }
+  test("object lookup", async ({ bench }) => {
+    await bench("object lookup", () => {
+      for (const item of shuffled) {
+        detectMonadTypeObject(item)
+      }
+    }).run()
   })
 
-  bench("if/else early return", () => {
-    for (const item of shuffled) {
-      detectMonadTypeEarlyReturn(item)
-    }
+  test("if/else early return", async ({ bench }) => {
+    await bench("if/else early return", () => {
+      for (const item of shuffled) {
+        detectMonadTypeEarlyReturn(item)
+      }
+    }).run()
   })
 })
 
@@ -159,51 +167,75 @@ describe("detectMonadType micro-benchmarks", () => {
     throw new Error("test")
   }) // tryFailure - unused for now
 
-  bench("switch - Option (Some)", () => {
-    detectMonadTypeSwitch(someValue)
+  test("switch - Option (Some)", async ({ bench }) => {
+    await bench("switch - Option (Some)", () => {
+      detectMonadTypeSwitch(someValue)
+    }).run()
   })
 
-  bench("if/else - Option (Some)", () => {
-    detectMonadTypeIfElse(someValue)
+  test("if/else - Option (Some)", async ({ bench }) => {
+    await bench("if/else - Option (Some)", () => {
+      detectMonadTypeIfElse(someValue)
+    }).run()
   })
 
-  bench("object - Option (Some)", () => {
-    detectMonadTypeObject(someValue)
+  test("object - Option (Some)", async ({ bench }) => {
+    await bench("object - Option (Some)", () => {
+      detectMonadTypeObject(someValue)
+    }).run()
   })
 
-  bench("switch - Either (Right)", () => {
-    detectMonadTypeSwitch(rightValue)
+  test("switch - Either (Right)", async ({ bench }) => {
+    await bench("switch - Either (Right)", () => {
+      detectMonadTypeSwitch(rightValue)
+    }).run()
   })
 
-  bench("if/else - Either (Right)", () => {
-    detectMonadTypeIfElse(rightValue)
+  test("if/else - Either (Right)", async ({ bench }) => {
+    await bench("if/else - Either (Right)", () => {
+      detectMonadTypeIfElse(rightValue)
+    }).run()
   })
 
-  bench("object - Either (Right)", () => {
-    detectMonadTypeObject(rightValue)
+  test("object - Either (Right)", async ({ bench }) => {
+    await bench("object - Either (Right)", () => {
+      detectMonadTypeObject(rightValue)
+    }).run()
   })
 
-  bench("switch - List", () => {
-    detectMonadTypeSwitch(listValue)
+  test("switch - List", async ({ bench }) => {
+    await bench("switch - List", () => {
+      detectMonadTypeSwitch(listValue)
+    }).run()
   })
 
-  bench("if/else - List", () => {
-    detectMonadTypeIfElse(listValue)
+  test("if/else - List", async ({ bench }) => {
+    await bench("if/else - List", () => {
+      detectMonadTypeIfElse(listValue)
+    }).run()
   })
 
-  bench("object - List", () => {
-    detectMonadTypeObject(listValue)
+  test("object - List", async ({ bench }) => {
+    await bench("object - List", () => {
+      detectMonadTypeObject(listValue)
+    }).run()
   })
 
-  bench("switch - Try (Success)", () => {
-    detectMonadTypeSwitch(trySuccess)
+  test("switch - Try (Success)", async ({ bench }) => {
+    await bench("switch - Try (Success)", () => {
+      detectMonadTypeSwitch(trySuccess)
+    }).run()
   })
 
-  bench("if/else - Try (Success)", () => {
-    detectMonadTypeIfElse(trySuccess)
+  test("if/else - Try (Success)", async ({ bench }) => {
+    await bench("if/else - Try (Success)", () => {
+      detectMonadTypeIfElse(trySuccess)
+    }).run()
   })
 
-  bench("object - Try (Success)", () => {
-    detectMonadTypeObject(trySuccess)
+  test("object - Try (Success)", async ({ bench }) => {
+    await bench("object - Try (Success)", () => {
+      detectMonadTypeObject(trySuccess)
+    }).run()
   })
 })
