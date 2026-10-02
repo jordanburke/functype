@@ -329,24 +329,32 @@ pnpm vitest bench test/benchmark/list.bench.ts
 
 ### Writing Benchmarks
 
+Since vitest 5, `bench` is a test-context fixture rather than an import. Files still end in `.bench.ts`.
+
 ```typescript
-import { bench, describe } from "vitest"
+import { describe, expect, test } from "vitest"
 
 describe("Performance Test", () => {
-  bench("operation name", () => {
-    // Code to benchmark
-    someOperation()
+  test("operation name", async ({ bench }) => {
+    await bench("operation name", () => {
+      // Code to benchmark
+      someOperation()
+    }).run()
   })
 
   // Compare implementations
-  bench("List map", () => {
-    List([1, 2, 3]).map((x) => x * 2)
-  })
-
-  bench("LazyList map", () => {
-    LazyList([1, 2, 3])
-      .map((x) => x * 2)
-      .toArray()
+  test("List map vs LazyList map", async ({ bench }) => {
+    const result = await bench.compare(
+      bench("List map", () => {
+        List([1, 2, 3]).map((x) => x * 2)
+      }),
+      bench("LazyList map", () => {
+        LazyList([1, 2, 3])
+          .map((x) => x * 2)
+          .toArray()
+      }),
+    )
+    expect(result.get("List map")).toBeDefined()
   })
 })
 ```

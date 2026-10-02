@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest"
+import { describe, test } from "vitest"
 
 import { $, Do } from "@/do"
 import { Right } from "@/either"
@@ -107,84 +107,100 @@ function DoOld<T>(gen: () => Generator<unknown, T, unknown>): unknown {
 
 describe("Do optimization before vs after", () => {
   describe("Simple comprehensions", () => {
-    bench("OPTIMIZED - Option chain", () => {
-      Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Option(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OPTIMIZED - Option chain", async ({ bench }) => {
+      await bench("OPTIMIZED - Option chain", () => {
+        Do(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Option(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
 
-    bench("OLD - Option chain", () => {
-      DoOld(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Option(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OLD - Option chain", async ({ bench }) => {
+      await bench("OLD - Option chain", () => {
+        DoOld(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Option(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
   })
 
   describe("Early termination", () => {
-    bench("OPTIMIZED - early None", () => {
-      Do(function* () {
-        const x = yield* $(Option.none<number>())
-        const y = yield* $(Option(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OPTIMIZED - early None", async ({ bench }) => {
+      await bench("OPTIMIZED - early None", () => {
+        Do(function* () {
+          const x = yield* $(Option.none<number>())
+          const y = yield* $(Option(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
 
-    bench("OLD - early None", () => {
-      DoOld(function* () {
-        const x = yield* $(Option.none<number>())
-        const y = yield* $(Option(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OLD - early None", async ({ bench }) => {
+      await bench("OLD - early None", () => {
+        DoOld(function* () {
+          const x = yield* $(Option.none<number>())
+          const y = yield* $(Option(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
   })
 
   describe("Multiple yields", () => {
-    bench("OPTIMIZED - 10 yields", () => {
-      Do(function* () {
-        let sum = 0
-        for (let i = 0; i < 10; i++) {
-          sum += yield* $(Option(1))
-        }
-        return sum
-      })
+    test("OPTIMIZED - 10 yields", async ({ bench }) => {
+      await bench("OPTIMIZED - 10 yields", () => {
+        Do(function* () {
+          let sum = 0
+          for (let i = 0; i < 10; i++) {
+            sum += yield* $(Option(1))
+          }
+          return sum
+        })
+      }).run()
     })
 
-    bench("OLD - 10 yields", () => {
-      DoOld(function* () {
-        let sum = 0
-        for (let i = 0; i < 10; i++) {
-          sum += yield* $(Option(1))
-        }
-        return sum
-      })
+    test("OLD - 10 yields", async ({ bench }) => {
+      await bench("OLD - 10 yields", () => {
+        DoOld(function* () {
+          let sum = 0
+          for (let i = 0; i < 10; i++) {
+            sum += yield* $(Option(1))
+          }
+          return sum
+        })
+      }).run()
     })
   })
 
   describe("Mixed types", () => {
-    bench("OPTIMIZED - mixed Option/Either", () => {
-      Do(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Right<string, number>(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OPTIMIZED - mixed Option/Either", async ({ bench }) => {
+      await bench("OPTIMIZED - mixed Option/Either", () => {
+        Do(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Right<string, number>(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
 
-    bench("OLD - mixed Option/Either", () => {
-      DoOld(function* () {
-        const x = yield* $(Option(5))
-        const y = yield* $(Right<string, number>(10))
-        const z = yield* $(Option(15))
-        return x + y + z
-      })
+    test("OLD - mixed Option/Either", async ({ bench }) => {
+      await bench("OLD - mixed Option/Either", () => {
+        DoOld(function* () {
+          const x = yield* $(Option(5))
+          const y = yield* $(Right<string, number>(10))
+          const z = yield* $(Option(15))
+          return x + y + z
+        })
+      }).run()
     })
   })
 })
@@ -193,29 +209,33 @@ describe("Do optimization before vs after", () => {
 describe("Overall performance gains", () => {
   const iterations = 100
 
-  bench("OPTIMIZED - typical usage pattern", () => {
-    for (let i = 0; i < iterations; i++) {
-      Do(function* () {
-        const x = yield* $(Option(Math.random()))
-        if (x > 0.5) {
-          const y = yield* $(Option(x * 2))
-          return y
-        }
-        return x
-      })
-    }
+  test("OPTIMIZED - typical usage pattern", async ({ bench }) => {
+    await bench("OPTIMIZED - typical usage pattern", () => {
+      for (let i = 0; i < iterations; i++) {
+        Do(function* () {
+          const x = yield* $(Option(Math.random()))
+          if (x > 0.5) {
+            const y = yield* $(Option(x * 2))
+            return y
+          }
+          return x
+        })
+      }
+    }).run()
   })
 
-  bench("OLD - typical usage pattern", () => {
-    for (let i = 0; i < iterations; i++) {
-      DoOld(function* () {
-        const x = yield* $(Option(Math.random()))
-        if (x > 0.5) {
-          const y = yield* $(Option(x * 2))
-          return y
-        }
-        return x
-      })
-    }
+  test("OLD - typical usage pattern", async ({ bench }) => {
+    await bench("OLD - typical usage pattern", () => {
+      for (let i = 0; i < iterations; i++) {
+        DoOld(function* () {
+          const x = yield* $(Option(Math.random()))
+          if (x > 0.5) {
+            const y = yield* $(Option(x * 2))
+            return y
+          }
+          return x
+        })
+      }
+    }).run()
   })
 })

@@ -264,19 +264,24 @@ describe("Pipelines", () => {
 
 ### Benchmarks
 
+Benchmarks live in `*.bench.ts` files and run with `pnpm bench` (`vitest bench`); `vitest run` skips them. Since vitest 5, `bench` is a test-context fixture, not an import:
+
 ```typescript
-import { bench, describe } from "vitest"
+import { describe, test } from "vitest"
 
 describe("Performance", () => {
-  bench("Option creation", () => {
-    for (let i = 0; i < 1000; i++) {
-      Option(i)
-    }
+  test("Option creation", async ({ bench }) => {
+    await bench("Option creation", () => {
+      List.range(0, 1000).forEach((i) => Option(i))
+    }).run()
   })
 
-  bench("List operations", () => {
-    const list = List(Array.from({ length: 1000 }, (_, i) => i))
-    list.filter((x) => x % 2 === 0).map((x) => x * 2)
+  test("List operations", async ({ bench }) => {
+    await bench("List operations", () => {
+      List.range(0, 1000)
+        .filter((x) => x % 2 === 0)
+        .map((x) => x * 2)
+    }).run()
   })
 })
 ```

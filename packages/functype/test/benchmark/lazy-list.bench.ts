@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest"
+import { describe, test } from "vitest"
 import { List, LazyList } from "@/list"
 
 describe("LazyList vs List Performance", () => {
@@ -8,54 +8,66 @@ describe("LazyList vs List Performance", () => {
     describe(`with ${size} items`, () => {
       const data = Array.from({ length: size }, (_, i) => i)
 
-      bench("List - chained operations (full)", () => {
-        List(data)
-          .map((x) => x * 2)
-          .filter((x) => x % 3 === 0)
-          .map((x) => x + 1)
-          .toArray()
-          .slice(0, 10)
+      test("List - chained operations (full)", async ({ bench }) => {
+        await bench("List - chained operations (full)", () => {
+          List(data)
+            .map((x) => x * 2)
+            .filter((x) => x % 3 === 0)
+            .map((x) => x + 1)
+            .toArray()
+            .slice(0, 10)
+        }).run()
       })
 
-      bench("LazyList - chained operations with take", () => {
-        LazyList(data)
-          .map((x) => x * 2)
-          .filter((x) => x % 3 === 0)
-          .map((x) => x + 1)
-          .take(10)
-          .toArray()
+      test("LazyList - chained operations with take", async ({ bench }) => {
+        await bench("LazyList - chained operations with take", () => {
+          LazyList(data)
+            .map((x) => x * 2)
+            .filter((x) => x % 3 === 0)
+            .map((x) => x + 1)
+            .take(10)
+            .toArray()
+        }).run()
       })
 
-      bench("List - find operation", () => {
-        List(data)
-          .map((x) => x * 2)
-          .find((x) => x > size)
+      test("List - find operation", async ({ bench }) => {
+        await bench("List - find operation", () => {
+          List(data)
+            .map((x) => x * 2)
+            .find((x) => x > size)
+        }).run()
       })
 
-      bench("LazyList - find operation", () => {
-        LazyList(data)
-          .map((x) => x * 2)
-          .find((x) => x > size)
+      test("LazyList - find operation", async ({ bench }) => {
+        await bench("LazyList - find operation", () => {
+          LazyList(data)
+            .map((x) => x * 2)
+            .find((x) => x > size)
+        }).run()
       })
     })
   })
 
   describe("infinite sequences", () => {
-    bench("LazyList - infinite range with take", () => {
-      LazyList.iterate(1, (x) => x + 1)
-        .map((x) => x * 2)
-        .filter((x) => x % 3 === 0)
-        .take(100)
-        .toArray()
+    test("LazyList - infinite range with take", async ({ bench }) => {
+      await bench("LazyList - infinite range with take", () => {
+        LazyList.iterate(1, (x) => x + 1)
+          .map((x) => x * 2)
+          .filter((x) => x % 3 === 0)
+          .take(100)
+          .toArray()
+      }).run()
     })
 
-    bench("LazyList - generate with take", () => {
-      let counter = 0
-      LazyList.generate(() => counter++)
-        .map((x) => x * 2)
-        .filter((x) => x % 3 === 0)
-        .take(100)
-        .toArray()
+    test("LazyList - generate with take", async ({ bench }) => {
+      await bench("LazyList - generate with take", () => {
+        let counter = 0
+        LazyList.generate(() => counter++)
+          .map((x) => x * 2)
+          .filter((x) => x % 3 === 0)
+          .take(100)
+          .toArray()
+      }).run()
     })
   })
 })
