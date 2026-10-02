@@ -46,6 +46,12 @@ updates:
       # (#337 proposed 26 while .nvmrc pins 24). Bump it with .nvmrc, by hand.
       - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
+      # typescript@7 is the Go-based rewrite (tsgo). Its exports omit the classic
+      # compiler API that functype-eval (ts.sys, getParsedCommandLineOfConfigFile)
+      # and the MCP server's validate_code depend on; see 1fffeb0. Move to 7
+      # deliberately, once those callers have a replacement.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     commit-message:
       prefix: "chore(deps)"
     labels:
