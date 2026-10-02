@@ -26,7 +26,11 @@ export interface Try<out T>
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
   orElse<T2 extends Type>(defaultValue: T2): T | T2
-  orThrow: (error?: Error) => T
+  /**
+   * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
+   * the failure's error. With no argument, rethrows the original error.
+   */
+  orThrow: (error?: Error | ((error: Error) => Error)) => T
   /**
    * Returns the success value, or calls the never-returning handler with the Failure's error.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the program —
@@ -124,7 +128,7 @@ const Success = <T>(value: T): Try<T> => ({
     return false
   },
   orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
-  orThrow: (_error?: Error) => value,
+  orThrow: () => value,
   expect: (_handler: (error: Error) => never): T => value,
   or: <T2 extends Type>(_alternative: Try<T2>): Try<T | T2> => Success<T | T2>(value),
   orNull: () => value,
@@ -187,8 +191,8 @@ const Failure = <T>(error: Error): Try<T> => ({
     return true
   },
   orElse: <T2 extends Type>(defaultValue: T2): T | T2 => defaultValue,
-  orThrow: (e?: Error) => {
-    throw e ?? error
+  orThrow: (e?: Error | ((error: Error) => Error)) => {
+    throw e === undefined ? error : typeof e === "function" ? e(error) : e
   },
   expect: (handler: (error: Error) => never): T => handler(error),
   or: <T2 extends Type>(alternative: Try<T2>): Try<T | T2> => alternative as Try<T | T2>,

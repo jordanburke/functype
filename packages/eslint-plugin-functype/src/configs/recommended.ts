@@ -6,7 +6,8 @@
  *
  * Still `warn`, and why:
  * - prefer-option / prefer-either / prefer-try: fire on correct code at serialization boundaries
- *   (JSON rows, DTOs) and on documented invariant throws — #325 B/D close those.
+ *   (JSON rows, DTOs) and on throws that are correct (bug checks, host contracts). Wire<T> (#325 B),
+ *   invariant() and @interop (#342) close those; graduating them is a measured decision.
  * - prefer-flatmap / prefer-do-notation: heuristics without type information; precision unmeasured.
  *
  * Graduated with a precision condition: prefer-fold checks functype predicate calls (`isSome()`,

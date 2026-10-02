@@ -504,12 +504,13 @@ Option.fromBinary<string>(binaryData)
 | DB row / HTTP body / JSONB with `null` fields or arrays | `type UserRow = Wire<{ email: string \| null; tags: ReadonlyArray<string> }>` | `eslint-disable` on each field |
 | A collection at a boundary | `Wire<ReadonlyArray<Row>>` (not `Wire<Row>`, which is one row) | `Row[]` |
 | A bridge whose host requires a throw / rejection / nullable (React `use()`, React Query, a nullable→Option converter) | JSDoc `@interop <reason>` on the function | file-level `eslint-disable` |
-| A throw for a programmer error, not an expected failure | JSDoc `@invariant <reason>` on the function | `Either` for an impossible case, or a disable |
+| A throw for a programmer error, not an expected failure | `invariant(cond, "msg")` — narrows `cond` after it | `throw` (reported), `Either` for an impossible case, or a disable |
+| A host needs a throw built from the failure | `either.orThrow((l) => new StepError(l.message))` | `throw` inside a `fold` |
 | React state that may be empty | `useState<User \| null>(null)` — allowed as-is | `Option` inside hook state |
 | A cache or registry that is mutated on purpose | native `Map`/`Set` with `.set`/`.add` — allowed as-is | functype `Map` (immutable) |
 | Loop that awaits sequentially and stops on failure | `IO.forEach(items, f)` | `.forEach` with an async callback |
 
-Markers need a reason on the same line (`@interop React Query needs a rejection.`); a bare tag exempts nothing. They cover the tagged declaration and what is nested inside it.
+`@interop` needs a reason on the same line (`@interop React Query needs a rejection.`); a bare tag exempts nothing. It covers the tagged declaration and what is nested inside it. Rule of thumb: host needs the throw → `@interop` or `orThrow(builder)`; only a bug can trip it → `invariant()`; can fail in normal operation → `Either`.
 
 ## Looking Up Functype APIs
 

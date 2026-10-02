@@ -5,11 +5,13 @@ import type { ASTNode } from "../types/ast"
 /**
  * Structural exemptions recorded in JSDoc, instead of `eslint-disable` (#241).
  *
- * - `@interop <reason>` — the enclosing declaration bridges functype to a host whose contract is the
- *   non-FP shape: React's `use()` needs a throw, React Query needs a rejected promise, a hook that
- *   converts nullables into `Option` must accept nullables.
- * - `@invariant <reason>` — the enclosing declaration throws only for programmer errors, never for
- *   expected failures (#325 D). Only `prefer-either` honors it.
+ * `@interop <reason>` — the enclosing declaration bridges functype to a host whose contract is the
+ * non-FP shape: React's `use()` needs a throw, React Query needs a rejected promise, a hook that converts
+ * nullables into `Option` must accept nullables.
+ *
+ * Bug checks are not tagged: they are `invariant(cond, msg)` calls from functype, which narrow types and
+ * cover one statement. (An `@invariant` tag shipped in 1.10.0 and was removed in #342 — it exempted a
+ * whole function, including any expected-failure throw added to it later.)
  *
  * Why a tag rather than a disable comment: it covers one declaration (and what is nested inside it), not
  * a whole file; it must carry a reason on the same line, so a bare tag exempts nothing; and it is
@@ -17,7 +19,6 @@ import type { ASTNode } from "../types/ast"
  */
 
 export const INTEROP_TAG = "interop"
-export const INVARIANT_TAG = "invariant"
 
 /** Declarations whose leading JSDoc can carry a tag. */
 const DOCUMENTABLE: ReadonlySet<string> = new Set([

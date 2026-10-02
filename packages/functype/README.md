@@ -693,7 +693,7 @@ list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 
 ## ESLint Plugin
 
-[`eslint-plugin-functype`](https://functype.org/eslint) enforces these patterns. `recommended` fails the build on the rules that are reliably right (loops, `let`, native `Map`/`Set` you only read, `isSome()` branching) and warns on the rest. Declare boundaries with `Wire<T>`, `@interop` and `@invariant` instead of `eslint-disable`.
+[`eslint-plugin-functype`](https://functype.org/eslint) enforces these patterns. `recommended` fails the build on the rules that are reliably right (loops, `let`, native `Map`/`Set` you only read, `isSome()` branching) and warns on the rest. Declare boundaries with `Wire<T>` and `@interop`, and write bug checks as `invariant(cond, msg)`, instead of `eslint-disable`.
 
 ## Feature Matrix
 

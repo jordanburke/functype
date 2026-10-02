@@ -46,6 +46,7 @@ Install with `npm install functype`. Every type listed below is also available f
 - [Brand](https://functype.org/reference.md#brand): Nominal typing without runtime overhead
 - [ValidatedBrand](https://functype.org/reference.md#validatedbrand): Branded types with runtime validation
 - [Wire](https://functype.org/wire.md): Serialization-boundary marker for a row, collection or nullable field at DB / HTTP / JSONB boundaries. Zero runtime, assignable both ways with T. prefer-list and prefer-option skip everything inside it. A collection is Wire<ReadonlyArray<Row>>.
+- [invariant](https://functype.org/reference.md#invariant): One-line bug check: invariant(cond, msg) throws a tagged InvariantViolation when cond is falsy and narrows cond after it. For programmer errors only; expected failures return Either.
 - [TracedOption](https://functype.org/reference.md#tracedoption): Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tracer, then delegates. For code-path introspection.
 
 ## Validation
@@ -75,7 +76,7 @@ Install with `npm install functype`. Every type listed below is also available f
 
 ## Tooling
 
-- [ESLint Plugin](https://functype.org/eslint): Rules, severity policy, and the Wire / @interop / @invariant boundary markers
+- [ESLint Plugin](https://functype.org/eslint): Rules, severity policy, Wire / @interop boundaries, and invariant() bug checks
 - [MCP Server](https://functype.org/mcp-server): Live type docs and compile-time code validation for AI agents
 - [CLI](https://github.com/jordanburke/functype/blob/main/packages/functype#cli-documentation): `npx functype` prints the LLM-optimized API reference; `npx functype <Type>` for one type
 

@@ -134,38 +134,6 @@ function f(row: Wire<Row>, fallback: string | null) {}`,
         ],
       },
       {
-        name: "@invariant does not exempt a nullable (it is for throws only)",
-        code: `/** @invariant Arguments are validated upstream. */
-function b(x: string | null) {
-  return x
-}`,
-        errors: [
-          {
-            messageId: "preferOption",
-            data: { type: "string", nullable: "string | null" },
-            suggestions: [
-              {
-                messageId: "suggestOptionType",
-                data: { type: "string" },
-                output: `/** @invariant Arguments are validated upstream. */
-function b(x: Option<string>) {
-  return x
-}`,
-              },
-              {
-                messageId: "suggestAddImport",
-                data: { symbol: "Option" },
-                output: `/** @invariant Arguments are validated upstream. */
-import { Option } from "functype"
-function b(x: string | null) {
-  return x
-}`,
-              },
-            ],
-          },
-        ],
-      },
-      {
         name: "allowUseState: false reports hook type arguments too",
         code: "const [user, setUser] = useState<User | null>(null)",
         options: [{ allowUseState: false }],

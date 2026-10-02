@@ -46,11 +46,12 @@ export interface Option<out T extends Type>
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the contained value or throws an error if None
-   * @param error - Optional custom error to throw. If not provided, throws a default error
+   * @param error - Optional error to throw, or a builder that makes one (called only on None). If not
+   *   provided, throws a default error
    * @returns The contained value
-   * @throws The specified error or a default error if the Option is None
+   * @throws The specified or built error, or a default error if the Option is None
    */
-  orThrow(error?: Error): T
+  orThrow(error?: Error | (() => Error)): T
   /**
    * Returns the contained value, or calls the never-returning handler if None.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the
@@ -274,8 +275,12 @@ const NONE: Option<never> = {
     return true
   },
   orElse: <T2 extends Type>(defaultValue: T2): never | T2 => defaultValue,
-  orThrow<T>(error?: Error): T {
-    throw error ?? new Error("Cannot extract value from None")
+  orThrow<T>(error?: Error | (() => Error)): T {
+    throw error === undefined
+      ? new Error("Cannot extract value from None")
+      : typeof error === "function"
+        ? error()
+        : error
   },
   expect(handler: () => never): never {
     return handler()

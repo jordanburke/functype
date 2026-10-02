@@ -30,6 +30,7 @@ const MODULE_DOCS: Readonly<Record<string, ReadonlyArray<string> | { readonly in
   functype: { internal: "Functype / FunctypeSum base interfaces for implementers" },
   hkt: { internal: "higher-kinded type encoding for implementers" },
   identity: ["Identity"],
+  invariant: ["invariant"],
   io: ["IO", "Exit"],
   lazy: ["Lazy"],
   list: ["List", "LazyList"],

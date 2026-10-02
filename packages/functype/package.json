@@ -134,6 +134,11 @@
       "import": "./dist/wire/index.js",
       "default": "./dist/wire/index.js"
     },
+    "./invariant": {
+      "types": "./dist/invariant/index.d.ts",
+      "import": "./dist/invariant/index.js",
+      "default": "./dist/invariant/index.js"
+    },
     "./task": {
       "types": "./dist/core/task/index.d.ts",
       "import": "./dist/core/task/index.js",
