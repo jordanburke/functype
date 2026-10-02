@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.11.0 - 2026-10-02
+
 **`functype` — `invariant()` for bug checks, and `orThrow` that builds its error (#342).**
 
 - **`invariant(condition, message)`** throws a tagged `InvariantViolation` when `condition` is falsy, and narrows `condition` for the code after it (`asserts condition`). It's for programmer errors only — "upsert returned no row", "step must be non-negative"; expected failures still return `Either`. The message can be a thunk, built only when the check fails. `InvariantViolation(msg)` is exported for branches that can only be reached by a bug. Also available as `functype/invariant`.
