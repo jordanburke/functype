@@ -1,4 +1,4 @@
-# Functype v1.11.0
+# Functype v1.11.1
 
 > A functional programming library for TypeScript, using immutable data structures and type classes, with Scala-inspired patterns.
 
@@ -4113,7 +4113,7 @@ MIT
 ## API Reference
 ────────────────────────────────────────────────────────────────────────────────
 
-# Functype API reference (v1.11.0)
+# Functype API reference (v1.11.1)
 
 Generated from the functype CLI data — the same source as `npx functype` and the MCP server's `search_docs`. Types are grouped as in the CLI overview.
 

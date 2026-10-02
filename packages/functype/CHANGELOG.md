@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.11.1 - 2026-10-02
+
 **`eslint-plugin-functype` — `prefer-functype-map` / `prefer-functype-set` fixes found by the civala.ai upgrade.**
 
 - **No more reports on a declared native read-only contract.** A `new Map(...)` / `new Set(...)` that flows directly into a `ReadonlyMap` / `ReadonlySet` declared type is exempt. That covers a return from a function declared to return one (or `Promise<…>` of one), an arrow body with that return type, an annotated variable, class field or parameter default, and an `as` / `satisfies` assertion, through ternary and `??` / `||` / `&&` branches. The rules never reported the `ReadonlyMap` annotation, but they reported the constructor it requires, so an interface typed `ReadonlyMap` (civala's fixture-replay engine) left no clean fix. Mutable `Map<K, V>` annotations are still reported, and a nested callback doesn't inherit the outer function's return type.
