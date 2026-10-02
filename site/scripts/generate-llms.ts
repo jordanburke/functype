@@ -125,7 +125,7 @@ const TOOLING: ReadonlyArray<Link> = [
   sitePage(
     "ESLint Plugin",
     "eslint",
-    "Rules, severity policy, and the Wire / @interop / @invariant boundary markers",
+    "Rules, severity policy, Wire / @interop boundaries, and invariant() bug checks",
   ),
   sitePage(
     "MCP Server",

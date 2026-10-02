@@ -30,11 +30,12 @@ export const FULL_INTERFACES: Record<string, string> = {
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the contained value or throws an error if None
-   * @param error - Optional custom error to throw. If not provided, throws a default error
+   * @param error - Optional error to throw, or a builder that makes one (called only on None). If not
+   *   provided, throws a default error
    * @returns The contained value
-   * @throws The specified error or a default error if the Option is None
+   * @throws The specified or built error, or a default error if the Option is None
    */
-  orThrow(error?: Error): T
+  orThrow(error?: Error | (() => Error)): T
   /**
    * Returns the contained value, or calls the never-returning handler if None.
    * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the
@@ -266,7 +267,12 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
-  orThrow: (error?: Error) => R
+  /**
+   * Returns the Right value, or throws on a Left. Pass an \`Error\` to throw it, or a builder to make one
+   * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
+   * React Query \`queryFn\`). With no argument, throws the Left value itself.
+   */
+  orThrow: (error?: Error | ((left: L) => Error)) => R
   /**
    * Returns the right value, or calls the never-returning handler with the Left's value.
    * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the
@@ -357,7 +363,11 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
   isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
   orElse<T2 extends Type>(defaultValue: T2): T | T2
-  orThrow: (error?: Error) => T
+  /**
+   * Returns the value, or throws on a Failure. Pass an \`Error\` to throw it, or a builder to make one from
+   * the failure's error. With no argument, rethrows the original error.
+   */
+  orThrow: (error?: Error | ((error: Error) => Error)) => T
   /**
    * Returns the success value, or calls the never-returning handler with the Failure's error.
    * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the program —

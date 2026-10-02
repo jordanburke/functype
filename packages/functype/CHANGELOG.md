@@ -6,6 +6,22 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`functype` — `invariant()` for bug checks, and `orThrow` that builds its error (#342).**
+
+- **`invariant(condition, message)`** throws a tagged `InvariantViolation` when `condition` is falsy, and narrows `condition` for the code after it (`asserts condition`). It's for programmer errors only — "upsert returned no row", "step must be non-negative"; expected failures still return `Either`. The message can be a thunk, built only when the check fails. `InvariantViolation(msg)` is exported for branches that can only be reached by a bug. Also available as `functype/invariant`.
+
+  ```ts
+  invariant(row, "upsert returned no row") // row: Row from here on
+  invariant(teamDomain && aud, "requires CF_ACCESS_TEAM_DOMAIN and CF_ACCESS_AUD")
+  ```
+
+- **`orThrow` accepts an error builder** on `Either`, `Try` and `Option`, alongside the existing ready-made error: `either.orThrow((left) => new StepError(left.message))`, `tryValue.orThrow((e) => new StepError(e))`, `option.orThrow(() => new NotFound(id))`. The builder is called only on the failure side. This is for code that must throw for a host (a retrying step runner, an MCP tool, a React Query `queryFn`) without writing `throw` inside a `fold`.
+
+**`eslint-plugin-functype` — `@invariant` removed; `prefer-either` messages name the escape hatches.**
+
+- **The `@invariant` JSDoc tag and `prefer-either`'s `allowInvariantMarker` option are removed** (shipped in 1.10.0, no adopters). The tag exempted a whole function, including any expected-failure throw added to it later; `invariant()` covers one statement and narrows types. A config that still sets `allowInvariantMarker` now fails ESLint's option validation: delete the option, and replace each tagged function's throws with `invariant(…)` calls.
+- **`prefer-either`'s messages point at the fixes:** "…For a bug check use invariant(); for a host that needs the throw, tag the function @interop". The README's "Throwing on purpose" section has the decision rule: host needs the throw → `@interop` or `orThrow(builder)`; only a bug can trip it → `invariant()`; can fail in normal operation → `Either`.
+
 ## 1.10.0 - 2026-09-29
 
 **`functype` — new opt-in `TracedOption` wrapper for code-path introspection.**

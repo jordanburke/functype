@@ -45,7 +45,7 @@ export const TYPES: Record<string, TypeData> = {
         ".fold(n, s)",
         ".foldAsync(n, s)",
         ".orElse(d)",
-        ".orThrow()",
+        ".orThrow(err | () => Error)",
         ".expect(() => never)",
         ".orNull()",
         ".match({Some, None})",
@@ -71,7 +71,7 @@ export const TYPES: Record<string, TypeData> = {
         ".fold(l, r)",
         ".foldAsync(l, r)",
         ".orElse(d)",
-        ".orThrow()",
+        ".orThrow(err | (left) => Error)",
         ".expect((l) => never)",
         ".match({Left, Right})",
       ],
@@ -96,7 +96,7 @@ export const TYPES: Record<string, TypeData> = {
         ".fold(f, s)",
         ".foldAsync(f, s)",
         ".orElse(d)",
-        ".orThrow()",
+        ".orThrow(err | (error) => Error)",
         ".expect((e) => never)",
         ".toOption()",
         ".toEither(left | (err) => left)",
@@ -501,6 +501,16 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
+  invariant: {
+    description:
+      "One-line bug check: invariant(cond, msg) throws a tagged InvariantViolation when cond is falsy and narrows cond after it. For programmer errors only; expected failures return Either.",
+    interfaces: [],
+    methods: {
+      create: ['invariant(row, "upsert returned no row")', "invariant(n >= 0, () => `bad step ${n}`)  // lazy message"],
+      other: ["InvariantViolation(msg)  // throw directly for an unreachable branch"],
+    },
+  },
+
   TracedOption: {
     description:
       "Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tracer, then delegates. For code-path introspection.",
@@ -795,7 +805,7 @@ export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj", "Identity"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
   Effect: ["IO", "Exit", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
-  Utility: ["Lazy", "Cond", "Match", "Do", "Ref", "Brand", "ValidatedBrand", "Wire", "TracedOption"],
+  Utility: ["Lazy", "Cond", "Match", "Do", "Ref", "Brand", "ValidatedBrand", "Wire", "invariant", "TracedOption"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],
   Service: ["Logger", "Tracer"],

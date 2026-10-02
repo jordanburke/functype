@@ -23,6 +23,7 @@ const entries = {
   "do/index": "src/do/index.ts",
   "logger/index": "src/logger/Logger.ts",
   "wire/index": "src/wire/Wire.ts",
+  "invariant/index": "src/invariant/Invariant.ts",
   // Subpaths advertised in `exports` but previously never built (#180) — each maps to
   // its module barrel, matching what the top barrel re-exports (`export * from "@/io"` …).
   "conditional/index": "src/conditional/index.ts",

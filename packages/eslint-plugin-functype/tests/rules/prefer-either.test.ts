@@ -1,4 +1,4 @@
-import { describe } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import rule from "../../src/rules/prefer-either"
 import { ruleTester } from "../utils/rule-tester"
@@ -6,6 +6,13 @@ import { ruleTester } from "../utils/rule-tester"
 describe("prefer-either", () => {
   ruleTester.run("prefer-either", rule, {
     valid: [
+      {
+        name: "invariant() is a call, not a throw",
+        code: `function deriveRunId(workflowId: string, step: number): string {
+  invariant(step >= 0, "step must be non-negative")
+  return workflowId + ":" + step
+}`,
+      },
       // #241 — `@interop <reason>` marks a function whose contract with a host library IS the throw.
       {
         name: "A throw inside an @interop function is the host contract",
@@ -30,15 +37,6 @@ export function useValue(p) {
     },
     (a) => a,
   )
-}`,
-      },
-      // #325 D — `@invariant <reason>` marks a throw that signals a programmer error, not an expected failure.
-      {
-        name: "A throw inside an @invariant function is a documented invariant violation",
-        code: `/** @invariant Called only inside a DBOS step, where every argument is already validated. */
-function deriveRunId(workflowId: string, step: number): string {
-  if (step < 0) throw new Error("step must be non-negative")
-  return workflowId + ":" + step
 }`,
       },
       // Using Either instead of throwing
@@ -75,6 +73,16 @@ function deriveRunId(workflowId: string, step: number): string {
       },
     ],
     invalid: [
+      // #342 — the `@invariant` JSDoc tag is gone (it exempted a whole function, including any expected-failure
+      // throw added later). A bug check is the one-line `invariant()` call instead, which has no `throw` here.
+      {
+        name: "An @invariant JSDoc tag no longer exempts a throw",
+        code: `/** @invariant Arguments are validated upstream. */
+function b(x) {
+  if (x) throw new Error("x")
+}`,
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
       {
         name: "A bare @interop tag with no reason does not exempt",
         code: `/** @interop */
@@ -108,15 +116,6 @@ function b(x) {
   if (x) throw new Error("x")
 }`,
         options: [{ allowInteropMarker: false }],
-        errors: [{ messageId: "preferEitherOverThrow" }],
-      },
-      {
-        name: "allowInvariantMarker: false reports inside an @invariant function",
-        code: `/** @invariant Arguments are validated upstream. */
-function b(x) {
-  if (x) throw new Error("x")
-}`,
-        options: [{ allowInvariantMarker: false }],
         errors: [{ messageId: "preferEitherOverThrow" }],
       },
       // #324 — one report per throw. The enclosing function's return type decides the message; a throw
@@ -415,5 +414,20 @@ function validate(x: number) {
         ],
       },
     ],
+  })
+})
+
+describe("prefer-either messages and options (#342)", () => {
+  it("points at invariant() and @interop, so the escape hatches are discoverable from the warning", () => {
+    const messages = rule.meta?.messages ?? {}
+    for (const id of ["preferEitherOverThrow", "preferEitherReturn"] as const) {
+      expect(messages[id]).toContain("invariant()")
+      expect(messages[id]).toContain("@interop")
+    }
+  })
+
+  it("no longer accepts allowInvariantMarker", () => {
+    const schema = rule.meta?.schema as ReadonlyArray<{ readonly properties: Record<string, unknown> }>
+    expect(Object.keys(schema[0]!.properties)).not.toContain("allowInvariantMarker")
   })
 })

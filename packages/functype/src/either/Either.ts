@@ -30,7 +30,12 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
   orElse<R2 extends Type>(defaultValue: R2): R | R2
-  orThrow: (error?: Error) => R
+  /**
+   * Returns the Right value, or throws on a Left. Pass an `Error` to throw it, or a builder to make one
+   * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
+   * React Query `queryFn`). With no argument, throws the Left value itself.
+   */
+  orThrow: (error?: Error | ((left: L) => Error)) => R
   /**
    * Returns the right value, or calls the never-returning handler with the Left's value.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the
@@ -231,8 +236,8 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
     return false
   },
   orElse: <R2 extends Type>(defaultValue: R2): R | R2 => defaultValue,
-  orThrow: (error?: Error) => {
-    throw error ?? value
+  orThrow: (error?: Error | ((left: L) => Error)) => {
+    throw error === undefined ? value : typeof error === "function" ? error(value) : error
   },
   expect: (handler: (value: L) => never): R => handler(value),
   or: <L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2> =>

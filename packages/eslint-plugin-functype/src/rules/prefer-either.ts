@@ -1,7 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { INTEROP_TAG, INVARIANT_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
+import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 /** True iff any ancestor of `node` is a `CatchClause`. Pure tail recursion. */
@@ -27,10 +27,6 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
-          allowInvariantMarker: {
-            type: "boolean",
-            default: true,
-          },
           allowThrowInTests: {
             type: "boolean",
             default: true,
@@ -40,8 +36,10 @@ const rule: Rule.RuleModule = {
       },
     ],
     messages: {
-      preferEitherOverThrow: "Prefer Either.left(error) over throw statement",
-      preferEitherReturn: "Consider returning Either<Error, {{type}}> instead of throwing",
+      preferEitherOverThrow:
+        "Prefer Either.left(error) over throw statement. For a bug check use invariant(); for a host that needs the throw, tag the function @interop",
+      preferEitherReturn:
+        "Consider returning Either<Error, {{type}}> instead of throwing. For a bug check use invariant(); for a host that needs the throw, tag the function @interop",
       suggestEitherLeft: "Replace with Either.left(...)",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -51,11 +49,9 @@ const rule: Rule.RuleModule = {
     const options = context.options[0] || {}
     // `@interop <reason>` on an enclosing declaration marks a host-contract boundary (#241).
     const allowInteropMarker = options.allowInteropMarker !== false
-    // `@invariant <reason>` marks throws that signal programmer errors, not expected failures (#325 D).
-    const allowInvariantMarker = options.allowInvariantMarker !== false
+    // Bug checks are `invariant()` calls from functype (#342): a call, not a throw, so nothing to exempt.
     const isExemptByMarker = (node: ASTNode): boolean =>
-      (allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)) ||
-      (allowInvariantMarker && isInsideTaggedDeclaration(node, INVARIANT_TAG, context.sourceCode))
+      allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)
     const allowThrowInTests = options.allowThrowInTests !== false
 
     function isInTestFile() {

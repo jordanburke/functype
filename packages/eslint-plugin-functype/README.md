@@ -49,11 +49,24 @@ A rule is **`error` in `recommended` once it is right on ~95–99% of real code*
 
 `prefer-fold` reports only; its rewrite is a suggestion you apply, never an autofix, so `eslint --fix` can't change code on your behalf.
 
-## Boundary markers: `@interop` and `@invariant`
+## Throwing on purpose: `invariant()` and `@interop`
 
-Some code is correct _because_ it isn't FP-shaped: a bridge to a host whose contract is the throw, the rejection or the nullable. Mark the declaration instead of disabling the rule:
+`prefer-either` reports every `throw`. Two kinds of throw are correct, and each has its own tool:
+
+| The throw is…                                                                                                   | Use                                                           |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| A bug check: the condition can only fail because of a programmer error                                          | `invariant(cond, msg)` from `functype`                        |
+| A host contract: the caller (React `use()`, React Query, a step runner, an MCP tool) needs a throw or rejection | `@interop <reason>` on the declaration, or `orThrow(builder)` |
+| Anything that can fail in normal operation                                                                      | return an `Either`                                            |
 
 ```ts
+import { invariant } from "functype"
+
+function deriveRunId(workflowId: string, step: number): string {
+  invariant(step >= 0, "step must be non-negative") // a call, not a throw: nothing to report
+  return `${workflowId}:${step}`
+}
+
 /**
  * Runs the effect, or throws a boxed error.
  *
@@ -61,24 +74,18 @@ Some code is correct _because_ it isn't FP-shaped: a bridge to a host whose cont
  */
 const runBoxed = async <E, A>(effect: () => IO<never, E, A>): Promise<A> => { … }
 
-/** @invariant Called only inside a DBOS step, where every argument is already validated. */
-function deriveRunId(workflowId: string, step: number): string {
-  if (step < 0) throw new Error("step must be non-negative")
-  …
-}
+// A host throw built from the failure, with no tag at all:
+const value = either.orThrow((left) => new StepError(left.message))
 ```
 
-| Tag                   | Honored by                                                    | Means                                                                                                              |
-| --------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `@interop <reason>`   | `prefer-either`, `prefer-option`, `prefer-fold`, `prefer-try` | This declaration bridges functype to a host (React, React Query, an SDK) whose contract requires the non-FP shape. |
-| `@invariant <reason>` | `prefer-either`                                               | This declaration throws only for programmer errors, never for expected failures.                                   |
+`invariant()` covers one statement and narrows the condition for the code after it, so a function can mix bug checks with `Either`-returning failures. `@interop` rules:
 
-- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered.
+- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered. Honored by `prefer-either`, `prefer-option`, `prefer-fold` and `prefer-try`.
 - **The reason is required**, on the same line as the tag. A bare `@interop` exempts nothing.
 - **Only JSDoc (`/** … */`) counts.** A `//` comment mentioning the tag does not.
-- **Opt out** per rule with `allowInteropMarker: false` / `allowInvariantMarker: false`.
+- **Opt out** per rule with `allowInteropMarker: false`.
 
-Prefer a marker to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". A marker covers one declaration, carries its reason, and `rg '@interop'` gives the complete inventory of places the code touches a throw-based host.
+Prefer either tool to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". `rg 'invariant\('` lists every bug check, and `rg '@interop'` lists every place the code touches a throw-based host.
 
 ## Rule options
 
