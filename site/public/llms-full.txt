@@ -3929,21 +3929,22 @@ export default [functype.configs.strict]
 
 ## Rules
 
-| Rule                           | Recommended | Strict | Description                                                |
-| ------------------------------ | :---------: | :----: | ---------------------------------------------------------- |
-| `functype/no-let`              |    error    | error  | Use `const`; no reassignment                               |
-| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops  |
-| `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read |
-| `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read |
-| `functype/prefer-map`          |    error    | error  | Use `map` instead of pushing inside `forEach`              |
-| `functype/prefer-fold`         |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/… |
-| `functype/prefer-option`       |    warn     | error  | Use `Option` instead of `null`/`undefined`                 |
-| `functype/prefer-either`       |    warn     | error  | Use `Either` for typed domain errors instead of `throw`    |
-| `functype/prefer-try`          |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch         |
-| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                    |
-| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                   |
-| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)     |
-| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                        |
+| Rule                           | Recommended | Strict | Description                                                                              |
+| ------------------------------ | :---------: | :----: | ---------------------------------------------------------------------------------------- |
+| `functype/no-let`              |    error    | error  | Use `const`; no reassignment                                                             |
+| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops                                |
+| `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read                               |
+| `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read                               |
+| `functype/collection-naming`   |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map` |
+| `functype/prefer-map`          |    error    | error  | Use `map` instead of pushing inside `forEach`                                            |
+| `functype/prefer-fold`         |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                               |
+| `functype/prefer-option`       |    warn     | error  | Use `Option` instead of `null`/`undefined`                                               |
+| `functype/prefer-either`       |    warn     | error  | Use `Either` for typed domain errors instead of `throw`                                  |
+| `functype/prefer-try`          |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                       |
+| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                                                  |
+| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                                                 |
+| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                   |
+| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                                                      |
 
 ### Severity policy
 
@@ -4075,9 +4076,22 @@ functype's collections are immutable, so a cache, registry or in-place accumulat
 - an `as ReadonlyMap<…>` / `satisfies ReadonlyMap<…>` assertion;
 - any of the above through a ternary branch or a `??` / `||` / `&&` operand.
 
-This is the escape for an interface that takes a native `ReadonlyMap` — declare the type, don't disable the rule. A callback nested inside such a function doesn't inherit its signature, and a mutable `Map<K, V>` annotation is still reported. To hand a functype `Map` to such an interface, put the conversion in one typed helper: `const toReadonly = <K, V>(m: FMap<K, V>): ReadonlyMap<K, V> => new Map(m)`.
+This is the escape for an interface that takes a native `ReadonlyMap` — declare the type, don't disable the rule. A callback nested inside such a function doesn't inherit its signature, and a mutable `Map<K, V>` annotation is still reported. To hand a functype `Map` to such an interface, put the conversion in one typed helper: `const toReadonly = <K, V>(m: Map<K, V>): ReadonlyMap<K, V> => new globalThis.Map(m)`.
 
-**Imports are resolved where `Map` / `Set` is used.** `import { Map as FMap } from "functype"` no longer silences the file: the bare `Map` there is still the native one and is reported, and the suggestions use your name (`FMap(entries)`, `FMap.empty()`) without adding a second import.
+**The built-in is spelled `globalThis.Map` / `globalThis.Set`.** `new globalThis.Map()` and `new ESMap()` are reported like a bare `new Map()`, with the same exemptions. Imports are resolved where `Map` / `Set` is used: functype's import (any name) or a local shadow isn't the built-in.
+
+### `functype/collection-naming`
+
+functype's `Map` / `Set` are the default collections (the Scala convention: the immutable collection owns the plain name). This rule reports:
+
+- `new Map()` on functype's `Map` (or `Set`). It's a factory, so TypeScript only says TS7009 ("target lacks a construct signature"). The message says to write `Map(…)` / `Map.empty()`, or `new globalThis.Map(…)` for the built-in.
+- `import { Map as FMap } from "functype"`. An alias lets the plain name keep meaning the built-in, which inverts the convention and drifts between files.
+
+| Option       | Default | Description                                                                                                          |
+| ------------ | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `allowAlias` | `false` | Accept aliased imports of functype's `Map` / `Set`, for a codebase that prefers the built-ins under the plain names. |
+
+It applies in test files too: tests are read as examples.
 
 ### `functype/no-imperative-loops` / `functype/prefer-map`
 
@@ -4396,6 +4410,10 @@ Implements: Collection, Foldable, Functor, Iterable, Serializable, Traversable
 - `.isEmpty`
 - `.size`
 
+**Other**
+
+- `import { Set } from "functype"  // its own name; the built-in is globalThis.Set`
+
 ### Map
 
 Immutable key-value store
@@ -4429,6 +4447,10 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 - `.has(k)`
 - `.isEmpty`
 - `.size`
+
+**Other**
+
+- `import { Map } from "functype"  // its own name; the built-in is globalThis.Map`
 
 ### LazyList
 

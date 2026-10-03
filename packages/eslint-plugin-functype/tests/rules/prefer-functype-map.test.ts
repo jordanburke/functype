@@ -5,6 +5,19 @@ import rule from "../../src/rules/prefer-functype-map"
 describe("prefer-functype-map", () => {
   ruleTester.run("prefer-functype-map", rule, {
     valid: [
+      // The explicit built-in spelling (`globalThis.Map`) keeps the same exemptions as a bare one.
+      {
+        name: "new globalThis.Map that is mutated on purpose",
+        code: "const c = new globalThis.Map()\nc.set('a', 1)",
+      },
+      {
+        name: "new globalThis.Map flowing into a ReadonlyMap contract",
+        code: "function f(): ReadonlyMap<string, number> { return new globalThis.Map() }",
+      },
+      {
+        name: "A mutated binding annotated globalThis.Map",
+        code: "const c: globalThis.Map<string, number> = make()\nc.set('a', 1)",
+      },
       {
         name: "A type-only import of functype's Map is functype's Map in type positions",
         code: 'import type { Map } from "functype"\nlet m: Map<string, number>',
@@ -86,6 +99,79 @@ export const register = (k: string, f: () => void) => { registry.set(k, f) }`,
       },
     ],
     invalid: [
+      // #349 — `globalThis.Map` is the explicit built-in spelling under the functype-by-default convention;
+      // it must be as visible as a bare `new Map()`, not an escape hatch.
+      {
+        name: "new globalThis.Map that is only read",
+        code: "const c = new globalThis.Map()",
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              { messageId: "suggestMapEmpty", data: { name: "Map" }, output: "const c = Map.empty()" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output: 'import { Map } from "functype"\nconst c = new globalThis.Map()',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "new globalThis.Map next to functype's Map suggests functype's",
+        code: 'import { Map } from "functype"\nconst c = new globalThis.Map(xs)',
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapFrom",
+                data: { name: "Map" },
+                output: 'import { Map } from "functype"\nconst c = Map(xs)',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A globalThis.Map type annotation on a read-only binding",
+        code: "let c: globalThis.Map<string, number>",
+        errors: [
+          {
+            messageId: "preferFunctypeMap",
+            data: { keyType: "string", valueType: "number" },
+            suggestions: [
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output: 'import { Map } from "functype"\nlet c: globalThis.Map<string, number>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "new ESMap (functype's re-export of the built-in) is the built-in",
+        code: 'import { ESMap } from "functype"\nconst m = new ESMap()',
+        errors: [
+          {
+            messageId: "preferFunctypeMapLiteral",
+            suggestions: [
+              {
+                messageId: "suggestMapEmpty",
+                data: { name: "Map" },
+                output: 'import { ESMap } from "functype"\nconst m = Map.empty()',
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Map" },
+                output: 'import { ESMap, Map } from "functype"\nconst m = new ESMap()',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A native Map annotation next to an aliased import points at the alias",
         code: 'import { Map as FMap } from "functype"\nlet m: Map<string, number>',

@@ -497,7 +497,7 @@ Option.fromBinary<string>(binaryData)
 
 ## Lint Conventions (eslint-plugin-functype)
 
-`recommended` **errors** on `no-let`, `no-imperative-loops`, `prefer-map`, `prefer-fold`, `prefer-functype-map` and `prefer-functype-set`. `prefer-option`, `prefer-either` and `prefer-try` warn. Write code that passes, and when code is correct *because* it isn't FP-shaped, declare the boundary instead of disabling the rule:
+`recommended` **errors** on `no-let`, `no-imperative-loops`, `prefer-map`, `prefer-fold`, `prefer-functype-map`, `prefer-functype-set` and `collection-naming`. `prefer-option`, `prefer-either` and `prefer-try` warn. Write code that passes, and when code is correct *because* it isn't FP-shaped, declare the boundary instead of disabling the rule:
 
 | Situation | Do this | Not this |
 | --- | --- | --- |
@@ -507,8 +507,11 @@ Option.fromBinary<string>(binaryData)
 | A throw for a programmer error, not an expected failure | `invariant(cond, "msg")` — narrows `cond` after it | `throw` (reported), `Either` for an impossible case, or a disable |
 | A host needs a throw built from the failure | `either.orThrow((l) => new StepError(l.message))` | `throw` inside a `fold` |
 | React state that may be empty | `useState<User \| null>(null)` — allowed as-is | `Option` inside hook state |
-| A cache or registry that is mutated on purpose | native `Map`/`Set` with `.set`/`.add` — allowed as-is | functype `Map` (immutable) |
+| Any `Map` / `Set` | `import { Map, Set } from "functype"` — functype's own names. `Map` in a file that imports it means functype's | `Map as FMap`, `new Map()` on functype's factory (it isn't a class) |
+| The built-in is genuinely needed: a cache mutated on purpose, or a value for an API typed `ReadonlyMap` | `new globalThis.Map()` / `new globalThis.Set()` — allowed when mutated or passed to a declared `ReadonlyMap`/`ReadonlySet` | bare `new Map()` in a file that imports functype's `Map` (TS7009) |
 | Loop that awaits sequentially and stops on failure | `IO.forEach(items, f)` | `.forEach` with an async callback |
+
+**Reading code:** in a file with `import { Map } from "functype"`, every `Map` is functype's (immutable, built with `Map(…)`), and the built-in is always written `globalThis.Map`. With no functype import, `Map` is the built-in — check the imports before assuming.
 
 `@interop` needs a reason on the same line (`@interop React Query needs a rejection.`); a bare tag exempts nothing. It covers the tagged declaration and what is nested inside it. Rule of thumb: host needs the throw → `@interop` or `orThrow(builder)`; only a bug can trip it → `invariant()`; can fail in normal operation → `Either`.
 

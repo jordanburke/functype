@@ -14,6 +14,9 @@
  * `isLeft()`) only; its null-check heuristic is opt-in (`checkNullable`) because it fired on plain
  * nullables — 31 of 31 hits in CivalaOS. prefer-map leaves loops to no-imperative-loops (`checkForLoops`
  * off), so one loop is one error.
+ *
+ * collection-naming is a convention, not a heuristic — functype's Map/Set imported under their own names,
+ * the built-in spelled globalThis.Map — so it has no false-positive class and starts at error.
  */
 const recommendedRules = {
   "functype/no-let": "error",
@@ -22,6 +25,7 @@ const recommendedRules = {
   "functype/prefer-functype-set": "error",
   "functype/prefer-map": "error",
   "functype/prefer-fold": "error",
+  "functype/collection-naming": "error",
   "functype/prefer-option": "warn",
   "functype/prefer-either": "warn",
   "functype/prefer-try": "warn",

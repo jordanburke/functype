@@ -1,3 +1,4 @@
+import collectionNaming from "./collection-naming"
 import noGetUnsafe from "./no-get-unsafe"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
@@ -13,6 +14,7 @@ import preferOption from "./prefer-option"
 import preferTry from "./prefer-try"
 
 export {
+  collectionNaming,
   noGetUnsafe,
   noImperativeLoops,
   noLet,
@@ -42,4 +44,5 @@ export default {
   "prefer-functype-set": preferFunctypeSet,
   "no-imperative-loops": noImperativeLoops,
   "prefer-do-notation": preferDoNotation,
+  "collection-naming": collectionNaming,
 }

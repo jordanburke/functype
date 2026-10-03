@@ -3,7 +3,7 @@ import * as fs from "node:fs"
 import * as os from "node:os"
 import * as path from "node:path"
 
-import { List, Option, Set as FSet, Try } from "functype"
+import { List, Option, Set, Try } from "functype"
 
 export type UserInfo = {
   readonly username: string
@@ -70,7 +70,7 @@ const cachedIsCI = memo(
     process.env["BUILDKITE"] !== undefined,
 )
 
-const SYSTEM_ACCOUNTS = FSet.of("all users", "default", "default user", "public")
+const SYSTEM_ACCOUNTS = Set.of("all users", "default", "default user", "public")
 
 const isSystemAccount = (name: string): boolean => {
   const lower = name.toLowerCase()

@@ -1,5 +1,21 @@
 # Native Type Naming Strategies
 
+> **Decision (2026-10-03): functype's `Map` / `Set` are the default collections.** Import them under
+> their own names (`import { Map, Set } from "functype"`). Where the built-in is genuinely needed — a
+> collection mutated on purpose, or a value for an API typed `ReadonlyMap` / `ReadonlySet` — spell it
+> `globalThis.Map` / `globalThis.Set`. Don't alias functype's (`Map as FMap`). This is the Scala
+> convention: the immutable collection owns the plain name and the mutable one is qualified.
+>
+> `eslint-plugin-functype` enforces it. `collection-naming` reports aliased imports and `new Map()` on
+> functype's factory (replacing TypeScript's unhelpful TS7009), and `prefer-functype-map` / `-set`
+> report `new globalThis.Map()` like any other built-in, with the mutated and `ReadonlyMap`-contract
+> exemptions.
+>
+> The analysis below predates the decision. Its claim that importing functype's types causes "no
+> shadowing at user level" is **wrong**: functype exports `Map` and `Set`, the same names as the
+> built-ins, so a bare import replaces them in that file. That is the intended effect under the
+> decision, not an accident.
+
 ## Problem Statement
 
 How can functype prevent confusion between its functional `Set<A>` and `Map<K,V>` types and JavaScript's native `Set` and `Map`?
@@ -41,7 +57,8 @@ const map = Map([[k, v]]) // functype Map<K, V>
 
 **Why This Works:**
 
-- ✅ No shadowing at user level (functype exports different names)
+- ~~No shadowing at user level (functype exports different names)~~ — wrong: functype exports `Map` /
+  `Set`, so a bare import does replace the built-in in that file (see the decision at the top)
 - ✅ Internal clarity (`ESMap`/`ESSet` = native, `Map`/`Set` = functional)
 - ✅ Zero runtime overhead
 - ✅ No documentation burden
@@ -341,4 +358,6 @@ function process(set: unknown) {
 
 ## Conclusion
 
-**No changes recommended.** Functype's current ES prefix pattern for internal shimming combined with distinct functional type exports already prevents user confusion while maintaining clean, ergonomic APIs. The two-layer approach is a proven pattern that balances internal clarity with external simplicity.
+Superseded by the decision at the top of this note (2026-10-03). The internal `ESMap` / `ESSet` shims
+stay as they are, but user code spells the built-in `globalThis.Map` / `globalThis.Set` — one spelling
+any TypeScript reader understands, rather than functype-specific names.
