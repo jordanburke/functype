@@ -103,7 +103,7 @@ Try(() => yaml.load(text)).toEither((e) => ScopeError(path, `parse: ${e.message}
 | `(a, b)` tuple        | `[a, b]` as readonly tuple     | `Tuple(a, b)`                                 |
 | `Stack`               | n/a                            | `Stack.of(1, 2, 3)`                           |
 
-functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators. Use them when you need composition; reach for native `Array` / `Set` / `Map` when you need raw perf or interop. The `eslint-plugin-functype` rules `prefer-functype-set` / `prefer-functype-map` push toward functype but can be disabled per-file.
+functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators, and `Set` / `Map` are the default collections: import them under their own names. When you need the built-in (a cache you mutate, an API that takes a native `ReadonlyMap`), spell it `globalThis.Map` / `globalThis.Set`. The `eslint-plugin-functype` rules `collection-naming`, `prefer-functype-set` and `prefer-functype-map` enforce this; a mutated collection or one passed to a declared `ReadonlyMap` / `ReadonlySet` is allowed.
 
 ---
 

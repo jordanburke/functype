@@ -6,6 +6,16 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**functype's `Map` / `Set` are the default collections; `eslint-plugin-functype` enforces it. Upgrade note: this adds lint errors in files that alias them.**
+
+The convention, now written down: import functype's collections under their own names (`import { Map, Set } from "functype"`), and spell the built-in `globalThis.Map` / `globalThis.Set` where it's genuinely needed (a collection mutated on purpose, or a value for an API typed `ReadonlyMap` / `ReadonlySet`). It's the Scala convention: the immutable collection owns the plain name. functype's docs had disagreed (one design note rejected aliases, another doc recommended `Map as FMap`); they now agree.
+
+- **New rule `functype/collection-naming`, `error` in `recommended`.** It reports `new Map()` / `new Set()` on functype's factory, which TypeScript only reports as TS7009 ("target lacks a construct signature"); the message says what to write. It also reports aliased imports (`Map as FMap`). Opt out of the alias check with `allowAlias: true`. It applies in test files too.
+- **`prefer-functype-map` / `-set` see the explicit built-in.** `new globalThis.Map()`, `new ESMap()` and `globalThis.Map<K, V>` annotations were invisible to them; they're now treated like a bare `new Map()`, with the same exemptions (mutated on purpose, or flowing into a declared `ReadonlyMap`).
+- **Docs:** the native-type-naming design note records the decision and corrects its claim that importing functype's types causes no shadowing. `npx functype Map` / `Set` (and the MCP server) show the import line, and the functype skill and plugin README describe the convention.
+
+**Upgrading:** in each file that aliases functype's `Map` / `Set`, import it under its own name, and rewrite that file's built-in uses (`new Map(...)`, `Map<K, V>` annotations) as `globalThis.Map`.
+
 ## 1.11.1 - 2026-10-02
 
 **`eslint-plugin-functype` — `prefer-functype-map` / `prefer-functype-set` fixes found by the civala.ai upgrade.**

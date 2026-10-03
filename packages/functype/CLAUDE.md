@@ -475,9 +475,10 @@ const config: Config = {
 const cache = new Map<string, Value>()
 cache.set(key, value)
 
-// AFTER: functype Map (returns new Map)
-import { Map as FMap } from "functype"
-const cache = FMap<string, Value>([])
+// AFTER: functype Map (returns new Map). Import it as `Map`: functype's Map/Set are the
+// default collections, and the built-in is spelled `globalThis.Map` where it's really needed.
+import { Map } from "functype"
+const cache = Map<string, Value>([])
 const newCache = cache.set(key, value)
 ```
 

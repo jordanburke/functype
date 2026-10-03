@@ -5,6 +5,19 @@ import rule from "../../src/rules/prefer-functype-set"
 describe("prefer-functype-set", () => {
   ruleTester.run("prefer-functype-set", rule, {
     valid: [
+      // The explicit built-in spelling (`globalThis.Set`) keeps the same exemptions as a bare one.
+      {
+        name: "new globalThis.Set that is mutated on purpose",
+        code: "const c = new globalThis.Set()\nc.add('a')",
+      },
+      {
+        name: "new globalThis.Set flowing into a ReadonlySet contract",
+        code: "function f(): ReadonlySet<string> { return new globalThis.Set() }",
+      },
+      {
+        name: "A mutated binding annotated globalThis.Set",
+        code: "const c: globalThis.Set<string> = make()\nc.add('a')",
+      },
       {
         name: "A type-only import of functype's Set is functype's Set in type positions",
         code: 'import type { Set } from "functype"\nlet m: Set<string>',
@@ -136,6 +149,58 @@ seen.delete("x")`,
       },
     ],
     invalid: [
+      // #349 — `globalThis.Set` is the explicit built-in spelling under the functype-by-default convention;
+      // it must be as visible as a bare `new Set()`, not an escape hatch.
+      {
+        name: "new globalThis.Set that is only read",
+        code: "const c = new globalThis.Set()",
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              { messageId: "suggestSetEmpty", data: { name: "Set" }, output: "const c = Set.empty()" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Set" },
+                output: 'import { Set } from "functype"\nconst c = new globalThis.Set()',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "new globalThis.Set next to functype's Set suggests functype's",
+        code: 'import { Set } from "functype"\nconst c = new globalThis.Set(xs)',
+        errors: [
+          {
+            messageId: "preferFunctypeSetLiteral",
+            suggestions: [
+              {
+                messageId: "suggestSetFrom",
+                data: { name: "Set" },
+                output: 'import { Set } from "functype"\nconst c = Set(xs)',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A globalThis.Set type annotation on a read-only binding",
+        code: "let c: globalThis.Set<string>",
+        errors: [
+          {
+            messageId: "preferFunctypeSet",
+            data: { type: "string" },
+            suggestions: [
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Set" },
+                output: 'import { Set } from "functype"\nlet c: globalThis.Set<string>',
+              },
+            ],
+          },
+        ],
+      },
       {
         name: "A native Set annotation next to an aliased import points at the alias",
         code: 'import { Set as FSet } from "functype"\nlet m: Set<string>',

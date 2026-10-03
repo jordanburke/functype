@@ -1,7 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { bindingOf, functypeLocalName } from "../utils/collection-binding"
+import { bindingOf, functypeLocalName, isExplicitNativeCollection } from "../utils/collection-binding"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
 import { createImportFixer } from "../utils/import-fixer"
 import { annotatesMutatedBinding, isMutatedCollection, MAP_MUTATORS } from "../utils/mutable-collection"
@@ -65,13 +65,16 @@ const rule: Rule.RuleModule = {
       NewExpression(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
 
-        // Only flag `new Map(...)` calls
-        if (!node.callee || node.callee.type !== "Identifier" || node.callee.name !== "Map") return
+        // The built-in, however it's spelled: bare `Map` that resolves to the global (functype's import
+        // or a local shadow doesn't count, #350), or explicit `globalThis.Map` — the spelling the
+        // functype-by-default convention uses, which must not be an escape hatch (#349).
+        const isBareNative =
+          node.callee?.type === "Identifier" &&
+          node.callee.name === "Map" &&
+          bindingOf(node.callee, "Map", context.sourceCode) === "native"
+        if (!isBareNative && !isExplicitNativeCollection(node.callee, "Map", context.sourceCode)) return
 
         if (allowMutable && isMutatedCollection(node, MAP_MUTATORS, context.sourceCode)) return
-
-        // `Map` may be functype's import (under any name), a local shadow, or the native built-in (#350).
-        if (bindingOf(node.callee, "Map", context.sourceCode) !== "native") return
 
         // A native Map flowing into a declared `ReadonlyMap` contract is what that contract requires (#350).
         if (flowsIntoReadonlyContract(node, "ReadonlyMap")) return
@@ -150,9 +153,10 @@ const rule: Rule.RuleModule = {
         if (!node.typeName) return
 
         const sourceCode = context.sourceCode
+        // `Map<…>` or the explicit `globalThis.Map<…>`.
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
-        if (typeName !== "Map") return
+        if (typeName !== "Map" && typeName !== "globalThis.Map") return
 
         if (allowMutable && annotatesMutatedBinding(node, MAP_MUTATORS, context.sourceCode)) return
 

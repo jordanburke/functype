@@ -1,7 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { bindingOf, functypeLocalName } from "../utils/collection-binding"
+import { bindingOf, functypeLocalName, isExplicitNativeCollection } from "../utils/collection-binding"
 import { getFunctypeImportsLegacy, isAlreadyUsingFunctype } from "../utils/functype-detection"
 import { createImportFixer } from "../utils/import-fixer"
 import { annotatesMutatedBinding, isMutatedCollection, SET_MUTATORS } from "../utils/mutable-collection"
@@ -65,13 +65,16 @@ const rule: Rule.RuleModule = {
       NewExpression(node: ASTNode) {
         if (allowInTests && isInTestFile()) return
 
-        // Only handle `new Set(...)` calls
-        if (!node.callee || node.callee.type !== "Identifier" || node.callee.name !== "Set") return
+        // The built-in, however it's spelled: bare `Set` that resolves to the global (functype's import
+        // or a local shadow doesn't count, #350), or explicit `globalThis.Set` — the spelling the
+        // functype-by-default convention uses, which must not be an escape hatch (#349).
+        const isBareNative =
+          node.callee?.type === "Identifier" &&
+          node.callee.name === "Set" &&
+          bindingOf(node.callee, "Set", context.sourceCode) === "native"
+        if (!isBareNative && !isExplicitNativeCollection(node.callee, "Set", context.sourceCode)) return
 
         if (allowMutable && isMutatedCollection(node, SET_MUTATORS, context.sourceCode)) return
-
-        // `Set` may be functype's import (under any name), a local shadow, or the native built-in (#350).
-        if (bindingOf(node.callee, "Set", context.sourceCode) !== "native") return
 
         // A native Set flowing into a declared `ReadonlySet` contract is what that contract requires (#350).
         if (flowsIntoReadonlyContract(node, "ReadonlySet")) return
@@ -149,9 +152,10 @@ const rule: Rule.RuleModule = {
         if (!node.typeName) return
 
         const sourceCode = context.sourceCode
+        // `Set<…>` or the explicit `globalThis.Set<…>`.
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
-        if (typeName !== "Set") return
+        if (typeName !== "Set" && typeName !== "globalThis.Set") return
 
         if (allowMutable && annotatesMutatedBinding(node, SET_MUTATORS, context.sourceCode)) return
 

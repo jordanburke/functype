@@ -47,3 +47,68 @@ export const functypeLocalName = (sourceCode: SourceCode, name: string): string 
     })
   return names[0] ?? null
 }
+
+export const COLLECTION_NAMES: ReadonlyArray<string> = ["Map", "Set"]
+
+/**
+ * If `expr` names functype's `Map` / `Set` — an identifier bound to its import (any local name), or a
+ * namespace member like `F.Map` — returns the imported name and how this file spells it; else null.
+ */
+export const functypeCollectionAt = (
+  expr: ASTNode,
+  sourceCode: SourceCode,
+): { readonly name: string; readonly local: string } | null => {
+  if (expr?.type === "Identifier") {
+    const def = resolve(expr, expr.name, sourceCode)?.defs[0] as
+      { readonly type: string; readonly node?: ASTNode; readonly parent?: ASTNode } | undefined
+    if (def?.type !== "ImportBinding" || !isFunctypeSource(def.parent?.source?.value)) return null
+    const spec = def.node
+    if (spec?.type !== "ImportSpecifier" || spec.imported?.type !== "Identifier") return null
+    return COLLECTION_NAMES.includes(spec.imported.name) ? { name: spec.imported.name, local: expr.name } : null
+  }
+  if (
+    expr?.type === "MemberExpression" &&
+    !expr.computed &&
+    expr.object.type === "Identifier" &&
+    expr.property.type === "Identifier" &&
+    COLLECTION_NAMES.includes(expr.property.name)
+  ) {
+    const def = resolve(expr.object, expr.object.name, sourceCode)?.defs[0] as
+      { readonly type: string; readonly node?: ASTNode; readonly parent?: ASTNode } | undefined
+    const isNamespace =
+      def?.type === "ImportBinding" &&
+      def.node?.type === "ImportNamespaceSpecifier" &&
+      isFunctypeSource(def.parent?.source?.value)
+    return isNamespace ? { name: expr.property.name, local: `${expr.object.name}.${expr.property.name}` } : null
+  }
+  return null
+}
+
+/**
+ * Is `callee` the built-in constructor spelled explicitly — `globalThis.Map` / `globalThis.Set`, or
+ * functype's `ESMap` re-export of the native Map? Bare `Map` is handled by {@link bindingOf}.
+ */
+export const isExplicitNativeCollection = (callee: ASTNode, name: string, sourceCode: SourceCode): boolean => {
+  if (
+    callee?.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.object.type === "Identifier" &&
+    callee.object.name === "globalThis" &&
+    callee.property.type === "Identifier" &&
+    callee.property.name === name
+  ) {
+    // A local binding named `globalThis` would shadow the real one.
+    return resolve(callee.object, "globalThis", sourceCode)?.defs.length ? false : true
+  }
+  if (callee?.type === "Identifier" && name === "Map") {
+    const def = resolve(callee, callee.name, sourceCode)?.defs[0] as
+      { readonly type: string; readonly node?: ASTNode; readonly parent?: ASTNode } | undefined
+    return (
+      def?.type === "ImportBinding" &&
+      isFunctypeSource(def.parent?.source?.value) &&
+      def.node?.type === "ImportSpecifier" &&
+      def.node.imported?.name === "ESMap"
+    )
+  }
+  return false
+}

@@ -160,6 +160,7 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".map(f)", ".filter(p)", ".union(s)", ".intersection(s)", ".difference(s)", ".add(v)"],
       extract: [".fold(z, f)", ".toArray()"],
       check: [".has(v)", ".isEmpty", ".size"],
+      other: ['import { Set } from "functype"  // its own name; the built-in is globalThis.Set'],
     },
   },
 
@@ -193,6 +194,7 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".set(k, v)", ".delete(k)", ".map(f)", ".filter(p)", ".add(k, v)"],
       extract: [".get(k)", ".keys()", ".values()", ".entries()", ".fold(z, f)"],
       check: [".has(k)", ".isEmpty", ".size"],
+      other: ['import { Map } from "functype"  // its own name; the built-in is globalThis.Map'],
     },
   },
 

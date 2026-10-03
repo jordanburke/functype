@@ -2,6 +2,23 @@
 
 Quick lookup guide for common functype operations.
 
+## Map and Set naming
+
+functype's `Map` / `Set` are the default collections. Import them under their own names; spell the built-in `globalThis.Map` / `globalThis.Set`.
+
+```typescript
+import { Map, Set } from "functype"
+
+const byId = Map([["a", 1]])                    // functype Map — a factory, not a class
+const tags = Set.of("x", "y")
+const cache = new globalThis.Map<string, Row>() // the built-in: mutated on purpose, so lint allows it
+cache.set(id, row)
+```
+
+- `new Map()` on functype's `Map` fails with TS7009 ("target lacks a construct signature"); lint reports it with the fix.
+- Don't alias (`Map as FMap`); `collection-naming` reports it.
+- A built-in that's only read is still reported: use functype's, or pass it straight to a declared `ReadonlyMap` / `ReadonlySet`.
+
 ## Construction
 
 | Type     | Constructor                                                     | Example                                                                                    |

@@ -20,6 +20,7 @@ describe("recommended preset", () => {
     "functype/prefer-functype-set",
     "functype/prefer-map",
     "functype/prefer-fold",
+    "functype/collection-naming",
   ])("%s is an error", (rule) => {
     expect(rules[rule]).toBe("error")
   })
