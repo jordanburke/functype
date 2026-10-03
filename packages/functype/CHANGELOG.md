@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.12.0 - 2026-10-03
+
 **functype's `Map` / `Set` are the default collections; `eslint-plugin-functype` enforces it. Upgrade note: this adds lint errors in files that alias them.**
 
 The convention, now written down: import functype's collections under their own names (`import { Map, Set } from "functype"`), and spell the built-in `globalThis.Map` / `globalThis.Set` where it's genuinely needed (a collection mutated on purpose, or a value for an API typed `ReadonlyMap` / `ReadonlySet`). It's the Scala convention: the immutable collection owns the plain name. functype's docs had disagreed (one design note rejected aliases, another doc recommended `Map as FMap`); they now agree.
