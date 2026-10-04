@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeSum } from "@/functype"
+import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
@@ -413,6 +414,35 @@ const EitherCompanion = {
     f: (value: R) => Either<L, U>,
   ): Either<L, U[]> => {
     return EitherCompanion.sequence(arr.map(f))
+  },
+
+  /**
+   * Async traverse: runs `f` over `items` and collects the Right values, stopping at the first Left.
+   *
+   * Runs one call at a time, in order, by default. Pass `{ concurrency: n }` to allow up to `n` calls at once,
+   * or `"unbounded"` to start them all together. After a Left no new calls start; calls already running
+   * finish, and the result is the Left of the earliest item that failed. A rejected promise rejects the result.
+   *
+   * @param items - Values to traverse (an array, List, or any iterable)
+   * @param f - Async function returning Either
+   * @param options - `{ concurrency }`; defaults to 1 (sequential)
+   * @returns Right of all results in input order, or the first Left
+   *
+   * @example
+   * ```typescript
+   * const saved = await Either.traverseAsync(rows, (row) => saveRow(row))
+   * // Either<SaveError, SavedRow[]>, one save at a time, stopping at the first failure
+   *
+   * const fetched = await Either.traverseAsync(ids, fetchUser, { concurrency: 4 })
+   * ```
+   */
+  traverseAsync: async <L extends Type, A extends Type, U extends Type>(
+    items: Iterable<A>,
+    f: (value: A) => PromiseLike<Either<L, U>>,
+    options?: ConcurrencyOptions,
+  ): Promise<Either<L, U[]>> => {
+    const results = await traverseWithConcurrency(items, f, options?.concurrency ?? 1, (either) => either.isLeft())
+    return EitherCompanion.sequence(results)
   },
 
   /**

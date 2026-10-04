@@ -30,7 +30,7 @@ export default [functype.configs.strict]
 | Rule                           | Recommended | Strict | Description                                                                              |
 | ------------------------------ | :---------: | :----: | ---------------------------------------------------------------------------------------- |
 | `functype/no-let`              |    error    | error  | Use `const`; no reassignment                                                             |
-| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops                                |
+| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops               |
 | `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read                               |
 | `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read                               |
 | `functype/collection-naming`   |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map` |
@@ -182,7 +182,7 @@ This is the escape for an interface that takes a native `ReadonlyMap` — declar
 
 functype's `Map` / `Set` are the default collections (the Scala convention: the immutable collection owns the plain name). This rule reports:
 
-- `new Map()` on functype's `Map` (or `Set`). It's a factory, so TypeScript only says TS7009 ("target lacks a construct signature"). The message says to write `Map(…)` / `Map.empty()`, or `new globalThis.Map(…)` for the built-in.
+- `new Map()` on functype's `Map` (or `Set`). It's a factory, so TypeScript only says TS7009 ("target lacks a construct signature"), or TS2350 ("Only a void function can be called with the 'new' keyword") when `noImplicitAny` is off. The message says to write `Map(…)` / `Map.empty()`, or `new globalThis.Map(…)` for the built-in.
 - `import { Map as FMap } from "functype"`. An alias lets the plain name keep meaning the built-in, which inverts the convention and drifts between files.
 
 | Option       | Default | Description                                                                                                          |
@@ -198,7 +198,7 @@ These rules don't report loops that have no functional equivalent:
 - `for await` consumes a stream, and collecting it first would defeat the streaming.
 - A loop whose body `yield`s is a generator's body, and a callback can't yield.
 
-A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `IO.forEach`. `prefer-map` doesn't report it.
+A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `List.flatMapAsync(f, { concurrency: 1 })`, `Either.traverseAsync` (stops at the first `Left`) or, inside `IO`, `IO.forEach`. `prefer-map` doesn't report it.
 
 ## Combining with eslint-config-functype
 

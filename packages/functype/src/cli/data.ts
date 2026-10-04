@@ -76,7 +76,12 @@ export const TYPES: Record<string, TypeData> = {
         ".match({Left, Right})",
       ],
       check: [".isRight()", ".isLeft()"],
-      other: ["Either.sequence(arr)", "Either.traverse(arr, f)", "Either.fromNullable(v, e)"],
+      other: [
+        "Either.sequence(arr)",
+        "Either.traverse(arr, f)",
+        "Either.traverseAsync(items, f, {concurrency?}) // in order by default, stops at first Left",
+        "Either.fromNullable(v, e)",
+      ],
     },
   },
 
@@ -147,7 +152,7 @@ export const TYPES: Record<string, TypeData> = {
         ".toArray()",
       ],
       check: [".isEmpty", ".nonEmpty", ".size", ".contains(v)"],
-      other: [".groupBy(f)", ".partition(p)", ".span(p)"],
+      other: [".groupBy(f)", ".partition(p)", ".span(p)", ".flatMapAsync(f, {concurrency?}) // 1 = in order"],
     },
   },
 
@@ -363,6 +368,7 @@ export const TYPES: Record<string, TypeData> = {
         "IO.async(f)",
         "IO.tryPromise({try, catch})",
         "IO.fromEither(e)",
+        "IO.fromPromiseEither(f, onReject?)",
         "IO.fromOption(o)",
         "IO.fromTry(t)",
         "IO.die(defect)",

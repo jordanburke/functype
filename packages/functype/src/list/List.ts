@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
+import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -33,7 +34,8 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   map: <B>(f: (a: A) => B) => List<B>
   ap: <B>(ff: List<(value: A) => B>) => List<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>) => PromiseLike<List<B>>
+  /** Async flatMap. Starts every call at once unless `options.concurrency` caps it; `{ concurrency: 1 }` runs them in order. */
+  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions) => PromiseLike<List<B>>
   // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>
@@ -101,8 +103,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     flatMap: <B>(f: (a: A) => Iterable<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
 
-    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>): Promise<List<B>> => {
-      const results = await Promise.all(array.map(async (a) => await f(a)))
+    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): Promise<List<B>> => {
+      const results = await traverseWithConcurrency(array, f, options?.concurrency ?? "unbounded")
       return ListObject(results.flatMap((iterable) => Array.from(iterable)))
     },
 

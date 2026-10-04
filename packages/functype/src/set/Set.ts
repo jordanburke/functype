@@ -1,6 +1,7 @@
 import type { Collection } from "@/collections"
 import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
+import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer } from "@/serialization"
@@ -74,15 +75,9 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return createSet(results)
     },
 
-    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>): Promise<Set<B>> => {
-      const results = new NativeSet<B>()
-      for (const a of values) {
-        const items = await f(a)
-        for (const b of items) {
-          results.add(b)
-        }
-      }
-      return createSet(results)
+    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): Promise<Set<B>> => {
+      const results = await traverseWithConcurrency(values, f, options?.concurrency ?? 1)
+      return createSet(results.flatMap((iterable) => Array.from(iterable)))
     },
 
     fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => {

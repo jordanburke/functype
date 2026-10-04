@@ -461,7 +461,8 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   map: <B>(f: (a: A) => B) => List<B>
   ap: <B>(ff: List<(value: A) => B>) => List<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>) => PromiseLike<List<B>>
+  /** Async flatMap. Starts every call at once unless \`options.concurrency\` caps it; \`{ concurrency: 1 }\` runs them in order. */
+  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions) => PromiseLike<List<B>>
   // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>

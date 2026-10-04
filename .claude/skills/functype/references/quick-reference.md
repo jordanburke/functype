@@ -15,7 +15,7 @@ const cache = new globalThis.Map<string, Row>() // the built-in: mutated on purp
 cache.set(id, row)
 ```
 
-- `new Map()` on functype's `Map` fails with TS7009 ("target lacks a construct signature"); lint reports it with the fix.
+- `new Map()` on functype's `Map` fails with TS7009 ("target lacks a construct signature"), or TS2350 ("Only a void function can be called with the 'new' keyword") when `noImplicitAny` is off. Either code means the same thing; lint reports it with the fix.
 - Don't alias (`Map as FMap`); `collection-naming` reports it.
 - A built-in that's only read is still reported: use functype's, or pass it straight to a declared `ReadonlyMap` / `ReadonlySet`.
 
@@ -212,6 +212,25 @@ const results = items.map(parseRow) // Array<Either<E, Row>>  <- now what?
 const result = Either.traverse(items, parseRow) // Either<E, Row[]>
 ```
 
+### Async traversal (awaiting in a loop)
+
+`no-imperative-loops` reports a loop that `await`s. Replace it with one of these, not a hand-rolled `reduce` over promises.
+
+```typescript
+// f returns Either: one call at a time, stops at the first Left
+await Either.traverseAsync(rows, saveRow)                     // Promise<Either<E, Saved[]>>
+await Either.traverseAsync(ids, fetchUser, { concurrency: 4 }) // up to 4 at once; earliest failing item's Left wins
+
+// f returns a plain promise: flatMapAsync with a concurrency cap
+await List(files).flatMapAsync(async (f) => [await stat(f)], { concurrency: 1 }) // in order
+await List(urls).flatMapAsync(async (u) => [await get(u)])                        // List default: all at once
+
+// Inside IO: IO.forEach runs in order and stops at the first failure
+IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
+```
+
+`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.flatMapAsync` starts every call at once; `Set.flatMapAsync` and `Either.traverseAsync` run one at a time. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
+
 ## Pipeline Composition
 
 ### Option Pipeline
@@ -305,6 +324,7 @@ const pairs = Do(function* () {
 | Pure success   | `IO.succeed(value)`           | `IO.succeed(42)`                           |
 | Pure failure   | `IO.fail(error)`              | `IO.fail(new Error("oops"))`               |
 | From promise   | `IO.tryPromise({try, catch})` | `IO.tryPromise({ try: () => fetch(url) })` |
+| From Promise<Either> | `IO.fromPromiseEither(fn, onReject?)` | `IO.fromPromiseEither(() => save(row))` (keeps `E` typed) |
 | Access service | `IO.service(Tag)`             | `IO.service(Database)`                     |
 | Provide deps   | `effect.provide(layer)`       | `program.provide(dbLayer)`                 |
 | Pure defect    | `IO.die(defect)`              | `IO.die(new Error("bug"))`                 |
@@ -575,5 +595,9 @@ if (e.isLeft()) {
 }
 const n: number = e.value // narrowed to RightOf — value is number, no cast
 ```
+
+After an `isLeft()` early return, `e.value` is already `R`: don't call `.orThrow()` to get it.
+
+To choose between two Options, use `a.or(b)`, not an `if`. `orElse` takes a plain value; `or` takes another Option.
 
 If you need to reference a specific variant, import `LeftOf` / `RightOf` from `functype/either`.

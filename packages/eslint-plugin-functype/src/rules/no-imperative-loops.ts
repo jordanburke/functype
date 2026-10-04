@@ -36,7 +36,7 @@ const rule: Rule.RuleModule = {
       noForInLoop: "Prefer Object.keys().forEach() or functional methods over for..in loops",
       noForOfLoop: "Prefer .forEach() or .map() over for..of loops",
       noAsyncLoop:
-        "This loop awaits, which .forEach()/.map() cannot do. For sequential effects use IO.forEach(items, f) (runs in order, stops at the first failure); for independent ones, IO.all",
+        "This loop awaits, which .forEach()/.map() cannot do. To await in order use List(items).flatMapAsync(f, { concurrency: 1 }), or Either.traverseAsync(items, f) when f returns Either (stops at the first Left). Inside IO, use IO.forEach(items, f)",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
       noDoWhileLoop: "Prefer functional iteration or recursion over do..while loops",
       suggestForEach: "Replace with {{iterable}}.forEach(...)",
@@ -165,7 +165,7 @@ const rule: Rule.RuleModule = {
         if (allowInTests && isInTestFile()) return
 
         // A .forEach suggestion here would move `await` into a non-async callback — a syntax error —
-        // so an awaiting body gets the IO.forEach pointer and no suggestion.
+        // so an awaiting body gets the async-traversal pointer and no suggestion.
         if (containsAwait(node.body)) {
           context.report({ node, messageId: "noAsyncLoop" })
           return

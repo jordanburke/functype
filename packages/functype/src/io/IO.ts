@@ -1336,6 +1336,32 @@ const IOCompanion = {
     unsafeCoerce(either.isRight() ? IOCompanion.succeed(either.value as A) : IOCompanion.fail(either.value as E)),
 
   /**
+   * Lifts an async function that returns `Either<E, A>` into `IO<never, E, A>`, keeping `E` typed.
+   * The promise is not created until the IO is run.
+   *
+   * A Left becomes a failure in the E channel. A rejected promise is a defect by default (the function
+   * is not expected to throw); pass `onReject` to map rejections into the error channel instead.
+   *
+   * @example
+   * ```typescript
+   * const save = (row: Row): Promise<Either<SaveError, Saved>> => ...
+   *
+   * IO.forEach(rows, (row) => IO.fromPromiseEither(() => save(row))).run()
+   * // Promise<Either<SaveError, readonly Saved[]>>, in order, stopping at the first Left
+   * ```
+   */
+  fromPromiseEither: <E extends Type, A extends Type, E2 extends Type = never>(
+    f: () => PromiseLike<Either<E, A>>,
+    onReject?: (error: unknown) => E2,
+  ): IO<never, E | E2, A> => {
+    const lifted = IOCompanion.async(async () => f())
+    const settled: IO<never, E2, Either<E, A>> = onReject
+      ? lifted.mapError(onReject)
+      : lifted.recoverWith((defect) => IOCompanion.die(defect))
+    return settled.flatMap((either) => IOCompanion.fromEither(either))
+  },
+
+  /**
    * Creates an IO from an Option.
    */
   fromOption: <A extends Type>(option: Option<A>): IO<never, void, A> =>
@@ -1562,7 +1588,8 @@ const IOCompanion = {
   // ============================================
 
   /**
-   * Runs all IOs in parallel and collects results.
+   * Runs all IOs one after another, in order, and collects the results. Stops at the first failure.
+   * Despite the name, the effects do not run in parallel yet.
    */
   all: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, readonly A[]> => {
     if (effects.length === 0) {
@@ -1799,8 +1826,9 @@ const IOCompanion = {
   },
 
   /**
-   * Executes effects for each element in parallel (limited concurrency coming later).
-   * Alias for forEach.
+   * @deprecated Runs sequentially: this is an alias for {@link IOCompanion.forEach}, not a parallel traversal.
+   * Use `IO.forEach` so the code says what it does. For parallel Promise work, use
+   * `Either.traverseAsync(items, f, { concurrency })` or `list.flatMapAsync(f, { concurrency })`.
    */
   forEachPar: <R extends Type, E extends Type, A extends Type, B extends Type>(
     items: readonly A[],
