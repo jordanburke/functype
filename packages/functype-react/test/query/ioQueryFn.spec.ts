@@ -83,6 +83,34 @@ describe("ioQueryFn", () => {
   })
 })
 
+describe("ioQueryFn cancellation", () => {
+  it("a cancelled query stops the effect, and rejects with an interruption marked as a defect, not an E", async () => {
+    const counter = { n: 0 }
+    const loop = IO.iterate(
+      0,
+      (i: number) =>
+        IO.sleep(1).map(() => {
+          counter.n += 1
+          return i + 1
+        }),
+      () => false,
+      { max: 1_000_000 },
+    )
+    const controller = new AbortController()
+    const pending = ioQueryFn(() => loop)({ signal: controller.signal }).catch((e: unknown) => e)
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    controller.abort()
+    const error = await pending
+
+    expect(error).toBeInstanceOf(IOQueryError)
+    expect((error as IOQueryError<unknown>).defect).toBe(true)
+    const snapshot = counter.n
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    expect(counter.n).toBe(snapshot)
+  })
+})
+
 describe("ioMutationFn", () => {
   it("resolves with the Right value and receives the variables", async () => {
     const mutationFn = ioMutationFn<never, string, { name: string }>((vars) => IO.succeed(`created ${vars.name}`))

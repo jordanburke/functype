@@ -3,18 +3,18 @@
 import type { UseMutationResult } from "@tanstack/react-query"
 import type { IO } from "functype/io"
 
-import type { TaskState } from "../async/TaskState"
+import type { AsyncState } from "../async/AsyncState"
 import type { IOQueryError } from "./IOQueryError"
 import { toMutationState } from "./queryState"
 import type { UseIOMutationOptions } from "./useIOMutation"
 import { useIOMutation } from "./useIOMutation"
 
 /**
- * `TaskState` plus the flags and the trigger functions. Unlike a query, a mutation is
+ * `AsyncState` plus the flags and the trigger functions. Unlike a query, a mutation is
  * useless without its trigger, so `mutate` / `mutateAsync` / `reset` are carried
  * through with React Query's own signatures.
  */
-export type UseIOMutationStateResult<A, E, V, TContext> = TaskState<IOQueryError<E>, A> &
+export type UseIOMutationStateResult<A, E, V, TContext> = AsyncState<IOQueryError<E>, A> &
   Pick<UseMutationResult<A, IOQueryError<E>, V, TContext>, "mutate" | "mutateAsync" | "reset"> & {
     readonly isIdle: boolean
     readonly isPending: boolean
@@ -23,7 +23,7 @@ export type UseIOMutationStateResult<A, E, V, TContext> = TaskState<IOQueryError
   }
 
 /**
- * `useIOMutation` projected onto the `TaskState` ADT, so a mutation's lifecycle matches
+ * `useIOMutation` projected onto the `AsyncState` ADT, so a mutation's lifecycle matches
  * exhaustively like a query's. React Query's own `idle` status maps directly onto `Idle`.
  *
  * ```tsx

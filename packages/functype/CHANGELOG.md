@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (breaking): functype-react's async hooks run `IO` instead of `Task`.** Part of removing `Task` from functype.
+
+- `useTask` → `useIO`, `useTaskPromise` → `useIOPromise`, `useTaskValue` → `useIOValue`, `<TaskBoundary>` → `<AsyncBoundary>`, `TaskState` → `AsyncState`, `UseTaskResult` → `UseIOResult`. The factory now returns an `IO<never, E, A>` instead of a promise: `useIO((signal) => Http.get(url, { signal }), [id])`.
+- `useIO`'s `Failure` carries the effect's typed `E` instead of a `Throwable`. A defect is rethrown during render to the nearest error boundary. On unmount or a `deps` change the effect is cancelled and stops at its next step.
+- `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
+- `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
+- functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
 
 - **`io.interruptOn(signal)`** stops a running effect when an `AbortSignal` fires. No further step starts, so a cancelled poll, retry loop or `IO.gen` pipeline stops instead of running on with its result discarded. The result is a typed `InterruptedError` (`E` widens to `E | InterruptedError`), which `catchTag("InterruptedError", …)` handles outside the call. Inside it, `retry`, `recover`, `catchAll` and `fold` cannot swallow the cancellation, including an abort that surfaces as a rejected `fetch`. `bracket` / `acquireRelease` cleanup still runs, to completion. A defect after the abort is still reported as a defect. Closes #242.

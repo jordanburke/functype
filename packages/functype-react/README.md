@@ -4,7 +4,7 @@ React bindings for the [functype](https://github.com/jordanburke/functype) funct
 
 ## Thesis
 
-Push the same ADTs (`Option`, `Either`, `Try`, `Task`, `Validated`) you already trust on the server-side into React component boundaries, so design/requirement errors fail compilation in the UI layer instead of leaking through as `data && !error && !loading` flag soup.
+Push the same ADTs (`Option`, `Either`, `Try`, `IO`, `Validated`) you already trust on the server-side into React component boundaries, so design/requirement errors fail compilation in the UI layer instead of leaking through as `data && !error && !loading` flag soup.
 
 ## Install
 
@@ -20,7 +20,7 @@ pnpm add functype functype-react react react-dom
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers         |
 | `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                      |
-| `functype-react/async`  | `useTask`, `useTaskPromise`, `useTaskValue` (React 19 `use()` bridge), `<TaskBoundary>`                                                     |
+| `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                          |
 | `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                       |
 | `functype-react/query`  | `useIOQuery(State)`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
 
@@ -71,35 +71,38 @@ import { Match, MatchOption } from "functype-react"
 
 Omitting a `_tag` case is a compile error.
 
-## Tier 3 — async / Task
+## Tier 3 — async / IO
 
 ```ts
-import { useTask } from "functype-react/async"
+import { Http } from "functype/fetch"
+import { useIO } from "functype-react/async"
 
 function UserPanel({ id }: { id: string }) {
-  const state = useTask((signal) => fetch(`/users/${id}`, { signal }).then((r) => r.json()), [id])
+  const state = useIO((signal) => Http.get<User>(`/users/${id}`, { signal }).map((r) => r.data), [id])
   if (state.isPending) return <Spinner />
-  if (state.isFailure) return <Err err={state.error} />
+  if (state.isFailure) return <Err err={state.error} /> // state.error is the effect's typed E
   return state.isSuccess ? <Profile user={state.value} /> : null
 }
 ```
 
+On unmount or a `deps` change the signal aborts, and the effect stops at its next step (no further retries, polls or `flatMap`s run). A typed failure becomes `Failure`; a defect is rethrown to the nearest error boundary.
+
 For React 19 `use()` + Suspense:
 
 ```tsx
-import { TaskBoundary, useTaskValue } from "functype-react/async"
+import { AsyncBoundary, useIOValue } from "functype-react/async"
 
 function UserPanel({ id }: { id: string }) {
-  const user = useTaskValue((signal) => fetch(`/users/${id}`, { signal }).then((r) => r.json()), [id])
+  const user = useIOValue((signal) => Http.get<User>(`/users/${id}`, { signal }).map((r) => r.data), [id])
   return <Profile user={user} />
 }
 
-;<TaskBoundary pending={<Spinner />} fallback={(err, reset) => <ErrorPanel err={err} onRetry={reset} />}>
+;<AsyncBoundary pending={<Spinner />} fallback={(err, reset) => <ErrorPanel err={err} onRetry={reset} />}>
   <UserPanel id="42" />
-</TaskBoundary>
+</AsyncBoundary>
 ```
 
-`useTaskValue` requires React 19. See the JSDoc on the hook for invariant documentation (stable promise refs, ErrorBoundary outside Suspense, no SSR).
+`useIOValue` requires React 19. See the JSDoc on the hook for invariant documentation (stable promise refs, ErrorBoundary outside Suspense, no SSR).
 
 ## Tier 4 — forms with accumulating validation
 
@@ -165,7 +168,7 @@ if (error) {
 
 ### Matching instead of flag soup
 
-The result above is still React Query's — `data` is `A | undefined`, so the success path needs a `!` or a guard. `toQueryState` projects it onto the same `TaskState` ADT that `functype-react/async` returns, so a query matches exhaustively like any other functype value:
+The result above is still React Query's — `data` is `A | undefined`, so the success path needs a `!` or a guard. `toQueryState` projects it onto the same `AsyncState` ADT that `functype-react/async` returns, so a query matches exhaustively like any other functype value:
 
 ```tsx
 import { Match } from "functype-react"
@@ -191,7 +194,7 @@ function UserPanel({ id }: { id: string }) {
 
 The projection is a pure function over the result, so you keep everything else React Query gives you (`refetch`, `isFetching`, `dataUpdatedAt`) on the original object. (Invalidation is a client-level operation — `queryClient.invalidateQueries()` — not a method on the result.)
 
-If the ADT is all you need, `useIOQueryState` skips the projection step — it returns `TaskState` directly, plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and `refetch`, mirroring what `useTask` returns in Tier 3:
+If the ADT is all you need, `useIOQueryState` skips the projection step — it returns `AsyncState` directly, plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and `refetch`, mirroring what `useIO` returns in Tier 3:
 
 ```tsx
 const user = useIOQueryState(["user", id], ({ signal }) => Http.get<User>(url, { signal }))
@@ -212,8 +215,8 @@ Both read only the fields they project. For **queries** that matters: React Quer
 
 Two behaviours worth knowing before you rely on the ADT:
 
-- **A failed background refetch projects to `Failure` even though React Query still holds the last successful `data`.** `TaskState` has no "loaded but stale" variant. This is the deliberate default — it never silently hides a failure — but it does mean a transient refetch error flips a loaded view to the error branch. To keep rendering stale data, read `query.data` alongside the projection or branch on `query.isRefetchError` before projecting.
-- **`defect: true` means `.error` is not an `E`** — check it before matching on `_tag`. It is set when the effect factory throws before an `IO` is produced, when the effect produces a defect (`Exit.Die`: a throwing `IO.sync` thunk, a throwing `map`/`flatMap`/`mapError` callback, or `IO.die`), or when the effect is interrupted. Conversely `defect: false` genuinely means `.error` is an `E` — the bridge reads `runExit()`, so it can see the difference. (It previously read `run()`, whose `Either` could not, so a defect arrived indistinguishable from a typed failure and the flag read `false`.)
+- **A failed background refetch projects to `Failure` even though React Query still holds the last successful `data`.** `AsyncState` has no "loaded but stale" variant. This is the deliberate default — it never silently hides a failure — but it does mean a transient refetch error flips a loaded view to the error branch. To keep rendering stale data, read `query.data` alongside the projection or branch on `query.isRefetchError` before projecting.
+- **`defect: true` means `.error` is not an `E`** — check it before matching on `_tag`. It is set when the effect factory throws before an `IO` is produced, when the effect produces a defect (`Exit.Die`: a throwing `IO.sync` thunk, a throwing `map`/`flatMap`/`mapError` callback, or `IO.die`), or when the effect is interrupted (including a query React Query cancelled: the effect runs with the query's `signal`, so it stops at its next step). Conversely `defect: false` genuinely means `.error` is an `E` — the bridge reads `runExit()`, so it can see the difference. (It previously read `run()`, whose `Either` could not, so a defect arrived indistinguishable from a typed failure and the flag read `false`.)
 
 Mutations mirror the shape (React Query supplies no `AbortSignal` to mutations, so the callback takes only the variables):
 
@@ -255,7 +258,7 @@ Both the hooks and the primitives are generic over any `IO<never, E, A>` — not
 ## Compatibility
 
 - **TypeScript**: `strict: true` + `noUncheckedIndexedAccess: true`. Loose configs will silently lose the type-level exhaustiveness guarantees.
-- **React**: peer dep range `>=18 <20`. Tier 3's `useTaskValue` (and consequently anything that depends on React 19's `use()` hook) is React-19-only at runtime; the rest of the package works on both.
+- **React**: peer dep range `>=18 <20`. Tier 3's `useIOValue` (and consequently anything that depends on React 19's `use()` hook) is React-19-only at runtime; the rest of the package works on both.
 - **SSR / RSC**: hooks are client-only and marked with `"use client"`. `<Match>` family components are pure and render fine in Server Components.
 - **React Query**: Tier 5 targets `@tanstack/react-query` v5 (`>=5.0.0`), an optional peer. The `ioQueryFn` / `ioMutationFn` primitives type their context structurally, so they carry no `@tanstack` types and are unaffected by its major-version churn.
 
@@ -264,7 +267,7 @@ Both the hooks and the primitives are generic over any `IO<never, E, A>` — not
 - `./optics` subpath (`useLens`, `useOptional`, `useSelector`) — blocked on core not shipping a lens module yet.
 - React-specific ESLint rules (`must-fold-on-component-return`, `no-getOrThrow-in-render`, etc.) — land in `eslint-functype@2.4.0` once the API stabilizes.
 - Codemods, Storybook, cookbook recipes on the Astro site.
-- Playwright browser-based testing for `useTaskValue` + `<TaskBoundary>` (jsdom doesn't unsuspend React 19's `use()` reliably).
+- Playwright browser-based testing for `useIOValue` + `<AsyncBoundary>` (jsdom doesn't unsuspend React 19's `use()` reliably).
 
 ## License
 
