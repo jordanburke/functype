@@ -1,6 +1,6 @@
 # functype-os
 
-Functional OS utilities for Node.js using [functype](https://github.com/jordanburke/functype) data structures. Wraps environment variables, path expansion, filesystem operations, platform detection, and config file resolution with `Option`, `Either`, `Task`, and `List`.
+Functional OS utilities for Node.js using [functype](https://github.com/jordanburke/functype) data structures. Wraps environment variables, path expansion, filesystem operations, platform detection, and config file resolution with `Option`, `Either`, `IO`, and `List`.
 
 ## Install
 
@@ -46,16 +46,24 @@ Path.isAbsolute("/abs") // true
 
 ### Fs
 
-Async filesystem operations returning `TaskResult`.
+Async filesystem operations return a lazy `IO`: nothing touches the disk until you call `.run()`. Each `*Sync` method returns `Either` and runs immediately.
 
 ```typescript
 import { Fs } from "functype-os"
 
-await Fs.exists("/path/to/file") // TaskResult<boolean>
-await Fs.readFile("/path/to/file") // TaskResult<string>
-await Fs.readFileOpt("/path/to/file") // TaskResult<Option<string>> (None on ENOENT)
-await Fs.readdir("/path/to/dir") // TaskResult<List<string>>
+await Fs.exists("/path/to/file").run() // Either<never, boolean>
+await Fs.readFile("/path/to/file").run() // Either<FsError, string>
+await Fs.readFileOpt("/path/to/file").run() // Either<FsError, Option<string>> (None on ENOENT)
+await Fs.readdir("/path/to/dir").run() // Either<FsError, List<string>>
+
+// Being IO, they compose before anything runs:
+const copyConfig = Fs.readFile(src)
+  .flatMap((text) => Fs.writeFile(dest, text))
+  .retry(2)
+await copyConfig.run()
 ```
+
+Forgetting `.run()` is a silent no-op: `await Fs.mkdir(dir)` awaits the `IO` value itself. The `@typescript-eslint/await-thenable` rule catches it when type-aware linting is on, as it is in ts-builds' functype preset.
 
 ### Platform
 
@@ -89,18 +97,18 @@ import { ConfigResolver } from "functype-os"
 
 const config = await ConfigResolver.resolve({
   candidates: ["./app.toml", "~/.config/app/config.toml", "$APPDATA/app/config.toml"],
-})
-// TaskResult<Option<string>> — Ok(Some("/home/user/.config/app/config.toml"))
+}).run()
+// Either<never, Option<string>> — Right(Some("/home/user/.config/app/config.toml"))
 
 const required = await ConfigResolver.resolveRequired({
   candidates: ["./app.toml", "~/.config/app/config.toml"],
-})
-// TaskResult<string> — Err(ConfigError) if none found
+}).run()
+// Either<ConfigError, string> — Left(ConfigError) if none found
 
 const all = await ConfigResolver.resolveAll({
   candidates: ["./a.toml", "./b.toml", "./c.toml"],
-})
-// TaskResult<List<string>> — all existing paths
+}).run()
+// Either<never, List<string>> — all existing paths
 ```
 
 ### Errors

@@ -5,20 +5,20 @@ import { Process } from "../../src/process"
 describe("Process", () => {
   describe("exec", () => {
     it("should execute command and return Ok with ExecResult", async () => {
-      const result = await Process.exec("echo hello")
-      expect(result.isOk()).toBe(true)
+      const result = await Process.exec("echo hello").run()
+      expect(result.isRight()).toBe(true)
       expect(result.value.stdout.trim()).toBe("hello")
       expect(result.value.exitCode).toBe(0)
     })
 
     it("should return Err for failing command", async () => {
-      const result = await Process.exec("node -e 'process.exit(1)'")
-      expect(result.isErr()).toBe(true)
+      const result = await Process.exec("node -e 'process.exit(1)'").run()
+      expect(result.isLeft()).toBe(true)
     })
 
     it("should respect cwd option", async () => {
-      const result = await Process.exec("pwd", { cwd: "/tmp" })
-      expect(result.isOk()).toBe(true)
+      const result = await Process.exec("pwd", { cwd: "/tmp" }).run()
+      expect(result.isRight()).toBe(true)
       expect(result.value.stdout.trim()).toMatch(/tmp/)
     })
   })
