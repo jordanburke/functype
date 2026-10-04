@@ -270,23 +270,19 @@ result.fold(
 
 ### Sequential Async Operations
 
+Don't write a helper or a `reduce` over promises; the built-ins cover it (1.13+).
+
 ```typescript
-import { List } from "functype"
+import { Either, List } from "functype"
 
-async function processInSequence<T, R>(items: T[], process: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = []
+// Plain promises, one at a time, in order. Keep the [ ]: f must return an iterable.
+const users = await List(userIds).flatMapAsync(async (id) => [await fetchUser(id)], { concurrency: 1 })
 
-  for (const item of items) {
-    const result = await process(item)
-    results.push(result)
-  }
+// Either-returning calls: one at a time, stops at the first Left
+const saved = await Either.traverseAsync(rows, saveRow) // Either<SaveError, Saved[]>
 
-  return results
-}
-
-// Usage with functype
-const userIds = List(["1", "2", "3"])
-const users = await processInSequence(userIds.toArray(), async (id) => fetchUser(id))
+// Bounded parallelism instead of strict order
+const pages = await Either.traverseAsync(urls, fetchPage, { concurrency: 4 })
 ```
 
 ## Combining Types

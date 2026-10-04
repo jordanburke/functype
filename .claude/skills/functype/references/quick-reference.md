@@ -229,7 +229,7 @@ await List(urls).flatMapAsync(async (u) => [await get(u)])                      
 IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
 ```
 
-`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.flatMapAsync` starts every call at once; `Set.flatMapAsync` and `Either.traverseAsync` run one at a time. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
+Keep the `[ ]` in `flatMapAsync`: `f` must return an iterable, and a function returning a string type-checks and yields its characters. `concurrency` is a positive integer or `"unbounded"`. Defaults: `List.flatMapAsync` starts every call at once; `Set.flatMapAsync` and `Either.traverseAsync` run one at a time. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
 
 ## Pipeline Composition
 

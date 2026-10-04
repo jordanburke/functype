@@ -36,7 +36,7 @@ const rule: Rule.RuleModule = {
       noForInLoop: "Prefer Object.keys().forEach() or functional methods over for..in loops",
       noForOfLoop: "Prefer .forEach() or .map() over for..of loops",
       noAsyncLoop:
-        "This loop awaits, which .forEach()/.map() cannot do. To await in order use List(items).flatMapAsync(f, { concurrency: 1 }), or Either.traverseAsync(items, f) when f returns Either (stops at the first Left). Inside IO, use IO.forEach(items, f)",
+        "This loop awaits, which .forEach()/.map() cannot do. To await in order use List(items).flatMapAsync(async (x) => [await f(x)], { concurrency: 1 }), or Either.traverseAsync(items, f) when f returns Either (stops at the first Left). Inside IO, use IO.forEach(items, f)",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
       noDoWhileLoop: "Prefer functional iteration or recursion over do..while loops",
       suggestForEach: "Replace with {{iterable}}.forEach(...)",

@@ -456,7 +456,7 @@ Http.get("/api/users/1", {
   }),
 );
 
-// Parallel requests
+// Both requests (IO.all runs them in order today, not in parallel)
 import { IO } from "functype/io";
 
 const [users, posts] = await IO.all([

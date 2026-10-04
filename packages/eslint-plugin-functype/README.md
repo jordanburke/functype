@@ -198,7 +198,7 @@ These rules don't report loops that have no functional equivalent:
 - `for await` consumes a stream, and collecting it first would defeat the streaming.
 - A loop whose body `yield`s is a generator's body, and a callback can't yield.
 
-A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `List.flatMapAsync(f, { concurrency: 1 })`, `Either.traverseAsync` (stops at the first `Left`) or, inside `IO`, `IO.forEach`. `prefer-map` doesn't report it.
+A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `List(items).flatMapAsync(async (x) => [await f(x)], { concurrency: 1 })`, `Either.traverseAsync` (stops at the first `Left`) or, inside `IO`, `IO.forEach`. `prefer-map` doesn't report it.
 
 ## Combining with eslint-config-functype
 

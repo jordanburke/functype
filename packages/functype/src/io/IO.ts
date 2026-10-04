@@ -1826,7 +1826,7 @@ const IOCompanion = {
   },
 
   /**
-   * @deprecated Runs sequentially: this is an alias for {@link IOCompanion.forEach}, not a parallel traversal.
+   * @deprecated Runs sequentially: this is an alias for `IO.forEach`, not a parallel traversal.
    * Use `IO.forEach` so the code says what it does. For parallel Promise work, use
    * `Either.traverseAsync(items, f, { concurrency })` or `list.flatMapAsync(f, { concurrency })`.
    */
