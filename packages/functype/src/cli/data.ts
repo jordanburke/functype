@@ -152,7 +152,13 @@ export const TYPES: Record<string, TypeData> = {
         ".toArray()",
       ],
       check: [".isEmpty", ".nonEmpty", ".size", ".contains(v)"],
-      other: [".groupBy(f)", ".partition(p)", ".span(p)", ".flatMapAsync(f, {concurrency?}) // 1 = in order"],
+      other: [
+        ".groupBy(f)",
+        ".partition(p)",
+        ".span(p)",
+        ".mapAsync(f, {concurrency?}) // in order by default",
+        ".flatMapAsync(f, {concurrency?})",
+      ],
     },
   },
 

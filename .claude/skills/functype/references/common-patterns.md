@@ -275,8 +275,8 @@ Don't write a helper or a `reduce` over promises; the built-ins cover it (1.13+)
 ```typescript
 import { Either, List } from "functype"
 
-// Plain promises, one at a time, in order. Keep the [ ]: f must return an iterable.
-const users = await List(userIds).flatMapAsync(async (id) => [await fetchUser(id)], { concurrency: 1 })
+// Plain promises, one at a time, in order
+const users = await List(userIds).mapAsync(fetchUser)
 
 // Either-returning calls: one at a time, stops at the first Left
 const saved = await Either.traverseAsync(rows, saveRow) // Either<SaveError, Saved[]>

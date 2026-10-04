@@ -108,6 +108,44 @@ describe("List.flatMapAsync concurrency", () => {
   })
 })
 
+describe("List.mapAsync", () => {
+  it("runs one call at a time, in order, by default", async () => {
+    const p = probe()
+    const result = await List(["a", "b", "c"]).mapAsync((s) => p.run(s, s.toUpperCase()))
+    expect(p.maxInFlight()).toBe(1)
+    expect(p.started).toEqual(["a", "b", "c"])
+    expect(result.toArray()).toEqual(["A", "B", "C"])
+  })
+
+  it("caps calls in flight at { concurrency: n } and keeps input order", async () => {
+    const p = probe()
+    const delays = [5, 1, 3, 2]
+    const result = await List(delays).mapAsync(
+      (ms) => new Promise<number>((resolve) => setTimeout(() => resolve(ms), ms)).then((v) => p.run(String(v), v)),
+      { concurrency: 2 },
+    )
+    expect(p.maxInFlight()).toBeLessThanOrEqual(2)
+    expect(result.toArray()).toEqual([5, 1, 3, 2])
+  })
+
+  it("keeps a string result whole (the trap flatMapAsync has)", async () => {
+    const result = await List([1, 2]).mapAsync(async (n) => `item-${n}`)
+    expect(result.toArray()).toEqual(["item-1", "item-2"])
+  })
+
+  it("returns an empty List for no items", async () => {
+    const result = await List<number>([]).mapAsync(async (n) => n)
+    expect(result.toArray()).toEqual([])
+  })
+
+  it("rejects on the first rejection and starts nothing after it", async () => {
+    const p = probe()
+    const failing = List([1, 2, 3]).mapAsync((n) => (n === 2 ? Promise.reject(new Error("boom")) : p.run(String(n), n)))
+    await expect(failing).rejects.toThrow("boom")
+    expect(p.started).toEqual(["1"])
+  })
+})
+
 describe("Set.flatMapAsync concurrency", () => {
   it("runs in order by default (unchanged behavior)", async () => {
     const p = probe()

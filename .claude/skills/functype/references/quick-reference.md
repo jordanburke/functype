@@ -221,15 +221,15 @@ const result = Either.traverse(items, parseRow) // Either<E, Row[]>
 await Either.traverseAsync(rows, saveRow)                     // Promise<Either<E, Saved[]>>
 await Either.traverseAsync(ids, fetchUser, { concurrency: 4 }) // up to 4 at once; earliest failing item's Left wins
 
-// f returns a plain promise: flatMapAsync with a concurrency cap
-await List(files).flatMapAsync(async (f) => [await stat(f)], { concurrency: 1 }) // in order
-await List(urls).flatMapAsync(async (u) => [await get(u)])                        // List default: all at once
+// f returns a plain promise: mapAsync
+await List(files).mapAsync(stat)                     // one at a time, in order (the default)
+await List(urls).mapAsync(get, { concurrency: 4 })   // up to 4 at once
 
 // Inside IO: IO.forEach runs in order and stops at the first failure
 IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
 ```
 
-Keep the `[ ]` in `flatMapAsync`: `f` must return an iterable, and a function returning a string type-checks and yields its characters. `concurrency` is a positive integer or `"unbounded"`. Defaults: `List.flatMapAsync` starts every call at once; `Set.flatMapAsync` and `Either.traverseAsync` run one at a time. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
+`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.flatMapAsync` and `Either.traverseAsync` run one at a time; `List.flatMapAsync` starts every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
 
 ## Pipeline Composition
 

@@ -47,11 +47,9 @@ List([1, 2]).flatMap((x) => List([x, x * 10])); // List([1, 10, 2, 20])
 // Fold - reduce to single value
 List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x); // 6
 
-// FlatMapAsync - await each element; starts them all at once unless capped
-await List(ids).flatMapAsync(async (id) => [await fetchUser(id)]); // all at once
-await List(ids).flatMapAsync(async (id) => [await fetchUser(id)], {
-  concurrency: 1,
-}); // in order
+// MapAsync - await each element; one at a time unless you raise the cap
+await List(ids).mapAsync(fetchUser); // in order
+await List(ids).mapAsync(fetchUser, { concurrency: 4 }); // up to 4 at once
 ```
 
 ## Collection Operations
