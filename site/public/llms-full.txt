@@ -1680,6 +1680,10 @@ Right<string, number>(5).filterOrElse(
   (n) => n > 10,
   (n) => `too small: ${n}`,
 ); // Left("too small: 5")
+
+// TraverseAsync - run an async Either-returning function over many items
+await Either.traverseAsync(rows, saveRow); // one at a time, stops at the first Left
+await Either.traverseAsync(ids, fetchUser, { concurrency: 4 }); // up to 4 at once
 ```
 
 ## Pattern Matching
@@ -1952,6 +1956,10 @@ List([1, 2]).flatMap((x) => List([x, x * 10])); // List([1, 10, 2, 20])
 
 // Fold - reduce to single value
 List([1, 2, 3]).foldLeft(0)((acc, x) => acc + x); // 6
+
+// MapAsync - await each element; one at a time unless you raise the cap
+await List(ids).mapAsync(fetchUser); // in order
+await List(ids).mapAsync(fetchUser, { concurrency: 4 }); // up to 4 at once
 ```
 
 ## Collection Operations
@@ -2415,16 +2423,17 @@ const syncValue = sync.runSyncOrThrow(); // A - throws on error
 
 ## Constructors
 
-| Method                             | Description                      |
-| ---------------------------------- | -------------------------------- |
-| `IO.succeed(value)`                | Effect that succeeds with value  |
-| `IO.fail(error)`                   | Effect that fails with error     |
-| `IO.sync(() => A)`                 | Wrap synchronous computation     |
-| `IO.async(async () => A)`          | Wrap async computation           |
-| `IO.tryCatch(fn, onError)`         | Catch exceptions as typed errors |
-| `IO.fromPromise(promise, onError)` | Convert Promise to IO            |
-| `IO.unit`                          | Effect that succeeds with void   |
-| `IO.never`                         | Effect that never completes      |
+| Method                                | Description                                           |
+| ------------------------------------- | ----------------------------------------------------- |
+| `IO.succeed(value)`                   | Effect that succeeds with value                       |
+| `IO.fail(error)`                      | Effect that fails with error                          |
+| `IO.sync(() => A)`                    | Wrap synchronous computation                          |
+| `IO.async(async () => A)`             | Wrap async computation                                |
+| `IO.tryCatch(fn, onError)`            | Catch exceptions as typed errors                      |
+| `IO.fromPromise(promise, onError)`    | Convert Promise to IO                                 |
+| `IO.fromPromiseEither(fn, onReject?)` | Lift `() => Promise<Either<E, A>>`, keeping `E` typed |
+| `IO.unit`                             | Effect that succeeds with void                        |
+| `IO.never`                            | Effect that never completes                           |
 
 ## Transformations
 
@@ -2447,8 +2456,9 @@ io.orElse(fallbackIO);
 ## Combining Effects
 
 ```typescript
-// Run in parallel
-IO.all([io1, io2, io3]); // All must succeed
+// Run in order (IO.all does not run effects in parallel yet)
+IO.all([io1, io2, io3]); // All must succeed; stops at the first failure
+IO.forEach(items, (item) => save(item)); // One effect per item, in order
 IO.race([io1, io2]); // First to complete wins
 IO.any([io1, io2, io3]); // First success wins
 
@@ -3147,7 +3157,7 @@ Http.get("/api/users/1", {
   }),
 );
 
-// Parallel requests
+// Both requests (IO.all runs them in order today, not in parallel)
 import { IO } from "functype/io";
 
 const [users, posts] = await IO.all([
@@ -3932,7 +3942,7 @@ export default [functype.configs.strict]
 | Rule                           | Recommended | Strict | Description                                                                              |
 | ------------------------------ | :---------: | :----: | ---------------------------------------------------------------------------------------- |
 | `functype/no-let`              |    error    | error  | Use `const`; no reassignment                                                             |
-| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods or `IO.forEach` instead of loops                                |
+| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops               |
 | `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read                               |
 | `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read                               |
 | `functype/collection-naming`   |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map` |
@@ -4084,7 +4094,7 @@ This is the escape for an interface that takes a native `ReadonlyMap` — declar
 
 functype's `Map` / `Set` are the default collections (the Scala convention: the immutable collection owns the plain name). This rule reports:
 
-- `new Map()` on functype's `Map` (or `Set`). It's a factory, so TypeScript only says TS7009 ("target lacks a construct signature"). The message says to write `Map(…)` / `Map.empty()`, or `new globalThis.Map(…)` for the built-in.
+- `new Map()` on functype's `Map` (or `Set`). It's a factory, so TypeScript only says TS7009 ("target lacks a construct signature"), or TS2350 ("Only a void function can be called with the 'new' keyword") when `noImplicitAny` is off. The message says to write `Map(…)` / `Map.empty()`, or `new globalThis.Map(…)` for the built-in.
 - `import { Map as FMap } from "functype"`. An alias lets the plain name keep meaning the built-in, which inverts the convention and drifts between files.
 
 | Option       | Default | Description                                                                                                          |
@@ -4100,7 +4110,7 @@ These rules don't report loops that have no functional equivalent:
 - `for await` consumes a stream, and collecting it first would defeat the streaming.
 - A loop whose body `yield`s is a generator's body, and a callback can't yield.
 
-A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `IO.forEach`. `prefer-map` doesn't report it.
+A loop whose body `await`s is still reported by `no-imperative-loops`, which points at `List(items).mapAsync(f)`, `Either.traverseAsync` (stops at the first `Left`) or, inside `IO`, `IO.forEach`. `prefer-map` doesn't report it.
 
 ## Combining with eslint-config-functype
 
@@ -4216,6 +4226,7 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mon
 
 - `Either.sequence(arr)`
 - `Either.traverse(arr, f)`
+- `Either.traverseAsync(items, f, {concurrency?}) // in order by default, stops at first Left`
 - `Either.fromNullable(v, e)`
 
 ### Try
@@ -4377,6 +4388,8 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 - `.groupBy(f)`
 - `.partition(p)`
 - `.span(p)`
+- `.mapAsync(f, {concurrency?}) // in order by default`
+- `.flatMapAsync(f, {concurrency?})`
 
 ### Set
 
@@ -4561,6 +4574,7 @@ Implements: Functor, Monad, Foldable, Matchable
 - `IO.async(f)`
 - `IO.tryPromise({try, catch})`
 - `IO.fromEither(e)`
+- `IO.fromPromiseEither(f, onReject?)`
 - `IO.fromOption(o)`
 - `IO.fromTry(t)`
 - `IO.die(defect)`

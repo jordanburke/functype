@@ -7,7 +7,7 @@ import { ruleTester } from "../utils/rule-tester"
  * functype's `Map` / `Set` are the default collections (Scala-style): imported under their own names,
  * with the built-in spelled `globalThis.Map` / `globalThis.Set` where it is genuinely needed. This rule
  * keeps that convention mechanical, and replaces TypeScript's TS7009 ("target lacks a construct
- * signature") with a message that says what to write instead.
+ * signature") or TS2350 (without noImplicitAny) with a message that says what to write instead.
  */
 describe("collection-naming", () => {
   ruleTester.run("collection-naming", rule, {

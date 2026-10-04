@@ -41,16 +41,17 @@ const syncValue = sync.runSyncOrThrow(); // A - throws on error
 
 ## Constructors
 
-| Method                             | Description                      |
-| ---------------------------------- | -------------------------------- |
-| `IO.succeed(value)`                | Effect that succeeds with value  |
-| `IO.fail(error)`                   | Effect that fails with error     |
-| `IO.sync(() => A)`                 | Wrap synchronous computation     |
-| `IO.async(async () => A)`          | Wrap async computation           |
-| `IO.tryCatch(fn, onError)`         | Catch exceptions as typed errors |
-| `IO.fromPromise(promise, onError)` | Convert Promise to IO            |
-| `IO.unit`                          | Effect that succeeds with void   |
-| `IO.never`                         | Effect that never completes      |
+| Method                                | Description                                           |
+| ------------------------------------- | ----------------------------------------------------- |
+| `IO.succeed(value)`                   | Effect that succeeds with value                       |
+| `IO.fail(error)`                      | Effect that fails with error                          |
+| `IO.sync(() => A)`                    | Wrap synchronous computation                          |
+| `IO.async(async () => A)`             | Wrap async computation                                |
+| `IO.tryCatch(fn, onError)`            | Catch exceptions as typed errors                      |
+| `IO.fromPromise(promise, onError)`    | Convert Promise to IO                                 |
+| `IO.fromPromiseEither(fn, onReject?)` | Lift `() => Promise<Either<E, A>>`, keeping `E` typed |
+| `IO.unit`                             | Effect that succeeds with void                        |
+| `IO.never`                            | Effect that never completes                           |
 
 ## Transformations
 
@@ -73,8 +74,9 @@ io.orElse(fallbackIO);
 ## Combining Effects
 
 ```typescript
-// Run in parallel
-IO.all([io1, io2, io3]); // All must succeed
+// Run in order (IO.all does not run effects in parallel yet)
+IO.all([io1, io2, io3]); // All must succeed; stops at the first failure
+IO.forEach(items, (item) => save(item)); // One effect per item, in order
 IO.race([io1, io2]); // First to complete wins
 IO.any([io1, io2, io3]); // First success wins
 

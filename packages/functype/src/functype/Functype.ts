@@ -1,6 +1,7 @@
 import type { Collection } from "@/collections"
 import type { Extractable } from "@/extractable"
 import type { Foldable } from "@/foldable/Foldable"
+import type { ConcurrencyOptions } from "@/internal/concurrency"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
@@ -59,5 +60,13 @@ export interface FunctypeCollection<A, Tag extends string = string>
   toValue(): { _tag: Tag; value: A[] }
   // Override to work with Iterable instead of Monad/AsyncMonad
   flatMap<B extends Type>(f: (value: A) => Iterable<B>): FunctypeCollection<B, Tag>
-  flatMapAsync<B extends Type>(f: (value: A) => PromiseLike<Iterable<B>>): PromiseLike<FunctypeCollection<B, Tag>>
+  /**
+   * Async flatMap. `options.concurrency` caps how many calls of `f` run at once: `1` runs them in order,
+   * one after another; `"unbounded"` starts them all together. Results keep input order either way.
+   * The default depends on the collection: List starts them all; Set runs them in order.
+   */
+  flatMapAsync<B extends Type>(
+    f: (value: A) => PromiseLike<Iterable<B>>,
+    options?: ConcurrencyOptions,
+  ): PromiseLike<FunctypeCollection<B, Tag>>
 }

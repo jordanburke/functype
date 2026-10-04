@@ -89,7 +89,7 @@ describe("no-imperative-loops", () => {
       },
       // #328 review — for..in gets the same await handling as for and for..of.
       {
-        name: "for..in that awaits points at IO.forEach and offers no Object.keys suggestion",
+        name: "for..in that awaits points at async traversal and offers no Object.keys suggestion",
         code: `async function f(obj) {
   for (const k in obj) {
     await use(k)
@@ -107,9 +107,9 @@ describe("no-imperative-loops", () => {
         errors: [{ messageId: "noForOfLoop" }],
       },
       // #323 — a loop that awaits cannot become .forEach/.map (neither awaits), so the message points at
-      // IO.forEach and no .forEach suggestion is offered (it would put `await` in a non-async callback).
+      // async traversal and no .forEach suggestion is offered (it would put `await` in a non-async callback).
       {
-        name: "for..of that awaits points at IO.forEach and offers no forEach suggestion",
+        name: "for..of that awaits points at async traversal and offers no forEach suggestion",
         code: `async function run(items) {
   for (const item of items) {
     await save(item)
@@ -118,7 +118,7 @@ describe("no-imperative-loops", () => {
         errors: [{ messageId: "noAsyncLoop" }],
       },
       {
-        name: "Classic for loop that awaits points at IO.forEach",
+        name: "Classic for loop that awaits points at async traversal",
         code: `async function run(items) {
   for (let i = 0; i < items.length; i++) {
     await save(items[i])

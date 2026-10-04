@@ -24,7 +24,7 @@ for (const item of items) {
 }`,
       },
       // #323 — a loop that awaits cannot become .map (the callback cannot await); no-imperative-loops owns
-      // it and points at IO.forEach, so prefer-map must not also tell the reader to use .map.
+      // it and points at async traversal, so prefer-map must not also tell the reader to use .map.
       {
         name: "for..of that awaits while pushing is not a .map candidate",
         code: `async function saveAll(items, save) {

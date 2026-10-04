@@ -461,7 +461,23 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   map: <B>(f: (a: A) => B) => List<B>
   ap: <B>(ff: List<(value: A) => B>) => List<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>) => PromiseLike<List<B>>
+  /** Async flatMap. Starts every call at once unless \`options.concurrency\` caps it; \`{ concurrency: 1 }\` runs them in order. */
+  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions) => PromiseLike<List<B>>
+  /**
+   * Async map: awaits \`f\` for each element and keeps the results in input order.
+   *
+   * Runs one call at a time by default, which is what replacing a loop that awaits needs. Pass
+   * \`{ concurrency: n }\` to allow up to \`n\` calls at once, or \`"unbounded"\` to start them all together.
+   * (\`flatMapAsync\` defaults to \`"unbounded"\`; it keeps that default so existing callers don't change.)
+   * A rejection rejects the result, and no further calls start.
+   *
+   * @example
+   * \`\`\`typescript
+   * const users = await List(ids).mapAsync(fetchUser)                       // in order, one at a time
+   * const pages = await List(urls).mapAsync(fetchPage, { concurrency: 4 })  // up to 4 at once
+   * \`\`\`
+   */
+  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<List<B>>
   // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>

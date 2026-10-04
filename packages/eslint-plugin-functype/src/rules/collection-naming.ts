@@ -9,7 +9,8 @@ import { COLLECTION_NAMES, functypeCollectionAt } from "../utils/collection-bind
  *
  * Two defects:
  * - `new Map()` on functype's Map. It's a factory, so TypeScript only says TS7009 ("target lacks a construct
- *   signature, implicitly has an 'any' type"), which doesn't say what to write instead. This message does.
+ *   signature, implicitly has an 'any' type"), or TS2350 ("Only a void function can be called with the 'new'
+ *   keyword") when `noImplicitAny` is off. Neither says what to write instead. This message does.
  * - `import { Map as FMap } from "functype"`. Aliases let a file keep the built-in under the plain name,
  *   which inverts the convention and drifts (`FMap`, `FMapOf`, `IMap`…). `allowAlias: true` opts out.
  *

@@ -60,6 +60,10 @@ Right<string, number>(5).filterOrElse(
   (n) => n > 10,
   (n) => `too small: ${n}`,
 ); // Left("too small: 5")
+
+// TraverseAsync - run an async Either-returning function over many items
+await Either.traverseAsync(rows, saveRow); // one at a time, stops at the first Left
+await Either.traverseAsync(ids, fetchUser, { concurrency: 4 }); // up to 4 at once
 ```
 
 ## Pattern Matching

@@ -7,7 +7,7 @@
 > convention: the immutable collection owns the plain name and the mutable one is qualified.
 >
 > `eslint-plugin-functype` enforces it. `collection-naming` reports aliased imports and `new Map()` on
-> functype's factory (replacing TypeScript's unhelpful TS7009), and `prefer-functype-map` / `-set`
+> functype's factory (replacing TypeScript's unhelpful TS7009, or TS2350 when `noImplicitAny` is off), and `prefer-functype-map` / `-set`
 > report `new globalThis.Map()` like any other built-in, with the mutated and `ReadonlyMap`-contract
 > exemptions.
 >
