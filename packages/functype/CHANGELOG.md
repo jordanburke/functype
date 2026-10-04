@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.13.0 - 2026-10-04
+
 **Async traversal with a concurrency cap, so an awaiting loop has a one-line replacement. Additive: existing calls behave as before.**
 
 - **`Either.traverseAsync(items, f, { concurrency? })`.** Runs an `Either`-returning async function over an array, `List` or any iterable. It runs one call at a time by default and stops at the first `Left`. With `concurrency: n`, no new call starts after a `Left`, and the result is the `Left` of the earliest failing item. It replaces hand-rolled `traverseSeqEither`-style helpers.
