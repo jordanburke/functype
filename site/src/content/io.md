@@ -196,7 +196,8 @@ const { result, cancel } = loadReport.runCancellable();
 
 - Inside the cancelled section, `retry`, `recover` and `catchAll` can't swallow the cancellation.
 - `bracket` / `acquireRelease` cleanup still runs, to completion.
-- A promise already in flight can't be stopped, so the effect stops when it settles. Pass the same
+- A promise already in flight can't be stopped. The cancellation is seen at the next step, so if that
+  promise was the last step, the effect succeeds with its result. Pass the same
   signal to `Http` or `IO.tryAsync` so the request itself aborts.
 - When `E` is `unknown` (effects from `IO.async`), use `InterruptedError.is(e)`.
 

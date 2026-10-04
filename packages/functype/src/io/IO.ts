@@ -635,10 +635,12 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    *
    * - `bracket` / `acquireRelease` cleanup still runs, to completion: acquire and release
    *   are not interruptible.
-   * - A promise already in flight can't be stopped (JavaScript has no way to), so the effect
-   *   stops when it settles. Pass the same signal to `Http` / `IO.tryAsync` / `fetch` so the
-   *   request itself aborts; its rejection is reported as the cancellation. `IO.sleep` is not
-   *   woken early.
+   * - A promise already in flight can't be stopped (JavaScript has no way to). The
+   *   cancellation is seen at the next step after it settles, so if that promise was the
+   *   effect's last step, the effect succeeds with its result. `IO.never()` under
+   *   `interruptOn` never resolves for the same reason. Pass the same signal to `Http` /
+   *   `IO.tryAsync` / `fetch` so the request itself aborts; its rejection is reported as the
+   *   cancellation. `IO.sleep` is not woken early.
    * - A defect (a bug) that happens after the abort is still reported as a defect.
    * - `runSync` only sees a signal that was already aborted when this effect starts.
    * - When `E` is `unknown` (effects from `IO.async` or `IO(...)`), the union collapses to
