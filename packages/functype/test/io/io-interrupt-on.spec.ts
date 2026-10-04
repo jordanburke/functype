@@ -332,3 +332,48 @@ describe("IO.runCancellable", () => {
     expect((await result).orThrow()).toBe("done")
   })
 })
+
+describe("IO.runExit({ signal })", () => {
+  it("stops the effect and returns Interrupted without widening E", async () => {
+    const counter = { n: 0 }
+    const controller = new AbortController()
+    const pending = countingLoop(counter).runExit({ signal: controller.signal })
+
+    await tick(20)
+    controller.abort()
+    const exit = await pending
+    expect(exit.isInterrupted()).toBe(true)
+    const snapshot = counter.n
+    await tick(100)
+    expect(counter.n).toBe(snapshot)
+  })
+
+  it("reports a failure caused by the abort as Interrupted, and a defect as a defect", async () => {
+    const aborted = new AbortController()
+    const failed = await IO.sync(() => aborted.abort())
+      .flatMap(() => IO.fail("boom" as const))
+      .runExit({ signal: aborted.signal })
+    expect(failed.isInterrupted()).toBe(true)
+
+    const crashed = new AbortController()
+    const defect = await IO.sync(() => {
+      crashed.abort()
+      throw new TypeError("bug")
+    }).runExit({ signal: crashed.signal })
+    expect(defect.isDie()).toBe(true)
+  })
+
+  it("without a signal, or with one that never fires, behaves as before", async () => {
+    expect((await IO.succeed(1).runExit()).isSuccess()).toBe(true)
+    const live = new AbortController()
+    const failed = await IO.fail("boom" as const).runExit({ signal: live.signal })
+    expect(failed.isFailure()).toBe(true)
+  })
+
+  it("keeps E unchanged", () => {
+    const signal = new AbortController().signal
+    expectTypeOf(IO.fail("boom" as const).runExit({ signal })).resolves.toEqualTypeOf<
+      Awaited<ReturnType<IOType<never, "boom", never>["runExit"]>>
+    >()
+  })
+})

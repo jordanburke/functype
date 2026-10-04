@@ -387,6 +387,7 @@ export const TYPES: Record<string, TypeData> = {
         ".runSyncOrThrow()",
         ".runExit() // Exit<E,A> — the only terminal that distinguishes Failure/Die/Interrupted",
         ".runCancellable() // { result, cancel }",
+        ".runExit({ signal }) // Interrupted on abort, E unchanged",
         ".runOption()",
         ".runTry()",
         ".fold(onErr, onOk)",

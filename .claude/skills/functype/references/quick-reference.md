@@ -334,6 +334,7 @@ const pairs = Do(function* () {
 | Run to Exit    | `effect.runExit()`            | `await effect.runExit()`                   |
 | Cancel on abort | `effect.interruptOn(signal)` | `await poll.interruptOn(signal).run()` → `Left(InterruptedError)` |
 | Run with a cancel handle | `effect.runCancellable()` | `const { result, cancel } = io.runCancellable()` |
+| Run until a signal aborts | `effect.runExit({ signal })` | Exit is `Interrupted` on abort; `E` unchanged |
 | Retry (any)    | `effect.retry(n)` / `retryWithDelay(n, ms)` | `effect.retry(3)` |
 | Retry (predicate, 1.3+) | `effect.retryWhile({n, while, delayMs?})` | `eff.retryWhile({n:3, while:e=>e.status>=500})` |
 | Retry (backoff, 1.3+) | `effect.retryWithBackoff({n, baseMs, maxMs?, factor?, jitter?, while?})` | `eff.retryWithBackoff({n:5, baseMs:250})` |

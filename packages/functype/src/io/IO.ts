@@ -563,8 +563,15 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 
   /**
    * Runs the effect and returns an Exit.
+   *
+   * With `options.signal`, the run stops at the next step once the signal aborts and
+   * returns an `Interrupted` Exit, with the same rules as {@link IO.interruptOn}: no further
+   * step or callback runs, recovery can't swallow it, and cleanup completes. Unlike
+   * `interruptOn`, `E` is not widened: the cancellation is reported as `Interrupted`, not as
+   * a typed `InterruptedError`. This suits runners (React hooks, query adapters) that
+   * discard a cancelled result rather than handle it.
    */
-  runExit(this: IO<never, E, A>): Promise<ExitType<E, A>>
+  runExit(this: IO<never, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>>
 
   /**
    * Runs the effect and returns an Option.
@@ -909,8 +916,13 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       return runEffectSync(_fx(this))
     },
 
-    async runExit(this: IO<never, E, A>): Promise<ExitType<E, A>> {
-      return runEffect(_fx(this))
+    async runExit(this: IO<never, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>> {
+      const signal = options?.signal
+      if (!signal) return runEffect(_fx(this))
+      // A failure after the abort is reported as the cancellation, as at an interruptOn
+      // boundary; a defect stays a defect.
+      const exit = await runEffect(_fx(this), undefined, () => signal.aborted)
+      return signal.aborted && exit.isFailure() ? Exit.interrupted() : exit
     },
 
     async runOption(this: IO<never, E, A>): Promise<Option<A>> {
