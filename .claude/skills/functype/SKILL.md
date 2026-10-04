@@ -509,7 +509,7 @@ Option.fromBinary<string>(binaryData)
 | React state that may be empty | `useState<User \| null>(null)` — allowed as-is | `Option` inside hook state |
 | Any `Map` / `Set` | `import { Map, Set } from "functype"` — functype's own names. `Map` in a file that imports it means functype's | `Map as FMap`, `new Map()` on functype's factory (it isn't a class) |
 | The built-in is genuinely needed: a cache mutated on purpose, or a value for an API typed `ReadonlyMap` | `new globalThis.Map()` / `new globalThis.Set()` — allowed when mutated or passed to a declared `ReadonlyMap`/`ReadonlySet` | bare `new Map()` in a file that imports functype's `Map` (TS7009, or TS2350 without `noImplicitAny`) |
-| Loop that awaits sequentially and stops on failure | `IO.forEach(items, f)` | `.forEach` with an async callback |
+| Loop that awaits, one call at a time | `List(items).mapAsync(f)`; `Either.traverseAsync(items, f)` when `f` returns Either (stops at the first Left); `IO.forEach(items, f)` inside IO | `.forEach` with an async callback, or a `reduce` over promises |
 
 **Reading code:** in a file with `import { Map } from "functype"`, every `Map` is functype's (immutable, built with `Map(…)`), and the built-in is always written `globalThis.Map`. With no functype import, `Map` is the built-in — check the imports before assuming.
 
