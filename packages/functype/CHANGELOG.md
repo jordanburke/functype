@@ -6,6 +6,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`no-get-unsafe` no longer contradicts the guidance for host throws.** It reported every `.orThrow(…)`, including `.orThrow((e) => new StepError(e))`, the form the README and skill recommend when a host needs a throw. So turning the rule on (it's `error` in `strict`) forced a disable at every host boundary. Now:
+  - `.orThrow(error)` / `.orThrow(builder)` is allowed, because the caller chose the error.
+  - Calls inside an `@interop <reason>` declaration are allowed, as in `prefer-either` (option `allowInteropMarker`, default `true`).
+  - A bare `.orThrow()`, `.get()`, `.unwrap()` or `.expect()` is still reported.
+  - The message now names the fix for a host throw.
+
 ## 1.13.0 - 2026-10-04
 
 **Async traversal with a concurrency cap, so an awaiting loop has a one-line replacement. Additive: existing calls behave as before.**

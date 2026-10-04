@@ -65,8 +65,87 @@ describe("no-get-unsafe", () => {
         name: "Non-monadic get() calls are allowed",
         code: 'const item = map.get("key")',
       },
+      // The caller chose the error: the documented host-throw form, not an unsafe extraction.
+      {
+        name: "orThrow with an error builder is allowed",
+        code: "const value = either.orThrow((left) => new StepError(left.message))",
+      },
+      {
+        name: "orThrow with an error value is allowed",
+        code: 'const site = siteOption.orThrow(new Error("SharePoint site not configured"))',
+      },
+      {
+        name: "A bare extractor inside an @interop declaration (with a reason) is allowed",
+        code: `
+          /**
+           * @interop React's use() reaches the boundary only through a throw.
+           */
+          function useValue(option) {
+            return option.get()
+          }
+        `,
+      },
     ],
     invalid: [
+      {
+        name: "A bare @interop tag (no reason) exempts nothing",
+        code: `
+          /**
+           * @interop
+           */
+          function useValue(option) {
+            return option.orThrow()
+          }
+        `,
+        errors: [
+          {
+            messageId: "noUnsafeGet",
+            data: { method: "orThrow" },
+            suggestions: suggestionsFor(
+              `
+          /**
+           * @interop
+           */
+          function useValue(option) {
+            return option.orThrow()
+          }
+        `,
+              "option",
+              "orThrow",
+            ),
+          },
+        ],
+      },
+      {
+        name: "allowInteropMarker: false reports inside @interop",
+        options: [{ allowInteropMarker: false }],
+        code: `
+          /**
+           * @interop React needs a throw.
+           */
+          function useValue(option) {
+            return option.get()
+          }
+        `,
+        errors: [
+          {
+            messageId: "noUnsafeGet",
+            data: { method: "get" },
+            suggestions: suggestionsFor(
+              `
+          /**
+           * @interop React needs a throw.
+           */
+          function useValue(option) {
+            return option.get()
+          }
+        `,
+              "option",
+              "get",
+            ),
+          },
+        ],
+      },
       // orThrow — functype's actual dangerous extractor (added to defaults in this release).
       {
         name: "orThrow() call on Option should be avoided",
