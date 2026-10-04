@@ -332,6 +332,8 @@ const pairs = Do(function* () {
 | Run (sync)     | `effect.runSync()`            | `effect.runSync()`                         |
 | Run to Either  | `effect.runEither()`          | `await effect.runEither()`                 |
 | Run to Exit    | `effect.runExit()`            | `await effect.runExit()`                   |
+| Cancel on abort | `effect.interruptOn(signal)` | `await poll.interruptOn(signal).run()` → `Left(InterruptedError)` |
+| Run with a cancel handle | `effect.runCancellable()` | `const { result, cancel } = io.runCancellable()` |
 | Retry (any)    | `effect.retry(n)` / `retryWithDelay(n, ms)` | `effect.retry(3)` |
 | Retry (predicate, 1.3+) | `effect.retryWhile({n, while, delayMs?})` | `eff.retryWhile({n:3, while:e=>e.status>=500})` |
 | Retry (backoff, 1.3+) | `effect.retryWithBackoff({n, baseMs, maxMs?, factor?, jitter?, while?})` | `eff.retryWithBackoff({n:5, baseMs:250})` |

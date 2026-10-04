@@ -47,6 +47,15 @@ export class InterruptedError extends Error {
     super(message ?? "Effect was interrupted")
     this.name = "InterruptedError"
   }
+
+  /**
+   * Runtime type guard. Use it to recognise a cancellation when the `E` channel has
+   * collapsed to `unknown` (effects built with `IO.async` or `IO(...)`), where
+   * `catchTag("InterruptedError", …)` can't typecheck.
+   */
+  static is(e: unknown): e is InterruptedError {
+    return typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: unknown })._tag === "InterruptedError"
+  }
 }
 
 /**
@@ -217,6 +226,7 @@ type IOEffect<R, E, A> =
       readonly effect: IO<R, E, A>
       readonly duration: number
     }
+  | { readonly _tag: "InterruptWhen"; readonly effect: IO<R, E, A>; readonly signal: AbortSignal }
   | { readonly _tag: "Service"; readonly tag: Tag<A> }
   | { readonly _tag: "ProvideContext"; readonly effect: IO<R, E, A>; readonly context: Context<R> }
 
@@ -568,6 +578,24 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    */
   runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>>
 
+  /**
+   * Starts the effect and returns a handle that cancels it, with {@link IO.interruptOn}
+   * semantics: after `cancel()`, no further step runs and `result` resolves to
+   * `Left(InterruptedError)`. Calling `cancel()` after the effect finished does nothing.
+   * Requires R = never.
+   *
+   * @example
+   * ```typescript
+   * const { result, cancel } = loadReport.runCancellable()
+   * onUnmount(cancel)
+   * const report = await result
+   * ```
+   */
+  runCancellable(this: IO<never, E, A>): {
+    readonly result: Promise<Either<E | InterruptedError, A>>
+    readonly cancel: () => void
+  }
+
   // ============================================
   // Utilities
   // ============================================
@@ -594,6 +622,36 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * @param fallback - Value to return on timeout
    */
   timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B>
+
+  /**
+   * Makes this effect cancellable by an `AbortSignal`, such as the one React Query or a
+   * request handler provides.
+   *
+   * Once the signal aborts, no further step starts. The effect stops at the next step
+   * boundary (between `flatMap`s, retries, repeat iterations and `IO.gen` yields), and no
+   * `map`, `recover` or other callback inside it runs after that. The result is a failure
+   * with `InterruptedError`, which `catchTag("InterruptedError", …)` can handle outside this
+   * call. Inside it, `retry`, `recover` and `catchAll` cannot swallow the cancellation.
+   *
+   * - `bracket` / `acquireRelease` cleanup still runs, to completion: acquire and release
+   *   are not interruptible.
+   * - A promise already in flight can't be stopped (JavaScript has no way to), so the effect
+   *   stops when it settles. Pass the same signal to `Http` / `IO.tryAsync` / `fetch` so the
+   *   request itself aborts; its rejection is reported as the cancellation. `IO.sleep` is not
+   *   woken early.
+   * - A defect (a bug) that happens after the abort is still reported as a defect.
+   * - `runSync` only sees a signal that was already aborted when this effect starts.
+   * - When `E` is `unknown` (effects from `IO.async` or `IO(...)`), the union collapses to
+   *   `unknown`; use `InterruptedError.is(e)` to recognise the cancellation.
+   *
+   * @example
+   * ```typescript
+   * const poll = checkStatus.repeatUntil((s) => s.done, { max: 60, delayMs: 500 })
+   * const result = await poll.interruptOn(signal).run()
+   * // Left(InterruptedError) if the signal aborts first, and polling has stopped
+   * ```
+   */
+  interruptOn(signal: AbortSignal): IO<R, E | InterruptedError, A>
 
   /**
    * Converts to string representation.
@@ -875,6 +933,11 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       )
     },
 
+    runCancellable(this: IO<never, E, A>) {
+      const controller = new AbortController()
+      return { result: this.interruptOn(controller.signal).run(), cancel: () => controller.abort() }
+    },
+
     // Utilities
     pipe<B>(f: (self: IO<R, E, A>) => B): B {
       return f(io)
@@ -892,6 +955,10 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B> {
       return unsafeCoerce(io.timeout(ms).recover(unsafeCoerce(fallback)))
+    },
+
+    interruptOn(signal: AbortSignal): IO<R, E | InterruptedError, A> {
+      return createIO(unsafeCoerce({ _tag: "InterruptWhen", effect: io, signal }))
     },
 
     toString() {
@@ -929,10 +996,30 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
  * excludes Interrupted; the sync path needs it stated explicitly.
  */
 const rethrowIfNonRecoverable = (e: unknown): void => {
-  if (e instanceof InterruptedError || e instanceof UnsupportedSyncOperationError) {
+  if (isControlFlowInterruption(e) || e instanceof UnsupportedSyncOperationError) {
     throw e
   }
 }
+
+/**
+ * `InterruptedError`s that an `interruptOn` region has turned into its typed failure.
+ *
+ * The sync interpreter throws `InterruptedError` for two different things: interruption as
+ * control flow, which no recovery may catch, and, at a region boundary, the region's typed
+ * `E`, which `catchTag` outside the region must be able to catch. Both are the same class,
+ * so membership here tells them apart. The async interpreter doesn't need this: there the
+ * two are an `Interrupted` and a `Failure` Exit.
+ */
+const typedInterruptions = new WeakSet<InterruptedError>()
+
+const typedInterruption = (): InterruptedError => {
+  const error = new InterruptedError()
+  typedInterruptions.add(error)
+  return error
+}
+
+const isControlFlowInterruption = (e: unknown): e is InterruptedError =>
+  e instanceof InterruptedError && !typedInterruptions.has(e)
 
 /**
  * The value in an Exit's error channel, if it has one: the typed error of a `Failure`,
@@ -1063,12 +1150,11 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         // with certainty, so it arrives as Die. Everything else is ambiguous here: the
         // sync interpreter signals `Fail` and `Die` with the same bare `throw`, so a
         // thrown value could be either and Failure stays the honest default.
-        exit =
-          e instanceof InterruptedError
-            ? unsafeCoerce(Exit.interrupted())
-            : e instanceof UnsupportedSyncOperationError
-              ? unsafeCoerce(Exit.die(e))
-              : unsafeCoerce(Exit.fail(e as E))
+        exit = isControlFlowInterruption(e)
+          ? unsafeCoerce(Exit.interrupted())
+          : e instanceof UnsupportedSyncOperationError
+            ? unsafeCoerce(Exit.die(e))
+            : unsafeCoerce(Exit.fail(e as E))
         throw e
       } finally {
         runEffectSync(_fx(effect.release(resource, exit!)), context)
@@ -1078,16 +1164,77 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       throw new UnsupportedSyncOperationError("race")
     case "Timeout":
       throw new UnsupportedSyncOperationError("timeout")
+    case "InterruptWhen": {
+      // A synchronous run can't observe an abort from outside while it runs, so only a
+      // signal that is already aborted here counts. An `IO.interrupt()` inside the region
+      // becomes the region's typed failure, matching the async interpreter.
+      if (effect.signal.aborted) throw typedInterruption()
+      try {
+        return runEffectSync(_fx(effect.effect), context)
+      } catch (e) {
+        if (isControlFlowInterruption(e)) throw typedInterruption()
+        throw e
+      }
+    }
   }
 }
 
 /**
- * Interprets and runs an effect asynchronously
+ * In a cancelled `interruptOn` region, error handlers don't run: a failure becomes the
+ * cancellation, so a `recover` can't turn an aborted request into a fallback value. A defect
+ * passes through unchanged, so a bug that lands after the abort stays visible.
+ * `undefined` while the region is live, meaning the handler should run.
+ */
+const skipHandlerWhenCancelled = <E, A>(
+  exit: ExitType<unknown, unknown>,
+  cancelled: boolean,
+): ExitType<E, A> | undefined => {
+  if (!cancelled) return undefined
+  return exit.isDie() ? unsafeCoerce(exit) : Exit.interrupted()
+}
+
+/**
+ * What an `interruptOn` region reports when its effect ends.
+ *
+ * - Success and Die pass through: finished work stands, and a bug stays a bug.
+ * - If an enclosing region was cancelled, the outcome stays (or becomes) `Interrupted`, so it
+ *   keeps propagating as control flow and no `recover` between the two boundaries can catch
+ *   it. The enclosing region's boundary converts it.
+ * - If this region's signal fired, a failure or interruption becomes a typed
+ *   `InterruptedError`: an abort that surfaced as a rejected `fetch` reports as the
+ *   cancellation it was, not as a network error.
+ * - An `IO.interrupt()` inside the region becomes the typed failure too.
+ * - Any other failure is genuine and returned as is.
+ */
+const regionOutcome = <E, A>(
+  exit: ExitType<E, A>,
+  signal: AbortSignal,
+  outerCancelled: boolean,
+): ExitType<E | InterruptedError, A> => {
+  if (exit.isSuccess() || exit.isDie()) return exit
+  if (outerCancelled) return Exit.interrupted()
+  if (exit.isInterrupted() || signal.aborted) return Exit.fail(new InterruptedError())
+  return exit
+}
+
+/**
+ * Interprets and runs an effect asynchronously.
+ *
+ * `interrupted` is the cancellation check of the enclosing `interruptOn` region(s). It is
+ * consulted before every step and before every user callback, so a cancelled region starts
+ * no new work. `undefined` means uninterruptible: the default, so an effect with no region
+ * runs exactly as before. `bracket` acquire and release always run with `undefined`
+ * (masked); checking there would let a cancelled region skip its own release and leak the
+ * resource.
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
   context: Context<R> = ContextCompanion.empty() as Context<R>,
+  interrupted?: () => boolean,
 ): Promise<ExitType<E, A>> => {
+  // Outside the `try`: a throwing check must not be reported as a defect of this effect.
+  if (interrupted?.()) return Exit.interrupted()
+  const cancelled = (): boolean => interrupted?.() ?? false
   try {
     switch (effect._tag) {
       case "Succeed":
@@ -1126,32 +1273,36 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         }
       }
       case "Map": {
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
+        if (cancelled()) return Exit.interrupted()
         return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
       }
       case "FlatMap": {
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
+        if (cancelled()) return Exit.interrupted()
         const nextIO = effect.f(exitA.orThrow())
-        return runEffect(_fx(nextIO), context)
+        return runEffect(_fx(nextIO), context, interrupted)
       }
       case "MapError": {
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         const channel = errorChannel(exitA)
         if (!channel) {
           return unsafeCoerce(exitA)
         }
+        const skipped = skipHandlerWhenCancelled<E, A>(exitA, cancelled())
+        if (skipped) return skipped
         // A mapped defect becomes a `Failure`: the caller's mapper returns a genuine `E`,
         // so the outcome really is a typed failure from here on.
         return unsafeCoerce(Exit.fail(effect.f(channel.value)))
       }
       case "Recover": {
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         // Only something in the error channel is recoverable. Success passes through, and
         // so does Interrupted — interruption is control flow, not a domain error, so a
         // fallback must never convert a cancelled effect into a successful value.
@@ -1159,26 +1310,29 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (!errorChannel(exitA)) {
           return unsafeCoerce(exitA)
         }
-        return Exit.succeed(effect.fallback)
+        return skipHandlerWhenCancelled<E, A>(exitA, cancelled()) ?? Exit.succeed(effect.fallback)
       }
       case "RecoverWith": {
         // effect.effect is IO<R, unknown, unknown> (E-erased for variance). Exit branches
         // are re-wrapped via unsafeCoerce — outer A/E are preserved by RecoverWith's semantics.
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         const channel = errorChannel(exitA)
         if (!channel) {
           return unsafeCoerce(exitA)
         }
+        const skipped = skipHandlerWhenCancelled<E, A>(exitA, cancelled())
+        if (skipped) return skipped
         const recoveryIO = effect.f(channel.value)
-        return runEffect(_fx(recoveryIO), context)
+        return runEffect(_fx(recoveryIO), context, interrupted)
       }
       case "Fold": {
-        const exitA = await runEffect(_fx(effect.effect), context)
+        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
         const channel = errorChannel(exitA)
         if (channel) {
-          return Exit.succeed(effect.onFailure(channel.value))
+          return skipHandlerWhenCancelled<E, A>(exitA, cancelled()) ?? Exit.succeed(effect.onFailure(channel.value))
         }
         if (exitA.isSuccess()) {
+          if (cancelled()) return Exit.interrupted()
           return Exit.succeed(effect.onSuccess(exitA.orThrow()))
         }
         return exitA as ExitType<E, A>
@@ -1192,20 +1346,22 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "ProvideContext": {
         const mergedContext = context.merge(effect.context)
-        return runEffect(_fx(effect.effect), mergedContext as Context<R>)
+        return runEffect(_fx(effect.effect), mergedContext as Context<R>, interrupted)
       }
       case "Interrupt":
         return Exit.interrupted()
       case "Bracket": {
+        // Acquire and release are masked (no `interrupted`): see the runEffect doc.
         const acquireExit = await runEffect(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
         const resource = acquireExit.orThrow()
         try {
-          return await runEffect(_fx(effect.use(resource)), context)
+          if (cancelled()) return Exit.interrupted()
+          return await runEffect(_fx(effect.use(resource)), context, interrupted)
         } finally {
-          // Release always runs, even if use fails
+          // Release always runs, even if use fails or the region was cancelled
           await runEffect(_fx(effect.release(resource)), context)
         }
       }
@@ -1215,9 +1371,11 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return acquireExit as ExitType<E, A>
         }
         const resource = acquireExit.orThrow()
-        const useExit = await runEffect(_fx(effect.use(resource)), context)
-        // Release always runs and receives the use-step's Exit
-        await runEffect(_fx(effect.release(resource, useExit as ExitType<E, A>)), context)
+        const useExit: ExitType<E, A> = cancelled()
+          ? Exit.interrupted()
+          : await runEffect(_fx(effect.use(resource)), context, interrupted)
+        // Release always runs (masked, like acquire) and receives the use-step's Exit
+        await runEffect(_fx(effect.release(resource, useExit)), context)
         return useExit
       }
       case "Race": {
@@ -1225,15 +1383,20 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return Exit.fail(new Error("No effects to race") as E)
         }
         // Race all effects - first one to complete wins
-        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context)))
+        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context, interrupted)))
         return result
       }
       case "Timeout": {
         const timeoutPromise = new Promise<ExitType<E, A>>((resolve) =>
           setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration),
         )
-        const effectPromise = runEffect(_fx(effect.effect), context)
+        const effectPromise = runEffect(_fx(effect.effect), context, interrupted)
         return Promise.race([effectPromise, timeoutPromise])
+      }
+      case "InterruptWhen": {
+        const { signal } = effect
+        const exit = await runEffect(_fx(effect.effect), context, () => signal.aborted || cancelled())
+        return unsafeCoerce(regionOutcome(exit, signal, cancelled()))
       }
     }
   } catch (e) {

@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
+
+- **`io.interruptOn(signal)`** stops a running effect when an `AbortSignal` fires. No further step starts, so a cancelled poll, retry loop or `IO.gen` pipeline stops instead of running on with its result discarded. The result is a typed `InterruptedError` (`E` widens to `E | InterruptedError`), which `catchTag("InterruptedError", …)` handles outside the call. Inside it, `retry`, `recover`, `catchAll` and `fold` cannot swallow the cancellation, including an abort that surfaces as a rejected `fetch`. `bracket` / `acquireRelease` cleanup still runs, to completion. A defect after the abort is still reported as a defect. Closes #242.
+- **`io.runCancellable()`** starts the effect and returns `{ result, cancel }`. It is the `IO` equivalent of `Task.cancellable`.
+- **`InterruptedError.is(e)`** recognises the cancellation when `E` has collapsed to `unknown`.
+- **Limits:** a promise already in flight can't be stopped, so the effect stops when it settles; pass the same signal to `Http` / `IO.tryAsync` so the request aborts. `IO.sleep` isn't woken early. `runSync` only sees a signal aborted before it starts. `timeout` and `race` still let losing effects run on (follow-up).
+- **Docs:** the site's `IO.bracket` example had `use` and `release` swapped, and `acquireRelease` was missing `use`; both fixed. The skill gains a pattern for appending computed batches without `push(...batch)`, which overflows the call stack on large inputs.
+
 ## 1.13.0 - 2026-10-04
 
 **Async traversal with a concurrency cap, so an awaiting loop has a one-line replacement. Additive: existing calls behave as before.**
