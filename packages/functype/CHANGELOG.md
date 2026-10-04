@@ -11,6 +11,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - Calls inside an `@interop <reason>` declaration are allowed, as in `prefer-either` (option `allowInteropMarker`, default `true`).
   - A bare `.orThrow()`, `.get()`, `.unwrap()` or `.expect()` is still reported.
   - The message now names the fix for a host throw.
+  - **With type-aware linting, it checks the receiver's type instead of guessing from its name.** Previously `missing.orThrow()` on an `Option` passed because `missing` isn't an Option-sounding name (three live cases in civala), and a native `Map` named `options` could be flagged. Now any type with both `orThrow` and `fold` is checked, whatever it's called. Without type information it falls back to the name heuristic. This is the first type-aware check in the plugin; it adds no runtime dependency on `typescript`.
 
 ## 1.13.0 - 2026-10-04
 
