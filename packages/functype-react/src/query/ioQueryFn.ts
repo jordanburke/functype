@@ -45,12 +45,18 @@ export type IOBridgeOptions<E> = {
  *
  * @interop React Query signals failure only by promise rejection; an Either return reads as success (#239).
  */
-const runBoxed = async <E, A>(effect: () => IO<never, E, A>, options?: IOBridgeOptions<E>): Promise<A> => {
+const runBoxed = async <E, A>(
+  effect: () => IO<never, E, A>,
+  options?: IOBridgeOptions<E>,
+  signal?: AbortSignal,
+): Promise<A> => {
   const exit = await Try(() => effect()).fold(
     (thrown) => {
       throw new IOQueryError(thrown as E, undefined, true)
     },
-    (io) => io.runExit(),
+    // With the query's signal, a cancelled query stops at the effect's next step instead of
+    // running on with its result discarded. It ends `Interrupted`, handled below.
+    (io) => io.runExit({ signal }),
   )
 
   if (exit.isFailure()) {
@@ -76,8 +82,9 @@ const runBoxed = async <E, A>(effect: () => IO<never, E, A>, options?: IOBridgeO
  * Adapts an `IO<never, E, A>` into a React Query `queryFn`.
  *
  * `Right` resolves with the value; `Left` rejects with an {@link IOQueryError} that
- * carries the typed error on `.error`. Wire cancellation by closing over the supplied
- * `signal`:
+ * carries the typed error on `.error`. The effect runs with React Query's `signal`, so a
+ * cancelled, unmounted or superseded query stops at its next step. To abort an in-flight
+ * request as well, close over the same `signal`:
  *
  * ```ts
  * useQuery({
@@ -93,7 +100,7 @@ export const ioQueryFn =
     options?: IOBridgeOptions<E>,
   ) =>
   (context: TContext): Promise<A> =>
-    runBoxed(() => io(context), options)
+    runBoxed(() => io(context), options, context.signal)
 
 /**
  * Adapts a variables-taking `IO<never, E, A>` into a React Query `mutationFn`.

@@ -36,7 +36,8 @@ const EXPECTED_SUPPRESSIONS: Readonly<Record<string, number>> = {
  * boundary is visible in review rather than a quiet exemption.
  */
 const EXPECTED_INTEROP: Readonly<Record<string, number>> = {
-  "async/useTaskValue.ts": 1,
+  "async/useIO.ts": 1,
+  "async/useIOValue.ts": 1,
   "hooks/useOption.ts": 1,
   "query/ioQueryFn.ts": 1,
 }

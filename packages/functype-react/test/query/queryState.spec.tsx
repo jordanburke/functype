@@ -37,7 +37,7 @@ describe("toQueryState", () => {
 })
 
 describe("toMutationState", () => {
-  it("maps React Query's four mutation statuses onto TaskState", () => {
+  it("maps React Query's four mutation statuses onto AsyncState", () => {
     expect(toMutationState({ status: "idle" })).toEqual({ _tag: "Idle" })
     expect(toMutationState({ status: "pending" })).toEqual({ _tag: "Pending" })
     expect(toMutationState({ status: "success", data: 7 })).toEqual({ _tag: "Success", value: 7 })
@@ -85,7 +85,7 @@ describe("projection over live hook results", () => {
   })
 
   // Pins the documented squash: React Query holds the last successful data while
-  // reporting status "error" after a failed background refetch, and TaskState has no
+  // reporting status "error" after a failed background refetch, and AsyncState has no
   // variant for "loaded but stale", so it projects to Failure. Change this test
   // deliberately if that default is ever revisited.
   it("projects a failed refetch to Failure even though data is still held", async () => {

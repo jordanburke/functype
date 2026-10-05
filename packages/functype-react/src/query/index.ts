@@ -12,7 +12,7 @@
  *   `useQuery` / `useSuspenseQuery` / `prefetchQuery` call for full option control.
  * - `useIOQuery` / `useIOMutation` — the common path, one call.
  * - `toQueryState` / `toMutationState` — project a React Query result onto the
- *   `TaskState` ADT so it can be matched exhaustively with the `<Match>` family,
+ *   `AsyncState` ADT so it can be matched exhaustively with the `<Match>` family,
  *   rather than read through `data && !error && !isLoading` flag soup.
  */
 export { formatIOError, IOQueryError, isIOQueryError } from "./IOQueryError"

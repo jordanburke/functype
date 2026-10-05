@@ -3,19 +3,19 @@
 import type { QueryFunctionContext, QueryKey, UseQueryResult } from "@tanstack/react-query"
 import type { IO } from "functype/io"
 
-import type { TaskState } from "../async/TaskState"
+import type { AsyncState } from "../async/AsyncState"
 import type { IOQueryError } from "./IOQueryError"
 import { toQueryState } from "./queryState"
 import type { UseIOQueryOptions } from "./useIOQuery"
 import { useIOQuery } from "./useIOQuery"
 
 /**
- * `TaskState` plus the convenience flags and refetch trigger, mirroring
- * `UseTaskResult` from `functype-react/async` so both async surfaces read alike.
+ * `AsyncState` plus the convenience flags and refetch trigger, mirroring
+ * `UseIOResult` from `functype-react/async` so both async surfaces read alike.
  *
  * `refetch` keeps React Query's own signature rather than a lossy re-declaration.
  */
-export type UseIOQueryStateResult<A, E> = TaskState<IOQueryError<E>, A> &
+export type UseIOQueryStateResult<A, E> = AsyncState<IOQueryError<E>, A> &
   Pick<UseQueryResult<A, IOQueryError<E>>, "refetch"> & {
     readonly isIdle: boolean
     readonly isPending: boolean
@@ -24,7 +24,7 @@ export type UseIOQueryStateResult<A, E> = TaskState<IOQueryError<E>, A> &
   }
 
 /**
- * `useIOQuery` projected straight onto the `TaskState` ADT — the flag-soup-free path
+ * `useIOQuery` projected straight onto the `AsyncState` ADT — the flag-soup-free path
  * in one call.
  *
  * ```tsx
