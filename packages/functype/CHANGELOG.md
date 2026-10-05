@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.14.0 - 2026-10-04
+
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
 
 - **`io.interruptOn(signal)`** stops a running effect when an `AbortSignal` fires. No further step starts, so a cancelled poll, retry loop or `IO.gen` pipeline stops instead of running on with its result discarded. The result is a typed `InterruptedError` (`E` widens to `E | InterruptedError`), which `catchTag("InterruptedError", …)` handles outside the call. Inside it, `retry`, `recover`, `catchAll` and `fold` cannot swallow the cancellation, including an abort that surfaces as a rejected `fetch`. `bracket` / `acquireRelease` cleanup still runs, to completion. A defect after the abort is still reported as a defect. Closes #242.
