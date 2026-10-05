@@ -362,10 +362,12 @@ Provides conversion to Promise for async interop:
      - Composable via map/flatMap
      - Dependency injection via Tag/Layer/Context
      - Structured concurrency: bracket, race, timeout
+     - Cancellation: `interruptOn(signal)` stops a running effect at its next step once the
+       `AbortSignal` fires (cleanup still runs); `runCancellable()` returns `{ result, cancel }`
      - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
      - Error handling: catchTag, catchAll, retry, retryWithDelay, retryWhile, retryWithBackoff
      - Value-driven repetition: repeatUntil, repeatWhile, IO.iterate (bounded by RepeatExhausted)
-     - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry()
+     - Execution methods: run(), runOrThrow(), runSync(), runSyncOrThrow(), runExit(), runOption(), runTry(), runCancellable()
      - Outcomes: `Exit<E, A>` = Success | Failure | Die | Interrupted, returned by runExit().
        `Failure` carries a value from the declared `E` channel; `Die` carries a **defect** —
        a value that is not an `E` (a throwing `IO.sync` thunk, a throwing map/flatMap/mapError

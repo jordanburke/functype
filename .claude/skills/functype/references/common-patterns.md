@@ -285,6 +285,24 @@ const saved = await Either.traverseAsync(rows, saveRow) // Either<SaveError, Sav
 const pages = await Either.traverseAsync(urls, fetchPage, { concurrency: 4 })
 ```
 
+### Appending a computed batch to an accumulator
+
+When replacing a `forEach` + `push` loop, never spread a batch into a call: `acc.push(...batch)`
+passes every element as an argument, and a large batch throws `RangeError: Maximum call stack size
+exceeded`, which no `Either` catches. Keep one entry per batch and flatten once at the end.
+
+```typescript
+// Wrong: crashes on a large folder
+found.forEach((folder) => candidates.push(...folder.files))
+
+// Right: one entry per batch, flattened once
+const candidates = List(found).flatMap((folder) => folder.files)
+
+// Async batches: collect them, then flatten
+const batches = await List(folders).mapAsync(listFiles) // List<File[]>
+const files = batches.flatMap((batch) => batch)
+```
+
 ## Combining Types
 
 ### Option with Either

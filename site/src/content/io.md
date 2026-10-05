@@ -160,19 +160,46 @@ const program = IO.Do.bind("user", () => getUser("123"))
 ## Resource Management
 
 ```typescript
-// Bracket pattern
+// Bracket pattern: acquire, use, release
 IO.bracket(
   IO.sync(() => openFile(path)), // acquire
-  (file) => IO.sync(() => file.close()), // release
   (file) => IO.sync(() => file.read()), // use
+  (file) => IO.sync(() => file.close()), // release
 );
 
-// Acquire/Release
+// Acquire/Release: same arguments, more descriptive name
 IO.acquireRelease(
   IO.sync(() => openConnection()),
+  (conn) => IO.sync(() => conn.query(sql)),
   (conn) => IO.sync(() => conn.close()),
 );
 ```
+
+## Cancellation
+
+`interruptOn(signal)` stops a running effect when an `AbortSignal` fires, such as the one React Query
+or a request handler provides. No further step starts, so a cancelled poll stops polling. The result
+is `Left(InterruptedError)`.
+
+```typescript
+const poll = checkStatus.repeatUntil((s) => s.done, { max: 60, delayMs: 500 });
+const result = await poll.interruptOn(signal).run(); // Left(InterruptedError) if aborted
+
+// Handle it outside the cancelled section
+poll
+  .interruptOn(signal)
+  .catchTag("InterruptedError", () => IO.succeed(lastKnown));
+
+// Or start it with a handle
+const { result, cancel } = loadReport.runCancellable();
+```
+
+- Inside the cancelled section, `retry`, `recover` and `catchAll` can't swallow the cancellation.
+- `bracket` / `acquireRelease` cleanup still runs, to completion.
+- A promise already in flight can't be stopped. The cancellation is seen at the next step, so if that
+  promise was the last step, the effect succeeds with its result. Pass the same
+  signal to `Http` or `IO.tryAsync` so the request itself aborts.
+- When `E` is `unknown` (effects from `IO.async`), use `InterruptedError.is(e)`.
 
 ## Outcomes: `Exit`
 

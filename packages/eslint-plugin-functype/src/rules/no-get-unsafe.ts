@@ -1,6 +1,8 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
+import { isExtractableByType } from "../utils/type-aware"
 
 const DEFAULT_UNSAFE_METHODS: readonly string[] = ["orThrow", "expect", "get", "getOrThrow", "unwrap"]
 
@@ -20,6 +22,10 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
+          allowInteropMarker: {
+            type: "boolean",
+            default: true,
+          },
           unsafeMethods: {
             type: "array",
             items: { type: "string" },
@@ -30,7 +36,8 @@ const rule: Rule.RuleModule = {
       },
     ],
     messages: {
-      noUnsafeGet: "Avoid unsafe .{{method}}() call. Use .fold(), .map(), or .orElse() instead",
+      noUnsafeGet:
+        "Avoid unsafe .{{method}}() call: it throws a generic error. Use .fold(), .map(), or .orElse() instead. If a host needs the throw, name the error: .orThrow((e) => new MyError(e))",
       suggestOrElse: "Replace with .orElse(default) for a value fallback",
       suggestFold: "Replace with .fold(onNone, onSome) for branch handling",
     },
@@ -40,6 +47,16 @@ const rule: Rule.RuleModule = {
     const options = context.options[0] || {}
     const allowInTests = options.allowInTests !== false
     const unsafeMethods: readonly string[] = options.unsafeMethods || DEFAULT_UNSAFE_METHODS
+    // `@interop <reason>` on an enclosing declaration marks a host-contract boundary, as in prefer-either.
+    const allowInteropMarker = options.allowInteropMarker !== false
+
+    /**
+     * `.orThrow(error)` / `.orThrow((e) => error)`: the caller chose the error. That is the documented way
+     * to throw for a host that needs it, not an unsafe extraction; `prefer-either` and the README's
+     * decision table both treat it that way. Only a bare `.orThrow()` throws a generic error.
+     */
+    const isChosenErrorThrow = (methodName: string, node: ASTNode): boolean =>
+      methodName === "orThrow" && node.arguments.length > 0
 
     function isInTestFile() {
       const filename = context.filename
@@ -103,9 +120,14 @@ const rule: Rule.RuleModule = {
 
         const methodName = property.name
         if (!unsafeMethods.includes(methodName)) return
+        if (isChosenErrorThrow(methodName, node)) return
+        if (allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)) return
 
-        // Check if this looks like it's being called on a monadic type
-        if (isMonadicType(node.callee.object)) {
+        // With type information, the receiver's type decides: no name guessing, so `missing.orThrow()`
+        // on an Option is reported and `options.get("k")` on a native Map is not. Without it, fall
+        // back to the name/shape heuristic.
+        const byType = isExtractableByType(node.callee.object, context)
+        if (byType ?? isMonadicType(node.callee.object)) {
           const sourceCode = context.sourceCode
           const objectText = sourceCode.getText(node.callee.object)
 
