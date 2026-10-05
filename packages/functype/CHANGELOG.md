@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
+
+- **`io.interruptOn(signal)`** stops a running effect when an `AbortSignal` fires. No further step starts, so a cancelled poll, retry loop or `IO.gen` pipeline stops instead of running on with its result discarded. The result is a typed `InterruptedError` (`E` widens to `E | InterruptedError`), which `catchTag("InterruptedError", …)` handles outside the call. Inside it, `retry`, `recover`, `catchAll` and `fold` cannot swallow the cancellation, including an abort that surfaces as a rejected `fetch`. `bracket` / `acquireRelease` cleanup still runs, to completion. A defect after the abort is still reported as a defect. Closes #242.
+- **`io.runCancellable()`** starts the effect and returns `{ result, cancel }`. It is the `IO` equivalent of `Task.cancellable`.
+- **`io.runExit({ signal })`** runs with the same cancellation rules but reports it as an `Interrupted` Exit without widening `E`. It's for runners that discard a cancelled result, such as React hooks and query adapters.
+- **`InterruptedError.is(e)`** recognises the cancellation when `E` has collapsed to `unknown`.
+- **Limits:** a promise already in flight can't be stopped; the cancellation is seen at the next step, so if that promise was the effect's last step, the effect succeeds with its result. Pass the same signal to `Http` / `IO.tryAsync` so the request aborts. `IO.sleep` isn't woken early. `runSync` only sees a signal aborted before it starts. `timeout` and `race` still let losing effects run on (follow-up).
+- **Docs:** the site's `IO.bracket` example had `use` and `release` swapped, and `acquireRelease` was missing `use`; both fixed. The skill gains a pattern for appending computed batches without `push(...batch)`, which overflows the call stack on large inputs.
 - **`no-get-unsafe` no longer contradicts the guidance for host throws.** It reported every `.orThrow(…)`, including `.orThrow((e) => new StepError(e))`, the form the README and skill recommend when a host needs a throw. So turning the rule on (it's `error` in `strict`) forced a disable at every host boundary. Now:
   - `.orThrow(error)` / `.orThrow(builder)` is allowed, because the caller chose the error.
   - Calls inside an `@interop <reason>` declaration are allowed, as in `prefer-either` (option `allowInteropMarker`, default `true`).
