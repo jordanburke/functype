@@ -41,6 +41,14 @@ describe("prefer-list", () => {
         name: "A tuple rest element is part of the tuple, not a list",
         code: "const roles = [...ASSIGNABLE] as [string, ...string[]]",
       },
+      {
+        name: "A literal whose method is called on the spot stores nothing",
+        code: 'const ok = ["a", "b"].includes(x); const sorted = [...xs].sort(); const text = [a, b].join("\\n")',
+      },
+      {
+        name: "A const used only through a read-only method is a temporary",
+        code: 'export function text(a: string, b: string) { const lines = [a, b]; return lines.join("\\n") }',
+      },
       // Already using List
       {
         name: "List type is allowed",
@@ -91,6 +99,16 @@ describe("prefer-list", () => {
       },
     ],
     invalid: [
+      {
+        name: "A field that is pushed to somewhere in the file gets the mutation advice",
+        code: "type Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+        errors: [{ messageId: "mutatedArray", data: { name: "errors", how: "push" } }],
+      },
+      {
+        name: "A literal accumulator that is pushed to gets the mutation advice",
+        code: 'export function summary(n: number) { const parts = ["a"]; if (n) parts.push("b"); return parts }',
+        errors: [{ messageId: "mutatedArray", data: { name: "parts", how: "push" } }],
+      },
       {
         name: "wireTypes: [] turns the Wire exemption off",
         code: "type Rows = Wire<ReadonlyArray<Row>>",
