@@ -32,6 +32,15 @@ describe("prefer-list", () => {
         code: "type Rows = Dto<ReadonlyArray<Row>>",
         options: [{ allowReadonlyArrays: false, wireTypes: ["Dto"] }],
       },
+      // `as const` is a read-only literal tuple (an enum's values); List would lose the literal types.
+      {
+        name: "An as-const literal tuple is allowed",
+        code: 'export const DOC_TYPES = ["memo", "report"] as const',
+      },
+      {
+        name: "A tuple rest element is part of the tuple, not a list",
+        code: "const roles = [...ASSIGNABLE] as [string, ...string[]]",
+      },
       // Already using List
       {
         name: "List type is allowed",
@@ -107,9 +116,14 @@ describe("prefer-list", () => {
         code: 'const items: string[] = ["a", "b", "c"]',
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: 'const items: ReadonlyArray<string> = ["a", "b", "c"]',
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -130,9 +144,14 @@ describe("prefer-list", () => {
         code: 'const items: Array<string> = ["a", "b", "c"]',
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "Array<string>" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: 'const items: ReadonlyArray<string> = ["a", "b", "c"]',
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -205,9 +224,14 @@ describe("prefer-list", () => {
         options: [{ allowArrayLiterals: true }],
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function f(xs: ReadonlyArray<string>) {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -249,12 +273,17 @@ describe("prefer-list", () => {
         code: "const users: { name: string; age: number }[] = []",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: {
               type: "{ name: string; age: number }",
               arrayType: "{ name: string; age: number }[]",
             },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "{ name: string; age: number }" },
+                output: "const users: ReadonlyArray<{ name: string; age: number }> = []",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "{ name: string; age: number }" },
@@ -275,9 +304,14 @@ describe("prefer-list", () => {
         code: "function processItems(items: string[]): void {}",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function processItems(items: ReadonlyArray<string>): void {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -298,9 +332,14 @@ describe("prefer-list", () => {
         code: "function getItems(): string[] { return [] }",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function getItems(): ReadonlyArray<string> { return [] }",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -354,9 +393,14 @@ describe("prefer-list", () => {
         options: [{ allowReadonlyArrays: true }],
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function f(xs: ReadonlyArray<string>) {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },

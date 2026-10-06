@@ -17,7 +17,12 @@ type CheckerLike = {
   getTypeAtLocation(node: unknown): TypeLike
   getNonNullableType(type: TypeLike): TypeLike
   getPropertyOfType(type: TypeLike, name: string): unknown
+  getContextualType(node: unknown): TypeLike | undefined
+  isArrayLikeType(type: TypeLike): boolean
 }
+
+/** `ts.TypeFlags.Any` / `Unknown`, inlined so the plugin needs no runtime `typescript` import. */
+const ANY_OR_UNKNOWN_FLAGS = 1 | 2
 
 type TypedServices = {
   readonly program: { getTypeChecker(): CheckerLike }
@@ -47,4 +52,30 @@ export const isExtractableByType = (node: ASTNode, context: Rule.RuleContext): b
   return (
     checker.getPropertyOfType(type, "orThrow") !== undefined && checker.getPropertyOfType(type, "fold") !== undefined
   )
+}
+
+const isArrayLikeOrUntyped = (checker: CheckerLike, type: TypeLike): boolean => {
+  const { flags, types } = type as { flags?: number; types?: ReadonlyArray<TypeLike> }
+  if (flags !== undefined && (flags & ANY_OR_UNKNOWN_FLAGS) !== 0) return true
+  if (types) return types.some((member) => isArrayLikeOrUntyped(checker, member))
+  return checker.isArrayLikeType(type)
+}
+
+/**
+ * Does `node` (an expression) flow into a slot that is typed as an array, a tuple or `any`/`unknown`?
+ * That's the expected type TypeScript checks it against: the parameter it is passed to, the property
+ * it initialises, the declared return type. A literal in such a slot is handed to code that requires an
+ * array, such as drizzle's `.values([...])` or an index definition, so `List` can't go there.
+ *
+ * `undefined` when type information isn't available, or when there is no expected type (a free-standing
+ * literal), so the caller can fall back.
+ */
+export const flowsIntoArraySlot = (node: ASTNode, context: Rule.RuleContext): boolean | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const expected = checker.getContextualType(tsNode)
+  return expected === undefined ? undefined : isArrayLikeOrUntyped(checker, expected)
 }

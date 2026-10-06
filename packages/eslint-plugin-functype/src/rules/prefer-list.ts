@@ -3,6 +3,7 @@ import type { Rule } from "eslint"
 import type { ASTNode } from "../types/ast"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
+import { flowsIntoArraySlot } from "../utils/type-aware"
 import { DEFAULT_WIRE_TYPES, isInsideWireType, WIRE_TYPES_SCHEMA } from "../utils/wire-types"
 
 /** AST keys that don't represent syntax children — back-edges and source metadata. */
@@ -31,6 +32,21 @@ function isListFactoryArg(parent: ASTNode | null | undefined): boolean {
     parent.callee.object.type === "Identifier" &&
     parent.callee.object.name === "List" &&
     ["from", "of"].includes(parent.callee.property.name)
+  )
+}
+
+/**
+ * `[…] as const` or `[…] as [string, ...string[]]`: the literal is asserted to a tuple, a fixed shape that
+ * `List` can't express (an enum's values, the argument zod's `z.enum` requires).
+ */
+function isTupleAssertion(parent: ASTNode | null | undefined): boolean {
+  const raw = parent?.type === "TSAsExpression" ? parent.typeAnnotation : undefined
+  const annotation = raw?.type === "TSTypeOperator" ? raw.typeAnnotation : raw
+  if (annotation?.type === "TSTupleType") return true
+  return (
+    annotation?.type === "TSTypeReference" &&
+    annotation.typeName?.type === "Identifier" &&
+    annotation.typeName.name === "const"
   )
 }
 
@@ -70,8 +86,11 @@ const rule: Rule.RuleModule = {
     ],
     messages: {
       preferList: "Prefer List<{{type}}> over array type {{arrayType}}",
+      preferReadonlyOrList:
+        "Mutable array type {{arrayType}}: use ReadonlyArray<{{type}}> where it crosses a boundary, or List<{{type}}> inside your own code",
       preferListLiteral: "Prefer List.of(...) or List.from([...]) over array literal",
       suggestListType: "Replace with List<{{type}}>",
+      suggestReadonlyArray: "Replace with ReadonlyArray<{{type}}>",
       suggestListOf: "Replace with List.of(...)",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -113,6 +132,75 @@ const rule: Rule.RuleModule = {
       return findInNode(node)
     }
 
+    /** `List([...x])`, `Set([a, b])`: the literal is already being captured into a functype value. */
+    function isFunctypeConstructorArg(node: ASTNode, parent: ASTNode | null | undefined): boolean {
+      return (
+        parent?.type === "CallExpression" &&
+        parent.callee.type === "Identifier" &&
+        functypeImports.has(parent.callee.name) &&
+        parent.arguments.includes(node)
+      )
+    }
+
+    /** Is `node` handed straight to an array-typed slot, directly or spread into a literal that is? */
+    function reachesArraySlot(node: ASTNode): boolean {
+      if (flowsIntoArraySlot(node, context) === true) return true
+      const parent = node.parent as ASTNode | undefined
+      return (
+        parent?.type === "SpreadElement" &&
+        parent.parent?.type === "ArrayExpression" &&
+        flowsIntoArraySlot(parent.parent as ASTNode, context) === true
+      )
+    }
+
+    /**
+     * `const OPTIONS = [...]` whose every use hands it to an array-typed slot (`<Select data={OPTIONS} />`,
+     * `db.insert(t).values(ROWS)`): data built only to give to a library, declared before it's used.
+     * Needs type information and at least one local use; an exported constant with no local use is still
+     * reported, because its consumers aren't visible here.
+     */
+    function isOnlyHandedToArraySlots(declarator: ASTNode | null | undefined): boolean {
+      if (declarator?.type !== "VariableDeclarator" || declarator.id?.type !== "Identifier") return false
+      const uses = context.sourceCode
+        .getDeclaredVariables(declarator)
+        .flatMap((variable) => variable.references.filter((ref) => !ref.init))
+      return uses.length > 0 && uses.every((ref) => reachesArraySlot(ref.identifier as ASTNode))
+    }
+
+    /**
+     * A mutable `T[]` / `Array<T>` is the real defect: anything holding it can push, sort or splice.
+     * `ReadonlyArray<T>` fixes that and still fits wherever a library expects an array, so it's offered
+     * first; `List<T>` is for collections that live inside your own code.
+     */
+    function reportMutable(reportNode: ASTNode, elementType: string, fullType: string): void {
+      const sourceCode = context.sourceCode
+      const suggest: Rule.SuggestionReportDescriptor[] = [
+        {
+          messageId: "suggestReadonlyArray",
+          data: { type: elementType },
+          fix: (fixer: Rule.RuleFixer) => fixer.replaceText(reportNode, `ReadonlyArray<${elementType}>`),
+        },
+        {
+          messageId: "suggestListType",
+          data: { type: elementType },
+          fix: (fixer: Rule.RuleFixer) => fixer.replaceText(reportNode, `List<${elementType}>`),
+        },
+      ]
+      if (!hasFunctypeSymbol(sourceCode, "List")) {
+        suggest.push({
+          messageId: "suggestAddImport",
+          data: { symbol: "List" },
+          fix: createImportFixer(sourceCode, "List"),
+        })
+      }
+      context.report({
+        node: reportNode,
+        messageId: "preferReadonlyOrList",
+        data: { type: elementType, arrayType: fullType },
+        suggest,
+      })
+    }
+
     return {
       TSArrayType(node: ASTNode) {
         if (isInsideWireType(node, wireTypes)) return
@@ -125,6 +213,10 @@ const rule: Rule.RuleModule = {
         // TSArrayType would leave `readonly List<T>` behind, which is invalid TS
         // (TS1354: `readonly` only applies to array/tuple types).
         const parent = node.parent as ASTNode | undefined
+        // `[string, ...string[]]`: a tuple's rest element must be written as an array type, and libraries
+        // such as zod's `z.enum` require exactly that shape. The tuple is the type; its rest isn't a list.
+        if (parent?.type === "TSRestType") return
+
         const isReadonly =
           parent?.type === "TSTypeOperator" && (parent as { operator?: string }).operator === "readonly"
 
@@ -134,6 +226,11 @@ const rule: Rule.RuleModule = {
         const elementType = sourceCode.getText(node.elementType)
         const reportNode = isReadonly ? (parent as ASTNode) : node
         const fullType = sourceCode.getText(reportNode)
+
+        if (!isReadonly) {
+          reportMutable(reportNode, elementType, fullType)
+          return
+        }
 
         const suggest: Rule.SuggestionReportDescriptor[] = [
           {
@@ -175,41 +272,11 @@ const rule: Rule.RuleModule = {
 
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
-        // Handle Array<T> syntax
+        // Handle Array<T> syntax: mutable, same as T[]
         if (typeName === "Array") {
-          // Look for type parameters in child nodes
           const typeParam = findTypeParameter(node, sourceCode)
-          const fullType = sourceCode.getText(node)
-
-          const resolvedType = typeParam || "T"
-
-          const suggest: Rule.SuggestionReportDescriptor[] = [
-            {
-              messageId: "suggestListType",
-              data: { type: resolvedType },
-              fix(fixer: Rule.RuleFixer) {
-                return fixer.replaceText(node, `List<${resolvedType}>`)
-              },
-            },
-          ]
-
-          if (!hasFunctypeSymbol(sourceCode, "List")) {
-            suggest.push({
-              messageId: "suggestAddImport",
-              data: { symbol: "List" },
-              fix: createImportFixer(sourceCode, "List"),
-            })
-          }
-
-          context.report({
-            node,
-            messageId: "preferList",
-            data: {
-              type: resolvedType,
-              arrayType: fullType,
-            },
-            suggest,
-          })
+          reportMutable(node, typeParam || "T", sourceCode.getText(node))
+          return
         }
 
         // Handle ReadonlyArray<T> — gated on allowReadonlyArrays (parity with `readonly T[]`).
@@ -271,6 +338,17 @@ const rule: Rule.RuleModule = {
         // Don't flag array literals that already live in a type-annotated
         // context (those are handled by the type-checking rules).
         if (ancestorSatisfies(node, hasOwnTypeAnnotation)) return
+
+        // A literal asserted to a tuple (`as const`, `as [string, ...string[]]`) is a fixed shape.
+        if (isTupleAssertion(parent)) return
+
+        // With type information: a literal passed where an array is expected — drizzle's
+        // `.values([...])`, an index definition, a schema `target: [...]` — is handed straight to code
+        // that requires an array. It never becomes a collection in your own code, so it's the
+        // boundary itself and `List` can't go there.
+        if (flowsIntoArraySlot(node, context) === true) return
+        if (isFunctypeConstructorArg(node, parent)) return
+        if (isOnlyHandedToArraySlots(parent)) return
 
         // Check if any element is a SpreadElement — ambiguous semantics, skip suggestions
         const hasSpread = node.elements.some((el) => el !== null && el.type === "SpreadElement")
