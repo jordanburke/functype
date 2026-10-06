@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { descendants } from "../utils/ast-walk"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 import { flowsIntoArraySlot, flowsIntoMutableArraySlot, isUntypedExpression } from "../utils/type-aware"
@@ -300,13 +301,28 @@ const rule: Rule.RuleModule = {
       return found ?? null
     }
 
-    /** The first in-place mutation of `.<field>` anywhere in the file (`x.errors.push(…)`), or null. */
+    /**
+     * Fields mutated in place anywhere in the file, `errors` → `push` for `t.errors.push(e)`. Built once per
+     * file, on first use, from the syntax tree.
+     */
+    const mutatedFields: { map?: ReadonlyMap<string, string> } = {}
     function fieldMutationIn(field: string): string | null {
-      const pattern = new RegExp(
-        `\\.${field.replace(/\$/g, "\\$")}\\s*\\.\\s*(${[...MUTATING_METHODS].join("|")})\\s*\\(`,
-      )
-      const match = pattern.exec(context.sourceCode.text)
-      return match ? (match[1] ?? null) : null
+      if (!mutatedFields.map) {
+        const entries = descendants(context.sourceCode.ast as unknown as ASTNode).flatMap(
+          (node): [string, string][] => {
+            if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return []
+            const method = node.callee.property?.type === "Identifier" ? node.callee.property.name : null
+            const target = node.callee.object as ASTNode
+            const name =
+              target?.type === "MemberExpression" && target.property?.type === "Identifier" && !target.computed
+                ? target.property.name
+                : null
+            return method && name && MUTATING_METHODS.has(method) ? [[name, method]] : []
+          },
+        )
+        mutatedFields.map = new globalThis.Map(entries.reverse())
+      }
+      return mutatedFields.map.get(field) ?? null
     }
 
     /** Is `binding` handed to a slot that requires a mutable array (pg `query` values, ReactFlow `nodes`)? */
