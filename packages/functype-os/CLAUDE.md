@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-functype-os is a standalone npm package that wraps Node.js OS operations using functype data structures (Option, Either, Task, List). It provides functional interfaces for env vars, path expansion, filesystem ops, platform/container detection, and config file resolution.
+functype-os is a standalone npm package that wraps Node.js OS operations using functype data structures (Option, Either, IO, List). It provides functional interfaces for env vars, path expansion, filesystem ops, platform/container detection, and config file resolution.
 
 ## Quick Start
 
@@ -23,26 +23,26 @@ src/
 ├── errors/     # Discriminated union error types (EnvError, PathError, FsError, ConfigError, ProcessError)
 ├── env/        # Env("VAR") → Option, Env.getRequired() → Either, Env.parse() → Either
 ├── path/       # expandTilde, expandVars, expandPath — pure sync functions
-├── fs/         # Fs.exists, readFile, writeFile, mkdir, unlink, stat, copyFile, rename, glob → TaskResult
+├── fs/         # Fs.exists, readFile, writeFile, mkdir, unlink, stat, copyFile, rename, glob → IO<never, FsError, T>
 ├── platform/   # OS detection + container runtime detection (lazy-cached)
 ├── config/     # ConfigResolver (file-path resolution) + ConfigSource/Layered/bootDiagnostics (1.3.0+, multi-source boot config)
-├── process/    # Process.exec, Process.execSync → TaskResult/Either<ProcessError, ExecResult>
+├── process/    # Process.exec → IO<never, ProcessError, ExecResult>; Process.execSync → Either
 └── index.ts    # Barrel export
 ```
 
 ### Design Decisions
 
-| Decision            | Choice                   | Rationale                                                                                          |
-| ------------------- | ------------------------ | -------------------------------------------------------------------------------------------------- |
-| Async wrapper       | Task (Ok/Err)            | The "environment" IS the OS — nothing to inject. Task is simpler than IO.                          |
-| Path ops            | Pure functions → Either  | Tilde/var expansion is sync string manipulation. Only FS ops need Task.                            |
-| Error types         | Discriminated unions     | Enables exhaustive matching via `_tag`.                                                            |
-| Container detection | Lazy-cached sync         | Follows sindresorhus/is-docker pattern.                                                            |
-| functype imports    | Barrel `"functype"` only | Subpath exports (`functype/task`, `functype/either`) don't resolve correctly in published package. |
+| Decision            | Choice                   | Rationale                                                                                                                |
+| ------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Async wrapper       | Lazy `IO<never, E, T>`   | functype 2.0 drops Task. IO is lazy and composes (retry, timeout, interruptOn); `R = never` — the OS needs no injection. |
+| Path ops            | Pure functions → Either  | Tilde/var expansion is sync string manipulation. Only async FS ops need IO.                                              |
+| Error types         | Discriminated unions     | Enables exhaustive matching via `_tag`.                                                                                  |
+| Container detection | Lazy-cached sync         | Follows sindresorhus/is-docker pattern.                                                                                  |
+| functype imports    | Barrel `"functype"` only | Subpath exports (`functype/io`, `functype/either`) don't resolve correctly in published package.                         |
 
 ### Key Patterns
 
-- **All imports from functype use the barrel export** — do NOT use subpath imports like `functype/task`
+- **All imports from functype use the barrel export** — do NOT use subpath imports like `functype/io`
 - **Error types** are both types and constructor functions (same name, different namespaces)
 - **Env** uses `Object.assign` to combine constructor + companion (not `Companion()` from functype, since this is a standalone package)
 - **Platform container checks** use module-level cached variables with nullish coalescing assignment (`??=`)
@@ -73,7 +73,7 @@ src/
 
 1. Create module directory under `src/`
 2. Define error type in `src/errors/errors.ts` if needed
-3. Implement using functype types (Option, Either, Task, List)
+3. Implement using functype types (Option, Either, IO, List)
 4. Export from module `index.ts` and `src/index.ts`
 5. Add subpath export to `package.json` exports field
 6. Write tests in `test/`

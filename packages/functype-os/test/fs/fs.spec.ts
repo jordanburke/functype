@@ -24,55 +24,55 @@ describe("Fs", () => {
 
   describe("exists", () => {
     it("should return Ok(true) for existing file", async () => {
-      const result = await Fs.exists(testFile)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.exists(testFile).run()
+      expect(result.isRight()).toBe(true)
       expect(result.value).toBe(true)
     })
 
     it("should return Ok(false) for non-existing file", async () => {
-      const result = await Fs.exists(path.join(tmpDir, "nope.txt"))
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.exists(path.join(tmpDir, "nope.txt")).run()
+      expect(result.isRight()).toBe(true)
       expect(result.value).toBe(false)
     })
   })
 
   describe("readFile", () => {
     it("should return Ok with file content", async () => {
-      const result = await Fs.readFile(testFile)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.readFile(testFile).run()
+      expect(result.isRight()).toBe(true)
       expect(result.value).toBe(testContent)
     })
 
     it("should return Err for non-existing file", async () => {
-      const result = await Fs.readFile(path.join(tmpDir, "missing.txt"))
-      expect(result.isErr()).toBe(true)
-      if (result.isErr()) {
-        expect(result.error.message).toContain("readFile")
+      const result = await Fs.readFile(path.join(tmpDir, "missing.txt")).run()
+      expect(result.isLeft()).toBe(true)
+      if (result.isLeft()) {
+        expect(result.value.message).toContain("readFile")
       }
     })
   })
 
   describe("readFileOpt", () => {
     it("should return Ok(Some) for existing file", async () => {
-      const result = await Fs.readFileOpt(testFile)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.readFileOpt(testFile).run()
+      expect(result.isRight()).toBe(true)
       const opt = result.value
       expect(opt.isSome()).toBe(true)
       expect(opt.orElse("")).toBe(testContent)
     })
 
     it("should return Ok(None) for ENOENT", async () => {
-      const result = await Fs.readFileOpt(path.join(tmpDir, "missing.txt"))
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.readFileOpt(path.join(tmpDir, "missing.txt")).run()
+      expect(result.isRight()).toBe(true)
       expect(result.value.isNone()).toBe(true)
     })
   })
 
   describe("stat", () => {
     it("should return Ok with FileInfo for existing file", async () => {
-      const result = await Fs.stat(testFile)
-      expect(result.isOk()).toBe(true)
-      if (result.isOk()) {
+      const result = await Fs.stat(testFile).run()
+      expect(result.isRight()).toBe(true)
+      if (result.isRight()) {
         const info = result.value
         expect(info.isFile).toBe(true)
         expect(info.isDirectory).toBe(false)
@@ -82,31 +82,31 @@ describe("Fs", () => {
     })
 
     it("should return Ok with FileInfo for directory", async () => {
-      const result = await Fs.stat(tmpDir)
-      expect(result.isOk()).toBe(true)
-      if (result.isOk()) {
+      const result = await Fs.stat(tmpDir).run()
+      expect(result.isRight()).toBe(true)
+      if (result.isRight()) {
         expect(result.value.isDirectory).toBe(true)
         expect(result.value.isFile).toBe(false)
       }
     })
 
     it("should return Err for non-existing path", async () => {
-      const result = await Fs.stat(path.join(tmpDir, "nope"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.stat(path.join(tmpDir, "nope")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
   describe("copyFile", () => {
     it("should copy file and return Ok(undefined)", async () => {
       const dest = path.join(tmpDir, "copied.txt")
-      const result = await Fs.copyFile(testFile, dest)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.copyFile(testFile, dest).run()
+      expect(result.isRight()).toBe(true)
       expect(fs.readFileSync(dest, "utf8")).toBe(testContent)
     })
 
     it("should return Err when source does not exist", async () => {
-      const result = await Fs.copyFile(path.join(tmpDir, "nope.txt"), path.join(tmpDir, "dest.txt"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.copyFile(path.join(tmpDir, "nope.txt"), path.join(tmpDir, "dest.txt")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
@@ -115,29 +115,29 @@ describe("Fs", () => {
       const src = path.join(tmpDir, "rename-src.txt")
       const dest = path.join(tmpDir, "rename-dest.txt")
       fs.writeFileSync(src, "rename me")
-      const result = await Fs.rename(src, dest)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.rename(src, dest).run()
+      expect(result.isRight()).toBe(true)
       expect(fs.existsSync(src)).toBe(false)
       expect(fs.readFileSync(dest, "utf8")).toBe("rename me")
     })
 
     it("should return Err when source does not exist", async () => {
-      const result = await Fs.rename(path.join(tmpDir, "nope.txt"), path.join(tmpDir, "dest.txt"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.rename(path.join(tmpDir, "nope.txt"), path.join(tmpDir, "dest.txt")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
   describe("readdir", () => {
     it("should return Ok with List of entries", async () => {
-      const result = await Fs.readdir(tmpDir)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.readdir(tmpDir).run()
+      expect(result.isRight()).toBe(true)
       const entries = result.value.toArray()
       expect(entries).toContain("test.txt")
     })
 
     it("should return Err for non-existing directory", async () => {
-      const result = await Fs.readdir(path.join(tmpDir, "no-such-dir"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.readdir(path.join(tmpDir, "no-such-dir")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
@@ -232,14 +232,14 @@ describe("Fs", () => {
   describe("writeFile", () => {
     it("should write content and return Ok(undefined)", async () => {
       const target = path.join(tmpDir, "write-test.txt")
-      const result = await Fs.writeFile(target, "written content")
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.writeFile(target, "written content").run()
+      expect(result.isRight()).toBe(true)
       expect(fs.readFileSync(target, "utf8")).toBe("written content")
     })
 
     it("should return Err for invalid path", async () => {
-      const result = await Fs.writeFile("/no-such-dir/file.txt", "data")
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.writeFile("/no-such-dir/file.txt", "data").run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
@@ -247,21 +247,21 @@ describe("Fs", () => {
     it("should append to existing file and return Ok(undefined)", async () => {
       const target = path.join(tmpDir, "append-test.txt")
       fs.writeFileSync(target, "first")
-      const result = await Fs.appendFile(target, "-second")
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.appendFile(target, "-second").run()
+      expect(result.isRight()).toBe(true)
       expect(fs.readFileSync(target, "utf8")).toBe("first-second")
     })
 
     it("should create the file if it does not exist", async () => {
       const target = path.join(tmpDir, "append-create.txt")
-      const result = await Fs.appendFile(target, "hello")
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.appendFile(target, "hello").run()
+      expect(result.isRight()).toBe(true)
       expect(fs.readFileSync(target, "utf8")).toBe("hello")
     })
 
     it("should return Err for invalid path", async () => {
-      const result = await Fs.appendFile("/no-such-dir/append.txt", "data")
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.appendFile("/no-such-dir/append.txt", "data").run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
@@ -304,30 +304,30 @@ describe("Fs", () => {
   describe("mkdir", () => {
     it("should create directory and return Ok(undefined)", async () => {
       const target = path.join(tmpDir, "new-dir")
-      const result = await Fs.mkdir(target)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.mkdir(target).run()
+      expect(result.isRight()).toBe(true)
       expect(fs.statSync(target).isDirectory()).toBe(true)
     })
 
     it("should create nested directories with recursive option", async () => {
       const target = path.join(tmpDir, "a", "b", "c")
-      const result = await Fs.mkdir(target, { recursive: true })
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.mkdir(target, { recursive: true }).run()
+      expect(result.isRight()).toBe(true)
       expect(fs.statSync(target).isDirectory()).toBe(true)
     })
 
     it("should return Err for invalid path without recursive", async () => {
-      const result = await Fs.mkdir(path.join(tmpDir, "x", "y", "z"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.mkdir(path.join(tmpDir, "x", "y", "z")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
   describe("mkdir magic-FS guard", () => {
     it("refuses recursive mkdir under /proc with a Left(FsError)", async () => {
-      const result = await Fs.mkdir("/proc/no-write-here/a/b/c", { recursive: true })
-      expect(result.isErr()).toBe(true)
-      if (result.isErr()) {
-        expect(result.error.message).toContain("magic filesystem root")
+      const result = await Fs.mkdir("/proc/no-write-here/a/b/c", { recursive: true }).run()
+      expect(result.isLeft()).toBe(true)
+      if (result.isLeft()) {
+        expect(result.value.message).toContain("magic filesystem root")
       }
     })
 
@@ -366,14 +366,14 @@ describe("Fs", () => {
     it("should delete file and return Ok(undefined)", async () => {
       const target = path.join(tmpDir, "to-delete.txt")
       fs.writeFileSync(target, "delete me")
-      const result = await Fs.unlink(target)
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.unlink(target).run()
+      expect(result.isRight()).toBe(true)
       expect(fs.existsSync(target)).toBe(false)
     })
 
     it("should return Err for non-existing file", async () => {
-      const result = await Fs.unlink(path.join(tmpDir, "no-exist.txt"))
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.unlink(path.join(tmpDir, "no-exist.txt")).run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 
@@ -401,8 +401,8 @@ describe("Fs", () => {
     })
 
     it("should return matching files for *.ts pattern", async () => {
-      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.ts")
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.ts").run()
+      expect(result.isRight()).toBe(true)
       const files = result.value.toArray()
       expect(files).toContain("a.ts")
       expect(files).toContain(path.join("sub", "c.ts"))
@@ -410,14 +410,14 @@ describe("Fs", () => {
     })
 
     it("should return empty list for no matches", async () => {
-      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.py")
-      expect(result.isOk()).toBe(true)
+      const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.py").run()
+      expect(result.isRight()).toBe(true)
       expect(result.value.size).toBe(0)
     })
 
     it("should return Err for non-existing directory", async () => {
-      const result = await Fs.glob(path.join(tmpDir, "no-dir"), "**/*")
-      expect(result.isErr()).toBe(true)
+      const result = await Fs.glob(path.join(tmpDir, "no-dir"), "**/*").run()
+      expect(result.isLeft()).toBe(true)
     })
   })
 })

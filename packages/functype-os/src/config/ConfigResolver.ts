@@ -1,5 +1,5 @@
-import type { Either, TaskResult } from "functype"
-import { Err, Left, List, Ok, Option, Right } from "functype"
+import type { Either } from "functype"
+import { IO, Left, List, Option, Right } from "functype"
 
 import type { ConfigError } from "../errors/errors"
 import { ConfigError as ConfigErrorConstructor } from "../errors/errors"
@@ -14,49 +14,38 @@ const tryExpandPath = (candidate: string): Option<string> => {
   )
 }
 
-const findFirstExistingAsync = async (candidates: readonly string[], startIndex: number): Promise<Option<string>> => {
-  if (startIndex >= candidates.length) return Option<string>(undefined)
-  const candidate = candidates[startIndex] as string
-  const expanded = tryExpandPath(candidate)
-  if (expanded.isNone()) return findFirstExistingAsync(candidates, startIndex + 1)
-  const existsResult = await Fs.exists(expanded.orThrow())
-  if (existsResult.isOk() && existsResult.value) return expanded
-  return findFirstExistingAsync(candidates, startIndex + 1)
-}
+// Checks candidates in order and stops at the first that exists.
+const findFirstExisting = (candidates: List<string>): IO<never, never, Option<string>> =>
+  candidates.headOption.fold(
+    () => IO.succeed(Option<string>(undefined)),
+    (head) =>
+      Fs.exists(head).flatMap((found) => (found ? IO.succeed(Option(head)) : findFirstExisting(candidates.tail))),
+  )
 
 // Expand each candidate; drop entries whose env variables didn't resolve.
 const presentPaths = (candidates: readonly string[]): List<string> =>
   List<string>(candidates.flatMap((c) => tryExpandPath(c).toArray() as string[]))
 
 export const ConfigResolver = {
-  // Async methods — return TaskResult<T>
+  // Async methods — return a lazy IO; nothing touches the filesystem until `.run()`
 
-  resolve: async (options: { readonly candidates: readonly string[] }): TaskResult<Option<string>> => {
-    const found = await findFirstExistingAsync(options.candidates, 0)
-    return Ok(found)
-  },
+  resolve: (options: { readonly candidates: readonly string[] }): IO<never, never, Option<string>> =>
+    findFirstExisting(presentPaths(options.candidates)),
 
-  resolveRequired: async (options: { readonly candidates: readonly string[] }): TaskResult<string> => {
-    const result = await ConfigResolver.resolve(options)
-    if (result.isErr()) return Err(result.error)
+  resolveRequired: (options: { readonly candidates: readonly string[] }): IO<never, ConfigError, string> =>
+    ConfigResolver.resolve(options).flatMap((found) =>
+      found.fold<IO<never, ConfigError, string>>(
+        () => IO.fail(ConfigErrorConstructor(options.candidates)),
+        (path) => IO.succeed(path),
+      ),
+    ),
 
-    return result.orThrow().fold<TaskResult<string>>(
-      () => Promise.resolve(Err(ConfigErrorConstructor(options.candidates))),
-      (v) => Promise.resolve(Ok(v)),
-    )
-  },
-
-  resolveAll: async (options: { readonly candidates: readonly string[] }): TaskResult<List<string>> => {
-    const expanded = presentPaths(options.candidates).toArray()
-    const checks = await Promise.all(
-      expanded.map(async (p): Promise<string | null> => {
-        const r = await Fs.exists(p)
-        return r.isOk() && r.value ? p : null
-      }),
-    )
-    const found = checks.filter((p): p is string => p !== null)
-    return Ok(List<string>(found))
-  },
+  // Checks paths one at a time, in order. They're a handful of config candidates, so this
+  // costs nothing measurable and keeps the result order stable.
+  resolveAll: (options: { readonly candidates: readonly string[] }): IO<never, never, List<string>> =>
+    IO.forEach(presentPaths(options.candidates).toArray(), (path) =>
+      Fs.exists(path).map((found) => (found ? [path] : [])),
+    ).map((perPath) => List<string>(perPath.flat())),
 
   // Sync methods — return Either<ConfigError, T>
 
