@@ -136,8 +136,24 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
+| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. Off while it rolls out: `prefer-fold` is `error` in `recommended`.   |
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+
+**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `orElse(default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
+
+```ts
+if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
+if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
+if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
+if (e.isLeft()) throw new Error("x") // a host throw   → e.orThrow((err) => new MyError(err))
+if (t.isFailure()) {
+  log(t.error)
+  return
+} // other work first → t.fold(onFailure, onSuccess)
+```
+
+When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On CivalaOS it finds 75 guards, all of this shape.
 
 ### `functype/prefer-option`
 

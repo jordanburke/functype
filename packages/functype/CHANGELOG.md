@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-fold` can report a guard followed by an unwrap** (`checkGuards`, off by default): `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()`. The message gives advice based on what the guard does: `flatMap` when it hands the failure back, `mapLeft(…).flatMap` when it builds a new one, `map(…).orElse` or `fold` for a fallback, `orThrow((e) => …)` for a host throw, `fold` when it does other work first, and the async forms when the rest awaits. `orElse` and `fold` are never reported. On CivalaOS it finds 75 guards. It's opt-in because `prefer-fold` is `error` in `recommended`, and turning it on by default is planned for 2.0.
+
 ## 1.14.0 - 2026-10-04
 
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
