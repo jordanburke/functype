@@ -64,6 +64,17 @@ const MUTATING_METHODS: ReadonlySet<string> = new Set([
   "copyWithin",
 ])
 
+/**
+ * The expression a literal stands in for once conditionals are looked through: `[x]` in
+ * `List(c ? xs : [x])` or `const args = c ? [a] : ["--fix", a]` behaves like the whole conditional.
+ */
+function throughConditionals(node: ASTNode): ASTNode {
+  const parent = node.parent as ASTNode | undefined
+  if (parent?.type === "ConditionalExpression" && parent.test !== node) return throughConditionals(parent)
+  if (parent?.type === "LogicalExpression") return throughConditionals(parent)
+  return node
+}
+
 /** `[…].join(" ")`, `[a, b].includes(x)`, `[...x].sort(…)`: a literal whose method is called on the spot. */
 function isTransientReceiver(node: ASTNode, parent: ASTNode | null | undefined): boolean {
   return parent?.type === "MemberExpression" && parent.object === node && parent.parent?.type === "CallExpression"
@@ -186,6 +197,15 @@ const rule: Rule.RuleModule = {
   },
 
   create(context) {
+    // A generated file (`// @generated`, "Auto-generated … DO NOT EDIT") isn't edited by hand, so there's
+    // nothing for its author to fix. Generators without a marker (Supabase types) need a config ignore.
+    const header = context.sourceCode
+      .getAllComments()
+      .slice(0, 3)
+      .map((comment) => comment.value)
+      .join("\n")
+    if (/@generated|auto-generated|do not edit/i.test(header)) return {}
+
     const options = context.options[0] || {}
     // Everything inside `Wire<…>` is the declared serialization shape (#325 B).
     const wireTypes: ReadonlyArray<string> = options.wireTypes ?? DEFAULT_WIRE_TYPES
@@ -445,6 +465,8 @@ const rule: Rule.RuleModule = {
         // `[string, ...string[]]`: a tuple's rest element must be written as an array type, and libraries
         // such as zod's `z.enum` require exactly that shape. The tuple is the type; its rest isn't a list.
         if (parent?.type === "TSRestType") return
+        // `(...args: string[])`: a rest parameter is a fresh array on every call, owned by the callee.
+        if (parent?.type === "TSTypeAnnotation" && parent.parent?.type === "RestElement") return
 
         const isReadonly =
           parent?.type === "TSTypeOperator" && (parent as { operator?: string }).operator === "readonly"
@@ -568,6 +590,10 @@ const rule: Rule.RuleModule = {
         // context (those are handled by the type-checking rules).
         if (ancestorSatisfies(node, hasOwnTypeAnnotation)) return
 
+        // Look through `c ? xs : [x]` / `xs ?? [x]`: the checks below apply to the whole expression.
+        const target = throughConditionals(node)
+        const targetParent = target.parent as ASTNode | undefined
+
         // A literal asserted to a tuple (`as const`, `as [string, ...string[]]`) is a fixed shape.
         if (isTupleAssertion(parent)) return
 
@@ -575,22 +601,22 @@ const rule: Rule.RuleModule = {
         // `.values([...])`, an index definition, a schema `target: [...]` — is handed straight to code
         // that requires an array. It never becomes a collection in your own code, so it's the
         // boundary itself and `List` can't go there.
-        if (flowsIntoArraySlot(node, context) === true) return
-        if (isFunctypeConstructorArg(node, parent)) return
+        if (flowsIntoArraySlot(node, context) === true || flowsIntoArraySlot(target, context) === true) return
+        if (isFunctypeConstructorArg(target, targetParent)) return
         // Used on the spot (`[a, b].includes(x)`, `[...].join("\n")`, `[...x].sort(…)`): nothing is stored.
-        if (isTransientReceiver(node, parent)) return
+        if (isTransientReceiver(node, parent) || isTransientReceiver(target, targetParent)) return
         // Spread into a call (`and(...(c ? [x] : []))`): the function gets the elements one by one.
         if (isSpreadIntoCall(node)) return
         // `const acc = [...]; acc.push(x)`: an accumulator. The defect is the mutation, so it gets the same
         // advice as a mutated `T[]` binding, not a List.of suggestion that has no push.
-        if (parent?.type === "VariableDeclarator" && parent.id?.type === "Identifier") {
-          const how = mutationOf(parent.id as ASTNode)
+        if (targetParent?.type === "VariableDeclarator" && targetParent.id?.type === "Identifier") {
+          const how = mutationOf(targetParent.id as ASTNode)
           if (how) {
-            context.report({ node, messageId: "mutatedArray", data: { name: parent.id.name, how } })
+            context.report({ node, messageId: "mutatedArray", data: { name: targetParent.id.name, how } })
             return
           }
         }
-        if (isOnlyHandedToArraySlots(parent)) return
+        if (isOnlyHandedToArraySlots(targetParent)) return
 
         // Check if any element is a SpreadElement — ambiguous semantics, skip suggestions
         const hasSpread = node.elements.some((el) => el !== null && el.type === "SpreadElement")

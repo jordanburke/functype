@@ -49,6 +49,18 @@ describe("prefer-list", () => {
         name: "A const used only through a read-only method is a temporary",
         code: 'export function text(a: string, b: string) { const lines = [a, b]; return lines.join("\\n") }',
       },
+      {
+        name: "A generated file is skipped",
+        code: "/**\n * Status - Auto-generated file\n *\n * DO NOT EDIT MANUALLY\n */\nexport const sites: string[] = ['a']",
+      },
+      {
+        name: "A fallback literal in a conditional whose result is used on the spot",
+        code: 'export const labels = (roles: ReadonlyArray<string>) => (roles.length ? roles : ["—"]).map((r) => r.toUpperCase())',
+      },
+      {
+        name: "A rest parameter is a fresh array owned by the callee",
+        code: "export function log(...parts: string[]) { return parts.length } type Rpc = (...args: unknown[]) => unknown",
+      },
       // Already using List
       {
         name: "List type is allowed",
