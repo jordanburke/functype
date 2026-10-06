@@ -1,8 +1,8 @@
 import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { containsAwait } from "../utils/async-detection"
 import { childNodes, descendants } from "../utils/ast-walk"
+import { containsAwait } from "../utils/async-detection"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 
 /** Methods on a monadic value that mean "this is the Some/Right/Success path." */
@@ -243,7 +243,9 @@ function unwrapsReceiver(statements: ReadonlyArray<ASTNode>, receiver: string, s
       const name = node.property.type === "Identifier" ? node.property.name : null
       if (name === SUCCESS_MEMBER) return true
       const parent = node.parent as ASTNode | undefined
-      return name !== null && SUCCESS_METHODS.includes(name) && parent?.type === "CallExpression" && parent.callee === node
+      return (
+        name !== null && SUCCESS_METHODS.includes(name) && parent?.type === "CallExpression" && parent.callee === node
+      )
     })
 }
 
