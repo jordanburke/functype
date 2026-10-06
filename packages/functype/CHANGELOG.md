@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers, it goes from 1,985 hits to 649 (CivalaOS 821 → 184, agent-todo 828 → 312). CivalaOS's hits were classified with civala's agent.
+  - Mutable `T[]` / `Array<T>` suggests `ReadonlyArray<T>` first, then `List<T>`.
+  - An array changed in place (`push`, `sort`, `x[i] = …`, on a binding or a field) gets advice instead of a suggestion that wouldn't compile.
+  - A cast of untyped data (`JSON.parse(raw) as Row[]`) points at `Wire<ReadonlyArray<Row>>`.
+  - With type-aware linting, a literal or binding is skipped when it goes to a library in the shape the library demands: an array-typed parameter or prop, a spread into a call, an untyped request body, or a slot that requires a mutable array (pg `query` values, an SDK option typed `string[]`).
+  - Also skipped: `Iterable` / generic-sink parameters, helper return values that go to one, literals used on the spot (`[a, b].includes(x)`), `as const` and tuple assertions, tuple rest elements, rest parameters, literals passed into `List(…)` / `Set(…)`, a `const` used only through read-only methods, and files marked generated.
+  - `prefer-list` stays `off` in `recommended` and `warn` in `strict` for now.
+
 ## 1.14.0 - 2026-10-04
 
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**

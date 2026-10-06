@@ -32,6 +32,35 @@ describe("prefer-list", () => {
         code: "type Rows = Dto<ReadonlyArray<Row>>",
         options: [{ allowReadonlyArrays: false, wireTypes: ["Dto"] }],
       },
+      // `as const` is a read-only literal tuple (an enum's values); List would lose the literal types.
+      {
+        name: "An as-const literal tuple is allowed",
+        code: 'export const DOC_TYPES = ["memo", "report"] as const',
+      },
+      {
+        name: "A tuple rest element is part of the tuple, not a list",
+        code: "const roles = [...ASSIGNABLE] as [string, ...string[]]",
+      },
+      {
+        name: "A literal whose method is called on the spot stores nothing",
+        code: 'const ok = ["a", "b"].includes(x); const sorted = [...xs].sort(); const text = [a, b].join("\\n")',
+      },
+      {
+        name: "A const used only through a read-only method is a temporary",
+        code: 'export function text(a: string, b: string) { const lines = [a, b]; return lines.join("\\n") }',
+      },
+      {
+        name: "A generated file is skipped",
+        code: "/**\n * Status - Auto-generated file\n *\n * DO NOT EDIT MANUALLY\n */\nexport const sites: string[] = ['a']",
+      },
+      {
+        name: "A fallback literal in a conditional whose result is used on the spot",
+        code: 'export const labels = (roles: ReadonlyArray<string>) => (roles.length ? roles : ["—"]).map((r) => r.toUpperCase())',
+      },
+      {
+        name: "A rest parameter is a fresh array owned by the callee",
+        code: "export function log(...parts: string[]) { return parts.length } type Rpc = (...args: unknown[]) => unknown",
+      },
       // Already using List
       {
         name: "List type is allowed",
@@ -83,6 +112,16 @@ describe("prefer-list", () => {
     ],
     invalid: [
       {
+        name: "A field that is pushed to somewhere in the file gets the mutation advice",
+        code: "type Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+        errors: [{ messageId: "mutatedArray", data: { name: "errors", how: "push" } }],
+      },
+      {
+        name: "A literal accumulator that is pushed to gets the mutation advice",
+        code: 'export function summary(n: number) { const parts = ["a"]; if (n) parts.push("b"); return parts }',
+        errors: [{ messageId: "mutatedArray", data: { name: "parts", how: "push" } }],
+      },
+      {
         name: "wireTypes: [] turns the Wire exemption off",
         code: "type Rows = Wire<ReadonlyArray<Row>>",
         options: [{ allowReadonlyArrays: false, wireTypes: [] }],
@@ -107,9 +146,14 @@ describe("prefer-list", () => {
         code: 'const items: string[] = ["a", "b", "c"]',
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: 'const items: ReadonlyArray<string> = ["a", "b", "c"]',
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -130,9 +174,14 @@ describe("prefer-list", () => {
         code: 'const items: Array<string> = ["a", "b", "c"]',
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "Array<string>" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: 'const items: ReadonlyArray<string> = ["a", "b", "c"]',
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -205,9 +254,14 @@ describe("prefer-list", () => {
         options: [{ allowArrayLiterals: true }],
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function f(xs: ReadonlyArray<string>) {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -249,12 +303,17 @@ describe("prefer-list", () => {
         code: "const users: { name: string; age: number }[] = []",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: {
               type: "{ name: string; age: number }",
               arrayType: "{ name: string; age: number }[]",
             },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "{ name: string; age: number }" },
+                output: "const users: ReadonlyArray<{ name: string; age: number }> = []",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "{ name: string; age: number }" },
@@ -275,9 +334,14 @@ describe("prefer-list", () => {
         code: "function processItems(items: string[]): void {}",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function processItems(items: ReadonlyArray<string>): void {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -298,9 +362,14 @@ describe("prefer-list", () => {
         code: "function getItems(): string[] { return [] }",
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function getItems(): ReadonlyArray<string> { return [] }",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
@@ -354,9 +423,14 @@ describe("prefer-list", () => {
         options: [{ allowReadonlyArrays: true }],
         errors: [
           {
-            messageId: "preferList",
+            messageId: "preferReadonlyOrList",
             data: { type: "string", arrayType: "string[]" },
             suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "function f(xs: ReadonlyArray<string>) {}",
+              },
               {
                 messageId: "suggestListType",
                 data: { type: "string" },
