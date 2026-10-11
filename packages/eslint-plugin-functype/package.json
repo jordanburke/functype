@@ -1,6 +1,6 @@
 {
   "name": "eslint-plugin-functype",
-  "version": "2.114.0",
+  "version": "2.115.0",
   "description": "Custom ESLint rules for functional TypeScript programming with functype library patterns including Do notation (ESLint 10+)",
   "type": "module",
   "main": "./dist/index.js",
@@ -59,7 +59,7 @@
     "eslint": "^10.2.1"
   },
   "devDependencies": {
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "@typescript-eslint/rule-tester": "^8.71.0",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",

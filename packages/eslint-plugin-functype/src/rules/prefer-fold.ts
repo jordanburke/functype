@@ -1,7 +1,8 @@
 import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { childNodes } from "../utils/ast-walk"
+import { childNodes, descendants } from "../utils/ast-walk"
+import { containsAwait } from "../utils/async-detection"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 
 /** Methods on a monadic value that mean "this is the Some/Right/Success path." */
@@ -182,6 +183,115 @@ function ifElseChainLength(node: ASTNode): number {
   return 2 // root + the terminal else
 }
 
+/**
+ * What a guard's early exit does, which decides the advice:
+ * - `passthrough`: hands the failure back unchanged (`return e`, `return Left(e.value)`, `return None()`),
+ *   so the rest of the function is a `flatMap`/`map`.
+ * - `mappedFailure`: returns a new failure built from the old one (`return Left({ kind: e.value.kind })`),
+ *   so it's `mapLeft(…)` then `flatMap`.
+ * - `default`: returns a plain fallback, so it's `map(…).orElse(fallback)` or a `fold`.
+ * - `throw`: a host that needs a throw, so it's `orThrow((e) => …)`.
+ * - `effect`: does other work first (logging, setting state), so it's a `fold`.
+ */
+type GuardExit = "passthrough" | "mappedFailure" | "default" | "throw" | "effect"
+
+/** Constructors (and companion methods) that build a failure: `Left(…)`, `None()`, `Failure(…)`, `Either.left(…)`. */
+const FAILURE_CONSTRUCTORS: ReadonlySet<string> = new Set(["Left", "None", "Failure", "left", "none", "failure"])
+
+/** Does `node` read `<receiver>.<member>` anywhere inside it? */
+function readsMember(node: ASTNode, receiver: string, member: string, sourceCode: SourceCode): boolean {
+  return descendants(node).some(
+    (n) =>
+      n.type === "MemberExpression" &&
+      !n.computed &&
+      n.property.type === "Identifier" &&
+      n.property.name === member &&
+      compact(sourceCode.getText(n.object)) === receiver,
+  )
+}
+
+/** The single exit statement of a guard's consequent: `return x` / `throw x`, alone or as a one-statement block. */
+function guardExitStatement(consequent: ASTNode): { readonly exit: ASTNode; readonly extraWork: boolean } | null {
+  if (consequent.type === "ReturnStatement" || consequent.type === "ThrowStatement") {
+    return { exit: consequent, extraWork: false }
+  }
+  if (consequent.type !== "BlockStatement" || consequent.body.length === 0) return null
+  const last = consequent.body[consequent.body.length - 1] as ASTNode
+  if (last.type !== "ReturnStatement" && last.type !== "ThrowStatement") return null
+  return { exit: last, extraWork: consequent.body.length > 1 }
+}
+
+/**
+ * `receiver` is the compacted receiver text; `failureMember` is where the failure value lives once
+ * narrowed (`value` for Either, `error` for Try, null for Option, whose None carries nothing).
+ */
+function classifyGuardExit(
+  consequent: ASTNode,
+  receiver: string,
+  failureMember: string | null,
+  sourceCode: SourceCode,
+): GuardExit | null {
+  const found = guardExitStatement(consequent)
+  if (!found) return null
+  if (found.exit.type === "ThrowStatement") return "throw"
+  if (found.extraWork) return "effect"
+  const argument = found.exit.argument as ASTNode | null
+  if (!argument) return "effect"
+  if (compact(sourceCode.getText(argument)) === receiver) return "passthrough"
+  const callee = argument.type === "CallExpression" ? (argument.callee as ASTNode) : null
+  const calleeName =
+    callee?.type === "Identifier"
+      ? callee.name
+      : callee?.type === "MemberExpression" && callee.property.type === "Identifier"
+        ? callee.property.name
+        : null
+  if (calleeName && FAILURE_CONSTRUCTORS.has(calleeName)) {
+    const args = (argument.arguments ?? []) as ReadonlyArray<ASTNode>
+    const unchanged =
+      args.length === 0 ||
+      (args.length === 1 &&
+        failureMember !== null &&
+        compact(sourceCode.getText(args[0])) === `${receiver}.${failureMember}`)
+    return unchanged ? "passthrough" : "mappedFailure"
+  }
+  // A fallback built from the failure (`c.json({ error: r.value }, 500)`) can only be written as a fold:
+  // outside the guard the failure isn't narrowed, so `map(…).orElse(…)` couldn't read it.
+  if (failureMember !== null && readsMember(argument, receiver, failureMember, sourceCode)) return "effect"
+  return "default"
+}
+
+/**
+ * Does `statements` unwrap `receiver` the imperative way — `receiver.value`, `.orThrow()`, `.get()`?
+ * Reads through `map`, `flatMap`, `fold`, `orElse`… are already the functional form and don't count.
+ */
+function unwrapsReceiver(statements: ReadonlyArray<ASTNode>, receiver: string, sourceCode: SourceCode): boolean {
+  const nodes = statements.flatMap((statement) => descendants(statement))
+  // `e = next()` after the guard: later reads are of a different value, which the guard didn't check.
+  const reassigned = nodes.some(
+    (node) => node.type === "AssignmentExpression" && compact(sourceCode.getText(node.left)) === receiver,
+  )
+  if (reassigned) return false
+  return nodes.some((node) => {
+    if (node.type !== "MemberExpression" || compact(sourceCode.getText(node.object)) !== receiver) return false
+    const name = node.property.type === "Identifier" ? node.property.name : null
+    if (name === SUCCESS_MEMBER) return true
+    const parent = node.parent as ASTNode | undefined
+    if (name === null || !SUCCESS_METHODS.includes(name)) return false
+    if (parent?.type !== "CallExpression" || parent.callee !== node) return false
+    // `orThrow(error)` / `orThrow((e) => …)` names its error: no-get-unsafe treats that as a deliberate
+    // host throw, so this rule doesn't count it as an unwrap either.
+    return !(name === "orThrow" && (parent.arguments as ReadonlyArray<ASTNode>).length > 0)
+  })
+}
+
+/** An exit-only negative guard (`if (e.isLeft()) return …`) on a functype predicate, or null. */
+function guardOf(node: ASTNode, sourceCode: SourceCode): ReturnType<typeof extractMonadicTest> {
+  if (node.type !== "IfStatement" || node.alternate) return null
+  const extracted = extractMonadicTest(node.test, sourceCode)
+  if (!extracted?.isNegated || !guardExitStatement(node.consequent)) return null
+  return extracted
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -210,6 +320,10 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: false,
           },
+          checkGuards: {
+            type: "boolean",
+            default: false,
+          },
         },
         additionalProperties: false,
       },
@@ -217,6 +331,8 @@ const rule: Rule.RuleModule = {
     messages: {
       preferFold: "Prefer .fold() over if/else when working with {{type}} types",
       preferFoldTernary: "Consider using .fold() instead of ternary operator for {{type}}",
+      preferFoldGuard:
+        "{{receiver}} is checked with an early exit and then unwrapped. {{advice}} Branching first and unwrapping after is the imperative form.",
       suggestFold: "Replace with .fold()",
       suggestOr:
         "Replace with {{receiver}}.or({{alternative}}) — keep the first when it is present, else the alternative",
@@ -235,6 +351,69 @@ const rule: Rule.RuleModule = {
     // path fired on JSX conditionals, style objects and conditional spreads (31 of 31 hits in CivalaOS,
     // 0 of which were functype values). Predicate calls (`o.isSome()`, `e.isLeft()`) are always checked.
     const checkNullable = options.checkNullable === true
+    // Guard-then-unwrap (`if (e.isLeft()) return …; use(e.value)`). Opt-in while it's measured on real
+    // code: prefer-fold is `error` in recommended, so turning this on by default would fail builds.
+    const checkGuards = options.checkGuards === true
+
+    const SEQUENCE_ADVICE = (isAsync: boolean): string =>
+      isAsync
+        ? "Several guards in a row pass their failures through: sequence them with DoAsync(async function* () { const a = yield* $(await …) … })."
+        : "Several guards in a row pass their failures through: sequence them with Do(function* () { const a = yield* $(…); const b = yield* $(…); return … })."
+
+    const GUARD_ADVICE: Readonly<Record<GuardExit, (receiver: string, isAsync: boolean) => string>> = {
+      passthrough: (r, isAsync) =>
+        isAsync
+          ? `Keep it in the chain: ${r}.flatMapAsync(…), or lift the steps into IO.`
+          : `Keep it in the chain: ${r}.flatMap(…) or ${r}.map(…); the failure passes through on its own.`,
+      mappedFailure: (r, isAsync) =>
+        `Keep it in the chain: ${r}.mapLeft(…).${isAsync ? "flatMapAsync" : "flatMap"}(…) builds the new failure and continues on success.`,
+      default: (r) => `Use ${r}.map(…).orElse(fallback), or ${r}.fold(() => fallback, (value) => …).`,
+      throw: (r) =>
+        `If a host needs the throw, use ${r}.orThrow((e) => new YourError(e)); otherwise keep it in the chain with .flatMap or .fold.`,
+      effect: (r, isAsync) =>
+        isAsync ? `Use ${r}.foldAsync(onFailure, onSuccess).` : `Use ${r}.fold(onFailure, onSuccess).`,
+    }
+
+    /**
+     * `if (e.isLeft()) return …` followed, in the same block, by reads of `e.value` / `e.orThrow()`.
+     * `orElse` and `fold` are never flagged: both are proper ways to leave the container.
+     */
+    function checkGuard(node: ASTNode): void {
+      if (!checkGuards) return
+      const sourceCode = context.sourceCode
+      const extracted = guardOf(node, sourceCode)
+      if (!extracted) return
+      const block = node.parent as ASTNode | undefined
+      if (block?.type !== "BlockStatement" && block?.type !== "Program") return
+      const body = block.body as ReadonlyArray<ASTNode>
+      const after = body.slice(body.indexOf(node) + 1)
+      const receiver = compact(extracted.obj)
+      if (!unwrapsReceiver(after, receiver, sourceCode)) return
+      const exit = classifyGuardExit(node.consequent, receiver, extracted.failure?.member ?? null, sourceCode)
+      if (!exit) return
+      const isAsync = after.some((statement) => containsAwait(statement))
+      // Two or more pass-through guards in one block, each unwrapped later: nested flatMaps would be worse
+      // than the guards, so the advice is a Do comprehension.
+      const passThrough = (candidate: ASTNode): boolean => {
+        const other = guardOf(candidate, sourceCode)
+        if (!other) return false
+        const otherReceiver = compact(other.obj)
+        const otherAfter = body.slice(body.indexOf(candidate) + 1)
+        const kind = classifyGuardExit(candidate.consequent, otherReceiver, other.failure?.member ?? null, sourceCode)
+        return (
+          (kind === "passthrough" || kind === "mappedFailure") && unwrapsReceiver(otherAfter, otherReceiver, sourceCode)
+        )
+      }
+      const sequenced = (exit === "passthrough" || exit === "mappedFailure") && body.filter(passThrough).length > 1
+      context.report({
+        node,
+        messageId: "preferFoldGuard",
+        data: {
+          receiver: extracted.obj,
+          advice: sequenced ? SEQUENCE_ADVICE(isAsync) : GUARD_ADVICE[exit](extracted.obj, isAsync),
+        },
+      })
+    }
 
     function generateFoldFromIf(node: ASTNode): string | null {
       const sourceCode = context.sourceCode
@@ -378,6 +557,7 @@ const rule: Rule.RuleModule = {
       IfStatement(node: ASTNode) {
         if (isExemptByMarker(node)) return
         analyzeIfStatement(node)
+        checkGuard(node)
       },
 
       ConditionalExpression(node: ASTNode) {
