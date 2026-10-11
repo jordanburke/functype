@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.15.0 - 2026-10-10
+
 - **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (CivalaOS 821 → 215, agent-todo 843 → 328). CivalaOS's hits were classified with civala's agent, and the design was reviewed by a second model.
   - Mutable `T[]` / `Array<T>` suggests `ReadonlyArray<T>` first, then `List<T>`.
   - An array changed in place (`push`, `sort`, `x[i] = …`, on a binding, a literal accumulator or a field) gets advice instead of a suggestion that wouldn't compile.
