@@ -16,6 +16,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - Also skipped: `as const` and tuple assertions, tuple rest elements, rest parameters, literals passed into `List(…)` / `Set(…)`, and files marked generated.
   - `prefer-list` stays `off` in `recommended` and `warn` in `strict` for now.
 - **`prefer-fold` can report a guard followed by an unwrap** (`checkGuards`, off by default): `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()`. The message gives advice based on what the guard does: `flatMap` when it hands the failure back (including `Failure(t.error)` for `Try`), `mapLeft(…).flatMap` when it builds a new one, `map(…).orElse` for a plain fallback, `fold` when the fallback reads the failure or the guard does other work first, `orThrow((e) => …)` for a host throw, `Do` for several pass-through guards in a row, and the async forms when the rest awaits. `orElse`, `fold` and `orThrow(error)` are never reported. On CivalaOS it finds 75 guards. It's opt-in because `prefer-fold` is `error` in `recommended`. In 2.0 it's planned to be on in `strict`, not `recommended`: pass-through guards are clear defects, but fallback guards are closer to style.
+- **New rule `functype/no-array-mutation`** (type-aware): reports changing an array in place.
+  - **What it reports:** `push` / `pop` / `shift` / `unshift` / `splice` / `sort` / `reverse` / `fill` / `copyWithin`, element assignment (`xs[i] = v`, `+=`, `++`), `delete xs[i]`, and setting `length`.
+  - **Why it's needed:** it catches the mutation wherever the array came from, including an inferred `const rows = load(); rows.push(x)` that `prefer-list` can't see.
+  - **What it skips:** mutating a fresh copy on the spot (`[...xs].sort()`), non-array types (a queue class, a `Set`, `any`), and anything inside an `@interop <reason>` declaration.
+  - **Without type information** it reports nothing.
+  - **Measured on five consumers:** 91 hits, every one a real mutation.
+  - **Severity:** `error` in `strict`, `off` in `recommended` until 2.0.
 
 ## 1.14.0 - 2026-10-04
 

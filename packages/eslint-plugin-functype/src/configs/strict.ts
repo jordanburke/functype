@@ -7,6 +7,7 @@ const strictRules = {
   "functype/prefer-try": "error",
   "functype/no-get-unsafe": "error",
   "functype/prefer-list": "warn",
+  "functype/no-array-mutation": "error",
   "functype/prefer-functype-map": "error",
   "functype/prefer-functype-set": "error",
   "functype/no-imperative-loops": "error",
