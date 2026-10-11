@@ -15,6 +15,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - Single-value reads are temporaries: `.length`, `[i]`, `join` / `includes` / `find`…, and chains ending in one. Chains that produce another collection (`map`, `filter`, `slice`) are reported, unless their result goes to JSX children or an array slot.
   - Also skipped: `as const` and tuple assertions, tuple rest elements, rest parameters, literals passed into `List(…)` / `Set(…)`, and files marked generated.
   - `prefer-list` stays `off` in `recommended` and `warn` in `strict` for now.
+- **`prefer-fold` can report a guard followed by an unwrap** (`checkGuards`, off by default): `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()`. The message gives advice based on what the guard does: `flatMap` when it hands the failure back (including `Failure(t.error)` for `Try`), `mapLeft(…).flatMap` when it builds a new one, `map(…).orElse` for a plain fallback, `fold` when the fallback reads the failure or the guard does other work first, `orThrow((e) => …)` for a host throw, `Do` for several pass-through guards in a row, and the async forms when the rest awaits. `orElse`, `fold` and `orThrow(error)` are never reported. On CivalaOS it finds 75 guards. It's opt-in because `prefer-fold` is `error` in `recommended`. In 2.0 it's planned to be on in `strict`, not `recommended`: pass-through guards are clear defects, but fallback guards are closer to style.
 
 ## 1.14.0 - 2026-10-04
 
