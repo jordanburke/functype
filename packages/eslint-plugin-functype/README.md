@@ -139,7 +139,7 @@ const sorted = [...xs].sort(byRank) // fine: sorts a fresh copy nobody else hold
 
 **What it skips:**
 
-- mutating a fresh value on the spot (`[...xs].sort()`, `xs.slice().reverse()`, `(await load()).sort()`);
+- mutating a value assumed fresh on the spot: a literal or any call result (`[...xs].sort()`, `xs.slice().reverse()`, `(await load()).sort()`). This also misses a call that returns a shared array (`getSharedCache().push(x)`), a recall gap the rule accepts to stay free of false positives;
 - `ReadonlyArray`, which the compiler already guards.
 
 For a host that has to mutate, such as a charting library that takes the array it fills, tag the function `@interop <reason>`.

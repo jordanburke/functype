@@ -18,9 +18,10 @@ const MUTATING_METHODS: ReadonlySet<string> = new Set([
 ])
 
 /**
- * Is `node` a value nothing else can see yet — `[...xs]`, `xs.slice()`, `Array.from(it)`, `items.map(f)`?
- * Mutating it on the spot (`[...xs].sort(byRank)`) changes no array anyone else holds, so it isn't the
- * shared-state defect this rule is about. Only a named array (a binding or a property) is.
+ * Is `node` assumed to be a value nothing else can see yet — `[...xs]`, `xs.slice()`, `Array.from(it)`,
+ * `items.map(f)`? Mutating it on the spot (`[...xs].sort(byRank)`) is the common copy-then-sort idiom.
+ * Every call result is assumed fresh, so `getSharedCache().push(x)` is missed too: a recall gap the rule
+ * accepts to keep false positives at zero. Only a named array (a binding or a property) is reported.
  */
 const isFreshValue = (node: ASTNode): boolean =>
   node.type === "ArrayExpression" ||
