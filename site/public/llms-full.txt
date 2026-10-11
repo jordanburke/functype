@@ -4040,6 +4040,29 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 | `allowReadonlyArrays` | `true`  | When `true`, `ReadonlyArray<T>` **and** `readonly T[]` pass. When `false`, both are flagged consistently. Use `false` in combination with `Wire<T>` from `functype` to hold the rule at `error` — every unmarked `ReadonlyArray<T>` becomes a lint error, and wrapping a boundary type in `Wire<…>` is the explicit escape hatch. |
 | `allowArrayLiterals`  | `false` | When `true`, `const xs = [1, 2, 3]` is not reported. Useful when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`. Mutable `T[]` in type positions is always reported regardless.                                                                                                     |
 
+**What it reports.** The defect is a collection that can change under you, so:
+
+- **A mutable `T[]` / `Array<T>` type.** The first suggestion is `ReadonlyArray<T>`, which every caller and library accepts; `List<T>` is second, for a collection you transform. With `allowReadonlyArrays: true` (the default) one accepted suggestion silences the report, so in practice the rule asks for read-only types; set it to `false` with `Wire<T>` at boundaries to push towards `List`.
+- **An array changed in place** (`push`, `sort`, `splice`, `x[i] = …`, on a binding, a literal accumulator or a field). This gets advice instead of a suggestion, because `ReadonlyArray` wouldn't compile there: build it with `map` / `filter` / `flatMap`, a `List`, or a fold. (This only fires where the rule has an annotation or a literal to hook onto; an inferred array that's pushed to isn't seen.)
+- **A cast of untyped data to an array** (`JSON.parse(raw) as Row[]`, `raw as Row[]` after `Array.isArray`), with type information. Decoded outside data belongs in a `Wire<ReadonlyArray<Row>>` shape.
+- **An array literal that becomes a collection in your own code** (stored, then transformed with `map` / `filter` / `slice` / `reduce`), with type information.
+
+**What it leaves alone.** Data handed to a library in the shape the library demands isn't yours to change. With type-aware linting (`projectService`) the rule skips:
+
+- a literal passed where an array is expected (drizzle `.values([...])`, an index definition, a prop typed as an array, a parameter typed `Iterable`), or spread into a call (`and(...conds)`);
+- a literal inside an object passed to an untyped parameter (a `JSON.stringify` request body), or to a generic one that doesn't hand it back (`c.json<T>(data: T)`). A generic that returns the argument (`useState(init)`, including React's `S | (() => S)` signature, `identity(x)`, `Promise<T>`) leaves the shape with you, so it's reported;
+- a method chain whose result goes to JSX children or an array slot (`{["PDF", "DOCX"].map((f) => <Chip />)}`);
+- a mutable type whose value goes to a slot that **requires** a mutable array (pg's `query(text, values: unknown[])`, an SDK option typed `string[]`), including through a function's declared return type;
+- a `const` whose every use is one of those, or a single-value read.
+
+**Single-value reads** are temporaries, with or without type information: `.length`, `[i]`, `join` / `includes` / `indexOf` / `some` / `every` / `find` / `at`, and chains that end in one (`[a, b].filter(Boolean).join(" ")`, `[...xs].sort(byRank)[0]`). A chain that produces another collection is collection work and is reported.
+
+**Without type information, array literals aren't reported at all.** The rule can't tell a literal handed to a library from one of your own, so it reports neither rather than guess. Type positions and in-place mutation are still reported. Turn on type-aware linting to get literal checks.
+
+Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Generators with no marker, such as Supabase's types, need an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
+
+Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: CivalaOS 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of CivalaOS with the rule on takes about 18 seconds.
+
 **Boundary recipe (recommended for codebases touching serialization boundaries):**
 
 ```jsonc
@@ -4112,8 +4135,31 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
+| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. Off while it rolls out: `prefer-fold` is `error` in `recommended`.   |
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+
+**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `orElse(default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
+
+```ts
+if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
+if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
+if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
+if (r.isLeft()) return c.json({ error: r.value }, 500) // fallback reads the failure → r.fold(…), only
+if (a.isLeft()) return a
+if (b.isLeft()) return b // several in a row → Do(function* () { … })
+if (e.isLeft()) throw new Error("x") // a host throw   → e.orThrow((err) => new MyError(err))
+if (t.isFailure()) {
+  log(t.error)
+  return
+} // other work first → t.fold(onFailure, onSuccess)
+```
+
+`orThrow(error)` / `orThrow((e) => …)` after a guard isn't counted as an unwrap, matching `no-get-unsafe`, which treats a named error as a deliberate host throw. A receiver reassigned after the guard isn't reported. Only the negative predicates (`isLeft` / `isNone` / `isFailure`) are matched; `if (!e.isRight())` isn't yet.
+
+Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why this is planned for `strict`, not `recommended`, in 2.0.
+
+When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On CivalaOS it finds 75 guards, all of this shape.
 
 ### `functype/prefer-option`
 

@@ -80,15 +80,24 @@ describe("Visual Transformation Demo", () => {
       "prefer-list",
       preferList,
       {
-        valid: [],
+        valid: [
+          {
+            name: "Array literals need type information to be reported (see the typed tests)",
+            code: 'const colors = ["red", "green", "blue"]',
+          },
+        ],
         invalid: showTransformations([
           {
             name: "🚫 Array Type → List<T> (Manual Fix Required)",
             code: 'const userIds: string[] = ["user1", "user2", "user3"]',
             errors: [
               {
-                messageId: "preferList",
+                messageId: "preferReadonlyOrList",
                 suggestions: [
+                  {
+                    messageId: "suggestReadonlyArray",
+                    output: 'const userIds: ReadonlyArray<string> = ["user1", "user2", "user3"]',
+                  },
                   {
                     messageId: "suggestListType",
                     output: 'const userIds: List<string> = ["user1", "user2", "user3"]',
@@ -106,8 +115,12 @@ describe("Visual Transformation Demo", () => {
             code: "const scores: Array<number> = [85, 92, 78, 96]",
             errors: [
               {
-                messageId: "preferList",
+                messageId: "preferReadonlyOrList",
                 suggestions: [
+                  {
+                    messageId: "suggestReadonlyArray",
+                    output: "const scores: ReadonlyArray<number> = [85, 92, 78, 96]",
+                  },
                   {
                     messageId: "suggestListType",
                     output: "const scores: List<number> = [85, 92, 78, 96]",
@@ -121,31 +134,16 @@ describe("Visual Transformation Demo", () => {
             ],
           },
           {
-            name: "🚫 Array Literal → List.from() (Manual Fix Required)",
-            code: 'const colors = ["red", "green", "blue"]',
-            errors: [
-              {
-                messageId: "preferListLiteral",
-                suggestions: [
-                  {
-                    messageId: "suggestListOf",
-                    output: 'const colors = List.of("red", "green", "blue")',
-                  },
-                  {
-                    messageId: "suggestAddImport",
-                    output: `import { List } from "functype"\nconst colors = ["red", "green", "blue"]`,
-                  },
-                ],
-              },
-            ],
-          },
-          {
             name: "🚫 Function Parameter Array → List<T> (Manual Fix Required)",
             code: "function processItems(items: ProcessedItem[]): void { }",
             errors: [
               {
-                messageId: "preferList",
+                messageId: "preferReadonlyOrList",
                 suggestions: [
+                  {
+                    messageId: "suggestReadonlyArray",
+                    output: "function processItems(items: ReadonlyArray<ProcessedItem>): void { }",
+                  },
                   {
                     messageId: "suggestListType",
                     output: "function processItems(items: List<ProcessedItem>): void { }",
