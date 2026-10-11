@@ -1,4 +1,5 @@
 import collectionNaming from "./collection-naming"
+import noArrayMutation from "./no-array-mutation"
 import noGetUnsafe from "./no-get-unsafe"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
@@ -15,6 +16,7 @@ import preferTry from "./prefer-try"
 
 export {
   collectionNaming,
+  noArrayMutation,
   noGetUnsafe,
   noImperativeLoops,
   noLet,
@@ -45,4 +47,5 @@ export default {
   "no-imperative-loops": noImperativeLoops,
   "prefer-do-notation": preferDoNotation,
   "collection-naming": collectionNaming,
+  "no-array-mutation": noArrayMutation,
 }

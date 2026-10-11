@@ -17,6 +17,10 @@
  *
  * collection-naming is a convention, not a heuristic — functype's Map/Set imported under their own names,
  * the built-in spelled globalThis.Map — so it has no false-positive class and starts at error.
+ *
+ * no-array-mutation is off here only because turning a new error on in a 1.x minor would fail consumers'
+ * builds on upgrade (91 hits across five consumers, every one a real in-place mutation). It's `error` in
+ * strict, and planned for `error` here in 2.0. It is type-aware: without type information it reports nothing.
  */
 const recommendedRules = {
   "functype/no-let": "error",
@@ -33,6 +37,7 @@ const recommendedRules = {
   "functype/prefer-do-notation": "warn",
   "functype/no-get-unsafe": "off",
   "functype/prefer-list": "off",
+  "functype/no-array-mutation": "off",
 }
 
 export default recommendedRules

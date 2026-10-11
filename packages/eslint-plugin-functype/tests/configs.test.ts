@@ -37,6 +37,10 @@ describe("recommended preset", () => {
 })
 
 describe("strict preset", () => {
+  it("errors on in-place array mutation", () => {
+    expect(configs.strict!.rules["functype/no-array-mutation"]).toBe("error")
+  })
+
   it("is never looser than recommended", () => {
     const rank = { off: 0, warn: 1, error: 2 } as const
     const recommended = configs.recommended!.rules

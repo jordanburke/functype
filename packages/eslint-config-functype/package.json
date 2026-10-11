@@ -1,6 +1,6 @@
 {
   "name": "eslint-config-functype",
-  "version": "2.114.0",
+  "version": "2.115.0",
   "type": "module",
   "description": "Curated ESLint flat config bundle for functional TypeScript programming (ESLint 9.x+)",
   "main": "dist/index.js",
@@ -77,7 +77,7 @@
     "@eslint/js": "^10.0.1"
   },
   "devDependencies": {
-    "@types/node": "^24.19.0",
+    "@types/node": "^24.19.1",
     "@typescript-eslint/eslint-plugin": "^8.71.0",
     "@typescript-eslint/parser": "^8.71.0",
     "eslint-config-prettier": "^10.1.8",

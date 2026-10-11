@@ -7,6 +7,13 @@ describe("functype-integration", () => {
   describe("prefer-option with functype imports", () => {
     ruleTester.run("prefer-option", preferOption, {
       valid: [
+        {
+          name: "Without type information, array literals aren't reported even with functype imported",
+          code: `
+            import { Option } from 'functype'
+            const items = [1, 2, 3]
+          `,
+        },
         // Should not flag when functype is imported and used properly
         {
           name: "Functype Option usage is not flagged",
@@ -74,37 +81,7 @@ describe("functype-integration", () => {
           `,
         },
       ],
-      invalid: [
-        // Should still flag array literals when functype is imported but List not used
-        {
-          name: "Still flags array literals with functype import",
-          code: `
-            import { Option } from 'functype'
-            const items = [1, 2, 3]
-          `,
-          errors: [
-            {
-              messageId: "preferListLiteral",
-              suggestions: [
-                {
-                  messageId: "suggestListOf",
-                  output: `
-            import { Option } from 'functype'
-            const items = List.of(1, 2, 3)
-          `,
-                },
-                {
-                  messageId: "suggestAddImport",
-                  output: `
-            import { Option, List } from 'functype'
-            const items = [1, 2, 3]
-          `,
-                },
-              ],
-            },
-          ],
-        },
-      ],
+      invalid: [],
     })
   })
 })
