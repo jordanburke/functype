@@ -4073,7 +4073,7 @@ It catches the mutation wherever the array came from, including an inferred `con
 rows.push(row) // reported → [...rows, row], or build rows with map / flatMap
 xs.sort(byRank) // reported → xs.toSorted(byRank)
 xs[i] = v // reported → xs.with(i, v)
-const sorted = [...xs].sort(byRank) // fine: sorts a fresh copy nobody else holds
+const sorted = [...xs].sort(byRank) // fine: sorts a fresh copy
 ```
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). It checks the receiver's type, so `push` on a queue class, a `Set` or an `any` value is never mistaken for an array. Without type information it reports nothing.

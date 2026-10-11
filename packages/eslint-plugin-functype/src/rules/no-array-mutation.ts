@@ -43,8 +43,8 @@ const nameOf = (node: ASTNode, sourceCode: Rule.RuleContext["sourceCode"]): stri
  * This is the mutation itself, wherever the array came from — an inferred `const rows = load()` included,
  * which `prefer-list` can't see because it has no annotation or literal to hook onto. Type-aware only:
  * without type information it reports nothing, so `push` on a custom class or a `Set` is never mistaken
- * for an array. Mutating a fresh copy on the spot (`[...xs].sort(byRank)`) isn't reported: no one else
- * holds that array.
+ * for an array. Mutating a literal or a call result on the spot (`[...xs].sort(byRank)`) isn't reported:
+ * it's assumed to be a fresh copy (see isFreshValue for the recall gap that leaves).
  */
 const rule: Rule.RuleModule = {
   meta: {
