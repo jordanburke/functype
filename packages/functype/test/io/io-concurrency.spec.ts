@@ -97,6 +97,26 @@ describe("IO.all concurrency", () => {
     expect(started.n).toBe(3)
   })
 
+  it("leaves the thunks' signal live after every effect succeeds", async () => {
+    const signals: Array<AbortSignal | undefined> = []
+    const effect = IO.async((signal) => {
+      signals.push(signal)
+      return tick(2).then(() => 1)
+    })
+    expect(await IO.all([effect, effect, effect], { concurrency: "unbounded" }).runOrThrow()).toEqual([1, 1, 1])
+    expect(signals).toHaveLength(3)
+    expect(signals.every((s) => s !== undefined && !s.aborted)).toBe(true)
+  })
+
+  it("returns a sibling's defect as Die", async () => {
+    const stuck = IO.async(() => new Promise<number>(() => {}))
+    const dying = IO.sync<number>(() => {
+      throw new Error("bug")
+    })
+    const exit = await IO.all([stuck, dying], { concurrency: 2 }).runExit()
+    expect(exit.isDie()).toBe(true)
+  })
+
   it("rejects a bad concurrency when the IO is built", () => {
     expect(() => IO.all([IO.succeed(1)], { concurrency: 0 })).toThrow(RangeError)
     expect(() => IO.forEach([1], IO.succeed, { concurrency: 1.5 })).toThrow(RangeError)
@@ -125,6 +145,10 @@ describe("IO.forEach concurrency", () => {
     expect(calls.n).toBe(0)
     expect(await io.runOrThrow()).toEqual([2, 4, 6, 8])
     expect(gauge.max).toBe(2)
+  })
+
+  it("returns an empty array for no items", async () => {
+    expect(await IO.forEach([], IO.succeed, { concurrency: 2 }).runOrThrow()).toEqual([])
   })
 })
 
@@ -166,6 +190,46 @@ describe("abort signal for async thunks", () => {
     ).runExit({ signal: controller.signal })
     controller.abort()
     expect((await running).isInterrupted()).toBe(true)
+  })
+
+  it("arrives in the first parameter, so a thunk with its own optional parameter must be wrapped", async () => {
+    const controller = new AbortController()
+    const load = (page: unknown = 1): Promise<unknown> => Promise.resolve(page)
+    const unwrapped = await IO.async(load as (signal?: AbortSignal) => Promise<unknown>)
+      .interruptOn(controller.signal)
+      .runOrThrow()
+    expect(unwrapped).toBeInstanceOf(AbortSignal)
+    expect(
+      await IO.async(() => load())
+        .interruptOn(controller.signal)
+        .runOrThrow(),
+    ).toBe(1)
+  })
+
+  it("tryAsync detaches from the caller's signal when the function throws synchronously", async () => {
+    const caller = new AbortController()
+    const region = new AbortController()
+    const added = { n: 0, removed: 0 }
+    const add = caller.signal.addEventListener.bind(caller.signal)
+    const remove = caller.signal.removeEventListener.bind(caller.signal)
+    caller.signal.addEventListener = ((...args: Parameters<typeof add>) => {
+      added.n += 1
+      return add(...args)
+    }) as typeof add
+    caller.signal.removeEventListener = ((...args: Parameters<typeof remove>) => {
+      added.removed += 1
+      return remove(...args)
+    }) as typeof remove
+    const io = IO.tryAsync(
+      () => {
+        throw new Error("sync")
+      },
+      (e) => e as Error,
+      caller.signal,
+    ).interruptOn(region.signal)
+    await io.run()
+    expect(added.n).toBeGreaterThan(0)
+    expect(added.removed).toBe(added.n)
   })
 
   it("tryAsync combines the caller's signal with the region's", async () => {

@@ -648,9 +648,10 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * - A promise already in flight can't be stopped (JavaScript has no way to). The
    *   cancellation is seen at the next step after it settles, so if that promise was the
    *   effect's last step, the effect succeeds with its result. `IO.never()` under
-   *   `interruptOn` never resolves for the same reason. Pass the same signal to `Http` /
-   *   `IO.tryAsync` / `fetch` so the request itself aborts; its rejection is reported as the
-   *   cancellation. `IO.sleep` is not woken early.
+   *   `interruptOn` never resolves for the same reason. `IO.async` and `IO.tryPromise`
+   *   thunks receive the region's signal as their argument, so `IO.async((signal) =>
+   *   fetch(url, { signal }))` aborts the request itself; its rejection is reported as the
+   *   cancellation. `IO(() => …)` thunks get no signal. `IO.sleep` is not woken early.
    * - A defect (a bug) that happens after the abort is still reported as a defect.
    * - `runSync` only sees a signal that was already aborted when this effect starts.
    * - When `E` is `unknown` (effects from `IO.async` or `IO(...)`), the union collapses to
@@ -1455,9 +1456,11 @@ const runAll = <R extends Type, E extends Type>(
   const results: unknown[] = new Array(effects.length)
   const state = { next: 0, succeeded: 0, settled: false }
   return new Promise((resolve) => {
+    // Only a failure aborts the siblings. After success the thunks' signal must stay live: a
+    // `fetch` response body handed out as a result is still read through it.
     const finish = (exit: ExitType<E, readonly unknown[]>): void => {
       state.settled = true
-      siblings.abort()
+      if (!exit.isSuccess()) siblings.abort()
       scope.dispose()
       resolve(exit)
     }
@@ -1520,7 +1523,9 @@ const IOCompanion = {
    *
    * Inside an `interruptOn` region (or `runCancellable`, or `runExit({ signal })`), the thunk
    * receives the region's abort signal; pass it to `fetch` and the request stops when the run is
-   * cancelled. Outside a region it receives `undefined`.
+   * cancelled. Outside a region it receives `undefined`. A function whose first parameter is
+   * something else (`(page = 1) => load(page)`) would receive the signal in that slot, so wrap
+   * it: `IO.async(() => load())`.
    */
   async: <A extends Type>(f: (signal?: AbortSignal) => Promise<A>): IO<never, unknown, A> =>
     createIO(unsafeCoerce({ _tag: "Async", thunk: f })),
@@ -1686,7 +1691,12 @@ const IOCompanion = {
       if (!region) return f(signal)
       // The combined signal lives as long as the call; detach it from both parents afterwards.
       const both = anySignal([signal, region])
-      return f(both.signal).finally(both.dispose)
+      try {
+        return f(both.signal).finally(both.dispose)
+      } catch (e) {
+        both.dispose()
+        throw e
+      }
     }).mapError(onError)
   },
 
