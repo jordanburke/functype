@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **New rule `functype/no-array-mutation`** (type-aware): reports changing an array in place.
+  - **What it reports:** `push` / `pop` / `shift` / `unshift` / `splice` / `sort` / `reverse` / `fill` / `copyWithin`, element assignment (`xs[i] = v`, `+=`, `++`), `delete xs[i]`, and setting `length`.
+  - **Why it's needed:** it catches the mutation wherever the array came from, including an inferred `const rows = load(); rows.push(x)` that `prefer-list` can't see.
+  - **What it skips:** mutating a fresh copy on the spot (`[...xs].sort()`), non-array types (a queue class, a `Set`, `any`), and anything inside an `@interop <reason>` declaration.
+  - **Without type information** it reports nothing.
+  - **Measured on five consumers:** 91 hits, every one a real mutation.
+  - **Severity:** `error` in `strict`, `off` in `recommended` until 2.0.
+
 ## 1.14.0 - 2026-10-04
 
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**

@@ -3984,6 +3984,7 @@ export default [functype.configs.strict]
 | `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                                                 |
 | `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                   |
 | `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                                                      |
+| `functype/no-array-mutation`   |     off     | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one           |
 
 ### Severity policy
 
@@ -4056,6 +4057,40 @@ type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArra
 ```
 
 `Wire<T>` is assignable both ways with the plain type, so no casts. `prefer-list` and `prefer-option` skip everything inside a `Wire<…>` type argument (`wireTypes` option, default `["Wire"]`; `[]` turns it off), and consumer aliases stack cleanly.
+
+### `functype/no-array-mutation`
+
+Reports changing an array in place:
+
+- the methods `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`, `fill` and `copyWithin`;
+- assigning to an element (`xs[i] = v`, `xs[i] += 1`, `xs[i]++`);
+- `delete xs[i]`;
+- setting `length`.
+
+It catches the mutation wherever the array came from, including an inferred `const rows = load(); rows.push(x)`, which `prefer-list` can't see because there's no annotation or literal.
+
+```ts
+rows.push(row) // reported → [...rows, row], or build rows with map / flatMap
+xs.sort(byRank) // reported → xs.toSorted(byRank)
+xs[i] = v // reported → xs.with(i, v)
+const sorted = [...xs].sort(byRank) // fine: sorts a fresh copy nobody else holds
+```
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). It checks the receiver's type, so `push` on a queue class, a `Set` or an `any` value is never mistaken for an array. Without type information it reports nothing.
+
+**What it skips:**
+
+- mutating a fresh value on the spot (`[...xs].sort()`, `xs.slice().reverse()`, `(await load()).sort()`);
+- `ReadonlyArray`, which the compiler already guards.
+
+For a host that has to mutate, such as a charting library that takes the array it fills, tag the function `@interop <reason>`.
+
+| Option               | Default | Description                                                |
+| -------------------- | ------- | ---------------------------------------------------------- |
+| `allowInTests`       | `true`  | Silence the rule inside test files.                        |
+| `allowInteropMarker` | `true`  | Skip code inside a declaration tagged `@interop <reason>`. |
+
+Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `off` in `recommended` until 2.0, to avoid failing builds on a 1.x upgrade.
 
 ### `functype/no-get-unsafe`
 
