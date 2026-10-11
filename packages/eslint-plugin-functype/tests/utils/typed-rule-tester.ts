@@ -17,6 +17,7 @@ export const typedRuleTester = new RuleTester({
   languageOptions: {
     parser: tsParser,
     parserOptions: {
+      ecmaFeatures: { jsx: true },
       projectService: true,
       tsconfigRootDir: join(import.meta.dirname, "..", "fixtures", "typed"),
     },
@@ -24,3 +25,4 @@ export const typedRuleTester = new RuleTester({
 })
 
 export const typedFilename = join(import.meta.dirname, "..", "fixtures", "typed", "file.ts")
+export const typedTsxFilename = join(import.meta.dirname, "..", "fixtures", "typed", "component.tsx")

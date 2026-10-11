@@ -6,6 +6,16 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (CivalaOS 821 → 215, agent-todo 843 → 328). CivalaOS's hits were classified with civala's agent, and the design was reviewed by a second model.
+  - Mutable `T[]` / `Array<T>` suggests `ReadonlyArray<T>` first, then `List<T>`.
+  - An array changed in place (`push`, `sort`, `x[i] = …`, on a binding, a literal accumulator or a field) gets advice instead of a suggestion that wouldn't compile.
+  - A cast of untyped data (`JSON.parse(raw) as Row[]`) points at `Wire<ReadonlyArray<Row>>`, with type information.
+  - **Array literals are only reported with type-aware linting.** Without it the rule can't tell a literal handed to a library from one of your own. Type positions and mutation are still reported.
+  - With type information, a literal or binding is skipped when it goes to a library in the shape the library demands: an array-typed, `Iterable` or untyped parameter or prop, a spread into a call, a generic that doesn't hand the argument back (`c.json<T>`), or a slot that requires a mutable array (pg `query` values, an SDK option typed `string[]`). A generic that does hand it back (`useState`, `identity`) is reported.
+  - Single-value reads are temporaries: `.length`, `[i]`, `join` / `includes` / `find`…, and chains ending in one. Chains that produce another collection (`map`, `filter`, `slice`) are reported, unless their result goes to JSX children or an array slot.
+  - Also skipped: `as const` and tuple assertions, tuple rest elements, rest parameters, literals passed into `List(…)` / `Set(…)`, and files marked generated.
+  - `prefer-list` stays `off` in `recommended` and `warn` in `strict` for now.
+
 ## 1.14.0 - 2026-10-04
 
 **`IO` can be cancelled while it runs. Additive: effects without `interruptOn` behave exactly as before.**
