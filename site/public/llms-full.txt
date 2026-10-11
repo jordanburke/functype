@@ -4526,6 +4526,7 @@ Implements: Collection, Foldable, Functor, Iterable, Serializable, Traversable
 - `.intersection(s)`
 - `.difference(s)`
 - `.add(v)`
+- `.mapAsync(f, {concurrency?}) // in order by default`
 
 **Extract**
 
@@ -4729,10 +4730,12 @@ Implements: Functor, Monad, Foldable, Matchable
 - `.repeatWhile(cont, { max, delayMs? })`
 - `.timeout(ms)`
 - `.interruptOn(signal) // stops at the next step once the AbortSignal fires; E gains InterruptedError`
+- `IO.async((signal?) => fetch(url, { signal })) // thunk gets the run's AbortSignal inside a region`
 - `.delay(ms)`
 - `.zip(io)`
 - `.pipe(f)`
-- `IO.all([...])`
+- `IO.all([...], { concurrency? }) // in order by default; first failure interrupts the rest`
+- `IO.forEach(items, f, { concurrency? })`
 - `IO.race([...])`
 - `IO.iterate(seed, step, done, { max? })`
 - `IO.bracket(acquire, use, release)`
@@ -4959,6 +4962,7 @@ Either-returning decoder contract: `Decoder<A> = (raw: unknown) => Either<Decode
 **Create**
 
 - `Decoder.string / .number / .boolean / .unknown / .nullable(inner)`
+- `Decoder.fromThrowing(parse) // adapt a throwing parser such as Zod's schema.parse`
 - `Decoder.option(inner)`
 - `Decoder.either.envelope({ok, err})`
 - `Decoder.either.discriminated({tag, leftTag, rightTag}, l, r)`

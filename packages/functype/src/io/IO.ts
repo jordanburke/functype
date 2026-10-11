@@ -1,6 +1,8 @@
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { type Concurrency, type ConcurrencyOptions, workerCount } from "@/internal/concurrency"
+import { anySignal } from "@/internal/signal"
 import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
 import { None, Option as OptionConstructor, Some } from "@/option/Option"
@@ -185,7 +187,7 @@ export type IOEffectKey = typeof IOEffectKey
  */
 type IOEffect<R, E, A> =
   | { readonly _tag: "Sync"; readonly thunk: () => A }
-  | { readonly _tag: "Async"; readonly thunk: () => Promise<A> }
+  | { readonly _tag: "Async"; readonly thunk: (signal?: AbortSignal) => Promise<A> }
   | { readonly _tag: "Auto"; readonly thunk: () => A | Promise<A> }
   | { readonly _tag: "Succeed"; readonly value: A }
   | { readonly _tag: "Fail"; readonly error: E }
@@ -227,6 +229,7 @@ type IOEffect<R, E, A> =
       readonly duration: number
     }
   | { readonly _tag: "InterruptWhen"; readonly effect: IO<R, E, A>; readonly signal: AbortSignal }
+  | { readonly _tag: "All"; readonly effects: readonly IO<R, E, unknown>[]; readonly concurrency: Concurrency }
   | { readonly _tag: "Service"; readonly tag: Tag<A> }
   | { readonly _tag: "ProvideContext"; readonly effect: IO<R, E, A>; readonly context: Context<R> }
 
@@ -921,7 +924,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
       if (!signal) return runEffect(_fx(this))
       // A failure after the abort is reported as the cancellation, as at an interruptOn
       // boundary; a defect stays a defect.
-      const exit = await runEffect(_fx(this), undefined, () => signal.aborted)
+      const exit = await runEffect(_fx(this), undefined, signal)
       return signal.aborted && exit.isFailure() ? Exit.interrupted() : exit
     },
 
@@ -1174,6 +1177,9 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         runEffectSync(_fx(effect.release(resource, exit!)), context)
       }
     }
+    case "All":
+      // A synchronous run has no concurrency to offer: running in order gives the same results.
+      return unsafeCoerce(effect.effects.map((e) => runEffectSync(_fx(e), context)))
     case "Race":
       throw new UnsupportedSyncOperationError("race")
     case "Timeout":
@@ -1234,21 +1240,20 @@ const regionOutcome = <E, A>(
 /**
  * Interprets and runs an effect asynchronously.
  *
- * `interrupted` is the cancellation check of the enclosing `interruptOn` region(s). It is
- * consulted before every step and before every user callback, so a cancelled region starts
- * no new work. `undefined` means uninterruptible: the default, so an effect with no region
- * runs exactly as before. `bracket` acquire and release always run with `undefined`
- * (masked); checking there would let a cancelled region skip its own release and leak the
- * resource.
+ * `interruption` is the abort signal of the enclosing `interruptOn` region(s). It is checked
+ * before every step and before every user callback, so a cancelled region starts no new work,
+ * and an `IO.async` thunk receives it so a `fetch` can pass it on. `undefined` means
+ * uninterruptible: the default, so an effect with no region runs exactly as before. `bracket`
+ * acquire and release always run with `undefined` (masked); checking there would let a
+ * cancelled region skip its own release and leak the resource.
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
   context: Context<R> = ContextCompanion.empty() as Context<R>,
-  interrupted?: () => boolean,
+  interruption?: AbortSignal,
 ): Promise<ExitType<E, A>> => {
-  // Outside the `try`: a throwing check must not be reported as a defect of this effect.
-  if (interrupted?.()) return Exit.interrupted()
-  const cancelled = (): boolean => interrupted?.() ?? false
+  if (interruption?.aborted) return Exit.interrupted()
+  const cancelled = (): boolean => interruption?.aborted ?? false
   try {
     switch (effect._tag) {
       case "Succeed":
@@ -1267,7 +1272,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         // `IO.tryPromise` is `async(...).mapError(catch)`, and a `Die` would sail past
         // `MapError`'s error-channel branch, leaving the `catch` handler never invoked.
         try {
-          const result = await effect.thunk()
+          const result = await effect.thunk(interruption)
           return unsafeCoerce(Exit.succeed(result))
         } catch (e) {
           return unsafeCoerce(Exit.fail(e))
@@ -1287,7 +1292,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         }
       }
       case "Map": {
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
@@ -1295,16 +1300,16 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
       }
       case "FlatMap": {
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         if (!exitA.isSuccess()) {
           return unsafeCoerce(exitA)
         }
         if (cancelled()) return Exit.interrupted()
         const nextIO = effect.f(exitA.orThrow())
-        return runEffect(_fx(nextIO), context, interrupted)
+        return runEffect(_fx(nextIO), context, interruption)
       }
       case "MapError": {
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         const channel = errorChannel(exitA)
         if (!channel) {
           return unsafeCoerce(exitA)
@@ -1316,7 +1321,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return unsafeCoerce(Exit.fail(effect.f(channel.value)))
       }
       case "Recover": {
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         // Only something in the error channel is recoverable. Success passes through, and
         // so does Interrupted — interruption is control flow, not a domain error, so a
         // fallback must never convert a cancelled effect into a successful value.
@@ -1329,7 +1334,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       case "RecoverWith": {
         // effect.effect is IO<R, unknown, unknown> (E-erased for variance). Exit branches
         // are re-wrapped via unsafeCoerce — outer A/E are preserved by RecoverWith's semantics.
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         const channel = errorChannel(exitA)
         if (!channel) {
           return unsafeCoerce(exitA)
@@ -1337,10 +1342,10 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         const skipped = skipHandlerWhenCancelled<E, A>(exitA, cancelled())
         if (skipped) return skipped
         const recoveryIO = effect.f(channel.value)
-        return runEffect(_fx(recoveryIO), context, interrupted)
+        return runEffect(_fx(recoveryIO), context, interruption)
       }
       case "Fold": {
-        const exitA = await runEffect(_fx(effect.effect), context, interrupted)
+        const exitA = await runEffect(_fx(effect.effect), context, interruption)
         const channel = errorChannel(exitA)
         if (channel) {
           return skipHandlerWhenCancelled<E, A>(exitA, cancelled()) ?? Exit.succeed(effect.onFailure(channel.value))
@@ -1360,12 +1365,12 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "ProvideContext": {
         const mergedContext = context.merge(effect.context)
-        return runEffect(_fx(effect.effect), mergedContext as Context<R>, interrupted)
+        return runEffect(_fx(effect.effect), mergedContext as Context<R>, interruption)
       }
       case "Interrupt":
         return Exit.interrupted()
       case "Bracket": {
-        // Acquire and release are masked (no `interrupted`): see the runEffect doc.
+        // Acquire and release are masked (no `interruption`): see the runEffect doc.
         const acquireExit = await runEffect(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
@@ -1373,7 +1378,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         const resource = acquireExit.orThrow()
         try {
           if (cancelled()) return Exit.interrupted()
-          return await runEffect(_fx(effect.use(resource)), context, interrupted)
+          return await runEffect(_fx(effect.use(resource)), context, interruption)
         } finally {
           // Release always runs, even if use fails or the region was cancelled
           await runEffect(_fx(effect.release(resource)), context)
@@ -1387,7 +1392,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         const resource = acquireExit.orThrow()
         const useExit: ExitType<E, A> = cancelled()
           ? Exit.interrupted()
-          : await runEffect(_fx(effect.use(resource)), context, interrupted)
+          : await runEffect(_fx(effect.use(resource)), context, interruption)
         // Release always runs (masked, like acquire) and receives the use-step's Exit
         await runEffect(_fx(effect.release(resource, useExit)), context)
         return useExit
@@ -1397,21 +1402,28 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return Exit.fail(new Error("No effects to race") as E)
         }
         // Race all effects - first one to complete wins
-        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context, interrupted)))
+        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context, interruption)))
         return result
       }
       case "Timeout": {
         const timeoutPromise = new Promise<ExitType<E, A>>((resolve) =>
           setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration),
         )
-        const effectPromise = runEffect(_fx(effect.effect), context, interrupted)
+        const effectPromise = runEffect(_fx(effect.effect), context, interruption)
         return Promise.race([effectPromise, timeoutPromise])
       }
       case "InterruptWhen": {
         const { signal } = effect
-        const exit = await runEffect(_fx(effect.effect), context, () => signal.aborted || cancelled())
-        return unsafeCoerce(regionOutcome(exit, signal, cancelled()))
+        const region = anySignal([interruption, signal])
+        try {
+          const exit = await runEffect(_fx(effect.effect), context, region.signal)
+          return unsafeCoerce(regionOutcome(exit, signal, cancelled()))
+        } finally {
+          region.dispose()
+        }
       }
+      case "All":
+        return unsafeCoerce(await runAll(effect.effects, effect.concurrency, context, interruption))
     }
   } catch (e) {
     // Everything reaching here threw out of a callback the type system said could not
@@ -1420,6 +1432,53 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
     // cases above, because those constructors *do* declare `E = unknown`.
     return Exit.die(e)
   }
+}
+
+/**
+ * Runs `effects` with at most `concurrency` in flight and collects the results in input order.
+ *
+ * Fail-fast: the first child that doesn't succeed is the result, at once. Its siblings are
+ * interrupted (they start no new step, and an `IO.async` thunk sees its signal abort), but
+ * `runAll` doesn't wait for them, so a promise that ignores its signal can't hold the result.
+ * A sibling's `bracket` release still runs when it settles; `runEffect` never rejects, so a
+ * detached sibling can't become an unhandled rejection.
+ */
+const runAll = <R extends Type, E extends Type>(
+  effects: readonly IO<R, E, unknown>[],
+  concurrency: Concurrency,
+  context: Context<R>,
+  interruption: AbortSignal | undefined,
+): Promise<ExitType<E, readonly unknown[]>> => {
+  if (effects.length === 0) return Promise.resolve(Exit.succeed([]))
+  const siblings = new AbortController()
+  const scope = anySignal([interruption, siblings.signal])
+  const results: unknown[] = new Array(effects.length)
+  const state = { next: 0, succeeded: 0, settled: false }
+  return new Promise((resolve) => {
+    const finish = (exit: ExitType<E, readonly unknown[]>): void => {
+      state.settled = true
+      siblings.abort()
+      scope.dispose()
+      resolve(exit)
+    }
+    const start = (): void => {
+      if (state.settled || state.next >= effects.length) return
+      const index = state.next
+      state.next = index + 1
+      void runEffect(_fx(effects[index]!), context, scope.signal).then((exit) => {
+        if (state.settled) return
+        if (!exit.isSuccess()) {
+          finish(unsafeCoerce(exit))
+          return
+        }
+        results[index] = exit.orThrow()
+        state.succeeded = state.succeeded + 1
+        if (state.succeeded === effects.length) finish(Exit.succeed(results))
+        else start()
+      })
+    }
+    Array.from({ length: workerCount(concurrency, effects.length) }).forEach(start)
+  })
 }
 
 // ============================================
@@ -1458,15 +1517,20 @@ const IOCompanion = {
   /**
    * Creates an IO from an async thunk.
    * The Promise is not created until the IO is run.
+   *
+   * Inside an `interruptOn` region (or `runCancellable`, or `runExit({ signal })`), the thunk
+   * receives the region's abort signal; pass it to `fetch` and the request stops when the run is
+   * cancelled. Outside a region it receives `undefined`.
    */
-  async: <A extends Type>(f: () => Promise<A>): IO<never, unknown, A> =>
+  async: <A extends Type>(f: (signal?: AbortSignal) => Promise<A>): IO<never, unknown, A> =>
     createIO(unsafeCoerce({ _tag: "Async", thunk: f })),
 
   /**
    * Creates an IO from a Promise with error handling.
+   * `try` receives the region's abort signal, as `IO.async`'s thunk does.
    */
   tryPromise: <A extends Type, E extends Type>(opts: {
-    readonly try: () => Promise<A>
+    readonly try: (signal?: AbortSignal) => Promise<A>
     readonly catch: (error: unknown) => E
   }): IO<never, E, A> => createIO<never, unknown, A>({ _tag: "Async", thunk: opts.try }).mapError(opts.catch),
 
@@ -1617,7 +1681,13 @@ const IOCompanion = {
     if (signal?.aborted) {
       return unsafeCoerce(IOCompanion.fail(onError(signal.reason ?? new DOMException("Aborted", "AbortError"))))
     }
-    return IOCompanion.async(() => f(signal)).mapError(onError)
+    return IOCompanion.async((region) => {
+      if (!signal) return f(region)
+      if (!region) return f(signal)
+      // The combined signal lives as long as the call; detach it from both parents afterwards.
+      const both = anySignal([signal, region])
+      return f(both.signal).finally(both.dispose)
+    }).mapError(onError)
   },
 
   /**
@@ -1765,10 +1835,27 @@ const IOCompanion = {
   // ============================================
 
   /**
-   * Runs all IOs one after another, in order, and collects the results. Stops at the first failure.
-   * Despite the name, the effects do not run in parallel yet.
+   * Runs all IOs and collects the results in input order. Stops at the first failure.
+   *
+   * By default they run one after another. Pass `{ concurrency: n }` to run up to `n` at once, or
+   * `"unbounded"` to start them all together. With more than one in flight, the first failure is the
+   * result at once and the others are interrupted: they start no new step, and an `IO.async` thunk
+   * sees its signal abort. A promise that ignores its signal keeps running, but the result doesn't wait.
+   *
+   * @example
+   * ```typescript
+   * const users = IO.all(ids.map(fetchUser), { concurrency: 4 })
+   * ```
    */
-  all: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, readonly A[]> => {
+  all: <R extends Type, E extends Type, A extends Type>(
+    effects: readonly IO<R, E, A>[],
+    options?: ConcurrencyOptions,
+  ): IO<R, E, readonly A[]> => {
+    const concurrency = options?.concurrency ?? 1
+    workerCount(concurrency, 1) // a bad value throws RangeError here, not when the IO runs
+    if (concurrency !== 1 && effects.length > 1) {
+      return createIO(unsafeCoerce({ _tag: "All", effects, concurrency }))
+    }
     if (effects.length === 0) {
       return unsafeCoerce(IOCompanion.succeed([]))
     }
@@ -1977,19 +2064,29 @@ const IOCompanion = {
   },
 
   /**
-   * Executes an effect for each element in the array, collecting results.
+   * Executes an effect for each element in the array, collecting results in input order.
+   *
+   * Runs them one after another by default. `{ concurrency }` works as it does for `IO.all`.
    *
    * @example
    * ```typescript
    * const results = await IO.forEach([1, 2, 3], n =>
    *   IO.sync(() => n * 2)
    * ).run() // [2, 4, 6]
+   * const pages = IO.forEach(urls, fetchPage, { concurrency: 4 })
    * ```
    */
   forEach: <R extends Type, E extends Type, A extends Type, B extends Type>(
     items: readonly A[],
     f: (a: A) => IO<R, E, B>,
+    options?: ConcurrencyOptions,
   ): IO<R, E, readonly B[]> => {
+    const concurrency = options?.concurrency ?? 1
+    workerCount(concurrency, 1) // a bad value throws RangeError here, not when the IO runs
+    if (concurrency !== 1) {
+      // `f` runs when the IO runs, as it does in the sequential path.
+      return IOCompanion.unit.flatMap(() => IOCompanion.all(items.map(f), options))
+    }
     if (items.length === 0) {
       return unsafeCoerce(IOCompanion.succeed([]))
     }
@@ -2004,8 +2101,8 @@ const IOCompanion = {
 
   /**
    * @deprecated Runs sequentially: this is an alias for `IO.forEach`, not a parallel traversal.
-   * Use `IO.forEach` so the code says what it does. For parallel Promise work, use
-   * `Either.traverseAsync(items, f, { concurrency })` or `list.mapAsync(f, { concurrency })`.
+   * Use `IO.forEach` so the code says what it does, and `IO.forEach(items, f, { concurrency })`
+   * to run them in parallel.
    */
   forEachPar: <R extends Type, E extends Type, A extends Type, B extends Type>(
     items: readonly A[],

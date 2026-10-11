@@ -26,6 +26,7 @@ export type Decoder<A> = (raw: unknown) => Either<DecoderError, A>
  * Decoder namespace: combinators for converting `unknown` into typed values.
  *
  * - `Decoder.string` / `.number` / `.boolean` / `.unknown` / `.nullable(inner)` — leaf primitives
+ * - `Decoder.fromThrowing(parse)` — adapt a throwing parser (Zod `.parse`); a throw becomes a leaf error
  * - `Decoder.option(inner)` — null-bias Option (null → None, else inner → Some)
  * - `Decoder.either.envelope({ok, err})` / `.discriminated({...}, l, r)` — Either variants
  * - `Decoder.list(inner)` / `.array(inner)` / `.map(inner)` / `.object(shape)` — composites; accumulate child failures
