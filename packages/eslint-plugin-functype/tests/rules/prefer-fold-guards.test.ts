@@ -59,12 +59,59 @@ describe("prefer-fold checkGuards", () => {
         options,
       },
       {
-        name: "orThrow with a builder after the guard is not an unwrap the rule tracks",
-        code: "function f(e) { if (e.isLeft()) return e; return e.orElse(1) }",
+        name: "orThrow with a builder after the guard names its error, as no-get-unsafe allows",
+        code: "function f(e) { if (e.isLeft()) return e; return e.orThrow((l) => new StepError(l)) }",
+        options,
+      },
+      {
+        name: "A receiver reassigned after the guard is a different value",
+        code: "function f(e) { if (e.isLeft()) return e; e = next(); return e.value }",
         options,
       },
     ],
     invalid: [
+      guard(
+        "function h(r) { if (r.isLeft()) return c.json({ error: r.value }, 500); return c.json(r.value) }",
+        "r",
+        "Use r.fold(onFailure, onSuccess).",
+      ),
+      guard(
+        "function f(t) { if (t.isFailure()) return Failure(t.error); return Success(t.get() + 1) }",
+        "t",
+        "Keep it in the chain: t.flatMap(…) or t.map(…); the failure passes through on its own.",
+      ),
+      guard(
+        "function f(e) { if (e.isLeft()) return e; return e.orThrow() }",
+        "e",
+        "Keep it in the chain: e.flatMap(…) or e.map(…); the failure passes through on its own.",
+      ),
+      guard(
+        "function f(state) {\n  if (state\n    .result.isLeft()) return state.result\n  return state.result.value\n}",
+        "state\n    .result",
+        "Keep it in the chain: state\n    .result.flatMap(…) or state\n    .result.map(…); the failure passes through on its own.",
+      ),
+      {
+        code: "function f(a, b) { if (a.isLeft()) return a; if (b.isLeft()) return b; return Right(a.value + b.value) }",
+        options,
+        errors: [
+          {
+            messageId: "preferFoldGuard" as const,
+            data: {
+              receiver: "a",
+              advice:
+                "Several guards in a row pass their failures through: sequence them with Do(function* () { const a = yield* $(…); const b = yield* $(…); return … }).",
+            },
+          },
+          {
+            messageId: "preferFoldGuard" as const,
+            data: {
+              receiver: "b",
+              advice:
+                "Several guards in a row pass their failures through: sequence them with Do(function* () { const a = yield* $(…); const b = yield* $(…); return … }).",
+            },
+          },
+        ],
+      },
       guard(
         "function f(e) { if (e.isLeft()) return e; return e.value + 1 }",
         "e",

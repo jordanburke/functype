@@ -146,12 +146,19 @@ Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite 
 if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
 if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
 if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
+if (r.isLeft()) return c.json({ error: r.value }, 500) // fallback reads the failure → r.fold(…), only
+if (a.isLeft()) return a
+if (b.isLeft()) return b // several in a row → Do(function* () { … })
 if (e.isLeft()) throw new Error("x") // a host throw   → e.orThrow((err) => new MyError(err))
 if (t.isFailure()) {
   log(t.error)
   return
 } // other work first → t.fold(onFailure, onSuccess)
 ```
+
+`orThrow(error)` / `orThrow((e) => …)` after a guard isn't counted as an unwrap, matching `no-get-unsafe`, which treats a named error as a deliberate host throw. A receiver reassigned after the guard isn't reported. Only the negative predicates (`isLeft` / `isNone` / `isFailure`) are matched; `if (!e.isRight())` isn't yet.
+
+Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why this is planned for `strict`, not `recommended`, in 2.0.
 
 When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On CivalaOS it finds 75 guards, all of this shape.
 
