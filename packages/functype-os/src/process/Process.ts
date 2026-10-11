@@ -1,7 +1,7 @@
 import { exec as execCb, execSync as nodeExecSync } from "node:child_process"
 
-import type { Either, TaskResult } from "functype"
-import { Err, Ok, Option, Try } from "functype"
+import type { Either } from "functype"
+import { IO, Left, Option, Right, Try } from "functype"
 
 import { ProcessError } from "../errors/errors"
 
@@ -12,19 +12,22 @@ export type ExecResult = {
 }
 
 export const Process = {
-  exec: (command: string, options?: { timeout?: number; cwd?: string }): TaskResult<ExecResult> => {
-    return new Promise((resolve) => {
-      execCb(command, { timeout: options?.timeout, cwd: options?.cwd }, (error, stdout, stderr) => {
-        if (error) {
-          // exec callback error has `code` as exit code (number) — distinct from Node errno `code` (string)
-          const exitCode = Option(typeof error.code === "number" ? error.code : undefined)
-          resolve(Err(ProcessError(command, exitCode, String(stderr))))
-        } else {
-          resolve(Ok({ stdout: String(stdout), stderr: String(stderr), exitCode: 0 }))
-        }
-      })
-    })
-  },
+  // Lazy: the command doesn't start until the IO runs.
+  exec: (command: string, options?: { timeout?: number; cwd?: string }): IO<never, ProcessError, ExecResult> =>
+    IO.fromPromiseEither(
+      () =>
+        new Promise<Either<ProcessError, ExecResult>>((resolve) => {
+          execCb(command, { timeout: options?.timeout, cwd: options?.cwd }, (error, stdout, stderr) => {
+            if (error) {
+              // exec callback error has `code` as exit code (number) — distinct from Node errno `code` (string)
+              const exitCode = Option(typeof error.code === "number" ? error.code : undefined)
+              resolve(Left(ProcessError(command, exitCode, String(stderr))))
+            } else {
+              resolve(Right({ stdout: String(stdout), stderr: String(stderr), exitCode: 0 }))
+            }
+          })
+        }),
+    ),
 
   execSync: (command: string, options?: { timeout?: number; cwd?: string }): Either<ProcessError, ExecResult> => {
     const buildProcessError = (error: unknown): ProcessError => {
