@@ -108,7 +108,7 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 **What it leaves alone.** Data handed to a library in the shape the library demands isn't yours to change. With type-aware linting (`projectService`) the rule skips:
 
 - a literal passed where an array is expected (drizzle `.values([...])`, an index definition, a prop typed as an array, a parameter typed `Iterable`), or spread into a call (`and(...conds)`);
-- a literal inside an object passed to an untyped parameter (a `JSON.stringify` request body), or to a generic one that doesn't hand it back (`c.json<T>(data: T)`). A generic that returns the argument (`useState(init)`, `identity(x)`, `Promise<T>`) leaves the shape with you, so it's reported;
+- a literal inside an object passed to an untyped parameter (a `JSON.stringify` request body), or to a generic one that doesn't hand it back (`c.json<T>(data: T)`). A generic that returns the argument (`useState(init)`, including React's `S | (() => S)` signature, `identity(x)`, `Promise<T>`) leaves the shape with you, so it's reported;
 - a method chain whose result goes to JSX children or an array slot (`{["PDF", "DOCX"].map((f) => <Chip />)}`);
 - a mutable type whose value goes to a slot that **requires** a mutable array (pg's `query(text, values: unknown[])`, an SDK option typed `string[]`), including through a function's declared return type;
 - a `const` whose every use is one of those, or a single-value read.
@@ -119,7 +119,7 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 
 Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Generators with no marker, such as Supabase's types, need an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
 
-Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 695 after.** By repo, before → after: CivalaOS 821 → 214, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of CivalaOS with the rule on takes about 18 seconds.
+Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: CivalaOS 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of CivalaOS with the rule on takes about 18 seconds.
 
 **Boundary recipe (recommended for codebases touching serialization boundaries):**
 

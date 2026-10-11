@@ -240,6 +240,8 @@ describe("prefer-list (type-aware)", () => {
       // A generic that hands its argument straight back leaves the shape with the caller.
       literal("export const [ids, setIds] = hostState([1, 2])", "1, 2"),
       literal("export const ids = hostIdentity([1, 2])", "1, 2"),
+      // React's real useState signature: `S | (() => S)`, a union containing the type parameter.
+      literal("export const [ids, setIds] = hostReactState([1, 2])", "1, 2"),
       literal("export const ids = hostLoad([1, 2])", "1, 2"),
       {
         name: "A mutable array changed in place gets advice, not a ReadonlyArray suggestion that wouldn't compile",

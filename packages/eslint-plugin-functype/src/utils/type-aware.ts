@@ -112,8 +112,8 @@ const enclosingCall = (
 }
 
 /**
- * Is the parameter that `at` is passed to (directly or nested) declared as a bare type parameter,
- * `json<T>(data: T)`? Then TypeScript's expected type for `at` is only an echo of what it inferred from
+ * Is the parameter that `at` is passed to (directly or nested) declared as a type parameter, or a union
+ * containing one — `json<T>(data: T)`, `useState<S>(init: S | (() => S))`? Then TypeScript's expected type for `at` is only an echo of what it inferred from
  * `at` itself (`[1, 2]` → `number[]`), not a shape the library demands.
  */
 const isGenericParameterArgument = (checker: CheckerLike, services: TypedServices, at: ASTNode): boolean => {
@@ -123,7 +123,11 @@ const isGenericParameterArgument = (checker: CheckerLike, services: TypedService
   if (!found || !parameters || parameters.length === 0) return false
   const declared = parameters[Math.min(found.index, parameters.length - 1)] as { readonly type?: unknown } | undefined
   // The parameter's type annotation node (`T` in `value: T`); asking for the declaration node's type gives `any`.
-  return declared?.type !== undefined && isTypeParameter(checker.getTypeAtLocation(declared.type))
+  if (declared?.type === undefined) return false
+  const annotated = checker.getTypeAtLocation(declared.type)
+  // React's `useState<S>(init: S | (() => S))`: a union that contains the type parameter is generic too.
+  const members = (annotated as { types?: ReadonlyArray<TypeLike> }).types ?? [annotated]
+  return members.some(isTypeParameter)
 }
 
 /**

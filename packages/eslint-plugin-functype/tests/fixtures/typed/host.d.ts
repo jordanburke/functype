@@ -15,3 +15,4 @@ declare function hostState<T>(init: T): [T, (next: T) => void]
 declare function hostIdentity<T>(value: T): T
 declare function hostLoad<T>(value: T): Promise<T>
 declare function hostRespond<T>(data: T, status?: number): { readonly _data: T; readonly status: number }
+declare function hostReactState<S>(init: S | (() => S)): [S, (s: S) => void]
