@@ -25,7 +25,7 @@ const unknownDecoder: Decoder<unknown> = (raw) => Right(raw)
  *
  * @example
  * ```typescript
- * Http.get("/api/user", { decode: Decoder.fromThrowing(UserSchema.parse) })
+ * Http.get("/api/user", { decode: Decoder.fromThrowing((raw) => UserSchema.parse(raw)) })
  * ```
  */
 const fromThrowing =

@@ -7,8 +7,10 @@
 export const anySignal = (
   signals: ReadonlyArray<AbortSignal | undefined>,
 ): { readonly signal: AbortSignal; readonly dispose: () => void } => {
-  const controller = new AbortController()
   const parents = signals.filter((s): s is AbortSignal => s !== undefined)
+  const [only] = parents
+  if (only !== undefined && parents.length === 1) return { signal: only, dispose: () => {} }
+  const controller = new AbortController()
   const aborted = parents.find((s) => s.aborted)
   if (aborted) {
     controller.abort(aborted.reason)

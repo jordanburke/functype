@@ -2458,9 +2458,11 @@ io.orElse(fallbackIO);
 ## Combining Effects
 
 ```typescript
-// Run in order (IO.all does not run effects in parallel yet)
-IO.all([io1, io2, io3]); // All must succeed; stops at the first failure
+// In order by default; all must succeed, and it stops at the first failure
+IO.all([io1, io2, io3]);
+IO.all([io1, io2, io3], { concurrency: 2 }); // Up to 2 at once; the first failure interrupts the rest
 IO.forEach(items, (item) => save(item)); // One effect per item, in order
+IO.forEach(items, (item) => save(item), { concurrency: "unbounded" });
 IO.race([io1, io2]); // First to complete wins
 IO.any([io1, io2, io3]); // First success wins
 
@@ -2576,6 +2578,9 @@ poll
 
 // Or start it with a handle
 const { result, cancel } = loadReport.runCancellable();
+
+// An async thunk receives the run's signal, so a request stops too
+const load = IO.async((signal) => fetch(url, { signal }).then((r) => r.json()));
 ```
 
 - Inside the cancelled section, `retry`, `recover` and `catchAll` can't swallow the cancellation.
@@ -2730,14 +2735,14 @@ See full API documentation at [functype API docs](https://jordanburke.github.io/
 
 # Http
 
-HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<unknown>>` effects by default. Provide a `validate` function to get typed responses.
+HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<unknown>>` effects by default. Provide a `decode` decoder to get typed responses.
 
 ## Overview
 
 `Http` wraps the global `fetch` API with full IO integration:
 
 - Returns `IO<never, HttpError, HttpResponse<unknown>>` by default — every request is a lazy, composable effect
-- **BYOV (Bring Your Own Validator)**: Pass a `validate: (data: unknown) => T` function to get `HttpResponse<T>`
+- **BYOV (Bring Your Own Validator)**: Pass `decode: Decoder<T>` to get `HttpResponse<T>`. `Decoder.fromThrowing` adapts any parser that throws, such as Zod's `parse`
 - Works with any validation library: Zod, TypeBox, Valibot, or manual validators
 - Three typed error variants: `NetworkError`, `HttpStatusError`, `DecodeError`
 - Zero dependencies — uses `globalThis.fetch` (browsers, Node 18+, Bun, Deno)
@@ -2750,32 +2755,33 @@ Nothing runs until you call `.run()` or `.runOrThrow()`.
 ## Basic Usage
 
 ```typescript
+import { Decoder } from "functype/decoder";
 import { Http } from "functype/fetch";
 
 // Without validator — data is unknown
 const effect = Http.get("/api/users/1");
 const result = await effect.run(); // Either<HttpError, HttpResponse<unknown>>
 
-// With validator — T inferred from validate return type
+// With a decoder — T inferred from the parser's return type
 const typedEffect = Http.get("/api/users/1", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 const typedResult = await typedEffect.run(); // Either<HttpError, HttpResponse<User>>
 
 // POST with body — auto-serialized as JSON
 const create = Http.post("/api/users", {
   body: { name: "Alice", email: "alice@example.com" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 
 // PUT, PATCH, DELETE
 Http.put("/api/users/1", {
   body: { name: "Alice Updated" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 Http.patch("/api/users/1", {
   body: { name: "Alice" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 Http.delete("/api/users/1");
 
@@ -2788,22 +2794,22 @@ Http.request({
   url: "/api/users/1",
   method: "GET",
   headers: { "X-Request-Id": "abc123" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 ```
 
 ## Validation
 
-Without a `validate` function, response data is `unknown`. This is intentional — it prevents unsafe type casts and encourages runtime validation.
+Without `decode`, response data is `unknown`. This is intentional — it prevents unsafe type casts and encourages runtime validation.
 
 ```typescript
-// Without validate — data is unknown, you must narrow it yourself
+// Without decode — data is unknown, you must narrow it yourself
 const effect = Http.get("/api/users");
 // effect: IO<never, HttpError, HttpResponse<unknown>>
 
-// With validate — T is inferred from the validator's return type
+// With decode — T is inferred from the decoder's type
 const typedEffect = Http.get("/api/users", {
-  validate: (data) => z.array(UserSchema).parse(data),
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
 });
 // typedEffect: IO<never, HttpError, HttpResponse<User[]>>
 ```
@@ -2812,20 +2818,29 @@ const typedEffect = Http.get("/api/users", {
 
 ```typescript
 // Zod
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) });
+Http.get("/api/users", {
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
+});
 
 // TypeBox
-Http.get("/api/users", { validate: (data) => Value.Decode(UserSchema, data) });
+Http.get("/api/users", {
+  decode: Decoder.fromThrowing((data) => Value.Decode(UserSchema, data)),
+});
 
 // Valibot
-Http.get("/api/users", { validate: (data) => parse(UserSchema, data) });
+Http.get("/api/users", {
+  decode: Decoder.fromThrowing((data) => parse(UserSchema, data)),
+});
+
+// functype's own decoders, no library
+Http.get("/api/users", { decode: Decoder.array(UserDecoder) });
 
 // Manual validation
 Http.get("/api/users", {
-  validate: (data) => {
+  decode: Decoder.fromThrowing((data) => {
     if (!Array.isArray(data)) throw new Error("Expected array");
     return data as User[];
-  },
+  }),
 });
 ```
 
@@ -2835,7 +2850,7 @@ Every successful request resolves to `HttpResponse<T>` (where `T` is `unknown` w
 
 ```typescript
 type HttpResponse<T> = {
-  readonly data: T; // Parsed response body (unknown without validate)
+  readonly data: T; // Parsed response body (unknown without decode)
   readonly status: number; // HTTP status code (e.g. 200)
   readonly statusText: string; // HTTP status text (e.g. "OK")
   readonly headers: Headers; // Response headers (standard Web API)
@@ -2843,7 +2858,7 @@ type HttpResponse<T> = {
 
 // Accessing response fields with a validator
 const effect = Http.get("/api/users", {
-  validate: (data) => z.array(UserSchema).parse(data),
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
 });
 const either = await effect.run();
 
@@ -2891,7 +2906,7 @@ type DecodeError = {
 import { Http, HttpError } from "functype/fetch";
 
 const effect = Http.get("/api/users/1", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 });
 
 const result = await effect
@@ -2910,7 +2925,7 @@ const result = await effect
 ```typescript
 // Recover from 404 with a default value
 const user = Http.get("/api/users/99", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }).catchTag("HttpStatusError", (e) =>
   e.status === 404
     ? IO.succeed({
@@ -2934,7 +2949,7 @@ const resilient = Http.get("/api/data").catchTag("NetworkError", () =>
 import { HttpError } from "functype/fetch";
 
 const either = await Http.get("/api/users/1", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }).run();
 
 if (either._tag === "Left") {
@@ -2955,6 +2970,7 @@ if (either._tag === "Left") {
 Create a configured client with a base URL, default headers, or a custom fetch implementation:
 
 ```typescript
+import { Decoder } from "functype/decoder";
 import { Http } from "functype/fetch";
 
 const api = Http.client({
@@ -2967,10 +2983,10 @@ const api = Http.client({
 
 // Paths are resolved relative to baseUrl
 const users = api.get("/users", {
-  validate: (data) => z.array(UserSchema).parse(data),
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
 }); // → https://api.example.com/v1/users
 const user = api.get("/users/1", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }); // → https://api.example.com/v1/users/1
 
 // Absolute URLs bypass baseUrl
@@ -3039,7 +3055,9 @@ const api = Http.client({
 
 // Every call through `api` runs the full transformer stack.
 const user = await api
-  .get("/users/me", { validate: (d) => UserSchema.parse(d) })
+  .get("/users/me", {
+    decode: Decoder.fromThrowing((d) => UserSchema.parse(d)),
+  })
   .runOrThrow();
 ```
 
@@ -3048,7 +3066,7 @@ Notes on the contract:
 - **Failure short-circuits.** Returning `IO.fail(httpError)` from `beforeRequest` aborts the call — `fetch` is never invoked and the error surfaces through the normal `.catchTag` / `.run*` paths.
 - **Headers passed in are already merged.** `r.headers` reflects `defaultHeaders` + per-call `headers` — `beforeRequest` is the final word.
 - **Body is raw at hook time.** `r.body` is the pre-serialization value. Content-Type is derived after the hook runs, so swapping `body` for a different shape produces the correct content-type header.
-- **`validate` lives on the response side.** `HttpRequestView` deliberately omits it; the hook can't change response decoding.
+- **`decode` lives on the response side.** `HttpRequestView` deliberately omits it; the hook can't change response decoding.
 - **Compose vs. replace.** This is additive to `fetch` override — they can coexist if you have a reason. For request-decoration use cases (auth, request IDs, logging), `beforeRequest` is the lighter touch and gives you typed `HttpRequestOptions` instead of raw `(input, init)`.
 
 ## Response-side composition with `afterResponse`
@@ -3143,7 +3161,7 @@ type ParseMode = "json" | "text" | "blob" | "arrayBuffer" | "raw";
 // Force JSON parsing regardless of Content-Type header
 Http.get("/api/config", {
   parseAs: "json",
-  validate: (data) => ConfigSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => ConfigSchema.parse(data)),
 });
 
 // Get raw Blob for file downloads
@@ -3161,6 +3179,7 @@ Http.get("/api/stream", { parseAs: "raw" });
 Because `Http` returns `IO` effects, the full IO operator set is available:
 
 ```typescript
+import { Decoder } from "functype/decoder";
 import { Http } from "functype/fetch";
 
 // Retry on failure
@@ -3173,16 +3192,16 @@ Http.get("/api/data").retryWithDelay(3, 1000);
 Http.get("/api/data").timeout(5000);
 
 // Transform the response data (with validator for typed access)
-Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).map(
-  (res) => res.data.name,
-);
+Http.get("/api/users/1", {
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
+}).map((res) => res.data.name);
 
 // Chain requests — use result of first to drive second
 Http.get("/api/users/1", {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }).flatMap((res) =>
   Http.get(`/api/users/${res.data.id}/posts`, {
-    validate: (data) => z.array(PostSchema).parse(data),
+    decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
   }),
 );
 
@@ -3191,10 +3210,10 @@ import { IO } from "functype/io";
 
 const [users, posts] = await IO.all([
   Http.get("/api/users", {
-    validate: (data) => z.array(UserSchema).parse(data),
+    decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
   }),
   Http.get("/api/posts", {
-    validate: (data) => z.array(PostSchema).parse(data),
+    decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
   }),
 ]).run();
 
@@ -3217,7 +3236,7 @@ Request bodies are serialized based on their JavaScript type:
 // Object body → JSON serialized automatically
 Http.post("/api/orders", {
   body: { productId: 42, quantity: 3 },
-  validate: (data) => OrderSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => OrderSchema.parse(data)),
   // Content-Type: application/json is added automatically
 });
 
@@ -3225,7 +3244,7 @@ Http.post("/api/orders", {
 Http.post("/api/graphql", {
   body: '{"query":"{ users { id name } }"}',
   headers: { "Content-Type": "application/json" },
-  validate: (data) => GraphQLResultSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => GraphQLResultSchema.parse(data)),
 });
 
 // FormData or URLSearchParams — pass as string or handle manually
