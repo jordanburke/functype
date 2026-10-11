@@ -17,7 +17,7 @@ That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, 
 
 ## What `pnpm release` does
 
-1. **Preflight** — verifies the working tree is clean, you're on `main`, and `main` is in sync with `origin/main`.
+1. **Preflight** — verifies the working tree is clean, you're on `main` or a `release/<major>.x` branch, and that branch is in sync with its `origin` copy.
 2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
 3. **Bump functype family** — applies the new version to all 5 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`).
 4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
@@ -36,6 +36,19 @@ That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, 
 4. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
 OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`.
+
+## Release branches (`release/<major>.x`)
+
+Once `main` carries unreleased breaking changes, additive releases for the old major ship from a `release/<major>.x` branch instead. `release/1.x` was cut from `v1.15.0` on 2026-10-11, because `main` is 2.0-bound. Decided in #276 (the 2.0 release plan).
+
+- `pnpm release` and `ci.yml` accept `main` or `release/<major>.x`.
+- Feature PRs for the old major target the release branch, and write their notes under `## Unreleased` there.
+- After each release from the branch, merge it into `main` (merge, never rebase) and keep both CHANGELOG sections. That is how the additive work reaches the next major.
+
+**Before the first 1.x publish after 2.0.0 is `latest`,** two things must change. Without them a 1.x patch would either take over `latest` or be refused:
+
+1. `publish.yml` must publish a 1.x tag under a `v1` dist-tag (`pnpm -r publish --tag v1`), not the default `latest`.
+2. `check-publish-safety` must compare a 1.x version against the `v1` dist-tag, not `latest`; today invariant 2 (downgrade) refuses any version below `latest`.
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 
