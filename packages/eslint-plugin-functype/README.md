@@ -98,6 +98,29 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 | `allowReadonlyArrays` | `true`  | When `true`, `ReadonlyArray<T>` **and** `readonly T[]` pass. When `false`, both are flagged consistently. Use `false` in combination with `Wire<T>` from `functype` to hold the rule at `error` — every unmarked `ReadonlyArray<T>` becomes a lint error, and wrapping a boundary type in `Wire<…>` is the explicit escape hatch. |
 | `allowArrayLiterals`  | `false` | When `true`, `const xs = [1, 2, 3]` is not reported. Useful when you want type-position enforcement but tolerate idiomatic literals like `[...map.entries()]`. Mutable `T[]` in type positions is always reported regardless.                                                                                                     |
 
+**What it reports.** The defect is a collection that can change under you, so:
+
+- **A mutable `T[]` / `Array<T>` type.** The first suggestion is `ReadonlyArray<T>`, which every caller and library accepts; `List<T>` is second, for a collection you transform. With `allowReadonlyArrays: true` (the default) one accepted suggestion silences the report, so in practice the rule asks for read-only types; set it to `false` with `Wire<T>` at boundaries to push towards `List`.
+- **An array changed in place** (`push`, `sort`, `splice`, `x[i] = …`, on a binding, a literal accumulator or a field). This gets advice instead of a suggestion, because `ReadonlyArray` wouldn't compile there: build it with `map` / `filter` / `flatMap`, a `List`, or a fold. (This only fires where the rule has an annotation or a literal to hook onto; an inferred array that's pushed to isn't seen.)
+- **A cast of untyped data to an array** (`JSON.parse(raw) as Row[]`, `raw as Row[]` after `Array.isArray`), with type information. Decoded outside data belongs in a `Wire<ReadonlyArray<Row>>` shape.
+- **An array literal that becomes a collection in your own code** (stored, then transformed with `map` / `filter` / `slice` / `reduce`), with type information.
+
+**What it leaves alone.** Data handed to a library in the shape the library demands isn't yours to change. With type-aware linting (`projectService`) the rule skips:
+
+- a literal passed where an array is expected (drizzle `.values([...])`, an index definition, a prop typed as an array, a parameter typed `Iterable`), or spread into a call (`and(...conds)`);
+- a literal inside an object passed to an untyped parameter (a `JSON.stringify` request body), or to a generic one that doesn't hand it back (`c.json<T>(data: T)`). A generic that returns the argument (`useState(init)`, including React's `S | (() => S)` signature, `identity(x)`, `Promise<T>`) leaves the shape with you, so it's reported;
+- a method chain whose result goes to JSX children or an array slot (`{["PDF", "DOCX"].map((f) => <Chip />)}`);
+- a mutable type whose value goes to a slot that **requires** a mutable array (pg's `query(text, values: unknown[])`, an SDK option typed `string[]`), including through a function's declared return type;
+- a `const` whose every use is one of those, or a single-value read.
+
+**Single-value reads** are temporaries, with or without type information: `.length`, `[i]`, `join` / `includes` / `indexOf` / `some` / `every` / `find` / `at`, and chains that end in one (`[a, b].filter(Boolean).join(" ")`, `[...xs].sort(byRank)[0]`). A chain that produces another collection is collection work and is reported.
+
+**Without type information, array literals aren't reported at all.** The rule can't tell a literal handed to a library from one of your own, so it reports neither rather than guess. Type positions and in-place mutation are still reported. Turn on type-aware linting to get literal checks.
+
+Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Generators with no marker, such as Supabase's types, need an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
+
+Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: CivalaOS 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of CivalaOS with the rule on takes about 18 seconds.
+
 **Boundary recipe (recommended for codebases touching serialization boundaries):**
 
 ```jsonc

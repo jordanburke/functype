@@ -11,6 +11,14 @@ describe("real-functype-integration", () => {
   describe("prefer-option with real functype patterns", () => {
     ruleTester.run("prefer-option", preferOption, {
       valid: [
+        {
+          name: "Without type information, array literals aren't reported even with functype available",
+          code: `
+            import { List } from 'functype'
+            const items = [1, 2, 3]
+            const unused = List.from([4, 5, 6]) // functype is available but not used for items
+          `,
+        },
         // Real functype Option usage should not be flagged
         {
           name: "Real Option.some() usage",
@@ -108,32 +116,7 @@ describe("real-functype-integration", () => {
           `,
         },
       ],
-      invalid: [
-        // Should still flag when functype is available but array literals used
-        {
-          name: "Still flags array literals with functype available",
-          code: `
-            import { List } from 'functype'
-            const items = [1, 2, 3]
-            const unused = List.from([4, 5, 6]) // functype is available but not used for items
-          `,
-          errors: [
-            {
-              messageId: "preferListLiteral",
-              suggestions: [
-                {
-                  messageId: "suggestListOf",
-                  output: `
-            import { List } from 'functype'
-            const items = List.of(1, 2, 3)
-            const unused = List.from([4, 5, 6]) // functype is available but not used for items
-          `,
-                },
-              ],
-            },
-          ],
-        },
-      ],
+      invalid: [],
     })
   })
 })
