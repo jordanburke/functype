@@ -1,8 +1,8 @@
 import * as fsSync from "node:fs"
 import * as fs from "node:fs/promises"
 
-import type { Either, TaskResult } from "functype"
-import { Err, Left, List, Ok, Option, Right, Try } from "functype"
+import type { Either } from "functype"
+import { IO, Left, List, Option, Right, Try } from "functype"
 
 import { FsError } from "../errors/errors"
 
@@ -54,86 +54,70 @@ const matchGlob = (filePath: string, pattern: string): boolean => {
   return new RegExp(`^${regex}$`).test(filePath)
 }
 
-// Async helper: lift a Promise-returning thunk into TaskResult, mapping
-// rejections to FsError. Uses `Try.async(thunk)` rather than
-// `Try.fromPromise(thunk())` so synchronous throws from inside the thunk
-// (e.g. a bad encoding argument) are caught the same way async rejections
-// are — same Failure path, no unhandled-rejection escape hatch.
-const liftAsync = async <T>(p: string, op: string, thunk: () => Promise<T>): TaskResult<T> => {
-  const result = await Try.async(thunk)
-  return result.fold<TaskResult<T>>(
-    (err) => Promise.resolve(Err(toFsError(p, op, err))),
-    (value) => Promise.resolve(Ok(value)),
-  )
-}
+// Async helper: lift a Promise-returning thunk into a lazy IO, mapping rejections to
+// FsError. Nothing touches the filesystem until the IO runs. The interpreter awaits the
+// thunk inside its own try, so a synchronous throw from inside it (e.g. a bad encoding
+// argument) fails the same way a rejection does — same FsError, no unhandled rejection.
+const liftAsync = <T>(p: string, op: string, thunk: () => Promise<T>): IO<never, FsError, T> =>
+  IO.tryPromise({ try: thunk, catch: (err) => toFsError(p, op, err) })
+
+const isNotFound = (err: unknown): boolean => err instanceof Error && "code" in err && err.code === "ENOENT"
 
 // Sync helper: run a thunk via Try and convert to Either<FsError, T>.
 const liftSync = <T>(p: string, op: string, thunk: () => T): Either<FsError, T> =>
   Try(thunk).toEither((err) => toFsError(p, op, err))
 
 export const Fs = {
-  // Async methods — return TaskResult<T>
+  // Async methods — return a lazy IO<never, FsError, T>; nothing runs until `.run()`
 
-  exists: async (p: string): TaskResult<boolean> => {
-    const result = await Try.async(() => fs.access(p))
-    return Ok(result.isSuccess())
-  },
+  exists: (p: string): IO<never, never, boolean> =>
+    IO.async(() => fs.access(p)).fold(
+      () => false,
+      () => true,
+    ),
 
-  readFile: (p: string, encoding: BufferEncoding = "utf8"): TaskResult<string> =>
+  readFile: (p: string, encoding: BufferEncoding = "utf8"): IO<never, FsError, string> =>
     liftAsync(p, "readFile", () => fs.readFile(p, { encoding })),
 
-  readFileOpt: async (p: string, encoding: BufferEncoding = "utf8"): TaskResult<Option<string>> => {
-    const result = await Try.async(() => fs.readFile(p, { encoding }))
-    return result.fold<TaskResult<Option<string>>>(
-      (err) => {
-        if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-          return Promise.resolve(Ok(Option<string>(undefined)))
-        }
-        return Promise.resolve(Err(toFsError(p, "readFile", err)))
-      },
-      (data) => Promise.resolve(Ok(Option(data))),
-    )
-  },
+  readFileOpt: (p: string, encoding: BufferEncoding = "utf8"): IO<never, FsError, Option<string>> =>
+    IO.async(() => fs.readFile(p, { encoding }))
+      .fold(
+        (err): Either<FsError, Option<string>> =>
+          isNotFound(err) ? Right(Option<string>(undefined)) : Left(toFsError(p, "readFile", err)),
+        (data): Either<FsError, Option<string>> => Right(Option(data)),
+      )
+      .flatMap((result) => IO.fromEither(result)),
 
-  stat: (p: string): TaskResult<FileInfo> => liftAsync(p, "stat", () => fs.stat(p).then(toFileInfo)),
+  stat: (p: string): IO<never, FsError, FileInfo> => liftAsync(p, "stat", () => fs.stat(p).then(toFileInfo)),
 
-  copyFile: (src: string, dest: string): TaskResult<void> => liftAsync(src, "copyFile", () => fs.copyFile(src, dest)),
+  copyFile: (src: string, dest: string): IO<never, FsError, void> =>
+    liftAsync(src, "copyFile", () => fs.copyFile(src, dest)),
 
-  rename: (oldPath: string, newPath: string): TaskResult<void> =>
+  rename: (oldPath: string, newPath: string): IO<never, FsError, void> =>
     liftAsync(oldPath, "rename", () => fs.rename(oldPath, newPath)),
 
-  readdir: (p: string): TaskResult<List<string>> =>
+  readdir: (p: string): IO<never, FsError, List<string>> =>
     liftAsync(p, "readdir", () => fs.readdir(p).then((entries) => List<string>(entries))),
 
-  glob: async (dir: string, pattern: string): TaskResult<List<string>> => {
-    const result = await Try.async(() => fs.readdir(dir, { recursive: true, encoding: "utf8" }))
-    return result.fold<TaskResult<List<string>>>(
-      (err) => Promise.resolve(Err(toFsError(dir, "glob", err))),
-      (entries) => {
-        const matched = (entries as string[]).filter((entry) => matchGlob(entry, pattern))
-        return Promise.resolve(Ok(List<string>(matched)))
-      },
-    )
-  },
+  glob: (dir: string, pattern: string): IO<never, FsError, List<string>> =>
+    liftAsync(dir, "glob", () => fs.readdir(dir, { recursive: true, encoding: "utf8" })).map((entries) =>
+      List<string>(entries.filter((entry) => matchGlob(entry, pattern))),
+    ),
 
-  writeFile: (p: string, data: string, encoding: BufferEncoding = "utf8"): TaskResult<void> =>
+  writeFile: (p: string, data: string, encoding: BufferEncoding = "utf8"): IO<never, FsError, void> =>
     liftAsync(p, "writeFile", () => fs.writeFile(p, data, { encoding })),
 
-  appendFile: (p: string, data: string, encoding: BufferEncoding = "utf8"): TaskResult<void> =>
+  appendFile: (p: string, data: string, encoding: BufferEncoding = "utf8"): IO<never, FsError, void> =>
     liftAsync(p, "appendFile", () => fs.appendFile(p, data, { encoding })),
 
-  mkdir: (p: string, options?: { recursive?: boolean }): TaskResult<void> => {
-    if (options?.recursive && isMagicFsPath(p)) {
-      return Promise.resolve(
-        Err(
+  mkdir: (p: string, options?: { recursive?: boolean }): IO<never, FsError, void> =>
+    options?.recursive && isMagicFsPath(p)
+      ? IO.fail(
           toFsError(p, "mkdir", new Error("recursive mkdir refused under magic filesystem root (/proc, /sys, /dev)")),
-        ),
-      )
-    }
-    return liftAsync(p, "mkdir", () => fs.mkdir(p, options).then(() => undefined))
-  },
+        )
+      : liftAsync(p, "mkdir", () => fs.mkdir(p, options).then(() => undefined)),
 
-  unlink: (p: string): TaskResult<void> => liftAsync(p, "unlink", () => fs.unlink(p)),
+  unlink: (p: string): IO<never, FsError, void> => liftAsync(p, "unlink", () => fs.unlink(p)),
 
   // Sync methods — return Either<FsError, T>
 
@@ -145,12 +129,7 @@ export const Fs = {
   readFileOptSync: (p: string, encoding: BufferEncoding = "utf8"): Either<FsError, Option<string>> => {
     const tryResult = Try(() => fsSync.readFileSync(p, { encoding }))
     return tryResult.fold<Either<FsError, Option<string>>>(
-      (err) => {
-        if (err instanceof Error && "code" in err && err.code === "ENOENT") {
-          return Right(Option<string>(undefined))
-        }
-        return Left(toFsError(p, "readFileOptSync", err))
-      },
+      (err) => (isNotFound(err) ? Right(Option<string>(undefined)) : Left(toFsError(p, "readFileOptSync", err))),
       (data) => Right(Option(data)),
     )
   },

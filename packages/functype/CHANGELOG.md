@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
+
+- `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
+- The error type is the real one (`FsError`, `ProcessError`, `ConfigError`) rather than a wrapped `Throwable`. `Fs.exists`, `ConfigResolver.resolve` and `resolveAll` can't fail, so their `E` is `never`.
+- **Upgrade:** `await Fs.readFile(p)` becomes `await Fs.readFile(p).run()`. On the result, `isOk()` → `isRight()`, `isErr()` → `isLeft()`, `.error` → `.value`. A forgotten `.run()` compiles and does nothing; `@typescript-eslint/await-thenable` (on in ts-builds' functype preset) flags it.
+- `ConfigResolver.resolveAll` now checks candidates one at a time rather than all at once. Results are the same, in candidate order.
+- The `*Sync` methods are unchanged. functype-os's `functype` peer range is now `>=1.13.0` (it uses `IO.fromPromiseEither`).
+
 ## 1.15.0 - 2026-10-10
 
 - **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (CivalaOS 821 → 215, agent-todo 843 → 328). CivalaOS's hits were classified with civala's agent, and the design was reviewed by a second model.
