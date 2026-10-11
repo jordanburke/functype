@@ -1,7 +1,7 @@
 import { describe } from "vitest"
 
 import rule from "../../src/rules/prefer-list"
-import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
+import { typedFilename, typedRuleTester, typedTsxFilename } from "../utils/typed-rule-tester"
 
 /**
  * With type information, an array literal passed where an array is expected is the boundary itself:
@@ -144,6 +144,30 @@ describe("prefer-list (type-aware)", () => {
         code: 'hostJson({ response_types_supported: ["code"], scopes: ["read", "write"] })',
       },
       {
+        name: "A const read down to single values is a temporary",
+        filename: typedFilename,
+        options,
+        code: 'const parts = ["a", "b"]; export const text = parts.join(" "); export const n = parts.length; export const has = ["x", "y"].includes("x")',
+      },
+      {
+        name: "A literal whose mapped result goes to an array-typed slot",
+        filename: typedFilename,
+        options,
+        code: "declare function slider(o: { marks: ReadonlyArray<{ value: number }> }): void; slider({ marks: [3, 4, 5].map((v) => ({ value: v })) })",
+      },
+      {
+        name: "A literal mapped straight into JSX children",
+        filename: typedTsxFilename,
+        options,
+        code: 'export const Formats = () => <div>{["PDF", "DOCX"].map((f) => <span key={f}>{f}</span>)}</div>',
+      },
+      {
+        name: "A literal whose chain ends in a single value is a temporary",
+        filename: typedFilename,
+        options,
+        code: 'declare const a: string; declare const b: string; export const text = [a, b].filter((v) => v.length > 0).join("\\n"); export const one = [a, b].filter(Boolean).length; export const first = [...[3, 1]].sort()[0]',
+      },
+      {
         name: "A literal handed to an Iterable parameter",
         filename: typedFilename,
         options,
@@ -168,6 +192,12 @@ describe("prefer-list (type-aware)", () => {
         code: 'type Cat = "a" | "b"; declare const items: ReadonlyArray<{ c: Cat; v: number }>; export const g = items.reduce<Partial<Record<Cat, ReadonlyArray<number>>>>((acc, i) => ({ ...acc, [i.c]: [...(acc[i.c] ?? []), i.v] }), {})',
       },
       {
+        name: "A generic response helper whose result wraps the data (Hono c.json shape) is a sink",
+        filename: typedFilename,
+        options,
+        code: 'export const r = hostRespond({ scopes: ["read", "write"] }, 200)',
+      },
+      {
         name: "A string | string[] option for a library that requires it",
         filename: typedFilename,
         options,
@@ -175,6 +205,42 @@ describe("prefer-list (type-aware)", () => {
       },
     ],
     invalid: [
+      // A literal passed to your own array-typed parameter is fine; the mutable parameter type is what's reported.
+      {
+        name: "Your own mutable parameter type is reported, the literal passed to it is not",
+        filename: typedFilename,
+        options,
+        code: 'function shout(xs: string[]) { return xs.join("!") } export const s = shout(["a"])',
+        errors: [
+          {
+            messageId: "preferReadonlyOrList" as const,
+            data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray" as const,
+                data: { type: "string" },
+                output:
+                  'function shout(xs: ReadonlyArray<string>) { return xs.join("!") } export const s = shout(["a"])',
+              },
+              {
+                messageId: "suggestListType" as const,
+                data: { type: "string" },
+                output: 'function shout(xs: List<string>) { return xs.join("!") } export const s = shout(["a"])',
+              },
+              {
+                messageId: "suggestAddImport" as const,
+                data: { symbol: "List" },
+                output:
+                  'import { List } from "functype"\nfunction shout(xs: string[]) { return xs.join("!") } export const s = shout(["a"])',
+              },
+            ],
+          },
+        ],
+      },
+      // A generic that hands its argument straight back leaves the shape with the caller.
+      literal("export const [ids, setIds] = hostState([1, 2])", "1, 2"),
+      literal("export const ids = hostIdentity([1, 2])", "1, 2"),
+      literal("export const ids = hostLoad([1, 2])", "1, 2"),
       {
         name: "A mutable array changed in place gets advice, not a ReadonlyArray suggestion that wouldn't compile",
         filename: typedFilename,
@@ -252,11 +318,15 @@ describe("prefer-list (type-aware)", () => {
           },
         ],
       },
-      // One use is not an array slot (`.length`), so the const is a collection in your own code.
+      // One use transforms it (`.map`), so the const is a collection in your own code.
       literal(
-        'declare function select(o: { data: ReadonlyArray<string> }): void; const OPTIONS = ["a", "b"]; select({ data: OPTIONS }); export const n = OPTIONS.length',
+        'declare function select(o: { data: ReadonlyArray<string> }): void; const OPTIONS = ["a", "b"]; select({ data: OPTIONS }); export const up = OPTIONS.map((o) => o.toUpperCase())',
         '"a", "b"',
       ),
+      literal('export const items = ["a", "b", "c"]', '"a", "b", "c"'),
+      literal("export const matrix = [[1, 2], [3, 4]]", "[1, 2], [3, 4]"),
+      // A literal transformed on the spot is collection work, not a single-value read.
+      literal("export const sorted = [3, 1, 2].map((n) => n * 2)", "3, 1, 2"),
       literal("export const ids = [1, 2, 3]", "1, 2, 3"),
     ],
   })

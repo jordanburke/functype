@@ -11,3 +11,7 @@ declare function hostImportKey(format: "raw", usages: string[]): void
 declare function hostImportKey(format: "jwk", usages: string[], extra: number): void
 declare function hostJson<T>(data: T): void
 declare function hostConsume(values: Iterable<string>): void
+declare function hostState<T>(init: T): [T, (next: T) => void]
+declare function hostIdentity<T>(value: T): T
+declare function hostLoad<T>(value: T): Promise<T>
+declare function hostRespond<T>(data: T, status?: number): { readonly _data: T; readonly status: number }

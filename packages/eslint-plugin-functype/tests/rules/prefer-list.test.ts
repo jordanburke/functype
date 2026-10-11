@@ -6,6 +6,10 @@ describe("prefer-list", () => {
   ruleTester.run("prefer-list", rule, {
     valid: [
       {
+        name: "Without type information, array literals aren't reported (the typed tests cover them)",
+        code: 'const items = ["a", "b", "c"]; const matrix = [[1, 2], [3, 4]]; const more = [...other, 1, 2]',
+      },
+      {
         name: "An import-type Wire is recognized",
         code: 'type Rows = import("functype").Wire<ReadonlyArray<Row>>',
         options: [{ allowReadonlyArrays: false }],
@@ -276,27 +280,6 @@ describe("prefer-list", () => {
           },
         ],
       },
-      // Array literal (default: allowArrayLiterals is false, so still flagged)
-      {
-        name: "Array literal should use List.from",
-        code: 'const items = ["a", "b", "c"]',
-        errors: [
-          {
-            messageId: "preferListLiteral",
-            suggestions: [
-              {
-                messageId: "suggestListOf",
-                output: 'const items = List.of("a", "b", "c")',
-              },
-              {
-                messageId: "suggestAddImport",
-                data: { symbol: "List" },
-                output: 'import { List } from "functype"\nconst items = ["a", "b", "c"]',
-              },
-            ],
-          },
-        ],
-      },
       // Complex type array
       {
         name: "Complex type array should use List",
@@ -381,38 +364,6 @@ describe("prefer-list", () => {
                 output: 'import { List } from "functype"\nfunction getItems(): string[] { return [] }',
               },
             ],
-          },
-        ],
-      },
-      // Nested array literal in assignment
-      {
-        name: "Nested array literals should use List.from",
-        code: "const matrix = [[1, 2], [3, 4]]",
-        errors: [
-          {
-            messageId: "preferListLiteral",
-            suggestions: [
-              {
-                messageId: "suggestListOf",
-                output: "const matrix = List.of([1, 2], [3, 4])",
-              },
-              {
-                messageId: "suggestAddImport",
-                data: { symbol: "List" },
-                output: 'import { List } from "functype"\nconst matrix = [[1, 2], [3, 4]]',
-              },
-            ],
-          },
-        ],
-      },
-      // Array with spread elements — no suggestions (ambiguous semantics)
-      {
-        name: "Array literal with spread should warn but have no suggestions",
-        code: "const items = [...other, 1, 2]",
-        errors: [
-          {
-            messageId: "preferListLiteral",
-            suggestions: [],
           },
         ],
       },

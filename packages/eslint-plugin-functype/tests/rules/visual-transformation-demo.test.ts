@@ -80,7 +80,12 @@ describe("Visual Transformation Demo", () => {
       "prefer-list",
       preferList,
       {
-        valid: [],
+        valid: [
+          {
+            name: "Array literals need type information to be reported (see the typed tests)",
+            code: 'const colors = ["red", "green", "blue"]',
+          },
+        ],
         invalid: showTransformations([
           {
             name: "🚫 Array Type → List<T> (Manual Fix Required)",
@@ -123,25 +128,6 @@ describe("Visual Transformation Demo", () => {
                   {
                     messageId: "suggestAddImport",
                     output: `import { List } from "functype"\nconst scores: Array<number> = [85, 92, 78, 96]`,
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            name: "🚫 Array Literal → List.from() (Manual Fix Required)",
-            code: 'const colors = ["red", "green", "blue"]',
-            errors: [
-              {
-                messageId: "preferListLiteral",
-                suggestions: [
-                  {
-                    messageId: "suggestListOf",
-                    output: 'const colors = List.of("red", "green", "blue")',
-                  },
-                  {
-                    messageId: "suggestAddImport",
-                    output: `import { List } from "functype"\nconst colors = ["red", "green", "blue"]`,
                   },
                 ],
               },

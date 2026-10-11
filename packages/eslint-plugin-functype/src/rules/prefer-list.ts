@@ -4,7 +4,12 @@ import type { ASTNode } from "../types/ast"
 import { descendants } from "../utils/ast-walk"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
-import { flowsIntoArraySlot, flowsIntoMutableArraySlot, isUntypedExpression } from "../utils/type-aware"
+import {
+  flowsIntoArraySlot,
+  flowsIntoMutableArraySlot,
+  hasTypeInformation,
+  isUntypedExpression,
+} from "../utils/type-aware"
 import { DEFAULT_WIRE_TYPES, isInsideWireType, WIRE_TYPES_SCHEMA } from "../utils/wire-types"
 
 /** AST keys that don't represent syntax children — back-edges and source metadata. */
@@ -75,9 +80,67 @@ function throughConditionals(node: ASTNode): ASTNode {
   return node
 }
 
-/** `[…].join(" ")`, `[a, b].includes(x)`, `[...x].sort(…)`: a literal whose method is called on the spot. */
-function isTransientReceiver(node: ASTNode, parent: ASTNode | null | undefined): boolean {
-  return parent?.type === "MemberExpression" && parent.object === node && parent.parent?.type === "CallExpression"
+/**
+ * Methods that turn an array into a single value: using a collection only through these makes it a
+ * temporary (`lines.join("\n")`, `[a, b].includes(x)`). Methods that produce another collection
+ * (`map`, `filter`, `slice`, `concat`, `reduce`…) are collection work, which is what `List` is for.
+ */
+const TERMINAL_METHODS: ReadonlySet<string> = new Set([
+  "join",
+  "includes",
+  "indexOf",
+  "lastIndexOf",
+  "some",
+  "every",
+  "find",
+  "findIndex",
+  "findLast",
+  "findLastIndex",
+  "at",
+])
+
+/**
+ * The end of a method chain that starts at `receiver`: `[…].map(f).filter(g)` → the `.filter(g)` call.
+ * `receiver` itself when no method is called on it.
+ */
+function chainEnd(receiver: ASTNode): ASTNode {
+  const member = receiver.parent as ASTNode | undefined
+  const call = member?.parent as ASTNode | undefined
+  if (member?.type !== "MemberExpression" || member.object !== receiver) return receiver
+  return call?.type === "CallExpression" && call.callee === member ? chainEnd(call) : receiver
+}
+
+/**
+ * Does the method chain starting at `receiver` end in a single value: `[a, b].filter(Boolean).length`,
+ * `[name, email].filter(nonEmpty).join("\n")`, `[...xs].sort(byRank)[0]`? Then every array in it is a
+ * temporary, the same as `lines.join("\n")`.
+ */
+function chainEndsInSingleValue(receiver: ASTNode): boolean {
+  if (isTerminalRead(receiver)) return true
+  const member = receiver.parent as ASTNode | undefined
+  const call = member?.parent as ASTNode | undefined
+  if (member?.type !== "MemberExpression" || member.object !== receiver) return false
+  return call?.type === "CallExpression" && call.callee === member && chainEndsInSingleValue(call)
+}
+
+/** `{items.map((i) => <Row />)}`: an expression rendered as JSX children, which React takes as an array. */
+function isJsxChild(node: ASTNode): boolean {
+  return (node.parent as ASTNode | undefined)?.type === "JSXExpressionContainer"
+}
+
+/**
+ * Is `receiver` read down to a single value on the spot: `.length`, `[i]`, or a terminal method call?
+ * The same test applies to a literal (`[a, b].includes(x)`) and to every use of a const (`lines.join`).
+ */
+function isTerminalRead(receiver: ASTNode): boolean {
+  const member = receiver.parent as ASTNode | undefined
+  if (member?.type !== "MemberExpression" || member.object !== receiver) return false
+  const grand = member.parent as ASTNode | undefined
+  if (grand?.type === "AssignmentExpression" && grand.left === member) return false
+  if (member.computed) return true
+  const name = member.property?.type === "Identifier" ? member.property.name : null
+  if (name === "length") return true
+  return name !== null && TERMINAL_METHODS.has(name) && grand?.type === "CallExpression" && grand.callee === member
 }
 
 /**
@@ -183,7 +246,7 @@ const rule: Rule.RuleModule = {
     messages: {
       preferList: "Prefer List<{{type}}> over array type {{arrayType}}",
       preferReadonlyOrList:
-        "Mutable array type {{arrayType}}: use ReadonlyArray<{{type}}> where it crosses a boundary, or List<{{type}}> inside your own code",
+        "Mutable array type {{arrayType}}: anything holding it can change it. Use ReadonlyArray<{{type}}>, which every caller and library accepts, or List<{{type}}> for a collection you transform",
       preferWireCast:
         "Cast to the mutable array {{arrayType}}: this is data decoded from outside. Declare its shape once as Wire<ReadonlyArray<{{type}}>> (functype's boundary marker) and cast to that",
       mutatedArray:
@@ -263,19 +326,10 @@ const rule: Rule.RuleModule = {
       )
     }
 
-    /** `lines.join("\n")`: a non-mutating method called on the spot. */
-    function isReadOnlyMethodReceiver(identifier: ASTNode): boolean {
-      const member = identifier.parent as ASTNode | undefined
-      if (member?.type !== "MemberExpression" || member.object !== identifier || member.computed) return false
-      const name = member.property?.type === "Identifier" ? member.property.name : null
-      const call = member.parent as ASTNode | undefined
-      return name !== null && !MUTATING_METHODS.has(name) && call?.type === "CallExpression" && call.callee === member
-    }
-
     /**
      * `const OPTIONS = [...]` whose every use hands it to an array-typed slot (`<Select data={OPTIONS} />`,
-     * `db.insert(t).values(ROWS)`) or calls a read-only method on it (`lines.join("\n")`): data built to give
-     * to a library, or a temporary, declared before it's used. Needs at least one local use; an exported
+     * `db.insert(t).values(ROWS)`) or reads it down to a single value (`lines.join("\n")`, `xs.length`): data
+     * built to give to a library, or a temporary, declared before it's used. Needs at least one local use; an exported
      * constant with no local use is still reported, because its consumers aren't visible here.
      */
     function isOnlyHandedToArraySlots(declarator: ASTNode | null | undefined): boolean {
@@ -285,9 +339,7 @@ const rule: Rule.RuleModule = {
         .flatMap((variable) => variable.references.filter((ref) => !ref.init))
       return (
         uses.length > 0 &&
-        uses.every(
-          (ref) => reachesArraySlot(ref.identifier as ASTNode) || isReadOnlyMethodReceiver(ref.identifier as ASTNode),
-        )
+        uses.every((ref) => reachesArraySlot(ref.identifier as ASTNode) || isTerminalRead(ref.identifier as ASTNode))
       )
     }
 
@@ -363,10 +415,11 @@ const rule: Rule.RuleModule = {
         n.type === "TSAsExpression" ? castSource(n.expression as ASTNode) : n
       if (cast && flowsIntoMutableArraySlot(cast, context) === true) return
       // Only a cast of an untyped value (`JSON.parse`, `res.json()`, a raw row) is decoding outside data,
-      // the Wire case. Without type information, any cast that isn't of a literal counts.
+      // the Wire case. It needs type evidence: without it the rule can't tell decoding from re-casting a
+      // typed value, so it gives the plain message rather than advice that flips when types are turned on.
       const source = cast ? castSource(cast) : null
       const decodes =
-        source !== null && source.type !== "ArrayExpression" && isUntypedExpression(source, context) !== false
+        source !== null && source.type !== "ArrayExpression" && isUntypedExpression(source, context) === true
       if (cast && decodes) {
         context.report({
           node: reportNode,
@@ -603,8 +656,13 @@ const rule: Rule.RuleModule = {
         // boundary itself and `List` can't go there.
         if (flowsIntoArraySlot(node, context) === true || flowsIntoArraySlot(target, context) === true) return
         if (isFunctypeConstructorArg(target, targetParent)) return
-        // Used on the spot (`[a, b].includes(x)`, `[...].join("\n")`, `[...x].sort(…)`): nothing is stored.
-        if (isTransientReceiver(node, parent) || isTransientReceiver(target, targetParent)) return
+        // Read down to one value on the spot (`[a, b].includes(x)`, `[a, b].filter(Boolean).join(" ")`):
+        // nothing is stored.
+        if (chainEndsInSingleValue(node) || chainEndsInSingleValue(target)) return
+        // A chain whose result goes to React or a library (`{["PDF", "DOCX"].map((f) => <Chip />)}`,
+        // `marks={[3, 4].map(…)}`): the transformed array is what's handed over, so the literal is too.
+        const end = chainEnd(target)
+        if (end !== target && (isJsxChild(end) || flowsIntoArraySlot(end, context) === true)) return
         // Spread into a call (`and(...(c ? [x] : []))`): the function gets the elements one by one.
         if (isSpreadIntoCall(node)) return
         // `const acc = [...]; acc.push(x)`: an accumulator. The defect is the mutation, so it gets the same
@@ -616,6 +674,9 @@ const rule: Rule.RuleModule = {
             return
           }
         }
+        // Without type information the rule can't tell a literal handed to a library (drizzle
+        // `.values([...])`) from a collection of your own, so it reports neither rather than guess.
+        if (!hasTypeInformation(context)) return
         if (isOnlyHandedToArraySlots(targetParent)) return
 
         // Check if any element is a SpreadElement — ambiguous semantics, skip suggestions
