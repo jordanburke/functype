@@ -11,7 +11,7 @@
  *   pnpm release major   # requires ALLOW_MAJOR env (see check-publish-safety)
  *
  * Flow:
- *   1. Verify clean working tree, on main, in sync with origin/main
+ *   1. Verify clean working tree, on main or release/<major>.x, in sync with its origin
  *   2. Run `pnpm validate` (full workspace lint + typecheck + test + build)
  *   3. Compute new functype version from current + bump level
  *   4. Apply to all 6 family package.jsons
@@ -104,17 +104,21 @@ if (dirty) {
   );
   process.exit(1);
 }
+// `main` carries the next major; `release/<major>.x` branches carry additive releases
+// of an older line (e.g. `release/1.x` while `main` is 2.0-bound).
 const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
-if (branch !== "main") {
-  console.error(`✗ Not on main (currently on ${branch}). Release from main.`);
+if (branch !== "main" && !/^release\/\d+\.x$/.test(branch)) {
+  console.error(
+    `✗ Not on a release branch (currently on ${branch}). Release from main or release/<major>.x.`,
+  );
   process.exit(1);
 }
-run("git", ["fetch", "origin", "main", "--quiet"]);
+run("git", ["fetch", "origin", branch, "--quiet"]);
 const local = capture("git", ["rev-parse", "HEAD"]);
-const remote = capture("git", ["rev-parse", "origin/main"]);
+const remote = capture("git", ["rev-parse", `origin/${branch}`]);
 if (local !== remote) {
   console.error(
-    `✗ Local main is not in sync with origin/main.\n  local=${local}\n  remote=${remote}`,
+    `✗ Local ${branch} is not in sync with origin/${branch}.\n  local=${local}\n  remote=${remote}`,
   );
   process.exit(1);
 }
