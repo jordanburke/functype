@@ -168,7 +168,15 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Set", "Functor", "Foldable", "Serializable", "Traversable"),
     methods: {
       create: ["Set([...])", "Set.of(...)", "Set.empty()"],
-      transform: [".map(f)", ".filter(p)", ".union(s)", ".intersection(s)", ".difference(s)", ".add(v)"],
+      transform: [
+        ".map(f)",
+        ".filter(p)",
+        ".union(s)",
+        ".intersection(s)",
+        ".difference(s)",
+        ".add(v)",
+        ".mapAsync(f, {concurrency?}) // in order by default",
+      ],
       extract: [".fold(z, f)", ".toArray()"],
       check: [".has(v)", ".isEmpty", ".size"],
       other: ['import { Set } from "functype"  // its own name; the built-in is globalThis.Set'],
@@ -405,10 +413,12 @@ export const TYPES: Record<string, TypeData> = {
         ".repeatWhile(cont, { max, delayMs? })",
         ".timeout(ms)",
         ".interruptOn(signal) // stops at the next step once the AbortSignal fires; E gains InterruptedError",
+        "IO.async((signal?) => fetch(url, { signal })) // thunk gets the run's AbortSignal inside a region",
         ".delay(ms)",
         ".zip(io)",
         ".pipe(f)",
-        "IO.all([...])",
+        "IO.all([...], { concurrency? }) // in order by default; first failure interrupts the rest",
+        "IO.forEach(items, f, { concurrency? })",
         "IO.race([...])",
         "IO.iterate(seed, step, done, { max? })",
         "IO.bracket(acquire, use, release)",
@@ -623,6 +633,7 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: [
         "Decoder.string / .number / .boolean / .unknown / .nullable(inner)",
+        "Decoder.fromThrowing(parse) // adapt a throwing parser such as Zod's schema.parse",
         "Decoder.option(inner)",
         "Decoder.either.envelope({ok, err})",
         "Decoder.either.discriminated({tag, leftTag, rightTag}, l, r)",

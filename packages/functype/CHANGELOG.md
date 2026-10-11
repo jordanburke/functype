@@ -6,6 +6,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases ship from this branch. Everything here is additive; existing code behaves as before.
+
+- **`IO.all` and `IO.forEach` take `{ concurrency }`.** Both still run one effect at a time by default. `{ concurrency: n }` runs up to `n` at once, and `"unbounded"` starts them all. Results keep input order. With more than one in flight, the first failure is the result at once, and the other effects are interrupted: they start no new step, and an `IO.async` thunk sees its signal abort. A promise that ignores its signal keeps running, but the result doesn't wait for it. A bad value throws `RangeError` when the IO is built. In 2.0, `IO.all` defaults to `"unbounded"`.
+- **`IO.async` and `IO.tryPromise` thunks receive an abort signal.** Inside `interruptOn`, `runCancellable` or `runExit({ signal })`, the thunk gets the run's `AbortSignal`; pass it to `fetch` and the request stops when the run is cancelled. Outside a region it is `undefined`, and a zero-argument thunk works as before. A thunk whose first parameter is something else, such as `(page = 1) => load(page)`, now receives the signal in that slot inside a region, so wrap it: `IO.async(() => load())`. `IO.tryAsync` now combines the caller's signal with the region's. The signal stays live after `IO.all` succeeds, so a response body can still be read.
+- **`Decoder.fromThrowing(parse)`** adapts a parser that throws (Zod's `schema.parse`, a hand-written check) into a `Decoder`. A throw becomes a `DecoderError` leaf whose `cause` is the thrown value. Use it in place of `Http`'s deprecated `validate`: `decode: Decoder.fromThrowing((raw) => schema.parse(raw))`. 2.0 removes `validate`, and `npx functype upgrade` rewrites it to this form.
+- **`Set.mapAsync(f, { concurrency? })`**, matching `List.mapAsync`: one call at a time by default, and equal results collapse into one.
+
 ## 1.15.0 - 2026-10-10
 
 - **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (CivalaOS 821 → 215, agent-todo 843 → 328). CivalaOS's hits were classified with civala's agent, and the design was reviewed by a second model.
