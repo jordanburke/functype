@@ -1,4 +1,4 @@
-import type { TaskState } from "../async/TaskState"
+import type { AsyncState } from "../async/AsyncState"
 
 /**
  * Structural view of a React Query result — the discriminated shape this module
@@ -19,7 +19,7 @@ export type MutationResultView<E, A> =
   | { readonly status: "error"; readonly error: E }
 
 /**
- * Projects a React Query result onto the package's `TaskState` ADT, so a query can
+ * Projects a React Query result onto the package's `AsyncState` ADT, so a query can
  * be folded or matched exhaustively instead of read through `data && !error && !isLoading`.
  *
  * This is the whole point of `functype-react`: omitting a case becomes a compile
@@ -40,11 +40,11 @@ export type MutationResultView<E, A> =
  * ```
  *
  * A disabled query (`enabled: false`, never fetched) projects to `Idle`; an
- * in-flight or paused one to `Pending`. Reuses the same `TaskState` that
- * `functype-react/async`'s `useTask` returns, so both async surfaces match alike.
+ * in-flight or paused one to `Pending`. Reuses the same `AsyncState` that
+ * `functype-react/async`'s `useIO` returns, so both async surfaces match alike.
  *
  * **Stale data on a failed refetch.** React Query keeps the last successful `data`
- * while setting `status: "error"` when a *background refetch* fails. `TaskState` has
+ * while setting `status: "error"` when a *background refetch* fails. `AsyncState` has
  * no variant for "loaded, but the latest fetch failed", so that squashes to `Failure`
  * and the still-held data is not surfaced through the ADT — a transient background
  * failure will flip a loaded view to an error branch. This is the deliberate default:
@@ -57,7 +57,7 @@ export type MutationResultView<E, A> =
  * arise here, but it is worth knowing that `.error` is `E` by construction rather
  * than by proof.
  */
-export const toQueryState = <E, A>(result: QueryResultView<E, A>): TaskState<E, A> => {
+export const toQueryState = <E, A>(result: QueryResultView<E, A>): AsyncState<E, A> => {
   switch (result.status) {
     case "success":
       return { _tag: "Success", value: result.data }
@@ -69,10 +69,10 @@ export const toQueryState = <E, A>(result: QueryResultView<E, A>): TaskState<E, 
 }
 
 /**
- * Projects a React Query mutation result onto `TaskState`. React Query models an
+ * Projects a React Query mutation result onto `AsyncState`. React Query models an
  * unfired mutation as `status: "idle"`, which maps directly onto `Idle`.
  */
-export const toMutationState = <E, A>(result: MutationResultView<E, A>): TaskState<E, A> => {
+export const toMutationState = <E, A>(result: MutationResultView<E, A>): AsyncState<E, A> => {
   switch (result.status) {
     case "success":
       return { _tag: "Success", value: result.data }

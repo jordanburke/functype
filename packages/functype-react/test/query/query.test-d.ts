@@ -3,7 +3,7 @@ import type { QueryFunctionContext, QueryKey } from "@tanstack/react-query"
 import type { HttpError } from "functype/fetch"
 import { describe, expectTypeOf, it } from "vitest"
 
-import type { TaskState } from "../../src/async/TaskState"
+import type { AsyncState } from "../../src/async/AsyncState"
 import type { MatchCases } from "../../src/match/Match"
 import type { IOQueryError } from "../../src/query/IOQueryError"
 import type { ioMutationFn, ioQueryFn } from "../../src/query/ioQueryFn"
@@ -42,27 +42,27 @@ describe("useIOMutation types", () => {
   })
 })
 
-describe("TaskState projection", () => {
-  it("projects onto the same TaskState the async subpath uses", () => {
+describe("AsyncState projection", () => {
+  it("projects onto the same AsyncState the async subpath uses", () => {
     expectTypeOf(toQueryState<IOQueryError<HttpError>, number>).returns.toEqualTypeOf<
-      TaskState<IOQueryError<HttpError>, number>
+      AsyncState<IOQueryError<HttpError>, number>
     >()
   })
 
   it("hands the Success branch a defined value — no `| undefined`, no `!`", () => {
-    type Success = Extract<TaskState<IOQueryError<HttpError>, number>, { _tag: "Success" }>
+    type Success = Extract<AsyncState<IOQueryError<HttpError>, number>, { _tag: "Success" }>
 
     expectTypeOf<Success["value"]>().toEqualTypeOf<number>()
   })
 
   it("keeps the functype error reachable through the Failure branch", () => {
-    type Failure = Extract<TaskState<IOQueryError<HttpError>, number>, { _tag: "Failure" }>
+    type Failure = Extract<AsyncState<IOQueryError<HttpError>, number>, { _tag: "Failure" }>
 
     expectTypeOf<Failure["error"]["error"]>().toEqualTypeOf<HttpError>()
   })
 
   it("makes an omitted case a compile error", () => {
-    type Cases = MatchCases<TaskState<IOQueryError<HttpError>, number>>
+    type Cases = MatchCases<AsyncState<IOQueryError<HttpError>, number>>
 
     // @ts-expect-error -- `Success` is missing; exhaustiveness must reject this.
     const incomplete: Cases = { Idle: () => null, Pending: () => null, Failure: () => null }

@@ -25,8 +25,8 @@ describe("functype-react main entry", () => {
   })
 
   it("intentionally does NOT re-export ./async or ./forms from the main entry (subpath-only)", () => {
-    expect((functypeReact as Record<string, unknown>).useTask).toBeUndefined()
-    expect((functypeReact as Record<string, unknown>).TaskBoundary).toBeUndefined()
+    expect((functypeReact as Record<string, unknown>).useIO).toBeUndefined()
+    expect((functypeReact as Record<string, unknown>).AsyncBoundary).toBeUndefined()
     expect((functypeReact as Record<string, unknown>).useValidatedField).toBeUndefined()
     expect((functypeReact as Record<string, unknown>).useValidatedForm).toBeUndefined()
   })

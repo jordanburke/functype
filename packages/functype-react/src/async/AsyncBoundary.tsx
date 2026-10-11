@@ -10,7 +10,7 @@ type Props = {
 
 type State = { readonly _tag: "Ok" } | { readonly _tag: "Errored"; readonly error: unknown }
 
-class TaskErrorBoundary extends Component<
+class AsyncErrorBoundary extends Component<
   { readonly fallback: Props["fallback"]; readonly children: ReactNode },
   State
 > {
@@ -37,7 +37,7 @@ class TaskErrorBoundary extends Component<
 }
 
 /**
- * Combines `<Suspense>` (for pending Tasks consumed via `useTaskValue`) with
+ * Combines `<Suspense>` (for pending effects consumed via `useIOValue`) with
  * an ErrorBoundary that catches thrown failures. The `fallback` render prop
  * receives the thrown value (typed `unknown` — consumers narrow) and a
  * `reset` callback that clears the error so children can be re-attempted.
@@ -45,10 +45,10 @@ class TaskErrorBoundary extends Component<
  * The ErrorBoundary wraps the Suspense, matching React's documented rule
  * (otherwise Suspense would catch errors instead of the boundary).
  */
-export function TaskBoundary(props: Props): ReactElement {
+export function AsyncBoundary(props: Props): ReactElement {
   return (
-    <TaskErrorBoundary fallback={props.fallback}>
+    <AsyncErrorBoundary fallback={props.fallback}>
       <Suspense fallback={props.pending}>{props.children}</Suspense>
-    </TaskErrorBoundary>
+    </AsyncErrorBoundary>
   )
 }
