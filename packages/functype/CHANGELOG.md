@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.16.0 - 2026-10-12
+
 First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases ship from this branch. Everything here is additive; existing code behaves as before.
 
 - **`IO.all` and `IO.forEach` take `{ concurrency }`.** Both still run one effect at a time by default. `{ concurrency: n }` runs up to `n` at once, and `"unbounded"` starts them all. Results keep input order. With more than one in flight, the first failure is the result at once, and the other effects are interrupted: they start no new step, and an `IO.async` thunk sees its signal abort. A promise that ignores its signal keeps running, but the result doesn't wait for it. A bad value throws `RangeError` when the IO is built. In 2.0, `IO.all` defaults to `"unbounded"`.
