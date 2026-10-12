@@ -117,6 +117,29 @@ describe("IO.all concurrency", () => {
     expect(exit.isDie()).toBe(true)
   })
 
+  it("keeps an inner IO.all's failure from interrupting the outer one's other effects", async () => {
+    const seen = { outerAborted: false }
+    const outerSibling = IO.async(async (signal) => {
+      await tick(20)
+      seen.outerAborted = signal?.aborted ?? false
+      return "outer"
+    })
+    const inner = IO.all([IO.fail("inner"), IO.async(() => tick(20).then(() => 1))], {
+      concurrency: "unbounded",
+    }).recover([])
+    const effects: ReadonlyArray<IO<never, unknown, unknown>> = [inner, outerSibling]
+    const result = await IO.all(effects, { concurrency: "unbounded" }).runOrThrow()
+    expect(result).toEqual([[], "outer"])
+    expect(seen.outerAborted).toBe(false)
+  })
+
+  it("starts only as many workers as there are effects when concurrency is larger", async () => {
+    const gauge = { now: 0, max: 0 }
+    const result = await IO.all([tracked(gauge, 1, 5), tracked(gauge, 2, 5)], { concurrency: 10 }).runOrThrow()
+    expect(result).toEqual([1, 2])
+    expect(gauge.max).toBe(2)
+  })
+
   it("rejects a bad concurrency when the IO is built", () => {
     expect(() => IO.all([IO.succeed(1)], { concurrency: 0 })).toThrow(RangeError)
     expect(() => IO.forEach([1], IO.succeed, { concurrency: 1.5 })).toThrow(RangeError)
@@ -230,6 +253,32 @@ describe("abort signal for async thunks", () => {
     await io.run()
     expect(added.n).toBeGreaterThan(0)
     expect(added.removed).toBe(added.n)
+  })
+
+  it("tryAsync with no caller signal gets the region's signal, and undefined outside a region", async () => {
+    const region = new AbortController()
+    const seen: Array<AbortSignal | undefined> = []
+    const call = IO.tryAsync(
+      (signal) => {
+        seen.push(signal)
+        return new Promise<number>((_, reject) => signal?.addEventListener("abort", () => reject(new Error("stop"))))
+      },
+      (e) => e as Error,
+    )
+    const running = call.interruptOn(region.signal).run()
+    await tick(5)
+    region.abort()
+    await running
+    expect(seen[0]?.aborted).toBe(true)
+
+    await IO.tryAsync(
+      (signal) => {
+        seen.push(signal)
+        return Promise.resolve(1)
+      },
+      (e) => e as Error,
+    ).run()
+    expect(seen[1]).toBeUndefined()
   })
 
   it("tryAsync combines the caller's signal with the region's", async () => {
