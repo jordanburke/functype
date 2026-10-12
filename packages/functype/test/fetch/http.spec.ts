@@ -504,6 +504,40 @@ describe("Http", () => {
     })
   })
 
+  describe("decode: Decoder.fromThrowing (the replacement for validate)", () => {
+    const parseUser = (raw: unknown): { id: number } => {
+      const id = (raw as { id?: unknown }).id
+      if (typeof id !== "number") throw new Error("id must be a number")
+      return { id }
+    }
+
+    it("passes a parsed value through as data", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 7 } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http
+        .get("https://api.test/users/7", { decode: Decoder.fromThrowing(parseUser) })
+        .runOrThrow()
+      expect(result.data).toEqual({ id: 7 })
+    })
+
+    it("turns a throw into HttpError.DecodeError whose cause is a Leaf carrying the thrown error", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: "seven" } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
+      const result = await http.get("https://api.test/users/7", { decode: Decoder.fromThrowing(parseUser) }).run()
+      const error = result.fold(
+        (e) => e,
+        () => undefined,
+      )
+      expect(error?._tag).toBe("DecodeError")
+      const cause = (error as { cause: DecoderError }).cause
+      expect(cause._tag).toBe("Leaf")
+      if (cause._tag === "Leaf") {
+        expect(cause.message).toBe("id must be a number")
+        expect(cause.cause).toBeInstanceOf(Error)
+      }
+    })
+  })
+
   describe("decode: Decoder<T> (Either-returning, 2.0.0)", () => {
     it("should decode a typed response on success", async () => {
       const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 1, name: "Alice" } })

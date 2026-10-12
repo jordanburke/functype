@@ -338,3 +338,37 @@ describe("Decoder", () => {
     expect(List([1, 2]).toArray()).toEqual([1, 2])
   })
 })
+
+describe("Decoder.fromThrowing", () => {
+  const parsePositive = (raw: unknown): number => {
+    if (typeof raw !== "number" || raw <= 0) throw new Error("expected a positive number")
+    return raw
+  }
+
+  it("returns Right with the parsed value", () => {
+    expect(Decoder.fromThrowing(parsePositive)(3).value).toBe(3)
+  })
+
+  it("turns a throw into a leaf error carrying the thrown value", () => {
+    const result = Decoder.fromThrowing(parsePositive)(-1)
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error).toMatchObject({ _tag: "Leaf", path: [], message: "expected a positive number" })
+    expect((error as { cause?: unknown }).cause).toBeInstanceOf(Error)
+  })
+
+  it("stringifies a non-Error throw", () => {
+    const result = Decoder.fromThrowing(() => {
+      throw "nope"
+    })(null)
+    expect(result.fold((e) => (e as { message: string }).message, String)).toBe("nope")
+  })
+
+  it("composes with the other decoders", () => {
+    const decoder = Decoder.object({ n: Decoder.fromThrowing(parsePositive) })
+    expect(decoder({ n: 2 }).value).toEqual({ n: 2 })
+    expect(decoder({ n: 0 }).isLeft()).toBe(true)
+  })
+})

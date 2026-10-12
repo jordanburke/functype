@@ -19,6 +19,25 @@ const boolean: Decoder<boolean> = (raw) =>
 
 const unknownDecoder: Decoder<unknown> = (raw) => Right(raw)
 
+/**
+ * Adapts a parser that throws on bad input (Zod's `schema.parse`, a hand-written check) into a
+ * `Decoder`. A throw becomes a `DecoderError` leaf whose `cause` is the thrown value.
+ *
+ * @example
+ * ```typescript
+ * Http.get("/api/user", { decode: Decoder.fromThrowing((raw) => UserSchema.parse(raw)) })
+ * ```
+ */
+const fromThrowing =
+  <A>(parse: (raw: unknown) => A): Decoder<A> =>
+  (raw) => {
+    try {
+      return Right(parse(raw))
+    } catch (e) {
+      return Left(DecoderError.leaf([], e instanceof Error ? e.message : String(e), e))
+    }
+  }
+
 const nullable =
   <A>(inner: Decoder<A>): Decoder<A | null> =>
   (raw) =>
@@ -206,6 +225,7 @@ export const DecoderCompanion = {
   number,
   boolean,
   unknown: unknownDecoder,
+  fromThrowing,
   nullable,
   option,
   either,

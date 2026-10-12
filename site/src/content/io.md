@@ -74,9 +74,11 @@ io.orElse(fallbackIO);
 ## Combining Effects
 
 ```typescript
-// Run in order (IO.all does not run effects in parallel yet)
-IO.all([io1, io2, io3]); // All must succeed; stops at the first failure
+// In order by default; all must succeed, and it stops at the first failure
+IO.all([io1, io2, io3]);
+IO.all([io1, io2, io3], { concurrency: 2 }); // Up to 2 at once; the first failure interrupts the rest
 IO.forEach(items, (item) => save(item)); // One effect per item, in order
+IO.forEach(items, (item) => save(item), { concurrency: "unbounded" });
 IO.race([io1, io2]); // First to complete wins
 IO.any([io1, io2, io3]); // First success wins
 
@@ -192,6 +194,9 @@ poll
 
 // Or start it with a handle
 const { result, cancel } = loadReport.runCancellable();
+
+// An async thunk receives the run's signal, so a request stops too
+const load = IO.async((signal) => fetch(url, { signal }).then((r) => r.json()));
 ```
 
 - Inside the cancelled section, `retry`, `recover` and `catchAll` can't swallow the cancellation.
