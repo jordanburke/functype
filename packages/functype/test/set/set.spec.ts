@@ -98,3 +98,46 @@ describe("Set", () => {
     expect(set.toSet()).toBe(set)
   })
 })
+
+describe("Set.mapAsync", () => {
+  test("collects results into a Set, collapsing equal ones", async () => {
+    const result = await Set([1, 2, 3, 4]).mapAsync(async (n) => n % 2)
+    expect(result.toArray().sort()).toEqual([0, 1])
+  })
+
+  test("runs one call at a time by default", async () => {
+    const gauge = { now: 0, max: 0 }
+    await Set([1, 2, 3]).mapAsync(async (n) => {
+      gauge.now += 1
+      gauge.max = Math.max(gauge.max, gauge.now)
+      await new Promise((resolve) => setTimeout(resolve, 2))
+      gauge.now -= 1
+      return n
+    })
+    expect(gauge.max).toBe(1)
+  })
+
+  test("runs up to `concurrency` calls at once", async () => {
+    const run = async (concurrency: number | "unbounded"): Promise<number> => {
+      const gauge = { now: 0, max: 0 }
+      const result = await Set([1, 2, 3, 4, 5]).mapAsync(
+        async (n) => {
+          gauge.now += 1
+          gauge.max = Math.max(gauge.max, gauge.now)
+          await new Promise((resolve) => setTimeout(resolve, 2))
+          gauge.now -= 1
+          return n * 10
+        },
+        { concurrency },
+      )
+      expect(result.toArray().sort((x, y) => x - y)).toEqual([10, 20, 30, 40, 50])
+      return gauge.max
+    }
+    expect(await run(2)).toBe(2)
+    expect(await run("unbounded")).toBe(5)
+  })
+
+  test("rejects when a call rejects", async () => {
+    await expect(Set([1]).mapAsync(() => Promise.reject(new Error("boom")))).rejects.toThrow("boom")
+  })
+})

@@ -23,6 +23,12 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   has(value: unknown): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
+  /**
+   * Async map: awaits `f` for each element and collects the results into a Set, so equal results
+   * collapse into one. Runs one call at a time by default; pass `{ concurrency: n }` to allow up to
+   * `n` at once, or `"unbounded"`. A rejection rejects the result, and no further calls start.
+   */
+  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
@@ -74,6 +80,9 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       }
       return createSet(results)
     },
+
+    mapAsync: async <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<Set<B>> =>
+      createSet(await traverseWithConcurrency(values, f, options?.concurrency ?? 1)),
 
     flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): Promise<Set<B>> => {
       const results = await traverseWithConcurrency(values, f, options?.concurrency ?? 1)

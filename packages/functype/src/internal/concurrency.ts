@@ -12,7 +12,7 @@ export type ConcurrencyOptions = {
   readonly concurrency?: Concurrency
 }
 
-const workerCount = (concurrency: Concurrency, itemCount: number): number => {
+export const workerCount = (concurrency: Concurrency, itemCount: number): number => {
   if (concurrency === "unbounded") return itemCount
   if (!Number.isInteger(concurrency) || concurrency < 1) {
     throw new RangeError(`concurrency must be a positive integer or "unbounded", got ${String(concurrency)}`)

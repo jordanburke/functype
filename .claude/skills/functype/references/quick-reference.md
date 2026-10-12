@@ -227,9 +227,10 @@ await List(urls).mapAsync(get, { concurrency: 4 })   // up to 4 at once
 
 // Inside IO: IO.forEach runs in order and stops at the first failure
 IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
+IO.forEach(urls, fetchPage, { concurrency: 4 })      // up to 4 at once; first failure interrupts the rest
 ```
 
-`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.flatMapAsync` and `Either.traverseAsync` run one at a time; `List.flatMapAsync` starts every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` and `IO.all` currently run in order too.
+`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.mapAsync`, `Set.flatMapAsync`, `Either.traverseAsync`, `IO.all` and `IO.forEach` run one at a time; `List.flatMapAsync` starts every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` is an alias of `IO.forEach` and runs in order; use `IO.forEach(items, f, { concurrency })`.
 
 ## Pipeline Composition
 
