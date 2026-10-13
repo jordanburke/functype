@@ -31,7 +31,7 @@
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
     "@astrojs/mdx": "^8.0.3",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   }
