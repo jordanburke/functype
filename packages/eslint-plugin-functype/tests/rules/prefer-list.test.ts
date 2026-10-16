@@ -58,6 +58,14 @@ describe("prefer-list", () => {
         code: "/**\n * Status - Auto-generated file\n *\n * DO NOT EDIT MANUALLY\n */\nexport const sites: string[] = ['a']",
       },
       {
+        name: "Supabase's generated types (type Json + type Database, no marker) are skipped",
+        code: "export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]\nexport type Database = { public: { Tables: { t: { Row: { tags: string[] } } } } }\ntype Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+      },
+      {
+        name: "Older Supabase CLIs declare Database as an interface, and are skipped too",
+        code: "export type Json = string | number | boolean | null | Json[]\nexport interface Database { public: { Tables: {} } }\ntype Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+      },
+      {
         name: "A fallback literal in a conditional whose result is used on the spot",
         code: 'export const labels = (roles: ReadonlyArray<string>) => (roles.length ? roles : ["—"]).map((r) => r.toUpperCase())',
       },
@@ -115,6 +123,16 @@ describe("prefer-list", () => {
       },
     ],
     invalid: [
+      {
+        name: "Exporting Json alone is not the Supabase signature",
+        code: "export type Json = string | number\ntype Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+        errors: [{ messageId: "mutatedArray", data: { name: "errors", how: "push" } }],
+      },
+      {
+        name: "Json and Database must both be exported, not just declared",
+        code: "type Json = string | number\ntype Database = { x: 1 }\ntype Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
+        errors: [{ messageId: "mutatedArray", data: { name: "errors", how: "push" } }],
+      },
       {
         name: "A field that is pushed to somewhere in the file gets the mutation advice",
         code: "type Tally = { errors: string[] }; export function note(t: Tally, e: string) { t.errors.push(e) }",
