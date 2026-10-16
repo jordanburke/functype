@@ -6,6 +6,7 @@ import type { DecoderError } from "./DecoderError"
 import { tagged } from "./tagged"
 
 export type { DecoderErrorComposite, DecoderErrorLeaf } from "./DecoderError"
+export type { Encoder } from "./Encoder"
 export { DecoderError } from "./DecoderError"
 
 /**

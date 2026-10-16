@@ -352,6 +352,7 @@ success-or-not, `runExit()` to tell a typed failure from a **defect** or an inte
 | Check failure      | `exit.isFailure()`                                   | a value from the declared `E` channel                        |
 | Check defect       | `exit.isDie()`                                       | a value that is **not** an `E`                               |
 | Check interrupted  | `exit.isInterrupted()`                               | cancelled                                                    |
+| Read the payload   | `exit.value` / `.error` / `.defect` / `.fiberId`     | after the matching guard (`isSuccess()` → `.value`, …)        |
 | Pattern match      | `exit.fold(onFail, onOk, onInterrupted?, onDie?)`    | last two optional; fall back to `onFail`                     |
 | Pattern match      | `exit.match({Success, Failure, Interrupted, Die?})`  | `Die` optional; falls back to `Failure`                      |
 | Construct          | `Exit.succeed(v)` / `Exit.fail(e)` / `Exit.die(d)`   | plus `Exit.interrupt(id)` / `Exit.interrupted()`             |
@@ -374,6 +375,7 @@ recovered it. The sync interpreter can't make the distinction — `runSync()` re
 | GET with decoder  | `Http.get(url, { decode })`             | `Http.get("/u", { decode: userDecoder })`                               |
 | With query params | `Http.get(url, { params })`             | `Http.get("/s", { params: { q: "x", tag: ["a","b"] } })` (null dropped) |
 | Client config     | `Http.client({ baseUrl, beforeRequest, afterResponse })` | `Http.client({ baseUrl, afterResponse: r => IO.succeed(r) })` |
+| Custom body shape | `Http.post(url, { body, encode })`      | `encode: (u: NewUser) => ({ user_name: u.name })` (overrides `flatten`) |
 | Production retry  | `.retryWithBackoff({n, baseMs, while})` | `Http.get(url).retryWithBackoff({n:3, baseMs:250, while:isRetryable})`  |
 | Refresh-on-401    | `.catchTag("HttpStatusError", e => …)`  | `e.status===401 ? refresh().flatMap(()=>retry) : IO.fail(e)`            |
 

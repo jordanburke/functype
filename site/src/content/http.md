@@ -12,7 +12,7 @@ HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<unknown>>` effec
 - Three typed error variants: `NetworkError`, `HttpStatusError`, `DecodeError`
 - Zero dependencies — uses `globalThis.fetch` (browsers, Node 18+, Bun, Deno)
 - Auto content-type detection from response headers (JSON, text, raw)
-- Body serialization — objects are automatically JSON-serialized with `Content-Type: application/json`
+- Body serialization — objects are automatically JSON-serialized with `Content-Type: application/json`. Pass `encode: Encoder<TReq>` to control the wire shape yourself
 - Configurable clients with base URLs and default headers
 
 Nothing runs until you call `.run()` or `.runOrThrow()`.
@@ -108,6 +108,38 @@ Http.get("/api/users", {
   }),
 });
 ```
+
+## Request bodies
+
+Object bodies are JSON-serialized. By default (`flatten: true`) functype containers are stripped to
+plain JSON first: `Option` becomes the value or `null`, `List` an array, `Map` a record.
+`flatten: false` sends each container's tagged `{_tag, value}` form instead, for a functype service
+that decodes it with `Decoder.tagged.*`.
+
+### Custom wire shape with `encode`
+
+When neither fits, such as snake_case keys or a date-only string, pass an `Encoder`. It is the
+request-side counterpart of `Decoder`: any `(value: A) => JSONValue` function. When `encode` is set,
+its output goes on the wire as is and `flatten` is ignored.
+
+```typescript
+import { type Encoder, Http } from "functype";
+
+type NewUser = { name: string; createdAt: Date };
+
+const encodeNewUser: Encoder<NewUser> = (u) => ({
+  user_name: u.name,
+  created_at: u.createdAt.toISOString().slice(0, 10),
+});
+
+Http.post("/api/users", { body: newUser, encode: encodeNewUser });
+```
+
+`TReq` is inferred from `encode`. If you pass the response type explicitly, pass the request type
+too: `Http.post<User, NewUser>(…)`. TypeScript defaults any type argument you leave out to
+`unknown`, and an `Encoder<NewUser>` doesn't fit `Encoder<unknown>`.
+
+If `encode` throws, the request fails with `HttpError.NetworkError` and `fetch` is never called.
 
 ## HttpResponse\<T\>
 
