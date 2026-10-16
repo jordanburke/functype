@@ -125,17 +125,18 @@ describe("Http encode", () => {
     })
 
     it("infers TReq from encode when no type arguments are passed", () => {
+      // Built only to type-check; `void` marks the IOs as deliberately not run.
       const http = Http.client({ fetch: okFetch() })
-      http.post("https://api.test/users", { body: alice, encode: encodeNewUser })
-      Http.post("https://api.test/users", { body: alice, encode: encodeNewUser })
+      void http.post("https://api.test/users", { body: alice, encode: encodeNewUser })
+      void Http.post("https://api.test/users", { body: alice, encode: encodeNewUser })
     })
 
     it("needs both type arguments when the response type is explicit", () => {
       const http = Http.client({ fetch: okFetch() })
       const decode = Decoder.object({ id: Decoder.number })
-      http.post<{ id: number }, NewUser>("https://api.test/users", { body: alice, encode: encodeNewUser, decode })
+      void http.post<{ id: number }, NewUser>("https://api.test/users", { body: alice, encode: encodeNewUser, decode })
       // @ts-expect-error TReq defaults to unknown, and Encoder<NewUser> doesn't accept unknown
-      http.post<{ id: number }>("https://api.test/users", { body: alice, encode: encodeNewUser, decode })
+      void http.post<{ id: number }>("https://api.test/users", { body: alice, encode: encodeNewUser, decode })
     })
   })
 })

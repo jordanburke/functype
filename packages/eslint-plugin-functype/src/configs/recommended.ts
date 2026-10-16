@@ -21,6 +21,10 @@
  * no-array-mutation is off here only because turning a new error on in a 1.x minor would fail consumers'
  * builds on upgrade (91 hits across five consumers, every one a real in-place mutation). It's `error` in
  * strict, and planned for `error` here in 2.0. It is type-aware: without type information it reports nothing.
+ *
+ * no-floating-io (1.17) is off here and `warn` in strict while it is measured: 0 false positives across
+ * ~1,340 IO-typed calls in five codebases, but no real hits yet either. 2.0 decides `recommended` after
+ * measuring it against functype-os, whose async methods return IO there. Type-aware, like no-array-mutation.
  */
 const recommendedRules = {
   "functype/no-let": "error",
@@ -38,6 +42,7 @@ const recommendedRules = {
   "functype/no-get-unsafe": "off",
   "functype/prefer-list": "off",
   "functype/no-array-mutation": "off",
+  "functype/no-floating-io": "off",
 }
 
 export default recommendedRules
