@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+Additive release from `release/1.x`. Existing code behaves as before.
+
+- **`Exit` guards read the field they promise.** `isSuccess()`, `isFailure()`, `isDie()` and `isInterrupted()` narrow to a type with `.value`, `.error`, `.defect` and `.fiberId`, but the objects had none of those fields, so `exit.isSuccess() && exit.value` type-checked and returned `undefined`. Each variant now carries its field. The companion `Exit.isDie(exit)` also narrows to `.defect` now, like the method. Serialization (`toJSON`, `toValue`, `toString`) is unchanged. In 2.0, `Exit` becomes a discriminated union.
+- **`Encoder<A>` and a per-call `encode` option on `Http`.** `Encoder<A> = (value: A) => JSONValue` is the request-side counterpart of `Decoder`. Pass `encode` when `flatten` can't express the wire shape, such as snake_case keys or a date-only string. When it is set, the body goes out as `JSON.stringify(encode(body))` and `flatten` is ignored. If `encode` throws, the request fails with `HttpError.NetworkError` before `fetch` runs. The request type is inferred from `encode`; if you pass the response type explicitly, pass both: `Http.post<User, NewUser>(…)`.
+- **`timeout` clears its timer when the effect wins.** It used to leave the timer pending, so `IO.succeed(1).timeout(60_000)` kept a Node process alive for a minute. When the timer wins, the effect still runs on; stopping it is a 2.0 change.
+- **New rule `functype/no-floating-io`** (type-aware): reports an `IO` that is built and never run, either dropped as a statement or `await`ed (`IO` isn't a Promise, so `await io` returns the `IO` unrun). `no-floating-promises` doesn't see either. It's `off` in `recommended` and `warn` in `strict`. Measured on five codebases: 0 false positives across about 1,340 IO-typed calls.
+- **`prefer-list` skips Supabase's generated types.** `supabase gen types` writes no generated-file marker, so its `Json[]` and row arrays were reported (36 hits across two consumers). A file that exports both `type Json` and `Database` at the top level is now skipped, with no config needed.
+
 ## 1.16.1 - 2026-10-17
 
 - **`npx functype` and the MCP server's `get_type_api` no longer list methods that don't exist.** Their per-type method lists named calls absent from the types, so code written from them failed to compile. Map listed `.set`, `.delete`, `.filter`, `.has`, `.keys`, `.values` and `.entries`; Set listed `.union`, `.intersection` and `.difference`; Tuple listed `.first` and `.second`; Lazy listed `.get()` and a two-argument `.fold`; LazyList listed `.isEmpty` and `LazyList.infinite`; List listed `.nonEmpty`. Each entry now matches its type, and a test checks every listed method against a real instance. Docs only; no runtime change.
