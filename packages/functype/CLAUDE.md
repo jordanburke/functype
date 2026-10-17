@@ -101,6 +101,10 @@ option.map((x) => x + 1) // Instance methods
 Option.none() // Companion methods
 ```
 
+### Naming and API shape: the lingua franca, not Scala by default
+
+Scala is where functype's design started, because it was the first to merge FP and OO. It is one reference, not the spec. Before naming a method or choosing its shape, check what native ES, Effect, fp-ts, Immutable.js, Scala, Haskell and Rust call it. Prefer the name most of them share, or the one that fits functype's own existing contracts. Example: key membership on `Map` is `has(key)`, as in native, Effect and Immutable.js. Scala's `contains(key)` would clash with functype's `contains`, which checks for an element on every container.
+
 ### Type System
 
 - **Base constraint**: Use `Type` from types module for generic constraints (never `any`)
