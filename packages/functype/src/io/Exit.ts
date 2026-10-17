@@ -156,12 +156,26 @@ export interface Exit<E extends Type, A extends Type> {
   toJSON(): { _tag: ExitTag; value?: A; error?: E; defect?: unknown; fiberId?: string }
 }
 
+/*
+ * Each variant carries the field its guard narrows to, so `exit.isSuccess() && exit.value` reads the
+ * value instead of `undefined`. The fields stay off the public `Exit` interface: the guards are how a
+ * caller reaches them. (2.0 makes `Exit` a discriminated union instead — #276 §9.)
+ */
+type SuccessExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Success"; readonly value: A }
+type FailureExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Failure"; readonly error: E }
+type DieExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Die"; readonly defect: unknown }
+type InterruptedExitOf<E extends Type, A extends Type> = Exit<E, A> & {
+  readonly _tag: "Interrupted"
+  readonly fiberId: string
+}
+
 /**
  * Creates a Success Exit
  */
-const SuccessExit = <E extends Type, A extends Type>(value: A): Exit<E, A> => ({
+const SuccessExit = <E extends Type, A extends Type>(value: A): SuccessExitOf<E, A> => ({
   [Symbol.toStringTag]: "Exit",
   _tag: "Success",
+  value,
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
     return true
@@ -245,9 +259,10 @@ const SuccessExit = <E extends Type, A extends Type>(value: A): Exit<E, A> => ({
 /**
  * Creates a Failure Exit
  */
-const FailureExit = <E extends Type, A extends Type>(error: E): Exit<E, A> => ({
+const FailureExit = <E extends Type, A extends Type>(error: E): FailureExitOf<E, A> => ({
   [Symbol.toStringTag]: "Exit",
   _tag: "Failure",
+  error,
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
     return false
@@ -340,9 +355,10 @@ const FailureExit = <E extends Type, A extends Type>(error: E): Exit<E, A> => ({
  * directly rather than through this method, and its callback is documented to receive
  * `unknown`. That keeps the pre-`Die` behaviour of `.mapError` intact for callers.)
  */
-const DieExit = <E extends Type, A extends Type>(defect: unknown): Exit<E, A> => ({
+const DieExit = <E extends Type, A extends Type>(defect: unknown): DieExitOf<E, A> => ({
   [Symbol.toStringTag]: "Exit",
   _tag: "Die",
+  defect,
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
     return false
@@ -426,9 +442,10 @@ const DieExit = <E extends Type, A extends Type>(defect: unknown): Exit<E, A> =>
 /**
  * Creates an Interrupted Exit
  */
-const InterruptedExit = <E extends Type, A extends Type>(fiberId: string): Exit<E, A> => ({
+const InterruptedExit = <E extends Type, A extends Type>(fiberId: string): InterruptedExitOf<E, A> => ({
   [Symbol.toStringTag]: "Exit",
   _tag: "Interrupted",
+  fiberId,
 
   isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
     return false
@@ -558,8 +575,9 @@ const ExitCompanion = {
   /**
    * Type guard for Die
    */
-  isDie: <E extends Type, A extends Type>(exit: Exit<E, A>): exit is Exit<E, A> & { readonly _tag: "Die" } =>
-    exit.isDie(),
+  isDie: <E extends Type, A extends Type>(
+    exit: Exit<E, A>,
+  ): exit is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } => exit.isDie(),
 
   /**
    * Type guard for Interrupted

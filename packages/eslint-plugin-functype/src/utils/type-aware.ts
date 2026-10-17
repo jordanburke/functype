@@ -75,6 +75,27 @@ export const isExtractableByType = (node: ASTNode, context: Rule.RuleContext): b
   )
 }
 
+/**
+ * Is `node`'s type a functype `IO`? Structural: the type has both `runExit` and `provideLayer`, which
+ * only `IO` carries — `Task`, `Lazy` and the other containers have neither — and has carried since
+ * well before 1.9, so older functype versions are recognized too. A union of IOs counts.
+ * `any` and `unknown` have no properties, so they don't.
+ *
+ * `undefined` when type information isn't available.
+ */
+export const isIOByType = (node: ASTNode, context: Rule.RuleContext): boolean | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const type = checker.getNonNullableType(checker.getTypeAtLocation(tsNode))
+  return (
+    checker.getPropertyOfType(type, "runExit") !== undefined &&
+    checker.getPropertyOfType(type, "provideLayer") !== undefined
+  )
+}
+
 /** A slot's expected type and the expression TypeScript computed it for. */
 type Slot = { readonly type: TypeLike; readonly at: ASTNode }
 

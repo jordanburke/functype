@@ -209,6 +209,23 @@ function castOf(typeNode: ASTNode): ASTNode | null {
   return climb(typeNode.parent as ASTNode | undefined, typeNode)
 }
 
+/** Names a top-level `export type X = …` or `export interface X` declares. */
+function exportedTypeName(statement: ASTNode): string | undefined {
+  const declaration = statement.type === "ExportNamedDeclaration" ? (statement.declaration as ASTNode | null) : null
+  if (declaration?.type !== "TSTypeAliasDeclaration" && declaration?.type !== "TSInterfaceDeclaration") return undefined
+  return (declaration.id as ASTNode | undefined)?.name as string | undefined
+}
+
+/**
+ * Supabase's generated types (`supabase gen types typescript`) carry no generated-file marker, but
+ * always export both `type Json` and `Database` (a type alias, or an interface from older CLIs) at
+ * the top level. No hand-written module exports that pair, so the shape identifies the file.
+ */
+function isSupabaseGeneratedTypes(program: ASTNode): boolean {
+  const names = new Set((program.body as ASTNode[]).map(exportedTypeName))
+  return names.has("Json") && names.has("Database")
+}
+
 /** `node` is a VariableDeclarator with its own type annotation, or a TSTypeAnnotation node directly. */
 function hasOwnTypeAnnotation(node: ASTNode): boolean {
   return (node.type === "VariableDeclarator" && Boolean(node.id?.typeAnnotation)) || node.type === "TSTypeAnnotation"
@@ -261,13 +278,14 @@ const rule: Rule.RuleModule = {
 
   create(context) {
     // A generated file (`// @generated`, "Auto-generated … DO NOT EDIT") isn't edited by hand, so there's
-    // nothing for its author to fix. Generators without a marker (Supabase types) need a config ignore.
+    // nothing for its author to fix. Supabase's types have no marker and are recognized by shape.
     const header = context.sourceCode
       .getAllComments()
       .slice(0, 3)
       .map((comment) => comment.value)
       .join("\n")
     if (/@generated|auto-generated|do not edit/i.test(header)) return {}
+    if (isSupabaseGeneratedTypes(context.sourceCode.ast as unknown as ASTNode)) return {}
 
     const options = context.options[0] || {}
     // Everything inside `Wire<…>` is the declared serialization shape (#325 B).

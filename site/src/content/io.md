@@ -219,6 +219,12 @@ exit.isSuccess(); // completed with a value
 exit.isFailure(); // failed with a value from the declared E channel
 exit.isDie(); // produced a *defect* — a value that is not an E
 exit.isInterrupted(); // was cancelled
+
+// Each guard narrows to the field it names:
+if (exit.isSuccess()) exit.value;
+if (exit.isFailure()) exit.error; // an E
+if (exit.isDie()) exit.defect; // unknown
+if (exit.isInterrupted()) exit.fiberId;
 ```
 
 A **defect** is what happens when something lands in the error channel that the declared

@@ -1,6 +1,7 @@
 import type { Collection } from "@/collections"
 import type { Typeable } from "@/index"
 import { Companion, type Foldable } from "@/index"
+import { base64ToUtf8 } from "@/internal/base64"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -241,7 +242,7 @@ const MapCompanion = {
    * @returns Map instance
    */
   fromBinary: <K, V>(binary: string): Map<K, V> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return MapCompanion.fromJSON<K, V>(json)
   },
 }
