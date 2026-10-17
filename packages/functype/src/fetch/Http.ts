@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import type { Decoder } from "@/decoder/Decoder"
 import type { DecoderError } from "@/decoder/DecoderError"
+import type { Encoder } from "@/decoder/Encoder"
 import { IO } from "@/io"
 
 import type { HttpClientConfig } from "./HttpClient"
@@ -150,11 +151,14 @@ const normalizeBody = (value: unknown, mode: BodyMode): unknown => {
 }
 
 /** Serialize a request body, returning the serialized form and an optional Content-Type header. */
-const serializeBody = (
+const serializeBody = <TReq>(
   body: unknown,
   flatten: boolean,
+  encode: Encoder<TReq> | undefined,
 ): { serialized: NonNullable<RequestInit["body"]> | undefined; contentType: string | undefined } => {
   if (body === undefined || body === null) return { serialized: undefined, contentType: undefined }
+  // `encode` owns the wire shape, so it runs before (and instead of) the flatten walker.
+  if (encode) return { serialized: JSON.stringify(encode(body as TReq)), contentType: "application/json" }
   if (typeof body === "string") return { serialized: body, contentType: undefined }
   if (typeof body === "object" || Array.isArray(body)) {
     const normalized = normalizeBody(body, flatten ? "primitive" : "tagged")
@@ -230,9 +234,9 @@ const parseResponse = async <T>(
   return { data, status: response.status, statusText: response.statusText, headers: response.headers }
 }
 
-const doRequest = <T>(
+const doRequest = <T, TReq = unknown>(
   config: HttpClientConfig,
-  options: HttpRequestOptions<T>,
+  options: HttpRequestOptions<T, TReq>,
 ): IO<never, HttpError, HttpResponse<T>> => {
   // Assemble the pre-wire view: URL resolved against baseUrl, headers merged
   // from defaultHeaders + per-call headers. Body is left raw — Content-Type
@@ -256,7 +260,7 @@ const doRequest = <T>(
     const serializeResult = (():
       { ok: true; value: ReturnType<typeof serializeBody> } | { ok: false; cause: unknown } => {
       try {
-        return { ok: true, value: serializeBody(request.body, flatten) }
+        return { ok: true, value: serializeBody(request.body, flatten, options.encode) }
       } catch (cause) {
         return { ok: false, cause }
       }
@@ -319,23 +323,32 @@ const doRequest = <T>(
   })
 }
 
-const request = <T = unknown>(options: HttpRequestOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
-  doRequest<T>(defaultHttpClientConfig, options)
+const request = <T = unknown, TReq = unknown>(
+  options: HttpRequestOptions<T, TReq>,
+): IO<never, HttpError, HttpResponse<T>> => doRequest<T, TReq>(defaultHttpClientConfig, options)
 
 const get = <T = unknown>(url: string, options?: HttpMethodOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
   request<T>({ ...options, url, method: "GET" })
 
-const post = <T = unknown>(url: string, options?: HttpMethodOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
-  request<T>({ ...options, url, method: "POST" })
+const post = <T = unknown, TReq = unknown>(
+  url: string,
+  options?: HttpMethodOptions<T, TReq>,
+): IO<never, HttpError, HttpResponse<T>> => request<T, TReq>({ ...options, url, method: "POST" })
 
-const put = <T = unknown>(url: string, options?: HttpMethodOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
-  request<T>({ ...options, url, method: "PUT" })
+const put = <T = unknown, TReq = unknown>(
+  url: string,
+  options?: HttpMethodOptions<T, TReq>,
+): IO<never, HttpError, HttpResponse<T>> => request<T, TReq>({ ...options, url, method: "PUT" })
 
-const patch = <T = unknown>(url: string, options?: HttpMethodOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
-  request<T>({ ...options, url, method: "PATCH" })
+const patch = <T = unknown, TReq = unknown>(
+  url: string,
+  options?: HttpMethodOptions<T, TReq>,
+): IO<never, HttpError, HttpResponse<T>> => request<T, TReq>({ ...options, url, method: "PATCH" })
 
-const del = <T = unknown>(url: string, options?: HttpMethodOptions<T>): IO<never, HttpError, HttpResponse<T>> =>
-  request<T>({ ...options, url, method: "DELETE" })
+const del = <T = unknown, TReq = unknown>(
+  url: string,
+  options?: HttpMethodOptions<T, TReq>,
+): IO<never, HttpError, HttpResponse<T>> => request<T, TReq>({ ...options, url, method: "DELETE" })
 
 const head = (url: string, options?: HttpMethodOptions<void>): IO<never, HttpError, HttpResponse<void>> =>
   request<void>({ ...options, url, method: "HEAD", parseAs: "raw" })
@@ -344,29 +357,43 @@ const optionsMethod = (url: string, options?: HttpMethodOptions<void>): IO<never
   request<void>({ ...options, url, method: "OPTIONS", parseAs: "raw" })
 
 type HttpMethods = {
-  readonly request: <T = unknown>(options: HttpRequestOptions<T>) => IO<never, HttpError, HttpResponse<T>>
+  readonly request: <T = unknown, TReq = unknown>(
+    options: HttpRequestOptions<T, TReq>,
+  ) => IO<never, HttpError, HttpResponse<T>>
   readonly get: <T = unknown>(url: string, options?: HttpMethodOptions<T>) => IO<never, HttpError, HttpResponse<T>>
-  readonly post: <T = unknown>(url: string, options?: HttpMethodOptions<T>) => IO<never, HttpError, HttpResponse<T>>
-  readonly put: <T = unknown>(url: string, options?: HttpMethodOptions<T>) => IO<never, HttpError, HttpResponse<T>>
-  readonly patch: <T = unknown>(url: string, options?: HttpMethodOptions<T>) => IO<never, HttpError, HttpResponse<T>>
-  readonly delete: <T = unknown>(url: string, options?: HttpMethodOptions<T>) => IO<never, HttpError, HttpResponse<T>>
+  readonly post: <T = unknown, TReq = unknown>(
+    url: string,
+    options?: HttpMethodOptions<T, TReq>,
+  ) => IO<never, HttpError, HttpResponse<T>>
+  readonly put: <T = unknown, TReq = unknown>(
+    url: string,
+    options?: HttpMethodOptions<T, TReq>,
+  ) => IO<never, HttpError, HttpResponse<T>>
+  readonly patch: <T = unknown, TReq = unknown>(
+    url: string,
+    options?: HttpMethodOptions<T, TReq>,
+  ) => IO<never, HttpError, HttpResponse<T>>
+  readonly delete: <T = unknown, TReq = unknown>(
+    url: string,
+    options?: HttpMethodOptions<T, TReq>,
+  ) => IO<never, HttpError, HttpResponse<T>>
   readonly head: (url: string, options?: HttpMethodOptions<void>) => IO<never, HttpError, HttpResponse<void>>
   readonly options: (url: string, options?: HttpMethodOptions<void>) => IO<never, HttpError, HttpResponse<void>>
 }
 
 /** Create an Http client with a custom configuration (base URL, default headers, custom fetch). */
 const client = (config: HttpClientConfig): HttpMethods => ({
-  request: <T = unknown>(options: HttpRequestOptions<T>) => doRequest<T>(config, options),
+  request: <T = unknown, TReq = unknown>(options: HttpRequestOptions<T, TReq>) => doRequest<T, TReq>(config, options),
   get: <T = unknown>(url: string, options?: HttpMethodOptions<T>) =>
     doRequest<T>(config, { ...options, url, method: "GET" }),
-  post: <T = unknown>(url: string, options?: HttpMethodOptions<T>) =>
-    doRequest<T>(config, { ...options, url, method: "POST" }),
-  put: <T = unknown>(url: string, options?: HttpMethodOptions<T>) =>
-    doRequest<T>(config, { ...options, url, method: "PUT" }),
-  patch: <T = unknown>(url: string, options?: HttpMethodOptions<T>) =>
-    doRequest<T>(config, { ...options, url, method: "PATCH" }),
-  delete: <T = unknown>(url: string, options?: HttpMethodOptions<T>) =>
-    doRequest<T>(config, { ...options, url, method: "DELETE" }),
+  post: <T = unknown, TReq = unknown>(url: string, options?: HttpMethodOptions<T, TReq>) =>
+    doRequest<T, TReq>(config, { ...options, url, method: "POST" }),
+  put: <T = unknown, TReq = unknown>(url: string, options?: HttpMethodOptions<T, TReq>) =>
+    doRequest<T, TReq>(config, { ...options, url, method: "PUT" }),
+  patch: <T = unknown, TReq = unknown>(url: string, options?: HttpMethodOptions<T, TReq>) =>
+    doRequest<T, TReq>(config, { ...options, url, method: "PATCH" }),
+  delete: <T = unknown, TReq = unknown>(url: string, options?: HttpMethodOptions<T, TReq>) =>
+    doRequest<T, TReq>(config, { ...options, url, method: "DELETE" }),
   head: (url: string, options?: HttpMethodOptions<void>) =>
     doRequest<void>(config, { ...options, url, method: "HEAD", parseAs: "raw" }),
   options: (url: string, options?: HttpMethodOptions<void>) =>

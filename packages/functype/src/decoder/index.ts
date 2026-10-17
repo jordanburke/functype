@@ -7,6 +7,7 @@ import { tagged } from "./tagged"
 
 export type { DecoderErrorComposite, DecoderErrorLeaf } from "./DecoderError"
 export { DecoderError } from "./DecoderError"
+export type { Encoder } from "./Encoder"
 
 /**
  * A `Decoder<A>` converts an `unknown` value into either a typed `A` or a
