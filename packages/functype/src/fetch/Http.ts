@@ -70,6 +70,7 @@ const normalizeBody = (value: unknown, mode: BodyMode): unknown => {
   if (typeof value !== "object") return value
   if (value instanceof Date) return value
   if (value instanceof RegExp) return value
+  // eslint-disable-next-line no-restricted-globals -- guarded: passes a Node Buffer body through untouched
   if (typeof Buffer !== "undefined" && value instanceof Buffer) return value
 
   // Option

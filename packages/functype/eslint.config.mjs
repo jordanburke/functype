@@ -122,4 +122,19 @@ export default [
       // policy" section for the full rationale.
     },
   },
+  // The library runs on Workers and in browsers, which have no Buffer. The Node
+  // types in tsconfig let a bare Buffer compile, so this is the only check.
+  {
+    files: ["src/**/*.ts"],
+    ignores: ["src/cli/**"],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "Buffer",
+          message: "Not available on Workers or in browsers. Use the helpers in @/internal/base64.",
+        },
+      ],
+    },
+  },
 ]
