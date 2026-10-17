@@ -41,6 +41,11 @@ describe("strict preset", () => {
     expect(configs.strict!.rules["functype/no-array-mutation"]).toBe("error")
   })
 
+  it("warns on an IO that is never run, while it is measured", () => {
+    expect(configs.strict!.rules["functype/no-floating-io"]).toBe("warn")
+    expect(configs.recommended!.rules["functype/no-floating-io"]).toBe("off")
+  })
+
   it("is never looser than recommended", () => {
     const rank = { off: 0, warn: 1, error: 2 } as const
     const recommended = configs.recommended!.rules

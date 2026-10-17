@@ -1,4 +1,5 @@
 import type { Extractable } from "@/extractable"
+import { utf8ToBase64 } from "@/internal/base64"
 import { None, Option } from "@/option"
 import type { Widen } from "@/typeclass"
 import type { Type } from "@/types"
@@ -139,7 +140,7 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return {
       toJSON: () => JSON.stringify(data),
       toYAML: () => `@functype: Box\n_tag: ${this._tag}\nvalue: ${JSON.stringify(this._value)}`,
-      toBinary: () => Buffer.from(JSON.stringify(data)).toString("base64"),
+      toBinary: () => utf8ToBase64(JSON.stringify(data)),
     }
   }
 

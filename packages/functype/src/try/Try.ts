@@ -4,6 +4,7 @@ import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
@@ -397,7 +398,7 @@ const TryCompanion = {
    * @returns Try instance
    */
   fromBinary: <T>(binary: string): Try<T> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return TryCompanion.fromJSON<T>(json)
   },
   /**
