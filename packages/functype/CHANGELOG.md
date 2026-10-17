@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.17.0 - 2026-10-17
+
 Additive release from `release/1.x`. Existing code behaves as before.
 
 - **`Exit` guards read the field they promise.** `isSuccess()`, `isFailure()`, `isDie()` and `isInterrupted()` narrow to a type with `.value`, `.error`, `.defect` and `.fiberId`, but the objects had none of those fields, so `exit.isSuccess() && exit.value` type-checked and returned `undefined`. Each variant now carries its field. The companion `Exit.isDie(exit)` also narrows to `.defect` now, like the method. Serialization (`toJSON`, `toValue`, `toString`) is unchanged. In 2.0, `Exit` becomes a discriminated union.
