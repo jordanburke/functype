@@ -94,6 +94,10 @@ export function Option<T>(value: T | null | undefined): OptionType<T> {
 }
 ```
 
+### Naming and API Shape
+
+Scala is where the design started, not the spec. Before naming a method or choosing its shape, check what native ES, Effect, fp-ts, Immutable.js, Scala, Haskell and Rust call it. Prefer the name most of them share, or the one that fits functype's own existing contracts. For example, `Map.has(key)` follows native, Effect and Immutable.js, not Scala's `contains(key)`.
+
 ### Base Pattern
 
 Use the `Base` function to add common functionality to all types:
