@@ -209,12 +209,19 @@ export const TYPES: Record<string, TypeData> = {
     description: "Immutable key-value store",
     interfaces: mergeInterfaces("Map"),
     methods: {
-      create: ["Map([[k, v], ...])", "Map.of([k, v], ...)", "Map.empty()"],
+      create: [
+        "Map([[k, v], ...])",
+        "Map.of([k, v], ...)",
+        "Map.empty()",
+        "Map.fromJSON(json)",
+        "Map.fromYAML(yaml)",
+        "Map.fromBinary(b)",
+      ],
       transform: [".add(Tuple([k, v]))", ".remove(k)", ".map(f)", ".flatMap(f)", ".ap(ff)", ".flatMapAsync(f)"],
       extract: [
         ".get(k) // Option<V>",
         ".getOrElse(k, d)",
-        ".orElse(k, alt)",
+        ".orElse(k, Option<V>)",
         ".fold(z, f)",
         ".foldLeft(z)(f)",
         ".foldRight(z)(f)",
@@ -223,7 +230,7 @@ export const TYPES: Record<string, TypeData> = {
         ".toSet()",
         "[...map] // iterate [k, v] pairs",
       ],
-      check: [".contains(Tuple([k, v]))", ".isEmpty", ".size"],
+      check: [".contains(Tuple([k, v])) // === on the value", ".isEmpty", ".size"],
       other: ['import { Map } from "functype"  // its own name; the built-in is globalThis.Map'],
     },
   },
@@ -240,7 +247,15 @@ export const TYPES: Record<string, TypeData> = {
         "Lazy.fail(error) — Lazy that throws on access",
       ],
       transform: [".map(f)", ".flatMap(f)"],
-      extract: [".fold(n, s)", ".orElse(d)", ".orNull()", ".orThrow()", ".toJSON()", "Lazy.fromJSON(json)"],
+      extract: [
+        ".fold(f)",
+        ".foldWith(onFailure, onSuccess)",
+        ".orElse(d)",
+        ".orNull()",
+        ".orThrow()",
+        ".toJSON()",
+        "Lazy.fromJSON(json)",
+      ],
       check: [".isEvaluated"],
     },
   },
@@ -250,7 +265,14 @@ export const TYPES: Record<string, TypeData> = {
     // LazyList declares Functor/Monad/Iterable inline rather than via extends.
     interfaces: mergeInterfaces("LazyList", "Functor", "Monad", "Iterable"),
     methods: {
-      create: ["LazyList.from(iter)", "LazyList.range(start, end)", "LazyList.infinite(f)", "LazyList.fromJSON(json)"],
+      create: [
+        "LazyList(iterable)",
+        "LazyList.from(a, b, ...)",
+        "LazyList.range(start, end)",
+        "LazyList.iterate(seed, f)",
+        "LazyList.generate(f)",
+        "LazyList.fromJSON(json)",
+      ],
       transform: [
         ".map(f)",
         ".filter(p)",
