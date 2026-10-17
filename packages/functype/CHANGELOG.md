@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`npx functype` and the MCP server's `get_type_api` no longer list methods that don't exist.** Their per-type method lists named calls absent from the types, so code written from them failed to compile. Map listed `.set`, `.delete`, `.filter`, `.has`, `.keys`, `.values` and `.entries`; Set listed `.union`, `.intersection` and `.difference`; Tuple listed `.first` and `.second`; Lazy listed `.get()` and a two-argument `.fold`; LazyList listed `.isEmpty` and `LazyList.infinite`; List listed `.nonEmpty`. Each entry now matches its type, and a test checks every listed method against a real instance. Docs only; no runtime change.
+
 ## 1.16.0 - 2026-10-12
 
 First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases ship from this branch. Everything here is additive; existing code behaves as before.
