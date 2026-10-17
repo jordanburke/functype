@@ -44,6 +44,7 @@ export default [functype.configs.strict]
 | `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                   |
 | `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                                                      |
 | `functype/no-array-mutation`   |     off     | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one           |
+| `functype/no-floating-io`      |     off     |  warn  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it         |
 
 ### Severity policy
 
@@ -173,6 +174,27 @@ For a host that has to mutate, such as a charting library that takes the array i
 | `allowInteropMarker` | `true`  | Skip code inside a declaration tagged `@interop <reason>`. |
 
 Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `off` in `recommended` until 2.0, to avoid failing builds on a 1.x upgrade.
+
+### `functype/no-floating-io`
+
+Reports an `IO` that is built and never run, so it does nothing:
+
+- an expression statement whose value is an `IO`;
+- `await` on an `IO`. `IO` is not a Promise, so `await io` hands back the `IO` itself, unrun.
+
+`no-floating-promises` and `await-thenable` miss both, because `IO` isn't thenable.
+
+```ts
+log.info("saved") // reported, when info returns an IO → yield* it, or .run() it
+save(user).tap(audit) // reported → return it, or run it
+const user = await loadUser(id) // reported: user is the IO → await loadUser(id).runOrThrow()
+return save(user) // fine: the caller runs it
+void save(user) // fine: a deliberate drop
+```
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). It recognizes `IO` by its type (it has `runExit` and `provideLayer`), whatever the call is named. Without type information it reports nothing.
+
+Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and civala.ai's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
 
 ### `functype/no-get-unsafe`
 

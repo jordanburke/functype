@@ -347,6 +347,7 @@ exit.isSuccess() // completed with a value
 exit.isFailure() // a value from the declared E channel
 exit.isDie() // a defect — NOT an E
 exit.isInterrupted() // cancelled
+if (exit.isSuccess()) exit.value // each guard narrows to its field: .value / .error / .defect / .fiberId
 
 // Both extra handlers are optional and fall back to the failure branch, so existing
 // three-argument fold / three-key match calls keep working.
