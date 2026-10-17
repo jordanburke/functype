@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`toBinary()` and `fromBinary()` no longer need Node's `Buffer`.** They used the bare `Buffer` global, so on Cloudflare Workers without `nodejs_compat` (or anywhere else without `Buffer`) they threw `ReferenceError: Buffer is not defined`. They now use `TextEncoder`/`TextDecoder` with `btoa`/`atob`, which every runtime has. The output is byte-identical, so binaries written by earlier versions still decode. `fromBinary` also accepts input without padding, with whitespace, or in the URL-safe alphabet, as `Buffer` did. Applies to `Option`, `Either`, `Try`, `List`, `Set`, `Map`, `Stack`, `Obj` and the `createSerializer` helpers.
+
 ## 1.16.1 - 2026-10-17
 
 - **`npx functype` and the MCP server's `get_type_api` no longer list methods that don't exist.** Their per-type method lists named calls absent from the types, so code written from them failed to compile. Map listed `.set`, `.delete`, `.filter`, `.has`, `.keys`, `.values` and `.entries`; Set listed `.union`, `.intersection` and `.difference`; Tuple listed `.first` and `.second`; Lazy listed `.get()` and a two-argument `.fold`; LazyList listed `.isEmpty` and `LazyList.infinite`; List listed `.nonEmpty`. Each entry now matches its type, and a test checks every listed method against a real instance. Docs only; no runtime change.
