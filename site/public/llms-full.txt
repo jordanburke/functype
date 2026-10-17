@@ -4513,7 +4513,6 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 **Check**
 
 - `.isEmpty`
-- `.nonEmpty`
 - `.size`
 - `.contains(v)`
 
@@ -4540,11 +4539,11 @@ Implements: Collection, Foldable, Functor, Iterable, Serializable, Traversable
 **Transform**
 
 - `.map(f)`
+- `.flatMap(f)`
 - `.filter(p)`
-- `.union(s)`
-- `.intersection(s)`
-- `.difference(s)`
+- `.filterNot(p)`
 - `.add(v)`
+- `.remove(v)`
 - `.mapAsync(f, {concurrency?}) // in order by default`
 
 **Extract**
@@ -4573,26 +4572,35 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 - `Map([[k, v], ...])`
 - `Map.of([k, v], ...)`
 - `Map.empty()`
+- `Map.fromJSON(json)`
+- `Map.fromYAML(yaml)`
+- `Map.fromBinary(b)`
 
 **Transform**
 
-- `.set(k, v)`
-- `.delete(k)`
+- `.add(Tuple([k, v]))`
+- `.remove(k)`
 - `.map(f)`
-- `.filter(p)`
-- `.add(k, v)`
+- `.flatMap(f)`
+- `.ap(ff)`
+- `.flatMapAsync(f)`
 
 **Extract**
 
-- `.get(k)`
-- `.keys()`
-- `.values()`
-- `.entries()`
+- `.get(k) // Option<V>`
+- `.getOrElse(k, d)`
+- `.orElse(k, Option<V>)`
 - `.fold(z, f)`
+- `.foldLeft(z)(f)`
+- `.foldRight(z)(f)`
+- `.match({Empty, NonEmpty})`
+- `.toList()`
+- `.toSet()`
+- `[...map] // iterate [k, v] pairs`
 
 **Check**
 
-- `.has(k)`
+- `.contains(Tuple([k, v])) // === on the value`
 - `.isEmpty`
 - `.size`
 
@@ -4608,9 +4616,11 @@ Implements: Foldable, Functor, Iterable, Monad, Serializable
 
 **Create**
 
-- `LazyList.from(iter)`
+- `LazyList(iterable)`
+- `LazyList.from(a, b, ...)`
 - `LazyList.range(start, end)`
-- `LazyList.infinite(f)`
+- `LazyList.iterate(seed, f)`
+- `LazyList.generate(f)`
 - `LazyList.fromJSON(json)`
 
 **Transform**
@@ -4636,12 +4646,15 @@ Implements: Foldable, Functor, Iterable, Monad, Serializable
 - `.last`
 - `.lastOption`
 - `.init`
+- `.find(p)`
 - `.toArray()`
 - `.toJSON()`
 
 **Check**
 
-- `.isEmpty`
+- `.some(p)`
+- `.every(p)`
+- `.count()`
 
 ### Tuple
 
@@ -4661,8 +4674,8 @@ Implements: Foldable, Iterable, Serializable, Typeable, Valuable
 
 **Extract**
 
-- `.first`
-- `.second`
+- `.get(i)`
+- `.length`
 - `.toArray()`
 - `.toJSON()`
 
@@ -5037,10 +5050,11 @@ Implements: Applicative, AsyncMonad, Extractable, Foldable, Functor, Monad, Seri
 
 **Extract**
 
-- `.fold(n, s)`
+- `.fold(f)`
+- `.foldWith(onFailure, onSuccess)`
 - `.orElse(d)`
+- `.orNull()`
 - `.orThrow()`
-- `.get()`
 - `.toJSON()`
 - `Lazy.fromJSON(json)`
 
