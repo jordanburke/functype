@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { Either, List, Map, Option, Set, Try } from "../../src"
+import { Either, List, Map, Obj, Option, Set, Stack, Try } from "../../src"
 import { base64ToUtf8, utf8ToBase64 } from "../../src/internal/base64"
 
 const SAMPLES = [
@@ -31,11 +31,28 @@ describe("internal base64", () => {
     expect(base64ToUtf8(standard.replace(/(.{4})/g, "$1\n"))).toBe(text)
     expect(base64ToUtf8(Buffer.from(text).toString("base64url"))).toBe(text)
   })
+
+  it("throws on a character outside the alphabet, where Buffer skipped it", () => {
+    expect(() => base64ToUtf8("aGVs!bG8=")).toThrow()
+  })
+
+  it("keeps a leading byte-order mark, as Buffer does", () => {
+    const withBom = Buffer.from([0xef, 0xbb, 0xbf, 0x41]).toString("base64")
+    expect(base64ToUtf8(withBom)).toBe(Buffer.from(withBom, "base64").toString())
+  })
 })
 
 describe("toBinary / fromBinary without Buffer", () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it("imports without TextEncoder or TextDecoder", async () => {
+    // Jest 29's jsdom has neither; importing functype must not touch them.
+    vi.stubGlobal("TextEncoder", undefined)
+    vi.stubGlobal("TextDecoder", undefined)
+    vi.resetModules()
+    await expect(import("../../src")).resolves.toHaveProperty("Option")
   })
 
   it("round-trips every serializable type when Buffer does not exist", () => {
@@ -63,6 +80,8 @@ describe("toBinary / fromBinary without Buffer", () => {
         .get(text)
         .orThrow(),
     ).toBe(1)
+    expect(Stack.fromBinary<string>(Stack.of(text).serialize().toBinary()).toArray()).toEqual([text])
+    expect(Obj.fromBinary<{ text: string }>(Obj({ text }).serialize().toBinary()).value()).toEqual({ text })
   })
 
   it("reads binaries written by the Buffer-based implementation", () => {

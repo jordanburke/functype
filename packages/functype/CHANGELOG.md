@@ -6,7 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **`toBinary()` and `fromBinary()` no longer need Node's `Buffer`.** They used the bare `Buffer` global, so on Cloudflare Workers without `nodejs_compat` (or anywhere else without `Buffer`) they threw `ReferenceError: Buffer is not defined`. They now use `TextEncoder`/`TextDecoder` with `btoa`/`atob`, which every runtime has. The output is byte-identical, so binaries written by earlier versions still decode. `fromBinary` also accepts input without padding, with whitespace, or in the URL-safe alphabet, as `Buffer` did. Applies to `Option`, `Either`, `Try`, `List`, `Set`, `Map`, `Stack`, `Obj` and the `createSerializer` helpers.
+- **`toBinary()` and `fromBinary()` no longer need Node's `Buffer`.** They used the bare `Buffer` global, so on Cloudflare Workers without `nodejs_compat` (or anywhere else without `Buffer`) they threw `ReferenceError: Buffer is not defined`. They now use `TextEncoder`/`TextDecoder` with `btoa`/`atob`, which every runtime has. The output is byte-identical, so binaries written by earlier versions still decode. `fromBinary` accepts strict base64 plus whitespace, missing padding and the URL-safe alphabet. Other malformed input, such as a character outside the base64 alphabet, now throws `InvalidCharacterError` where `Buffer` silently skipped it. `toBinary`/`fromBinary` now need the `atob`/`btoa` globals, which Node has from 16. Applies to `Option`, `Either`, `Try`, `List`, `Set`, `Map`, `Stack`, `Obj` and the `createSerializer` helpers.
 
 ## 1.16.1 - 2026-10-17
 
