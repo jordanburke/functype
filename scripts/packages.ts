@@ -1,12 +1,12 @@
 /**
  * The one list of published workspace packages. `release.ts`, `check-publish-safety.ts`,
  * `verify-published.ts` and `sync-eslint-mirror.ts` all read it, so adding a package means
- * adding it here once. `check-publish-safety` fails if a public package under `packages/`
- * is missing from it.
+ * adding it here once. `check-publish-safety` fails if a public workspace package is
+ * missing from it.
  */
 
-import { readdirSync, readFileSync, existsSync } from "node:fs"
-import { join } from "node:path"
+import { spawnSync } from "node:child_process"
+import { relative } from "node:path"
 
 /** The functype family: 6 packages on the `1.x` line, bumped together by `release.ts`. */
 export const FAMILY_PACKAGE_DIRS = [
@@ -24,17 +24,18 @@ export const ESLINT_PACKAGE_DIRS = ["packages/eslint-config-functype", "packages
 /** Every package the release publishes. */
 export const PACKAGE_DIRS = [...FAMILY_PACKAGE_DIRS, ...ESLINT_PACKAGE_DIRS] as const
 
-/** Directories under `packages/` whose package.json is not `private` but which no list above names. */
+/**
+ * Workspace packages that are not `private` but which no list above names. Asks pnpm for the
+ * workspace, the same set `pnpm -r publish` walks, so it covers every glob in
+ * `pnpm-workspace.yaml`, not just `packages/`.
+ */
 export const unlistedPublicPackageDirs = (repoRoot: string): readonly string[] => {
+  const result = spawnSync("pnpm", ["-r", "ls", "--json", "--depth", "-1"], { cwd: repoRoot, encoding: "utf8" })
+  if (result.status !== 0) throw new Error(`pnpm -r ls failed: ${result.stderr}`)
+  const workspace = JSON.parse(result.stdout) as ReadonlyArray<{ readonly path: string; readonly private?: boolean }>
   const listed = new Set<string>(PACKAGE_DIRS)
-  return readdirSync(join(repoRoot, "packages"), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => `packages/${entry.name}`)
-    .filter((dir) => existsSync(join(repoRoot, dir, "package.json")))
-    .filter((dir) => {
-      const pkg = JSON.parse(readFileSync(join(repoRoot, dir, "package.json"), "utf8")) as {
-        readonly private?: boolean
-      }
-      return pkg.private !== true && !listed.has(dir)
-    })
+  return workspace
+    .filter((pkg) => pkg.private !== true)
+    .map((pkg) => relative(repoRoot, pkg.path))
+    .filter((dir) => !listed.has(dir))
 }

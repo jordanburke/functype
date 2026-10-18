@@ -16,10 +16,12 @@
  *          both on the `2.100.x` line (intentional offset from functype).
  *      Drift here means something bypassed the `scripts/release.ts` family
  *      bump (manual edit, conflict resolution, dependabot, etc.).
- *   4. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
+ *   4. Eslint mirror drift: the eslint pair's version must be the encoded
+ *      mirror of functype's (`pnpm sync:eslint-mirror:check`).
+ *   5. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
  *      manifest) must match the package.json version.
- *   5. Unlisted package: every non-private package under `packages/` must be
- *      in `PACKAGE_DIRS` (`scripts/packages.ts`). `pnpm -r publish` would
+ *   6. Unlisted package: every non-private workspace package must be in
+ *      `PACKAGE_DIRS` (`scripts/packages.ts`). `pnpm -r publish` would
  *      publish it, but no bump, alignment check or install check would see it.
  *
  * Background: on 2026-05-30 a `workspace:^` peerDependency caused

@@ -597,6 +597,7 @@ list.groupBy((x) => (x % 2 === 0 ? "even" : "odd")) // Map of grouped elements
 
 ```typescript
 import { Map } from "functype/map"
+import { Option } from "functype/option"
 import { Tuple } from "functype/tuple"
 
 // Creation

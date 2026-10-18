@@ -57,7 +57,7 @@ The publish gate refuses to proceed if any of these holds:
 3. **Family alignment drift.** The 6 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
-6. **Unlisted package.** Every non-private package under `packages/` must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
+6. **Unlisted package.** Every non-private workspace package must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
 
 All 6 are independent gates and all 6 fail closed.
 
