@@ -31,7 +31,7 @@ export const PACKAGE_DIRS = [...FAMILY_PACKAGE_DIRS, ...ESLINT_PACKAGE_DIRS] as 
  */
 export const unlistedPublicPackageDirs = (repoRoot: string): readonly string[] => {
   const result = spawnSync("pnpm", ["-r", "ls", "--json", "--depth", "-1"], { cwd: repoRoot, encoding: "utf8" })
-  if (result.status !== 0) throw new Error(`pnpm -r ls failed: ${result.stderr}`)
+  if (result.status !== 0) throw new Error(`pnpm -r ls failed: ${result.error?.message ?? result.stderr}`)
   const workspace = JSON.parse(result.stdout) as ReadonlyArray<{ readonly path: string; readonly private?: boolean }>
   const listed = new Set<string>(PACKAGE_DIRS)
   return workspace
