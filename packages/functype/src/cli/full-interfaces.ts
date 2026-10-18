@@ -566,6 +566,27 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => Iterable<[K2, V2]>): Map<K2, V2>
   flatMapAsync<U>(f: (value: V) => PromiseLike<Map<K, U>>): PromiseLike<Map<K, U>>
   get(key: K): Option<V>
+  /**
+   * Whether the map holds an entry for \`key\`. Keys compare like a native \`Map\`:
+   * by identity for objects, by \`SameValueZero\` otherwise.
+   *
+   * True even when the stored value is \`undefined\`, where \`get(key)\` returns \`None\`.
+   * For an entry check (key and value), use \`contains(Tuple([k, v]))\`, which
+   * compares the value with \`===\`.
+   * @param key - The key to look up
+   * @returns true if the map has an entry for \`key\`
+   */
+  has(key: K): boolean
+  /**
+   * The keys, in insertion order. A List, like \`Obj.keys()\`.
+   * @returns A List of the map's keys
+   */
+  keys(): List<K>
+  /**
+   * The values, in insertion order. Duplicates are kept.
+   * @returns A List of the map's values
+   */
+  values(): List<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
   fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B

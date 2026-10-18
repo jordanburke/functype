@@ -4648,6 +4648,8 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 **Extract**
 
 - `.get(k) // Option<V>`
+- `.keys() // List<K>`
+- `.values() // List<V>`
 - `.getOrElse(k, d)`
 - `.orElse(k, Option<V>)`
 - `.fold(z, f)`
@@ -4660,6 +4662,7 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 
 **Check**
 
+- `.has(k) // key only`
 - `.contains(Tuple([k, v])) // === on the value`
 - `.isEmpty`
 - `.size`
