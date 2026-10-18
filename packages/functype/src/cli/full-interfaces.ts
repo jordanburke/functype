@@ -1162,5 +1162,5 @@ const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkE
    * \`\`\`
    */
   readonly afterResponse?: (response: HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>>
-}`
+}`,
 }

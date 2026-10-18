@@ -34,10 +34,12 @@ import { readFileSync, writeFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { ESLINT_PACKAGE_DIRS } from "./packages.ts"
+
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 
 const FUNCTYPE_REF_PKG = "packages/functype/package.json"
-const ESLINT_PKGS = ["packages/eslint-config-functype/package.json", "packages/eslint-plugin-functype/package.json"]
+const ESLINT_PKGS = ESLINT_PACKAGE_DIRS.map((dir) => `${dir}/package.json`)
 
 const ESLINT_MAJOR = 2 // fixed offset; see header for context
 

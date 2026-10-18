@@ -19,11 +19,11 @@ That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, 
 
 1. **Preflight** — verifies the working tree is clean, you're on `main`, and `main` is in sync with `origin/main`.
 2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
-3. **Bump functype family** — applies the new version to all 5 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`).
+3. **Bump functype family** — applies the new version to all 6 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`). The list lives in `scripts/packages.ts`.
 4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
 5. **Sync mcp-server `server.json`** — `pnpm -F functype-mcp-server sync:registry` writes the new version to the MCP registry manifest.
 6. **Cut CHANGELOG** — takes `## Unreleased` content in `packages/functype/CHANGELOG.md` and rewrites the heading to `## {version} - {date}`, leaving a fresh empty `## Unreleased` at top.
-7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 5 invariants (see below).
+7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 6 invariants (see below).
 8. **Commit + tag** — `git commit -m "release: vX.Y.Z"` + `git tag -a vX.Y.Z`.
 
 ## What CI does on tag push
@@ -54,11 +54,12 @@ The publish gate refuses to proceed if any of these holds:
 
 1. **Unauthorized major.** Any package bumping its major version requires `ALLOW_MAJOR=<pkg>[,<pkg>]` env on the publish step. Per-release authorization, no "always allow" mode.
 2. **Downgrade.** Local version < npm `latest`. Never auto-authorized.
-3. **Family alignment drift.** The 5 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
+3. **Family alignment drift.** The 6 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
+6. **Unlisted package.** Every non-private package under `packages/` must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
 
-All 5 are independent gates and all 5 fail closed.
+All 6 are independent gates and all 6 fail closed.
 
 ## Eslint mirror encoding
 
@@ -87,13 +88,13 @@ The `×100` reserves headroom for double-digit minors. At `functype.minor >= 100
 When you intentionally do a major:
 
 ```bash
-ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-mcp-server" pnpm release major
+ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-eval,functype-mcp-server" pnpm release major
 git push --follow-tags
 ```
 
 And edit `.github/workflows/publish.yml` to set the same `ALLOW_MAJOR` on the `Check publish safety` step env. Remove the override in a follow-up PR after the major lands.
 
-(All 5 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
+(All 6 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
 
 ## Snapshot releases (testing pre-publish)
 

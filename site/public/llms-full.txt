@@ -597,41 +597,44 @@ list.groupBy((x) => (x % 2 === 0 ? "even" : "odd")) // Map of grouped elements
 
 ```typescript
 import { Map } from "functype/map"
+import { Tuple } from "functype/tuple"
 
 // Creation
-Map({ a: 1, b: 2, c: 3 }) // Map({a: 1, b: 2, c: 3})
+Map([
+  ["a", 1],
+  ["b", 2],
+]) // From [key, value] pairs
+Map.of<string, number>(["a", 1], ["b", 2]) // Variadic
 Map.empty<string, number>() // Empty map
 
-// Properties
-map.isEmpty() // true if empty
-map.size() // Number of entries
-map.has("a") // true if key exists
+// Properties (getters, not calls)
+map.isEmpty // true if empty
+map.size // Number of entries
 
 // Accessing
-map.get("a") // Option.Some with value or None
-map.orElse("a", 0) // Value or default
-map.keys() // List of keys
-map.values() // List of values
-map.entries() // List of [key, value] tuples
+map.has("a") // true if the key is present, even when its value is undefined
+map.get("a") // Some(value) or None
+map.getOrElse("a", 0) // Value or default
+map.orElse("a", Option(0)) // Option of the value, or the alternative Option
+map.keys() // List<K>, insertion order
+map.values() // List<V>, insertion order
+map.contains(Tuple(["a", 1])) // true if that exact entry is present (value compared with ===)
+map.toList() // List of Tuple<[K, V]> entries
+for (const [k, v] of map) {
+} // Iterates [key, value] pairs
 
-// Modifying
-map.add("d", 4) // New map with entry added
-map.addAll({ d: 4, e: 5 }) // New map with entries added
-map.remove("a") // New map with key removed
-map.removeAll(["a", "b"]) // New map with keys removed
+// Modifying (each returns a new Map)
+map.add(Tuple(["d", 4])) // Entry added or replaced; add takes one Tuple
+map.remove("a") // Key removed
 
 // Transforming
-map.map((v) => v * 2) // Map with transformed values
-map.mapEntries(([k, v]) => [`key_${k}`, v * 2]) // Transform both keys and values
-map.filter((v) => v > 1) // Map with entries matching predicate
-map.filterKeys((k) => k !== "a") // Map with entries having keys matching predicate
-
-// Operations
-map.merge(Map({ c: 30, d: 40 })) // Maps combined (right values override)
-map.mergeWith(Map({ c: 30, d: 40 }), (v1, v2) => v1 + v2) // Maps combined with custom function
+map.map((v) => v * 2) // Values transformed, keys kept
+map.flatMap((entry) => [[`key_${entry.get(0)}`, entry.get(1)]]) // Entries to new [key, value] pairs
+map.fold(0, (acc, entry) => acc + entry.get(1)) // Fold over Tuple entries
 
 // Conversions
-map.toObject() // Standard JS object
+map.toValue() // { _tag: "Map", value: [K, V][] }
+map.toSet() // Set of Tuple<[K, V]> entries
 ```
 
 ## Set<T>

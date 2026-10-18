@@ -34,20 +34,10 @@ import { readFileSync } from "node:fs"
 import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { PACKAGE_DIRS } from "./packages.ts"
+
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 const REGISTRY = "https://registry.npmjs.org"
-
-/** Keep in sync with `PACKAGE_DIRS` in `scripts/check-publish-safety.ts`. */
-const PACKAGE_DIRS = [
-  "packages/functype",
-  "packages/functype-os",
-  "packages/functype-log",
-  "packages/functype-react",
-  "packages/functype-eval",
-  "packages/mcp-server",
-  "packages/eslint-config-functype",
-  "packages/eslint-plugin-functype",
-] as const
 
 type Target = { readonly name: string; readonly version: string }
 
