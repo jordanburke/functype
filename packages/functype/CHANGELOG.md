@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`Either.mapAsync` and `flatMapAsync` reject when `f` rejects.** On a Right, they caught the rejection and returned it as `Left(reason)`, typed as `L` though it could be any value, such as an `Error` in an `Either<string, _>`. Now the returned Promise rejects with the same reason, as `map`/`flatMap` let a throw escape and `List.mapAsync`, `Set.mapAsync` and `Either.traverseAsync` reject. neverthrow's `ResultAsync.map` and fp-ts's `TaskEither` behave the same way. To turn a rejection into a Left, map the reason explicitly with `Either.fromPromise(promise, onRejected)` or `tryCatchAsync(f, onError)`. Code that relied on the old catch now sees a rejected Promise: wrap the async call in `Either.fromPromise` inside `flatMapAsync`.
+
 ## 1.17.0 - 2026-10-17
 
 Additive release from `release/1.x`. Existing code behaves as before.
