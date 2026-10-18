@@ -28,8 +28,6 @@ export default {
     "prefer-const": "error",
     "no-var": "error",
     "no-throw-literal": "error",
-    "no-mixed-spaces-and-tabs": "error",
-    "no-extra-semi": "error",
     "object-shorthand": "error",
     "prefer-template": "error",
     "prefer-destructuring": [
