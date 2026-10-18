@@ -192,15 +192,13 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
   ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
     ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
-  mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
-    f(value).then((result) => Right<L, U>(result)),
+  mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => Right<L, U>(await f(value)),
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
     other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
-    f(value) as Either<L | L2, U>,
-  flatMapAsync: <L2 extends Type, U extends Type>(
+  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> => f(value),
+  flatMapAsync: async <L2 extends Type, U extends Type>(
     f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> => f(value) as Promise<Either<L | L2, U>>,
+  ): Promise<Either<L | L2, U>> => await f(value),
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
@@ -286,15 +284,15 @@ export interface EitherBase<out L extends Type, out R extends Type>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
   /**
    * Maps the Right value with an async function. A Left resolves unchanged.
-   * If \`f\` rejects, the returned Promise rejects with the same reason: it does not
-   * become a Left. To turn a rejection into a Left, use \`Either.fromPromise(p, onRejected)\`
+   * If \`f\` rejects or throws, the returned Promise rejects with the same reason: it does not
+   * become a Left, and it never throws synchronously. To turn a rejection into a Left, use \`Either.fromPromise(p, onRejected)\`
    * or \`tryCatchAsync\`, which take a function from the reason to \`L\`.
    */
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
   /**
    * Chains an async function that returns an Either. A Left resolves unchanged.
-   * If \`f\` rejects, the returned Promise rejects with the same reason, as with \`mapAsync\`.
+   * If \`f\` rejects or throws, the returned Promise rejects with the same reason, as with \`mapAsync\`.
    */
   flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
