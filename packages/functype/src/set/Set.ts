@@ -1,6 +1,7 @@
 import type { Collection } from "@/collections"
 import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -323,7 +324,7 @@ const SetCompanion = {
    * @returns Set instance
    */
   fromBinary: <A>(binary: string): Set<A> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return SetCompanion.fromJSON<A>(json)
   },
 }

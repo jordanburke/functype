@@ -1,5 +1,6 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
+import { base64ToUtf8 } from "@/internal/base64"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -305,7 +306,7 @@ const StackCompanion = {
    * @returns Stack instance
    */
   fromBinary: <A>(binary: string): Stack<A> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return StackCompanion.fromJSON<A>(json)
   },
 }

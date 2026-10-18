@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeSum } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list/List"
@@ -528,7 +529,7 @@ const EitherCompanion = {
    * @returns Either instance
    */
   fromBinary: <L extends Type, R extends Type>(binary: string): Either<L, R> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return EitherCompanion.fromJSON<L, R>(json)
   },
 }
