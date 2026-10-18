@@ -42,11 +42,11 @@ OIDC trusted publishing produces npm provenance attestations for `functype`, `fu
 
 "Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
 
-`pnpm verify-published` checks each package's version metadata, its tarball and its dist-tag, retrying every 30 seconds for up to 30 minutes. It exits 0 once all 8 install.
+`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 8 install.
 
 - **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`.
 - **Check one version:** `pnpm verify-published functype@1.16.1`.
-- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS`, and `NPM_DIST_TAG` (default `latest`; a 1.x publish after 2.0.0 will need `latest-1`).
+- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS` (at least 1), and `NPM_DIST_TAG` (default `latest`). The publish step passes no `--tag`, so CI always checks `latest`. `NPM_DIST_TAG` is for checking another tag by hand.
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 

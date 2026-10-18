@@ -10,11 +10,14 @@
  * so a clean `npm install` failed for about 6 minutes. Both cleared on their
  * own, without a republish.
  *
- * For each package this checks, until all pass or the deadline:
+ * For each package this checks, until all pass or the deadline, the same
+ * document `npm install` reads: the abbreviated packument at
+ * `registry.npmjs.org/<name>`. The CDN caches it apart from the per-version
+ * and dist-tags URLs, so those can be current while it isn't.
  *
- *   1. `registry.npmjs.org/<name>/<version>` answers 200.
- *   2. The `dist.tarball` URL it names answers 200.
- *   3. The dist-tag (`NPM_DIST_TAG`, default `latest`) points at <version>.
+ *   1. It lists <version>.
+ *   2. Its dist-tag (`NPM_DIST_TAG`, default `latest`) points at <version>.
+ *   3. The `dist.tarball` URL it gives for <version> answers 200.
  *
  * Packages that pass are not re-checked. The deadline defaults to 30 minutes
  * (`VERIFY_TIMEOUT_SECONDS`), because a staged version has been seen to
@@ -50,19 +53,22 @@ type Target = { readonly name: string; readonly version: string }
 
 type Check = { readonly ok: true } | { readonly ok: false; readonly reason: string }
 
-const seconds = (envName: string, fallback: number): number => {
+const seconds = (envName: string, fallback: number, min: number): number => {
   const raw = process.env[envName]
   const parsed = raw === undefined || raw === "" ? fallback : Number(raw)
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    console.error(`✗ verify-published: ${envName} must be a non-negative number of seconds, got "${raw}"`)
+  if (!Number.isFinite(parsed) || parsed < min) {
+    console.error(`✗ verify-published: ${envName} must be a number of seconds >= ${min}, got "${raw}"`)
     process.exit(2)
   }
   return parsed
 }
 
 const distTag = process.env.NPM_DIST_TAG || "latest"
-const timeoutMs = seconds("VERIFY_TIMEOUT_SECONDS", 30 * 60) * 1000
-const intervalMs = seconds("VERIFY_INTERVAL_SECONDS", 30) * 1000
+const timeoutMs = seconds("VERIFY_TIMEOUT_SECONDS", 30 * 60, 0) * 1000
+// At least 1s, so a 0 can't turn the retry loop into a tight loop against the registry.
+const intervalMs = seconds("VERIFY_INTERVAL_SECONDS", 30, 1) * 1000
+/** Per request, so one hung connection fails that attempt instead of stalling the run past its deadline. */
+const REQUEST_TIMEOUT_MS = 15_000
 
 const readTarget = (dir: string): Target => {
   const pkg = JSON.parse(readFileSync(join(repoRoot, dir, "package.json"), "utf8")) as Target
@@ -78,26 +84,36 @@ const parseArg = (arg: string): Target => {
   return { name: arg.slice(0, at), version: arg.slice(at + 1) }
 }
 
-/** Asks the registry's CDN not to serve a cached 404. It may not honor that; the retry loop is the real safeguard. */
-const noCache = { headers: { "cache-control": "no-cache" } }
+/**
+ * `cache-control` asks the registry's CDN not to serve a cached 404. It may not honor that; the retry loop is
+ * the real safeguard. The `accept` value is the one npm sends, which selects the abbreviated packument.
+ */
+const request = (accept: string, method = "GET"): RequestInit => ({
+  method,
+  headers: { "cache-control": "no-cache", accept },
+  signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+})
+const INSTALL_ACCEPT = "application/vnd.npm.install-v1+json; q=1.0, application/json; q=0.8, */*"
+
+type Packument = {
+  readonly "dist-tags"?: Readonly<Record<string, string>>
+  readonly versions?: Readonly<Record<string, { readonly dist?: { readonly tarball?: string } }>>
+}
 
 const check = async ({ name, version }: Target): Promise<Check> => {
-  const metaRes = await fetch(`${REGISTRY}/${name}/${version}`, noCache)
-  if (metaRes.status !== 200) return { ok: false, reason: `version metadata ${metaRes.status}` }
-  const meta = (await metaRes.json()) as {
-    readonly dist?: { readonly tarball?: string }
-  }
-  const tarball = meta.dist?.tarball
-  if (tarball === undefined) return { ok: false, reason: "version metadata has no dist.tarball" }
+  const docRes = await fetch(`${REGISTRY}/${name}`, request(INSTALL_ACCEPT))
+  if (docRes.status !== 200) return { ok: false, reason: `packument ${docRes.status}` }
+  const doc = (await docRes.json()) as Packument
 
-  const tgzRes = await fetch(tarball, { ...noCache, method: "HEAD" })
-  if (tgzRes.status !== 200) return { ok: false, reason: `tarball ${tgzRes.status}` }
-
-  const tagsRes = await fetch(`${REGISTRY}/-/package/${name}/dist-tags`, noCache)
-  if (tagsRes.status !== 200) return { ok: false, reason: `dist-tags ${tagsRes.status}` }
-  const tags = (await tagsRes.json()) as Readonly<Record<string, string>>
-  const tagged = tags[distTag]
+  const entry = doc.versions?.[version]
+  if (entry === undefined) return { ok: false, reason: "packument does not list the version yet" }
+  const tagged = doc["dist-tags"]?.[distTag]
   if (tagged !== version) return { ok: false, reason: `dist-tag ${distTag} is ${tagged ?? "unset"}` }
+  const tarball = entry.dist?.tarball
+  if (tarball === undefined) return { ok: false, reason: "packument has no dist.tarball for the version" }
+
+  const tgzRes = await fetch(tarball, request("*/*", "HEAD"))
+  if (tgzRes.status !== 200) return { ok: false, reason: `tarball ${tgzRes.status}` }
 
   return { ok: true }
 }
