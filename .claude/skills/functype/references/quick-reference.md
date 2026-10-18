@@ -19,6 +19,17 @@ cache.set(id, row)
 - Don't alias (`Map as FMap`); `collection-naming` reports it.
 - A built-in that's only read is still reported: use functype's, or pass it straight to a declared `ReadonlyMap` / `ReadonlySet`.
 
+Reading a functype `Map` (1.18):
+
+```typescript
+byId.get("a")                  // Option<number>
+byId.has("a")                  // boolean: key only, true even when the stored value is undefined
+byId.keys()                    // List<string>, insertion order
+byId.values()                  // List<number>, insertion order, duplicates kept
+byId.add(Tuple(["b", 2]))      // new Map; add takes one Tuple
+byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
+```
+
 ## Construction
 
 | Type     | Constructor                                                     | Example                                                                                    |

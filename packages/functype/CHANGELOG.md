@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`Map` gains `has(key)`, `keys()` and `values()`.** `prefer-functype-map` steers code onto functype's `Map`, which had no way to check a key or list keys or values; the workarounds were `get(k).isSome()` and `[...map].map(([, v]) => v)`. `has` checks the key only, by identity for object keys like a native `Map`, and is true even when the stored value is `undefined` (where `get` returns `None`). `keys()` and `values()` return a `List` in insertion order, like `Obj.keys()` and `Obj.values()`, so they can be read more than once and chained. For a whole-entry check, `contains(Tuple([k, v]))` still compares the value with `===`.
+
 ## 1.17.0 - 2026-10-17
 
 Additive release from `release/1.x`. Existing code behaves as before.

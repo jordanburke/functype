@@ -224,8 +224,10 @@ set.toArray()                // convert to array
 Map([["a", 1], ["b", 2]])    // create from pairs
 Map.of<string, number>(["a", 1], ["b", 2])  // variadic factory
 Map.empty<string, number>()  // typed empty map
-map.set(key, value)          // add entry (returns new Map)
+map.add(Tuple([key, value])) // add entry (returns new Map); add takes one Tuple
 map.get(key)                 // get value (returns Option)
+map.has(key)                 // key present? (true even when the value is undefined)
+map.keys() / map.values()    // List<K> / List<V>, insertion order (1.18)
 
 // Option - nullable handling
 Option(value)                // wrap value (None if null/undefined)
@@ -479,9 +481,9 @@ cache.set(key, value)
 
 // AFTER: functype Map (returns new Map). Import it as `Map`: functype's Map/Set are the
 // default collections, and the built-in is spelled `globalThis.Map` where it's really needed.
-import { Map } from "functype"
+import { Map, Tuple } from "functype"
 const cache = Map<string, Value>([])
-const newCache = cache.set(key, value)
+const newCache = cache.add(Tuple([key, value]))
 ```
 
 ### Pattern 5: Error accumulation → List + buildResult helper

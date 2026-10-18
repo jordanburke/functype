@@ -220,6 +220,8 @@ export const TYPES: Record<string, TypeData> = {
       transform: [".add(Tuple([k, v]))", ".remove(k)", ".map(f)", ".flatMap(f)", ".ap(ff)", ".flatMapAsync(f)"],
       extract: [
         ".get(k) // Option<V>",
+        ".keys() // List<K>",
+        ".values() // List<V>",
         ".getOrElse(k, d)",
         ".orElse(k, Option<V>)",
         ".fold(z, f)",
@@ -230,7 +232,7 @@ export const TYPES: Record<string, TypeData> = {
         ".toSet()",
         "[...map] // iterate [k, v] pairs",
       ],
-      check: [".contains(Tuple([k, v])) // === on the value", ".isEmpty", ".size"],
+      check: [".has(k) // key only", ".contains(Tuple([k, v])) // === on the value", ".isEmpty", ".size"],
       other: ['import { Map } from "functype"  // its own name; the built-in is globalThis.Map'],
     },
   },
