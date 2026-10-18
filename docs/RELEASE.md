@@ -13,7 +13,7 @@ pnpm release patch        # or: minor, major
 git push --follow-tags    # → triggers CI publish
 ```
 
-That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
+That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
 
 ## What `pnpm release` does
 
@@ -33,9 +33,20 @@ That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, 
 1. **Validate** — same `pnpm validate` as local.
 2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
 3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
-4. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
+4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
+5. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
 OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`.
+
+## Verify the release installs (`scripts/verify-published.ts`)
+
+"Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
+
+`pnpm verify-published` checks each package's version metadata, its tarball and its dist-tag, retrying every 30 seconds for up to 30 minutes. It exits 0 once all 8 install.
+
+- **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`.
+- **Check one version:** `pnpm verify-published functype@1.16.1`.
+- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS`, and `NPM_DIST_TAG` (default `latest`; a 1.x publish after 2.0.0 will need `latest-1`).
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 
