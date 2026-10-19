@@ -68,7 +68,7 @@
     "@typescript-eslint/parser": "^8.71.1",
     "eslint-plugin-functype": "workspace:*",
     "ts-morph": "^28.0.0",
-    "type-coverage-core": "^2.30.3"
+    "type-coverage-core": "^2.30.4"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
