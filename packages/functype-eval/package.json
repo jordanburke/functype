@@ -65,7 +65,7 @@
     "typescript": ">=5.3.0 <7"
   },
   "dependencies": {
-    "@typescript-eslint/parser": "^8.71.1",
+    "@typescript-eslint/parser": "^8.71.2",
     "eslint-plugin-functype": "workspace:*",
     "ts-morph": "^28.0.0",
     "type-coverage-core": "^2.30.3"
