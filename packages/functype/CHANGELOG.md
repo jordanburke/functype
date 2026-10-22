@@ -21,6 +21,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **`Set` gains `union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf` and `isDisjointFrom`.** They have the same names as native `Set` (ES2025) and give the same elements. Results keep this set's order, then `other`'s; native `intersection` instead follows whichever set is smaller. `other` can be any iterable, such as an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does: objects by identity, and `NaN` equals `NaN`. `union` and `symmetricDifference` widen the element type, so `Set<number>.union(["a"])` is a `Set<number | string>`.
 - **`List` and `Set` gain `every(p)`**, true when every element matches and true for an empty collection. It is the counterpart of `exists`, and is named like `every` on native arrays and Sets.
 - **`HttpError` is exported as a value, not just a type.** `import { HttpError } from "functype/fetch"` now gives the companion with `networkError`, `httpStatusError` and `decodeError`, as the JSDoc and docs already showed. Before, the value was exported only as `HttpErrors`, which stays as an alias.
+- **`Either.traverse` stops at the first `Left`.** It called `f` on every element and then kept the first `Left`. Now `f` isn't called for the elements after it, as `Option.traverse` and `Try.traverse` already worked. The result is the same; only side effects in `f` for the later elements go away. `f` is also typed with the element's index, which it already received.
+- **`traverse` and `sequence` accept readonly arrays.** `Either.traverse`, `Either.sequence`, `Option.sequence` and `Try.sequence` took a mutable array, so a `ReadonlyArray`, such as a `Wire<ReadonlyArray<Row>>`, didn't type-check. `Option.traverse` and `Try.traverse` already accepted one.
+- **The functype skill's quick reference compiles too.** The type-check test now also covers `.claude/skills/functype/references/quick-reference.md`, the reference agents load. Blocks that leave out imports get the functype names they use imported for them, and indented code blocks are checked. It found:
+  - `Try.traverse(paths, readFileSync)`, where `f` must return a `Try`.
+  - `TracedOption(user, …)`, which takes an `Option`.
+  - `LazyList.from(0, f)`, which is `LazyList.iterate(0, f)`.
+  - A `.value()` on `Lazy`, which has none.
+  - Outside code blocks: `List.from(array)` and `list.append(x)`, which don't exist.
 
 ## 1.18.0 - 2026-10-18
 

@@ -22,6 +22,7 @@ cache.set(id, row)
 Reading a functype `Map` (1.18):
 
 ```typescript
+const byId = Map([["a", 1]])
 byId.get("a")                  // Option<number>
 byId.has("a")                  // boolean: key only, true even when the stored value is undefined
 byId.keys()                    // List<string>, insertion order
@@ -157,18 +158,22 @@ Set operations (1.19) have the same names as native `Set`, and results keep this
 | Either | Option | `fold(() => Option.none(), v => Option(v))` |
 | List   | Array  | `toArray()`                                 |
 | List   | Set    | `toSet()`                                   |
-| Array  | List   | `List.from(array)` or `List(array)`         |
-| Set    | List   | `List.from(set)`                            |
+| Array  | List   | `List(array)`                               |
+| Set    | List   | `set.toList()` or `List(set)`               |
 
 ## Common Patterns Cheat Sheet
 
 ### Null Safety
 
-```typescript
-// Before
-const name = user?.name ?? "Unknown"
+Before:
 
-// After
+```typescript
+const name = user?.name ?? "Unknown"
+```
+
+After:
+
+```typescript
 const name = Option(user)
   .map((u) => u.name)
   .orElse("Unknown")
@@ -176,27 +181,37 @@ const name = Option(user)
 
 ### Error Handling
 
-```typescript
-// Before
-try {
-  return riskyOperation()
-} catch (e) {
-  return defaultValue
-}
+Before:
 
-// After
-Try(() => riskyOperation()).orElse(defaultValue)
+```typescript
+function load(): number {
+  try {
+    return riskyOperation()
+  } catch {
+    return defaultValue
+  }
+}
+```
+
+After:
+
+```typescript
+const load = (): number => Try(() => riskyOperation()).orElse(defaultValue)
 ```
 
 ### Validation
 
+Before:
+
 ```typescript
-// Before
 function validate(email: string): string | null {
   return email.includes("@") ? email : null
 }
+```
 
-// After
+After:
+
+```typescript
 function validate(email: string): Either<string, string> {
   return email.includes("@") ? Right(email) : Left("Invalid email")
 }
@@ -204,11 +219,15 @@ function validate(email: string): Either<string, string> {
 
 ### Array Processing
 
-```typescript
-// Before
-const result = array.filter((x) => x > 0).map((x) => x * 2)
+Before:
 
-// After (immutable)
+```typescript
+const result = array.filter((x) => x > 0).map((x) => x * 2)
+```
+
+After (immutable):
+
+```typescript
 const result = List(array)
   .filter((x) => x > 0)
   .map((x) => x * 2)
@@ -224,7 +243,7 @@ Short-circuits on the first failure.
 // traverse: Array<T> -> (T => Effect<U>) => Effect<U[]>
 Either.traverse(items, parseRow) // Either<E, Row[]>
 Option.traverse(ids, lookupUser) // Option<User[]>
-Try.traverse(paths, readFileSync) // Try<string[]>
+Try.traverse(paths, (path) => Try(() => readFileSync(path))) // Try<string[]>
 
 // sequence: Array<Effect<T>> => Effect<T[]>
 Either.sequence(eithers) // Either<E, T[]>
@@ -432,7 +451,7 @@ type UserRow = Wire<{ readonly email: string | null; readonly tags: ReadonlyArra
 type UserRows = Wire<ReadonlyArray<UserRow>>; // collection — NOT Wire<UserRow>
 type Invite = { readonly acceptedAt: Wire<string | null> }; // one field
 
-async function fetchUsers(): Promise<UserRows> { ... }
+declare function fetchUsers(): Promise<UserRows>
 List(await fetchUsers()).filter((u) => Option(u.email).isSome()) // convert inside the pipeline
 ```
 
@@ -448,7 +467,7 @@ import { TracedOption, type Tracer, type TraceEvent } from "functype";
 const events: TraceEvent[] = [];
 const tracer: Tracer = { emit: (e) => void events.push(e) };
 
-TracedOption(user, tracer, "span-1")        // spanId groups one chain's events
+TracedOption(Option(user), tracer, "span-1") // wraps an Option; spanId groups one chain's events
   .map((u) => u.name.trim(), "trim")         // optional label per step
   .filter((n) => n.length > 0, "non-empty")
   .orElse("anonymous", "fallback");           // fold / orElse / unwrap() are terminal
@@ -588,7 +607,7 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 | `Option(value).map(...)` without extraction    | `Option(value).map(...).orElse(default)`     |
 | `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))` |
 | `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).orElse(fallback)`              |
-| `list.toArray().push(item)` (mutates)          | `list.append(item).toArray()`                |
+| `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                   |
 | Using `any` type                               | Use proper type parameters: `Option<T>`      |
 
 ## Performance Tips
@@ -597,13 +616,13 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 
    ```typescript
    const expensive = Lazy(() => heavyComputation())
-   // Only computed when accessed via .value()
+   expensive.orThrow() // computed on the first read (orThrow, orElse, fold, ...), then cached
    ```
 
 2. **Use LazyList for large datasets**
 
    ```typescript
-   LazyList.from(0, (n) => n + 1)
+   LazyList.iterate(0, (n) => n + 1) // 0, 1, 2, ... computed on demand
      .filter((n) => n % 2 === 0)
      .take(10)
    ```
@@ -619,12 +638,14 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 As of 0.53.0, `Either<L, R>` is defined as `LeftOf<L, R> | RightOf<L, R>`. This means TypeScript narrows `value` in both branches of `isLeft()` / `isRight()` or `_tag` checks — no `as R` casts needed.
 
 ```typescript
-const e: Either<Error, number> = parse("42")
-if (e.isLeft()) {
-  console.error(e.value.message) // e narrowed to LeftOf — value is Error
-  return
+function double(e: Either<Error, number>): number {
+  if (e.isLeft()) {
+    console.error(e.value.message) // e narrowed to LeftOf — value is Error
+    return 0
+  }
+  const n: number = e.value // narrowed to RightOf — value is number, no cast
+  return n * 2
 }
-const n: number = e.value // narrowed to RightOf — value is number, no cast
 ```
 
 After an `isLeft()` early return, `e.value` is already `R`: don't call `.orThrow()` to get it.
