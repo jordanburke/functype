@@ -34,13 +34,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
     - Cond: `Cond.start().case().otherwise()`, which is `Cond.of().when().elseWhen().else()`.
     - Layer and IO: `Layer.fromValue`, `effect.provide(layer)` and `effect.runEither()`.
     - Tuple: the old `first`/`mapFirst`/`swap`/`concat` API.
-    - Others: `Lazy.value()`, `List.push`, `list.append`, and `Try.toEither()` with no argument.
+    - Others: `Lazy.value()`, `list.append`, and `Try.toEither()` with no argument.
   - **Wrong arguments:** `Stack.of(1, 2, 3)` and `LazyList.of(1, 2, 3)`, which take one value. `LazyList.from(0, f)`, which builds `[0]` rather than an infinite sequence.
   - **Wrong shapes:**
     - `IO.bracket({ acquire, use, release })`, which takes three arguments.
     - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
     - `catchTag` on classes without a `_tag`.
-  - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too.
+  - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
   - **Two documented forms that compile only with a workaround:**
     - `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
     - `Do(...)` over Option or Try generators is typed `unknown`. The doc casts the result.

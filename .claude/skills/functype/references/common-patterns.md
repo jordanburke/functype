@@ -220,8 +220,8 @@ const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
 ### Conditional Config Assembly
 
 ```typescript
-const config = Obj({ debug: false, port: 3000, logLevel: "info" })
-  .assign({ port: 8080 })
+const config = Obj({ debug: false, port: 3000 })
+  .merge({ logLevel: "info" }) // merge adds keys; assign only overrides existing ones
   .when(process.env.NODE_ENV === "production", { debug: false, logLevel: "error" })
   .when(process.env.NODE_ENV === "development", { debug: true })
   .value()

@@ -227,8 +227,8 @@ import { Match } from "functype"
 
 const describe = (status: "success" | "error"): string =>
   Match(status)
-    .caseValue("success", "done")
-    .caseValue("error", "failed")
+    .case("success", () => "done")
+    .case("error", () => "failed")
     .exhaustive()
 ```
 
@@ -243,9 +243,11 @@ function validateEmail(email: string): Either<string, string> {
   return email.includes("@") ? Right(email) : Left("Invalid email format")
 }
 
-function validateUser(user: any): Either<string, User> {
-  return validateEmail(user.email)
-    .map((email) => ({ ...user, email }))
+type SignupInput = { readonly email: string; readonly age: number }
+
+function validateUser(input: SignupInput): Either<string, SignupInput> {
+  return validateEmail(input.email)
+    .map((email) => ({ ...input, email }))
     .flatMap((u) => (u.age >= 18 ? Right(u) : Left("Must be 18 or older")))
 }
 
@@ -344,7 +346,7 @@ const findProgram = IO.gen(function* () {
 // Execution
 await effect.run() // Returns Promise<Either<E, A>>
 await effect.runOrThrow() // Returns Promise<A>; rejects with the error
-effect.runSync() // Returns Either<E, A> (throws if async)
+effect.runSync() // Returns Either<E, A>; Left if the effect is async (runSyncOrThrow throws instead)
 await effect.runExit() // Returns Promise<Exit<E, A>>
 
 // run() vs runExit(): Either has two branches, Exit has four. Use run() when all you
@@ -533,7 +535,7 @@ Option.fromBinary<string>(binaryData)
 For a complete overview of which methods are available on each data structure, consult the **Feature Matrix** at:
 
 - `references/feature-matrix.md` (included with this skill)
-- Or in the functype repo: `docs/FUNCTYPE_FEATURE_MATRIX.md`
+- Or in the functype repo: `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`
 
 The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type implements and what methods are available.
 
@@ -562,7 +564,7 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 
 - `map`, `flatMap`, `filter`, `reduce`
 - `foldLeft`, `foldRight`
-- `append`, `prepend`, `concat`
+- `add`, `prepend`, `concat`
 - `head`, `tail`, `isEmpty`
 - `toArray`, `toSet`
 
