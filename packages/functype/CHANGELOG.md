@@ -42,9 +42,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
     - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
     - `catchTag` on classes without a `_tag`.
   - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
-  - **Two documented forms that compile only with a workaround:**
-    - `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
-    - `Do(...)` over Option or Try generators is typed `unknown`. The doc casts the result.
+  - **A documented form that compiles only with a workaround:** `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
   - **A dead link:** the skill's `references/feature-matrix.md` symlink pointed at a path that stopped existing in the monorepo move. It now points at `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`.
 
 ## 1.18.0 - 2026-10-18

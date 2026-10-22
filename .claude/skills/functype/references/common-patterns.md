@@ -601,16 +601,13 @@ const name = result.map((config) => config.name).orElse("default")
 ```typescript
 import { Do, $, Option, Either } from "functype"
 
-// Option comprehension. Do's result is typed unknown for Option and Try generators today,
-// so cast it, as the Do JSDoc shows for mixed generators.
-const userTheme = (
-  Do(function* () {
-    const user = yield* $(Option(currentUser))
-    const profile = yield* $(Option(user.profile))
-    const settings = yield* $(Option(profile.settings))
-    return settings.theme
-  }) as Option<string>
-).orElse("light")
+// Option comprehension: an Option-only Do is an Option
+const userTheme = Do(function* () {
+  const user = yield* $(Option(currentUser))
+  const profile = yield* $(Option(user.profile))
+  const settings = yield* $(Option(profile.settings))
+  return settings.theme
+}).orElse("light")
 
 // Either validation chain
 const validated = Do(function* () {
