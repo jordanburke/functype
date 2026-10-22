@@ -73,7 +73,7 @@ declare global {
     readonly name: string
     readonly email: string
     readonly isActive: boolean
-    readonly profile?: { readonly settings?: { readonly theme: string } }
+    readonly profile?: { readonly avatar?: { readonly url: string }; readonly settings?: { readonly theme: string } }
   }
   type Saved = { readonly id: string }
   const row: Row
@@ -114,6 +114,77 @@ declare global {
   const api: { readonly getUser: (id: string) => Promise<User> }
   const heavyComputation: () => number
   const computeOnce: () => number
+
+  // SKILL.md
+  type Config = { readonly name: string; readonly port: number }
+  type DatabaseService = { readonly query: () => ReadonlyArray<string>; readonly findUser: (id: string) => Promise<User> }
+  class NetworkError extends Error {
+    readonly _tag: "NetworkError"
+    constructor(cause?: unknown)
+  }
+  const str: string
+  const findUser: (id: string) => User | undefined
+  const configStr: string
+  const defaultConfig: Config
+  const validateConfig: (config: unknown) => Either<string, Config>
+  const computation: () => number
+  const error: Error
+  const promise: Promise<number>
+  const url: string
+  const myDb: DatabaseService
+  const effect: IO<never, Error, number>
+  const onSuccess: (value: number) => string
+  const onFailure: (error: Error) => string
+  const onInterrupted: (fiberId: string) => string
+  const hugeArray: ReadonlyArray<number>
+  const fetchProfileAsync: (userId: string) => Promise<Option<{ readonly bio: string }>>
+  const option: Option<number>
+  const either: Either<string, number>
+  const tryVal: Try<number>
+  const yamlString: string
+  const binaryData: string
+  const fetchedUsers: ReadonlyArray<User>
+  const existingSet: globalThis.Set<string>
+
+  // references/common-patterns.md
+  type Data = { readonly id: string }
+  class UserNotFoundError extends Error {
+    constructor(id: string, cause?: unknown)
+  }
+  const callback: ((...args: ReadonlyArray<number>) => void) | undefined
+  const arg1: number
+  const arg2: number
+  const condition: boolean
+  const compute: () => number
+  const fetchData: (url: string) => Either<string, string>
+  const parseData: (raw: string) => Either<{ readonly type: "parse"; readonly details: string }, unknown>
+  const validateData: (value: unknown) => Either<{ readonly type: "validation"; readonly field: string }, Data>
+  const fetchFromAPI: () => number
+  const cachedData: number
+  const userAgent: string
+  const accessToken: string | undefined
+  const userIds: ReadonlyArray<string>
+  const fetchPageSafe: (url: string) => Promise<Either<Error, string>>
+  const found: ReadonlyArray<{ readonly files: ReadonlyArray<string> }>
+  const folders: ReadonlyArray<string>
+  const listFiles: (folder: string) => Promise<ReadonlyArray<string>>
+  const jsonString: string
+  const defaultObject: unknown
+  const sendEmail: (email: string) => void
+  const db: { readonly findUser: (id: string) => Promise<User | null>; readonly saveUser: (user: User) => Promise<void> }
+  const fallbackData: unknown
+  const openConnection: () => { readonly query: (sql: string) => Promise<ReadonlyArray<User>>; readonly close: () => void }
+  const onNavigateAway: (f: () => void) => void
+  const renderData: (data: unknown) => void
+  const data: string
+  const splitIntoChunks: (data: string) => ReadonlyArray<string>
+  const uploadChunk: (chunk: string | undefined) => Promise<void>
+  const updateProgressBar: (percent: number) => void
+  const loadAndParseConfig: () => Promise<Config>
+  const currentUser: User | undefined
+  const form: { readonly email: string; readonly age: number; readonly name: string }
+  const validateAge: (age: number) => Either<string, number>
+  const validateName: (name: string) => Either<string, string>
 }
 
 export {}
@@ -159,6 +230,8 @@ type DocSpec = {
 const DOCS: ReadonlyArray<DocSpec> = [
   { path: "packages/functype/docs/quick-reference.md", prelude: DOCS_PRELUDE, autoImport: false },
   { path: ".claude/skills/functype/references/quick-reference.md", prelude: SKILL_PRELUDE, autoImport: true },
+  { path: ".claude/skills/functype/SKILL.md", prelude: SKILL_PRELUDE, autoImport: true },
+  { path: ".claude/skills/functype/references/common-patterns.md", prelude: SKILL_PRELUDE, autoImport: true },
 ]
 
 type Block = { readonly line: number; readonly code: string }

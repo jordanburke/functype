@@ -29,7 +29,23 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - `TracedOption(user, …)`, which takes an `Option`.
   - `LazyList.from(0, f)`, which is `LazyList.iterate(0, f)`.
   - A `.value()` on `Lazy`, which has none.
-  - Outside code blocks: `List.from(array)` and `list.append(x)`, which don't exist.
+  - By hand, in its tables, which the check can't read: `List.from(array)` and `list.append(x)`, which don't exist.
+- **The rest of the functype skill compiles too.** The check now also covers the skill's `SKILL.md`, the file agents load first, and `references/common-patterns.md`. They had these errors:
+  - **Calls that don't exist:**
+    - Cond: `Cond.start().case().otherwise()`, which is `Cond.of().when().elseWhen().else()`.
+    - Layer and IO: `Layer.fromValue`, `effect.provide(layer)` and `effect.runEither()`.
+    - Tuple: the old `first`/`mapFirst`/`swap`/`concat` API.
+    - Others: `Lazy.value()`, `list.append`, and `Try.toEither()` with no argument.
+  - **Wrong arguments:** `Stack.of(1, 2, 3)` and `LazyList.of(1, 2, 3)`, which take one value. `LazyList.from(0, f)`, which builds `[0]` rather than an infinite sequence.
+  - **Wrong shapes:**
+    - `IO.bracket({ acquire, use, release })`, which takes three arguments.
+    - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
+    - `catchTag` on classes without a `_tag`.
+  - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
+  - **Two documented forms that compile only with a workaround:**
+    - `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
+    - `Do(...)` over Option or Try generators is typed `unknown`. The doc casts the result.
+  - **A dead link:** the skill's `references/feature-matrix.md` symlink pointed at a path that stopped existing in the monorepo move. It now points at `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`.
 
 ## 1.18.0 - 2026-10-18
 
