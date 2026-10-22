@@ -6,6 +6,19 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
+- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
+  - Option: `isDefined()` and `get()`, which don't exist.
+  - Either: `get()`, `getLeft()` and `filter`.
+  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
+  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
+  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
+  - Task: a `functype/core/task` import.
+  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
+  - Brand: its arguments in the wrong order.
+  - Http: `HttpError.networkError`, where the value is exported as `HttpErrors`.
+  - Composition: a `pipe` import from a subpath that doesn't exist.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
