@@ -233,7 +233,7 @@ const generateOutput = (interfaces: List<InterfaceInfo>): string => {
  */
 
 export const FULL_INTERFACES: Record<string, string> = {
-${entries}
+${entries},
 }
 `
 }

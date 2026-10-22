@@ -16,8 +16,13 @@
  *          both on the `2.100.x` line (intentional offset from functype).
  *      Drift here means something bypassed the `scripts/release.ts` family
  *      bump (manual edit, conflict resolution, dependabot, etc.).
- *   4. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
+ *   4. Eslint mirror drift: the eslint pair's version must be the encoded
+ *      mirror of functype's (`pnpm sync:eslint-mirror:check`).
+ *   5. Side-file drift: `packages/mcp-server/server.json` (the MCP registry
  *      manifest) must match the package.json version.
+ *   6. Unlisted package: every non-private workspace package must be in
+ *      `PACKAGE_DIRS` (`scripts/packages.ts`). `pnpm -r publish` would
+ *      publish it, but no bump, alignment check or install check would see it.
  *
  * Background: on 2026-05-30 a `workspace:^` peerDependency caused
  * functype-os/-log/-react to silently force-major-bump from 0.60.7 →
@@ -36,49 +41,26 @@ import { join, dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
+import { ESLINT_PACKAGE_DIRS, FAMILY_PACKAGE_DIRS, PACKAGE_DIRS, unlistedPublicPackageDirs } from "./packages.ts"
 
-const PACKAGE_DIRS = [
-  "packages/functype",
-  "packages/functype-os",
-  "packages/functype-log",
-  "packages/functype-react",
-  "packages/functype-eval",
-  "packages/mcp-server",
-  "packages/eslint-config-functype",
-  "packages/eslint-plugin-functype",
-] as const
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 
 /**
  * Packages that must publish in lockstep — every member of a group must have
  * the same version at publish time.
  *
  * - Functype family: 6 packages on the `1.x` line, bumped together by
- *   `FAMILY_PACKAGE_DIRS` in `scripts/release.ts`.
+ *   `scripts/release.ts`.
  * - Eslint pair: config + plugin on the `2.100.x` line, derived from the
  *   functype family version via `scripts/sync-eslint-mirror.ts` (intentional
  *   version-line offset).
  *
- * **Sync rule:** if you change this list, also update the matching bump source
- * (`FAMILY_PACKAGE_DIRS` in `scripts/release.ts` for the family) so the bump
- * and this guard stay in agreement.
+ * Both come from `scripts/packages.ts`, the same lists the bump reads, so the
+ * bump and this guard can't disagree.
  */
-const ALIGNMENT_GROUPS: ReadonlyArray<{ readonly label: string; readonly members: ReadonlySet<string> }> = [
-  {
-    label: "functype-* family",
-    members: new Set<string>([
-      "functype",
-      "functype-os",
-      "functype-log",
-      "functype-react",
-      "functype-eval",
-      "functype-mcp-server",
-    ]),
-  },
-  {
-    label: "eslint pair",
-    members: new Set<string>(["eslint-config-functype", "eslint-plugin-functype"]),
-  },
+const ALIGNMENT_GROUPS: ReadonlyArray<{ readonly label: string; readonly dirs: ReadonlySet<string> }> = [
+  { label: "functype-* family", dirs: new Set<string>(FAMILY_PACKAGE_DIRS) },
+  { label: "eslint pair", dirs: new Set<string>(ESLINT_PACKAGE_DIRS) },
 ]
 
 const allowMajor = new Set(
@@ -91,6 +73,7 @@ const allowMajor = new Set(
 type BumpKind = "patch" | "minor" | "major" | "downgrade" | "same" | "new"
 
 interface Plan {
+  dir: string
   name: string
   local: string
   npm: string | null
@@ -125,10 +108,19 @@ const classify = (local: string, npm: string | null): BumpKind => {
   return "downgrade"
 }
 
+const unlisted = unlistedPublicPackageDirs(repoRoot)
+if (unlisted.length > 0) {
+  console.error(`\n✗ check-publish-safety: ${unlisted.length} public package(s) missing from scripts/packages.ts:`)
+  for (const dir of unlisted) console.error(`    ${dir}`)
+  console.error(`\n  \`pnpm -r publish\` would publish them unchecked. Add each to FAMILY_PACKAGE_DIRS or`)
+  console.error(`  ESLINT_PACKAGE_DIRS, or mark it \`"private": true\`.`)
+  process.exit(1)
+}
+
 const plans: Plan[] = PACKAGE_DIRS.map((dir) => {
   const { name, version } = readPkg(dir)
   const npm = getNpmVersion(name)
-  return { name, local: version, npm, bump: classify(version, npm) }
+  return { dir, name, local: version, npm, bump: classify(version, npm) }
 })
 
 console.log("\nPublish plan (local → npm):")
@@ -177,7 +169,7 @@ if (surpriseMajors.length > 0) {
 // check catches drift at publish time before any group member lands out of sync
 // on npm.
 const driftedGroups = ALIGNMENT_GROUPS.flatMap((group) => {
-  const members = plans.filter((p) => group.members.has(p.name))
+  const members = plans.filter((p) => group.dirs.has(p.dir))
   const versions = new Set(members.map((p) => p.local))
   return versions.size > 1 ? [{ group, members }] : []
 })

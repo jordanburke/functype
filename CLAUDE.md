@@ -49,7 +49,7 @@ git push --follow-tags             # push the tag to trigger the CI publish
 ## Workflows
 
 - **`.github/workflows/ci.yml`** — runs on PR + push to `main` and `release/**`. `pnpm turbo run validate`. Includes a path-filtered bundle-size job for `packages/functype/**`.
-- **`.github/workflows/publish.yml`** — runs on push of a `v*` tag (not on push to main). Re-runs `turbo run validate`, then `check-publish-safety` as the final gate, then `pnpm -r publish`, which publishes any package whose local version differs from npm `latest`. Publishes with provenance; auth is npm OIDC trusted publishing where configured, with `NPM_TOKEN` as the fallback. See the header comment in `publish.yml` for the current per-package split — that file is the source of truth, not this line.
+- **`.github/workflows/publish.yml`** — runs on push of a `v*` tag (not on push to main). Re-runs `turbo run validate`, then `check-publish-safety` as the final gate, then `pnpm -r publish`, which publishes any package whose local version differs from npm `latest`, then `verify-published`, which waits until every package installs. Publishes with provenance; auth is npm OIDC trusted publishing where configured, with `NPM_TOKEN` as the fallback. See the header comment in `publish.yml` for the current per-package split — that file is the source of truth, not this line.
 - **`.github/workflows/deploy-docs.yml`** — builds the Astro site + TypeDoc on push to main, publishes to GitHub Pages.
 - **`.github/workflows/auto-merge-dependabot.yml`** — auto-merges patch/minor Dependabot PRs.
 

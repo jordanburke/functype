@@ -6,6 +6,19 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
+- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
+  - Option: `isDefined()` and `get()`, which don't exist.
+  - Either: `get()`, `getLeft()` and `filter`.
+  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
+  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
+  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
+  - Task: a `functype/core/task` import.
+  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
+  - Brand: its arguments in the wrong order.
+  - Http: `HttpError.networkError`, where the value is exported as `HttpErrors`.
+  - Composition: a `pipe` import from a subpath that doesn't exist.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -21,6 +34,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
+## 1.18.0 - 2026-10-18
+
+- **`Map` gains `has(key)`, `keys()` and `values()`.** `prefer-functype-map` steers code onto functype's `Map`, which had no way to check a key or list keys or values; the workarounds were `get(k).isSome()` and `[...map].map(([, v]) => v)`. `has` checks the key only, by identity for object keys like a native `Map`, and is true even when the stored value is `undefined` (where `get` returns `None`). `keys()` and `values()` return a `List` in insertion order, like `Obj.keys()` and `Obj.values()`, so they can be read more than once and chained. For a whole-entry check, `contains(Tuple([k, v]))` still compares the value with `===`.
+- **Behavior change: `Either.mapAsync` and `flatMapAsync` reject when `f` rejects or throws.** On a Right, they caught a rejection and returned it as `Left(reason)`, typed as `L` though it could be any value, such as an `Error` in an `Either<string, _>`. A synchronous throw from `f` escaped the call instead of rejecting. Now the returned Promise rejects with the same reason in both cases, as `List.mapAsync`, `Set.mapAsync` and `Either.traverseAsync` reject, and as Option, Try, Lazy and Map's async methods already did. neverthrow's `ResultAsync.map` behaves the same way. To turn a rejection into a Left, map the reason explicitly with `Either.fromPromise(promise, onRejected)` or `tryCatchAsync(f, onError)`. Code that relied on the old catch now sees a rejected Promise: wrap the async call in `Either.fromPromise` inside `flatMapAsync`.
+- **`eslint-config-functype` drops `no-extra-semi` and `no-mixed-spaces-and-tabs`.** Both are formatting rules that ESLint removes in 11.0, and `eslint-config-prettier` turns both off, since Prettier owns formatting. `no-mixed-spaces-and-tabs` never fires on Prettier output, so dropping it changes nothing. `no-extra-semi` conflicted with Prettier. With `semi: false`, Prettier puts a `;` in front of a line that starts with `[`, `(` or a backtick, so the line can't join the one before it. After a block, such as a function declaration or an `if`, ESLint read that `;` as an empty statement and `no-extra-semi` reported it. `prettier/prettier`, also an error in `recommended`, put it back, so `eslint --fix` couldn't clear either error. Real extra semicolons, such as `;;` or `function f() {};`, still fail `prettier/prettier`, which removes them.
 
 ## 1.17.0 - 2026-10-17
 
