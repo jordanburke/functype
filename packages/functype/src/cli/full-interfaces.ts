@@ -531,6 +531,29 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   add<B>(value: B): Set<A | B>
   remove: (value: unknown) => Set<A>
   has(value: unknown): boolean
+  /**
+   * Elements in this set or \`other\`. \`other\` can be any iterable: an array, a native Set or a functype Set.
+   * Like every Set method, it compares elements as \`has\` does: by SameValueZero, so objects by identity and
+   * \`NaN\` equal to \`NaN\`.
+   *
+   * @example
+   * \`\`\`typescript
+   * Set([1, 2]).union([2, 3]) // Set([1, 2, 3])
+   * \`\`\`
+   */
+  union<B>(other: Iterable<B>): Set<A | B>
+  /** Elements in both this set and \`other\`, in this set's order (native \`intersection\` follows the smaller set's). */
+  intersection(other: Iterable<unknown>): Set<A>
+  /** Elements in this set and not in \`other\`. */
+  difference(other: Iterable<unknown>): Set<A>
+  /** Elements in exactly one of this set and \`other\`. */
+  symmetricDifference<B>(other: Iterable<B>): Set<A | B>
+  /** True if every element of this set is in \`other\`. True for an empty set. */
+  isSubsetOf(other: Iterable<unknown>): boolean
+  /** True if every element of \`other\` is in this set. */
+  isSupersetOf(other: Iterable<unknown>): boolean
+  /** True if this set and \`other\` share no element. */
+  isDisjointFrom(other: Iterable<unknown>): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   /**
