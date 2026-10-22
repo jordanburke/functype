@@ -132,12 +132,13 @@ const MonadConstructors: Record<string, MonadConstructor> = {
 }
 
 // Structural types for better overload matching
-// Option and Try are matched through orThrow(). These shapes once required get(), which both types
-// dropped, so Option-only and Try-only comprehensions fell through to the `unknown` overload.
-type OptionLike = { _tag: "Some" | "None"; isSome(): boolean; orThrow(): unknown }
+// Option and Try are matched through orThrow() and doUnwrap(). These shapes once required get(), which
+// both types dropped, so Option-only and Try-only comprehensions fell through to the `unknown` overload.
+// doUnwrap() keeps Exit out: it has isSuccess() and orThrow() and a "Success" tag, but Do can't run it.
+type OptionLike = { _tag: "Some" | "None"; isSome(): boolean; orThrow(): unknown; doUnwrap(): unknown }
 type EitherLike = { _tag: "Left" | "Right"; isLeft(): boolean; isRight(): boolean; value: unknown }
 type ListLike = { _tag: "List"; toArray(): unknown[] }
-type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; orThrow(): unknown }
+type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; orThrow(): unknown; doUnwrap(): unknown }
 
 /**
  * Executes a generator-based monadic comprehension
@@ -540,13 +541,13 @@ export function* $<M>(monad: M): Generator<M, unknown, unknown> {
 }
 
 // Type inference for common monads
-type InferYieldType<M> = M extends { isSome(): boolean; orThrow(): infer T }
+type InferYieldType<M> = M extends { isSome(): boolean; orThrow(): infer T; doUnwrap(): unknown }
   ? T // Option
   : M extends { isRight(): boolean; value: infer R }
     ? R // Either (Right)
     : M extends { toArray(): (infer T)[] }
       ? T // List
-      : M extends { isSuccess(): boolean; orThrow(): infer T }
+      : M extends { isSuccess(): boolean; orThrow(): infer T; doUnwrap(): unknown }
         ? T // Try
         : M extends Doable<infer T>
           ? T // Generic Doable

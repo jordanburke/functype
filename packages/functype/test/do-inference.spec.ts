@@ -2,7 +2,7 @@ import { describe, expect, expectTypeOf, it } from "vitest"
 
 import { $, Do, DoAsync } from "@/do"
 import type { Reshapeable } from "@/reshapeable/Reshapeable"
-import { Either, List, Option, Try } from "@/index"
+import { Either, Exit, List, Option, Try } from "@/index"
 
 /**
  * Pins the result type of Do and DoAsync per kind of generator. Option-only and Try-only comprehensions
@@ -73,6 +73,21 @@ describe("Do result types", () => {
         return x + y
       }),
     ).toEqualTypeOf<Reshapeable<number>>()
+  })
+})
+
+describe("values Do cannot run", () => {
+  it("an Exit is not taken for a Try, though it has isSuccess() and orThrow()", () => {
+    const exit = Exit.succeed<never, number>(1)
+    expectTypeOf($(exit)).toEqualTypeOf<Generator<Exit<never, number>, unknown, unknown>>()
+    // Type only: Do throws at runtime on an Exit, which is why it must not be typed as a Try.
+    const comprehension = () =>
+      exit.isSuccess()
+        ? Do(function* () {
+            return yield* $(exit)
+          })
+        : undefined
+    expectTypeOf<ReturnType<typeof comprehension>>().toEqualTypeOf<unknown>()
   })
 })
 
