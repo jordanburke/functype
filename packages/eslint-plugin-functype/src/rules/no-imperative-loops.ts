@@ -32,9 +32,12 @@ const rule: Rule.RuleModule = {
       },
     ],
     messages: {
-      noForLoop: "Prefer functional methods (.map, .filter, .forEach, .reduce) over for loops",
-      noForInLoop: "Prefer Object.keys().forEach() or functional methods over for..in loops",
-      noForOfLoop: "Prefer .forEach() or .map() over for..of loops",
+      noForLoop:
+        "Replace this for loop with the method for what it does: .map/.filter/.flatMap to build a new collection, .reduce (List: .foldLeft) to accumulate, .find/.some (List: .exists) to stop at a match. Need the index? array.map((x, i) => ...) or List(xs).zipWithIndex()",
+      noForInLoop:
+        "Replace this for..in with Object.entries/keys/values(obj) and the method for what it does: .map/.filter to build, .reduce to accumulate. for..in also visits inherited enumerable keys",
+      noForOfLoop:
+        "Replace this for..of with the method for what it does: .map/.filter/.flatMap to build a new collection, .reduce (List: .foldLeft) to accumulate, .find/.some (List: .exists) to stop at a match. Use .forEach only for side effects. On a Set, Map, string or generator, spread it to an array first or wrap it in List(...)",
       noAsyncLoop:
         "This loop awaits, which .forEach()/.map() cannot do. To await in order use List(items).mapAsync(f), or Either.traverseAsync(items, f) when f returns Either (stops at the first Left). Inside IO, use IO.forEach(items, f)",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
