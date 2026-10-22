@@ -579,6 +579,7 @@ list.slice(1, 3) // Elements from start to end (exclusive)
 // Finding
 list.find((x) => x > 10) // Option.Some with first match or None
 list.exists((x) => x > 10) // true if any element matches predicate
+!list.exists((x) => !(x > 0)) // true if all elements match predicate (List has no forAll)
 list.partition((x) => x > 0) // [matching, rest]
 list.count((x) => x % 2 === 0) // Count of elements matching predicate
 
@@ -669,6 +670,7 @@ const other = Set([3, 4, 5])
 Set([...set, ...other]) // Union
 set.filter((x) => other.has(x)) // Intersection
 set.filter((x) => !other.has(x)) // Elements in this set but not in other
+Set([...set.filter((x) => !other.has(x)), ...other.filter((x) => !set.has(x))]) // In either set but not both
 !set.exists((x) => !other.has(x)) // true if this set is a subset of other
 ```
 
@@ -733,7 +735,8 @@ pair.get(1) // "hello"
 triple.get(2) // "hello"
 pair.length // 2
 pair.toArray() // [42, "hello"]
-const [n, s] = pair // destructures like an array
+const [n, s] = pair // destructures like an array (elements typed as the union)
+pair.get(0) + pair.get(1).length // 47: use the parts directly (there is no apply)
 
 // Transforming: map and flatMap receive the whole array
 pair.map(([a, b]) => [a * 2, b.toUpperCase()] as [number, string]) // Tuple([84, "HELLO"])

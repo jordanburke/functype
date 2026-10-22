@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs"
-import { join } from "node:path"
+import { posix } from "node:path"
 
 import ts from "typescript"
 import { describe, expect, it } from "vitest"
@@ -22,9 +22,9 @@ import { describe, expect, it } from "vitest"
  *   with a ```ts ignore fence. That is visible in the doc, not a silent skip.
  */
 
-const PACKAGE_ROOT = join(import.meta.dirname, "..", "..")
-  .split("\\")
-  .join("/")
+// posix joins throughout, so virtual file names match what the compiler host is asked for on any OS
+const { join } = posix
+const PACKAGE_ROOT = join(import.meta.dirname.split("\\").join("/"), "..", "..")
 const DOC = join(PACKAGE_ROOT, "docs", "quick-reference.md")
 
 const PRELUDE = `
@@ -72,17 +72,28 @@ const extractBlocks = (markdown: string): ReadonlyArray<Block> =>
 /** `functype` and each published subpath, mapped from the export's `types` target back to src. */
 const exportPaths = (): Record<string, string[]> => {
   const pkg = JSON.parse(readFileSync(join(PACKAGE_ROOT, "package.json"), "utf8")) as {
-    readonly exports: Record<string, { readonly types: string }>
+    readonly exports: Record<string, { readonly types?: string } | string>
   }
   return Object.fromEntries(
-    Object.entries(pkg.exports).map(([subpath, target]) => [
-      subpath === "." ? "functype" : `functype/${subpath.slice(2)}`,
-      [join(PACKAGE_ROOT, target.types.replace("./dist/", "src/").replace(/\.d\.ts$/, ".ts"))],
-    ]),
+    Object.entries(pkg.exports)
+      .flatMap(([subpath, target]) =>
+        typeof target === "object" && target.types !== undefined ? [[subpath, target.types] as const] : [],
+      )
+      .map(([subpath, types]) => [
+        subpath === "." ? "functype" : `functype/${subpath.slice(2)}`,
+        [join(PACKAGE_ROOT, types.replace("./dist/", "src/").replace(/\.d\.ts$/, ".ts"))],
+      ]),
   )
 }
 
-const typeCheck = (blocks: ReadonlyArray<Block>): ReadonlyArray<ReadonlyArray<string>> => {
+type Result = {
+  /** Diagnostics per block, mapped to doc lines. */
+  readonly blocks: ReadonlyArray<ReadonlyArray<string>>
+  /** Everything else: the prelude, or a global diagnostic. Any of these can turn placeholders into `any`. */
+  readonly other: ReadonlyArray<string>
+}
+
+const typeCheck = (blocks: ReadonlyArray<Block>): Result => {
   const virtualDir = join(PACKAGE_ROOT, "__quick_reference__")
   const preludeFile = join(virtualDir, "prelude.ts")
   const blockFiles = blocks.map((_, i) => join(virtualDir, `block-${i}.ts`))
@@ -96,7 +107,9 @@ const typeCheck = (blocks: ReadonlyArray<Block>): ReadonlyArray<ReadonlyArray<st
     {},
     {
       ...ts.sys,
-      onUnRecoverableConfigFileDiagnostic: () => undefined,
+      onUnRecoverableConfigFileDiagnostic: (d) => {
+        throw new Error(ts.flattenDiagnosticMessageText(d.messageText, " "))
+      },
     },
   )
   const options: ts.CompilerOptions = {
@@ -108,29 +121,33 @@ const typeCheck = (blocks: ReadonlyArray<Block>): ReadonlyArray<ReadonlyArray<st
     noUnusedParameters: false,
     paths: { ...base?.options.paths, ...exportPaths() },
   }
-  const host = ts.createCompilerHost(options)
-  const readFile = host.readFile.bind(host)
-  const fileExists = host.fileExists.bind(host)
-  const getSourceFile = host.getSourceFile.bind(host)
-  host.readFile = (f) => sources[f] ?? readFile(f)
-  host.fileExists = (f) => f in sources || fileExists(f)
-  host.getSourceFile = (f, languageVersion, onError, shouldCreate) => {
-    const source = sources[f]
-    return source === undefined
-      ? getSourceFile(f, languageVersion, onError, shouldCreate)
-      : ts.createSourceFile(f, source, languageVersion, true)
+  const baseHost = ts.createCompilerHost(options)
+  const host: ts.CompilerHost = {
+    ...baseHost,
+    readFile: (f) => sources[f] ?? baseHost.readFile(f),
+    fileExists: (f) => f in sources || baseHost.fileExists(f),
+    getSourceFile: (f, languageVersion, onError, shouldCreate) => {
+      const source = sources[f]
+      return source === undefined
+        ? baseHost.getSourceFile(f, languageVersion, onError, shouldCreate)
+        : ts.createSourceFile(f, source, languageVersion, true)
+    },
   }
 
   const program = ts.createProgram([preludeFile, ...blockFiles], options, host)
   const diagnostics = ts.getPreEmitDiagnostics(program)
-  return blocks.map((block, i) =>
-    diagnostics
-      .filter((d) => d.file?.fileName === blockFiles[i])
-      .map((d) => {
-        const { line } = d.file?.getLineAndCharacterOfPosition(d.start ?? 0) ?? { line: 0 }
-        return `docs/quick-reference.md:${block.line + line} TS${d.code}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`
-      }),
-  )
+  const message = (d: ts.Diagnostic): string => `TS${d.code}: ${ts.flattenDiagnosticMessageText(d.messageText, " ")}`
+  const lineOf = (d: ts.Diagnostic): number => d.file?.getLineAndCharacterOfPosition(d.start ?? 0).line ?? 0
+  return {
+    blocks: blocks.map((block, i) =>
+      diagnostics
+        .filter((d) => d.file?.fileName === blockFiles[i])
+        .map((d) => `docs/quick-reference.md:${block.line + lineOf(d)} ${message(d)}`),
+    ),
+    other: diagnostics
+      .filter((d) => !blockFiles.includes(d.file?.fileName ?? ""))
+      .map((d) => `${d.file?.fileName ?? "(global)"}:${lineOf(d) + 1} ${message(d)}`),
+  }
 }
 
 describe("docs/quick-reference.md", () => {
@@ -141,6 +158,8 @@ describe("docs/quick-reference.md", () => {
   })
 
   it("every TypeScript block type-checks against src", { timeout: 120_000 }, () => {
-    expect(typeCheck(blocks).flat()).toEqual([])
+    const result = typeCheck(blocks)
+    expect(result.other).toEqual([])
+    expect(result.blocks.flat()).toEqual([])
   })
 })
