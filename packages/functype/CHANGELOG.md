@@ -6,6 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`Do` and `DoAsync` over Option or Try are typed again.** A comprehension that yields only Options now has the type `Option<T>`, and one that yields only Trys has `Try<T>`, so `Do(...).orElse(x)` compiles without a cast. Before, both were typed `unknown`: the overloads recognized Option and Try by a `get()` method that both types had dropped. A comprehension that mixes Option or Try with another monad stays `unknown`, as it always was, so existing casts such as `Do(...) as Either<E, A>` keep compiling. Either-only, List-only and mixed Either/List comprehensions are unchanged.
 - **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
 - **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
   - Option: `isDefined()` and `get()`, which don't exist.
@@ -41,9 +42,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
     - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
     - `catchTag` on classes without a `_tag`.
   - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
-  - **Two documented forms that compile only with a workaround:**
-    - `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
-    - `Do(...)` over Option or Try generators is typed `unknown`. The doc casts the result.
+  - **A documented form that compiles only with a workaround:** `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
   - **A dead link:** the skill's `references/feature-matrix.md` symlink pointed at a path that stopped existing in the monorepo move. It now points at `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`.
 
 ## 1.18.0 - 2026-10-18

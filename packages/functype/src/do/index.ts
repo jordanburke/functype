@@ -132,10 +132,13 @@ const MonadConstructors: Record<string, MonadConstructor> = {
 }
 
 // Structural types for better overload matching
-type OptionLike = { _tag: "Some" | "None"; isSome(): boolean; get(): unknown }
+// Option and Try are matched through orThrow() and doUnwrap(). These shapes once required get(), which
+// both types dropped, so Option-only and Try-only comprehensions fell through to the `unknown` overload.
+// doUnwrap() keeps Exit out: it has isSuccess() and orThrow() and a "Success" tag, but Do can't run it.
+type OptionLike = { _tag: "Some" | "None"; isSome(): boolean; orThrow(): unknown; doUnwrap(): unknown }
 type EitherLike = { _tag: "Left" | "Right"; isLeft(): boolean; isRight(): boolean; value: unknown }
 type ListLike = { _tag: "List"; toArray(): unknown[] }
-type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unknown }
+type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; orThrow(): unknown; doUnwrap(): unknown }
 
 /**
  * Executes a generator-based monadic comprehension
@@ -149,7 +152,7 @@ type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unkno
  * Type Inference Notes:
  * - TypeScript infers the correct return type for homogeneous comprehensions
  * - For mixed monad types, TypeScript returns a union type
- * - Use DoTyped<T> or type assertions for mixed scenarios
+ * - Use a type assertion for a mix that includes Option or Try
  *
  * @example
  * ```typescript
@@ -177,7 +180,7 @@ type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; get(): unkno
  * });
  * // result: List([4, 5, 5, 6])
  *
- * // Mixed types - use type assertion or DoTyped:
+ * // Mixed types - use a type assertion:
  * const result = Do(function* () {
  *   const x = yield* $(Option(5));
  *   const y = yield* $(Right<string, number>(10));
@@ -194,8 +197,9 @@ export function Do<T>(gen: () => Generator<OptionLike, T, unknown>): Option<T>
 export function Do<L, R>(gen: () => Generator<EitherLike, R, unknown>): Either<L, R>
 export function Do<T>(gen: () => Generator<ListLike, T, unknown>): List<T>
 export function Do<T>(gen: () => Generator<TryLike, T, unknown>): Try<T>
-// For mixed types - first monad wins but type inference is limited
-export function Do<T>(gen: () => Generator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>): Reshapeable<T>
+// Mixed Either/List: the first monad wins, typed as Reshapeable. A mix that includes Option or Try stays
+// `unknown` (cast it): that is what it has always been typed, and code casting it to a concrete monad relies on it.
+export function Do<T>(gen: () => Generator<EitherLike | ListLike, T, unknown>): Reshapeable<T>
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown
 // Implementation
 export function Do<T>(gen: () => Generator<unknown, T, unknown>): unknown {
@@ -386,10 +390,8 @@ export function DoAsync<T>(gen: () => AsyncGenerator<OptionLike, T, unknown>): P
 export function DoAsync<L, R>(gen: () => AsyncGenerator<EitherLike, R, unknown>): Promise<Either<L, R>>
 export function DoAsync<T>(gen: () => AsyncGenerator<ListLike, T, unknown>): Promise<List<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<TryLike, T, unknown>): Promise<Try<T>>
-// For mixed types - first monad wins but type inference is limited
-export function DoAsync<T>(
-  gen: () => AsyncGenerator<OptionLike | EitherLike | ListLike | TryLike, T, unknown>,
-): Promise<Reshapeable<T>>
+// Mixed Either/List: first monad wins. A mix that includes Option or Try stays `unknown`, as for Do.
+export function DoAsync<T>(gen: () => AsyncGenerator<EitherLike | ListLike, T, unknown>): Promise<Reshapeable<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown>
 // Implementation
 export async function DoAsync<T>(gen: () => AsyncGenerator<unknown, T, unknown>): Promise<unknown> {
@@ -539,13 +541,13 @@ export function* $<M>(monad: M): Generator<M, unknown, unknown> {
 }
 
 // Type inference for common monads
-type InferYieldType<M> = M extends { isSome(): boolean; get(): infer T }
+type InferYieldType<M> = M extends { isSome(): boolean; orThrow(): infer T; doUnwrap(): unknown }
   ? T // Option
   : M extends { isRight(): boolean; value: infer R }
     ? R // Either (Right)
     : M extends { toArray(): (infer T)[] }
       ? T // List
-      : M extends { isSuccess(): boolean; get(): infer T }
+      : M extends { isSuccess(): boolean; orThrow(): infer T; doUnwrap(): unknown }
         ? T // Try
         : M extends Doable<infer T>
           ? T // Generic Doable
