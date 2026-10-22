@@ -170,7 +170,7 @@ list.slice(1, 3) // Elements from start to end (exclusive)
 // Finding
 list.find((x) => x > 10) // Option.Some with first match or None
 list.exists((x) => x > 10) // true if any element matches predicate
-!list.exists((x) => !(x > 0)) // true if all elements match predicate (List has no forAll)
+list.every((x) => x > 0) // true if all elements match predicate (true when empty)
 list.partition((x) => x > 0) // [matching, rest]
 list.count((x) => x % 2 === 0) // Count of elements matching predicate
 
@@ -256,13 +256,15 @@ set.map((x) => x * 2) // Set with transformed elements
 set.flatMap((x) => Set([x, x + 1])) // Transform + flatten
 set.filter((x) => x % 2 === 0) // Set with elements matching predicate
 
-// Set operations: there is no union/intersection method yet, so build them from the basics
-const other = Set([3, 4, 5])
-Set([...set, ...other]) // Union
-set.filter((x) => other.has(x)) // Intersection
-set.filter((x) => !other.has(x)) // Elements in this set but not in other
-Set([...set.filter((x) => !other.has(x)), ...other.filter((x) => !set.has(x))]) // In either set but not both
-!set.exists((x) => !other.has(x)) // true if this set is a subset of other
+// Set operations: same names and results as native Set; `other` can be any iterable
+set.union(Set([3, 4, 5])) // Union
+set.intersection(Set([2, 3, 4])) // Intersection
+set.difference([3, 4]) // Elements in this set but not in other
+set.symmetricDifference([3, 4]) // Elements in either set but not both
+set.isSubsetOf(Set([1, 2, 3, 4])) // true if all elements are in other
+set.isSupersetOf([1, 2]) // true if all of other's elements are in this set
+set.isDisjointFrom([7, 8]) // true if no element is shared
+set.every((x) => x > 0) // true if all elements match predicate
 ```
 
 ## Task
@@ -413,7 +415,7 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
-import { Http, HttpErrors } from "functype/fetch"
+import { Http, HttpError } from "functype/fetch"
 import { IO } from "functype/io"
 
 // Without validator — data is unknown
@@ -445,7 +447,7 @@ const api = Http.client({
       .flatMap((req) =>
         IO.tryPromise({
           try: () => getToken(),
-          catch: (e) => HttpErrors.networkError(req.url, req.method, e),
+          catch: (e) => HttpError.networkError(req.url, req.method, e),
         }).map((token) => ({ ...req, headers: { ...req.headers, Authorization: `Bearer ${token}` } })),
       )
       .tap((req) => logger.info(req.method, req.url)),

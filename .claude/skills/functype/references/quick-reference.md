@@ -98,13 +98,15 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Is success (Try)    | `isSuccess()`     | `boolean` |
 | Is failure (Try)    | `isFailure()`     | `boolean` |
 | Contains value      | `contains(value)` | `boolean` |
-| Is empty (List)     | `isEmpty()`       | `boolean` |
+| Is empty (List)     | `isEmpty`         | `boolean` |
+| Any match           | `exists(p)`       | `boolean` |
+| All match (List, Set) | `every(p)`      | `boolean` |
 
 ## Collection Operations
 
 | Operation              | Method                | Example                                  |
 | ---------------------- | --------------------- | ---------------------------------------- |
-| Add element            | `append(elem)`        | `list.append(4)`                         |
+| Add element            | `add(elem)`           | `list.add(4)`                            |
 | Add at start           | `prepend(elem)`       | `list.prepend(0)`                        |
 | Combine lists          | `concat(other)`       | `list.concat(otherList)`                 |
 | First element          | `head`                | `list.head`                              |
@@ -131,6 +133,18 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Reduce left            | `foldLeft(init)(fn)`  | `list.foldLeft(0)((sum, n) => sum + n)`  |
 | Reduce right           | `foldRight(init)(fn)` | `list.foldRight(0)((n, sum) => sum + n)` |
 | Standard reduce        | `reduce(fn, init)`    | `list.reduce((acc, n) => acc + n, 0)`    |
+
+Set operations (1.19) have the same names and results as native `Set`. `other` can be any iterable: an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does (objects by identity, `NaN` equal to `NaN`).
+
+| Operation          | Method                       | Returns  |
+| ------------------ | ---------------------------- | -------- |
+| In either          | `union(other)`               | `Set`    |
+| In both            | `intersection(other)`        | `Set`    |
+| In this, not other | `difference(other)`          | `Set`    |
+| In exactly one     | `symmetricDifference(other)` | `Set`    |
+| All in other       | `isSubsetOf(other)`          | `boolean` |
+| Contains all of other | `isSupersetOf(other)`     | `boolean` |
+| Nothing shared     | `isDisjointFrom(other)`      | `boolean` |
 
 ## Conversion
 

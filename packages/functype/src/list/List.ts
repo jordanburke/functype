@@ -135,6 +135,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     exists: (p: (a: A) => boolean) => array.some(p),
 
+    every: (p: (a: A) => boolean) => array.every(p),
+
     filter: (predicate: (a: A) => unknown) => ListObject(array.filter(predicate as (a: A) => boolean)),
 
     filterNot: (p: (a: A) => boolean) => ListObject(array.filter((x) => !p(x))),

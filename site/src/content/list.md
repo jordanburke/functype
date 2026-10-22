@@ -74,6 +74,7 @@ List([1, 2, 3]).init; // List([1, 2])
 List([1, 2, 3]).find((x) => x > 1); // 2 (or undefined)
 List([1, 2, 3]).contains(2); // true
 List([1, 2, 3]).exists((x) => x > 2); // true
+List([1, 2, 3]).every((x) => x > 0); // true (also true for an empty List)
 
 // Combine and reorder
 List([1, 2]).concat(List([3, 4])); // List([1, 2, 3, 4])

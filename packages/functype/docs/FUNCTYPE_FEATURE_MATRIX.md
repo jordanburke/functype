@@ -271,6 +271,7 @@ Note: `fold` has different semantics per type category:
 
 ### CollectionOps
 
+- `every(p: (value: A) => boolean): boolean`
 - `drop(n: number): Self`
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
