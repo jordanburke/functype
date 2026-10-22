@@ -20,11 +20,11 @@ That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, 
 
 1. **Preflight** — verifies the working tree is clean, you're on `main` or a `release/<major>.x` branch, and that branch is in sync with its `origin` copy.
 2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
-3. **Bump functype family** — applies the new version to all 6 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`).
+3. **Bump functype family** — applies the new version to all 6 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`). The list lives in `scripts/packages.ts`.
 4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
 5. **Sync mcp-server `server.json`** — `pnpm -F functype-mcp-server sync:registry` writes the new version to the MCP registry manifest.
 6. **Cut CHANGELOG** — takes `## Unreleased` content in `packages/functype/CHANGELOG.md` and rewrites the heading to `## {version} - {date}`, leaving a fresh empty `## Unreleased` at top.
-7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 5 invariants (see below).
+7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 6 invariants (see below).
 8. **Commit + tag** — `git commit -m "release: vX.Y.Z"` + `git tag -a vX.Y.Z`.
 
 ## What CI does on tag push
@@ -34,7 +34,8 @@ That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, 
 1. **Validate** — same `pnpm validate` as local.
 2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
 3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
-4. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
+4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
+5. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
 OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`.
 
@@ -53,11 +54,22 @@ Once `main` carries unreleased breaking changes, additive releases for the old m
 2. **Fix the downgrade check in `check-publish-safety`.** Invariant 2 refuses any version below `latest`. That covers the eslint pair too: after 2.0 it is at `2.200.x`, and the 1.x line produces `2.116.x`, which classifies as a same-major downgrade. So key the check off the functype line (`floor(eslintMinor / 100)` for the pair), not each package's own major.
    - Compare against the highest published version on the same line (`npm view <pkg> versions --json`, filtered), not against `npm view <pkg>@latest-1`. That tag won't exist at the first post-2.0 publish, so a tag lookup would come back empty and skip the gate.
 3. **Pass `make_latest: false` and `previous_tag` to the GitHub release step.** Otherwise a `v1.16.1` release becomes the repo's "Latest release", and its notes compare against `v2.0.0`.
+4. **Pass the same dist-tag to `verify-published`** (`NPM_DIST_TAG=latest-1`). It checks `latest` by default, so after a `latest-1` publish it would wait 30 minutes for a tag that never moves, then fail.
 
 Also note:
 
 - `deploy-docs.yml` deploys from `main` only. The site shows a 1.x release only after `release/1.x` is merged into `main`.
 - After that merge, run `pnpm turbo run validate` on the merge commit, and commit any regenerated `site/public/llms*.txt`, before pushing. CI's stale-artifact check fails otherwise.
+
+## Verify the release installs (`scripts/verify-published.ts`)
+
+"Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
+
+`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 8 install.
+
+- **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`.
+- **Check one version:** `pnpm verify-published functype@1.16.1`.
+- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS` (at least 1), and `NPM_DIST_TAG` (default `latest`). The publish step passes no `--tag`, so CI always checks `latest`. `NPM_DIST_TAG` is for checking another tag by hand.
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 
@@ -68,8 +80,9 @@ The publish gate refuses to proceed if any of these holds:
 3. **Family alignment drift.** The 6 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
+6. **Unlisted package.** Every non-private workspace package must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
 
-All 5 are independent gates and all 5 fail closed.
+All 6 are independent gates and all 6 fail closed.
 
 ## Eslint mirror encoding
 
