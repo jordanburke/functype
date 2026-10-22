@@ -6,6 +6,19 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The index-loop message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`. Only the message text changed: the rule reports the same loops at the same level.
+- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
+  - Option: `isDefined()` and `get()`, which don't exist.
+  - Either: `get()`, `getLeft()` and `filter`.
+  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
+  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
+  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
+  - Task: a `functype/core/task` import.
+  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
+  - Brand: its arguments in the wrong order.
+  - Http: `HttpError.networkError`, where the value is exported as `HttpErrors`.
+  - Composition: a `pipe` import from a subpath that doesn't exist.
+
 ## 1.18.0 - 2026-10-18
 
 - **`Map` gains `has(key)`, `keys()` and `values()`.** `prefer-functype-map` steers code onto functype's `Map`, which had no way to check a key or list keys or values; the workarounds were `get(k).isSome()` and `[...map].map(([, v]) => v)`. `has` checks the key only, by identity for object keys like a native `Map`, and is true even when the stored value is `undefined` (where `get` returns `None`). `keys()` and `values()` return a `List` in insertion order, like `Obj.keys()` and `Obj.values()`, so they can be read more than once and chained. For a whole-entry check, `contains(Tuple([k, v]))` still compares the value with `===`.
