@@ -43,16 +43,46 @@ describe("Set operations", () => {
     expect(empty.isDisjointFrom(a)).toBe(true)
   })
 
-  it("matches native Set results", () => {
-    const na = new globalThis.Set([1, 2, 3])
-    const nb = new globalThis.Set([3, 4, 5])
-    expect(a.union(b).toArray()).toEqual([...na.union(nb)])
-    expect(a.intersection(b).toArray()).toEqual([...na.intersection(nb)])
-    expect(a.difference(b).toArray()).toEqual([...na.difference(nb)])
-    expect(a.symmetricDifference(b).toArray()).toEqual([...na.symmetricDifference(nb)])
-    expect(a.isSubsetOf(b)).toBe(na.isSubsetOf(nb))
-    expect(a.isSupersetOf(b)).toBe(na.isSupersetOf(nb))
-    expect(a.isDisjointFrom(b)).toBe(na.isDisjointFrom(nb))
+  it("gives native Set's elements, in this set's order, for sets of any size", () => {
+    const pairs: ReadonlyArray<readonly [ReadonlyArray<number>, ReadonlyArray<number>]> = [
+      [
+        [1, 2, 3],
+        [3, 4, 5],
+      ],
+      [
+        [3, 2, 1],
+        [1, 3],
+      ],
+      [
+        [1, 3],
+        [5, 3, 2, 1],
+      ],
+      [[], [1]],
+      [
+        [1, 2],
+        [1, 2],
+      ],
+    ]
+    const sorted = (xs: Iterable<number>): number[] => [...xs].sort((x, y) => x - y)
+    pairs.forEach(([left, right]) => {
+      const [fl, nl, nr] = [Set(left), new globalThis.Set(left), new globalThis.Set(right)]
+      expect(fl.union(right).toArray()).toEqual([...nl.union(nr)])
+      expect(fl.difference(right).toArray()).toEqual([...nl.difference(nr)])
+      expect(fl.symmetricDifference(right).toArray()).toEqual([...nl.symmetricDifference(nr)])
+      expect(sorted(fl.intersection(right))).toEqual(sorted(nl.intersection(nr)))
+      expect(fl.intersection(right).toArray()).toEqual(left.filter((x) => nr.has(x)))
+      expect(fl.isSubsetOf(right)).toBe(nl.isSubsetOf(nr))
+      expect(fl.isSupersetOf(right)).toBe(nl.isSupersetOf(nr))
+      expect(fl.isDisjointFrom(right)).toBe(nl.isDisjointFrom(nr))
+    })
+  })
+
+  it("isSupersetOf and isDisjointFrom stop at the first deciding element", () => {
+    function* naturals(): Generator<number> {
+      for (let n = 0; ; n++) yield n
+    }
+    expect(Set([0, 1]).isSupersetOf(naturals())).toBe(false)
+    expect(Set([5]).isDisjointFrom(naturals())).toBe(false)
   })
 
   it("accepts an array, a native Set, a functype Set, a List or a generator", () => {

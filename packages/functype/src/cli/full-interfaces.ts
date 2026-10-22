@@ -542,7 +542,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * \`\`\`
    */
   union<B>(other: Iterable<B>): Set<A | B>
-  /** Elements in both this set and \`other\`, in this set's order. */
+  /** Elements in both this set and \`other\`, in this set's order (native \`intersection\` follows the smaller set's). */
   intersection(other: Iterable<unknown>): Set<A>
   /** Elements in this set and not in \`other\`. */
   difference(other: Iterable<unknown>): Set<A>

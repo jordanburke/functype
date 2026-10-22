@@ -665,7 +665,7 @@ set.map((x) => x * 2) // Set with transformed elements
 set.flatMap((x) => Set([x, x + 1])) // Transform + flatten
 set.filter((x) => x % 2 === 0) // Set with elements matching predicate
 
-// Set operations: same names and results as native Set; `other` can be any iterable
+// Set operations: same names as native Set; `other` can be any iterable; results keep this set's order
 set.union(Set([3, 4, 5])) // Union
 set.intersection(Set([2, 3, 4])) // Intersection
 set.difference([3, 4]) // Elements in this set but not in other

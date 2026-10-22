@@ -33,7 +33,7 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
    * ```
    */
   union<B>(other: Iterable<B>): Set<A | B>
-  /** Elements in both this set and `other`, in this set's order. */
+  /** Elements in both this set and `other`, in this set's order (native `intersection` follows the smaller set's). */
   intersection(other: Iterable<unknown>): Set<A>
   /** Elements in this set and not in `other`. */
   difference(other: Iterable<unknown>): Set<A>
@@ -109,9 +109,19 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return [...values].every((a) => others.has(a))
     },
 
-    isSupersetOf: (other: Iterable<unknown>): boolean => [...other].every((b) => values.has(b as A)),
+    isSupersetOf: (other: Iterable<unknown>): boolean => {
+      for (const b of other) {
+        if (!values.has(b as A)) return false
+      }
+      return true
+    },
 
-    isDisjointFrom: (other: Iterable<unknown>): boolean => ![...other].some((b) => values.has(b as A)),
+    isDisjointFrom: (other: Iterable<unknown>): boolean => {
+      for (const b of other) {
+        if (values.has(b as A)) return false
+      }
+      return true
+    },
 
     map: <B>(f: (a: A) => B): Set<B> => createSet(Array.from(values).map(f)),
 

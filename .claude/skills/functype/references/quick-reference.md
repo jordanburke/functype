@@ -134,7 +134,7 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Reduce right           | `foldRight(init)(fn)` | `list.foldRight(0)((n, sum) => sum + n)` |
 | Standard reduce        | `reduce(fn, init)`    | `list.reduce((acc, n) => acc + n, 0)`    |
 
-Set operations (1.19) have the same names and results as native `Set`. `other` can be any iterable: an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does (objects by identity, `NaN` equal to `NaN`).
+Set operations (1.19) have the same names as native `Set`, and results keep this set's order, then `other`'s. `other` can be any iterable: an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does (objects by identity, `NaN` equal to `NaN`).
 
 | Operation          | Method                       | Returns  |
 | ------------------ | ---------------------------- | -------- |
