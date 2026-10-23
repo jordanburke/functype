@@ -272,6 +272,7 @@ const FULL_SECTIONS: ReadonlyArray<{
     "either",
     "try",
     "list",
+    "set",
     "obj",
     "task",
     "io",

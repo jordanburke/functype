@@ -6,19 +6,6 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
-- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
-  - Option: `isDefined()` and `get()`, which don't exist.
-  - Either: `get()`, `getLeft()` and `filter`.
-  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
-  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
-  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
-  - Task: a `functype/core/task` import.
-  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
-  - Brand: its arguments in the wrong order.
-  - Http: `HttpError.networkError`, where the value is exported as `HttpErrors`.
-  - Composition: a `pipe` import from a subpath that doesn't exist.
-
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -34,6 +21,59 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
+## 1.19.0 - 2026-10-22
+
+- **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.
+- **The docs site's pages compile.** The doc type-check now covers every type page of the site (`site/src/content`) and the feature matrix. It found calls that don't exist on most pages, now fixed:
+  - Match: `Cond(...).otherwise(...)`, which is `.else(...)`.
+  - Try: `Try.of`, `mapFailure` and `toEither()` with no argument.
+  - IO: `IO.fromPromise`, `orElse`, `zipWith`, `andThen`, `catch` and `ensuring`.
+  - Option: `tap`. List: `List.range` and `append`. Obj: `when` with a key the object doesn't have.
+  - Http: `Option.toNullable()`, which is `orNull()`, and `IO.all` over two differently typed requests, which doesn't type-check (`zip` does).
+  - Do-notation: a `DoAsync` example built on a `Task.async` that doesn't exist. In the package's `docs/do-notation.md`, a mixed `Do` called `.toOption()` on a result typed `unknown`; it now casts to `Reshapeable`.
+  - List: `find` was described as returning the value or `undefined`; it returns `Some` or `None`.
+  - The MCP server page's "invalid code" example compiled; it now shows a call that really fails.
+- **Task's site page is now a move-to-IO guide.** Task is removed in 2.0, and the old page described an API it never had (`Task.sync`, `Task.async`, `task.run({ timeout })`). The page now maps each Task use to IO. The home page and footer list Set and IO in Task's place.
+- **The docs site has a Set page**, covering the 1.19 set operations, `every` and the conversions. `Either.traverse` and `Either.sequence` are on the Either page.
+- **`Do` and `DoAsync` over Option or Try are typed again.** A comprehension that yields only Options now has the type `Option<T>`, and one that yields only Trys has `Try<T>`, so `Do(...).orElse(x)` compiles without a cast. Before, both were typed `unknown`: the overloads recognized Option and Try by a `get()` method that both types had dropped. A comprehension that mixes Option or Try with another monad stays `unknown`, as it always was, so existing casts such as `Do(...) as Either<E, A>` keep compiling. Either-only, List-only and mixed Either/List comprehensions are unchanged.
+- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
+- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
+  - Option: `isDefined()` and `get()`, which don't exist.
+  - Either: `get()`, `getLeft()` and `filter`.
+  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
+  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
+  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
+  - Task: a `functype/core/task` import.
+  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
+  - Brand: its arguments in the wrong order.
+  - Http: a missing `IO` import.
+  - Composition: a `pipe` import from a subpath that doesn't exist.
+- **`Set` gains `union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf` and `isDisjointFrom`.** They have the same names as native `Set` (ES2025) and give the same elements. Results keep this set's order, then `other`'s; native `intersection` instead follows whichever set is smaller. `other` can be any iterable, such as an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does: objects by identity, and `NaN` equals `NaN`. `union` and `symmetricDifference` widen the element type, so `Set<number>.union(["a"])` is a `Set<number | string>`.
+- **`List` and `Set` gain `every(p)`**, true when every element matches and true for an empty collection. It is the counterpart of `exists`, and is named like `every` on native arrays and Sets.
+- **`HttpError` is exported as a value, not just a type.** `import { HttpError } from "functype/fetch"` now gives the companion with `networkError`, `httpStatusError` and `decodeError`, as the JSDoc and docs already showed. Before, the value was exported only as `HttpErrors`, which stays as an alias.
+- **`Either.traverse` stops at the first `Left`.** It called `f` on every element and then kept the first `Left`. Now `f` isn't called for the elements after it, as `Option.traverse` and `Try.traverse` already worked. The result is the same; only side effects in `f` for the later elements go away. `f` is also typed with the element's index, which it already received.
+- **`traverse` and `sequence` accept readonly arrays.** `Either.traverse`, `Either.sequence`, `Option.sequence` and `Try.sequence` took a mutable array, so a `ReadonlyArray`, such as a `Wire<ReadonlyArray<Row>>`, didn't type-check. `Option.traverse` and `Try.traverse` already accepted one.
+- **The functype skill's quick reference compiles too.** The type-check test now also covers `.claude/skills/functype/references/quick-reference.md`, the reference agents load. Blocks that leave out imports get the functype names they use imported for them, and indented code blocks are checked. It found:
+  - `Try.traverse(paths, readFileSync)`, where `f` must return a `Try`.
+  - `TracedOption(user, …)`, which takes an `Option`.
+  - `LazyList.from(0, f)`, which is `LazyList.iterate(0, f)`.
+  - A `.value()` on `Lazy`, which has none.
+  - By hand, in its tables, which the check can't read: `List.from(array)` and `list.append(x)`, which don't exist.
+- **The rest of the functype skill compiles too.** The check now also covers the skill's `SKILL.md`, the file agents load first, and `references/common-patterns.md`. They had these errors:
+  - **Calls that don't exist:**
+    - Cond: `Cond.start().case().otherwise()`, which is `Cond.of().when().elseWhen().else()`.
+    - Layer and IO: `Layer.fromValue`, `effect.provide(layer)` and `effect.runEither()`.
+    - Tuple: the old `first`/`mapFirst`/`swap`/`concat` API.
+    - Others: `Lazy.value()`, `list.append`, and `Try.toEither()` with no argument.
+  - **Wrong arguments:** `Stack.of(1, 2, 3)` and `LazyList.of(1, 2, 3)`, which take one value. `LazyList.from(0, f)`, which builds `[0]` rather than an infinite sequence.
+  - **Wrong shapes:**
+    - `IO.bracket({ acquire, use, release })`, which takes three arguments.
+    - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
+    - `catchTag` on classes without a `_tag`.
+  - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
+  - **A documented form that compiles only with a workaround:** `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
+  - **A dead link:** the skill's `references/feature-matrix.md` symlink pointed at a path that stopped existing in the monorepo move. It now points at `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`.
 
 ## 1.18.0 - 2026-10-18
 

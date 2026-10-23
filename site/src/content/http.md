@@ -162,7 +162,7 @@ const either = await effect.run();
 if (either._tag === "Right") {
   const { data, status, headers } = either.value;
   console.log(status); // 200
-  console.log(data[0].name); // "Alice" — data is User[], not unknown
+  console.log(data[0]?.name); // "Alice" — data is User[], not unknown
   console.log(headers.get("x-total-count"));
 }
 ```
@@ -172,6 +172,8 @@ if (either._tag === "Right") {
 All HTTP errors are typed as `HttpError`, a union of three variants:
 
 ```typescript
+import type { HttpMethod } from "functype/fetch";
+
 type NetworkError = {
   _tag: "NetworkError";
   url: string;
@@ -299,6 +301,9 @@ const testApi = Http.client({
 ### HttpClientConfig
 
 ```typescript
+import type { IO } from "functype";
+import type { HttpError, HttpRequestView, HttpResponse } from "functype/fetch";
+
 interface HttpClientConfig {
   readonly baseUrl?: string; // Base URL prepended to relative paths
   readonly defaultHeaders?: Record<string, string>; // Merged with per-request headers
@@ -432,7 +437,7 @@ await api
       q: "a b&c", // → q=a+b%26c
       tag: ["x", "y"], // → tag=x&tag=y
       page: 2, // → page=2
-      cursor: maybeCursor.toNullable(), // null is dropped if None
+      cursor: maybeCursor.orNull(), // null is dropped if None
     },
   })
   .runOrThrow();
@@ -502,17 +507,17 @@ Http.get("/api/users/1", {
   }),
 );
 
-// Both requests (IO.all runs them in order today, not in parallel)
-import { IO } from "functype/io";
-
-const [users, posts] = await IO.all([
-  Http.get("/api/users", {
-    decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
-  }),
-  Http.get("/api/posts", {
-    decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
-  }),
-]).run();
+// Both requests, one after the other; each result keeps its own type
+const [users, posts] = await Http.get("/api/users", {
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
+})
+  .zip(
+    Http.get("/api/posts", {
+      decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
+    }),
+  )
+  .runOrThrow(); // [HttpResponse<User[]>, HttpResponse<Post[]>]
+// IO.all([...], { concurrency }) runs a list of same-typed requests, up to n at once
 
 // Map over errors
 Http.get("/api/data").mapError((err) => new AppError(err));

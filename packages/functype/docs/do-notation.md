@@ -403,17 +403,19 @@ const typed = result as Option<number>
 
 ### Mixed Monad Types
 
-When mixing different monad types, use Reshapeable:
+When mixing different monad types, the result is typed `unknown`. Cast it to `Reshapeable` and convert it to the type you want:
 
 ```typescript
+import type { Reshapeable } from "functype"
+
 const mixed = Do(function* () {
   const a = yield* $(Option(5))
-  const b = yield* $(Right(10))
+  const b = yield* $(Right<string, number>(10))
   return a + b
-})
+}) as Reshapeable<number>
 
 // Explicitly convert to desired type
-const asOption = mixed.toOption()
+const asOption = mixed.toOption() // Some(15)
 ```
 
 ### Debugging

@@ -21,7 +21,11 @@ Four methods, all mandatory. No `trace`/`fatal`/`child`/`withContext` in the cor
 
 ```typescript
 import type { Logger } from "functype";
-// or
+```
+
+or
+
+```typescript
 import type { Logger } from "functype/logger";
 ```
 
