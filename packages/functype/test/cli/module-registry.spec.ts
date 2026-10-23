@@ -41,6 +41,7 @@ const MODULE_DOCS: Readonly<Record<string, ReadonlyArray<string> | { readonly in
   option: ["Option"],
   pipe: { internal: "the Pipe interface behind every container's .pipe() method" },
   ref: ["Ref"],
+  reshapeable: { internal: "the Reshapeable interface a mixed Do comprehension returns; documented with Do" },
   serializable: { internal: "typeclass interface — documented under `npx functype interfaces`" },
   serialization: ["Serialization", "SerializedError"],
   set: ["Set"],

@@ -36,14 +36,13 @@ none.orNull(); // null
 | `Option(value)`      | Some if non-null/undefined, else None |
 | `Option.from(value)` | Same as constructor                   |
 | `Option.none()`      | Create None explicitly                |
-| `Option.of(value)`   | Same as constructor                   |
 
 ## Transformations
 
 ```typescript
 // Map - transform the value if present
 Option(5).map((x) => x * 2); // Some(10)
-Option(null).map((x) => x * 2); // None
+Option<number>(null).map((x) => x * 2); // None
 
 // FlatMap - chain operations that return Options
 Option(5).flatMap((x) => (x > 0 ? Option(x) : Option.none()));
@@ -52,8 +51,8 @@ Option(5).flatMap((x) => (x > 0 ? Option(x) : Option.none()));
 Option(5).filter((x) => x > 3); // Some(5)
 Option(5).filter((x) => x > 10); // None
 
-// Tap - side effect without changing value
-Option(5).tap((x) => console.log(x)); // logs 5, returns Some(5)
+// forEach - side effect only, runs when the value is present
+Option(5).forEach((x) => console.log(x)); // logs 5
 ```
 
 ## Pattern Matching

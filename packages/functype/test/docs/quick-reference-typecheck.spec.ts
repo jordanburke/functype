@@ -7,22 +7,24 @@ import { describe, expect, it } from "vitest"
 import * as functype from "@/index"
 
 /**
- * Type-checks every TypeScript block in the two quick references against the source: the package's
- * docs/quick-reference.md, and the functype skill's references/quick-reference.md that agents load.
+ * Type-checks every TypeScript block in the docs people and agents copy from, against the source: the
+ * package's docs/quick-reference.md and feature matrix, the functype skill's SKILL.md and references,
+ * and every type page of the docs site (site/src/content).
  *
  * The quick reference is what agents and readers copy from, and it drifted from the code without
  * anything noticing: its Map section listed `entries()`, `addAll`, `merge` and an `add(k, v)` that
  * never existed, and its Tuple section showed `first()`/`mapFirst()`/`swap()`. A block that calls
  * something that does not exist now fails here, with the doc line it is on.
  *
- * - Imports resolve through the `exports` of functype and functype-os, the way a consumer's would,
- *   so a block that imports from a subpath neither package publishes fails too.
+ * - Imports resolve through the `exports` of functype, functype-os and functype-log, the way a
+ *   consumer's would, so a block that imports from a subpath none of them publishes fails too.
  * - The blocks are cheat sheets, so they use placeholder values (`option`, `list`, `defaultValue`)
  *   and stand-ins for the reader's own code (`User`, `UserSchema`). Each doc's prelude declares them
  *   with concrete types, which keeps calls on them checked. A block that needs a new placeholder
  *   adds it to its doc's prelude.
- * - The skill's blocks often leave out imports. For those, any functype export a block uses and
- *   neither imports nor declares is imported for it, on the block's first line so line numbers hold.
+ * - The skill and site blocks often leave out imports (a site page imports once, in its first block).
+ *   For those, any functype value a block uses and neither imports nor declares is imported for it, on
+ *   the block's first line so line numbers hold. Only docs/quick-reference.md is checked for imports.
  * - A block that cannot compile on its own (pseudo-code, a fragment of another block) opts out
  *   with a ```ts ignore fence. That is visible in the doc, not a silent skip.
  */
@@ -220,6 +222,230 @@ const autoImport = (code: string): string => {
   return used.length === 0 ? "" : `import { ${used.join(", ")} } from "functype"; `
 }
 
+/** Placeholders shared by the site's type pages (site/src/content). Page-specific ones are in SITE_PAGE_PRELUDES. */
+const SITE_PRELUDE = `
+import type { Either, IO, List, Option, Try } from "functype"
+
+declare global {
+  type User = { readonly id: string; readonly name: string; readonly email: string; readonly age: number }
+}
+
+export {}
+`
+
+/** Page-specific site placeholders, appended to SITE_PRELUDE. Names may differ in shape between pages. */
+const SITE_PAGE_PRELUDES: Readonly<Record<string, string>> = {
+  "do-notation": `
+declare global {
+  type Profile = { readonly settingsId: string; readonly email: Option<string> }
+  const input: { readonly name: string; readonly age: number; readonly email: string }
+  const validateName: (name: string | { readonly name: string }) => Either<string, string>
+  const validateAge: (age: number) => Either<string, number>
+  const validateEmail: (email: string | { readonly email: string }) => Either<string, string>
+  const id: string
+  const findUser: (id: string) => Option<{ readonly profile: Option<Profile> }>
+  const readConfig: () => { readonly url: string }
+  const connectDB: (config: { readonly url: string }) => { readonly query: (sql: string) => ReadonlyArray<User> }
+  const fetchUser: (id: string) => Promise<Either<Error, User>>
+  const fetchPosts: (userId: string) => Promise<Either<Error, ReadonlyArray<string>>>
+  const getUser: (id: string) => Option<User & { readonly profileId: string }>
+  const getProfile: (profileId: string) => Option<Profile>
+  const getSettings: (settingsId: string) => Option<{ readonly theme: string }>
+}
+`,
+  either: `
+declare global {
+  type UserInput = { readonly name: string; readonly age: number; readonly email: string }
+  const either: Either<string, number>
+  const rows: ReadonlyArray<{ readonly id: string }>
+  const saveRow: (row: { readonly id: string }) => Promise<Either<Error, { readonly id: string }>>
+  const ids: ReadonlyArray<string>
+  const fetchUser: (id: string) => Promise<Either<Error, User>>
+  const validateUser: (input: UserInput) => Either<ReadonlyArray<string>, User>
+  const input: UserInput
+  const validateName: (name: string) => Either<string, string>
+  const validateAge: (age: number) => Either<string, number>
+  const validateEmail: (email: string) => Either<string, string>
+}
+`,
+  http: `
+import type { Decoder, HttpError, HttpRequestView } from "functype"
+declare global {
+  type Schema<T> = { readonly parse: (data: unknown) => T }
+  class AppError extends Error {
+    constructor(cause: HttpError)
+  }
+  const UserSchema: Schema<User>
+  const PostSchema: Schema<{ readonly id: string; readonly title: string }>
+  const OrderSchema: Schema<{ readonly id: string; readonly total: number }>
+  const ConfigSchema: Schema<{ readonly apiUrl: string }>
+  const GraphQLResultSchema: Schema<{ readonly data: unknown }>
+  const z: { readonly array: <T>(schema: Schema<T>) => Schema<T[]> }
+  const Value: { readonly Decode: <T>(schema: Schema<T>, data: unknown) => T }
+  const parse: <T>(schema: Schema<T>, data: unknown) => T
+  const UserDecoder: Decoder<User>
+  const userDecoder: Decoder<User>
+  const usersDecoder: Decoder<ReadonlyArray<User>>
+  const newUser: { readonly name: string; readonly email: string }
+  const token: string
+  const getToken: () => Promise<string>
+  const logger: { readonly info: (...args: ReadonlyArray<unknown>) => void }
+  const myMockFetch: typeof globalThis.fetch
+  const addBearer: (request: HttpRequestView) => IO<never, HttpError, HttpRequestView>
+  const refreshToken: () => IO<never, HttpError, void>
+  const redactSensitiveHeaders: (headers: Headers) => Headers
+  const maybeCursor: Option<string>
+  const api: ReturnType<typeof import("functype").Http.client>
+}
+`,
+  io: `
+import type { Exit, HttpError, Tag } from "functype"
+declare global {
+  type LoggerService = { readonly log: (message: string) => void }
+  type AppConfig = { readonly url: string }
+  class WrappedError extends Error {
+    constructor(cause: unknown)
+  }
+  class AuthError extends Error {}
+  const Logger: Tag<LoggerService>
+  const Config: Tag<AppConfig>
+  const consoleLogger: LoggerService
+  const appConfig: AppConfig
+  const program: IO<LoggerService | AppConfig, never, void>
+  const fetchData: () => Promise<unknown>
+  const input: string
+  const io: IO<never, HttpError, number>
+  const fallback: number
+  const defaultValue: number
+  const fallbackIO: IO<never, never, number>
+  const io1: IO<never, Error, number>
+  const io2: IO<never, Error, number>
+  const io3: IO<never, Error, number>
+  const items: ReadonlyArray<string>
+  const save: (item: string) => IO<never, Error, void>
+  const getUser: (id: string) => IO<never, Error, User>
+  const getPosts: (userId: string) => IO<never, Error, ReadonlyArray<string>>
+  const openFile: (path: string) => { readonly read: () => string; readonly close: () => void }
+  const path: string
+  const openConnection: () => { readonly query: (sql: string) => ReadonlyArray<User>; readonly close: () => void }
+  const sql: string
+  const checkStatus: IO<never, Error, { readonly done: boolean }>
+  const signal: AbortSignal
+  const lastKnown: { readonly done: boolean }
+  const loadReport: IO<never, Error, string>
+  const url: string
+  const effect: IO<never, Error, number>
+  const bad: string
+  const exit: Exit<Error, number>
+  const report: (error: Error) => number | null
+  const crash: (defect: unknown) => number | null
+  const taggedIO: IO<never, { readonly _tag: "NotFound" } | { readonly _tag: "Timeout" }, string>
+  const pollJob: IO<never, Error, { readonly done: boolean }>
+  const pollUntilReady: IO<never, Error, { readonly status: "pending" | "ready" }>
+}
+`,
+  list: `
+declare global {
+  const ids: ReadonlyArray<string>
+  const fetchUser: (id: string) => Promise<User>
+  const list: List<number>
+}
+`,
+  match: `
+declare global {
+  const statusCode: number
+  const value: string | number | boolean
+  const name: string | undefined
+  const result: Either<string, number>
+  const tryValue: Try<number>
+  const score: number
+  const age: number
+  const expensiveCompute: () => number
+  const httpMethod: "GET" | "POST" | "PUT" | "DELETE"
+  const handleGet: () => string
+  const handlePost: () => string
+  const handlePut: () => string
+  const handleOther: () => string
+  const action: { readonly type: "INCREMENT" | "DECREMENT" | "RESET" | "NOOP" }
+  const state: number
+  const order: { readonly total: number; readonly isPrime: boolean; readonly isLocal: boolean }
+  const errors: ReadonlyArray<string>
+  const warnings: ReadonlyArray<string>
+  const status: number
+}
+`,
+  obj: `
+declare global {
+  const isAdmin: boolean
+  const userAgent: string
+  const requiresAuth: boolean
+  const accessToken: string | undefined
+}
+`,
+  option: `
+declare global {
+  const user: User | undefined
+  const name: string | null
+  const option: Option<number>
+}
+`,
+  set: `
+declare global {
+  const nums: import("functype").Set<number>
+}
+`,
+  try: `
+declare global {
+  type Config = { readonly url: string }
+  class CustomError extends Error {}
+  const jsonString: string
+  const readFile: (path: string) => string
+  const path: string
+  const validate: (data: unknown) => unknown
+  const riskyOperation: () => number
+  const fallbackValue: number
+  const primarySource: () => string
+  const backupSource: () => string
+  const parse: (raw: string) => { readonly data: { readonly children: ReadonlyArray<{ readonly data: unknown }> } }
+  const raw: string
+  const fetchData: () => ReadonlyArray<string>
+  const result: Try<string>
+  const readConfig: () => Config
+  const connectDB: (config: Config) => { readonly query: (sql: string) => ReadonlyArray<User> }
+  const riskyCall: () => number
+  const input: string
+  const tryValue: Try<number>
+}
+`,
+  wire: `
+declare global {
+  type InviteId = string & { readonly __brand: "InviteId" }
+  type UserRow = import("functype").Wire<{ readonly id: string; readonly email: string | null }>
+  type UserRows = import("functype").Wire<ReadonlyArray<UserRow>>
+  type Row = { readonly id: string }
+  const db: { readonly query: (sql: string) => { readonly rows: UserRows } }
+  const enrich: (row: UserRow) => UserRow
+}
+`,
+}
+
+const SITE_PAGES = [
+  "do-notation",
+  "either",
+  "http",
+  "io",
+  "list",
+  "logger",
+  "match",
+  "mcp-server",
+  "obj",
+  "option",
+  "set",
+  "task",
+  "try",
+  "wire",
+] as const
+
 type DocSpec = {
   /** Path from the repo root, used in failure messages. */
   readonly path: string
@@ -232,6 +458,13 @@ const DOCS: ReadonlyArray<DocSpec> = [
   { path: ".claude/skills/functype/references/quick-reference.md", prelude: SKILL_PRELUDE, autoImport: true },
   { path: ".claude/skills/functype/SKILL.md", prelude: SKILL_PRELUDE, autoImport: true },
   { path: ".claude/skills/functype/references/common-patterns.md", prelude: SKILL_PRELUDE, autoImport: true },
+  // site/src/content/feature-matrix.md is a symlink to this file
+  { path: "packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md", prelude: SITE_PRELUDE, autoImport: true },
+  ...SITE_PAGES.map((page) => ({
+    path: `site/src/content/${page}.md`,
+    prelude: SITE_PRELUDE + (SITE_PAGE_PRELUDES[page] ?? ""),
+    autoImport: true,
+  })),
 ]
 
 type Block = { readonly line: number; readonly code: string }
@@ -312,6 +545,7 @@ const typeCheck = (doc: DocSpec, blocks: ReadonlyArray<Block>): Result => {
       ...base?.options.paths,
       ...exportPaths(PACKAGE_ROOT),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-os")),
+      ...exportPaths(join(REPO_ROOT, "packages", "functype-log")),
     },
   }
   const baseHost = ts.createCompilerHost(options)
@@ -347,7 +581,7 @@ describe.each(DOCS)("$path", (doc) => {
   const blocks = extractBlocks(readFileSync(join(REPO_ROOT, doc.path), "utf8"))
 
   it("has TypeScript blocks to check", () => {
-    expect(blocks.length).toBeGreaterThan(10)
+    expect(blocks.length).toBeGreaterThan(0)
   })
 
   it("every TypeScript block type-checks against src", { timeout: 120_000 }, () => {

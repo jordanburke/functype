@@ -121,7 +121,7 @@ Map.empty<string, number>() // typed empty map
 
 ### Http Methods
 
-```typescript
+```typescript ignore
 // Http — fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default
 // Provide a validate function to get typed responses (BYOV: bring your own validator)
 Http.get(url, opts?)          // GET → HttpResponse<unknown>
@@ -152,7 +152,7 @@ collects **all** field errors rather than short-circuiting on the first (unlike
 `Either.sequence`, which fails fast). Not a typeclass-grid container, so it lives
 here rather than in the interface matrix above (same as `HttpError` / `DecoderError`).
 
-```typescript
+```typescript ignore
 // FormValidation<T> — the accumulating result type
 type FormValidation<T> = Either<List<TypedError<"VALIDATION_FAILED">>, T>
 

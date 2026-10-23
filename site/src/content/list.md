@@ -25,12 +25,11 @@ nums.isEmpty; // false
 
 ## Constructors
 
-| Method                   | Description             |
-| ------------------------ | ----------------------- |
-| `List(array)`            | Create from array       |
-| `List.of(...values)`     | Create from values      |
-| `List.empty<T>()`        | Create empty typed list |
-| `List.range(start, end)` | Create range of numbers |
+| Method               | Description             |
+| -------------------- | ----------------------- |
+| `List(array)`        | Create from array       |
+| `List.of(...values)` | Create from values      |
+| `List.empty<T>()`    | Create empty typed list |
 
 ## Transformations
 
@@ -71,14 +70,14 @@ List([1, 2, 3]).tail; // List([2, 3])
 List([1, 2, 3]).init; // List([1, 2])
 
 // Find and contains
-List([1, 2, 3]).find((x) => x > 1); // 2 (or undefined)
+List([1, 2, 3]).find((x) => x > 1); // Some(2), or None when nothing matches
 List([1, 2, 3]).contains(2); // true
 List([1, 2, 3]).exists((x) => x > 2); // true
 List([1, 2, 3]).every((x) => x > 0); // true (also true for an empty List)
 
 // Combine and reorder
 List([1, 2]).concat(List([3, 4])); // List([1, 2, 3, 4])
-List([1, 2]).append(3); // List([1, 2, 3])
+List([1, 2]).add(3); // List([1, 2, 3])
 List([1, 2]).prepend(0); // List([0, 1, 2])
 List([1, 2, 3]).reverse(); // List([3, 2, 1])
 ```

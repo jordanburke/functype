@@ -40,11 +40,11 @@ failure.orThrow(); // throws Error
 ```typescript
 // Map - transform the Right value
 Right(5).map((x) => x * 2); // Right(10)
-Left("err").map((x) => x * 2); // Left("err") - unchanged
+Left<string, number>("err").map((x) => x * 2); // Left("err") - unchanged
 
 // MapLeft - transform the Left value
 Left("err").mapLeft((e) => e.toUpperCase()); // Left("ERR")
-Right(5).mapLeft((e) => e.toUpperCase()); // Right(5) - unchanged
+Right<string, number>(5).mapLeft((e) => e.toUpperCase()); // Right(5) - unchanged
 
 // FlatMap - chain operations
 Right(5).flatMap((x) => (x > 0 ? Right(x * 2) : Left("negative")));
@@ -60,6 +60,13 @@ Right<string, number>(5).filterOrElse(
   (n) => n > 10,
   (n) => `too small: ${n}`,
 ); // Left("too small: 5")
+
+// Traverse - run an Either-returning function over an array; stops calling it at the first Left
+const parseNumber = (s: string): Either<string, number> =>
+  Number.isNaN(Number(s)) ? Left(`not a number: ${s}`) : Right(Number(s));
+Either.traverse(["1", "2", "3"], parseNumber); // Right([1, 2, 3])
+Either.traverse(["1", "x", "3"], parseNumber); // Left("not a number: x"); "3" is never parsed
+Either.sequence([Right(1), Right(2)]); // Right([1, 2])
 
 // TraverseAsync - run an async Either-returning function over many items
 await Either.traverseAsync(rows, saveRow); // one at a time, stops at the first Left
