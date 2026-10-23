@@ -4698,6 +4698,7 @@ Implements: Foldable, Functor, Iterable, Monad, Serializable
 
 - `LazyList(iterable)`
 - `LazyList.from(a, b, ...)`
+- `LazyList.of(a, b, ...)`
 - `LazyList.range(start, end)`
 - `LazyList.iterate(seed, f)`
 - `LazyList.generate(f)`

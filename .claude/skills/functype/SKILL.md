@@ -389,7 +389,7 @@ pair.flatMap(([a, b]) => Tuple([a, b, true] as [number, string, boolean])) // Tu
 import { Stack } from "functype"
 
 Stack.empty<number>()
-const stack = Stack([1, 2, 3]) // Stack.of takes a single value
+const stack = Stack.of(1, 2, 3) // same as Stack([1, 2, 3])
 stack.push(4) // Returns new Stack
 stack.pop() // Returns [Option<T>, Stack<T>]
 stack.peek() // Returns Option<T>
@@ -406,7 +406,7 @@ import { LazyList } from "functype"
 
 // Creation
 LazyList([1, 2, 3])
-LazyList.from(1, 2, 3) // variadic; LazyList.of takes a single value
+LazyList.of(1, 2, 3)
 LazyList.empty<number>()
 
 // Infinite sequences

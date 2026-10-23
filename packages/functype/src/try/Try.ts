@@ -5,7 +5,7 @@ import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
-import { safeStringify } from "@/internal/stringify"
+import { showValue } from "@/internal/stringify"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -162,7 +162,7 @@ const Success = <T>(value: T): Try<T> => ({
     <B>(z: B) =>
     (op: (a: T, b: B) => B) =>
       op(value, z),
-  toString: () => `Success(${safeStringify(value)})`,
+  toString: () => `Success(${showValue(value)})`,
   toPromise: (): Promise<T> => Promise.resolve(value),
   toValue: () => ({ _tag: "Success", value }),
   toJSON: () => ({ "@functype": "Try" as const, _tag: "Success" as const, value }),
@@ -228,7 +228,7 @@ const Failure = <T>(error: Error): Try<T> => ({
     <B>(z: B) =>
     (_op: (a: T, b: B) => B) =>
       z, // No transformation on failure
-  toString: () => `Failure(${safeStringify(error)}))`,
+  toString: () => `Failure(${showValue(error)})`,
   toPromise: (): Promise<T> => Promise.reject(error),
   toValue: () => ({ _tag: "Failure", value: error }),
   toJSON: () => ({

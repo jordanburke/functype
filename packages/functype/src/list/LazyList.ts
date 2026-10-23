@@ -414,14 +414,15 @@ const LazyListCompanion = {
   },
 
   /**
-   * Create a LazyList from a single value
+   * Create a LazyList from values (one or more)
    * @example
    * const single = LazyList.of(42)
    *   .map(x => x * 2)
    *   .toArray() // [84]
+   * LazyList.of(1, 2, 3).toArray() // [1, 2, 3], same as LazyList.from(1, 2, 3)
    */
-  of: <A extends Type>(value: A): LazyList<A> => {
-    return LazyListObject([value])
+  of: <A extends Type>(...values: A[]): LazyList<A> => {
+    return LazyListObject(values)
   },
 
   /**
