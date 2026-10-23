@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "1.17.0",
+  "version": "1.19.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "keywords": [
@@ -69,7 +69,8 @@
     "ts-builds": "^4.0.0",
     "tsdown": "^0.23.1",
     "tsx": "^4.23.15",
-    "typedoc": "^0.28.20"
+    "typedoc": "^0.28.20",
+    "typescript": "^6.0.3"
   },
   "types": "./dist/index.d.ts",
   "module": "./dist/index.js",

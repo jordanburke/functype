@@ -39,8 +39,8 @@ export type ExitTag = "Success" | "Failure" | "Die" | "Interrupted"
  * recovered it.
  *
  * Note the sync interpreter cannot distinguish the two. `runSync` returns
- * `Either<E, A>`, which has no third branch to put a defect in, and the sync
- * interpreter signals failure by throwing the raw value — so `Fail` and `Die` arrive
+ * `Either<E, A>`, which has no third branch to put a defect in: both a failure and a
+ * defect land in the `Left` as the raw value — so `Fail` and `Die` arrive
  * identically. `Die` is observable through the async terminals (`runExit`) and
  * through the `Exit` handed to a `bracketExit` release.
  */

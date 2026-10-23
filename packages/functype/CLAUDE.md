@@ -224,8 +224,10 @@ set.toArray()                // convert to array
 Map([["a", 1], ["b", 2]])    // create from pairs
 Map.of<string, number>(["a", 1], ["b", 2])  // variadic factory
 Map.empty<string, number>()  // typed empty map
-map.set(key, value)          // add entry (returns new Map)
+map.add(Tuple([key, value])) // add entry (returns new Map); add takes one Tuple
 map.get(key)                 // get value (returns Option)
+map.has(key)                 // key present? (true even when the value is undefined)
+map.keys() / map.values()    // List<K> / List<V>, insertion order (1.18)
 
 // Option - nullable handling
 Option(value)                // wrap value (None if null/undefined)
@@ -272,14 +274,14 @@ IO.tryPromise({              // promise with error mapping
   catch: (e) => new NetworkError(e)
 })
 IO.service(Tag)              // access injected dependency
-effect.provide(layer)        // provide dependencies
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.retry(3)              // retry on failure
 effect.runSync()             // execute sync effect
 await effect.run()           // execute, get Either<E,A>
 await effect.runExit()       // execute, get Exit<E,A> (see the Exit block below)
 IO.gen(function*() {         // generator do-notation
   const db = yield* IO.service(Database)
-  const user = yield* IO.tryPromise(() => db.find(id))
+  const user = yield* IO.async(() => db.find(id))
   return user
 })
 
@@ -302,7 +304,7 @@ IO.fail(error)               // typed failure
 IO.tryPromise({try, catch})  // promise with error mapping
 IO.service(Tag)              // dependency injection
 IO.gen(function*() {...})    // generator do-notation
-effect.provide(layer)        // provide dependencies
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.runSync()             // execute sync
 await effect.run()           // execute → Either<E,A>
 await effect.runExit()       // execute → Exit<E,A>
@@ -479,9 +481,9 @@ cache.set(key, value)
 
 // AFTER: functype Map (returns new Map). Import it as `Map`: functype's Map/Set are the
 // default collections, and the built-in is spelled `globalThis.Map` where it's really needed.
-import { Map } from "functype"
+import { Map, Tuple } from "functype"
 const cache = Map<string, Value>([])
-const newCache = cache.set(key, value)
+const newCache = cache.add(Tuple([key, value]))
 ```
 
 ### Pattern 5: Error accumulation → List + buildResult helper

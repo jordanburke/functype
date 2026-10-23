@@ -432,7 +432,7 @@ const OptionCompanion = {
    * @param options - Array of Option values
    * @returns Some with array of values, or None if any element is None
    */
-  sequence: <T extends Type>(options: Option<T>[]): Option<T[]> =>
+  sequence: <T extends Type>(options: ReadonlyArray<Option<T>>): Option<T[]> =>
     options.reduce<Option<T[]>>(
       (acc, opt) => (acc.isEmpty || opt.isEmpty ? None<T[]>() : Some([...(acc.value as T[]), opt.value as T])),
       Some<T[]>([]),

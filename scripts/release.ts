@@ -39,16 +39,9 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+import { FAMILY_PACKAGE_DIRS } from "./packages.ts";
 
-const FAMILY_PACKAGE_DIRS = [
-  "packages/functype",
-  "packages/functype-os",
-  "packages/functype-log",
-  "packages/functype-react",
-  "packages/functype-eval",
-  "packages/mcp-server",
-] as const;
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 type BumpLevel = "patch" | "minor" | "major";
 

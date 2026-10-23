@@ -43,9 +43,9 @@ user.assign({ name: "Jane", age: 25 });
 user.merge({ city: "NYC" });
 // → Obj({ name: "John", age: 30, role: "admin", city: "NYC" })
 
-// Conditional merge
-user.when(isAdmin, { permissions: "all" });
-// → merges only if isAdmin is true
+// Conditional assign (existing keys only, like assign)
+user.when(isAdmin, { role: "superadmin" });
+// → assigns only if isAdmin is true
 
 // Pick specific keys
 user.pick("name", "role");
@@ -60,14 +60,18 @@ user.omit("role");
 
 The primary motivator for Obj — replacing imperative if/assign patterns:
 
+Before, mutable:
+
 ```typescript
-// Before: mutable
 const headers: Record<string, string> = { "User-Agent": userAgent };
 if (requiresAuth && accessToken) {
   headers["Authorization"] = `Bearer ${accessToken}`;
 }
+```
 
-// After: immutable and fluent
+After, immutable and fluent:
+
+```typescript
 const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
   .assign({ "Content-Type": "application/json" })
   .when(requiresAuth, { Authorization: `Bearer ${accessToken}` })

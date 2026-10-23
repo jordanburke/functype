@@ -15,11 +15,12 @@ Option.from(42) // Some(42)
 Option.none() // None
 
 // Checking
-option.isDefined() // true if Some, false if None
-option.isEmpty() // true if None, false if Some
+option.isSome() // true if Some, false if None
+option.isNone() // true if None, false if Some
+option.isEmpty // same as isNone(), as a property
 
 // Accessing
-option.get() // Gets value or throws if None
+option.orThrow() // Gets value or throws if None
 option.orElse(defaultValue) // Gets value or returns default
 option.orThrow(new Error("No value")) // Gets value or throws custom error
 
@@ -57,15 +58,15 @@ either.isRight() // true if Right, false if Left
 either.isLeft() // true if Left, false if Right
 
 // Accessing
-either.get() // Gets Right value or throws if Left
+either.orThrow() // Gets Right value or throws if Left
 either.orElse(defaultValue) // Gets Right value or returns default
-either.getLeft() // Gets Left value or throws if Right
+either.swap().orThrow() // Gets Left value or throws if Right
 
 // Transforming
 either.map((x) => x * 2) // Transforms Right value
 either.mapLeft((e) => `Error: ${e}`) // Transforms Left value
 either.flatMap((x) => Right(x.toString())) // Chains with operations returning Either
-either.filter(
+either.filterOrElse(
   (x) => x > 10,
   (x) => `${x} is too small`,
 ) // Left if predicate fails
@@ -88,27 +89,27 @@ either.match({
 ## Try<T>
 
 ```typescript
-import { Try, Success, Failure } from "functype/try"
+import { Try } from "functype/try"
 
 // Creation
 Try(() => 42) // Success(42)
 Try(() => {
   throw new Error("Failed")
 }) // Failure(Error)
-Success(42) // Success(42)
-Failure(new Error("Failed")) // Failure(Error)
+Try.success(42) // Success(42)
+Try.failure(new Error("Failed")) // Failure(Error)
 
 // Checking
 tryVal.isSuccess() // true if Success, false if Failure
 tryVal.isFailure() // true if Failure, false if Success
 
 // Accessing
-tryVal.get() // Gets value or throws original error
+tryVal.orThrow() // Gets value or throws original error
 tryVal.orElse(defaultValue) // Gets value or returns default
 tryVal.error // Gets error for Failure
 
 // Error handling
-tryVal.recover(defaultValue) // Success with original value or default
+tryVal.recover(() => defaultValue) // Success with original value or default
 tryVal.recoverWith(() => Try(() => backup())) // Tries alternative computation on failure
 
 // Transforming
@@ -117,7 +118,7 @@ tryVal.flatMap((x) => Try(() => operation(x))) // Chains with operations returni
 
 // Conversions
 tryVal.toOption() // Option.Some for Success, Option.None for Failure
-tryVal.toEither() // Either.Right for Success, Either.Left for Failure
+tryVal.toEither((error) => error.message) // Either.Right for Success, Either.Left for Failure
 
 // Pattern matching
 tryVal.fold(
@@ -141,18 +142,19 @@ List([1, 2, 3]) // List([1, 2, 3])
 List.empty<number>() // List([])
 
 // Properties
-list.isEmpty() // true if empty, false otherwise
-list.size() // Number of elements
+list.isEmpty // true if empty, false otherwise
+list.size // Number of elements
 
 // Accessing
-list.head() // Option.Some with first element or None if empty
-list.tail() // List with all elements except the first
-list.at(2) // Option.Some with element at index or None
+list.headOption // Option.Some with first element or None if empty
+list.head // First element, or undefined if empty
+list.tail // List with all elements except the first
+list.get(2) // Option.Some with element at index or None
 
 // Adding/removing
 list.add(4) // New list with element added
-list.addAll([4, 5, 6]) // New list with elements added
-list.remove(2) // New list with element removed
+list.concat(List([4, 5, 6])) // New list with elements added
+list.remove(2) // New list with the value 2 removed
 list.removeAt(1) // New list with element at index removed
 
 // Transforming
@@ -168,7 +170,8 @@ list.slice(1, 3) // Elements from start to end (exclusive)
 // Finding
 list.find((x) => x > 10) // Option.Some with first match or None
 list.exists((x) => x > 10) // true if any element matches predicate
-list.forAll((x) => x > 0) // true if all elements match predicate
+list.every((x) => x > 0) // true if all elements match predicate (true when empty)
+list.partition((x) => x > 0) // [matching, rest]
 list.count((x) => x % 2 === 0) // Count of elements matching predicate
 
 // Aggregating
@@ -178,51 +181,56 @@ list.reduce((a, b) => a + b) // Reduce (without initial value)
 
 // Operations
 list.reverse() // Reversed list
-list.sort((a, b) => a - b) // Sorted list
+list.sorted((a, b) => a - b) // Sorted list
+list.sortBy((x) => -x) // Sorted by a key
 list.distinct() // List with duplicates removed
 list.concat(List([4, 5, 6])) // Lists combined
-list.groupBy((x) => (x % 2 === 0 ? "even" : "odd")) // Map of grouped elements
+list.groupBy((x) => (x % 2 === 0 ? "even" : "odd")) // native Map of key to List
 ```
 
 ## Map<K, V>
 
 ```typescript
 import { Map } from "functype/map"
+import { Option } from "functype/option"
+import { Tuple } from "functype/tuple"
 
 // Creation
-Map({ a: 1, b: 2, c: 3 }) // Map({a: 1, b: 2, c: 3})
+Map([
+  ["a", 1],
+  ["b", 2],
+]) // From [key, value] pairs
+Map.of<string, number>(["a", 1], ["b", 2]) // Variadic
 Map.empty<string, number>() // Empty map
 
-// Properties
-map.isEmpty() // true if empty
-map.size() // Number of entries
-map.has("a") // true if key exists
+// Properties (getters, not calls)
+map.isEmpty // true if empty
+map.size // Number of entries
 
 // Accessing
-map.get("a") // Option.Some with value or None
-map.orElse("a", 0) // Value or default
-map.keys() // List of keys
-map.values() // List of values
-map.entries() // List of [key, value] tuples
+map.has("a") // true if the key is present, even when its value is undefined
+map.get("a") // Some(value) or None
+map.getOrElse("a", 0) // Value or default
+map.orElse("a", Option(0)) // Option of the value, or the alternative Option
+map.keys() // List<K>, insertion order
+map.values() // List<V>, insertion order
+map.contains(Tuple(["a", 1])) // true if that exact entry is present (value compared with ===)
+map.toList() // List of Tuple<[K, V]> entries
+for (const [k, v] of map) {
+} // Iterates [key, value] pairs
 
-// Modifying
-map.add("d", 4) // New map with entry added
-map.addAll({ d: 4, e: 5 }) // New map with entries added
-map.remove("a") // New map with key removed
-map.removeAll(["a", "b"]) // New map with keys removed
+// Modifying (each returns a new Map)
+map.add(Tuple(["d", 4])) // Entry added or replaced; add takes one Tuple
+map.remove("a") // Key removed
 
 // Transforming
-map.map((v) => v * 2) // Map with transformed values
-map.mapEntries(([k, v]) => [`key_${k}`, v * 2]) // Transform both keys and values
-map.filter((v) => v > 1) // Map with entries matching predicate
-map.filterKeys((k) => k !== "a") // Map with entries having keys matching predicate
-
-// Operations
-map.merge(Map({ c: 30, d: 40 })) // Maps combined (right values override)
-map.mergeWith(Map({ c: 30, d: 40 }), (v1, v2) => v1 + v2) // Maps combined with custom function
+map.map((v) => v * 2) // Values transformed, keys kept
+map.flatMap((entry) => [[`key_${entry.get(0)}`, entry.get(1)]]) // Entries to new [key, value] pairs
+map.fold(0, (acc, entry) => acc + entry.get(1)) // Fold over Tuple entries
 
 // Conversions
-map.toObject() // Standard JS object
+map.toValue() // { _tag: "Map", value: [K, V][] }
+map.toSet() // Set of Tuple<[K, V]> entries
 ```
 
 ## Set<T>
@@ -235,68 +243,68 @@ Set([1, 2, 3]) // Set([1, 2, 3])
 Set.empty<number>() // Empty set
 
 // Properties
-set.isEmpty() // true if empty
-set.size() // Number of elements
+set.isEmpty // true if empty
+set.size // Number of elements
 set.has(2) // true if element exists
 
 // Modifying
 set.add(4) // New set with element added
-set.addAll([4, 5]) // New set with elements added
 set.remove(2) // New set with element removed
-set.removeAll([1, 2]) // New set with elements removed
 
 // Transforming
 set.map((x) => x * 2) // Set with transformed elements
 set.flatMap((x) => Set([x, x + 1])) // Transform + flatten
 set.filter((x) => x % 2 === 0) // Set with elements matching predicate
 
-// Set operations
-set.union(Set([3, 4, 5])) // Union of sets
-set.intersect(Set([2, 3, 4])) // Intersection of sets
-set.difference(Set([3, 4])) // Elements in this set but not in other
-set.symmetricDifference(Set([3, 4])) // Elements in either set but not both
-set.isSubsetOf(Set([1, 2, 3, 4])) // true if all elements in other set
+// Set operations: same names as native Set; `other` can be any iterable; results keep this set's order
+set.union(Set([3, 4, 5])) // Union
+set.intersection(Set([2, 3, 4])) // Intersection
+set.difference([3, 4]) // Elements in this set but not in other
+set.symmetricDifference([3, 4]) // Elements in either set but not both
+set.isSubsetOf(Set([1, 2, 3, 4])) // true if all elements are in other
+set.isSupersetOf([1, 2]) // true if all of other's elements are in this set
+set.isDisjointFrom([7, 8]) // true if no element is shared
+set.every((x) => x > 0) // true if all elements match predicate
 ```
 
 ## Task
 
 ```typescript
-import { Task } from "functype/core/task"
+import { Task } from "functype/task"
 
-// Synchronous tasks
+// Synchronous tasks return a TaskOutcome (Ok or Err)
 const syncTask = Task().Sync(
   () => 42,
-  (err) => new Error(`Failed: ${err}`),
+  (err) => new Error(`Failed: ${String(err)}`),
 )
 
-// Asynchronous tasks
+// Asynchronous tasks return a Promise of a TaskOutcome
 const asyncTask = Task().Async(
-  async () => await fetch("/api").then((r) => r.json()),
-  async (err) => new Error(`Fetch failed: ${err}`),
+  async () => (await fetch("/api").then((r) => r.json())) as unknown,
+  (err) => new Error(`Fetch failed: ${String(err)}`),
 )
 
 // Named tasks (for debugging and error identification)
 const namedTask = Task({ name: "UserFetch" }).Sync(
   () => ({ id: 1, name: "John" }),
-  (err) => new Error(`User fetch failed: ${err}`),
+  (err) => new Error(`User fetch failed: ${String(err)}`),
 )
 
-// Error handling with named tasks
-try {
-  await Task({ name: "DataProcessor" }).Async(() => {
-    throw new Error("Processing failed")
-  })
-} catch (error) {
-  console.log(error.name) // "DataProcessor"
-  console.log(error.taskInfo.name) // "DataProcessor"
-}
+// A throw becomes an Err; the outcome carries the task name
+const outcome = await Task({ name: "DataProcessor" }).Async(() => {
+  throw new Error("Processing failed")
+})
+outcome.fold(
+  (error) => `Failed: ${error.message}`,
+  (value) => `Done: ${String(value)}`,
+)
 
 // Companion functions
-Task.success(42, { name: "SuccessResult" }) // Creates TaskResult
-Task.fail(new Error("Failed"), data, { name: "FailureResult" }) // Creates TaskException with name
+Task.success(42, { name: "SuccessResult" }) // Ok outcome
+Task.fail(new Error("Failed"), data, { name: "FailureResult" }) // Err outcome with a name
 
 // Adapting functions
-const fetchAPI = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json())
+const fetchAPI = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<User>)
 const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
 
 // Converting
@@ -308,27 +316,28 @@ const promise = Task.toPromise(syncTask) // Standard Promise
 ```typescript
 import { Tuple } from "functype/tuple"
 
-// Creation
-const pair = Tuple(42, "hello")
-const triple = Tuple(true, 42, "hello")
+// Creation: Tuple takes an array
+const pair = Tuple([42, "hello"] as [number, string])
+const triple = Tuple.triple(true, 42, "hello")
+Tuple.pair("key", 42) // Tuple<[string, number]>
+Tuple.of(1, "a", true) // Tuple<[number, string, boolean]>
 
 // Accessing
-pair.first() // 42
-pair.second() // "hello"
-triple.third() // "hello"
+pair.get(0) // 42
+pair.get(1) // "hello"
+triple.get(2) // "hello"
+pair.length // 2
 pair.toArray() // [42, "hello"]
+const [n, s] = pair // destructures like an array (elements typed as the union)
+pair.get(0) + pair.get(1).length // 47: use the parts directly (there is no apply)
 
-// Transforming
-pair.mapFirst((x) => x * 2) // Tuple(84, "hello")
-pair.mapSecond((s) => s.toUpperCase()) // Tuple(42, "HELLO")
-pair.map(([a, b]) => [a * 2, b.toUpperCase()]) // Tuple(84, "HELLO")
+// Transforming: map and flatMap receive the whole array
+pair.map(([a, b]) => [a * 2, b.toUpperCase()] as [number, string]) // Tuple([84, "HELLO"])
+pair.map(([a, b]) => [b, a] as [string, number]) // swap: Tuple(["hello", 42])
+pair.flatMap(([a, b]) => Tuple([a, b, true] as [number, string, boolean])) // Tuple([42, "hello", true])
 
-// Operations
-pair.swap() // Tuple("hello", 42)
-pair.apply((a, b) => a + b.length) // 47
-
-// Combining
-pair.concat(Tuple(true)) // Tuple(42, "hello", true)
+// Folding over the elements
+pair.fold("", (acc, x) => acc + String(x)) // "42hello"
 ```
 
 ## Branded Types
@@ -337,9 +346,9 @@ pair.concat(Tuple(true)) // Tuple(42, "hello", true)
 import { Brand } from "functype/branded"
 
 // Type definitions
-type UserId = Brand<string, "UserId">
-type Email = Brand<string, "Email">
-type PositiveInt = Brand<number, "PositiveInt">
+type UserId = Brand<"UserId", string>
+type Email = Brand<"Email", string>
+type PositiveInt = Brand<"PositiveInt", number>
 
 // Factory functions with validation
 const UserId = (id: string): UserId => {
@@ -353,9 +362,7 @@ const PositiveInt = (n: number): PositiveInt => {
 }
 
 // Usage
-function getUserById(id: UserId): User {
-  /* ... */
-}
+declare function getUserById(id: UserId): User
 
 // Type-safe calls
 getUserById(UserId("U123456")) // Works
@@ -408,7 +415,8 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
-import { Http } from "functype/fetch"
+import { Http, HttpError } from "functype/fetch"
+import { IO } from "functype/io"
 
 // Without validator — data is unknown
 const effect = Http.get("/api/users") // IO<never, HttpError, HttpResponse<unknown>>
@@ -471,7 +479,7 @@ FoldableUtils.toList(Option(42)) // List([42])
 FoldableUtils.toList(Either.right(42)) // List([42])
 FoldableUtils.toList(Try(() => 42)) // List([42])
 
-FoldableUtils.toOption(List([1, 2, 3])) // Some(1)
+List([1, 2, 3]).headOption // Some(1): a List is not a sum type, so take its head
 FoldableUtils.toOption(Either.right(42)) // Some(42)
 FoldableUtils.toOption(Try(() => 42)) // Some(42)
 
@@ -484,37 +492,32 @@ FoldableUtils.toEither(
 // Built-in conversions
 option.toEither("No value") // Either.Right or Either.Left
 either.toOption() // Option.Some or Option.None
-tryVal.toEither() // Either.Right or Either.Left with error
+tryVal.toEither((error) => error) // Either.Right, or Either.Left with the error
 tryVal.toOption() // Option.Some or Option.None
 ```
 
 ## Functional Composition
 
 ```typescript
-import { pipe } from "functype/pipe"
+import { Option } from "functype/option"
 
-// Pipe operations for cleaner sequential transformations
-const result = pipe(
-  Option("42"),
-  (opt) => opt.map((s) => s.trim()),
-  (opt) => opt.map((s) => parseInt(s, 10)),
-  (opt) => opt.filter((n) => !isNaN(n)),
-  (opt) => opt.map((n) => n * 2),
-  (opt) => opt.orElse(0),
-) // 84
+// Method chaining is the pipeline: each step returns a new container
+const result = Option("42")
+  .map((s) => s.trim())
+  .map((s) => parseInt(s, 10))
+  .filter((n) => !isNaN(n))
+  .map((n) => n * 2)
+  .orElse(0) // 84
 
 // Cross-type transformations
-const mixed = pipe(
-  Option("42"),
-  (opt) => opt.map((s) => parseInt(s, 10)),
-  (opt) => opt.toEither("Invalid number"),
-  (e) => e.map((n) => n * 2),
-  (e) =>
-    e.fold(
-      (err) => `Error: ${err}`,
-      (val) => `Result: ${val}`,
-    ),
-) // "Result: 84"
+const mixed = Option("42")
+  .map((s) => parseInt(s, 10))
+  .toEither("Invalid number")
+  .map((n) => n * 2)
+  .fold(
+    (err) => `Error: ${err}`,
+    (val) => `Result: ${val}`,
+  ) // "Result: 84"
 ```
 
 ## Companion Pattern
@@ -550,7 +553,7 @@ if (Either.isRight(either)) {
 
 if (Try.isSuccess(tryValue)) {
   // TypeScript knows tryValue succeeded
-  console.log(tryValue.value)
+  console.log(tryValue.orThrow())
 }
 ```
 
@@ -668,11 +671,11 @@ box1.map((x) => x * 2).get() // 20
 Work with Companion objects using helper types:
 
 ```typescript
-import { type CompanionMethods, type InstanceType, isCompanion } from "functype/companion"
+import { Companion, type CompanionMethods, type InstanceType, isCompanion } from "functype/companion"
+import { Option } from "functype/option"
 
-// Extract companion methods type
+// Companion type of a constructor (today this includes the call signature, not only the static methods)
 type OptionMethods = CompanionMethods<typeof Option>
-// { from: ..., none: ..., isSome: ..., isNone: ..., fromJSON: ..., etc. }
 
 // Extract instance type
 type OptionInstance = InstanceType<typeof Option>
@@ -684,11 +687,10 @@ if (isCompanion(Option)) {
 }
 
 // Use with custom types
-const methods: CompanionMethods<typeof Box> = {
-  of: Box.of,
-  empty: Box.empty,
-}
+const Point = Companion((x: number, y: number) => ({ x, y }), { origin: () => ({ x: 0, y: 0 }) })
 
-type BoxInst = InstanceType<typeof Box>
-const instance: BoxInst = Box(42)
+Point.origin() // { x: 0, y: 0 }
+
+type PointInst = InstanceType<typeof Point>
+const instance: PointInst = Point(1, 2)
 ```

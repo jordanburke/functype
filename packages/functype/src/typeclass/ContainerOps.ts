@@ -46,6 +46,18 @@ export interface ContainerOps<out A extends Type> {
  */
 export interface CollectionOps<out A extends Type, Self> {
   /**
+   * Tests whether every element satisfies the predicate. True for an empty collection.
+   * Stops at the first element that fails. The counterpart of `exists`.
+   *
+   * @example
+   * ```typescript
+   * List([1, 2, 3]).every((x) => x > 0) // true
+   * List<number>([]).every((x) => x > 0) // true
+   * ```
+   */
+  every(p: (a: A) => boolean): boolean
+
+  /**
    * Left-associative fold over all elements using an initial value and combining function.
    * Unlike foldLeft (which is curried), this provides a convenient uncurried signature.
    *

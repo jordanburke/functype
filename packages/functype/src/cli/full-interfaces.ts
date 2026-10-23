@@ -192,18 +192,13 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
   ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
     ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
-  mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
-    f(value)
-      .then((result) => Right<L, U>(result))
-      .catch((error: unknown) => Promise.resolve(Left<L, U>(error as L))) as Promise<Either<L, U>>,
+  mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => Right<L, U>(await f(value)),
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
     other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
-    f(value) as Either<L | L2, U>,
-  flatMapAsync: <L2 extends Type, U extends Type>(
+  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> => f(value),
+  flatMapAsync: async <L2 extends Type, U extends Type>(
     f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> =>
-    f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
+  ): Promise<Either<L | L2, U>> => await f(value),
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
@@ -287,8 +282,18 @@ export interface EitherBase<out L extends Type, out R extends Type>
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>) => Either<L | L2, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
+  /**
+   * Maps the Right value with an async function. A Left resolves unchanged.
+   * If \`f\` rejects or throws, the returned Promise rejects with the same reason: it does not
+   * become a Left, and it never throws synchronously. To turn a rejection into a Left, use \`Either.fromPromise(p, onRejected)\`
+   * or \`tryCatchAsync\`, which take a function from the reason to \`L\`.
+   */
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
+  /**
+   * Chains an async function that returns an Either. A Left resolves unchanged.
+   * If \`f\` rejects or throws, the returned Promise rejects with the same reason, as with \`mapAsync\`.
+   */
   flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
   toString: () => string
@@ -526,6 +531,29 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   add<B>(value: B): Set<A | B>
   remove: (value: unknown) => Set<A>
   has(value: unknown): boolean
+  /**
+   * Elements in this set or \`other\`. \`other\` can be any iterable: an array, a native Set or a functype Set.
+   * Like every Set method, it compares elements as \`has\` does: by SameValueZero, so objects by identity and
+   * \`NaN\` equal to \`NaN\`.
+   *
+   * @example
+   * \`\`\`typescript
+   * Set([1, 2]).union([2, 3]) // Set([1, 2, 3])
+   * \`\`\`
+   */
+  union<B>(other: Iterable<B>): Set<A | B>
+  /** Elements in both this set and \`other\`, in this set's order (native \`intersection\` follows the smaller set's). */
+  intersection(other: Iterable<unknown>): Set<A>
+  /** Elements in this set and not in \`other\`. */
+  difference(other: Iterable<unknown>): Set<A>
+  /** Elements in exactly one of this set and \`other\`. */
+  symmetricDifference<B>(other: Iterable<B>): Set<A | B>
+  /** True if every element of this set is in \`other\`. True for an empty set. */
+  isSubsetOf(other: Iterable<unknown>): boolean
+  /** True if every element of \`other\` is in this set. */
+  isSupersetOf(other: Iterable<unknown>): boolean
+  /** True if this set and \`other\` share no element. */
+  isDisjointFrom(other: Iterable<unknown>): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   /**
@@ -561,6 +589,27 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   flatMap<K2, V2>(f: (entry: Tuple<[K, V]>) => Iterable<[K2, V2]>): Map<K2, V2>
   flatMapAsync<U>(f: (value: V) => PromiseLike<Map<K, U>>): PromiseLike<Map<K, U>>
   get(key: K): Option<V>
+  /**
+   * Whether the map holds an entry for \`key\`. Keys compare like a native \`Map\`:
+   * by identity for objects, by \`SameValueZero\` otherwise.
+   *
+   * True even when the stored value is \`undefined\`, where \`get(key)\` returns \`None\`.
+   * For an entry check (key and value), use \`contains(Tuple([k, v]))\`, which
+   * compares the value with \`===\`.
+   * @param key - The key to look up
+   * @returns true if the map has an entry for \`key\`
+   */
+  has(key: K): boolean
+  /**
+   * The keys, in insertion order. A List, like \`Obj.keys()\`.
+   * @returns A List of the map's keys
+   */
+  keys(): List<K>
+  /**
+   * The values, in insertion order. Duplicates are kept.
+   * @returns A List of the map's values
+   */
+  values(): List<V>
   getOrElse(key: K, defaultValue: V): V
   orElse(key: K, alternative: Option<V>): Option<V>
   fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B
@@ -1136,5 +1185,5 @@ const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkE
    * \`\`\`
    */
   readonly afterResponse?: (response: HttpResponse<unknown>) => IO<never, HttpError, HttpResponse<unknown>>
-}`
+}`,
 }

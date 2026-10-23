@@ -52,8 +52,18 @@ export interface EitherBase<out L extends Type, out R extends Type>
   readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
   ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>) => Either<L | L2, U>
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
+  /**
+   * Maps the Right value with an async function. A Left resolves unchanged.
+   * If `f` rejects or throws, the returned Promise rejects with the same reason: it does not
+   * become a Left, and it never throws synchronously. To turn a rejection into a Left, use `Either.fromPromise(p, onRejected)`
+   * or `tryCatchAsync`, which take a function from the reason to `L`.
+   */
   mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
   flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
+  /**
+   * Chains an async function that returns an Either. A Left resolves unchanged.
+   * If `f` rejects or throws, the returned Promise rejects with the same reason, as with `mapAsync`.
+   */
   flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
   toOption: () => Option<R>
   toString: () => string
@@ -157,18 +167,13 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
   ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
     ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
-  mapAsync: <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
-    f(value)
-      .then((result) => Right<L, U>(result))
-      .catch((error: unknown) => Promise.resolve(Left<L, U>(error as L))) as Promise<Either<L, U>>,
+  mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => Right<L, U>(await f(value)),
   merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
     other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
-    f(value) as Either<L | L2, U>,
-  flatMapAsync: <L2 extends Type, U extends Type>(
+  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> => f(value),
+  flatMapAsync: async <L2 extends Type, U extends Type>(
     f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> =>
-    f(value).catch((error: unknown) => Left<L | L2, U>(error as L | L2)) as Promise<Either<L | L2, U>>,
+  ): Promise<Either<L | L2, U>> => await f(value),
   toOption: () => Some<R>(value),
   toList: () => List<R>([value]),
   toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
@@ -248,15 +253,14 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   orUndefined: () => undefined,
   map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
   ap: <L2 extends Type, U extends Type>(_ff: Either<L2, (value: R) => U>): Either<L | L2, U> => Left<L | L2, U>(value),
-  mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> =>
-    Promise.resolve(Left<L, U>(value)) as Promise<Either<L, U>>,
+  mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> => Promise.resolve(Left<L, U>(value)),
   merge: <L1 extends Type, R1 extends Type>(_other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
     Left<L | L1, [R, R1]>(value),
   flatMap: <L2 extends Type, U extends Type>(_f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
     Left<L | L2, U>(value),
   flatMapAsync: <L2 extends Type, U extends Type>(
     _f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> => Promise.resolve(Left<L | L2, U>(value)) as Promise<Either<L | L2, U>>,
+  ): Promise<Either<L | L2, U>> => Promise.resolve(Left<L | L2, U>(value)),
   toOption: () => None<R>(),
   toList: () => List<R>(),
   toEither: <E extends Type>(leftValue: E) => Left<E, R>(leftValue),
@@ -396,7 +400,7 @@ const EitherCompanion = {
    * @param eithers - Array of Either values
    * @returns Either with array of values or first Left encountered
    */
-  sequence: <L extends Type, R extends Type>(eithers: Either<L, R>[]): Either<L, R[]> => {
+  sequence: <L extends Type, R extends Type>(eithers: ReadonlyArray<Either<L, R>>): Either<L, R[]> => {
     return eithers.reduce<Either<L, R[]>>((acc, either) => {
       if (acc.isLeft()) return acc
       if (either.isLeft()) return Left(either.value as L)
@@ -405,17 +409,20 @@ const EitherCompanion = {
   },
 
   /**
-   * Maps an array through a function that returns Either, then sequences the results
+   * Maps an array through a function that returns Either, then sequences the results.
+   * Short-circuits on the first Left: `f` is not called for the elements after it.
    * @param arr - Array of values
-   * @param f - Function that returns Either
+   * @param f - Function that returns Either, given each value and its index
    * @returns Either with array of results or first Left encountered
    */
   traverse: <L extends Type, R extends Type, U extends Type>(
-    arr: R[],
-    f: (value: R) => Either<L, U>,
-  ): Either<L, U[]> => {
-    return EitherCompanion.sequence(arr.map(f))
-  },
+    arr: ReadonlyArray<R>,
+    f: (value: R, index: number) => Either<L, U>,
+  ): Either<L, U[]> =>
+    arr.reduce<Either<L, U[]>>(
+      (acc, item, i) => acc.flatMap((us) => f(item, i).map((u) => [...us, u])),
+      Right<L, U[]>([]),
+    ),
 
   /**
    * Async traverse: runs `f` over `items` and collects the Right values, stopping at the first Left.
