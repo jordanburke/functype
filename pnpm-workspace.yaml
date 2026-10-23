@@ -8,6 +8,12 @@ overrides:
   # GHSA alerts #338/#346/#347/#349/#350/#363: fast-uri <3.1.7, reached via fastmcp and the MCP SDK's ajv
   # (^3.0.1). Drop once their lockfile floor is >=3.1.7.
   fast-uri: ^3.1.8
+  # GHSA alert #366: source-map-js <1.2.2 (event-loop DoS), reached via Tailwind, css-tree (jsdom, svgo) and
+  # Vitest coverage. Dev and site only. Drop once their floors are >=1.2.2.
+  source-map-js: ^1.2.2
+  # GHSA alert #345: deepmerge-ts <8 (stack exhaustion on recursive objects), via eslint-plugin-functional@10's
+  # ^7.1.5. Dev only; the plugin imports only deepmerge(), which 8 keeps. Drop once the plugin allows ^8.
+  deepmerge-ts: ^8.0.2
   eslint-plugin-functype: "workspace:*"
   eslint-config-functype: "workspace:*"
 
