@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.19.0 - 2026-10-22
+
 - **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.
 - **The docs site's pages compile.** The doc type-check now covers every type page of the site (`site/src/content`) and the feature matrix. It found calls that don't exist on most pages, now fixed:
   - Match: `Cond(...).otherwise(...)`, which is `.else(...)`.
