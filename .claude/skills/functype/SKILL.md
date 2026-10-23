@@ -92,18 +92,21 @@ const cache = Map.empty<string, User>()
 **Before (Imperative):**
 
 ```typescript
-if (value !== null && value !== undefined) {
-  return value.toUpperCase()
+function shout(name: string | null | undefined): string {
+  if (name !== null && name !== undefined) {
+    return name.toUpperCase()
+  }
+  return ""
 }
-return ""
 ```
 
 **After (Functype):**
 
 ```typescript
-Option(value)
-  .map((v) => v.toUpperCase())
-  .orElse("")
+const shout = (name: string | null | undefined): string =>
+  Option(name)
+    .map((v) => v.toUpperCase())
+    .orElse("")
 ```
 
 ### Optional Chaining → Option Chain
@@ -129,10 +132,12 @@ const url = Option(user)
 **Before:**
 
 ```typescript
-try {
-  return JSON.parse(str)
-} catch (e) {
-  return null
+function parse(str: string): unknown {
+  try {
+    return JSON.parse(str)
+  } catch {
+    return null
+  }
 }
 ```
 
@@ -147,8 +152,8 @@ Try(() => JSON.parse(str))
 **After (with Either):**
 
 ```typescript
-Try(() => JSON.parse(str))
-  .toEither()
+Try(() => JSON.parse(str) as unknown)
+  .toEither((error) => error)
   .fold(
     (error) => `Parse failed: ${error.message}`,
     (data) => data,
@@ -177,12 +182,14 @@ List(array)
 **Before:**
 
 ```typescript
-if (x > 10) {
-  return "big"
-} else if (x > 5) {
-  return "medium"
-} else {
-  return "small"
+function size(x: number): string {
+  if (x > 10) {
+    return "big"
+  } else if (x > 5) {
+    return "medium"
+  } else {
+    return "small"
+  }
 }
 ```
 
@@ -191,10 +198,11 @@ if (x > 10) {
 ```typescript
 import { Cond } from "functype"
 
-Cond.start<string>()
-  .case(x > 10, "big")
-  .case(x > 5, "medium")
-  .otherwise("small")
+const size = (x: number): string =>
+  Cond.of<string>()
+    .when(x > 10, "big")
+    .elseWhen(x > 5, "medium")
+    .else("small")
 ```
 
 ### Switch Statements → Match
@@ -202,13 +210,13 @@ Cond.start<string>()
 **Before:**
 
 ```typescript
-switch (status) {
-  case "success":
-    return data
-  case "error":
-    return null
-  default:
-    return undefined
+function describe(status: "success" | "error"): string {
+  switch (status) {
+    case "success":
+      return "done"
+    case "error":
+      return "failed"
+  }
 }
 ```
 
@@ -217,10 +225,11 @@ switch (status) {
 ```typescript
 import { Match } from "functype"
 
-Match(status)
-  .case("success", () => data)
-  .case("error", () => null)
-  .exhaustive()
+const describe = (status: "success" | "error"): string =>
+  Match(status)
+    .case("success", () => "done")
+    .case("error", () => "failed")
+    .exhaustive()
 ```
 
 ## Common Use Cases
@@ -234,9 +243,11 @@ function validateEmail(email: string): Either<string, string> {
   return email.includes("@") ? Right(email) : Left("Invalid email format")
 }
 
-function validateUser(user: any): Either<string, User> {
-  return validateEmail(user.email)
-    .map((email) => ({ ...user, email }))
+type SignupInput = { readonly email: string; readonly age: number }
+
+function validateUser(input: SignupInput): Either<string, SignupInput> {
+  return validateEmail(input.email)
+    .map((email) => ({ ...input, email }))
     .flatMap((u) => (u.age >= 18 ? Right(u) : Left("Must be 18 or older")))
 }
 
@@ -258,7 +269,7 @@ interface User {
 }
 
 function getUserEmail(userId: string): Option<string> {
-  return Option(fetchUser(userId))
+  return Option(findUser(userId))
     .flatMap((user) => Option(user.email))
     .filter((email) => email.includes("@"))
 }
@@ -323,20 +334,20 @@ IO.tryPromise({
 const Database = Tag<DatabaseService>("Database")
 const dbEffect = IO.service(Database) // Access a service
 const program = dbEffect.flatMap((db) => IO.sync(() => db.query()))
-program.provide(Layer.fromValue(Database, myDb)) // Provide deps
+program.provideLayer(Layer.succeed(Database, myDb)) // Provide deps
 
 // Generator do-notation (cleaner syntax)
-const program = IO.gen(function* () {
+const findProgram = IO.gen(function* () {
   const db = yield* IO.service(Database)
-  const user = yield* IO.tryPromise(() => db.findUser(id))
+  const user = yield* IO.async(() => db.findUser(id))
   return user
 })
 
 // Execution
-await effect.run() // Returns Promise<A>
-effect.runSync() // Returns A (throws if async)
-await effect.runEither() // Returns Promise<Either<E,A>>
-await effect.runExit() // Returns Promise<Exit<E,A>>
+await effect.run() // Returns Promise<Either<E, A>>
+await effect.runOrThrow() // Returns Promise<A>; rejects with the error
+effect.runSync() // Returns Either<E, A>; Left if the effect is async (runSyncOrThrow throws instead)
+await effect.runExit() // Returns Promise<Exit<E, A>>
 
 // run() vs runExit(): Either has two branches, Exit has four. Use run() when all you
 // need is success-or-not; use runExit() to tell a typed failure from a *defect* (a
@@ -347,11 +358,12 @@ exit.isSuccess() // completed with a value
 exit.isFailure() // a value from the declared E channel
 exit.isDie() // a defect — NOT an E
 exit.isInterrupted() // cancelled
+if (exit.isSuccess()) exit.value // each guard narrows to its field: .value / .error / .defect / .fiberId
 
 // Both extra handlers are optional and fall back to the failure branch, so existing
 // three-argument fold / three-key match calls keep working.
-exit.fold(onFailure, onSuccess, onInterrupted?, onDie?)
-exit.match({ Success, Failure, Interrupted, Die? })
+exit.fold(onFailure, onSuccess) // optional 3rd and 4th handlers: onInterrupted, onDie
+exit.match({ Success: onSuccess, Failure: onFailure, Interrupted: onInterrupted }) // Die is optional
 
 // Defects stay recoverable: recover / recoverWith / fold / mapError treat a Die exactly
 // as a Failure. Exit.Die records what the outcome was when nothing recovered it.
@@ -362,13 +374,13 @@ exit.match({ Success, Failure, Interrupted, Die? })
 ```typescript
 import { Tuple } from "functype"
 
-const pair = Tuple(42, "hello")
-pair.first() // 42
-pair.second() // "hello"
-pair.mapFirst((x) => x * 2) // Tuple(84, "hello")
-pair.swap() // Tuple("hello", 42)
-pair.apply((a, b) => a + b.length) // 47
-pair.concat(Tuple(true)) // Tuple(42, "hello", true)
+const pair = Tuple([42, "hello"] as [number, string]) // Tuple takes one array
+pair.get(0) // 42
+pair.get(1) // "hello"
+pair.map(([a, b]) => [a * 2, b] as [number, string]) // Tuple([84, "hello"])
+pair.map(([a, b]) => [b, a] as [string, number]) // swap: Tuple(["hello", 42])
+pair.get(0) + pair.get(1).length // 47
+pair.flatMap(([a, b]) => Tuple([a, b, true] as [number, string, boolean])) // Tuple([42, "hello", true])
 ```
 
 ### Stack - Last-In-First-Out Collection
@@ -377,13 +389,13 @@ pair.concat(Tuple(true)) // Tuple(42, "hello", true)
 import { Stack } from "functype"
 
 Stack.empty<number>()
-const stack = Stack.of(1, 2, 3)
-stack.push(value) // Returns new Stack
+const stack = Stack([1, 2, 3]) // Stack.of takes a single value
+stack.push(4) // Returns new Stack
 stack.pop() // Returns [Option<T>, Stack<T>]
 stack.peek() // Returns Option<T>
 stack.match({
   Empty: () => "empty stack",
-  NonEmpty: (top, rest) => `top: ${top}`,
+  NonEmpty: (values) => `${values.length} items`,
 })
 ```
 
@@ -394,11 +406,11 @@ import { LazyList } from "functype"
 
 // Creation
 LazyList([1, 2, 3])
-LazyList.of(1, 2, 3)
+LazyList.from(1, 2, 3) // variadic; LazyList.of takes a single value
 LazyList.empty<number>()
 
 // Infinite sequences
-const naturals = LazyList.from(0, (n) => n + 1)
+const naturals = LazyList.iterate(0, (n) => n + 1)
 const evens = naturals.filter((n) => n % 2 === 0).take(10)
 
 // Operations are deferred until needed
@@ -472,7 +484,8 @@ if (Either.isLeft(either)) {
 
 // Try type guards
 if (Try.isSuccess(tryVal)) {
-  tryVal.value // TypeScript knows it succeeded
+  tryVal.orThrow() // safe here: it succeeded (Try has no .value until 2.0)
+  tryVal.error // TypeScript knows: undefined
 }
 if (Try.isFailure(tryVal)) {
   tryVal.error // TypeScript knows it failed
@@ -522,7 +535,7 @@ Option.fromBinary<string>(binaryData)
 For a complete overview of which methods are available on each data structure, consult the **Feature Matrix** at:
 
 - `references/feature-matrix.md` (included with this skill)
-- Or in the functype repo: `docs/FUNCTYPE_FEATURE_MATRIX.md`
+- Or in the functype repo: `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`
 
 The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type implements and what methods are available.
 
@@ -551,7 +564,7 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 
 - `map`, `flatMap`, `filter`, `reduce`
 - `foldLeft`, `foldRight`
-- `append`, `prepend`, `concat`
+- `add`, `prepend`, `concat`
 - `head`, `tail`, `isEmpty`
 - `toArray`, `toSet`
 
@@ -584,7 +597,7 @@ For pattern conversion help, examples, and API reference:
 
    ```typescript
    // Wrong - returns Option<string>
-   const name = Option(user).map((u) => u.name)
+   const wrapped = Option(user).map((u) => u.name)
 
    // Correct - returns string
    const name = Option(user)
@@ -610,7 +623,7 @@ For pattern conversion help, examples, and API reference:
    list.toArray().push(4)
 
    // Correct - creates new List
-   const newList = list.append(4)
+   const newList = list.add(4)
    ```
 
 ## Resources

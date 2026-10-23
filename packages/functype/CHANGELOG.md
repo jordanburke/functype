@@ -6,6 +6,76 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.19.0 - 2026-10-22
+
+- **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.
+- **The docs site's pages compile.** The doc type-check now covers every type page of the site (`site/src/content`) and the feature matrix. It found calls that don't exist on most pages, now fixed:
+  - Match: `Cond(...).otherwise(...)`, which is `.else(...)`.
+  - Try: `Try.of`, `mapFailure` and `toEither()` with no argument.
+  - IO: `IO.fromPromise`, `orElse`, `zipWith`, `andThen`, `catch` and `ensuring`.
+  - Option: `tap`. List: `List.range` and `append`. Obj: `when` with a key the object doesn't have.
+  - Http: `Option.toNullable()`, which is `orNull()`, and `IO.all` over two differently typed requests, which doesn't type-check (`zip` does).
+  - Do-notation: a `DoAsync` example built on a `Task.async` that doesn't exist. In the package's `docs/do-notation.md`, a mixed `Do` called `.toOption()` on a result typed `unknown`; it now casts to `Reshapeable`.
+  - List: `find` was described as returning the value or `undefined`; it returns `Some` or `None`.
+  - The MCP server page's "invalid code" example compiled; it now shows a call that really fails.
+- **Task's site page is now a move-to-IO guide.** Task is removed in 2.0, and the old page described an API it never had (`Task.sync`, `Task.async`, `task.run({ timeout })`). The page now maps each Task use to IO. The home page and footer list Set and IO in Task's place.
+- **The docs site has a Set page**, covering the 1.19 set operations, `every` and the conversions. `Either.traverse` and `Either.sequence` are on the Either page.
+- **`Do` and `DoAsync` over Option or Try are typed again.** A comprehension that yields only Options now has the type `Option<T>`, and one that yields only Trys has `Try<T>`, so `Do(...).orElse(x)` compiles without a cast. Before, both were typed `unknown`: the overloads recognized Option and Try by a `get()` method that both types had dropped. A comprehension that mixes Option or Try with another monad stays `unknown`, as it always was, so existing casts such as `Do(...) as Either<E, A>` keep compiling. Either-only, List-only and mixed Either/List comprehensions are unchanged.
+- **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
+- **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:
+  - Option: `isDefined()` and `get()`, which don't exist.
+  - Either: `get()`, `getLeft()` and `filter`.
+  - Try: `Success`/`Failure` imports, `get()` and `recover(value)`.
+  - List: `isEmpty()`/`size()` called as functions, `at`, `addAll`, `forAll` and `sort`.
+  - Set: `addAll`, `removeAll`, `union`, `intersect`, `difference`, `symmetricDifference` and `isSubsetOf`.
+  - Task: a `functype/core/task` import.
+  - Tuple: `Tuple(a, b)`, `first()`, `mapFirst()`, `swap()` and `concat`.
+  - Brand: its arguments in the wrong order.
+  - Http: a missing `IO` import.
+  - Composition: a `pipe` import from a subpath that doesn't exist.
+- **`Set` gains `union`, `intersection`, `difference`, `symmetricDifference`, `isSubsetOf`, `isSupersetOf` and `isDisjointFrom`.** They have the same names as native `Set` (ES2025) and give the same elements. Results keep this set's order, then `other`'s; native `intersection` instead follows whichever set is smaller. `other` can be any iterable, such as an array, a native `Set`, a functype `Set` or a `List`. Elements compare as `has` does: objects by identity, and `NaN` equals `NaN`. `union` and `symmetricDifference` widen the element type, so `Set<number>.union(["a"])` is a `Set<number | string>`.
+- **`List` and `Set` gain `every(p)`**, true when every element matches and true for an empty collection. It is the counterpart of `exists`, and is named like `every` on native arrays and Sets.
+- **`HttpError` is exported as a value, not just a type.** `import { HttpError } from "functype/fetch"` now gives the companion with `networkError`, `httpStatusError` and `decodeError`, as the JSDoc and docs already showed. Before, the value was exported only as `HttpErrors`, which stays as an alias.
+- **`Either.traverse` stops at the first `Left`.** It called `f` on every element and then kept the first `Left`. Now `f` isn't called for the elements after it, as `Option.traverse` and `Try.traverse` already worked. The result is the same; only side effects in `f` for the later elements go away. `f` is also typed with the element's index, which it already received.
+- **`traverse` and `sequence` accept readonly arrays.** `Either.traverse`, `Either.sequence`, `Option.sequence` and `Try.sequence` took a mutable array, so a `ReadonlyArray`, such as a `Wire<ReadonlyArray<Row>>`, didn't type-check. `Option.traverse` and `Try.traverse` already accepted one.
+- **The functype skill's quick reference compiles too.** The type-check test now also covers `.claude/skills/functype/references/quick-reference.md`, the reference agents load. Blocks that leave out imports get the functype names they use imported for them, and indented code blocks are checked. It found:
+  - `Try.traverse(paths, readFileSync)`, where `f` must return a `Try`.
+  - `TracedOption(user, …)`, which takes an `Option`.
+  - `LazyList.from(0, f)`, which is `LazyList.iterate(0, f)`.
+  - A `.value()` on `Lazy`, which has none.
+  - By hand, in its tables, which the check can't read: `List.from(array)` and `list.append(x)`, which don't exist.
+- **The rest of the functype skill compiles too.** The check now also covers the skill's `SKILL.md`, the file agents load first, and `references/common-patterns.md`. They had these errors:
+  - **Calls that don't exist:**
+    - Cond: `Cond.start().case().otherwise()`, which is `Cond.of().when().elseWhen().else()`.
+    - Layer and IO: `Layer.fromValue`, `effect.provide(layer)` and `effect.runEither()`.
+    - Tuple: the old `first`/`mapFirst`/`swap`/`concat` API.
+    - Others: `Lazy.value()`, `list.append`, and `Try.toEither()` with no argument.
+  - **Wrong arguments:** `Stack.of(1, 2, 3)` and `LazyList.of(1, 2, 3)`, which take one value. `LazyList.from(0, f)`, which builds `[0]` rather than an infinite sequence.
+  - **Wrong shapes:**
+    - `IO.bracket({ acquire, use, release })`, which takes three arguments.
+    - `ValidatedBrand<string, "Email">(fn)`, which is `ValidatedBrand("Email", predicate)`.
+    - `catchTag` on classes without a `_tag`.
+  - **Wrong return types:** `effect.run()` was described as returning `A`; it returns `Either<E, A>`. `runSync()` returns `Either` too, with a `Left` for an async effect, rather than throwing.
+  - **A documented form that compiles only with a workaround:** `IO.gen` is typed `IO<never, any, A>`, so it doesn't record the services it reads. The doc provides them with `provideService` instead of `provideLayer`.
+  - **A dead link:** the skill's `references/feature-matrix.md` symlink pointed at a path that stopped existing in the monorepo move. It now points at `packages/functype/docs/FUNCTYPE_FEATURE_MATRIX.md`.
+
+## 1.18.0 - 2026-10-18
+
+- **`Map` gains `has(key)`, `keys()` and `values()`.** `prefer-functype-map` steers code onto functype's `Map`, which had no way to check a key or list keys or values; the workarounds were `get(k).isSome()` and `[...map].map(([, v]) => v)`. `has` checks the key only, by identity for object keys like a native `Map`, and is true even when the stored value is `undefined` (where `get` returns `None`). `keys()` and `values()` return a `List` in insertion order, like `Obj.keys()` and `Obj.values()`, so they can be read more than once and chained. For a whole-entry check, `contains(Tuple([k, v]))` still compares the value with `===`.
+- **Behavior change: `Either.mapAsync` and `flatMapAsync` reject when `f` rejects or throws.** On a Right, they caught a rejection and returned it as `Left(reason)`, typed as `L` though it could be any value, such as an `Error` in an `Either<string, _>`. A synchronous throw from `f` escaped the call instead of rejecting. Now the returned Promise rejects with the same reason in both cases, as `List.mapAsync`, `Set.mapAsync` and `Either.traverseAsync` reject, and as Option, Try, Lazy and Map's async methods already did. neverthrow's `ResultAsync.map` behaves the same way. To turn a rejection into a Left, map the reason explicitly with `Either.fromPromise(promise, onRejected)` or `tryCatchAsync(f, onError)`. Code that relied on the old catch now sees a rejected Promise: wrap the async call in `Either.fromPromise` inside `flatMapAsync`.
+- **`eslint-config-functype` drops `no-extra-semi` and `no-mixed-spaces-and-tabs`.** Both are formatting rules that ESLint removes in 11.0, and `eslint-config-prettier` turns both off, since Prettier owns formatting. `no-mixed-spaces-and-tabs` never fires on Prettier output, so dropping it changes nothing. `no-extra-semi` conflicted with Prettier. With `semi: false`, Prettier puts a `;` in front of a line that starts with `[`, `(` or a backtick, so the line can't join the one before it. After a block, such as a function declaration or an `if`, ESLint read that `;` as an empty statement and `no-extra-semi` reported it. `prettier/prettier`, also an error in `recommended`, put it back, so `eslint --fix` couldn't clear either error. Real extra semicolons, such as `;;` or `function f() {};`, still fail `prettier/prettier`, which removes them.
+
+## 1.17.0 - 2026-10-17
+
+Additive release from `release/1.x`. Existing code behaves as before.
+
+- **`Exit` guards read the field they promise.** `isSuccess()`, `isFailure()`, `isDie()` and `isInterrupted()` narrow to a type with `.value`, `.error`, `.defect` and `.fiberId`, but the objects had none of those fields, so `exit.isSuccess() && exit.value` type-checked and returned `undefined`. Each variant now carries its field. The companion `Exit.isDie(exit)` also narrows to `.defect` now, like the method. Serialization (`toJSON`, `toValue`, `toString`) is unchanged. In 2.0, `Exit` becomes a discriminated union.
+- **`Encoder<A>` and a per-call `encode` option on `Http`.** `Encoder<A> = (value: A) => JSONValue` is the request-side counterpart of `Decoder`. Pass `encode` when `flatten` can't express the wire shape, such as snake_case keys or a date-only string. When it is set, the body goes out as `JSON.stringify(encode(body))` and `flatten` is ignored. If `encode` throws, the request fails with `HttpError.NetworkError` before `fetch` runs. The request type is inferred from `encode`; if you pass the response type explicitly, pass both: `Http.post<User, NewUser>(…)`.
+- **`timeout` clears its timer when the effect wins.** It used to leave the timer pending, so `IO.succeed(1).timeout(60_000)` kept a Node process alive for a minute. When the timer wins, the effect still runs on; stopping it is a 2.0 change.
+- **New rule `functype/no-floating-io`** (type-aware): reports an `IO` that is built and never run, either dropped as a statement or `await`ed (`IO` isn't a Promise, so `await io` returns the `IO` unrun). `no-floating-promises` doesn't see either. It's `off` in `recommended` and `warn` in `strict`. Measured on five codebases: 0 false positives across about 1,340 IO-typed calls.
+- **`prefer-list` skips Supabase's generated types.** `supabase gen types` writes no generated-file marker, so its `Json[]` and row arrays were reported (36 hits across two consumers). A file that exports both `type Json` and `Database` at the top level is now skipped, with no config needed.
+- **`toBinary()` and `fromBinary()` no longer need Node's `Buffer`.** They used the bare `Buffer` global, so on Cloudflare Workers without `nodejs_compat` (or anywhere else without `Buffer`) they threw `ReferenceError: Buffer is not defined`. They now use `TextEncoder`/`TextDecoder` with `btoa`/`atob`, which every runtime has. The output is byte-identical, so binaries written by earlier versions still decode. `fromBinary` accepts strict base64 plus whitespace, missing padding and the URL-safe alphabet. Other malformed input, such as a character outside the base64 alphabet, now throws `InvalidCharacterError` where `Buffer` silently skipped it. `toBinary`/`fromBinary` now need the `atob`/`btoa` globals, which Node has from 16. Applies to `Option`, `Either`, `Try`, `List`, `Set`, `Map`, `Stack`, `Obj` and the `createSerializer` helpers.
+
 ## 1.16.1 - 2026-10-17
 
 - **`npx functype` and the MCP server's `get_type_api` no longer list methods that don't exist.** Their per-type method lists named calls absent from the types, so code written from them failed to compile. Map listed `.set`, `.delete`, `.filter`, `.has`, `.keys`, `.values` and `.entries`; Set listed `.union`, `.intersection` and `.difference`; Tuple listed `.first` and `.second`; Lazy listed `.get()` and a two-argument `.fold`; LazyList listed `.isEmpty` and `LazyList.infinite`; List listed `.nonEmpty`. Each entry now matches its type, and a test checks every listed method against a real instance. Docs only; no runtime change.

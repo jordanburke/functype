@@ -13,17 +13,17 @@ pnpm release patch        # or: minor, major
 git push --follow-tags    # → triggers CI publish
 ```
 
-That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
+That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
 
 ## What `pnpm release` does
 
 1. **Preflight** — verifies the working tree is clean, you're on `main`, and `main` is in sync with `origin/main`.
 2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
-3. **Bump functype family** — applies the new version to all 5 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-mcp-server`).
+3. **Bump functype family** — applies the new version to all 6 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-mcp-server`). The list lives in `scripts/packages.ts`.
 4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
 5. **Sync mcp-server `server.json`** — `pnpm -F functype-mcp-server sync:registry` writes the new version to the MCP registry manifest.
 6. **Cut CHANGELOG** — takes `## Unreleased` content in `packages/functype/CHANGELOG.md` and rewrites the heading to `## {version} - {date}`, leaving a fresh empty `## Unreleased` at top.
-7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 5 invariants (see below).
+7. **Final safety gate** — `pnpm check-publish-safety` re-verifies all 6 invariants (see below).
 8. **Commit + tag** — `git commit -m "release: vX.Y.Z"` + `git tag -a vX.Y.Z`.
 
 ## What CI does on tag push
@@ -33,9 +33,20 @@ That's it. `pnpm release` bumps all 7 packages, runs every safety gate locally, 
 1. **Validate** — same `pnpm validate` as local.
 2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
 3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
-4. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
+4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
+5. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
 OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server` and the eslint pair publish via `NPM_TOKEN`.
+
+## Verify the release installs (`scripts/verify-published.ts`)
+
+"Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
+
+`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 8 install.
+
+- **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`.
+- **Check one version:** `pnpm verify-published functype@1.16.1`.
+- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS` (at least 1), and `NPM_DIST_TAG` (default `latest`). The publish step passes no `--tag`, so CI always checks `latest`. `NPM_DIST_TAG` is for checking another tag by hand.
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 
@@ -43,11 +54,12 @@ The publish gate refuses to proceed if any of these holds:
 
 1. **Unauthorized major.** Any package bumping its major version requires `ALLOW_MAJOR=<pkg>[,<pkg>]` env on the publish step. Per-release authorization, no "always allow" mode.
 2. **Downgrade.** Local version < npm `latest`. Never auto-authorized.
-3. **Family alignment drift.** The 5 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
+3. **Family alignment drift.** The 6 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
+6. **Unlisted package.** Every non-private workspace package must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
 
-All 5 are independent gates and all 5 fail closed.
+All 6 are independent gates and all 6 fail closed.
 
 ## Eslint mirror encoding
 
@@ -76,13 +88,13 @@ The `×100` reserves headroom for double-digit minors. At `functype.minor >= 100
 When you intentionally do a major:
 
 ```bash
-ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-mcp-server" pnpm release major
+ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-eval,functype-mcp-server" pnpm release major
 git push --follow-tags
 ```
 
 And edit `.github/workflows/publish.yml` to set the same `ALLOW_MAJOR` on the `Check publish safety` step env. Remove the override in a follow-up PR after the major lands.
 
-(All 5 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
+(All 6 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
 
 ## Snapshot releases (testing pre-publish)
 

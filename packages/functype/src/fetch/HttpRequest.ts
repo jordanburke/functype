@@ -1,4 +1,5 @@
 import type { Decoder } from "@/decoder/Decoder"
+import type { Encoder } from "@/decoder/Encoder"
 
 import type { HttpMethod } from "./HttpError"
 
@@ -17,7 +18,7 @@ export type HttpQueryParams = Readonly<
   Record<string, string | number | boolean | readonly (string | number | boolean)[] | undefined | null>
 >
 
-export interface HttpRequestOptions<T = unknown> {
+export interface HttpRequestOptions<T = unknown, TReq = unknown> {
   readonly url: string
   readonly method: HttpMethod
   readonly headers?: Record<string, string>
@@ -58,11 +59,27 @@ export interface HttpRequestOptions<T = unknown> {
    * Set to `false` to emit each ADT's canonical `{_tag, value}` form via
    * `toValue()` for functype-to-functype services where both ends round-trip
    * the tagged shape via `Decoder.tagged.*`.
+   *
+   * Ignored when `encode` is set.
    */
   readonly flatten?: boolean
+  /**
+   * Request-side encoder. When set, the body goes on the wire as `JSON.stringify(encode(body))`
+   * with `Content-Type: application/json`, and `flatten` is ignored. Use it when `flatten` can't
+   * express the wire shape: custom date formats, snake_case keys, stripping fields. A throw inside
+   * `encode` fails the request with `HttpError.NetworkError`, like any body that can't be serialized.
+   *
+   * It applies to the body after `beforeRequest` runs, so a hook that swaps the body must keep it
+   * a `TReq`.
+   *
+   * `TReq` is inferred from `encode`. If you pass the response type explicitly
+   * (`Http.post<User>(…)`), pass the request type too (`Http.post<User, NewUser>(…)`):
+   * TypeScript defaults the rest to `unknown`, and an `Encoder<NewUser>` won't fit `Encoder<unknown>`.
+   */
+  readonly encode?: Encoder<TReq>
 }
 
-export interface HttpMethodOptions<T = unknown> {
+export interface HttpMethodOptions<T = unknown, TReq = unknown> {
   readonly headers?: Record<string, string>
   readonly body?: unknown
   readonly signal?: AbortSignal
@@ -71,6 +88,8 @@ export interface HttpMethodOptions<T = unknown> {
   /** @deprecated Use `decode` (Either-returning) or an adapter package for throw-pattern validators. */
   readonly validate?: (data: unknown) => T
   readonly flatten?: boolean
+  /** Request-side encoder; overrides `flatten`. See {@link HttpRequestOptions.encode}. */
+  readonly encode?: Encoder<TReq>
   /**
    * Query-string parameters appended to the URL. See {@link HttpQueryParams}.
    */

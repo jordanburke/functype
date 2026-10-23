@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { Functype } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
@@ -355,7 +356,7 @@ const ObjCompanion = {
    * @returns A new Obj instance
    */
   fromBinary: <T extends Record<string, Type>>(binary: string): Obj<T> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return ObjCompanion.fromJSON<T>(json)
   },
 }

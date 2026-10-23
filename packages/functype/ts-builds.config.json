@@ -8,6 +8,6 @@
     "build": "tsx scripts/extract-interfaces.ts && NODE_ENV=production tsdown"
   },
   "chains": {
-    "validate": ["format", "lint", "compile", "test", "build"]
+    "validate": ["format", "lint", "compile", "test", "build", "format:check"]
   }
 }

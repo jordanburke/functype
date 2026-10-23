@@ -19,10 +19,10 @@ export default function CoreTypes() {
       icon: "[]",
     },
     {
-      name: "Task<T>",
-      href: "/task",
-      description: "Async operations with cancellation and error handling",
-      icon: "⚙",
+      name: "Set<A>",
+      href: "/set",
+      description: "Immutable sets with union, intersection and difference",
+      icon: "∪",
     },
     {
       name: "Obj<T>",

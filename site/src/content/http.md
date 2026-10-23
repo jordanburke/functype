@@ -12,7 +12,7 @@ HTTP fetch wrapper returning `IO<never, HttpError, HttpResponse<unknown>>` effec
 - Three typed error variants: `NetworkError`, `HttpStatusError`, `DecodeError`
 - Zero dependencies — uses `globalThis.fetch` (browsers, Node 18+, Bun, Deno)
 - Auto content-type detection from response headers (JSON, text, raw)
-- Body serialization — objects are automatically JSON-serialized with `Content-Type: application/json`
+- Body serialization — objects are automatically JSON-serialized with `Content-Type: application/json`. Pass `encode: Encoder<TReq>` to control the wire shape yourself
 - Configurable clients with base URLs and default headers
 
 Nothing runs until you call `.run()` or `.runOrThrow()`.
@@ -109,6 +109,38 @@ Http.get("/api/users", {
 });
 ```
 
+## Request bodies
+
+Object bodies are JSON-serialized. By default (`flatten: true`) functype containers are stripped to
+plain JSON first: `Option` becomes the value or `null`, `List` an array, `Map` a record.
+`flatten: false` sends each container's tagged `{_tag, value}` form instead, for a functype service
+that decodes it with `Decoder.tagged.*`.
+
+### Custom wire shape with `encode`
+
+When neither fits, such as snake_case keys or a date-only string, pass an `Encoder`. It is the
+request-side counterpart of `Decoder`: any `(value: A) => JSONValue` function. When `encode` is set,
+its output goes on the wire as is and `flatten` is ignored.
+
+```typescript
+import { type Encoder, Http } from "functype";
+
+type NewUser = { name: string; createdAt: Date };
+
+const encodeNewUser: Encoder<NewUser> = (u) => ({
+  user_name: u.name,
+  created_at: u.createdAt.toISOString().slice(0, 10),
+});
+
+Http.post("/api/users", { body: newUser, encode: encodeNewUser });
+```
+
+`TReq` is inferred from `encode`. If you pass the response type explicitly, pass the request type
+too: `Http.post<User, NewUser>(…)`. TypeScript defaults any type argument you leave out to
+`unknown`, and an `Encoder<NewUser>` doesn't fit `Encoder<unknown>`.
+
+If `encode` throws, the request fails with `HttpError.NetworkError` and `fetch` is never called.
+
 ## HttpResponse\<T\>
 
 Every successful request resolves to `HttpResponse<T>` (where `T` is `unknown` without a validator):
@@ -130,7 +162,7 @@ const either = await effect.run();
 if (either._tag === "Right") {
   const { data, status, headers } = either.value;
   console.log(status); // 200
-  console.log(data[0].name); // "Alice" — data is User[], not unknown
+  console.log(data[0]?.name); // "Alice" — data is User[], not unknown
   console.log(headers.get("x-total-count"));
 }
 ```
@@ -140,6 +172,8 @@ if (either._tag === "Right") {
 All HTTP errors are typed as `HttpError`, a union of three variants:
 
 ```typescript
+import type { HttpMethod } from "functype/fetch";
+
 type NetworkError = {
   _tag: "NetworkError";
   url: string;
@@ -267,6 +301,9 @@ const testApi = Http.client({
 ### HttpClientConfig
 
 ```typescript
+import type { IO } from "functype";
+import type { HttpError, HttpRequestView, HttpResponse } from "functype/fetch";
+
 interface HttpClientConfig {
   readonly baseUrl?: string; // Base URL prepended to relative paths
   readonly defaultHeaders?: Record<string, string>; // Merged with per-request headers
@@ -400,7 +437,7 @@ await api
       q: "a b&c", // → q=a+b%26c
       tag: ["x", "y"], // → tag=x&tag=y
       page: 2, // → page=2
-      cursor: maybeCursor.toNullable(), // null is dropped if None
+      cursor: maybeCursor.orNull(), // null is dropped if None
     },
   })
   .runOrThrow();
@@ -470,17 +507,17 @@ Http.get("/api/users/1", {
   }),
 );
 
-// Both requests (IO.all runs them in order today, not in parallel)
-import { IO } from "functype/io";
-
-const [users, posts] = await IO.all([
-  Http.get("/api/users", {
-    decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
-  }),
-  Http.get("/api/posts", {
-    decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
-  }),
-]).run();
+// Both requests, one after the other; each result keeps its own type
+const [users, posts] = await Http.get("/api/users", {
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
+})
+  .zip(
+    Http.get("/api/posts", {
+      decode: Decoder.fromThrowing((data) => z.array(PostSchema).parse(data)),
+    }),
+  )
+  .runOrThrow(); // [HttpResponse<User[]>, HttpResponse<Post[]>]
+// IO.all([...], { concurrency }) runs a list of same-typed requests, up to n at once
 
 // Map over errors
 Http.get("/api/data").mapError((err) => new AppError(err));

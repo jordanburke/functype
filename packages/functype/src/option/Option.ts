@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
@@ -422,7 +423,7 @@ const OptionCompanion = {
    * @returns Option instance
    */
   fromBinary: <T>(binary: string): Option<T> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return OptionCompanion.fromJSON<T>(json)
   },
   /**
@@ -431,7 +432,7 @@ const OptionCompanion = {
    * @param options - Array of Option values
    * @returns Some with array of values, or None if any element is None
    */
-  sequence: <T extends Type>(options: Option<T>[]): Option<T[]> =>
+  sequence: <T extends Type>(options: ReadonlyArray<Option<T>>): Option<T[]> =>
     options.reduce<Option<T[]>>(
       (acc, opt) => (acc.isEmpty || opt.isEmpty ? None<T[]>() : Some([...(acc.value as T[]), opt.value as T])),
       Some<T[]>([]),

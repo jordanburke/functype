@@ -228,8 +228,10 @@ set.toArray()                // convert to array
 Map([["a", 1], ["b", 2]])    // create from pairs
 Map.of<string, number>(["a", 1], ["b", 2])  // variadic factory
 Map.empty<string, number>()  // typed empty map
-map.set(key, value)          // add entry (returns new Map)
+map.add(Tuple([key, value])) // add entry (returns new Map); add takes one Tuple
 map.get(key)                 // get value (returns Option)
+map.has(key)                 // key present? (true even when the value is undefined)
+map.keys() / map.values()    // List<K> / List<V>, insertion order (1.18)
 
 // Option - nullable handling
 Option(value)                // wrap value (None if null/undefined)
@@ -276,15 +278,14 @@ IO.tryPromise({              // promise with error mapping
   catch: (e) => new NetworkError(e)
 })
 IO.service(Tag)              // access injected dependency
-effect.provide(layer)        // provide dependencies
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.retry(3)              // retry on failure
-await effect.run()           // execute the effect
 effect.runSync()             // execute sync effect
-await effect.runEither()     // execute, get Either<E,A>
+await effect.run()           // execute, get Either<E,A>
 await effect.runExit()       // execute, get Exit<E,A> (see the Exit block below)
 IO.gen(function*() {         // generator do-notation
   const db = yield* IO.service(Database)
-  const user = yield* IO.tryPromise(() => db.find(id))
+  const user = yield* IO.async(() => db.find(id))
   return user
 })
 
@@ -307,10 +308,9 @@ IO.fail(error)               // typed failure
 IO.tryPromise({try, catch})  // promise with error mapping
 IO.service(Tag)              // dependency injection
 IO.gen(function*() {...})    // generator do-notation
-effect.provide(layer)        // provide dependencies
-await effect.run()           // execute async
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.runSync()             // execute sync
-await effect.runEither()     // execute → Either<E,A>
+await effect.run()           // execute → Either<E,A>
 await effect.runExit()       // execute → Exit<E,A>
 
 // Exit — the outcome of runExit(). Either has two branches; Exit has four.
@@ -319,6 +319,7 @@ exit.isSuccess()             // completed with a value
 exit.isFailure()             // a value from the declared E channel
 exit.isDie()                 // a *defect* — a value that is NOT an E
 exit.isInterrupted()         // cancelled
+// each guard narrows to its field: .value / .error / .defect (unknown) / .fiberId
 exit.fold(onFail, onOk, onInterrupted?, onDie?)     // last two optional → fall back to onFail
 exit.match({Success, Failure, Interrupted, Die?})   // Die optional → falls back to Failure
 Exit.succeed(v) / Exit.fail(e) / Exit.die(defect) / Exit.interrupted()
@@ -415,6 +416,9 @@ const userDecoder = Decoder.object({
 //   Either→right-value or throw, Try→success-value or throw, Map→record).
 // - `flatten: false` emits canonical {_tag, value} shape for round-trip with Decoder.tagged.*
 //   in functype-to-functype services.
+// - `encode: Encoder<TReq>` (1.17) owns the wire shape: JSON.stringify(encode(body)), flatten ignored.
+//   Encoder<A> = (value: A) => JSONValue. TReq is inferred from encode; with an explicit response
+//   type pass both: Http.post<User, NewUser>(url, { body, encode }).
 
 // HttpError ADT: NetworkError | HttpStatusError | DecodeError
 // (DecodeError also exported as ResponseDecodeError type alias for clarity)
@@ -481,9 +485,9 @@ cache.set(key, value)
 
 // AFTER: functype Map (returns new Map). Import it as `Map`: functype's Map/Set are the
 // default collections, and the built-in is spelled `globalThis.Map` where it's really needed.
-import { Map } from "functype"
+import { Map, Tuple } from "functype"
 const cache = Map<string, Value>([])
-const newCache = cache.set(key, value)
+const newCache = cache.add(Tuple([key, value]))
 ```
 
 ### Pattern 5: Error accumulation → List + buildResult helper

@@ -1,3 +1,4 @@
+import { base64ToUtf8, utf8ToBase64 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
 
 /**
@@ -93,7 +94,7 @@ export function createSerializer(marker: string, tagOrValue: unknown, maybeValue
   return {
     toJSON: () => JSON.stringify(env),
     toYAML: () => `${FUNCTYPE_MARKER}: ${marker}\n_tag: ${tag}\nvalue: ${safeStringify(value)}`,
-    toBinary: () => Buffer.from(JSON.stringify(env)).toString("base64"),
+    toBinary: () => utf8ToBase64(JSON.stringify(env)),
   }
 }
 
@@ -119,7 +120,7 @@ export const createTaggedSerializer = (
       const entries = Object.entries(env)
       return entries.map(([key, val]) => `${key}: ${safeStringify(val)}`).join("\n")
     },
-    toBinary: () => Buffer.from(JSON.stringify(env)).toString("base64"),
+    toBinary: () => utf8ToBase64(JSON.stringify(env)),
   }
 }
 
@@ -139,7 +140,7 @@ export const createCustomSerializer = (data: Record<string, unknown>): Serializa
     const entries = Object.entries(data)
     return entries.map(([key, val]) => `${key}: ${safeStringify(val)}`).join("\n")
   },
-  toBinary: () => Buffer.from(JSON.stringify(data)).toString("base64"),
+  toBinary: () => utf8ToBase64(JSON.stringify(data)),
 })
 
 /**
@@ -201,7 +202,7 @@ export const fromBinary = <T>(
   binary: string,
   reconstructor: (parsed: { _tag?: string; [key: string]: unknown }) => T,
 ): T => {
-  const json = Buffer.from(binary, "base64").toString()
+  const json = base64ToUtf8(binary)
   return fromJSON(json, reconstructor)
 }
 

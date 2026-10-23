@@ -1407,11 +1407,18 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         return result
       }
       case "Timeout": {
-        const timeoutPromise = new Promise<ExitType<E, A>>((resolve) =>
-          setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration),
-        )
+        // Clear the timer when the effect wins: a pending timer keeps the process alive for the full
+        // duration. (When the timer wins, the effect still runs on; stopping it is 2.0 — #276 §8b.)
+        let timer: ReturnType<typeof setTimeout> | undefined
+        const timeoutPromise = new Promise<ExitType<E, A>>((resolve) => {
+          timer = setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration)
+        })
         const effectPromise = runEffect(_fx(effect.effect), context, interruption)
-        return Promise.race([effectPromise, timeoutPromise])
+        try {
+          return await Promise.race([effectPromise, timeoutPromise])
+        } finally {
+          clearTimeout(timer)
+        }
       }
       case "InterruptWhen": {
         const { signal } = effect
@@ -1917,7 +1924,7 @@ const IOCompanion = {
    *   (state) => fetchJob(state.id),
    *   (state) => state.status === "done" || state.status === "failed",
    *   { max: 30 },
-   * ).runEither()
+   * ).run()
    * ```
    *
    * @param seed - Initial state.

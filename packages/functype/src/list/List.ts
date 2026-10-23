@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
@@ -133,6 +134,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     count: (p: (x: A) => boolean) => array.filter(p).length,
 
     exists: (p: (a: A) => boolean) => array.some(p),
+
+    every: (p: (a: A) => boolean) => array.every(p),
 
     filter: (predicate: (a: A) => unknown) => ListObject(array.filter(predicate as (a: A) => boolean)),
 
@@ -396,7 +399,7 @@ const ListCompanion = {
    * @returns List instance
    */
   fromBinary: <A>(binary: string): List<A> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return ListCompanion.fromJSON<A>(json)
   },
 }

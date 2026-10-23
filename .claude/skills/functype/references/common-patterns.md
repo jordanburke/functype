@@ -46,7 +46,7 @@ import { Option } from "functype"
 const value = Option(condition ? compute() : null).orElse(defaultValue)
 
 // Or using filter
-const value = Option(compute())
+const filtered = Option(compute())
   .filter(() => condition)
   .orElse(defaultValue)
 ```
@@ -198,16 +198,20 @@ const initSum = list.init.foldLeft(0)((sum, n) => sum + n)
 
 ### Immutable Object Building
 
-```typescript
-import { Obj } from "functype"
+Before, mutable object assignment:
 
-// BEFORE: Mutable object assignment
+```typescript
 const headers: Record<string, string> = { "User-Agent": userAgent }
 if (requiresAuth && accessToken) {
   headers["Authorization"] = `Bearer ${accessToken}`
 }
+```
 
-// AFTER: Fluent immutable chain
+After, a fluent immutable chain:
+
+```typescript
+import { Obj } from "functype"
+
 const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
   .when(requiresAuth && !!accessToken, { Authorization: `Bearer ${accessToken}` })
   .value()
@@ -217,7 +221,7 @@ const headers = Obj({ "User-Agent": userAgent } as Record<string, string>)
 
 ```typescript
 const config = Obj({ debug: false, port: 3000 })
-  .assign({ logLevel: "info" })
+  .merge({ logLevel: "info" }) // merge adds keys; assign only overrides existing ones
   .when(process.env.NODE_ENV === "production", { debug: false, logLevel: "error" })
   .when(process.env.NODE_ENV === "development", { debug: true })
   .value()
@@ -253,7 +257,7 @@ import { Either, Left, Right } from "functype"
 async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
   try {
     const response = await fetch(`/api/users/${id}`)
-    const data = await response.json()
+    const data = (await response.json()) as User
     return Right(data)
   } catch (error) {
     return Left(error as Error)
@@ -282,7 +286,7 @@ const users = await List(userIds).mapAsync(fetchUser)
 const saved = await Either.traverseAsync(rows, saveRow) // Either<SaveError, Saved[]>
 
 // Bounded parallelism instead of strict order
-const pages = await Either.traverseAsync(urls, fetchPage, { concurrency: 4 })
+const pages = await Either.traverseAsync(urls, fetchPageSafe, { concurrency: 4 })
 ```
 
 ### Appending a computed batch to an accumulator
@@ -291,11 +295,16 @@ When replacing a `forEach` + `push` loop, never spread a batch into a call: `acc
 passes every element as an argument, and a large batch throws `RangeError: Maximum call stack size
 exceeded`, which no `Either` catches. Keep one entry per batch and flatten once at the end.
 
-```typescript
-// Wrong: crashes on a large folder
-found.forEach((folder) => candidates.push(...folder.files))
+Wrong, crashes on a large folder:
 
-// Right: one entry per batch, flattened once
+```typescript
+const candidates: string[] = []
+found.forEach((folder) => candidates.push(...folder.files))
+```
+
+Right, one entry per batch, flattened once:
+
+```typescript
 const candidates = List(found).flatMap((folder) => folder.files)
 
 // Async batches: collect them, then flatten
@@ -355,8 +364,8 @@ const expensive = Lazy(() => {
 console.log("Before access")
 
 // Now it computes (only once)
-const value1 = expensive.value()
-const value2 = expensive.value() // Uses cached value
+const value1 = expensive.orThrow()
+const value2 = expensive.orThrow() // Uses cached value
 ```
 
 ### LazyList for Large Datasets
@@ -365,7 +374,7 @@ const value2 = expensive.value() // Uses cached value
 import { LazyList } from "functype"
 
 // Infinite sequence
-const naturals = LazyList.from(0, (n) => n + 1)
+const naturals = LazyList.iterate(0, (n) => n + 1)
 
 // Only computes what's needed
 const firstTenEvens = naturals
@@ -421,14 +430,12 @@ const query = new QueryBuilder().select("id", "name", "email").where("active = t
 ### Branded Types with ValidatedBrand
 
 ```typescript
-import { ValidatedBrand, Either, Left, Right } from "functype"
+import { ValidatedBrand } from "functype"
 
 // Create branded types with validation
-type Email = ValidatedBrand<string, "Email">
+type Email = ValidatedBrand<"Email", string>
 
-const Email = ValidatedBrand<string, "Email">(
-  (value): Either<string, string> => (value.includes("@") ? Right(value) : Left("Invalid email format")),
-)
+const Email = ValidatedBrand("Email", (value: string) => value.includes("@"))
 
 // Usage
 const email = Email.from("test@example.com").fold(
@@ -442,7 +449,7 @@ const email = Email.from("test@example.com").fold(
 ### Basic Effect Composition
 
 ```typescript
-import { IO, Tag, Layer } from "functype"
+import { IO, Tag } from "functype"
 
 // Define a service
 interface UserService {
@@ -462,14 +469,17 @@ const getUser = (id: string) =>
     return user
   })
 
-// Provide implementation
-const live = Layer.fromValue(UserService, {
-  findUser: async (id) => db.query(`SELECT * FROM users WHERE id = $1`, [id]),
-  saveUser: async (user) => db.query(`INSERT INTO users...`),
-})
+// Provide implementation. IO.gen doesn't infer the services it reads (its type is IO<never, any, A>),
+// so provide them with provideService; provideLayer needs an effect whose R names the service.
+const live: UserService = {
+  findUser: async (id) => db.findUser(id),
+  saveUser: async (user) => {
+    await db.saveUser(user)
+  },
+}
 
 // Run the program
-const user = await getUser("123").provide(live).run()
+const user = await getUser("123").provideService(UserService, live).run() // Either: Left on failure
 ```
 
 ### Error Handling with IO
@@ -477,11 +487,12 @@ const user = await getUser("123").provide(live).run()
 ```typescript
 import { IO } from "functype"
 
+// catchTag matches on `_tag`
 class NetworkError extends Error {
-  type = "NetworkError" as const
+  readonly _tag = "NetworkError" as const
 }
 class ParseError extends Error {
-  type = "ParseError" as const
+  readonly _tag = "ParseError" as const
 }
 
 const fetchData = IO.tryPromise({
@@ -505,11 +516,11 @@ const result = fetchData
 ```typescript
 import { IO } from "functype"
 
-const program = IO.bracket({
-  acquire: IO.sync(() => openConnection()),
-  use: (conn) => IO.async(() => conn.query("SELECT * FROM users")),
-  release: (conn) => IO.sync(() => conn.close()),
-})
+const program = IO.bracket(
+  IO.sync(() => openConnection()), // acquire
+  (conn) => IO.async(() => conn.query("SELECT * FROM users")), // use
+  (conn) => IO.sync(() => conn.close()), // release
+)
 // Connection is always closed, even if query fails
 ```
 
@@ -590,7 +601,7 @@ const name = result.map((config) => config.name).orElse("default")
 ```typescript
 import { Do, $, Option, Either } from "functype"
 
-// Option comprehension
+// Option comprehension: an Option-only Do is an Option
 const userTheme = Do(function* () {
   const user = yield* $(Option(currentUser))
   const profile = yield* $(Option(user.profile))
@@ -600,9 +611,9 @@ const userTheme = Do(function* () {
 
 // Either validation chain
 const validated = Do(function* () {
-  const email = yield* $(validateEmail(input.email))
-  const age = yield* $(validateAge(input.age))
-  const name = yield* $(validateName(input.name))
+  const email = yield* $(validateEmail(form.email))
+  const age = yield* $(validateAge(form.age))
+  const name = yield* $(validateName(form.name))
   return { email, age, name }
 })
 ```

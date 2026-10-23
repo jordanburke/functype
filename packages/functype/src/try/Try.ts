@@ -4,6 +4,7 @@ import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
+import { base64ToUtf8 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
@@ -397,7 +398,7 @@ const TryCompanion = {
    * @returns Try instance
    */
   fromBinary: <T>(binary: string): Try<T> => {
-    const json = Buffer.from(binary, "base64").toString()
+    const json = base64ToUtf8(binary)
     return TryCompanion.fromJSON<T>(json)
   },
   /**
@@ -406,7 +407,7 @@ const TryCompanion = {
    * @param tries - Array of Try values
    * @returns Success with array of values, or first Failure
    */
-  sequence: <T>(tries: Try<T>[]): Try<T[]> => Try(() => tries.map((t) => t.orThrow())),
+  sequence: <T>(tries: ReadonlyArray<Try<T>>): Try<T[]> => Try(() => tries.map((t) => t.orThrow())),
   /**
    * Maps an array through a function returning Try, then sequences the results.
    * Short-circuits on the first Failure.

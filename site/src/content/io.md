@@ -25,8 +25,8 @@ const async = IO.async(async () => fetchData());
 
 // Effect that may fail
 const safe = IO.tryCatch(
-  () => JSON.parse(input),
-  (e) => new ParseError(e),
+  () => JSON.parse(input) as unknown,
+  (e) => new Error(`Invalid JSON: ${String(e)}`),
 );
 
 // Running effects - safe by default
@@ -48,7 +48,7 @@ const syncValue = sync.runSyncOrThrow(); // A - throws on error
 | `IO.sync(() => A)`                    | Wrap synchronous computation                          |
 | `IO.async(async () => A)`             | Wrap async computation                                |
 | `IO.tryCatch(fn, onError)`            | Catch exceptions as typed errors                      |
-| `IO.fromPromise(promise, onError)`    | Convert Promise to IO                                 |
+| `IO.tryPromise({ try, catch })`       | Convert a Promise to IO, mapping the rejection        |
 | `IO.fromPromiseEither(fn, onReject?)` | Lift `() => Promise<Either<E, A>>`, keeping `E` typed |
 | `IO.unit`                             | Effect that succeeds with void                        |
 | `IO.never`                            | Effect that never completes                           |
@@ -68,7 +68,7 @@ io.catchAll((e) => IO.succeed(fallback));
 io.recover(defaultValue);
 
 // Provide fallback
-io.orElse(fallbackIO);
+io.catchAll(() => fallbackIO);
 ```
 
 ## Combining Effects
@@ -84,10 +84,10 @@ IO.any([io1, io2, io3]); // First success wins
 
 // Zip effects
 io1.zip(io2); // [A, B]
-io1.zipWith(io2, (a, b) => c); // C
+io1.zip(io2).map(([a, b]) => a + b); // combine both results
 
 // Sequential
-io1.andThen(io2); // Run io2 after io1
+io1.zipRight(io2); // Run io2 after io1, keep io2's result
 ```
 
 ## Dependency Injection
@@ -185,7 +185,7 @@ is `Left(InterruptedError)`.
 
 ```typescript
 const poll = checkStatus.repeatUntil((s) => s.done, { max: 60, delayMs: 500 });
-const result = await poll.interruptOn(signal).run(); // Left(InterruptedError) if aborted
+const outcome = await poll.interruptOn(signal).run(); // Left(InterruptedError) if aborted
 
 // Handle it outside the cancelled section
 poll
@@ -219,6 +219,12 @@ exit.isSuccess(); // completed with a value
 exit.isFailure(); // failed with a value from the declared E channel
 exit.isDie(); // produced a *defect* — a value that is not an E
 exit.isInterrupted(); // was cancelled
+
+// Each guard narrows to the field it names:
+if (exit.isSuccess()) exit.value;
+if (exit.isFailure()) exit.error; // an E
+if (exit.isDie()) exit.defect; // unknown
+if (exit.isInterrupted()) exit.fiberId;
 ```
 
 A **defect** is what happens when something lands in the error channel that the declared
@@ -263,25 +269,22 @@ in your own code, or a cancellation from either. `.run()` stays the right defaul
 you need is success-or-not; it puts a defect in the `Left` as the raw thrown value, and an
 interruption as an `InterruptedError`.
 
-> The sync interpreter cannot make this distinction. `runSync()` returns `Either`, and it
-> signals failure by throwing the raw value, so `Fail` and `Die` arrive identically.
+> The sync interpreter cannot make this distinction. `runSync()` returns `Either`, with both
+> a failure and a defect in the `Left` as the raw value, so `Fail` and `Die` arrive identically.
 > `Die` is observable through `runExit()` and through the `Exit` handed to a
 > `bracketExit` release.
 
 ## Error Handling Patterns
 
 ```typescript
-// Catch specific errors
-io.catch("NotFound", () => IO.succeed(null));
+// Catch specific errors by their _tag
+taggedIO.catchTag("NotFound", () => IO.succeed(null));
 
 // Fold over success/failure
 io.fold(
   (error) => `Failed: ${error}`,
   (value) => `Success: ${value}`,
 );
-
-// Ensure cleanup
-io.ensuring(IO.sync(() => cleanup()));
 
 // Retry on failure
 io.retry(3); // any error, no delay
