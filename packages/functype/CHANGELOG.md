@@ -13,7 +13,9 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - IO: `IO.fromPromise`, `orElse`, `zipWith`, `andThen`, `catch` and `ensuring`.
   - Option: `tap`. List: `List.range` and `append`. Obj: `when` with a key the object doesn't have.
   - Http: `Option.toNullable()`, which is `orNull()`, and `IO.all` over two differently typed requests, which doesn't type-check (`zip` does).
-  - Do-notation: a `DoAsync` example built on a `Task.async` that doesn't exist.
+  - Do-notation: a `DoAsync` example built on a `Task.async` that doesn't exist. In the package's `docs/do-notation.md`, a mixed `Do` called `.toOption()` on a result typed `unknown`; it now casts to `Reshapeable`.
+  - List: `find` was described as returning the value or `undefined`; it returns `Some` or `None`.
+  - The MCP server page's "invalid code" example compiled; it now shows a call that really fails.
 - **Task's site page is now a move-to-IO guide.** Task is removed in 2.0, and the old page described an API it never had (`Task.sync`, `Task.async`, `task.run({ timeout })`). The page now maps each Task use to IO. The home page and footer list Set and IO in Task's place.
 - **The docs site has a Set page**, covering the 1.19 set operations, `every` and the conversions. `Either.traverse` and `Either.sequence` are on the Either page.
 - **`Do` and `DoAsync` over Option or Try are typed again.** A comprehension that yields only Options now has the type `Option<T>`, and one that yields only Trys has `Try<T>`, so `Do(...).orElse(x)` compiles without a cast. Before, both were typed `unknown`: the overloads recognized Option and Try by a `get()` method that both types had dropped. A comprehension that mixes Option or Try with another monad stays `unknown`, as it always was, so existing casts such as `Do(...) as Either<E, A>` keep compiling. Either-only, List-only and mixed Either/List comprehensions are unchanged.

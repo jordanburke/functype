@@ -98,8 +98,8 @@ const result = Option(42)
 const result = Option(42)
   .map((x) => x * 2)
   .getOrElse(0);
-// Validation FAILED — TS2551: Property 'getOrElse' does not exist on type 'Option<number>'.
-// Did you mean 'orElse'?
+// Validation FAILED — Line 3, Col 4: Property 'getOrElse' does not exist on type
+// 'Option<number>'. Did you mean 'orElse'? (TS2551)
 ```
 
 ### set_functype_version

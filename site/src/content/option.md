@@ -36,7 +36,6 @@ none.orNull(); // null
 | `Option(value)`      | Some if non-null/undefined, else None |
 | `Option.from(value)` | Same as constructor                   |
 | `Option.none()`      | Create None explicitly                |
-| `Option.of(value)`   | Same as constructor                   |
 
 ## Transformations
 
