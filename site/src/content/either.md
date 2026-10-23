@@ -144,4 +144,4 @@ either.toPromise(); // Rejected for Left, Resolved for Right
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/either.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/types/Either.html)

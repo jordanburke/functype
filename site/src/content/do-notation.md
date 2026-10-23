@@ -173,4 +173,4 @@ const result = Do(function* () {
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/do.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/functions/Do.html)

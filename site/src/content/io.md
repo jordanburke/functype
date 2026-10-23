@@ -345,4 +345,4 @@ IO.iterate(
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/io.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/IOType.html)

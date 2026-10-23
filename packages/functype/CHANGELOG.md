@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **The docs site's API and source links work.** Every type page's "API Documentation" link pointed at `/api-docs/modules/…`, which TypeDoc never writes, so each one was a 404, and "View Source" pointed at `src/…` from before the monorepo move. They now point at the page TypeDoc writes for the type (for IO, `interfaces/IOType.html`) and at `packages/functype/src/…`. A new test checks every such link against the real export and folder.
+
 ## 1.19.0 - 2026-10-22
 
 - **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.
