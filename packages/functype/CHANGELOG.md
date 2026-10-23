@@ -6,7 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **The docs site's API and source links work.** Every type page's "API Documentation" link pointed at `/api-docs/modules/…`, which TypeDoc never writes, so each one was a 404, and "View Source" pointed at `src/…` from before the monorepo move. They now point at the page TypeDoc writes for the type (for IO, `interfaces/IOType.html`) and at `packages/functype/src/…`. A new test checks every such link against the real export and folder.
+- **The docs site's API and source links work.** Most type pages' "API Documentation" links pointed at `/api-docs/modules/…`, a folder TypeDoc never writes, so they were 404s, and several "View Source" links pointed at `src/…` from before the monorepo move. They now point at the page TypeDoc writes for the type (for IO, `interfaces/IOType.html`; for Either, `interfaces/EitherBase.html`, where its methods are) and at `packages/functype/src/…`. The home page's "See Examples" link pointed at a folder that doesn't exist. A new test checks every such link against the real export, the folder TypeDoc writes it to, and the repo's paths.
 
 ## 1.19.0 - 2026-10-22
 
