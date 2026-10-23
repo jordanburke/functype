@@ -1924,7 +1924,7 @@ const IOCompanion = {
    *   (state) => fetchJob(state.id),
    *   (state) => state.status === "done" || state.status === "failed",
    *   { max: 30 },
-   * ).runEither()
+   * ).run()
    * ```
    *
    * @param seed - Initial state.

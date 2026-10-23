@@ -22,6 +22,29 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   add<B>(value: B): Set<A | B>
   remove: (value: unknown) => Set<A>
   has(value: unknown): boolean
+  /**
+   * Elements in this set or `other`. `other` can be any iterable: an array, a native Set or a functype Set.
+   * Like every Set method, it compares elements as `has` does: by SameValueZero, so objects by identity and
+   * `NaN` equal to `NaN`.
+   *
+   * @example
+   * ```typescript
+   * Set([1, 2]).union([2, 3]) // Set([1, 2, 3])
+   * ```
+   */
+  union<B>(other: Iterable<B>): Set<A | B>
+  /** Elements in both this set and `other`, in this set's order (native `intersection` follows the smaller set's). */
+  intersection(other: Iterable<unknown>): Set<A>
+  /** Elements in this set and not in `other`. */
+  difference(other: Iterable<unknown>): Set<A>
+  /** Elements in exactly one of this set and `other`. */
+  symmetricDifference<B>(other: Iterable<B>): Set<A | B>
+  /** True if every element of this set is in `other`. True for an empty set. */
+  isSubsetOf(other: Iterable<unknown>): boolean
+  /** True if every element of `other` is in this set. */
+  isSupersetOf(other: Iterable<unknown>): boolean
+  /** True if this set and `other` share no element. */
+  isDisjointFrom(other: Iterable<unknown>): boolean
   map: <B>(f: (a: A) => B) => Set<B>
   flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
   /**
@@ -59,6 +82,46 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     contains: (value: unknown): boolean => values.has(value as A),
 
     has: (value: unknown): boolean => values.has(value as A),
+
+    union: <B>(other: Iterable<B>): Set<A | B> => createSet<A | B>([...values, ...other]),
+
+    intersection: (other: Iterable<unknown>): Set<A> => {
+      const others = new NativeSet<unknown>(other)
+      return createSet([...values].filter((a) => others.has(a)))
+    },
+
+    difference: (other: Iterable<unknown>): Set<A> => {
+      const others = new NativeSet<unknown>(other)
+      return createSet([...values].filter((a) => !others.has(a)))
+    },
+
+    symmetricDifference: <B>(other: Iterable<B>): Set<A | B> => {
+      const others = [...new NativeSet<B>(other)]
+      const otherValues = new NativeSet<unknown>(others)
+      return createSet<A | B>([
+        ...[...values].filter((a) => !otherValues.has(a)),
+        ...others.filter((b) => !(values as NativeSet<unknown>).has(b)),
+      ])
+    },
+
+    isSubsetOf: (other: Iterable<unknown>): boolean => {
+      const others = new NativeSet<unknown>(other)
+      return [...values].every((a) => others.has(a))
+    },
+
+    isSupersetOf: (other: Iterable<unknown>): boolean => {
+      for (const b of other) {
+        if (!values.has(b as A)) return false
+      }
+      return true
+    },
+
+    isDisjointFrom: (other: Iterable<unknown>): boolean => {
+      for (const b of other) {
+        if (values.has(b as A)) return false
+      }
+      return true
+    },
 
     map: <B>(f: (a: A) => B): Set<B> => createSet(Array.from(values).map(f)),
 
@@ -155,6 +218,13 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
         if (p(a)) return true
       }
       return false
+    },
+
+    every: (p: (a: A) => boolean) => {
+      for (const a of values) {
+        if (!p(a)) return false
+      }
+      return true
     },
 
     forEach: (f: (a: A) => void) => {

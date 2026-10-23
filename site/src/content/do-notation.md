@@ -109,16 +109,17 @@ const combinations = Do(function* () {
 
 ## Async Do-Notation
 
-For async operations, use `DoAsync`:
+For async operations, use `DoAsync` and `await` each step's promise:
 
 ```typescript
 import { DoAsync, $ } from "functype/do";
 
+// fetchUser and fetchPosts return Promise<Either<Error, …>>
 const result = await DoAsync(async function* () {
-  const user = yield* $(Task.async("getUser", () => fetchUser()));
-  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)));
+  const user = yield* $(await fetchUser(id));
+  const posts = yield* $(await fetchPosts(user.id));
   return { user, posts };
-});
+}); // Either: Right({ user, posts }), or the first Left
 ```
 
 ## Performance
@@ -145,8 +146,9 @@ Do-notation is highly optimized:
 
 ## Comparison
 
+Without Do-notation:
+
 ```typescript
-// Without Do-notation
 const result = getUser(id).flatMap((user) =>
   getProfile(user.profileId).flatMap((profile) =>
     getSettings(profile.settingsId).map((settings) => ({
@@ -156,8 +158,11 @@ const result = getUser(id).flatMap((user) =>
     })),
   ),
 );
+```
 
-// With Do-notation
+With Do-notation:
+
+```typescript
 const result = Do(function* () {
   const user = yield* $(getUser(id));
   const profile = yield* $(getProfile(user.profileId));

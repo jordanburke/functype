@@ -21,27 +21,26 @@ result.isFailure(); // true if exception thrown
 // Extract values
 result.orElse({}); // value or default
 result.orThrow(); // value or re-throw
-result.toEither(); // Either<Error, T>
+result.toEither((error) => error); // Either<Error, T>; pass a value or a builder for the Left
 ```
 
 ## Constructors
 
-| Method                | Description                                 |
-| --------------------- | ------------------------------------------- |
-| `Try(() => value)`    | Wrap a potentially throwing function        |
-| `Try.of(() => value)` | Same as constructor                         |
-| `Try.success(value)`  | Create a Success directly                   |
-| `Try.failure(error)`  | Create a Failure directly (Error or string) |
-| `Try.fromPromise(p)`  | Create Try from a Promise (async)           |
+| Method               | Description                                 |
+| -------------------- | ------------------------------------------- |
+| `Try(() => value)`   | Wrap a potentially throwing function        |
+| `Try.success(value)` | Create a Success directly                   |
+| `Try.failure(error)` | Create a Failure directly (Error or string) |
+| `Try.fromPromise(p)` | Create Try from a Promise (async)           |
 
 ## Transformations
 
 ```typescript
 // Map - transform success value
 Try(() => "hello").map((s) => s.toUpperCase()); // Success("HELLO")
-Try(() => {
-  throw new Error();
-}).map((s) => s.toUpperCase()); // Failure
+Try<string>(() => {
+  throw new Error("boom");
+}).map((s) => s.toUpperCase()); // Failure, map is skipped
 
 // FlatMap - chain Try operations
 Try(() => readFile(path))
@@ -60,7 +59,7 @@ Try.success(parse(raw))
     (j) => j.data.children.length > 0,
     () => new Error("Post not found"),
   )
-  .map((j) => j.data.children[0].data);
+  .map((j) => j.data.children[0]?.data); // ?. because noUncheckedIndexedAccess can't see the guard
 ```
 
 ## Pattern Matching
@@ -88,8 +87,10 @@ const result = Try(() => readConfig())
   .flatMap((db) => Try(() => db.query("SELECT * FROM users")))
   .recover(() => []); // Return empty array on any failure
 
-// Transform errors
-Try(() => riskyCall()).mapFailure((err) => new CustomError(err.message));
+// Transform errors: Try has no mapFailure, so recover into a new Failure
+Try(() => riskyCall()).recoverWith((err) =>
+  Try.failure(new CustomError(err.message)),
+);
 
 // Filter with predicate
 Try(() => parseInt(input)).filterOrElse(
@@ -129,7 +130,7 @@ const result = Do(function* () {
 
 ```typescript
 tryValue.toOption(); // None for Failure, Some for Success
-tryValue.toEither(); // Left(error) or Right(value)
+tryValue.toEither((error) => error); // Left(error) or Right(value)
 tryValue.toPromise(); // Rejected or Resolved Promise
 ```
 

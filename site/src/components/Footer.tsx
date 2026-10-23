@@ -54,8 +54,13 @@ export default function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/task" className="hover:text-white transition-colors">
-                  Task&lt;T&gt;
+                <a href="/set" className="hover:text-white transition-colors">
+                  Set&lt;A&gt;
+                </a>
+              </li>
+              <li>
+                <a href="/io" className="hover:text-white transition-colors">
+                  IO&lt;R,E,A&gt;
                 </a>
               </li>
               <li>

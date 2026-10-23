@@ -400,7 +400,7 @@ const EitherCompanion = {
    * @param eithers - Array of Either values
    * @returns Either with array of values or first Left encountered
    */
-  sequence: <L extends Type, R extends Type>(eithers: Either<L, R>[]): Either<L, R[]> => {
+  sequence: <L extends Type, R extends Type>(eithers: ReadonlyArray<Either<L, R>>): Either<L, R[]> => {
     return eithers.reduce<Either<L, R[]>>((acc, either) => {
       if (acc.isLeft()) return acc
       if (either.isLeft()) return Left(either.value as L)
@@ -409,17 +409,20 @@ const EitherCompanion = {
   },
 
   /**
-   * Maps an array through a function that returns Either, then sequences the results
+   * Maps an array through a function that returns Either, then sequences the results.
+   * Short-circuits on the first Left: `f` is not called for the elements after it.
    * @param arr - Array of values
-   * @param f - Function that returns Either
+   * @param f - Function that returns Either, given each value and its index
    * @returns Either with array of results or first Left encountered
    */
   traverse: <L extends Type, R extends Type, U extends Type>(
-    arr: R[],
-    f: (value: R) => Either<L, U>,
-  ): Either<L, U[]> => {
-    return EitherCompanion.sequence(arr.map(f))
-  },
+    arr: ReadonlyArray<R>,
+    f: (value: R, index: number) => Either<L, U>,
+  ): Either<L, U[]> =>
+    arr.reduce<Either<L, U[]>>(
+      (acc, item, i) => acc.flatMap((us) => f(item, i).map((u) => [...us, u])),
+      Right<L, U[]>([]),
+    ),
 
   /**
    * Async traverse: runs `f` over `items` and collects the Right values, stopping at the first Left.

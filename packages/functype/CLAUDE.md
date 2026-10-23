@@ -274,14 +274,14 @@ IO.tryPromise({              // promise with error mapping
   catch: (e) => new NetworkError(e)
 })
 IO.service(Tag)              // access injected dependency
-effect.provide(layer)        // provide dependencies
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.retry(3)              // retry on failure
 effect.runSync()             // execute sync effect
 await effect.run()           // execute, get Either<E,A>
 await effect.runExit()       // execute, get Exit<E,A> (see the Exit block below)
 IO.gen(function*() {         // generator do-notation
   const db = yield* IO.service(Database)
-  const user = yield* IO.tryPromise(() => db.find(id))
+  const user = yield* IO.async(() => db.find(id))
   return user
 })
 
@@ -304,7 +304,7 @@ IO.fail(error)               // typed failure
 IO.tryPromise({try, catch})  // promise with error mapping
 IO.service(Tag)              // dependency injection
 IO.gen(function*() {...})    // generator do-notation
-effect.provide(layer)        // provide dependencies
+effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.runSync()             // execute sync
 await effect.run()           // execute → Either<E,A>
 await effect.runExit()       // execute → Exit<E,A>

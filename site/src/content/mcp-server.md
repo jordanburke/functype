@@ -94,12 +94,12 @@ const result = Option(42)
 
 **Example** — invalid code:
 
-```typescript
+```typescript ignore
 const result = Option(42)
   .map((x) => x * 2)
-  .flatMap((x) => (x > 50 ? Option(x) : Option.none()));
-// Validation FAILED — Option.none() without type parameter
-// creates Option<unknown>, incompatible with Option<number>
+  .getOrElse(0);
+// Validation FAILED — Line 3, Col 4: Property 'getOrElse' does not exist on type
+// 'Option<number>'. Did you mean 'orElse'? (TS2551)
 ```
 
 ### set_functype_version
