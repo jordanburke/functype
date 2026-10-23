@@ -6,6 +6,16 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.
+- **The docs site's pages compile.** The doc type-check now covers every type page of the site (`site/src/content`) and the feature matrix. It found calls that don't exist on most pages, now fixed:
+  - Match: `Cond(...).otherwise(...)`, which is `.else(...)`.
+  - Try: `Try.of`, `mapFailure` and `toEither()` with no argument.
+  - IO: `IO.fromPromise`, `orElse`, `zipWith`, `andThen`, `catch` and `ensuring`.
+  - Option: `tap`. List: `List.range` and `append`. Obj: `when` with a key the object doesn't have.
+  - Http: `Option.toNullable()`, which is `orNull()`, and `IO.all` over two differently typed requests, which doesn't type-check (`zip` does).
+  - Do-notation: a `DoAsync` example built on a `Task.async` that doesn't exist.
+- **Task's site page is now a move-to-IO guide.** Task is removed in 2.0, and the old page described an API it never had (`Task.sync`, `Task.async`, `task.run({ timeout })`). The page now maps each Task use to IO. The home page and footer list Set and IO in Task's place.
+- **The docs site has a Set page**, covering the 1.19 set operations, `every` and the conversions. `Either.traverse` and `Either.sequence` are on the Either page.
 - **`Do` and `DoAsync` over Option or Try are typed again.** A comprehension that yields only Options now has the type `Option<T>`, and one that yields only Trys has `Try<T>`, so `Do(...).orElse(x)` compiles without a cast. Before, both were typed `unknown`: the overloads recognized Option and Try by a `get()` method that both types had dropped. A comprehension that mixes Option or Try with another monad stays `unknown`, as it always was, so existing casts such as `Do(...) as Either<E, A>` keep compiling. Either-only, List-only and mixed Either/List comprehensions are unchanged.
 - **`no-imperative-loops` messages name the replacement.** The `for`, `for..of` and `for..in` messages used to say "prefer `.forEach()` or `.map()`", which named no method for the common cases and pointed at `.forEach`, the one replacement that is still imperative. Each now lists the method by what the loop does: `.map`/`.filter`/`.flatMap` to build a new collection, `.reduce` (List: `.foldLeft`) to accumulate, `.find`/`.some` (List: `.exists`) to stop at a match, and `.forEach` only for side effects. The `for` message adds `array.map((x, i) => ...)` and `List(xs).zipWithIndex()`, and the `for..of` message says to spread a Set, Map, string or generator to an array, or wrap it in `List(...)`, first. Only the message text changed: the rule reports the same loops at the same level.
 - **The quick reference compiles.** A new test type-checks every TypeScript block in `packages/functype/docs/quick-reference.md` against the source, resolving imports through the package's `exports`, so a block that calls a missing method or imports from an unpublished subpath fails the test. It found these, now fixed:

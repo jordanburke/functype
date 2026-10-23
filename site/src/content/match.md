@@ -77,7 +77,7 @@ const grade = Cond<string>()
   .when(score >= 80, () => "B")
   .when(score >= 70, () => "C")
   .when(score >= 60, () => "D")
-  .otherwise(() => "F");
+  .else(() => "F");
 ```
 
 ### With Predicates
@@ -87,7 +87,7 @@ const category = Cond<string>()
   .when(age < 13, () => "child")
   .when(age < 20, () => "teenager")
   .when(age < 65, () => "adult")
-  .otherwise(() => "senior");
+  .else(() => "senior");
 ```
 
 ### Lazy Evaluation
@@ -98,7 +98,7 @@ Cond evaluates lazily - only the matching branch runs:
 const result = Cond<number>()
   .when(true, () => 1) // This runs
   .when(true, () => expensiveCompute()) // This doesn't run
-  .otherwise(() => 0);
+  .else(() => 0);
 ```
 
 ## Match vs Cond
@@ -135,13 +135,13 @@ const shipping = Cond<number>()
   .when(order.total > 100, () => 0)
   .when(order.isPrime, () => 0)
   .when(order.isLocal, () => 5)
-  .otherwise(() => 10);
+  .else(() => 10);
 
 // Replacing if-else chains
 const message = Cond<string>()
   .when(errors.length > 0, () => `${errors.length} errors found`)
   .when(warnings.length > 0, () => `${warnings.length} warnings`)
-  .otherwise(() => "All good!");
+  .else(() => "All good!");
 ```
 
 ## Key Features
@@ -160,8 +160,9 @@ const message = Cond<string>()
 
 ## Comparison with if-else
 
+Traditional if-else (imperative):
+
 ```typescript
-// Traditional if-else (imperative)
 let result: string;
 if (status === 200) {
   result = "OK";
@@ -170,8 +171,11 @@ if (status === 200) {
 } else {
   result = "Unknown";
 }
+```
 
-// Match (functional expression)
+Match (functional expression):
+
+```typescript
 const result = Match(status)
   .case(200, () => "OK")
   .case(404, () => "Not Found")

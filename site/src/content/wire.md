@@ -27,13 +27,19 @@ The value doesn't come from type-level enforcement. It comes from three places:
 
 ```typescript
 import type { Wire } from "functype";
-// or
+```
+
+or
+
+```typescript
 import type { Wire } from "functype/wire";
 ```
 
 ## The three shapes
 
 ```typescript
+import type { Wire } from "functype";
+
 // A whole row or DTO: every field inside is covered.
 type UserRow = Wire<{
   readonly id: string;
@@ -82,8 +88,10 @@ Both rules take `wireTypes` (default `["Wire"]`). Add your own boundary alias na
 In 1.9, `Wire<T>` meant `ReadonlyArray<T>`. In 1.10 it wraps any shape, so:
 
 ```typescript
-type ClaimedDocs = Wire<Row>; // 1.9: an array of Row
-type ClaimedDocs = Wire<ReadonlyArray<Row>>; // 1.10
+import type { Wire } from "functype";
+
+// 1.9 wrote this as Wire<Row>, which meant an array of Row
+type ClaimedDocs = Wire<ReadonlyArray<Row>>; // 1.10+
 ```
 
 The break is loud, not silent: a `Wire<Row>` that meant an array fails to compile at the first `.map` or array assignment. The two exceptions are `Wire<object>` and `Wire<any>`, which accept an array under either meaning; search for them when upgrading.

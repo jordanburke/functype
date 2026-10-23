@@ -1,171 +1,37 @@
 # Task<T>
 
-Async operations with cancellation and error handling.
+Task is going away. functype 2.0 removes it.
 
 ## Overview
 
-Task provides structured async operations with built-in cancellation, progress tracking, and error handling. Unlike Promises, Tasks can be cancelled and provide detailed error context.
+Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://jordanburke.github.io/functype/modules/task.html).
 
-## Basic Usage
+## Moving from Task to IO
 
-```typescript
-import { Task } from "functype/task";
-
-// Synchronous task
-const syncTask = Task.sync("myTask", () => computeValue());
-
-// Async task
-const asyncTask = Task.async("fetchData", async () => {
-  const response = await fetch(url);
-  return response.json();
-});
-
-// Run and get result
-const result = await asyncTask.run(); // TaskOutcome<T>
-
-// Check outcome
-if (result.isOk()) {
-  console.log(result.value);
-} else {
-  console.error(result.error);
-}
-```
-
-## Constructors
-
-| Method                            | Description                   |
-| --------------------------------- | ----------------------------- |
-| `Task.sync(name, () => T)`        | Wrap synchronous computation  |
-| `Task.async(name, async () => T)` | Wrap async computation        |
-| `Task.of(value)`                  | Task that succeeds with value |
-| `Task.fail(error)`                | Task that fails with error    |
-| `Task.fromPromise(name, promise)` | Convert Promise to Task       |
-
-## Cancellation
+| Task (1.x)                                    | IO                                                           |
+| --------------------------------------------- | ------------------------------------------------------------ |
+| `Task(params).Sync(() => value)`              | `IO.sync(() => value).runSync()` → `Either<E, A>`            |
+| `await Task(params).Async(async () => value)` | `await IO.tryPromise({ try, catch }).run()` → `Either<E, A>` |
+| `TaskOutcome` (`Ok` / `Err`)                  | `Either` from `run()`, or `Exit` from `runExit()`            |
+| `Task.cancellable(fn)` with `cancel()`        | `effect.runExit({ signal })` and `AbortController.abort()`   |
+| `outcome.map` / `flatMap` / `recover`         | `effect.map` / `flatMap` / `recover`, before running         |
 
 ```typescript
-const task = Task.async("longOperation", async (signal) => {
-  // Check signal periodically
-  for (let i = 0; i < 1000; i++) {
-    if (signal.aborted) {
-      throw new Error("Cancelled");
-    }
-    await processChunk(i);
-  }
-});
+import { IO } from "functype/io";
 
-// Run with timeout
-const result = await task.run({ timeout: 5000 });
+const loadUser = (id: string) =>
+  IO.tryPromise({
+    try: () => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<User>),
+    catch: (error) => new Error(`Failed to load ${id}: ${String(error)}`),
+  });
 
-// Manual cancellation
+// Nothing runs until here
+const user = await loadUser("42").run(); // Either<Error, User>
+
+// Cancellable
 const controller = new AbortController();
-const promise = task.run({ signal: controller.signal });
-controller.abort(); // Cancel the task
+const exit = loadUser("42").runExit({ signal: controller.signal });
+controller.abort(); // the Exit is Interrupted
 ```
 
-## Progress Tracking
-
-```typescript
-const task = Task.async("upload", async (signal, progress) => {
-  for (let i = 0; i <= 100; i += 10) {
-    await uploadChunk(i);
-    progress(i / 100); // Report progress 0-1
-  }
-  return "complete";
-});
-
-// Subscribe to progress
-task.run({
-  onProgress: (p) => console.log(`${p * 100}% complete`),
-});
-```
-
-## Transformations
-
-```typescript
-// Map - transform success value
-task.map((data) => data.items);
-
-// FlatMap - chain tasks
-Task.async("getUser", () => fetchUser(id)).flatMap((user) =>
-  Task.async("getPosts", () => fetchPosts(user.id)),
-);
-
-// Recover - handle errors
-task.recover(defaultValue);
-task.recoverWith((error) => Task.of(fallback));
-```
-
-## TaskOutcome
-
-Task returns `TaskOutcome<T>` which is either `Ok<T>` or `Err<Error>`:
-
-```typescript
-const outcome = await task.run();
-
-// Pattern matching
-outcome.fold(
-  (error) => `Failed: ${error.message}`,
-  (value) => `Success: ${value}`,
-);
-
-// Type guards
-if (outcome.isOk()) {
-  console.log(outcome.value);
-}
-
-// Extract with default
-const value = outcome.orElse(defaultValue);
-
-// Convert to other types
-outcome.toEither(); // Either<Error, T>
-outcome.toOption(); // Option<T>
-outcome.toTry(); // Try<T>
-```
-
-## Do-Notation
-
-```typescript
-import { Do, $ } from "functype/do";
-
-const result = Do(function* () {
-  const user = yield* $(Task.async("getUser", () => fetchUser()));
-  const posts = yield* $(Task.async("getPosts", () => fetchPosts(user.id)));
-  const comments = yield* $(
-    Task.async("getComments", () => fetchComments(posts)),
-  );
-  return { user, posts, comments };
-});
-```
-
-## Key Features
-
-- **Named Tasks**: Debug async operations easily with named task contexts
-- **Cancellation**: Cancel ongoing operations gracefully
-- **Progress Tracking**: Monitor long-running operations
-- **Error Context**: Rich error information including task name and stack traces
-
-## When to Use Task
-
-- Long-running async operations that might be cancelled (file uploads, downloads)
-- Operations that need progress tracking (batch processing, migrations)
-- When you need better error context than Promises provide
-- Complex async workflows with multiple steps
-
-## Type Conversions
-
-```typescript
-// TaskOutcome conversions
-outcome.toEither(); // Either<Error, T>
-outcome.toOption(); // Option<T>
-outcome.toTry(); // Try<T>
-outcome.toPromise(); // Promise<T>
-
-// Create from other types
-Task.fromEither(either);
-Task.fromTry(tryValue);
-```
-
-## API Reference
-
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/task.html)
+See [IO](/io) for retries, timeouts, typed error recovery and dependency injection.
