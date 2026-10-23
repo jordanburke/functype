@@ -195,7 +195,8 @@ export {}
 /** Value exports of functype, the names a block can use without importing. */
 const FUNCTYPE_NAMES: ReadonlyArray<string> = Object.keys(functype)
 
-const escape = (name: string): string => name.replace(/[$]/g, "\\$")
+/** Escapes every regex metacharacter, so a name can be matched literally inside a RegExp. */
+const escape = (name: string): string => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 /** `import { … } from "functype"; ` for the functype names `code` uses but neither imports nor declares. */
 const autoImport = (code: string): string => {
