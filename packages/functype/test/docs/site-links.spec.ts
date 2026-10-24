@@ -51,18 +51,34 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
   const index = program.getSourceFile(join(PACKAGE_ROOT, "src", "index.ts"))
   const moduleSymbol = index === undefined ? undefined : checker.getSymbolAtLocation(index)
   if (moduleSymbol === undefined) throw new Error("could not resolve src/index.ts")
-  const folderOf = (declaration: ts.Declaration): string | undefined =>
+  const isTypeDeclaration = (d: ts.Declaration): boolean =>
+    ts.isInterfaceDeclaration(d) || ts.isTypeAliasDeclaration(d) || ts.isClassDeclaration(d)
+  const isFunctionConst = (d: ts.VariableDeclaration): boolean =>
+    d.initializer !== undefined && (ts.isArrowFunction(d.initializer) || ts.isFunctionExpression(d.initializer))
+  /**
+   * TypeDoc files a const with an arrow or function initializer under functions/. When the same name is
+   * also a type (`Ok`, `Tag`, `ParseError`), it picks functions/ for some and variables/ for others, so
+   * either is accepted there.
+   */
+  const foldersOf = (declaration: ts.Declaration, siblings: ReadonlyArray<ts.Declaration>): ReadonlyArray<string> =>
     ts.isInterfaceDeclaration(declaration)
-      ? "interfaces"
+      ? ["interfaces"]
       : ts.isTypeAliasDeclaration(declaration)
-        ? "types"
+        ? ["types"]
         : ts.isFunctionDeclaration(declaration)
-          ? "functions"
+          ? ["functions"]
           : ts.isVariableDeclaration(declaration)
-            ? "variables"
+            ? !isFunctionConst(declaration)
+              ? ["variables"]
+              : siblings.some(isTypeDeclaration)
+                ? ["functions", "variables"]
+                : ["functions"]
             : ts.isClassDeclaration(declaration)
-              ? "classes"
-              : undefined
+              ? ["classes"]
+              : []
+  /** typedoc.config.mjs sets excludeInternal, so an `@internal` declaration has no page. */
+  const isInternal = (d: ts.Declaration): boolean =>
+    ts.getJSDocTags(ts.isVariableDeclaration(d) ? d.parent.parent : d).some((tag) => tag.tagName.text === "internal")
   const exports = checker.getExportsOfModule(moduleSymbol)
   const resolve = (symbol: ts.Symbol): ts.Symbol =>
     symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
@@ -74,14 +90,14 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
       const typeOnly = (exported.declarations ?? []).some(
         (d) => ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly),
       )
-      // A type-only alias of a symbol that is also exported under its own name has no pages
-      const shadowAlias = typeOnly && exported.name !== target.name && resolved.get(target.name) === target
-      const folders = (target.declarations ?? []).flatMap((d) => {
-        const folder = folderOf(d)
-        return folder === undefined || shadowAlias || (typeOnly && folder !== "interfaces" && folder !== "types")
-          ? []
-          : [folder]
-      })
+      // An alias (`IO as IOType`, `HttpError as HttpErrors`) of a symbol that is also exported under its
+      // own name has no pages: TypeDoc writes the symbol once, under its own name
+      const shadowAlias = exported.name !== target.name && resolved.get(target.name) === target
+      const declarations = target.declarations ?? []
+      const folders = declarations
+        .filter((d) => !shadowAlias && !isInternal(d))
+        .flatMap((d) => foldersOf(d, declarations))
+        .filter((folder) => !typeOnly || folder === "interfaces" || folder === "types")
       return [exported.name, new globalThis.Set(folders)] as const
     }),
   )
