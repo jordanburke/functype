@@ -4,7 +4,7 @@ import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
-import { safeStringify } from "@/internal/stringify"
+import { showValue } from "@/internal/stringify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -182,7 +182,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
     return { "@functype": "Either" as const, _tag: "Right" as const, value }
   },
   toString: () => {
-    return `Right(${safeStringify(value)})`
+    return `Right(${showValue(value)})`
   },
   *[Symbol.iterator]() {
     yield value
@@ -271,7 +271,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   toJSON() {
     return { "@functype": "Either" as const, _tag: "Left" as const, value }
   },
-  toString: () => `Left(${safeStringify(value)})`,
+  toString: () => `Left(${showValue(value)})`,
   *[Symbol.iterator]() {
     // Left doesn't yield any values
   },

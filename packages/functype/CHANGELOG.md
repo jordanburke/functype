@@ -6,6 +6,11 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`toString()` prints an `Error` by name and message.** `Try`, `Either` and `Option` printed an `Error` as `{}`, because an Error's name and message aren't enumerable, so a failed `Try` read `Failure({}))`. It now reads `Failure(TypeError: bad input)`, and `Left(new Error("boom"))` reads `Left(Error: boom)`. `Try`'s `Failure` also lost a stray `)`. Only `toString()` changed: serialization (`serialize()`, `toJSON()`) prints an `Error` as before.
+- **`Stack.of` and `LazyList.of` take any number of values**, like `List.of` and `Set.of`. They took one, so `Stack.of(1, 2, 3)`, as the cheatsheet and `npx functype` showed it, built `Stack(1)`. `Stack.of(1, 2, 3)` now equals `Stack([1, 2, 3])`, and `LazyList.of(1, 2, 3)` equals `LazyList.from(1, 2, 3)`. One-value calls behave as before.
+- **`Http`, `HttpError`, `Decoder` and `DecoderError` carry the `_tag` their type declares.** Each companion was typed with a `_tag` (`"Http"`, `"HttpError"` and so on) but built from an empty object, so the field was `undefined` at runtime. It now holds the declared value. The types are unchanged.
+- **`no-imperative-loops` no longer offers a `.forEach` rewrite.** The editor quick-fix rewrote a simple `for..of` to `.forEach(...)` and a `for..in` to `Object.keys(...).forEach(...)`, the one replacement the rule's message calls a last resort. The rule reports the same loops with the same messages; only the suggestion is gone. It was never an `--fix` autofix, so no code changes on its own.
+
 ## 1.19.0 - 2026-10-22
 
 - **`Reshapeable` is exported as a type.** `Do` over a mix of Either and List returns `Reshapeable<T>`, which `functype` didn't export, so the result couldn't be named or cast to. `import type { Reshapeable } from "functype"` now works.

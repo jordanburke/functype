@@ -2,7 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
-import { safeStringify } from "@/internal/stringify"
+import { showValue } from "@/internal/stringify"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
 import type { Promisable, Widen } from "@/typeclass"
@@ -253,7 +253,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   toEither: <E>(_leftOrBuilder: E | (() => E)) => Right<E, T>(value),
   toTry: () => Try(() => value),
   toPromise: (): Promise<T> => Promise.resolve(value),
-  toString: () => `Some(${safeStringify(value)})`,
+  toString: () => `Some(${showValue(value)})`,
   toValue: () => ({ _tag: "Some", value }),
   toJSON: () => ({ "@functype": "Option" as const, _tag: "Some" as const, value }),
   pipe: <U extends Type>(f: (value: T) => U) => f(value),
