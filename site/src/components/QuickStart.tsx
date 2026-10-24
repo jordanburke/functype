@@ -134,7 +134,7 @@ export default function QuickStart() {
               View Full Documentation
             </a>
             <a
-              href="https://github.com/jordanburke/functype/tree/main/examples"
+              href="https://github.com/jordanburke/functype/tree/main/packages/functype/examples"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg border-2 border-blue-600 hover:bg-blue-50 transition-colors"

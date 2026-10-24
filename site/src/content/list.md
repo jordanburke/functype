@@ -148,4 +148,4 @@ list.headOption; // Option<A> for first element
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/list.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/List.html)
