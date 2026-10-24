@@ -63,3 +63,37 @@ describe("companions carry the _tag their type declares", () => {
     expect(Decoder.string("s").orThrow()).toBe("s")
   })
 })
+
+describe("toString never throws on a hostile Error", () => {
+  it("falls back when the Error's toString, name or message throws", () => {
+    class Hostile extends Error {
+      override toString(): string {
+        throw new Error("no")
+      }
+    }
+    const badName = new Error("x")
+    Object.defineProperty(badName, "name", {
+      get: () => {
+        throw new Error("no")
+      },
+    })
+    const proxied = new Proxy(new Error("p"), {
+      get: (target, key) => {
+        if (key === "message") throw new Error("no")
+        return Reflect.get(target, key) as unknown
+      },
+    })
+    ;[new Hostile("h"), badName, proxied].forEach((error) => {
+      expect(() => Left(error).toString()).not.toThrow()
+      expect(() => Try.failure(error).toString()).not.toThrow()
+      expect(() => Option(error).toString()).not.toThrow()
+    })
+  })
+
+  it("prints an Error from another realm by name and message", async () => {
+    const { runInNewContext } = await import("node:vm")
+    const foreign = runInNewContext('new TypeError("from vm")') as unknown
+    expect(foreign instanceof Error).toBe(false)
+    expect(Left(foreign).toString()).toBe("Left(TypeError: from vm)")
+  })
+})

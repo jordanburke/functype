@@ -61,13 +61,24 @@ export function safeStringify(value: unknown): string | undefined {
   }
 }
 
+/** True for an Error, including one from another realm (a `vm` context or iframe), where `instanceof` fails. */
+const isError = (value: unknown): value is Error =>
+  value instanceof Error || Object.prototype.toString.call(value) === "[object Error]"
+
 /**
  * Renders a value for a container's `toString()`. An `Error` prints as `String(error)`
  * (`"TypeError: bad input"`), since `safeStringify` turns it into `{}`: an Error's name and message
  * are not own enumerable properties. Everything else goes through `safeStringify`.
  *
+ * Never throws, like `safeStringify`: an Error whose `toString`, `name` or `message` throws (or a Proxy
+ * over one) falls back to `safeStringify`.
+ *
  * Display only. Serialization keeps using `safeStringify`, so wire formats are unchanged.
  */
 export function showValue(value: unknown): string | undefined {
-  return value instanceof Error ? String(value) : safeStringify(value)
+  try {
+    return isError(value) ? String(value) : safeStringify(value)
+  } catch {
+    return safeStringify(value)
+  }
 }
