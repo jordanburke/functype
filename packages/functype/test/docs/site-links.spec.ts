@@ -64,16 +64,18 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
               ? "classes"
               : undefined
   const exports = checker.getExportsOfModule(moduleSymbol)
-  const exportedNames = new globalThis.Set(exports.map((e) => e.name))
+  const resolve = (symbol: ts.Symbol): ts.Symbol =>
+    symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
+  const resolved = new globalThis.Map(exports.map((e) => [e.name, resolve(e)] as const))
   return new globalThis.Map(
     exports.map((exported) => {
-      const target = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported
+      const target = resolve(exported)
       // `export type { X as Y }` re-exports only the type side, so Y has no variables/ or functions/ page
       const typeOnly = (exported.declarations ?? []).some(
         (d) => ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly),
       )
       // A type-only alias of a symbol that is also exported under its own name has no pages
-      const shadowAlias = typeOnly && exported.name !== target.name && exportedNames.has(target.name)
+      const shadowAlias = typeOnly && exported.name !== target.name && resolved.get(target.name) === target
       const folders = (target.declarations ?? []).flatMap((d) => {
         const folder = folderOf(d)
         return folder === undefined || shadowAlias || (typeOnly && folder !== "interfaces" && folder !== "types")
