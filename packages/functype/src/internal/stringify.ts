@@ -60,3 +60,14 @@ export function safeStringify(value: unknown): string | undefined {
     return undefined
   }
 }
+
+/**
+ * Renders a value for a container's `toString()`. An `Error` prints as `String(error)`
+ * (`"TypeError: bad input"`), since `safeStringify` turns it into `{}`: an Error's name and message
+ * are not own enumerable properties. Everything else goes through `safeStringify`.
+ *
+ * Display only. Serialization keeps using `safeStringify`, so wire formats are unchanged.
+ */
+export function showValue(value: unknown): string | undefined {
+  return value instanceof Error ? String(value) : safeStringify(value)
+}

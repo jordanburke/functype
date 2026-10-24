@@ -6,7 +6,6 @@ import { containsAwait, containsYield } from "../utils/async-detection"
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
-    hasSuggestions: true,
     docs: {
       description: "Prefer functional iteration methods over imperative for loops",
       recommended: true,
@@ -42,8 +41,6 @@ const rule: Rule.RuleModule = {
         "This loop awaits, which .forEach()/.map() cannot do. To await in order use List(items).mapAsync(f), or Either.traverseAsync(items, f) when f returns Either (stops at the first Left). Inside IO, use IO.forEach(items, f)",
       noWhileLoop: "Prefer functional iteration or recursion over while loops",
       noDoWhileLoop: "Prefer functional iteration or recursion over do..while loops",
-      suggestForEach: "Replace with {{iterable}}.forEach(...)",
-      suggestObjectKeys: "Replace with Object.keys({{object}}).forEach(...)",
     },
   },
 
@@ -73,33 +70,12 @@ const rule: Rule.RuleModule = {
       return /\[\s*\w+\s*\]/.test(bodyText) && node.init && node.init.type === "VariableDeclaration"
     }
 
-    function isSingleStatementBody(node: ASTNode): boolean {
-      if (!node.body || node.body.type !== "BlockStatement") return false
-      return node.body.body.length === 1
-    }
-
-    function hasDestructuringVariable(node: ASTNode): boolean {
-      const left = node.left
-      if (!left) return false
-      if (left.type === "VariableDeclaration" && left.declarations[0]) {
-        const id = left.declarations[0].id
-        return id.type === "ObjectPattern" || id.type === "ArrayPattern"
-      }
-      return false
-    }
-
     /**
      * Loops with no functional equivalent (#324): `for await` consumes a stream, and collecting it first
      * would defeat the streaming; a loop that yields is a generator's body, and a callback cannot yield.
      */
     function hasNoFunctionalEquivalent(node: ASTNode): boolean {
       return (node.type === "ForOfStatement" && node.await === true) || containsYield(node.body)
-    }
-
-    function bodyContainsBreakOrContinue(node: ASTNode): boolean {
-      const sourceCode = context.sourceCode
-      const bodyText = sourceCode.getText(node.body)
-      return /\b(break|continue)\b/.test(bodyText)
     }
 
     return {
@@ -130,36 +106,9 @@ const rule: Rule.RuleModule = {
           return
         }
 
-        const suggest: Rule.SuggestionReportDescriptor[] = []
-
-        if (isSingleStatementBody(node) && !hasDestructuringVariable(node) && !bodyContainsBreakOrContinue(node)) {
-          const sourceCode = context.sourceCode
-          const bodyStmt = node.body.body[0]
-
-          if (bodyStmt && bodyStmt.type === "ExpressionStatement") {
-            const stmtText = sourceCode.getText(bodyStmt)
-            const objText = sourceCode.getText(node.right)
-
-            const left = node.left
-            const keyVar =
-              left.type === "VariableDeclaration" && left.declarations[0]
-                ? sourceCode.getText(left.declarations[0].id)
-                : sourceCode.getText(left)
-
-            suggest.push({
-              messageId: "suggestObjectKeys",
-              data: { object: objText },
-              fix(fixer) {
-                return fixer.replaceText(node, `Object.keys(${objText}).forEach((${keyVar}) => {\n  ${stmtText}\n})`)
-              },
-            })
-          }
-        }
-
         context.report({
           node,
           messageId: "noForInLoop",
-          suggest: suggest.length > 0 ? suggest : undefined,
         })
       },
 
@@ -167,52 +116,14 @@ const rule: Rule.RuleModule = {
         if (hasNoFunctionalEquivalent(node)) return
         if (allowInTests && isInTestFile()) return
 
-        // A .forEach suggestion here would move `await` into a non-async callback — a syntax error —
-        // so an awaiting body gets the async-traversal pointer and no suggestion.
         if (containsAwait(node.body)) {
           context.report({ node, messageId: "noAsyncLoop" })
           return
         }
 
-        const suggest: Rule.SuggestionReportDescriptor[] = []
-
-        // `for (x of await xs())` → `await xs().forEach(...)` would bind `await` to the forEach call, so an
-        // awaited iterable gets no suggestion.
-        if (
-          isSingleStatementBody(node) &&
-          !hasDestructuringVariable(node) &&
-          !bodyContainsBreakOrContinue(node) &&
-          !containsAwait(node.right)
-        ) {
-          const sourceCode = context.sourceCode
-          const bodyStmt = node.body.body[0]
-
-          if (bodyStmt && bodyStmt.type === "ExpressionStatement") {
-            const stmtText = sourceCode.getText(bodyStmt)
-            const iterableText = sourceCode.getText(node.right)
-
-            const varDecl = node.left
-            const varName =
-              varDecl.type === "VariableDeclaration" && varDecl.declarations[0]
-                ? sourceCode.getText(varDecl.declarations[0].id)
-                : sourceCode.getText(varDecl)
-
-            if (!stmtText.includes(".push(")) {
-              suggest.push({
-                messageId: "suggestForEach",
-                data: { iterable: iterableText },
-                fix(fixer) {
-                  return fixer.replaceText(node, `${iterableText}.forEach((${varName}) => {\n  ${stmtText}\n})`)
-                },
-              })
-            }
-          }
-        }
-
         context.report({
           node,
           messageId: "noForOfLoop",
-          suggest: suggest.length > 0 ? suggest : undefined,
         })
       },
 

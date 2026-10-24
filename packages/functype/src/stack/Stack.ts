@@ -266,11 +266,13 @@ const StackCompanion = {
   empty: <A extends Type>(): Stack<A> => StackObject<A>([]),
 
   /**
-   * Creates a Stack from a single value
-   * @param value - The value to create a stack with
-   * @returns A Stack with a single value
+   * Creates a Stack from values, like `Stack([...values])`
+   * @example
+   * Stack.of(1, 2, 3) // same as Stack([1, 2, 3])
+   * @param values - The values to create the stack with
+   * @returns A Stack holding the values
    */
-  of: <A extends Type>(value: A): Stack<A> => StackObject<A>([value]),
+  of: <A extends Type>(...values: A[]): Stack<A> => StackObject<A>(values),
 
   /**
    * Creates a Stack from JSON string

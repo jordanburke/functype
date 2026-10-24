@@ -112,4 +112,4 @@ const DecoderErrorCompanion = {
   format,
 }
 
-export const DecoderError = Companion({} as { readonly _tag: "DecoderError" }, DecoderErrorCompanion)
+export const DecoderError = Companion({ _tag: "DecoderError" } as const, DecoderErrorCompanion)
