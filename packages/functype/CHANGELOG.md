@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.20.0 - 2026-10-24
+
 - **`toString()` prints an `Error` by name and message.** `Try`, `Either` and `Option` printed an `Error` as `{}`, because an Error's name and message aren't enumerable, so a failed `Try` read `Failure({}))`. It now reads `Failure(TypeError: bad input)`, and `Left(new Error("boom"))` reads `Left(Error: boom)`. `Try`'s `Failure` also lost a stray `)`. An Error from another realm (a `vm` context or iframe) counts too, and an Error whose `toString` or `message` throws falls back to the old output instead of throwing. Only `toString()` changed: serialization (`serialize()`, `toJSON()`) prints an `Error` as before.
 - **`Stack.of` and `LazyList.of` take any number of values**, like `List.of` and `Set.of`. They took one, so `Stack.of(1, 2, 3)`, as the cheatsheet and `npx functype` showed it, was a type error (TS2554), and from JavaScript built `Stack(1)`. `Stack.of(1, 2, 3)` now equals `Stack([1, 2, 3])`, and `LazyList.of(1, 2, 3)` equals `LazyList.from(1, 2, 3)`. One-value calls behave as before.
 - **`Http`, `HttpError`, `Decoder` and `DecoderError` carry the `_tag` their type declares.** Each companion was typed with a `_tag` (`"Http"`, `"HttpError"` and so on) but built from an empty object, so the field was `undefined` at runtime. It now holds the declared value. The types are unchanged.
