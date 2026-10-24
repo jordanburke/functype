@@ -51,18 +51,45 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
   const index = program.getSourceFile(join(PACKAGE_ROOT, "src", "index.ts"))
   const moduleSymbol = index === undefined ? undefined : checker.getSymbolAtLocation(index)
   if (moduleSymbol === undefined) throw new Error("could not resolve src/index.ts")
-  const folderOf = (declaration: ts.Declaration): string | undefined =>
+  const isFunctionLikeInitializer = (node: ts.Expression): boolean =>
+    ts.isArrowFunction(node) || ts.isFunctionExpression(node)
+      ? true
+      : ts.isSatisfiesExpression(node) || ts.isAsExpression(node)
+        ? isFunctionLikeInitializer(node.expression)
+        : false
+  const hasTag = (d: ts.Declaration, name: string): boolean =>
+    ts.getJSDocTags(ts.isVariableDeclaration(d) ? d.parent.parent : d).some((tag) => tag.tagName.text === name)
+  /**
+   * TypeDoc 0.28's rule (convertVariable / shouldAutomaticallyConvertAsFunction): a const goes under
+   * functions/ when it is the symbol's first declaration, its type has call signatures and no construct
+   * signatures, and it is either tagged `@function` or has no type annotation and an arrow or function
+   * initializer (possibly wrapped in `satisfies` / `as`). So `ParseError`, declared const-first, is a
+   * function, while `Ok` and `Tag`, declared interface-first, are variables.
+   */
+  const isFunctionConst = (d: ts.VariableDeclaration, symbol: ts.Symbol): boolean => {
+    const type = checker.getTypeOfSymbolAtLocation(symbol, d)
+    return (
+      symbol.declarations?.[0] === d &&
+      type.getCallSignatures().length > 0 &&
+      type.getConstructSignatures().length === 0 &&
+      (hasTag(d, "function") ||
+        (d.type === undefined && d.initializer !== undefined && isFunctionLikeInitializer(d.initializer)))
+    )
+  }
+  const foldersOf = (declaration: ts.Declaration, symbol: ts.Symbol): ReadonlyArray<string> =>
     ts.isInterfaceDeclaration(declaration)
-      ? "interfaces"
+      ? ["interfaces"]
       : ts.isTypeAliasDeclaration(declaration)
-        ? "types"
+        ? ["types"]
         : ts.isFunctionDeclaration(declaration)
-          ? "functions"
+          ? ["functions"]
           : ts.isVariableDeclaration(declaration)
-            ? "variables"
+            ? [isFunctionConst(declaration, symbol) ? "functions" : "variables"]
             : ts.isClassDeclaration(declaration)
-              ? "classes"
-              : undefined
+              ? ["classes"]
+              : []
+  /** typedoc.config.mjs sets excludeInternal, so an `@internal` declaration has no page. */
+  const isInternal = (d: ts.Declaration): boolean => hasTag(d, "internal")
   const exports = checker.getExportsOfModule(moduleSymbol)
   const resolve = (symbol: ts.Symbol): ts.Symbol =>
     symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
@@ -74,14 +101,14 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
       const typeOnly = (exported.declarations ?? []).some(
         (d) => ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly),
       )
-      // A type-only alias of a symbol that is also exported under its own name has no pages
-      const shadowAlias = typeOnly && exported.name !== target.name && resolved.get(target.name) === target
-      const folders = (target.declarations ?? []).flatMap((d) => {
-        const folder = folderOf(d)
-        return folder === undefined || shadowAlias || (typeOnly && folder !== "interfaces" && folder !== "types")
-          ? []
-          : [folder]
-      })
+      // An alias (`IO as IOType`, `HttpError as HttpErrors`) of a symbol that is also exported under its
+      // own name has no pages: TypeDoc writes the symbol once, under its own name
+      const shadowAlias = exported.name !== target.name && resolved.get(target.name) === target
+      const declarations = target.declarations ?? []
+      const folders = declarations
+        .filter((d) => !shadowAlias && !isInternal(d))
+        .flatMap((d) => foldersOf(d, target))
+        .filter((folder) => !typeOnly || folder === "interfaces" || folder === "types")
       return [exported.name, new globalThis.Set(folders)] as const
     }),
   )
