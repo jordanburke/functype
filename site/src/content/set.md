@@ -89,4 +89,4 @@ List([1, 1, 2]).toSet(); // Set(1, 2)
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/api-docs/interfaces/Set.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Set.html)

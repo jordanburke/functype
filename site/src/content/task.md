@@ -4,7 +4,7 @@ Task is going away. functype 2.0 removes it.
 
 ## Overview
 
-Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://jordanburke.github.io/functype/api-docs/variables/Task.html).
+Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://functype.org/api-docs/variables/Task.html).
 
 ## Moving from Task to IO
 

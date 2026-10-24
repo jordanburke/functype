@@ -34,7 +34,7 @@ export type Decoder<A> = (raw: unknown) => Either<DecoderError, A>
  * - `Decoder.tagged.option/either/try/list/map/obj(inner?)` — round-trip the `{_tag, value}` shape
  *   used by functype's built-in `.toJSON()` (for functype-to-functype services)
  */
-export const Decoder = Companion({} as { readonly _tag: "Decoder" }, {
+export const Decoder = Companion({ _tag: "Decoder" } as const, {
   ...DecoderCompanion,
   tagged,
 })

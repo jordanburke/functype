@@ -207,7 +207,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
     return { "@functype": "Either" as const, _tag: "Right" as const, value }
   },
   toString: () => {
-    return \`Right(\${safeStringify(value)})\`
+    return \`Right(\${showValue(value)})\`
   },
   *[Symbol.iterator]() {
     yield value

@@ -75,15 +75,7 @@ describe("no-imperative-loops", () => {
         errors: [
           {
             messageId: "noForOfLoop",
-            suggestions: [
-              {
-                messageId: "suggestForEach",
-                data: { iterable: "xs" },
-                output: `xs.forEach((x) => {
-  register(function* () { yield x })
-})`,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
@@ -134,15 +126,7 @@ describe("no-imperative-loops", () => {
         errors: [
           {
             messageId: "noForOfLoop",
-            suggestions: [
-              {
-                messageId: "suggestForEach",
-                data: { iterable: "items" },
-                output: `items.forEach((item) => {
-  schedule(async () => { await save(item) })
-})`,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
@@ -171,17 +155,7 @@ describe("no-imperative-loops", () => {
         errors: [
           {
             messageId: "noForInLoop",
-            suggestions: [
-              {
-                messageId: "suggestObjectKeys",
-                data: { object: "obj" },
-                output: `
-          Object.keys(obj).forEach((key) => {
-  console.log(obj[key])
-})
-        `,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
@@ -196,17 +170,7 @@ describe("no-imperative-loops", () => {
         errors: [
           {
             messageId: "noForOfLoop",
-            suggestions: [
-              {
-                messageId: "suggestForEach",
-                data: { iterable: "items" },
-                output: `
-          items.forEach((item) => {
-  console.log(item)
-})
-        `,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
@@ -279,25 +243,7 @@ describe("no-imperative-loops", () => {
           },
           {
             messageId: "noForOfLoop",
-            suggestions: [
-              {
-                messageId: "suggestForEach",
-                data: { iterable: "otherItems" },
-                output: `
-          for (let i = 0; i < items.length; i++) {
-            console.log(items[i])
-          }
-
-          otherItems.forEach((item) => {
-  process(item)
-})
-
-          while (condition) {
-            doSomething()
-          }
-        `,
-              },
-            ],
+            suggestions: [],
           },
           {
             messageId: "noWhileLoop",
@@ -323,45 +269,29 @@ describe("no-imperative-loops", () => {
           },
         ],
       },
-      // Suggestion: simple for..of -> forEach
+      // No suggestion: .forEach is the last resort the message names, not a rewrite to offer
       {
-        name: "Simple for..of should suggest forEach",
+        name: "Simple for..of is reported with no forEach suggestion",
         code: `for (const item of items) {
   console.log(item)
 }`,
         errors: [
           {
             messageId: "noForOfLoop",
-            suggestions: [
-              {
-                messageId: "suggestForEach",
-                data: { iterable: "items" },
-                output: `items.forEach((item) => {
-  console.log(item)
-})`,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
-      // Suggestion: for..in -> Object.keys().forEach()
+      // No suggestion for for..in either
       {
-        name: "for..in should suggest Object.keys().forEach()",
+        name: "for..in is reported with no Object.keys().forEach() suggestion",
         code: `for (const key in obj) {
   console.log(key)
 }`,
         errors: [
           {
             messageId: "noForInLoop",
-            suggestions: [
-              {
-                messageId: "suggestObjectKeys",
-                data: { object: "obj" },
-                output: `Object.keys(obj).forEach((key) => {
-  console.log(key)
-})`,
-              },
-            ],
+            suggestions: [],
           },
         ],
       },
