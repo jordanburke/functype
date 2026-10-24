@@ -32,15 +32,16 @@
  * @category IO
  */
 
-export type { ContextServices, Context as ContextType, HasService } from "./Context"
+/* eslint-disable simple-import-sort/exports -- the value export must come before its type-only alias: TypeDoc names the pages after the first export it meets, so alias-first gives IO no page of its own. test/docs/site-links.spec.ts checks the order. */
 export { Context } from "./Context"
-export type { ExitTag, Exit as ExitType } from "./Exit"
 export { Exit } from "./Exit"
-export type { Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
 export { InterruptedError, IO, RepeatExhausted, TimeoutError, UnsupportedSyncOperationError } from "./IO"
-export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./Layer"
 export { Layer } from "./Layer"
-export type { TagService, Tag as TagType } from "./Tag"
 export { Tag } from "./Tag"
-export type { TestClock as TestClockType, TestContext as TestContextType } from "./TestClock"
 export { TestClock, TestClockTag, TestContext } from "./TestClock"
+export type { ContextServices, Context as ContextType, HasService } from "./Context"
+export type { ExitTag, Exit as ExitType } from "./Exit"
+export type { Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
+export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./Layer"
+export type { TagService, Tag as TagType } from "./Tag"
+export type { TestClock as TestClockType, TestContext as TestContextType } from "./TestClock"

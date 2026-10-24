@@ -2712,7 +2712,7 @@ IO.iterate(
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/IOType.html)
+See full API documentation at functype API docs: [IO's methods](https://functype.org/api-docs/interfaces/IO.html) and [its constructors](https://functype.org/api-docs/variables/IO.html) (`IO.sync`, `IO.succeed`, `IO.tryPromise` and the rest)
 
 
 ────────────────────────────────────────────────────────────────────────────────

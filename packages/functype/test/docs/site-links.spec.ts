@@ -13,8 +13,9 @@ import { describe, expect, it } from "vitest"
  * `types/`, `variables/`, `functions/`), so a link is checked against the real export: the name must
  * be exported from `src/index.ts`, and the folder must match one of its declarations.
  *
- * It is a name-and-kind check, not proof the page exists: TypeDoc writes a symbol exported under two
- * names (`IO`, and `IO as IOType`) once, so only one of them gets pages. Link to the name TypeDoc used.
+ * It is a name-and-kind check, not proof the page exists. TypeDoc writes a symbol exported under two
+ * names (`IO`, and `type { IO as IOType }`) once, under the first name it meets, so a module index lists
+ * the value export first (checked below) and an alias like `IOType` gets no pages of its own.
  */
 
 const { join } = posix
@@ -62,21 +63,55 @@ const typedocFolders = (): ReadonlyMap<string, ReadonlySet<string>> => {
             : ts.isClassDeclaration(declaration)
               ? "classes"
               : undefined
+  const exports = checker.getExportsOfModule(moduleSymbol)
+  const resolve = (symbol: ts.Symbol): ts.Symbol =>
+    symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
+  const resolved = new globalThis.Map(exports.map((e) => [e.name, resolve(e)] as const))
   return new globalThis.Map(
-    checker.getExportsOfModule(moduleSymbol).map((exported) => {
-      const target = exported.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(exported) : exported
+    exports.map((exported) => {
+      const target = resolve(exported)
       // `export type { X as Y }` re-exports only the type side, so Y has no variables/ or functions/ page
       const typeOnly = (exported.declarations ?? []).some(
         (d) => ts.isExportSpecifier(d) && (d.isTypeOnly || d.parent.parent.isTypeOnly),
       )
+      // A type-only alias of a symbol that is also exported under its own name has no pages
+      const shadowAlias = typeOnly && exported.name !== target.name && resolved.get(target.name) === target
       const folders = (target.declarations ?? []).flatMap((d) => {
         const folder = folderOf(d)
-        return folder === undefined || (typeOnly && folder !== "interfaces" && folder !== "types") ? [] : [folder]
+        return folder === undefined || shadowAlias || (typeOnly && folder !== "interfaces" && folder !== "types")
+          ? []
+          : [folder]
       })
       return [exported.name, new globalThis.Set(folders)] as const
     }),
   )
 }
+
+/**
+ * `src/<module>/index.ts` files where a type-only alias of a symbol (`export type { IO as IOType }`)
+ * comes before the value export of the same symbol (`export { IO }`). TypeDoc then names the symbol's
+ * pages after the alias, and `IO` itself gets none.
+ */
+const aliasFirstIndexes = (): ReadonlyArray<string> =>
+  readdirSync(join(PACKAGE_ROOT, "src"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(PACKAGE_ROOT, "src", entry.name, "index.ts")))
+    .flatMap((entry) => {
+      const file = join("src", entry.name, "index.ts")
+      const text = readFileSync(join(PACKAGE_ROOT, file), "utf8")
+      const valueAt = (name: string): number =>
+        [...text.matchAll(/^export \{([^}]*)\} from/gm)].find((m) =>
+          (m[1] ?? "").split(",").some((spec) => spec.trim() === name),
+        )?.index ?? -1
+      return [...text.matchAll(/^export type \{([^}]*)\} from/gm)].flatMap((m) =>
+        (m[1] ?? "").split(",").flatMap((spec) => {
+          const [, original = "", alias] = /^\s*(\w+)\s+as\s+(\w+)\s*$/.exec(spec) ?? []
+          const value = alias === undefined ? -1 : valueAt(original)
+          return value > (m.index ?? 0)
+            ? [`${file}: type ${original} as ${alias} comes before export { ${original} }`]
+            : []
+        }),
+      )
+    })
 
 describe("docs site links", () => {
   it("every API reference link names a real export in the folder TypeDoc writes it to", () => {
@@ -86,6 +121,10 @@ describe("docs site links", () => {
       return folders.get(name)?.has(folder) === true ? [] : [`${file}: ${url}`]
     })
     expect(broken).toEqual([])
+  })
+
+  it("module indexes export a value before its type-only alias, so TypeDoc names the pages after the value", () => {
+    expect(aliasFirstIndexes()).toEqual([])
   })
 
   it("has API reference links to check", () => {
