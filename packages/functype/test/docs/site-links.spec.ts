@@ -24,7 +24,7 @@ const SITE_DIRS = ["site/src/pages", "site/src/content", "site/src/components", 
 
 const siteFiles = (): ReadonlyArray<string> =>
   SITE_DIRS.flatMap((dir) =>
-    readdirSync(join(REPO_ROOT, dir))
+    readdirSync(join(REPO_ROOT, dir), { recursive: true, encoding: "utf8" })
       .filter((file) => /\.(astro|md|tsx)$/.test(file))
       .map((file) => join(dir, file)),
   )
