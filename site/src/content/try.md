@@ -136,4 +136,4 @@ tryValue.toPromise(); // Rejected or Resolved Promise
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/try_.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Try.html)

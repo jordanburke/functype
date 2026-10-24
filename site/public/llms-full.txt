@@ -1,4 +1,4 @@
-# Functype v1.19.0
+# Functype v1.20.0
 
 > A functional programming library for TypeScript, using immutable data structures and type classes, with Scala-inspired patterns.
 
@@ -1615,7 +1615,7 @@ option.toPromise(); // Rejected or Resolved Promise
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/option.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Option.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -1768,7 +1768,7 @@ either.toPromise(); // Rejected for Left, Resolved for Right
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/either.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/EitherBase.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -1913,7 +1913,7 @@ tryValue.toPromise(); // Rejected or Resolved Promise
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/try_.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Try.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -2070,7 +2070,7 @@ list.headOption; // Option<A> for first element
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/list.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/List.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -2168,7 +2168,7 @@ List([1, 1, 2]).toSet(); // Set(1, 2)
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/api-docs/interfaces/Set.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Set.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -2323,7 +2323,7 @@ Task is going away. functype 2.0 removes it.
 
 ## Overview
 
-Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://jordanburke.github.io/functype/api-docs/variables/Task.html).
+Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://functype.org/api-docs/variables/Task.html).
 
 ## Moving from Task to IO
 
@@ -2712,7 +2712,7 @@ IO.iterate(
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/io.html)
+See full API documentation at functype API docs: [IO's methods](https://functype.org/api-docs/interfaces/IO.html) and [its constructors](https://functype.org/api-docs/variables/IO.html) (`IO.sync`, `IO.succeed`, `IO.tryPromise` and the rest)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -3279,7 +3279,7 @@ Http.post("/api/form", {
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/fetch.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/variables/Http.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -3676,7 +3676,7 @@ const result = Do(function* () {
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/do.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/functions/Do.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -3869,7 +3869,7 @@ const result = Match(status)
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/conditional.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/types/Match.html)
 
 
 ────────────────────────────────────────────────────────────────────────────────
@@ -4337,7 +4337,7 @@ MIT
 ## API Reference
 ────────────────────────────────────────────────────────────────────────────────
 
-# Functype API reference (v1.19.0)
+# Functype API reference (v1.20.0)
 
 Generated from the functype CLI data — the same source as `npx functype` and the MCP server's `search_docs`. Types are grouped as in the CLI overview.
 
@@ -4698,6 +4698,7 @@ Implements: Foldable, Functor, Iterable, Monad, Serializable
 
 - `LazyList(iterable)`
 - `LazyList.from(a, b, ...)`
+- `LazyList.of(a, b, ...)`
 - `LazyList.range(start, end)`
 - `LazyList.iterate(seed, f)`
 - `LazyList.generate(f)`

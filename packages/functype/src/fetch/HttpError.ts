@@ -108,4 +108,4 @@ const HttpErrorCompanion = {
   match,
 }
 
-export const HttpError = Companion({} as { readonly _tag: "HttpError" }, HttpErrorCompanion)
+export const HttpError = Companion({ _tag: "HttpError" } as const, HttpErrorCompanion)

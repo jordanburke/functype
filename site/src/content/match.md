@@ -184,4 +184,4 @@ const result = Match(status)
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://jordanburke.github.io/functype/modules/conditional.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/types/Match.html)

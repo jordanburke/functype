@@ -283,6 +283,7 @@ export const TYPES: Record<string, TypeData> = {
       create: [
         "LazyList(iterable)",
         "LazyList.from(a, b, ...)",
+        "LazyList.of(a, b, ...)",
         "LazyList.range(start, end)",
         "LazyList.iterate(seed, f)",
         "LazyList.generate(f)",

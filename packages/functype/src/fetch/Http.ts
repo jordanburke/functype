@@ -412,4 +412,4 @@ const HttpCompanion = {
   client,
 }
 
-export const Http = Companion({} as { readonly _tag: "Http" }, HttpCompanion)
+export const Http = Companion({ _tag: "Http" } as const, HttpCompanion)
