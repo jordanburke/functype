@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.21.0 - 2026-10-26
+
 **eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
 
 - `no-getOrThrow-in-render` reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component's or hook's own body, where a missing value throws during render and unmounts the tree. A call guarded on the same value is not reported: inside a branch whose test proves the value is there (`isSome()`, `!o.isNone()`, `isEmpty`, through `!` / `&&` / `||`), or after an early return or throw on the missing case, an else-if chain whose branches all exit, or `invariant(o.isSome(), …)`, and neither is `.orThrow(error)` or code in an event handler or effect.

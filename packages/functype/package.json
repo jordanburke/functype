@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "1.20.0",
+  "version": "1.21.0",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "keywords": [
