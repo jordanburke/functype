@@ -155,7 +155,7 @@ agent-written docs, many of them names that never existed in functype but do in 
 ### Principles
 
 - **OO with Companion.** Per-value operations are instance methods you chain
-  (`opt.map(f).getOrElse(() => 0)`). Constructors, guards and multi-value operations live on the
+  (`opt.map(f).getOrElse(() => 0)`, the 2.0 shape). Constructors, guards and multi-value operations live on the
   companion (`Option.from`, `Option.isSome(o)`, `Either.traverse`). Effect and fp-ts are references for
   vocabulary, not for call shape: no data-first statics like `Option.map(o, f)` and no standalone
   `pipe(x, f, g)`. For shape, compare OO-method libraries: Scala, Kotlin, Rust, Java, native JS
@@ -188,9 +188,12 @@ A script under `scripts/`, never in `pnpm validate`: it needs an API key and its
   name. Fix tasks, scoring and thresholds before the first run.
 - **Sample:** 12–15 tasks × 3 Claude tiers × 5 samples. A name counts only if two tiers miss it.
   Report per-task miss rates, not raw counts.
-- **Classify by TypeScript diagnostic:** TS2339 on an instance type is a name miss; TS2339 on the
-  companion is a shape miss toward statics; TS2305 is a missing export; TS2554/TS2345 is a signature
-  miss; a runtime failure after a clean compile is the compiles-but-wrong case.
+- **Classify by TypeScript diagnostic:** TS2339 or TS2551 ("did you mean") on an instance type is a
+  name miss. On the companion it is a shape miss toward statics only when the name exists on the
+  instance type (`Option.map(o, f)`); otherwise it is a name miss (`Try.sucess(1)`). TS2305 or TS2724
+  is a missing export. TS2554 or TS2345 is a signature miss. A runtime failure after a clean compile is
+  the compiles-but-wrong case. TS2551 matters most: near-miss names such as `getOrElse` on 1.x produce
+  it, not TS2339.
 - **Three exposure conditions:** zero context; the `.d.ts` pasted in; agentic with compiler feedback.
 - Run once on 1.x to build the rename list, and again on the 2.0 API before release. The second run
   checks that no guess moved from "works or fails" to "compiles but wrong".
@@ -199,37 +202,39 @@ A script under `scripts/`, never in `pnpm validate`: it needs an API key and its
 
 ### Candidates
 
-| Candidate                                                                                                                                                                                 | Status                                                                                                                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| One error-and-tap set on every type: `mapError`, `tap`, `tapError` (Option gains `tap`; Try gains `mapError`, `tapError`)                                                                 | 1.x additive. IO and Lazy already use these names, and Effect v4 uses `mapError`                                                |
-| `either.getLeft()` / `getRight()`, returning `Option`                                                                                                                                     | 1.x additive. Effect v3's returns an `Option` too, so a raw-value guess fails to compile                                        |
-| "Did you mean" lint rule, with the same map in the MCP server's `validate_code` (`get` → `orThrow`, `andThen` → `flatMap`/`zipRight`, `mapFailure` → `mapError`, `fromNullable` → `from`) | 1.x additive                                                                                                                    |
-| `List.add` → `append`                                                                                                                                                                     | 2.0. List already has `prepend`; Effect uses `append`/`prepend`. `Set.add` stays, matching native `Set`                         |
-| `Either.mapLeft` → `mapError`                                                                                                                                                             | 2.0 candidate, so the error mapper has one name everywhere                                                                      |
-| Cond `.else` → `.otherwise`, and delete `elseWhen` (it has the same code as `when`)                                                                                                       | 2.0. `.otherwise` follows ts-pattern                                                                                            |
-| `Match.default` → `.otherwise`                                                                                                                                                            | test decides; no evidence yet                                                                                                   |
-| `exists` → `some`                                                                                                                                                                         | test decides. `some` fits List and Set next to `every`; Effect keeps `Option.exists`                                            |
-| `run()` / `runEither()`, as a family with `runSync`                                                                                                                                       | test decides the names. A 1.x `run()` call can't be made to fail to compile, so this relies on the upgrade tool's exact rewrite |
-| `getOrElse(() => v)` / `orElse(() => opt)`, lazy only                                                                                                                                     | decided in #276 §2; a positive control for the test                                                                             |
-| Variadic `Tuple(a, b)`                                                                                                                                                                    | dropped: an old `Tuple([1, 2])` would compile as a tuple holding one array. `Tuple.of(1, 2)` already exists                     |
-| `Option.get()`, `IO.andThen`, data-first statics, a standalone `pipe`                                                                                                                     | don't add. `map.get(k).get()` would read naturally and be the unsafe path                                                       |
-| `Task.sync`                                                                                                                                                                               | moot: Task is deleted in 2.0 and `IO.sync` replaces it                                                                          |
+| Candidate                                                                                                                                                                                                                                  | Status                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| One error-and-tap set on every type: `mapError`, `tap`, `tapError` (Option gains `tap`; Try gains `mapError`, `tapError`)                                                                                                                  | 1.x additive. IO has all three, Lazy has `tap`/`tapError`, and Effect v4 uses `mapError`                                        |
+| `either.getLeft()` / `getRight()`, returning `Option`                                                                                                                                                                                      | 1.x additive. Effect v3's returns an `Option` too, so a raw-value guess fails to compile                                        |
+| "Did you mean" lint rule, with the same map in the MCP server's `validate_code` (`get` → `orThrow`, `andThen` → `flatMap`/`zipRight`, `mapFailure` → `mapError`, and on Option only `fromNullable` → `from`; `Either.fromNullable` exists) | 1.x additive                                                                                                                    |
+| `List.add` → `append`                                                                                                                                                                                                                      | 2.0. List already has `prepend`; Effect uses `append`/`prepend`. `Set.add` stays, matching native `Set`                         |
+| `Either.mapLeft` → `mapError`                                                                                                                                                                                                              | 2.0 candidate, so the error mapper has one name everywhere                                                                      |
+| Cond `.else` → `.otherwise`, and delete `elseWhen` (it has the same code as `when`)                                                                                                                                                        | 2.0. `.otherwise` follows ts-pattern                                                                                            |
+| `Match.default` → `.otherwise`                                                                                                                                                                                                             | test decides; no evidence yet                                                                                                   |
+| `exists` → `some`                                                                                                                                                                                                                          | test decides. `some` fits List and Set next to `every`; Effect keeps `Option.exists`                                            |
+| `run()` / `runEither()`, as a family with `runSync`                                                                                                                                                                                        | test decides the names. A 1.x `run()` call can't be made to fail to compile, so this relies on the upgrade tool's exact rewrite |
+| `getOrElse(() => v)` / `orElse(() => opt)`, lazy only                                                                                                                                                                                      | decided in #276 §2; a positive control for the test                                                                             |
+| Variadic `Tuple(a, b)`                                                                                                                                                                                                                     | dropped: an old `Tuple([1, 2])` would compile as a tuple holding one array. `Tuple.of(1, 2)` already exists                     |
+| `Option.get()`, `IO.andThen`, data-first statics, a standalone `pipe`                                                                                                                                                                      | don't add. `map.get(k).get()` would read naturally and be the unsafe path                                                       |
+| `Task.sync`                                                                                                                                                                                                                                | moot: Task is deleted in 2.0 and `IO.sync` replaces it                                                                          |
 
 ### Effect v4 renamed `Either` to `Result`
 
 Effect's v3→v4 migration guide renames every `Either` API, with no alias: `Left`/`Right` →
 `Failure`/`Success`, `isLeft` → `isFailure`, `mapLeft` → `mapError`, `getLeft` → `getFailure`,
-`fromNullable` → `fromNullishOr`. v4 was a release candidate as of 2026-10. functype keeps `Either`; the
+`fromNullable` → `fromNullishOr`. v4 shipped as 4.0.0 on 2026-10-01, and v3 continues on npm's `prev` tag. functype keeps `Either`; the
 test should include an Either task to see whether agents start guessing `Result`.
 
 ### Raised in the 2.0 review, undecided
 
 - **Sibling peer floors.** On `main`, functype-os, functype-react and functype-log accept old cores
-  (`>=1.13.0`, `>=1.14.0`, `>=0.60.0`) and call the methods #276 §2 renames. Raise every peer floor to
+  (`>=1.13.0`, `>=1.14.0`, `>=0.60.0`), and functype-os and functype-react call the methods #276 §2
+  renames (`.or(…)`, `.orElse(…)`). Raise every peer floor to
   `>=2.0.0` at the cut, and consider a `check-publish-safety` check that peer floors match the
   family's major.
-- **One Node floor.** The packages disagree: none, `>=18.17.0` and `>=20.20.0`. Node 22 would let
-  `src/internal/signal.ts` (a stand-in for `AbortSignal.any`) go.
+- **One Node floor.** The packages disagree: none, `>=18.17.0` and `>=20.20.0`. `AbortSignal.any`
+  needs Node 20.3 or later, so any 20.x floor at or above that lets `src/internal/signal.ts` (its
+  stand-in) go.
 - **Serialized errors.** `Try` serializes an `Error` with name, message and stack; `Either`, `Option`
   and `List` serialize it as `{}`. Unifying them changes the wire format, so it's a 2.0 change, and the
   `stack` field needs a decision because it can leak file paths.
