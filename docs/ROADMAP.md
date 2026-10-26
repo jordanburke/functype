@@ -233,8 +233,8 @@ test should include an Either task to see whether agents start guessing `Result`
   `>=2.0.0` at the cut, and consider a `check-publish-safety` check that peer floors match the
   family's major.
 - **One Node floor.** The packages disagree: none, `>=18.17.0` and `>=20.20.0`. `AbortSignal.any`
-  needs Node 20.3 or later, so any 20.x floor at or above that lets `src/internal/signal.ts` (its
-  stand-in) go.
+  exists from Node 18.17.0 and 20.3.0, so every floor the packages declare already covers it.
+  `src/internal/signal.ts` (its stand-in) can go once functype, which declares none, sets one.
 - **Serialized errors.** `Try` serializes an `Error` with name, message and stack; `Either`, `Option`
   and `List` serialize it as `{}`. Unifying them changes the wire format, so it's a 2.0 change, and the
   `stack` field needs a decision because it can leak file paths.
