@@ -1,7 +1,9 @@
 import collectionNaming from "./collection-naming"
+import mustFoldOnComponentReturn from "./must-fold-on-component-return"
 import noArrayMutation from "./no-array-mutation"
 import noFloatingIo from "./no-floating-io"
 import noGetUnsafe from "./no-get-unsafe"
+import noGetOrThrowInRender from "./no-getOrThrow-in-render"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
 import preferDoNotation from "./prefer-do-notation"
@@ -17,8 +19,10 @@ import preferTry from "./prefer-try"
 
 export {
   collectionNaming,
+  mustFoldOnComponentReturn,
   noArrayMutation,
   noFloatingIo,
+  noGetOrThrowInRender,
   noGetUnsafe,
   noImperativeLoops,
   noLet,
@@ -51,4 +55,6 @@ export default {
   "collection-naming": collectionNaming,
   "no-array-mutation": noArrayMutation,
   "no-floating-io": noFloatingIo,
+  "no-getOrThrow-in-render": noGetOrThrowInRender,
+  "must-fold-on-component-return": mustFoldOnComponentReturn,
 }

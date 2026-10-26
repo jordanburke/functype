@@ -4,13 +4,7 @@ import type { ASTNode } from "../types/ast"
 import { childNodes, descendants } from "../utils/ast-walk"
 import { containsAwait } from "../utils/async-detection"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
-
-/** Methods on a monadic value that mean "this is the Some/Right/Success path." */
-const POSITIVE_PREDICATES: ReadonlySet<string> = new Set(["isSome", "isRight", "isSuccess"])
-/** Methods that mean "this is the None/Left/Failure path." */
-// `isEmpty` is deliberately absent: it is a property on every functype container, never a method, so
-// `x.isEmpty()` is not functype code (and on a List, `.fold` is a reduce, not a branch).
-const NEGATIVE_PREDICATES: ReadonlySet<string> = new Set(["isNone", "isLeft", "isFailure"])
+import { compact, NEGATIVE_PREDICATES, POSITIVE_PREDICATES } from "../utils/functype-predicates"
 
 /**
  * How each container's fold exposes its failure side. `fold(onFailure, onSuccess)` everywhere, but
@@ -59,9 +53,6 @@ function extractMonadicTest(
   if (NEGATIVE_PREDICATES.has(methodName)) return { obj, isNegated: true, failure }
   return null
 }
-
-/** Source text with all whitespace removed — receivers match however they are line-broken. */
-const compact = (text: string): string => text.replace(/\s+/g, "")
 
 /** Which reads of the narrowed receiver a fold parameter replaces. */
 type Reads = { readonly members: ReadonlyArray<string>; readonly methods: ReadonlyArray<string> }

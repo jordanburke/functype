@@ -6,6 +6,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
+
+- `no-getOrThrow-in-render` reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component's or hook's own body, where a missing value throws during render and unmounts the tree. A call guarded by `isSome()` / `isRight()` / `isSuccess()` on the same value, or after an early return on the other case, is not reported, and neither is `.orThrow(error)` or code in an event handler or effect.
+- `must-fold-on-component-return` reports a component that picks what it renders with an early return on `isNone()` / `isLeft()` / … or with `isSome() && <X />`, and points at `.fold(…)` or `<MatchOption>` / `<MatchEither>` / `<MatchTry>`. Ternaries and if/else stay `prefer-fold`'s, so nothing is reported twice.
+- Both honor `@interop <reason>`, work without type information, and with it require the receiver to be a functype container. functype-react's README now says how to turn them on; it had promised them for a later release.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.

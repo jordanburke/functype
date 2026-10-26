@@ -46,6 +46,14 @@ describe("strict preset", () => {
     expect(configs.recommended!.rules["functype/no-floating-io"]).toBe("off")
   })
 
+  it.each(["functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
+    "warns on the React rule %s, while it is measured",
+    (rule) => {
+      expect(configs.strict!.rules[rule]).toBe("warn")
+      expect(configs.recommended!.rules[rule]).toBe("off")
+    },
+  )
+
   it("is never looser than recommended", () => {
     const rank = { off: 0, warn: 1, error: 2 } as const
     const recommended = configs.recommended!.rules

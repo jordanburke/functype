@@ -25,6 +25,12 @@
  * no-floating-io (1.17) is off here and `warn` in strict while it is measured: 0 false positives across
  * ~1,340 IO-typed calls in five codebases, but no real hits yet either. 2.0 decides `recommended` after
  * measuring it against functype-os, whose async methods return IO there. Type-aware, like no-array-mutation.
+ *
+ * no-getOrThrow-in-render and must-fold-on-component-return are React rules: they fire only inside a
+ * component (a PascalCase function with JSX) or a hook (`use*`), so non-React code rarely trips them (a
+ * non-React function named `use*` is read as a hook). Both are new and unmeasured on real React code, so
+ * they start where no-floating-io did: off here, `warn` in strict. They work without type information and
+ * are more precise with it.
  */
 const recommendedRules = {
   "functype/no-let": "error",
@@ -43,6 +49,8 @@ const recommendedRules = {
   "functype/prefer-list": "off",
   "functype/no-array-mutation": "off",
   "functype/no-floating-io": "off",
+  "functype/no-getOrThrow-in-render": "off",
+  "functype/must-fold-on-component-return": "off",
 }
 
 export default recommendedRules

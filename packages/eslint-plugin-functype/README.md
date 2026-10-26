@@ -27,24 +27,26 @@ export default [functype.configs.strict]
 
 ## Rules
 
-| Rule                           | Recommended | Strict | Description                                                                              |
-| ------------------------------ | :---------: | :----: | ---------------------------------------------------------------------------------------- |
-| `functype/no-let`              |    error    | error  | Use `const`; no reassignment                                                             |
-| `functype/no-imperative-loops` |    error    | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops               |
-| `functype/prefer-functype-map` |    error    | error  | Use functype `Map` instead of a native `Map` you only read                               |
-| `functype/prefer-functype-set` |    error    | error  | Use functype `Set` instead of a native `Set` you only read                               |
-| `functype/collection-naming`   |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map` |
-| `functype/prefer-map`          |    error    | error  | Use `map` instead of pushing inside `forEach`                                            |
-| `functype/prefer-fold`         |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                               |
-| `functype/prefer-option`       |    warn     | error  | Use `Option` instead of `null`/`undefined`                                               |
-| `functype/prefer-either`       |    warn     | error  | Use `Either` for typed domain errors instead of `throw`                                  |
-| `functype/prefer-try`          |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                       |
-| `functype/prefer-flatmap`      |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                                                  |
-| `functype/prefer-do-notation`  |    warn     |  warn  | Use `Do` notation for chained operations                                                 |
-| `functype/no-get-unsafe`       |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                   |
-| `functype/prefer-list`         |     off     |  warn  | Use `List` instead of native arrays                                                      |
-| `functype/no-array-mutation`   |     off     | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one           |
-| `functype/no-floating-io`      |     off     |  warn  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it         |
+| Rule                                     | Recommended | Strict | Description                                                                                  |
+| ---------------------------------------- | :---------: | :----: | -------------------------------------------------------------------------------------------- |
+| `functype/no-let`                        |    error    | error  | Use `const`; no reassignment                                                                 |
+| `functype/no-imperative-loops`           |    error    | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
+| `functype/prefer-functype-map`           |    error    | error  | Use functype `Map` instead of a native `Map` you only read                                   |
+| `functype/prefer-functype-set`           |    error    | error  | Use functype `Set` instead of a native `Set` you only read                                   |
+| `functype/collection-naming`             |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
+| `functype/prefer-map`                    |    error    | error  | Use `map` instead of pushing inside `forEach`                                                |
+| `functype/prefer-fold`                   |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
+| `functype/prefer-option`                 |    warn     | error  | Use `Option` instead of `null`/`undefined`                                                   |
+| `functype/prefer-either`                 |    warn     | error  | Use `Either` for typed domain errors instead of `throw`                                      |
+| `functype/prefer-try`                    |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
+| `functype/prefer-flatmap`                |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                                                      |
+| `functype/prefer-do-notation`            |    warn     |  warn  | Use `Do` notation for chained operations                                                     |
+| `functype/no-get-unsafe`                 |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
+| `functype/prefer-list`                   |     off     |  warn  | Use `List` instead of native arrays                                                          |
+| `functype/no-array-mutation`             |     off     | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
+| `functype/no-floating-io`                |     off     |  warn  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
+| `functype/no-getOrThrow-in-render`       |     off     |  warn  | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
+| `functype/must-fold-on-component-return` |     off     |  warn  | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
 ### Severity policy
 
@@ -83,7 +85,7 @@ const value = either.orThrow((left) => new StepError(left.message))
 
 `invariant()` covers one statement and narrows the condition for the code after it, so a function can mix bug checks with `Either`-returning failures. `@interop` rules:
 
-- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered. Honored by `prefer-either`, `prefer-option`, `prefer-fold` and `prefer-try`.
+- **Scope:** the tagged declaration and everything nested in it. That can be a function, `const`, method, class field, object property, type alias or interface. A sibling declaration is not covered. Honored by `prefer-either`, `prefer-option`, `prefer-fold`, `prefer-try`, `no-get-unsafe`, `no-getOrThrow-in-render` and `must-fold-on-component-return`.
 - **The reason is required**, on the same line as the tag. A bare `@interop` exempts nothing.
 - **Only JSDoc (`/** … */`) counts.** A `//` comment mentioning the tag does not.
 - **Opt out** per rule with `allowInteropMarker: false`.
@@ -195,6 +197,89 @@ void save(user) // fine: a deliberate drop
 **It only runs with type-aware linting** (`parserOptions.projectService`). It recognizes `IO` by its type (it has `runExit` and `provideLayer`), whatever the call is named. Without type information it reports nothing.
 
 Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and civala.ai's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
+
+### React rules
+
+Two rules are for React code. They fire only inside a **component** (a function named in PascalCase whose body has JSX, including one wrapped in `memo` or `forwardRef`) or a **hook** (a function named `use` + a capital letter), so other code rarely trips them. The one exception is a non-React function whose name starts with `use` + a capital letter, which is read as a hook. Both are `off` in `recommended` and `warn` in `strict` while they're measured on real React code. To turn them on with `recommended`:
+
+```js
+import functype from "eslint-plugin-functype"
+
+export default [
+  functype.configs.recommended,
+  {
+    files: ["**/*.tsx", "**/*.jsx"],
+    rules: {
+      "functype/no-getOrThrow-in-render": "error",
+      "functype/must-fold-on-component-return": "warn",
+    },
+  },
+]
+```
+
+Both work without type information. With it (`parserOptions.projectService`), the receiver must also be a functype container, so an unrelated object that happens to have an `orThrow` or `isSome` method is not reported.
+
+Only the component's or hook's own body counts as render. An event handler, an effect, or a callback passed to `.map` is a separate function, so a call there is not reported. That also means a call inside a callback that does run during render (`useMemo(() => …)`, `items.map((o) => o.orThrow())` in JSX) is missed: the rules prefer missing a case to reporting valid code.
+
+### `functype/no-getOrThrow-in-render`
+
+Reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component or hook body. When the value is missing it throws during render, and React unmounts the tree up to the nearest error boundary.
+
+```tsx
+function Profile({ user }: { user: Option<User> }) {
+  const u = user.orThrow() // reported → user.fold(() => <SignIn />, (u) => <Card user={u} />)
+  return <Card user={u} />
+}
+
+user.isSome() ? <Card user={user.orThrow()} /> : null // fine: guarded, it can't throw
+if (user.isNone()) return null // …and every later user.orThrow() in this body is guarded too
+const u = user.orThrow((e) => new NotFound(e)) // fine: a named error, sent to the error boundary on purpose
+<button onClick={() => save(user.orThrow())} /> // fine: an event handler runs after render
+```
+
+A call is guarded when it sits in the branch of an `if`, a ternary or an `&&` whose test proves the value is there on the same receiver (`user.isSome()`, `e.isRight()`, `t.isSuccess()`), or after an early `return` / `throw` on the other case. `.expect(handler)` is not reported, because its handler is the chosen throw. The rule is named after `getOrThrow`, the method's older name; functype's containers spell it `orThrow`.
+
+| Option               | Default | Description                                                 |
+| -------------------- | :-----: | ----------------------------------------------------------- |
+| `allowInteropMarker` | `true`  | Skip calls inside a declaration tagged `@interop <reason>`. |
+
+`no-get-unsafe` reports the same calls anywhere. This rule is narrower and more confident: it reports only where the throw lands in render.
+
+### `functype/must-fold-on-component-return`
+
+Reports a component that chooses what it renders by asking an `Option`, `Either` or `Try` which case it holds, in the two shapes `prefer-fold` doesn't report:
+
+- an **early return**: `if (user.isNone()) return <SignIn />` (or `return null`), with the other case rendered below it;
+- a **short-circuit**: `{user.isSome() && <Card />}`, which renders one case and silently drops the other.
+
+```tsx
+function Profile({ user }: { user: Option<User> }) {
+  if (user.isNone()) return <SignIn /> // reported
+  return <Card user={user.orThrow()} />
+}
+
+// → one expression for both cases:
+return user.fold(
+  () => <SignIn />,
+  (u) => <Card user={u} />,
+)
+// → or, from functype-react:
+return <MatchOption value={user} Some={(u) => <Card user={u} />} None={() => <SignIn />} />
+
+{
+  user.isSome() && <Badge />
+} // reported → user.fold(() => null, () => <Badge />)
+```
+
+The message names the `Match` component that fits: `<MatchOption>` for `isSome`/`isNone`, `<MatchEither>` for `isLeft`/`isRight`, `<MatchTry>` for `isSuccess`/`isFailure`.
+
+A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this rule leaves it alone rather than report it twice. Only a predicate _call_ counts: `state.isPending` on a `useIO` result and `items.isEmpty` are properties, and are never reported. A guard that does other work before it returns, or returns something other than JSX or `null`, is not reported either. The rule reports only; there are no suggestions, because the rewrite moves code between branches.
+
+| Option               | Default | Description                                                |
+| -------------------- | :-----: | ---------------------------------------------------------- |
+| `allowInteropMarker` | `true`  | Skip code inside a declaration tagged `@interop <reason>`. |
+
+Measured (2026-10-25) with both rules on functype-react's source and tests (type-aware), and on agent-todo, mnemons and civala.ai (1,403 files, without type information): no reports. None of that code uses these shapes in a component, and `useIOValue`'s `exit.orThrow()` is guarded by `exit.isSuccess()`, so the measurement shows the false-positive rate, not the hit rate.
 
 ### `functype/no-get-unsafe`
 
