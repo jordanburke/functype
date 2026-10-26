@@ -6,6 +6,21 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **functype-os and functype-react are back on the 1.x API.** 1.21.0 was cut from `main`, the 2.0 branch, so those two packages shipped 2.0's breaking changes in a minor release: functype-os's async methods returned `IO` instead of `TaskResult`, and functype-react's `useTask` / `useTaskPromise` / `useTaskValue` / `<TaskBoundary>` became `useIO` / `useIOPromise` / `useIOValue` / `<AsyncBoundary>`. 1.21.1 restores the 1.20.0 API for both. If you already moved to the `IO` names on 1.21.0, pin those two packages to `1.21.0` until 2.0.
+- **eslint-plugin-functype keeps the two React rules from 2.121.0** (`no-getOrThrow-in-render` and `must-fold-on-component-return`), so 2.121.1 doesn't remove a rule anyone has turned on.
+- **`pnpm release` refuses a 1.x release from `main`.** While `release/1.x` exists, `main` releases only the next major, so this can't happen again.
+- **functype-mcp-server's `fast-uri` is 3.1.9**, which fixes four advisories (GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp). It reaches the server through ajv.
+
+## 1.21.0 - 2026-10-26
+
+Released from `main` by mistake: functype-os and functype-react carried 2.0's breaking `IO` changes, reverted in 1.21.1. The core `functype` package is the same as 1.20.0.
+
+**eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
+
+- `no-getOrThrow-in-render` reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component's or hook's own body, where a missing value throws during render and unmounts the tree. A call guarded on the same value is not reported: inside a branch whose test proves the value is there (`isSome()`, `!o.isNone()`, `isEmpty`, through `!` / `&&` / `||`), or after an early return or throw on the missing case, an else-if chain whose branches all exit, or `invariant(o.isSome(), …)`, and neither is `.orThrow(error)` or code in an event handler or effect.
+- `must-fold-on-component-return` reports a component that picks what it renders with an early return on `isNone()` / `isLeft()` / … or with `isSome() && <X />`, and points at `.fold(…)` or `<MatchOption>` / `<MatchEither>` / `<MatchTry>`. Ternaries and if/else stay `prefer-fold`'s, so nothing is reported twice.
+- Both honor `@interop <reason>`, work without type information, and with it require the receiver to be a functype container. functype-react's README now says how to turn them on; it had promised them for a later release.
+
 ## 1.20.0 - 2026-10-24
 
 - **`toString()` prints an `Error` by name and message.** `Try`, `Either` and `Option` printed an `Error` as `{}`, because an Error's name and message aren't enumerable, so a failed `Try` read `Failure({}))`. It now reads `Failure(TypeError: bad input)`, and `Left(new Error("boom"))` reads `Left(Error: boom)`. `Try`'s `Failure` also lost a stray `)`. An Error from another realm (a `vm` context or iframe) counts too, and an Error whose `toString` or `message` throws falls back to the old output instead of throwing. Only `toString()` changed: serialization (`serialize()`, `toJSON()`) prints an `Error` as before.
