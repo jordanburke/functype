@@ -4241,7 +4241,12 @@ const u = user.orThrow((e) => new NotFound(e)) // fine: a named error, sent to t
 <button onClick={() => save(user.orThrow())} /> // fine: an event handler runs after render
 ```
 
-A call is guarded when it sits in the branch of an `if`, a ternary or an `&&` whose test proves the value is there on the same receiver (`user.isSome()`, `e.isRight()`, `t.isSuccess()`), or after an early `return` / `throw` on the other case. `.expect(handler)` is not reported, because its handler is the chosen throw. The rule is named after `getOrThrow`, the method's older name; functype's containers spell it `orThrow`.
+A call is guarded when its test proves the value is there on the same receiver:
+
+- it sits in the branch of an `if`, a ternary, an `&&` or an `||` that only runs once the value is there: `user.isSome() ? … : …`, `!user.isSome() ? null : …`, `busy && user.isSome() ? … : …`, `user.isNone() || …`;
+- it comes after a statement that only lets control past once the value is there: an early `return` / `throw` on the missing case (`if (!user.isSome()) return null`, `if (busy || user.isNone()) return <Spinner />`, `if (user.isEmpty) return null`), an if / else-if chain whose branches all exit, or `invariant(user.isSome(), "…")`.
+
+The test can be `isSome()` / `isRight()` / `isSuccess()`, their opposites, `isEmpty`, and `!`, `&&` and `||` over them. `.expect(handler)` is not reported, because its handler is the chosen throw. The rule is named after `getOrThrow`, the method's older name; functype's containers spell it `orThrow`.
 
 | Option               | Default | Description                                                 |
 | -------------------- | :-----: | ----------------------------------------------------------- |
@@ -4251,9 +4256,9 @@ A call is guarded when it sits in the branch of an `if`, a ternary or an `&&` wh
 
 ### `functype/must-fold-on-component-return`
 
-Reports a component that chooses what it renders by asking an `Option`, `Either` or `Try` which case it holds, in the two shapes `prefer-fold` doesn't report:
+Reports a component that chooses what it renders by asking an `Option`, `Either` or `Try` which case it holds, in the two shapes `prefer-fold` doesn't report at its default options:
 
-- an **early return**: `if (user.isNone()) return <SignIn />` (or `return null`), with the other case rendered below it;
+- an **early return**: `if (user.isNone()) return <SignIn />` (or `return null`, `if (!user.isSome())`, `if (busy || user.isNone())`), with the other case rendered below it;
 - a **short-circuit**: `{user.isSome() && <Card />}`, which renders one case and silently drops the other.
 
 ```tsx
@@ -4270,14 +4275,12 @@ return user.fold(
 // → or, from functype-react:
 return <MatchOption value={user} Some={(u) => <Card user={u} />} None={() => <SignIn />} />
 
-{
-  user.isSome() && <Badge />
-} // reported → user.fold(() => null, () => <Badge />)
+const header = <h1>{user.isSome() && <Badge />}</h1> // reported → {user.fold(() => null, () => <Badge />)}
 ```
 
 The message names the `Match` component that fits: `<MatchOption>` for `isSome`/`isNone`, `<MatchEither>` for `isLeft`/`isRight`, `<MatchTry>` for `isSuccess`/`isFailure`.
 
-A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this rule leaves it alone rather than report it twice. Only a predicate _call_ counts: `state.isPending` on a `useIO` result and `items.isEmpty` are properties, and are never reported. A guard that does other work before it returns, or returns something other than JSX or `null`, is not reported either. The rule reports only; there are no suggestions, because the rewrite moves code between branches.
+A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this rule leaves it alone rather than report it twice. If you turn on `prefer-fold`'s `checkGuards`, an early return followed by an unwrap is reported by both rules. Only a predicate _call_ counts: `state.isPending` on a `useIO` result and `items.isEmpty` are properties, and are never reported. A guard that does other work before it returns, or returns something other than JSX or `null`, is not reported either. The rule reports only; there are no suggestions, because the rewrite moves code between branches.
 
 | Option               | Default | Description                                                |
 | -------------------- | :-----: | ---------------------------------------------------------- |

@@ -2,7 +2,7 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
-import { MATCH_COMPONENT, predicateCall } from "../utils/functype-predicates"
+import { MATCH_COMPONENT, testedPredicate } from "../utils/functype-predicates"
 import { enclosingFunction, producesJSX, renderKind } from "../utils/react-render"
 import { isExtractableByType } from "../utils/type-aware"
 
@@ -16,6 +16,7 @@ import { isExtractableByType } from "../utils/type-aware"
  * A ternary or an if/else on `isSome()` / `isLeft()` / … is `prefer-fold`'s, everywhere, so this rule
  * doesn't report it a second time.
  *
+ * The test may wrap the call: `if (!o.isSome()) return null`, `if (busy || o.isNone()) return <S />`.
  * Only a functype predicate *call* counts. `state.isPending` (a `useIO` result) and `items.isEmpty` are
  * properties, never calls, so they're not reported. With type information the receiver must also be a
  * functype container.
@@ -65,7 +66,7 @@ const rule: Rule.RuleModule = {
 
     /** The predicate `test` calls, when `node` sits directly in a component's body (not a nested callback). */
     const componentPredicate = (node: ASTNode, test: ASTNode) => {
-      const predicate = predicateCall(test, sourceCode)
+      const predicate = testedPredicate(test, sourceCode)
       if (!predicate) return null
       const fn = enclosingFunction(node)
       if (!fn || renderKind(fn) !== "component") return null

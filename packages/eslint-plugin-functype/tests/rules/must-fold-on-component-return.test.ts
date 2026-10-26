@@ -41,6 +41,10 @@ describe("must-fold-on-component-return", () => {
         code: "function Comp({ l1 }) { return <div>{l1.isEmpty && <A />}</div> }",
       },
       {
+        name: "An isEmpty guard is not a predicate call (a List's isEmpty is a plain check)",
+        code: "function Comp({ l1 }) { if (l1.isEmpty) return null; return <A /> }",
+      },
+      {
         name: "A plain boolean guard",
         code: "function Comp({ b1 }) { if (!b1) return null; return <A /> }",
       },
@@ -102,6 +106,42 @@ describe("must-fold-on-component-return", () => {
         "isNone",
         "MatchOption",
       ),
+      {
+        name: "A guard on a negated predicate, which no-getOrThrow-in-render also treats as a guard",
+        ...guard(
+          "function Comp({ o1 }) { if (!o1.isSome()) return null; return <B v={o1.orThrow()} /> }",
+          "o1",
+          "isSome",
+          "MatchOption",
+        ),
+      },
+      {
+        name: "A guard where one disjunct is the predicate",
+        ...guard(
+          "function Comp({ o1, b1 }) { if (b1 || o1.isNone()) return <S />; return <B /> }",
+          "o1",
+          "isNone",
+          "MatchOption",
+        ),
+      },
+      {
+        name: "The last link of an else-if chain is a guard",
+        ...guard(
+          "function Comp({ o1, b1 }) { if (b1) return <B />; else if (o1.isNone()) return null; return <A /> }",
+          "o1",
+          "isNone",
+          "MatchOption",
+        ),
+      },
+      {
+        name: "A short-circuit on a negated predicate",
+        ...shortCircuit(
+          "function Comp({ o1 }) { return <div>{!o1.isSome() && <A />}</div> }",
+          "o1",
+          "isSome",
+          "MatchOption",
+        ),
+      },
       shortCircuit("function Comp({ o1 }) { return <div>{o1.isSome() && <A />}</div> }", "o1", "isSome", "MatchOption"),
       shortCircuit("const Comp = ({ e1 }) => e1.isRight() && <B />", "e1", "isRight", "MatchEither"),
       shortCircuit("function Comp({ t1 }) { return t1.isFailure() && <></> }", "t1", "isFailure", "MatchTry"),

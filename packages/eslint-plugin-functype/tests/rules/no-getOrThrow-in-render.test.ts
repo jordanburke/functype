@@ -69,6 +69,42 @@ describe("no-getOrThrow-in-render", () => {
         code: "function Comp({ o1 }) { if (o1.isNone()) return null; const v = o1.orThrow(); return <A v={v} /> }",
       },
       {
+        name: "An early exit on a negated positive predicate",
+        code: "function Comp({ o1 }) { if (!o1.isSome()) return null; return <A v={o1.orThrow()} /> }",
+      },
+      {
+        name: "An early exit on isEmpty, Option's narrowing property",
+        code: "function Comp({ o1 }) { if (o1.isEmpty) return null; return <A v={o1.orThrow()} /> }",
+      },
+      {
+        name: "An early exit when any disjunct proves the value is missing",
+        code: "function Comp({ o1, b1 }) { if (b1 || o1.isNone()) return <S />; return <A v={o1.orThrow()} /> }",
+      },
+      {
+        name: "An else-if chain whose branches all exit",
+        code: "function Comp({ o1, b1 }) { if (b1) return <B />; else if (o1.isNone()) return null; return <A v={o1.orThrow()} /> }",
+      },
+      {
+        name: "A ternary on a negated predicate",
+        code: "function Comp({ o1 }) { return !o1.isSome() ? null : <A v={o1.orThrow()} /> }",
+      },
+      {
+        name: "A hook that throws on the missing case first",
+        code: "function useThing(o1) { if (!o1.isSome()) throw new Error('e1'); return o1.orThrow() }",
+      },
+      {
+        name: "&& in the positive branch, when a conjunct proves the value is there",
+        code: "function Comp({ o1, b1 }) { return b1 && o1.isSome() ? <A v={o1.orThrow()} /> : null }",
+      },
+      {
+        name: "|| whose left side proves the value missing",
+        code: "function Comp({ o1 }) { return <A v={o1.isNone() || o1.orThrow()} /> }",
+      },
+      {
+        name: "invariant() narrows the code after it",
+        code: 'function Comp({ o1 }) { invariant(o1.isSome(), "m1"); return <A v={o1.orThrow()} /> }',
+      },
+      {
         name: "An @interop declaration with a reason",
         code: `
           /**
@@ -96,6 +132,32 @@ describe("no-getOrThrow-in-render", () => {
       {
         name: "A positive predicate's else branch is the missing case",
         ...reported("function Comp({ o1 }) { return o1.isSome() ? null : <A v={o1.orThrow()} /> }", "o1"),
+      },
+      {
+        name: "An early exit when the value is there proves nothing for the code after it",
+        ...reported("function Comp({ o1 }) { if (!o1.isNone()) return null; return <A v={o1.orThrow()} /> }", "o1"),
+      },
+      {
+        name: "An early exit on a conjunction proves nothing: either side alone may be false",
+        ...reported(
+          "function Comp({ o1, b1 }) { if (b1 && o1.isNone()) return null; return <A v={o1.orThrow()} /> }",
+          "o1",
+        ),
+      },
+      {
+        name: "An else-if chain with a branch that falls through",
+        ...reported(
+          "function Comp({ o1, b1 }) { if (b1) { log1() } else if (o1.isNone()) return null; return <A v={o1.orThrow()} /> }",
+          "o1",
+        ),
+      },
+      {
+        name: "invariant() on another receiver",
+        ...reported('function Comp({ o1, o2 }) { invariant(o2.isSome(), "m1"); return <A v={o1.orThrow()} /> }', "o1"),
+      },
+      {
+        name: "isEmpty on another receiver",
+        ...reported("function Comp({ o1, o2 }) { if (o2.isEmpty) return null; return <A v={o1.orThrow()} /> }", "o1"),
       },
       {
         name: "A bare @interop tag exempts nothing",
