@@ -262,10 +262,36 @@ Both the hooks and the primitives are generic over any `IO<never, E, A>` — not
 - **SSR / RSC**: hooks are client-only and marked with `"use client"`. `<Match>` family components are pure and render fine in Server Components.
 - **React Query**: Tier 5 targets `@tanstack/react-query` v5 (`>=5.0.0`), an optional peer. The `ioQueryFn` / `ioMutationFn` primitives type their context structurally, so they carry no `@tanstack` types and are unaffected by its major-version churn.
 
+## Linting
+
+`eslint-plugin-functype` ships two React rules:
+
+- `functype/no-getOrThrow-in-render` reports a bare `.orThrow()` in a component or hook body, where a missing value would throw during render and unmount the tree.
+- `functype/must-fold-on-component-return` reports a component that picks what it renders with an `isSome()` / `isLeft()` early return or `&&`, instead of `fold` or a `Match` component.
+
+Both are on (`warn`) in `functype.configs.strict`. With `recommended`, turn them on yourself:
+
+```js
+// eslint.config.mjs
+import functype from "eslint-plugin-functype"
+
+export default [
+  functype.configs.recommended,
+  {
+    files: ["**/*.tsx", "**/*.jsx"],
+    rules: {
+      "functype/no-getOrThrow-in-render": "error",
+      "functype/must-fold-on-component-return": "warn",
+    },
+  },
+]
+```
+
+They work without type information and are more precise with it (`parserOptions.projectService`). See the [plugin README](../eslint-plugin-functype/README.md#react-rules) for what each one reports.
+
 ## Deferred to v0.2
 
 - `./optics` subpath (`useLens`, `useOptional`, `useSelector`) — blocked on core not shipping a lens module yet.
-- React-specific ESLint rules (`must-fold-on-component-return`, `no-getOrThrow-in-render`, etc.) — land in `eslint-functype@2.4.0` once the API stabilizes.
 - Codemods, Storybook, cookbook recipes on the Astro site.
 - Playwright browser-based testing for `useIOValue` + `<AsyncBoundary>` (jsdom doesn't unsuspend React 19's `use()` reliably).
 

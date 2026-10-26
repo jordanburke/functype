@@ -9,6 +9,8 @@ const strictRules = {
   "functype/prefer-list": "warn",
   "functype/no-array-mutation": "error",
   "functype/no-floating-io": "warn",
+  "functype/no-getOrThrow-in-render": "warn",
+  "functype/must-fold-on-component-return": "warn",
   "functype/prefer-functype-map": "error",
   "functype/prefer-functype-set": "error",
   "functype/no-imperative-loops": "error",
