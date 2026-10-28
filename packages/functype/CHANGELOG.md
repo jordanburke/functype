@@ -6,14 +6,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **functype-os and functype-react are back on the 1.x API.** 1.21.0 was cut from `main`, the 2.0 branch, so those two packages shipped 2.0's breaking changes in a minor release: functype-os's async methods returned `IO` instead of `TaskResult`, and functype-react's `useTask` / `useTaskPromise` / `useTaskValue` / `<TaskBoundary>` became `useIO` / `useIOPromise` / `useIOValue` / `<AsyncBoundary>`. 1.21.1 restores the 1.20.0 API for both. If you already moved to the `IO` names on 1.21.0, pin those two packages to `1.21.0` until 2.0.
+- **functype-os and functype-react are back on the 1.x API.** 1.21.0 was cut from `main`, the 2.0 branch, so those two packages shipped 2.0's breaking changes in a minor release: functype-os's async methods returned `IO` instead of `TaskResult`, and functype-react's `useTask` / `useTaskPromise` / `useTaskValue` / `<TaskBoundary>` became `useIO` / `useIOPromise` / `useIOValue` / `<AsyncBoundary>`. 1.21.1 restores the 1.20.0 API for both. If you already moved to the `IO` names on 1.21.0, move back to the `Task` names; the `IO` versions return in 2.0.
 - **eslint-plugin-functype keeps the two React rules from 2.121.0** (`no-getOrThrow-in-render` and `must-fold-on-component-return`), so 2.121.1 doesn't remove a rule anyone has turned on.
-- **`pnpm release` refuses a 1.x release from `main`.** While `release/1.x` exists, `main` releases only the next major, so this can't happen again.
-- **functype-mcp-server's `fast-uri` is 3.1.9**, which fixes four advisories (GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp). It reaches the server through ajv.
+- **`pnpm release` refuses a 1.x release from `main`.** While `release/1.x` exists, `main` releases only the next major. The guard takes effect on `main` once this release merges forward.
 
 ## 1.21.0 - 2026-10-26
 
 Released from `main` by mistake: functype-os and functype-react carried 2.0's breaking `IO` changes, reverted in 1.21.1. The core `functype` package is the same as 1.20.0.
+
+- **functype-mcp-server's `fast-uri` is 3.1.9**, which fixes four advisories (GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp). It reaches the server through ajv.
 
 **eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
 

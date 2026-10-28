@@ -121,14 +121,20 @@ if (local !== remote) {
 if (branch === "main" && bumpLevel !== "major") {
   const mainMajor = readPkg("packages/functype").version.split(".")[0];
   const lineBranch = `release/${mainMajor}.x`;
-  const lineExists =
-    spawnSync(
-      "git",
-      ["ls-remote", "--exit-code", "--heads", "origin", lineBranch],
-      {
-        cwd: repoRoot,
-      },
-    ).status === 0;
+  // ls-remote exits 0 when the branch exists and 2 when it doesn't; anything else (offline, auth)
+  // must not read as "no line branch".
+  const lsRemote = spawnSync(
+    "git",
+    ["ls-remote", "--exit-code", "--heads", "origin", lineBranch],
+    { cwd: repoRoot },
+  ).status;
+  if (lsRemote !== 0 && lsRemote !== 2) {
+    console.error(
+      `✗ Could not check origin for ${lineBranch} (git ls-remote exit ${lsRemote}).`,
+    );
+    process.exit(1);
+  }
+  const lineExists = lsRemote === 0;
   if (lineExists) {
     console.error(
       `✗ ${mainMajor}.x releases ship from ${lineBranch}, not main. main releases only the next major.`,
