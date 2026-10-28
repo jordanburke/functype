@@ -7,14 +7,15 @@ inherits rule bias), Task/IO is the long pole and lands across releases._
 Dependency graph: **2** standalone · **4 → 1** (hard ordering) · **5** standalone · **3** spans
 releases independently.
 
-| #   | Workstream                                | Size | Gates                                 |
-| --- | ----------------------------------------- | ---- | ------------------------------------- |
-| 1   | functype-eval Phase 2 bench               | M    | after 4                               |
-| 2   | Positioning doc (vs Effect)               | S    | —                                     |
-| 3   | Task → IO consolidation                   | L    | removal waits for 2.0                 |
-| 4   | ESLint rule aggressiveness audit          | M    | —                                     |
-| 5   | Performance honesty                       | S    | —                                     |
-| 6   | Naming alignment (agent first-guess test) | M    | considerations only; added 2026-10-26 |
+| #   | Workstream                                | Size | Gates                                                                       |
+| --- | ----------------------------------------- | ---- | --------------------------------------------------------------------------- |
+| 1   | functype-eval Phase 2 bench               | M    | after 4                                                                     |
+| 2   | Positioning doc (vs Effect)               | S    | —                                                                           |
+| 3   | Task → IO consolidation                   | L    | removal waits for 2.0                                                       |
+| 4   | ESLint rule aggressiveness audit          | M    | —                                                                           |
+| 5   | Performance honesty                       | S    | —                                                                           |
+| 6   | Naming alignment (agent first-guess test) | M    | considerations only; added 2026-10-26                                       |
+| 7   | Agent tooling: compile-time pressure      | L    | 2.0 roadmap; added 2026-10-28; 7b, 7c and two smaller items can ship on 1.x |
 
 Grounding facts (verified 2026-06-09): `core/task/Task.ts` is 1,062 LOC; IO already has
 interruption semantics (`Exit` with `Interrupted` + fiberId); Task's main consumer is
@@ -238,3 +239,68 @@ test should include an Either task to see whether agents start guessing `Result`
 - **Serialized errors.** `Try` serializes an `Error` with name, message and stack; `Either`, `Option`
   and `List` serialize it as `{}`. Unifying them changes the wire format, so it's a 2.0 change, and the
   `stack` field needs a decision because it can leak file paths.
+
+---
+
+## 7. Agent tooling: compile-time pressure
+
+_Added 2026-10-28 for the 2.0 roadmap, from a review of what Effect ships for coding agents. Workstream 6
+makes an agent's first guess right; this one makes a wrong guess fail where the agent will see it. The
+2.0 plan itself stays in #276 (the 2.0 release plan) and #277 (the 2.0 checklist)._
+
+**Why:** an agent fixes what its build tells it is wrong, and ignores the rest. Michael Arnaldi's AI
+Engineer Europe 2026 talk ("Vibe Engineering Effect Apps") makes this the core practice: turn diagnostics
+into errors, because "Feedback becomes useful back pressure when the agent cannot ignore it." An
+editor-only warning never reaches an agent, and a lint error reaches it only if its loop runs lint.
+
+### What Effect ships (checked 2026-10-28)
+
+- **`@effect/language-service` (0.87.5)**, a TypeScript language service plugin with Effect-specific
+  diagnostics. Examples: `anyUnknownInErrorContext` (`any` or `unknown` in the error or requirements
+  channel), `missingEffectError`, `catchUnfailableEffect` (error handling on an effect whose error type is
+  `never`), `tryCatchInEffectGen`, and `globalErrorInEffectFailure`.
+- **The diagnostics reach `tsc`.** Language service plugins load only in the editor, so
+  `effect-language-service patch` patches the project's `typescript` in `node_modules`, and Effect
+  recommends running it from `prepare`. Effect warnings and errors then fail `tsc`'s exit code by default.
+  `includeSuggestionsInTsc` prints suggestions in `tsc` output too, which the README says is "useful to
+  help steer LLM output".
+- **`@effect/tsgo` (0.63.0)**, a separate build of the same diagnostics for TypeScript-Go (TypeScript 7).
+  It also supports Oxlint, and its setup has a non-interactive mode "for LLM friends".
+- **Agent docs in the package.** The `effect` tarball (4.0.7) ships `AGENTS.md` and `CLAUDE.md`, identical
+  and 433 lines each, written for people using Effect, plus `ai-docs/`: 82 files, 55 of them `.ts` examples, with a
+  `tsconfig.json` that suggests Effect type-checks them in its own repo.
+
+### Where functype stands
+
+- **eslint-plugin-functype has 18 rules**, and seven are `error` in `recommended`. The ones that catch
+  agent mistakes are mostly not: `no-floating-io` (a forgotten `.run()`) and `no-get-unsafe` are `off`.
+- **The MCP server's `validate_code` runs `tsc` only**, so it can't report a lint rule.
+- **TypeScript 7 is `latest` on npm (7.0.2).** typescript-eslint 8.72.1 peers on `typescript >=4.8.4 <6.1.0`,
+  so the plugin's type-aware rules don't run on TypeScript 7 today. functype builds with 6.0.3. Effect
+  answered this with a separate TypeScript-Go build, which suggests a classic language service plugin
+  doesn't carry over (inferred, not verified).
+
+### The layers, cheapest first
+
+| #   | Layer                                  | What it means for functype                                                                                                                                                                                                                                  | Status         |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| 7a  | Types that reject the wrong call       | Where a common wrong guess can get a signature that fails with a readable message, do that. It needs no tooling and works in every editor and in `tsc`. This is workstream 6's "fail to compile" principle applied on purpose                               | 2.0            |
+| 7b  | An agent lint preset                   | A config with every rule that's precise enough at `error`, including `no-floating-io`, `no-get-unsafe` and workstream 6's did-you-mean rule. Each message names the fix, not just the problem                                                               | 1.x additive   |
+| 7c  | `validate_code` reports the lint rules | The MCP tool runs the preset as well as `tsc`, so an agent checking a snippet sees the same errors its build would. To stay additive, lint results go in their own field or behind an option, so today's `success` result doesn't change for the same input | 1.x additive   |
+| 7d  | Diagnostics inside `tsc`               | Effect's approach: a plugin plus a `tsc` patch, or a TypeScript-Go build. A large build with a moving target, so decide after 7a–7c show what lint can't reach                                                                                              | decide for 2.0 |
+| 7e  | Lint that runs on TypeScript 7         | Either wait for typescript-eslint to support TypeScript 7, or port the type-aware rules to Oxlint with `oxlint-tsgolint`, which `@effect/tsgo` already targets                                                                                              | gate for 2.0   |
+
+Diagnostics to consider, with Effect's equivalent: a floating `IO` (`no-floating-io` exists); `any` or
+`unknown` in an `Either` or `IO` error type (`anyUnknownInErrorContext`; `unknown` also swallows a union of
+tagged errors, so `E` can't be narrowed); `try`/`catch` inside `IO.gen` (`tryCatchInEffectGen`); error
+handling on an `IO` whose `E` is `never` (`catchUnfailableEffect`); and `.orThrow()` outside an `@interop`
+boundary.
+
+### Other agent items from the same review
+
+| Item                                                                                                                                                                                                                                                                                                                                   | Status                                                                                       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Ship a usage-focused `AGENTS.md` and `CLAUDE.md` in the `functype` tarball, which holds only `dist`, `LICENSE`, `package.json` and `README.md` today. Generate both from the `functype` skill at build time, so there's one source. The current `packages/functype/AGENTS.md` is contributor build notes, so it isn't the file to ship | 1.x additive                                                                                 |
+| Keep the Claude plugin current. `.claude-plugin/marketplace.json` still lists the `functype` plugin at 1.0.1, though the skill changed on 2026-10-23, so an installed plugin doesn't update. Bump it, and add a check that fails when a skill changes without a version bump                                                           | 1.x additive                                                                                 |
+| A 1.x → 2.0 migration skill, alongside the upgrade tool #276 plans. Effect ships one for v3 → v4 (`effect-v3-to-v4` in `effect-ts/skills`), and community versions exist                                                                                                                                                               | 2.0                                                                                          |
+| An AI app SDK like `effect/ai` (language models, tools, `McpServer`, `McpClient`)                                                                                                                                                                                                                                                      | don't add: it's an LLM framework, outside functype's scope. functype-mcp-server uses fastmcp |
