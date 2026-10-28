@@ -115,6 +115,27 @@ if (local !== remote) {
   );
   process.exit(1);
 }
+// While `release/<major>.x` exists, that line ships from there: a patch or minor cut from `main`
+// would publish main's next-major changes under the old major (1.21.0 shipped 2.0's breaking
+// functype-os and functype-react changes this way).
+if (branch === "main" && bumpLevel !== "major") {
+  const mainMajor = readPkg("packages/functype").version.split(".")[0];
+  const lineBranch = `release/${mainMajor}.x`;
+  const lineExists =
+    spawnSync(
+      "git",
+      ["ls-remote", "--exit-code", "--heads", "origin", lineBranch],
+      {
+        cwd: repoRoot,
+      },
+    ).status === 0;
+  if (lineExists) {
+    console.error(
+      `✗ ${mainMajor}.x releases ship from ${lineBranch}, not main. main releases only the next major.`,
+    );
+    process.exit(1);
+  }
+}
 
 // 2. Validate
 run("pnpm", ["validate"]);
