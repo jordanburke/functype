@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import plugin from "../src/index"
-import rules from "../src/rules"
+import ruleRegistry from "../src/rules"
 
 type Preset = { readonly rules: Readonly<Record<string, string>> }
 const configs = plugin.configs as Readonly<Record<string, Preset>>
@@ -74,7 +74,7 @@ describe("agent preset", () => {
 
   it("sets every rule, and none to warn", () => {
     expect(Object.keys(agent).sort()).toEqual(
-      Object.keys(rules)
+      Object.keys(ruleRegistry)
         .map((name) => `functype/${name}`)
         .sort(),
     )

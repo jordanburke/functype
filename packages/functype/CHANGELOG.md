@@ -6,7 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers. `recommended` and `strict` are unchanged.
+- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers with type-aware linting. `recommended` and `strict` are unchanged.
 
 ## 1.21.1 - 2026-10-28
 

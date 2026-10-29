@@ -4040,7 +4040,7 @@ export default [functype.configs.agent]
 ```
 
 - **`error`:** everything `strict` errors on, plus `no-floating-io` and the two React rules, which `strict` still warns on while they're measured. A forgotten `.run()` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
-- **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured. `prefer-list` is off too: `no-array-mutation`, at `error`, covers its in-place-change case, and the rest asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
+- **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured. `prefer-list` is off too: with type-aware linting, `no-array-mutation`, at `error`, covers its in-place-change case, and the rest asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
 - `prefer-option`, `prefer-either` and `prefer-try` are `error`, as in `strict`. At a real boundary the agent marks it instead: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
 - `no-array-mutation` and `no-floating-io` need type-aware linting (typescript-eslint's parser with `parserOptions.projectService`). Without it they report nothing.
 - Make sure the agent runs lint. An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
