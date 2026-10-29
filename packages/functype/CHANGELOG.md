@@ -6,13 +6,9 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-## 1.21.0 - 2026-10-26
+- **The Claude plugins update again.** An installed plugin picks up changes only when its version in `.claude-plugin/marketplace.json` changes, and neither plugin's version had moved since 2026-04-18 while both skills kept changing. The `functype` plugin is now 1.1.0 and `functype-developer` 1.0.3, so updating the plugins brings in six months of skill changes, including the wrong calls the doc type-checks found and fixed. A new check (`scripts/sync-plugin-lock.ts`, run by functype's tests) fails when a plugin's skills change without a version bump.
 
-**eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
-
-- `no-getOrThrow-in-render` reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component's or hook's own body, where a missing value throws during render and unmounts the tree. A call guarded on the same value is not reported: inside a branch whose test proves the value is there (`isSome()`, `!o.isNone()`, `isEmpty`, through `!` / `&&` / `||`), or after an early return or throw on the missing case, an else-if chain whose branches all exit, or `invariant(o.isSome(), …)`, and neither is `.orThrow(error)` or code in an event handler or effect.
-- `must-fold-on-component-return` reports a component that picks what it renders with an early return on `isNone()` / `isLeft()` / … or with `isSome() && <X />`, and points at `.fold(…)` or `<MatchOption>` / `<MatchEither>` / `<MatchTry>`. Ternaries and if/else stay `prefer-fold`'s, so nothing is reported twice.
-- Both honor `@interop <reason>`, work without type information, and with it require the receiver to be a functype container. functype-react's README now says how to turn them on; it had promised them for a later release.
+- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers with type-aware linting. `recommended` and `strict` are unchanged.
 
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
@@ -29,6 +25,24 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
+## 1.21.1 - 2026-10-28
+
+- **functype-os and functype-react are back on the 1.x API.** 1.21.0 was cut from `main`, the 2.0 branch, so those two packages shipped 2.0's breaking changes in a minor release: functype-os's async methods returned `IO` instead of `TaskResult`, and functype-react's `useTask` / `useTaskPromise` / `useTaskValue` / `<TaskBoundary>` became `useIO` / `useIOPromise` / `useIOValue` / `<AsyncBoundary>`. 1.21.1 restores the 1.20.0 API for both. If you already moved to the `IO` names on 1.21.0, move back to the `Task` names; the `IO` versions return in 2.0.
+- **eslint-plugin-functype keeps the two React rules from 2.121.0** (`no-getOrThrow-in-render` and `must-fold-on-component-return`), so 2.121.1 doesn't remove a rule anyone has turned on.
+- **`pnpm release` refuses a 1.x release from `main`.** While `release/1.x` exists, `main` releases only the next major. The guard takes effect on `main` once this release merges forward.
+
+## 1.21.0 - 2026-10-26
+
+Released from `main` by mistake: functype-os and functype-react carried 2.0's breaking `IO` changes, reverted in 1.21.1. The core `functype` package is the same as 1.20.0.
+
+- **functype-mcp-server's `fast-uri` is 3.1.9**, which fixes four advisories (GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h, GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp). It reaches the server through ajv.
+
+**eslint-plugin-functype: two React rules, `no-getOrThrow-in-render` and `must-fold-on-component-return`.** They fire only inside a React component (a PascalCase function with JSX) or a hook (`use*`), and are `off` in `recommended` and `warn` in `strict` while they're measured.
+
+- `no-getOrThrow-in-render` reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component's or hook's own body, where a missing value throws during render and unmounts the tree. A call guarded on the same value is not reported: inside a branch whose test proves the value is there (`isSome()`, `!o.isNone()`, `isEmpty`, through `!` / `&&` / `||`), or after an early return or throw on the missing case, an else-if chain whose branches all exit, or `invariant(o.isSome(), …)`, and neither is `.orThrow(error)` or code in an event handler or effect.
+- `must-fold-on-component-return` reports a component that picks what it renders with an early return on `isNone()` / `isLeft()` / … or with `isSome() && <X />`, and points at `.fold(…)` or `<MatchOption>` / `<MatchEither>` / `<MatchTry>`. Ternaries and if/else stay `prefer-fold`'s, so nothing is reported twice.
+- Both honor `@interop <reason>`, work without type information, and with it require the receiver to be a functype container. functype-react's README now says how to turn them on; it had promised them for a later release.
 
 ## 1.20.0 - 2026-10-24
 

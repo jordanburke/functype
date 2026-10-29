@@ -1,0 +1,10 @@
+{
+  "functype": {
+    "version": "1.1.0",
+    "sha256": "a8e3d777bade6b7cc70e6d8d6bc140a89065292e6ca0b76954c9b373645553ba"
+  },
+  "functype-developer": {
+    "version": "1.0.3",
+    "sha256": "e665e996657a516d8e224c3c9d0ecda171b024dd2af5a56ce222edf2697cd6f4"
+  }
+}
