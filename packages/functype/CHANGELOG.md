@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers. `recommended` and `strict` are unchanged.
+
 ## 1.21.1 - 2026-10-28
 
 - **functype-os and functype-react are back on the 1.x API.** 1.21.0 was cut from `main`, the 2.0 branch, so those two packages shipped 2.0's breaking changes in a minor release: functype-os's async methods returned `IO` instead of `TaskResult`, and functype-react's `useTask` / `useTaskPromise` / `useTaskValue` / `<TaskBoundary>` became `useIO` / `useIOPromise` / `useIOValue` / `<AsyncBoundary>`. 1.21.1 restores the 1.20.0 API for both. If you already moved to the `IO` names on 1.21.0, move back to the `Task` names; the `IO` versions return in 2.0.
