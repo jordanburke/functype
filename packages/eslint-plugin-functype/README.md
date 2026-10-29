@@ -25,28 +25,44 @@ import functype from "eslint-plugin-functype"
 export default [functype.configs.strict]
 ```
 
+### Agent mode
+
+For code a coding agent writes. An agent acts on what fails its build and passes over a warning, so `agent` has no warnings: every rule is `error` or `off`.
+
+```js
+import functype from "eslint-plugin-functype"
+
+export default [functype.configs.agent]
+```
+
+- **`error`:** everything `strict` errors on, plus `no-floating-io` and the two React rules, which `strict` still warns on while they're measured. A forgotten `.run()` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
+- **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured. `prefer-list` is off too: with type-aware linting, `no-array-mutation`, at `error`, covers its in-place-change case, and the rest asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
+- `prefer-option`, `prefer-either` and `prefer-try` are `error`, as in `strict`. At a real boundary the agent marks it instead: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
+- `no-array-mutation` and `no-floating-io` need type-aware linting (typescript-eslint's parser with `parserOptions.projectService`). Without it they report nothing.
+- Make sure the agent runs lint. An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
+
 ## Rules
 
-| Rule                                     | Recommended | Strict | Description                                                                                  |
-| ---------------------------------------- | :---------: | :----: | -------------------------------------------------------------------------------------------- |
-| `functype/no-let`                        |    error    | error  | Use `const`; no reassignment                                                                 |
-| `functype/no-imperative-loops`           |    error    | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
-| `functype/prefer-functype-map`           |    error    | error  | Use functype `Map` instead of a native `Map` you only read                                   |
-| `functype/prefer-functype-set`           |    error    | error  | Use functype `Set` instead of a native `Set` you only read                                   |
-| `functype/collection-naming`             |    error    | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
-| `functype/prefer-map`                    |    error    | error  | Use `map` instead of pushing inside `forEach`                                                |
-| `functype/prefer-fold`                   |    error    | error  | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
-| `functype/prefer-option`                 |    warn     | error  | Use `Option` instead of `null`/`undefined`                                                   |
-| `functype/prefer-either`                 |    warn     | error  | Use `Either` for typed domain errors instead of `throw`                                      |
-| `functype/prefer-try`                    |    warn     | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
-| `functype/prefer-flatmap`                |    warn     |  warn  | Use `flatMap` instead of `map().flat()`                                                      |
-| `functype/prefer-do-notation`            |    warn     |  warn  | Use `Do` notation for chained operations                                                     |
-| `functype/no-get-unsafe`                 |     off     | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
-| `functype/prefer-list`                   |     off     |  warn  | Use `List` instead of native arrays                                                          |
-| `functype/no-array-mutation`             |     off     | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
-| `functype/no-floating-io`                |     off     |  warn  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
-| `functype/no-getOrThrow-in-render`       |     off     |  warn  | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
-| `functype/must-fold-on-component-return` |     off     |  warn  | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
+| Rule                                     | Recommended | Strict | Agent | Description                                                                                  |
+| ---------------------------------------- | :---------: | :----: | :---: | -------------------------------------------------------------------------------------------- |
+| `functype/no-let`                        |    error    | error  | error | Use `const`; no reassignment                                                                 |
+| `functype/no-imperative-loops`           |    error    | error  | error | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
+| `functype/prefer-functype-map`           |    error    | error  | error | Use functype `Map` instead of a native `Map` you only read                                   |
+| `functype/prefer-functype-set`           |    error    | error  | error | Use functype `Set` instead of a native `Set` you only read                                   |
+| `functype/collection-naming`             |    error    | error  | error | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
+| `functype/prefer-map`                    |    error    | error  | error | Use `map` instead of pushing inside `forEach`                                                |
+| `functype/prefer-fold`                   |    error    | error  | error | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
+| `functype/prefer-option`                 |    warn     | error  | error | Use `Option` instead of `null`/`undefined`                                                   |
+| `functype/prefer-either`                 |    warn     | error  | error | Use `Either` for typed domain errors instead of `throw`                                      |
+| `functype/prefer-try`                    |    warn     | error  | error | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
+| `functype/prefer-flatmap`                |    warn     |  warn  |  off  | Use `flatMap` instead of `map().flat()`                                                      |
+| `functype/prefer-do-notation`            |    warn     |  warn  |  off  | Use `Do` notation for chained operations                                                     |
+| `functype/no-get-unsafe`                 |     off     | error  | error | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
+| `functype/prefer-list`                   |     off     |  warn  |  off  | Use `List` instead of native arrays                                                          |
+| `functype/no-array-mutation`             |     off     | error  | error | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
+| `functype/no-floating-io`                |     off     |  warn  | error | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
+| `functype/no-getOrThrow-in-render`       |     off     |  warn  | error | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
+| `functype/must-fold-on-component-return` |     off     |  warn  | error | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
 ### Severity policy
 

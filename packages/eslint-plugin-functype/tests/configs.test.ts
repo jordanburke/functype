@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import plugin from "../src/index"
+import ruleRegistry from "../src/rules"
 
 type Preset = { readonly rules: Readonly<Record<string, string>> }
 const configs = plugin.configs as Readonly<Record<string, Preset>>
@@ -61,5 +62,47 @@ describe("strict preset", () => {
     Object.entries(recommended).forEach(([rule, level]) => {
       expect(rank[strict[rule] as keyof typeof rank]).toBeGreaterThanOrEqual(rank[level as keyof typeof rank])
     })
+  })
+})
+
+/**
+ * The agent preset has no warnings: an agent acts on what fails its build and passes over the rest, so
+ * each rule is a decision, `error` or `off`.
+ */
+describe("agent preset", () => {
+  const agent = configs.agent!.rules
+
+  it("sets every rule, and none to warn", () => {
+    expect(Object.keys(agent).sort()).toEqual(
+      Object.keys(ruleRegistry)
+        .map((name) => `functype/${name}`)
+        .sort(),
+    )
+    expect(Object.entries(agent).filter(([, level]) => level === "warn")).toEqual([])
+  })
+
+  it("errors on everything strict errors on", () => {
+    Object.entries(configs.strict!.rules)
+      .filter(([, level]) => level === "error")
+      .forEach(([rule]) => expect(agent[rule], rule).toBe("error"))
+  })
+
+  it.each(["functype/no-floating-io", "functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
+    "errors on %s, which strict still warns on",
+    (rule) => {
+      expect(agent[rule]).toBe("error")
+    },
+  )
+
+  it.each(["functype/prefer-flatmap", "functype/prefer-do-notation"])(
+    "turns off %s until its precision is measured",
+    (rule) => {
+      expect(agent[rule]).toBe("off")
+    },
+  )
+
+  it("leaves prefer-list off, since no-array-mutation errors on its in-place-change case", () => {
+    expect(agent["functype/prefer-list"]).toBe("off")
+    expect(agent["functype/no-array-mutation"]).toBe("error")
   })
 })

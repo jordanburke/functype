@@ -1,3 +1,4 @@
+import agentRules from "./configs/agent"
 import recommendedRules from "./configs/recommended"
 import strictRules from "./configs/strict"
 import rules from "./rules"
@@ -22,6 +23,11 @@ plugin.configs = {
     name: "functype-plugin/strict",
     plugins: { functype: plugin },
     rules: strictRules,
+  },
+  agent: {
+    name: "functype-plugin/agent",
+    plugins: { functype: plugin },
+    rules: agentRules,
   },
 }
 
