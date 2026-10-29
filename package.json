@@ -25,6 +25,8 @@
     "sync:eslint-mirror": "tsx scripts/sync-eslint-mirror.ts",
     "sync:eslint-mirror:check": "tsx scripts/sync-eslint-mirror.ts --check",
     "sync:eslint-mirror:test": "tsx scripts/sync-eslint-mirror.ts --test",
+    "sync:plugin-lock": "tsx scripts/sync-plugin-lock.ts",
+    "sync:plugin-lock:check": "tsx scripts/sync-plugin-lock.ts --check",
     "check-publish-safety": "tsx scripts/check-publish-safety.ts",
     "release": "tsx scripts/release.ts",
     "verify-published": "tsx scripts/verify-published.ts"
