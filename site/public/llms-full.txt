@@ -4065,6 +4065,7 @@ export default [functype.configs.agent]
 | `functype/prefer-list`                   |     off     |  warn  |  off  | Use `List` instead of native arrays                                                          |
 | `functype/no-array-mutation`             |     off     | error  | error | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
 | `functype/no-floating-io`                |     off     |  warn  | error | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
+| `functype/no-floating-result`            |     off     | error  | error | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
 | `functype/no-getOrThrow-in-render`       |     off     |  warn  | error | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
 | `functype/must-fold-on-component-return` |     off     |  warn  | error | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
@@ -4217,6 +4218,29 @@ void save(user) // fine: a deliberate drop
 **It only runs with type-aware linting** (`parserOptions.projectService`). It recognizes `IO` by its type (it has `runExit` and `provideLayer`), whatever the call is named. Without type information it reports nothing.
 
 Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and civala.ai's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
+
+### `functype/no-floating-result`
+
+Reports a statement that computes a result that can carry a failure, such as an `Either` or `Try`, and drops it. A `Left` or `Failure` in it is silently ignored. `no-floating-promises` doesn't help: awaiting the promise satisfies it while the result inside is thrown away.
+
+```ts
+await userService.updateSubscription(id, plan) // reported: a failed write goes unnoticed
+parse(input) // reported, when parse returns an Either
+await save(user).run() // reported: run() returns an Either → check it, or use runOrThrow()
+
+const result = await userService.updateSubscription(id, plan) // fine: then check result.isLeft()
+await audit.write(entry).tapLeft((e) => log.error(e)) // fine: a best-effort write that logs its failure
+void (await cache.refresh()) // fine: a deliberate drop
+```
+
+- **What counts:** a type, or a member of its union, with `fold` and `isLeft` or `isFailure`. That covers `Either`, `Try`, `Exit`, `Validation`, `Task`'s result (`TaskOutcome`) and Either-shaped wrappers such as a `ServiceResult`. An ignored `Option` or `List` loses no error, so it isn't reported. An `IO` that is never run is `no-floating-io`'s.
+- **Handled chains:** a chain that passes through `.tapError(…)` or `.tapLeft(…)` isn't reported, because it handles its failure. A `.flatMap(…)` after the handler can bring in a new failure, so that chain is reported again. `Try` has no failure tap, so mark a deliberate `Try` drop with `void`.
+- **Tests:** a test that calls something for its side effect and then checks mocks is reported too. Assert on the result, or turn the rule off for test files.
+- **Not seen yet:** a drop inside a callback, such as `xs.forEach((x) => save(x))`, or in the first part of a comma expression, isn't its own statement, so it isn't reported. `ok && save(x)` and `ok ? a() : b()` are.
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
+
+Measured (2026-10-30) on agent-todo's agent-gate-api, which kept a hand-written check for this: at the commit that added that check, the rule reports 20 drops in production code. agent-todo fixed every one of them as a real bug, among them 8 in the Stripe webhook handler, where a failed write still answered Stripe 200. On the current code, after those fixes, it reports none in production code and 12 in tests. functype-os, functype-log, functype-react, functype-eval and functype-mcp-server report none. It's `error` in `strict` and `agent`, and `off` in `recommended`, where it moves to `error` in 2.0.
 
 ### React rules
 
