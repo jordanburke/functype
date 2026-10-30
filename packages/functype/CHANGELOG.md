@@ -6,10 +6,6 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **The Claude plugins update again.** An installed plugin picks up changes only when its version in `.claude-plugin/marketplace.json` changes, and neither plugin's version had moved since 2026-04-18 while both skills kept changing. The `functype` plugin is now 1.1.0 and `functype-developer` 1.0.3, so updating the plugins brings in six months of skill changes, including the wrong calls the doc type-checks found and fixed. A new check (`scripts/sync-plugin-lock.ts`, run by functype's tests) fails when a plugin's skills change without a version bump.
-
-- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers with type-aware linting. `recommended` and `strict` are unchanged.
-
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -25,6 +21,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
+## 1.22.0 - 2026-10-30
+
+- **The Claude plugins update again.** An installed plugin picks up changes only when its version in `.claude-plugin/marketplace.json` changes, and neither plugin's version had moved since 2026-04-18 while both skills kept changing. The `functype` plugin is now 1.1.0 and `functype-developer` 1.0.3, so updating the plugins brings in six months of skill changes, including the wrong calls the doc type-checks found and fixed. A new check (`scripts/sync-plugin-lock.ts`, run by functype's tests) fails when a plugin's skills change without a version bump.
+
+- **eslint-plugin-functype has an `agent` preset**, `functype.configs.agent`, for code a coding agent writes. An agent acts on what fails its build and passes over a warning, so the preset has no warnings: every rule is `error` or `off`. It errors on everything `strict` does, plus `no-floating-io`, `no-getOrThrow-in-render` and `must-fold-on-component-return`, which `strict` still warns on. It turns off `prefer-flatmap` and `prefer-do-notation` until their precision is measured, and `prefer-list`, whose in-place-change case `no-array-mutation` covers with type-aware linting. `recommended` and `strict` are unchanged.
 
 ## 1.21.1 - 2026-10-28
 
