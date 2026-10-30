@@ -229,10 +229,10 @@ await audit.write(entry).tapLeft((e) => log.error(e)) // fine: a best-effort wri
 void (await cache.refresh()) // fine: a deliberate drop
 ```
 
-- **What counts:** a type, or a member of its union, with `fold` and `isLeft` or `isFailure`. That covers `Either`, `Try`, `Exit`, `Validation` and Either-shaped wrappers such as a `ServiceResult`. An ignored `Option` or `List` loses no error, so it isn't reported. An `IO` that is never run is `no-floating-io`'s.
-- **Handled chains:** a chain that passes through `.tapError(…)` or `.tapLeft(…)` isn't reported, because it handles its failure.
+- **What counts:** a type, or a member of its union, with `fold` and `isLeft` or `isFailure`. That covers `Either`, `Try`, `Exit`, `Validation`, `Task`'s result (`TaskOutcome`) and Either-shaped wrappers such as a `ServiceResult`. An ignored `Option` or `List` loses no error, so it isn't reported. An `IO` that is never run is `no-floating-io`'s.
+- **Handled chains:** a chain that passes through `.tapError(…)` or `.tapLeft(…)` isn't reported, because it handles its failure. A `.flatMap(…)` after the handler can bring in a new failure, so that chain is reported again. `Try` has no failure tap, so mark a deliberate `Try` drop with `void`.
 - **Tests:** a test that calls something for its side effect and then checks mocks is reported too. Assert on the result, or turn the rule off for test files.
-- **Not seen yet:** a drop inside a callback, such as `xs.forEach((x) => save(x))`, isn't a statement, so it isn't reported.
+- **Not seen yet:** a drop inside a callback, such as `xs.forEach((x) => save(x))`, or in the first part of a comma expression, isn't its own statement, so it isn't reported. `ok && save(x)` and `ok ? a() : b()` are.
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 

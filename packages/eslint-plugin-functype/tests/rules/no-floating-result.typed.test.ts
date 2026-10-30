@@ -9,7 +9,7 @@ import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
  * `userService.updateSubscription(…)` on its own line, so a failed write still answered Stripe 200 (#365).
  */
 const svc = [
-  'import { Either, IO, List, Option, Try } from "functype"',
+  'import { Either, IO, List, Option, Task, Try } from "functype"',
   "type ServiceResult<T> = Either<Error, T>",
   "declare function update(id: number): Promise<ServiceResult<void>>",
   "declare function parse(raw: string): Either<string, number>",
@@ -18,6 +18,10 @@ const svc = [
   "declare function find(id: number): Option<number>",
   "declare function names(): List<string>",
   "declare function save(id: number): IO<never, Error, number>",
+  "declare function maybe(): ServiceResult<number> | undefined",
+  "declare function loose(): any",
+  "declare function opaque(): unknown",
+  "declare function sub(n: number): Either<string, number>",
   "declare const svc: { update?: (id: number) => Promise<ServiceResult<void>> }",
   "",
 ].join("; ")
@@ -49,6 +53,12 @@ describe("no-floating-result (type-aware)", () => {
         "tapLeft earlier in the chain",
         "export function f() { parse('1').tapLeft((e) => console.error(e)).map((n) => n + 1) }",
       ),
+      valid(
+        "A best-effort IO write that logs its failure: the agent-todo shape",
+        "export async function f() { await save(1).tapError((e) => console.error(e)).run() }",
+      ),
+      valid("any is not a result", "export function f() { loose() }"),
+      valid("unknown is not a result", "export function f() { opaque() }"),
       valid("Assigning it", "export function f() { const n = parse('1'); return n }"),
     ],
     invalid: [
@@ -59,6 +69,11 @@ describe("no-floating-result (type-aware)", () => {
       dropped("export async function f() { await save(1).run() }"),
       dropped("export async function f() { await save(1).runExit() }"),
       dropped("export function f() { parse('1').tap((n) => console.log(n)) }"),
+      dropped("export function f() { maybe() }"),
+      dropped("export async function f(ok: boolean) { ok && (await update(1)) }"),
+      dropped("export function f(ok: boolean) { ok ? parse('1') : parse('2') }"),
+      dropped("export function f() { parse('1').tapLeft((e) => console.error(e)).flatMap(sub) }"),
+      dropped("export function f() { Task().Sync(() => 1) }"),
     ],
   })
 })

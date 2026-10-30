@@ -6,7 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **eslint-plugin-functype has a `no-floating-result` rule.** It reports a statement that computes an `Either`, `Try` or other result that can carry a failure and drops it, such as `await userService.updateSubscription(id, plan)` on its own line, so a failure is silently ignored. A chain through `.tapError(…)` or `.tapLeft(…)` counts as handled, and `void` marks a deliberate drop. It's type-aware, `error` in `strict` and `agent`, and `off` in `recommended` until 2.0. On agent-todo's API it found the 20 real drops that project had fixed by hand, and on functype's own packages it reports nothing.
+- **eslint-plugin-functype has a `no-floating-result` rule.** It reports a statement that computes an `Either`, `Try` or other result that can carry a failure and drops it, such as `await userService.updateSubscription(id, plan)` on its own line, so a failure is silently ignored. A chain through `.tapError(…)` or `.tapLeft(…)` counts as handled, unless a later `.flatMap(…)` brings in a new failure, and `void` marks a deliberate drop. It's type-aware, `error` in `strict` and `agent`, and `off` in `recommended` until 2.0. On agent-todo's API it found the 20 real drops that project had fixed by hand, and on functype's own packages it reports nothing.
 
 ## 1.22.0 - 2026-10-30
 
