@@ -96,6 +96,28 @@ export const isIOByType = (node: ASTNode, context: Rule.RuleContext): boolean | 
   )
 }
 
+/**
+ * Can `node`'s value carry a failure that dropping it would lose? Structural: the type, or a member of
+ * its union, has `fold` and `isLeft` or `isFailure`. That covers Either, Try, Exit, Validation and
+ * Either-shaped wrappers such as a `ServiceResult`, and leaves out Option and List, whose `None` or
+ * empty value is no error. An `IO` is left to no-floating-io: it hasn't run, so it holds no failure yet.
+ *
+ * `undefined` when type information isn't available.
+ */
+export const canCarryFailureByType = (node: ASTNode, context: Rule.RuleContext): boolean | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const type = checker.getNonNullableType(checker.getTypeAtLocation(tsNode))
+  const has = (member: TypeLike, name: string): boolean => checker.getPropertyOfType(member, name) !== undefined
+  const carries = (member: TypeLike): boolean =>
+    has(member, "fold") && (has(member, "isLeft") || has(member, "isFailure")) && !has(member, "runExit")
+  const members = (type as { readonly types?: ReadonlyArray<TypeLike> }).types ?? [type]
+  return members.some(carries)
+}
+
 /** A slot's expected type and the expression TypeScript computed it for. */
 type Slot = { readonly type: TypeLike; readonly at: ASTNode }
 

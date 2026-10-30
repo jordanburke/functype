@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype has a `no-floating-result` rule.** It reports a statement that computes an `Either`, `Try` or other result that can carry a failure and drops it, such as `await userService.updateSubscription(id, plan)` on its own line, so a failure is silently ignored. A chain through `.tapError(…)` or `.tapLeft(…)` counts as handled, and `void` marks a deliberate drop. It's type-aware, `error` in `strict` and `agent`, and `off` in `recommended` until 2.0. On agent-todo's API it found the 20 real drops that project had fixed by hand, and on functype's own packages it reports nothing.
+
 ## 1.22.0 - 2026-10-30
 
 - **The Claude plugins update again.** An installed plugin picks up changes only when its version in `.claude-plugin/marketplace.json` changes, and neither plugin's version had moved since 2026-04-18 while both skills kept changing. The `functype` plugin is now 1.1.0 and `functype-developer` 1.0.3, so updating the plugins brings in six months of skill changes, including the wrong calls the doc type-checks found and fixed. A new check (`scripts/sync-plugin-lock.ts`, run by functype's tests) fails when a plugin's skills change without a version bump.
