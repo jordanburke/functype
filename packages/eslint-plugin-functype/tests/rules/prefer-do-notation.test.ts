@@ -171,6 +171,19 @@ describe("prefer-do-notation", () => {
             .map((p) => p.host)
         `,
         },
+        // Fable's review of #449: names that merely end in "try", "option" or "either"
+        ...["entry", "retry", "registry", "telemetry", "adoption", "neither"].map((name) => ({
+          name: `An array named ${name} is not a monad`,
+          code: `const out = ${name}.flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))`,
+        })),
+        {
+          name: "A chain that leaves the monad with getOrElse is an array chain from there on",
+          code: "const out = Option(items).getOrElse([]).flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))",
+        },
+        {
+          name: "A chain that leaves the monad with fold is not a monad chain from there on",
+          code: "const out = option.map(f).fold(() => [], (v) => [v]).flatMap((a) => g(a)).flatMap((b) => h(b)).flatMap((c) => k(c))",
+        },
         {
           name: "Two flatMaps on a constructor root are two levels, below the default of 3",
           code: "const r = Option(x).flatMap((a) => Option(a + 1)).flatMap((b) => Option(b * 2))",
@@ -310,6 +323,39 @@ describe("prefer-do-notation", () => {
             .map((y) => y + 1)
         `,
           errors: [{ messageId: "preferDoForMixedMonads" }],
+        },
+        ...["userOption", "parseResult", "loadTry", "task"].map((name) => ({
+          name: `A receiver named ${name} is a monad`,
+          code: `const out = ${name}.flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))`,
+          errors: [{ messageId: "preferDoForChainedMethods" as const, data: { count: "3" } }],
+        })),
+        {
+          name: "A chain after a conversion is a monad chain",
+          code: "const out = Try(() => parse(x)).toOption().flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))",
+          errors: [{ messageId: "preferDoForChainedMethods" as const, data: { count: "3" } }],
+        },
+        {
+          name: "An annotated root counts toward mixing",
+          code: `
+          import { Either, Option } from "functype"
+          export const r = (o: Option<number>) => o.flatMap((a) => Either.right(a)).map((n) => n + 1)
+        `,
+          errors: [{ messageId: "preferDoForMixedMonads" as const }],
+        },
+        {
+          name: "A parenthesized guard chain",
+          code: "const name = user && (user.profile && user.profile.name)",
+          errors: [{ messageId: "preferDoForNestedChecks" as const }],
+        },
+        {
+          name: "A guard chain from this",
+          code: "class C { n() { return this.a && this.a.b && this.a.b.c } }",
+          errors: [{ messageId: "preferDoForNestedChecks" as const }],
+        },
+        {
+          name: "A guard chain through a computed member",
+          code: "const c = a && a[k] && a[k].c",
+          errors: [{ messageId: "preferDoForNestedChecks" as const }],
         },
         // Deeply nested && chain (4+ levels)
         {

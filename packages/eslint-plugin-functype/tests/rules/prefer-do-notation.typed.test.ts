@@ -12,6 +12,9 @@ const decls = [
   "declare function getUser(id: number): Option<{ id: number }>",
   "declare const results: string[]",
   "declare function step(n: number): Option<number>",
+  "declare const items: Option<string[]>",
+  "declare const service: { getUser(id: number): Option<{ id: number }> }",
+  "declare const entries: Option<number>",
   "",
 ].join("; ")
 
@@ -28,8 +31,27 @@ describe("prefer-do-notation (type-aware)", () => {
         "An array chain whose callbacks build monads",
         "export const xs = results.map((r) => Option(r)).map((o) => Either.right(o))",
       ),
+      valid(
+        "An Option unwrapped with getOrElse is an array from there on",
+        "export const w = items.getOrElse([]).flatMap((a) => a.split(' ')).flatMap((b) => b.split('-')).flatMap((c) => c.split('_'))",
+      ),
     ],
     invalid: [
+      {
+        name: "A method call that returns an Option starts a monad chain",
+        filename: typedFilename,
+        code:
+          decls +
+          "export const n = service.getUser(1).flatMap((u) => step(u.id)).flatMap((a) => step(a)).flatMap((b) => step(b))",
+        errors: [{ messageId: "preferDoForChainedMethods" as const, data: { count: "3" } }],
+      },
+      {
+        name: "With types, the type decides, whatever the name",
+        filename: typedFilename,
+        code:
+          decls + "export const n = entries.flatMap((a) => step(a)).flatMap((b) => step(b)).flatMap((c) => step(c))",
+        errors: [{ messageId: "preferDoForChainedMethods" as const, data: { count: "3" } }],
+      },
       {
         name: "A call that returns an Option starts a monad chain",
         filename: typedFilename,

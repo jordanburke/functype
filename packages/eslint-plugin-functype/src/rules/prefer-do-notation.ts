@@ -122,10 +122,12 @@ function monadOfAnnotation(annotation: ASTNode | undefined): ReadonlySet<string>
 
 /**
  * Receiver names that say "this holds a monad", for code linted without type information: `option`,
- * `opt`, `either`, `result`, `maybe`, a numbered one such as `option1`, or a camelCase suffix such as
- * `userOption` or `parseResult`. The same guess no-get-unsafe makes.
+ * `opt`, `either`, `result`, `maybe`, `task`, or a numbered one such as `option1`, in any case; or a
+ * camelCase suffix such as `userOption` or `parseResult`, which must be capitalized, so `entry`,
+ * `retry` and `registry` don't count.
  */
-const MONAD_NAME = /^(option|opt|either|result|maybe)\d*$|(Option|Either|Result|Maybe|Try)\d*$/i
+const MONAD_NAME = /^(option|opt|either|result|maybe|task)\d*$/i
+const MONAD_SUFFIX = /[a-z0-9](Option|Either|Result|Maybe|Try|Task)\d*$/
 
 /** Methods that turn one monad into another: `Try(f).toOption()` is an Option. */
 const CONVERSIONS: ReadonlyMap<string, string> = new Map([
@@ -152,11 +154,15 @@ function monadOfValue(node: ASTNode): ReadonlySet<string> {
 
 /**
  * The receiver a method chain starts from: `Option(x)` in `Option(x).map(f).flatMap(g)`, `o` in
- * `o.flatMap(f)`. Stops at a monad constructor or companion call, which is a root of its own.
+ * `o.flatMap(f)`. Walks back only through steps that keep the monad (`flatMap`, `map`, `filter`), so
+ * in `Option(xs).getOrElse([]).flatMap(f)` or after a `.fold(…)` the root is the unwrapped value, not
+ * `Option(xs)`. A monad constructor or companion
+ * call is a root of its own.
  */
 function chainRoot(node: ASTNode): ASTNode {
   if (node.type !== "CallExpression" || monadAt(node).size > 0) return node
-  if (node.callee?.type !== "MemberExpression") return node
+  if (node.callee?.type !== "MemberExpression" || node.callee.property.type !== "Identifier") return node
+  if (!COMPOSITION_METHODS.has(node.callee.property.name)) return node
   return chainRoot(node.callee.object as ASTNode)
 }
 
@@ -208,16 +214,19 @@ const rule: Rule.RuleModule = {
     }
 
     /**
-     * Does the chain start from a functype monad? With type information its type decides, so a
-     * `string[]` never counts. Without it: a monad constructor or companion call, an identifier
-     * annotated with a monad type, or one named like a monad.
+     * Is `step` a step on a functype monad? With type information, the type of the value it's called on
+     * decides, so a `string[]`, or an Option already unwrapped with `.getOrElse([])`, never counts, and
+     * `service.getUser(1)` returning an Option does. Without it, the chain's root must be a monad
+     * constructor, companion or conversion, an identifier annotated with a monad type, or one named
+     * like a monad.
      */
-    function startsFromMonad(root: ASTNode): boolean {
-      const byType = isExtractableByType(root, context)
+    function onMonad(step: ASTNode): boolean {
+      const byType = isExtractableByType(step.callee.object as ASTNode, context)
       if (byType !== undefined) return byType
-      if (monadAt(root).size > 0) return true
+      const root = chainRoot(step)
+      if (monadOfValue(root).size > 0) return true
       if (root.type !== "Identifier") return false
-      return declaredMonad(root).size > 0 || MONAD_NAME.test(root.name)
+      return declaredMonad(root).size > 0 || MONAD_NAME.test(root.name) || MONAD_SUFFIX.test(root.name)
     }
 
     /** The call that takes `node` as its receiver for a further `.flatMap/.map/.filter/.fold` step, if any. */
@@ -269,7 +278,7 @@ const rule: Rule.RuleModule = {
     function checkChainedMethods(node: ASTNode): void {
       if (!isChainedMethodCall(node, "flatMap") || hasStepAbove(node, FLAT_MAP)) return
       const chainDepth = getChainDepth(node)
-      if (chainDepth < minChainDepth || !startsFromMonad(chainRoot(node))) return
+      if (chainDepth < minChainDepth || !onMonad(node)) return
       context.report({
         node,
         messageId: "preferDoForChainedMethods",
@@ -292,6 +301,7 @@ const rule: Rule.RuleModule = {
 
     /** The monads a composition chain moves through: its root, and what each step's callback returns. */
     function monadsAlongChain(node: ASTNode): ReadonlySet<string> {
+      if (node.type === "Identifier") return declaredMonad(node)
       if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return monadAt(node)
       const method = node.callee.property
       const step =
@@ -316,7 +326,7 @@ const rule: Rule.RuleModule = {
      */
     function checkMixedMonads(node: ASTNode): void {
       if (!detectMixedMonads || !isCompositionChain(node) || hasStepAbove(node, COMPOSITION_METHODS)) return
-      if (!startsFromMonad(chainRoot(node))) return
+      if (!onMonad(node)) return
       if (monadsAlongChain(node).size >= 2) context.report({ node, messageId: "preferDoForMixedMonads" })
     }
 

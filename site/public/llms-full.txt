@@ -4399,7 +4399,7 @@ Option(x)
 user && user.profile && user.profile.name // a guard on each step of a path → user?.profile?.name
 ```
 
-- **Only chains on a monad count.** With type information the receiver's type decides, so an array's `.flatMap(…)` chain is never reported. Without it, the chain must start from a monad constructor or companion (`Option(x)`, `Either.right(x)`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, `userOption`).
+- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse([])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
 - **Mixing is read along the chain**, from the monad each step's callback returns. A conversion such as `.toOption()` keeps the chain in one monad, and a monad built somewhere inside a callback isn't a step.
 - **A guard chain is read from the AST.** Each operand must be a property of the one before it, so `isAdmin && settings.theme && user.profile.name` isn't one.
 - **It has no autofix.** It reports only, so `eslint --fix` can't change code on its behalf.
