@@ -2,10 +2,12 @@ import collectionNaming from "./collection-naming"
 import mustFoldOnComponentReturn from "./must-fold-on-component-return"
 import noArrayMutation from "./no-array-mutation"
 import noFloatingIo from "./no-floating-io"
+import noFloatingResult from "./no-floating-result"
 import noGetUnsafe from "./no-get-unsafe"
 import noGetOrThrowInRender from "./no-getOrThrow-in-render"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
+import noSerializeContainer from "./no-serialize-container"
 import preferDoNotation from "./prefer-do-notation"
 import preferEither from "./prefer-either"
 import preferFlatmap from "./prefer-flatmap"
@@ -22,10 +24,12 @@ export {
   mustFoldOnComponentReturn,
   noArrayMutation,
   noFloatingIo,
+  noFloatingResult,
   noGetOrThrowInRender,
   noGetUnsafe,
   noImperativeLoops,
   noLet,
+  noSerializeContainer,
   preferDoNotation,
   preferEither,
   preferFlatmap,
@@ -55,6 +59,8 @@ export default {
   "collection-naming": collectionNaming,
   "no-array-mutation": noArrayMutation,
   "no-floating-io": noFloatingIo,
+  "no-floating-result": noFloatingResult,
+  "no-serialize-container": noSerializeContainer,
   "no-getOrThrow-in-render": noGetOrThrowInRender,
   "must-fold-on-component-return": mustFoldOnComponentReturn,
 }

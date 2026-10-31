@@ -14,17 +14,17 @@ import strictRules from "./strict"
  * `off`: prefer-flatmap and prefer-do-notation, whose precision is unmeasured. At `error` they would
  * teach an agent to write `eslint-disable`; each moves to `error` here once it is measured. Also
  * prefer-list: with type-aware linting, its in-place-change case is no-array-mutation's, which is `error`
- * here, and the rest
- * asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
+ * here, and the rest asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
  *
- * no-array-mutation and no-floating-io are type-aware: without `parserOptions.projectService` they
- * report nothing.
+ * no-array-mutation, no-floating-io, no-floating-result and no-serialize-container are type-aware:
+ * without `parserOptions.projectService` they report nothing.
  */
 const agentRules = {
   ...strictRules,
   "functype/no-floating-io": "error",
   "functype/no-getOrThrow-in-render": "error",
   "functype/must-fold-on-component-return": "error",
+  "functype/no-serialize-container": "error",
   "functype/prefer-flatmap": "off",
   "functype/prefer-do-notation": "off",
   "functype/prefer-list": "off",

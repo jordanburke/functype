@@ -27,6 +27,7 @@ type CheckerLike = {
   getAwaitedType(type: TypeLike): TypeLike | undefined
   isTupleType(type: TypeLike): boolean
   isTypeAssignableTo(source: TypeLike, target: TypeLike): boolean
+  getPropertiesOfType(type: TypeLike): ReadonlyArray<{ readonly name: string }>
 }
 
 type SignatureLike = {
@@ -94,6 +95,119 @@ export const isIOByType = (node: ASTNode, context: Rule.RuleContext): boolean | 
     checker.getPropertyOfType(type, "runExit") !== undefined &&
     checker.getPropertyOfType(type, "provideLayer") !== undefined
   )
+}
+
+/**
+ * Can `node`'s value carry a failure that dropping it would lose? Structural: the type, or a member of
+ * its union, has `fold` and `isLeft` or `isFailure`. That covers Either, Try, Exit, Validation and
+ * Either-shaped wrappers such as a `ServiceResult`, and leaves out Option and List, whose `None` or
+ * empty value is no error. An `IO` is left to no-floating-io: it hasn't run, so it holds no failure yet.
+ *
+ * `undefined` when type information isn't available.
+ */
+export const canCarryFailureByType = (node: ASTNode, context: Rule.RuleContext): boolean | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const type = checker.getNonNullableType(checker.getTypeAtLocation(tsNode))
+  const has = (member: TypeLike, name: string): boolean => checker.getPropertyOfType(member, name) !== undefined
+  const carries = (member: TypeLike): boolean =>
+    has(member, "fold") && (has(member, "isLeft") || has(member, "isFailure")) && !has(member, "runExit")
+  const members = (type as { readonly types?: ReadonlyArray<TypeLike> }).types ?? [type]
+  return members.some(carries)
+}
+
+/** Where a functype container sits inside a value, and what it is called. */
+export type ContainerAt = { readonly path: string; readonly name: string }
+
+type TypeShape = {
+  readonly types?: ReadonlyArray<TypeLike>
+  readonly aliasSymbol?: SymbolShape
+  isUnionOrIntersection?: () => boolean
+  getSymbol?: () => SymbolShape | undefined
+  getCallSignatures?: () => ReadonlyArray<unknown>
+}
+type SymbolShape = {
+  readonly name: string
+  getDeclarations?: () => ReadonlyArray<{ getSourceFile(): { readonly fileName: string } }> | undefined
+}
+
+const SERIALIZE_DEPTH = 4
+
+/** A name to show for a container type: `Either`, `Option`, `List`, or the generic fallback. */
+/** Member names TypeScript shows once a union loses its alias (`Either<E, A> | null`), mapped back. */
+const MEMBER_TO_CONTAINER: Readonly<Record<string, string>> = { LeftOf: "Either", RightOf: "Either" }
+
+const containerName = (type: TypeShape): string => {
+  // A bundled .d.ts renames a clashing declaration `Map$1`.
+  const raw = (type.aliasSymbol?.name ?? type.getSymbol?.()?.name)?.replace(/\$\d+$/, "")
+  if (raw === undefined || raw.startsWith("__")) return "functype container"
+  return MEMBER_TO_CONTAINER[raw] ?? raw
+}
+
+/** Declared in a dependency or the TypeScript lib: Stripe objects, Date, Request. Never descended into. */
+const isFromDependency = (type: TypeShape): boolean => {
+  // The type's own symbol, not its alias: `Partial<User>` and `Omit<Row, "x">` are anonymous mapped
+  // types whose alias is declared in TypeScript's lib, and their properties are the caller's.
+  const symbol = type.getSymbol?.()
+  if (symbol === undefined || symbol.name.startsWith("__")) return false
+  return (symbol.getDeclarations?.() ?? []).some((declaration) =>
+    declaration.getSourceFile().fileName.includes("/node_modules/"),
+  )
+}
+
+/**
+ * The first functype container inside the value `node` evaluates to, and the path to it: `subscription`,
+ * `items[]`, or empty for the whole value. A container is a type with `_tag` and `fold`, which every
+ * functype container has and its `toJSON()` envelope doesn't. Walks unions, intersections, array and
+ * tuple elements, object properties and string index signatures, up to 4 levels deep, and checks for a
+ * container before skipping types declared in node_modules, where functype itself lives (#364).
+ *
+ * `undefined` when there is none, or when type information isn't available.
+ */
+export const containerInsideByType = (node: ASTNode, context: Rule.RuleContext): ContainerAt | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const seen = new Set<TypeLike>()
+  const isContainer = (type: TypeLike): boolean =>
+    checker.getPropertyOfType(type, "_tag") !== undefined && checker.getPropertyOfType(type, "fold") !== undefined
+  const at = (path: string, step: string): string =>
+    path === "" ? step : step.startsWith("[") ? path + step : `${path}.${step}`
+
+  const find = (type: TypeLike, path: string, depth: number): ContainerAt | undefined => {
+    if (depth > SERIALIZE_DEPTH || seen.has(type) || isTypeParameter(type)) return undefined
+    seen.add(type)
+    const shape = type as TypeShape
+    // Before splitting: an Either union has `_tag` and `fold` on every member, and `Stack` is an
+    // intersection whose `_tag` and `fold` come from different members.
+    if (isContainer(type)) return { path, name: containerName(shape) }
+    if (shape.isUnionOrIntersection?.() === true) {
+      return (shape.types ?? []).map((member) => find(member, path, depth)).find((h) => h !== undefined)
+    }
+    if ((shape.getCallSignatures?.() ?? []).length > 0) return undefined
+    if (checker.isArrayLikeType(type) || checker.isTupleType(type)) {
+      return checker
+        .getTypeArguments(type)
+        .map((element) => find(element, path === "" ? "[]" : `${path}[]`, depth + 1))
+        .find((h) => h !== undefined)
+    }
+    // Before the dependency skip: `Record<string, Option<T>>` is declared in TypeScript's lib.
+    const indexed = checker.getIndexInfoOfType(type, 0)?.type
+    const byIndex = indexed === undefined ? undefined : find(indexed, at(path, "[key]"), depth + 1)
+    if (byIndex !== undefined) return byIndex
+    if (shape.getSymbol?.() === undefined || isFromDependency(shape)) return undefined
+    return checker
+      .getPropertiesOfType(type)
+      .map((property) => find(checker.getTypeOfSymbolAtLocation(property, tsNode), at(path, property.name), depth + 1))
+      .find((h) => h !== undefined)
+  }
+
+  return find(checker.getTypeAtLocation(tsNode), "", 0)
 }
 
 /** A slot's expected type and the expression TypeScript computed it for. */

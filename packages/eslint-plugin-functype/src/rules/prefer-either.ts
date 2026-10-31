@@ -2,6 +2,7 @@ import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
+import { HOST_THROWS_SCHEMA, hostThrowsWith, isHostThrow } from "../utils/host-throws"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
 
 /** True iff any ancestor of `node` is a `CatchClause`. Pure tail recursion. */
@@ -31,6 +32,7 @@ const rule: Rule.RuleModule = {
             type: "boolean",
             default: true,
           },
+          hostThrows: HOST_THROWS_SCHEMA,
         },
         additionalProperties: false,
       },
@@ -53,6 +55,8 @@ const rule: Rule.RuleModule = {
     const isExemptByMarker = (node: ASTNode): boolean =>
       allowInteropMarker && isInsideTaggedDeclaration(node, INTEROP_TAG, context.sourceCode)
     const allowThrowInTests = options.allowThrowInTests !== false
+    // `throw redirect(…)` / `throw notFound()` from a router is the router's API, not an error (#445).
+    const hostThrows = hostThrowsWith(options.hostThrows)
 
     function isInTestFile() {
       const filename = context.filename
@@ -98,6 +102,7 @@ const rule: Rule.RuleModule = {
     return {
       ThrowStatement(node: ASTNode) {
         if (isExemptByMarker(node)) return
+        if (isHostThrow(node.argument, hostThrows, context)) return
         // Allow throws in test files if configured
         if (allowThrowInTests && isInTestFile()) return
 
