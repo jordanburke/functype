@@ -415,6 +415,21 @@ describe("prefer-option optional members and parameters (#446)", () => {
         ],
       },
       {
+        name: "?: T | null is reported once with checkOptionalMembers, by the union check",
+        code: "type P = { c?: string | null }\nconst f = (x?: string | null) => x",
+        options: [{ checkOptionalMembers: true }],
+        errors: [
+          { messageId: "preferOption", suggestions: 2 },
+          { messageId: "preferOption", suggestions: 2 },
+        ],
+      },
+      {
+        name: "A string-literal key is named without its quotes",
+        code: "type P = { 'a-b'?: string }",
+        options: [{ checkOptionalMembers: true }],
+        errors: [reportedOptional("a-b", "string")],
+      },
+      {
         name: "checkOptionalMembers reports optional and | undefined parameters",
         code: 'export const f = (x?: string): string => x ?? ""\nexport const g = (y: string | undefined): string => y ?? ""',
         options: [{ checkOptionalMembers: true }],

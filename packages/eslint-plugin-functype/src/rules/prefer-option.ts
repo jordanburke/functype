@@ -116,11 +116,18 @@ const rule: Rule.RuleModule = {
       if (isInsideWireType(node, wireTypes) || isExemptByMarker(node)) return
       const annotation = (node.typeAnnotation as ASTNode | undefined)?.typeAnnotation as ASTNode | undefined
       if (!annotation || isFunctypeType(annotation, functypeImports)) return
+      // `a?: T | null` is reported once, by the union check, which keeps its suggestions.
+      if (annotation.type === "TSUnionType" && annotation.types.some((t: ASTNode) => t.type === "TSNullKeyword")) return
       const kept =
         annotation.type === "TSUnionType" ? annotation.types.filter((t: ASTNode) => !isNullish(t)) : [annotation]
       if (kept.length !== 1 || isFunctypeType(kept[0], functypeImports)) return
       const key = (node.type === "TSPropertySignature" ? node.key : node) as ASTNode
-      const name = key.type === "Identifier" ? key.name : context.sourceCode.getText(key)
+      const name =
+        key.type === "Identifier"
+          ? key.name
+          : key.type === "Literal"
+            ? String(key.value)
+            : context.sourceCode.getText(key)
       context.report({
         node: key,
         messageId: "preferOptionOverOptional",
