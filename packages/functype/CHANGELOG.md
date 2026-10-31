@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-either` no longer reports a router's control-flow throws.** TanStack Router, React Router and Remix redirect or show Not found only when a loader or route guard throws `redirect()`, `notFound()` and the like, so `throw redirect({ to: "/" })` is the router's API, not an error. The rule now skips a throw of one of those helpers when it's imported from `@tanstack/react-router`, `@tanstack/router-core`, `react-router` or `@remix-run/node`, under any local name or through a namespace import. A local `redirect` helper, `throw new Response(…)`, and every other throw in the same function are still reported, which an `@interop` tag on the route couldn't do. A new `hostThrows` option adds other modules.
+
 - **`prefer-do-notation` no longer rewrites code, and no longer reports arrays.** Its autofix ran even at `warn`, so `eslint --fix` (which `ts-builds validate` runs) rewrote any `a && a.b && a.b.c` in a file that imports `Do` into code that dropped the last property and didn't compile. On a long `flatMap` chain it added a TODO comment on every pass, ten per run. The rule now reports only, and:
   - counts a chain only when it starts from a monad. With type information the type decides; without it, a monad constructor, a monad-typed identifier, or a monad-like name does. An array's `.flatMap(…)` chain is no longer reported.
   - reads mixing along the chain, from what each step returns, so monads built inside an array's callbacks, and a step that converts with `.toOption()`, aren't a mix.
