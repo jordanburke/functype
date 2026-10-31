@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-option` gives `a?: T` and `a: T | undefined` the same verdict.** On a type-literal or interface member, or a parameter, `a?: string` was never reported but `a: string | undefined` and `a?: string | undefined` were, so the rule taught people to make a required key optional just to silence it, and it fought `exactOptionalPropertyTypes`. Both spellings mean "may be absent", so both are now skipped there. `T | null`, return types, variables, class fields and generic arguments are still reported. A new `checkOptionalMembers` option reports both spellings instead, `a?: T` included.
+
 - **`prefer-do-notation` no longer rewrites code, and no longer reports arrays.** Its autofix ran even at `warn`, so `eslint --fix` (which `ts-builds validate` runs) rewrote any `a && a.b && a.b.c` in a file that imports `Do` into code that dropped the last property and didn't compile. On a long `flatMap` chain it added a TODO comment on every pass, ten per run. The rule now reports only, and:
   - counts a chain only when it starts from a monad. With type information the type decides; without it, a monad constructor, a monad-typed identifier, or a monad-like name does. An array's `.flatMap(…)` chain is no longer reported.
   - reads mixing along the chain, from what each step returns, so monads built inside an array's callbacks, and a step that converts with `.toOption()`, aren't a mix.
