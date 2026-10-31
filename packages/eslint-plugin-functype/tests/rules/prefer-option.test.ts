@@ -324,3 +324,117 @@ const Avatar = (user: User | null) => user`,
     ],
   })
 })
+
+/**
+ * #446: `a?: T` and `a: T | undefined` on a member or parameter both mean "may be absent", and the caller
+ * writes `<X b="v" />` or `f()`. Both are skipped by default, so the two spellings get the same verdict;
+ * `checkOptionalMembers` reports both. `T | null` there is a deliberate nullable and is still reported.
+ */
+describe("prefer-option optional members and parameters (#446)", () => {
+  const reportedOptional = (name: string, type: string) => ({
+    messageId: "preferOptionOverOptional" as const,
+    data: { name, type },
+  })
+
+  ruleTester.run("prefer-option", rule, {
+    valid: [
+      {
+        name: "The issue's Props: ?: and | undefined get the same verdict",
+        code: "export type Props = { a?: string; b: string | undefined; c?: string | undefined }",
+      },
+      {
+        name: "An interface member",
+        code: "interface Options { readonly timeout: number | undefined }",
+      },
+      {
+        name: "Parameters, with and without ?:",
+        code: 'export const f = (x?: string): string => x ?? ""\nexport const g = (x: string | undefined): string => x ?? ""',
+      },
+      {
+        name: "A parameter with a default",
+        code: "function f(x: string | undefined = undefined) { return x }",
+      },
+      {
+        name: "A function type's and a method signature's parameters",
+        code: "type F = (x: string | undefined) => void\ninterface Api { get(id: string | undefined): void }",
+      },
+      {
+        name: "A constructor parameter property",
+        code: "class C { constructor(private readonly x: string | undefined) {} }",
+      },
+      {
+        name: "checkOptionalMembers skips a member that is already an Option",
+        code: "type Props = { a?: Option<string> }",
+        options: [{ checkOptionalMembers: true }],
+      },
+      {
+        name: "checkOptionalMembers still honors Wire<…>",
+        code: "type Row = Wire<{ a?: string }>",
+        options: [{ checkOptionalMembers: true }],
+      },
+    ],
+    invalid: [
+      {
+        name: "A nullable prop is still reported: null is a deliberate value, not absence",
+        code: "type Props = { b: string | null }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "?: T | null is still reported",
+        code: "type Props = { c?: string | null }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A return type is still reported",
+        code: "function f(): string | undefined { return undefined }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A variable is still reported",
+        code: "let v: string | undefined",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A class field is still reported",
+        code: "class C { name: string | undefined = undefined }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A generic argument inside a member is still reported",
+        code: "type Props = { names: Array<string | undefined> }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "checkOptionalMembers reports both spellings, once each",
+        code: "export type Props = { a?: string; b: string | undefined; c?: string | undefined }",
+        options: [{ checkOptionalMembers: true }],
+        errors: [
+          reportedOptional("a", "string"),
+          { messageId: "preferOption", suggestions: 2 },
+          reportedOptional("c", "string"),
+        ],
+      },
+      {
+        name: "?: T | null is reported once with checkOptionalMembers, by the union check",
+        code: "type P = { c?: string | null }\nconst f = (x?: string | null) => x",
+        options: [{ checkOptionalMembers: true }],
+        errors: [
+          { messageId: "preferOption", suggestions: 2 },
+          { messageId: "preferOption", suggestions: 2 },
+        ],
+      },
+      {
+        name: "A string-literal key is named without its quotes",
+        code: "type P = { 'a-b'?: string }",
+        options: [{ checkOptionalMembers: true }],
+        errors: [reportedOptional("a-b", "string")],
+      },
+      {
+        name: "checkOptionalMembers reports optional and | undefined parameters",
+        code: 'export const f = (x?: string): string => x ?? ""\nexport const g = (y: string | undefined): string => y ?? ""',
+        options: [{ checkOptionalMembers: true }],
+        errors: [reportedOptional("x", "string"), { messageId: "preferOption", suggestions: 2 }],
+      },
+    ],
+  })
+})

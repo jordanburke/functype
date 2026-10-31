@@ -47,6 +47,18 @@ describe("strict preset", () => {
     expect(configs.recommended!.rules["functype/no-floating-io"]).toBe("off")
   })
 
+  it("errors on a container sent to a JSON sink, which recommended leaves off until 2.0", () => {
+    expect(configs.strict!.rules["functype/no-serialize-container"]).toBe("error")
+    expect(configs.recommended!.rules["functype/no-serialize-container"]).toBe("off")
+    expect(configs.agent!.rules["functype/no-serialize-container"]).toBe("error")
+  })
+
+  it("errors on a dropped Either or Try, which recommended leaves off until 2.0", () => {
+    expect(configs.strict!.rules["functype/no-floating-result"]).toBe("error")
+    expect(configs.recommended!.rules["functype/no-floating-result"]).toBe("off")
+    expect(configs.agent!.rules["functype/no-floating-result"]).toBe("error")
+  })
+
   it.each(["functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
     "warns on the React rule %s, while it is measured",
     (rule) => {
