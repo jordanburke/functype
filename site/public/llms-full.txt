@@ -4382,6 +4382,28 @@ When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsyn
 
 `null` is idiomatic React state, and an `Option` there fights the hook's own API. Nullable component parameters and props are still reported.
 
+### `functype/prefer-do-notation`
+
+| Option              | Default | Description                                                                               |
+| ------------------- | ------- | ----------------------------------------------------------------------------------------- |
+| `minChainDepth`     | `3`     | Report a `.flatMap(…)` chain once it has this many `flatMap`/`map`/`filter`/`fold` steps. |
+| `detectMixedMonads` | `true`  | Report a composition chain that moves between Option, Either, Try and Task.               |
+
+It reports three shapes, each once, at the outermost step:
+
+```ts
+o.flatMap(f).flatMap(g).flatMap(h) // a flatMap chain 3 steps deep → Do notation
+Option(x)
+  .flatMap((v) => Either.right(v))
+  .map(f) // a chain that mixes monads → Do notation
+user && user.profile && user.profile.name // a guard on each step of a path → user?.profile?.name
+```
+
+- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse([])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
+- **Mixing is read along the chain**, from the monad each step's callback returns. A conversion such as `.toOption()` keeps the chain in one monad, and a monad built somewhere inside a callback isn't a step.
+- **A guard chain is read from the AST.** Each operand must be a property of the one before it, so `isAdmin && settings.theme && user.profile.name` isn't one.
+- **It has no autofix.** It reports only, so `eslint --fix` can't change code on its behalf.
+
 ### `functype/prefer-map`
 
 | Option              | Default | Description                                                                                                    |

@@ -6,6 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`prefer-do-notation` no longer rewrites code, and no longer reports arrays.** Its autofix ran even at `warn`, so `eslint --fix` (which `ts-builds validate` runs) rewrote any `a && a.b && a.b.c` in a file that imports `Do` into code that dropped the last property and didn't compile. On a long `flatMap` chain it added a TODO comment on every pass, ten per run. The rule now reports only, and:
+  - counts a chain only when it starts from a monad. With type information the type decides; without it, a monad constructor, a monad-typed identifier, or a monad-like name does. An array's `.flatMap(…)` chain is no longer reported.
+  - reads mixing along the chain, from what each step returns, so monads built inside an array's callbacks, and a step that converts with `.toOption()`, aren't a mix.
+  - reads a guard chain from the AST: each operand must be a property of the one before. It points at optional chaining (`a?.b?.c`) now, not Do notation.
+  - reports each chain once, at its outermost step, and no longer counts the receiver as a step, so `Option(x).flatMap(f).flatMap(g)` is 2 deep, not 3.
+
+  On agent-todo and functype's own packages, the 9 reports 2.122.0 made were all false positives, and none remain.
+
 - **eslint-plugin-functype has a `no-floating-result` rule.** It reports a statement that computes an `Either`, `Try` or other result that can carry a failure and drops it, such as `await userService.updateSubscription(id, plan)` on its own line, so a failure is silently ignored. A chain through `.tapError(…)` or `.tapLeft(…)` counts as handled, unless a later `.flatMap(…)` brings in a new failure, and `void` marks a deliberate drop. It's type-aware, `error` in `strict` and `agent`, and `off` in `recommended` until 2.0. On agent-todo's API it found the 20 real drops that project had fixed by hand, and on functype's own packages it reports nothing.
 
 ## 1.22.0 - 2026-10-30
