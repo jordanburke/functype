@@ -7,6 +7,7 @@ import noGetUnsafe from "./no-get-unsafe"
 import noGetOrThrowInRender from "./no-getOrThrow-in-render"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
+import noSerializeContainer from "./no-serialize-container"
 import preferDoNotation from "./prefer-do-notation"
 import preferEither from "./prefer-either"
 import preferFlatmap from "./prefer-flatmap"
@@ -28,6 +29,7 @@ export {
   noGetUnsafe,
   noImperativeLoops,
   noLet,
+  noSerializeContainer,
   preferDoNotation,
   preferEither,
   preferFlatmap,
@@ -58,6 +60,7 @@ export default {
   "no-array-mutation": noArrayMutation,
   "no-floating-io": noFloatingIo,
   "no-floating-result": noFloatingResult,
+  "no-serialize-container": noSerializeContainer,
   "no-getOrThrow-in-render": noGetOrThrowInRender,
   "must-fold-on-component-return": mustFoldOnComponentReturn,
 }

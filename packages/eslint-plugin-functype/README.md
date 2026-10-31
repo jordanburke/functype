@@ -62,6 +62,7 @@ export default [functype.configs.agent]
 | `functype/no-array-mutation`             |     off     | error  | error | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
 | `functype/no-floating-io`                |     off     |  warn  | error | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
 | `functype/no-floating-result`            |     off     | error  | error | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
+| `functype/no-serialize-container`        |     off     | error  | error | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
 | `functype/no-getOrThrow-in-render`       |     off     |  warn  | error | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
 | `functype/must-fold-on-component-return` |     off     |  warn  | error | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
@@ -259,6 +260,28 @@ void (await cache.refresh()) // fine: a deliberate drop
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
 Measured (2026-10-30) on agent-todo's agent-gate-api, which kept a hand-written check for this: at the commit that added that check, the rule reports 20 drops in production code. agent-todo fixed every one of them as a real bug, among them 8 in the Stripe webhook handler, where a failed write still answered Stripe 200. On the current code, after those fixes, it reports none in production code and 12 in tests. functype-os, functype-log, functype-react, functype-eval and functype-mcp-server report none. It's `error` in `strict` and `agent`, and `off` in `recommended`, where it moves to `error` in 2.0.
+
+### `functype/no-serialize-container`
+
+Reports a functype container handed to a JSON sink, anywhere inside the value. An `Either`, `Option` or `List` serializes as its `{"@functype", _tag, value}` envelope, so a client reading `subscription.plan` gets `undefined`, and a body built around a `Left` answers 200. The compiler can't catch it, because `c.json()` and `JSON.stringify()` accept any value.
+
+```ts
+return c.json(await svc.getDetails(id)) // reported: sends the Either's envelope
+return c.json({ user, subscription: details }) // reported, at subscription
+return JSON.stringify({ success: true, checkout }) // reported, at checkout: an MCP tool reporting success on failure
+
+return c.json(result.orThrow()) // fine, after checking result.isLeft()
+return c.json({ items: list.toArray() }) // fine
+return c.json(result.toJSON()) // fine: the envelope on purpose
+```
+
+- **Sinks:** `JSON.stringify(x)`, and any `.json(x)` call with an argument: Hono's `c.json`, `Response.json`, Express's `res.json`. `new Response(JSON.stringify(x))` is covered by the first. A read such as `await res.json()` has no argument, so it never matches.
+- **What counts:** a type with `_tag` and `fold`, which every functype container has and its `toJSON()` envelope doesn't. The rule looks through unions and intersections, array and tuple elements, object properties, `Record` values and utility types such as `Partial<T>` and `Omit<T, K>`, up to 4 levels deep, and names the path in the message.
+- **The envelope on purpose:** call `.toJSON()` or `.serialize()` first. A test that checks a container's JSON output is reported too, so call `.toJSON()` there as well.
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
+
+Measured (2026-10-31) on agent-todo's agent-gate-api, which kept a hand-written check for this. Before its fix commit (f002b90), the rule reports 4 calls, and each is a bug agent-todo fixed: `GET /billing`, which showed every paying user "billing account isn't properly linked" for about nine months; `PATCH /user/me` and `PATCH /user/preferences`, which answered 200 with a `Left` in the body; and an MCP tool that reported success on failure. On the current code it reports none, and none in agent-todo's UI or in functype's own packages. It's `error` in `strict` and `agent`, and `off` in `recommended`, where it moves to `error` in 2.0.
 
 ### React rules
 

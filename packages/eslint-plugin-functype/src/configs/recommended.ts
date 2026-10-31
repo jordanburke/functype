@@ -30,6 +30,10 @@
  * style, and on agent-todo's API it found the 20 drops that project fixed by hand as real bugs. Turning a
  * new error on here would fail consumers' builds on a 1.x minor, so it moves to `error` here in 2.0. Type-aware.
  *
+ * no-serialize-container (1.23) is off here and `error` in strict, for the same reason: a container sent
+ * to `c.json()` or `JSON.stringify()` is a defect, and turning a new error on here would fail consumers'
+ * builds on a 1.x minor. It moves to `error` here in 2.0. Type-aware.
+ *
  * no-getOrThrow-in-render and must-fold-on-component-return are React rules: they fire only inside a
  * component (a PascalCase function with JSX) or a hook (`use*`), so non-React code rarely trips them (a
  * non-React function named `use*` is read as a hook). Both are new and unmeasured on real React code, so
@@ -54,6 +58,7 @@ const recommendedRules = {
   "functype/no-array-mutation": "off",
   "functype/no-floating-io": "off",
   "functype/no-floating-result": "off",
+  "functype/no-serialize-container": "off",
   "functype/no-getOrThrow-in-render": "off",
   "functype/must-fold-on-component-return": "off",
 }
