@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype has a `no-serialize-container` rule.** It reports an `Either`, `Option`, `List` or other functype container passed to `JSON.stringify()` or a `.json()` sink such as Hono's `c.json`, anywhere inside the value, with the path in the message. A container serializes as its `{_tag, value}` envelope, so the client reads `undefined` fields. Calling `.toJSON()` or `.serialize()` first marks the envelope as deliberate. It's type-aware, `error` in `strict` and `agent`, and `off` in `recommended` until 2.0. On agent-todo's API before its fixes, it found the 4 calls that project fixed by hand, including a `GET /billing` that told every paying user their billing account wasn't linked, and on functype's own packages it reports nothing.
+
 - **`prefer-do-notation` no longer rewrites code, and no longer reports arrays.** Its autofix ran even at `warn`, so `eslint --fix` (which `ts-builds validate` runs) rewrote any `a && a.b && a.b.c` in a file that imports `Do` into code that dropped the last property and didn't compile. On a long `flatMap` chain it added a TODO comment on every pass, ten per run. The rule now reports only, and:
   - counts a chain only when it starts from a monad. With type information the type decides; without it, a monad constructor, a monad-typed identifier, or a monad-like name does. An array's `.flatMap(…)` chain is no longer reported.
   - reads mixing along the chain, from what each step returns, so monads built inside an array's callbacks, and a step that converts with `.toOption()`, aren't a mix.
