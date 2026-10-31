@@ -1,7 +1,8 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
-import { getFunctypeImports, isChainedMethodCall } from "../utils/functype-detection"
+import { isChainedMethodCall } from "../utils/functype-detection"
+import { isExtractableByType } from "../utils/type-aware"
 
 const MONAD_TYPES: ReadonlySet<string> = new Set(["Option", "Either", "Try", "Task"])
 
@@ -44,18 +45,9 @@ function astChildren(node: ASTNode): readonly unknown[] {
     .filter((v) => v !== null && typeof v === "object")
 }
 
-/**
- * Pure recursion: the set of all monad names reachable from `node` (including
- * `node` itself if it is a monad constructor call). No mutation, no
- * accumulator parameter — just a fold over the children's results.
- */
-function monadsIn(node: unknown): ReadonlySet<string> {
-  if (!node || typeof node !== "object") return new Set()
-  const ast = node as ASTNode
-  return astChildren(ast).reduce<ReadonlySet<string>>((acc, child) => union(acc, monadsIn(child)), monadAt(ast))
-}
-
 const CHAIN_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter", "fold"])
+
+const FLAT_MAP: ReadonlySet<string> = new Set(["flatMap"])
 
 /**
  * Methods that *compose* monadic operations (stay in the monad and feed the
@@ -66,16 +58,15 @@ const CHAIN_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter", 
 const COMPOSITION_METHODS: ReadonlySet<string> = new Set(["flatMap", "map", "filter"])
 
 /**
- * Length of the chain of `.flatMap()/.map()/.filter()/.fold()` calls walking
- * left from `node`. Returns 1 for a single call, N for N stacked calls. Pure
- * tail recursion — no mutable counter, no `while` loop.
+ * Number of `.flatMap()/.map()/.filter()/.fold()` steps walking left from `node`. Only the steps
+ * count: the receiver they start from, `o` or `Option(x)`, is not a level, so
+ * `Option(x).flatMap(f).flatMap(g)` is 2 deep.
  */
 function getChainDepth(node: ASTNode): number {
-  if (node.callee.type !== "MemberExpression" || node.callee.object.type !== "CallExpression") return 1
+  if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return 0
   const method = node.callee.property
-  const next = node.callee.object as ASTNode
   const here = method.type === "Identifier" && CHAIN_METHODS.has(method.name) ? 1 : 0
-  return here + getChainDepth(next)
+  return here + getChainDepth(node.callee.object as ASTNode)
 }
 
 /**
@@ -104,16 +95,69 @@ function isCompositionChain(node: ASTNode): boolean {
   return compositionChainDepth(node) >= 1
 }
 
+/** The operands of an `a && b && c` chain, left to right, through any nesting of `&&`. */
+function andOperands(node: ASTNode): ReadonlyArray<ASTNode> {
+  if (node.type !== "LogicalExpression" || node.operator !== "&&") return [node]
+  return [...andOperands(node.left as ASTNode), ...andOperands(node.right as ASTNode)]
+}
+
+/** A plain property path a guard can start from: `a`, `this`, `a.b`. Optional chains are already the fix. */
+const isPathStart = (node: ASTNode): boolean =>
+  node.type === "Identifier" || node.type === "ThisExpression" || node.type === "MemberExpression"
+
+const NONE: ReadonlySet<string> = new Set()
+
+const FUNCTION_TYPES: ReadonlySet<string> = new Set([
+  "ArrowFunctionExpression",
+  "FunctionExpression",
+  "FunctionDeclaration",
+])
+
+/** `MONAD_TYPES` entries a type annotation names: `Option<number>` → Option. */
+function monadOfAnnotation(annotation: ASTNode | undefined): ReadonlySet<string> {
+  const type = annotation?.typeAnnotation as ASTNode | undefined
+  if (type?.type !== "TSTypeReference" || type.typeName?.type !== "Identifier") return NONE
+  return MONAD_TYPES.has(type.typeName.name) ? new Set([type.typeName.name]) : NONE
+}
+
 /**
- * Depth of a logical-AND chain (`a && b && c && ...`) where each right-hand
- * side is either a MemberExpression or another && chain — the shape that
- * indicates nested property-access guarding rather than arbitrary booleans.
+ * Receiver names that say "this holds a monad", for code linted without type information: `option`,
+ * `opt`, `either`, `result`, `maybe`, a numbered one such as `option1`, or a camelCase suffix such as
+ * `userOption` or `parseResult`. The same guess no-get-unsafe makes.
  */
-function andChainDepth(node: ASTNode): number {
-  if (node.type !== "LogicalExpression" || node.operator !== "&&") return 0
-  const rhs = node.right
-  const here = rhs.type === "MemberExpression" || (rhs.type === "LogicalExpression" && rhs.operator === "&&") ? 1 : 0
-  return here + andChainDepth(node.left as ASTNode)
+const MONAD_NAME = /^(option|opt|either|result|maybe)\d*$|(Option|Either|Result|Maybe|Try)\d*$/i
+
+/** Methods that turn one monad into another: `Try(f).toOption()` is an Option. */
+const CONVERSIONS: ReadonlyMap<string, string> = new Map([
+  ["toOption", "Option"],
+  ["toEither", "Either"],
+  ["toTry", "Try"],
+])
+
+/**
+ * The monad an expression's value is, as far as the syntax shows: a constructor or companion call
+ * (`Option(x)`, `Either.right(x)`), a conversion (`Try(f).toOption()` is an Option), a step that keeps
+ * its receiver's monad (`Option(x).map(f)`), or either branch of `ok ? a : b`. Anything else is unknown.
+ */
+function monadOfValue(node: ASTNode): ReadonlySet<string> {
+  if (node.type === "ConditionalExpression")
+    return union(monadOfValue(node.consequent as ASTNode), monadOfValue(node.alternate as ASTNode))
+  if (node.type !== "CallExpression") return NONE
+  if (monadAt(node).size > 0) return monadAt(node)
+  if (node.callee?.type !== "MemberExpression" || node.callee.property.type !== "Identifier") return NONE
+  const converted = CONVERSIONS.get(node.callee.property.name)
+  if (converted !== undefined) return new Set([converted])
+  return COMPOSITION_METHODS.has(node.callee.property.name) ? monadOfValue(node.callee.object as ASTNode) : NONE
+}
+
+/**
+ * The receiver a method chain starts from: `Option(x)` in `Option(x).map(f).flatMap(g)`, `o` in
+ * `o.flatMap(f)`. Stops at a monad constructor or companion call, which is a root of its own.
+ */
+function chainRoot(node: ASTNode): ASTNode {
+  if (node.type !== "CallExpression" || monadAt(node).size > 0) return node
+  if (node.callee?.type !== "MemberExpression") return node
+  return chainRoot(node.callee.object as ASTNode)
 }
 
 const rule: Rule.RuleModule = {
@@ -123,9 +167,9 @@ const rule: Rule.RuleModule = {
       description: "Prefer Do notation for complex monadic compositions and nested operations",
       recommended: true,
     },
-    fixable: "code",
     messages: {
-      preferDoForNestedChecks: "Prefer Do notation for nested null/undefined checks instead of logical AND chains",
+      preferDoForNestedChecks:
+        "This && chain guards each step of a property path. Use optional chaining (a?.b?.c), or Option(a).flatMap(…) when you want an Option",
       preferDoForChainedMethods: "Prefer Do notation for complex flatMap chains ({{count}} levels deep)",
       preferDoForMixedMonads: "Consider Do notation when mixing Option, Either, and Try operations",
       preferDoAsyncForChainedTasks: "Prefer DoAsync notation for chained async operations",
@@ -152,120 +196,128 @@ const rule: Rule.RuleModule = {
     const options = context.options[0] || {}
     const minChainDepth = options.minChainDepth || 3
     const detectMixedMonads = options.detectMixedMonads !== false
+    const text = (node: ASTNode): string => context.sourceCode.getText(node).replace(/\s+/g, "")
 
-    const functypeImports = getFunctypeImports(context)
-
-    // Track if Do notation is already imported
-    const hasDoImport = functypeImports.functions.has("Do") || functypeImports.functions.has("DoAsync")
+    /** The monad a chain root is declared as, through its variable's or parameter's annotation. */
+    function declaredMonad(identifier: ASTNode): ReadonlySet<string> {
+      const variable = context.sourceCode
+        .getScope(identifier)
+        .references.find((reference) => reference.identifier === identifier)?.resolved
+      const declared = variable?.defs[0]?.name as ASTNode | undefined
+      return monadOfAnnotation(declared?.typeAnnotation as ASTNode | undefined)
+    }
 
     /**
-     * Detect nested null/undefined checks like: a && a.b && a.b.c
+     * Does the chain start from a functype monad? With type information its type decides, so a
+     * `string[]` never counts. Without it: a monad constructor or companion call, an identifier
+     * annotated with a monad type, or one named like a monad.
+     */
+    function startsFromMonad(root: ASTNode): boolean {
+      const byType = isExtractableByType(root, context)
+      if (byType !== undefined) return byType
+      if (monadAt(root).size > 0) return true
+      if (root.type !== "Identifier") return false
+      return declaredMonad(root).size > 0 || MONAD_NAME.test(root.name)
+    }
+
+    /** The call that takes `node` as its receiver for a further `.flatMap/.map/.filter/.fold` step, if any. */
+    function nextStep(node: ASTNode): ASTNode | undefined {
+      const member = node.parent as ASTNode | undefined
+      const call = member?.parent as ASTNode | undefined
+      if (member?.type !== "MemberExpression" || member.object !== node) return undefined
+      if (call?.type !== "CallExpression" || call.callee !== member) return undefined
+      return member.property.type === "Identifier" && CHAIN_METHODS.has(member.property.name) ? call : undefined
+    }
+
+    /**
+     * Is there a `methods` step further out on this chain? Then that step reports, once, for the whole
+     * chain. A trailing `.fold(…)` or `.map(…)` isn't one, so it doesn't hide the flatMaps under it.
+     */
+    function hasStepAbove(node: ASTNode, methods: ReadonlySet<string>): boolean {
+      const step = nextStep(node)
+      if (step === undefined) return false
+      const method = step.callee.property
+      return (method.type === "Identifier" && methods.has(method.name)) || hasStepAbove(step, methods)
+    }
+
+    /**
+     * `a && a.b && a.b.c`: at least three operands in a row, each a property of the one before it.
+     * Matched on the AST, so `isAdmin && settings.theme && user.profile.name` is not a guard chain.
      */
     function checkNestedNullChecks(node: ASTNode): void {
       if (node.operator !== "&&") return
-
-      // Check if this looks like nested property access guarding
-      if (andChainDepth(node) >= 2 && hasNestedPropertyAccess(node)) {
-        context.report({
-          node,
-          messageId: "preferDoForNestedChecks",
-          fix: hasDoImport ? (fixer) => fixNestedChecks(fixer, node) : undefined,
-        })
-      }
+      const parent = node.parent as ASTNode | undefined
+      if (parent?.type === "LogicalExpression" && parent.operator === "&&") return
+      const operands = andOperands(node)
+      const longestRun = operands.reduce<{ readonly run: number; readonly best: number }>(
+        (acc, operand, i) => {
+          const previous = operands[i - 1]
+          const extends_ =
+            previous !== undefined &&
+            isPathStart(previous) &&
+            operand.type === "MemberExpression" &&
+            text(operand.object as ASTNode) === text(previous)
+          const run = extends_ ? acc.run + 1 : 1
+          return { run, best: Math.max(acc.best, run) }
+        },
+        { run: 0, best: 0 },
+      ).best
+      if (longestRun >= 3) context.report({ node, messageId: "preferDoForNestedChecks" })
     }
 
-    /**
-     * Check if logical expression contains nested property access patterns
-     */
-    function hasNestedPropertyAccess(node: ASTNode): boolean {
-      // Look for patterns like: obj && obj.prop && obj.prop.nested
-      const matches = context.sourceCode.getText(node).match(/\w+(\.\w+){2,}/g)
-      return matches !== null && matches.length > 0
-    }
-
-    /**
-     * Detect long flatMap chains
-     */
+    /** A long `.flatMap(…)` chain on a monad, reported once at its outermost step. */
     function checkChainedMethods(node: ASTNode): void {
-      if (!isChainedMethodCall(node, "flatMap")) return
-
+      if (!isChainedMethodCall(node, "flatMap") || hasStepAbove(node, FLAT_MAP)) return
       const chainDepth = getChainDepth(node)
+      if (chainDepth < minChainDepth || !startsFromMonad(chainRoot(node))) return
+      context.report({
+        node,
+        messageId: "preferDoForChainedMethods",
+        data: { count: chainDepth.toString() },
+      })
+    }
 
-      if (chainDepth >= minChainDepth) {
-        context.report({
-          node,
-          messageId: "preferDoForChainedMethods",
-          data: { count: chainDepth.toString() },
-          fix: hasDoImport ? (fixer) => fixChainedMethods(fixer, node) : undefined,
-        })
+    /** What a step's callback returns: its expression body, or the arguments of its own `return`s. */
+    function returnedBy(callback: ASTNode | undefined): ReadonlyArray<ASTNode> {
+      if (callback?.type !== "ArrowFunctionExpression" && callback?.type !== "FunctionExpression") return []
+      const body = callback.body as ASTNode
+      if (body.type !== "BlockStatement") return [body]
+      const returns = (node: ASTNode): ReadonlyArray<ASTNode> => {
+        if (node.type === "ReturnStatement") return node.argument ? [node.argument as ASTNode] : []
+        if (FUNCTION_TYPES.has(node.type)) return []
+        return (astChildren(node) as ASTNode[]).flatMap(returns)
       }
+      return returns(body)
+    }
+
+    /** The monads a composition chain moves through: its root, and what each step's callback returns. */
+    function monadsAlongChain(node: ASTNode): ReadonlySet<string> {
+      if (node.type !== "CallExpression" || node.callee?.type !== "MemberExpression") return monadAt(node)
+      const method = node.callee.property
+      const step =
+        method.type === "Identifier" && COMPOSITION_METHODS.has(method.name)
+          ? returnedBy(node.arguments[0] as ASTNode | undefined).reduce<ReadonlySet<string>>(
+              (acc, returned) => union(acc, monadOfValue(returned)),
+              NONE,
+            )
+          : NONE
+      if (monadAt(node).size > 0) return union(step, monadAt(node))
+      // From a conversion on, the chain is the converted monad: what it converted from doesn't count.
+      const converted = method.type === "Identifier" ? CONVERSIONS.get(method.name) : undefined
+      if (converted !== undefined) return union(step, new Set([converted]))
+      return union(step, monadsAlongChain(node.callee.object as ASTNode))
     }
 
     /**
-     * Auto-fix for nested null checks
-     */
-    function fixNestedChecks(fixer: Rule.RuleFixer, node: ASTNode): Rule.Fix {
-      const text = context.sourceCode.getText(node)
-
-      // Simple transformation for common patterns
-      // a && a.b && a.b.c -> Do(function* () { const x = yield* $(Option(a)); const y = yield* $(Option(x.b)); return Option(y.c) })
-      const match = text.match(/(\w+)(\.\w+)+/)
-      if (match) {
-        const baseVar = match[1]
-        const chain = match[0]
-
-        const doNotation = `Do(function* () {
-  const obj = yield* $(Option(${baseVar}))
-  return yield* $(Option(obj${chain.substring(baseVar.length)}))
-})`
-
-        return fixer.replaceText(node, doNotation)
-      }
-
-      return fixer.replaceText(node, `/* TODO: Convert to Do notation */ ${text}`)
-    }
-
-    /**
-     * Auto-fix for chained methods (basic)
-     */
-    function fixChainedMethods(fixer: Rule.RuleFixer, node: ASTNode): Rule.Fix {
-      const text = context.sourceCode.getText(node)
-
-      // For now, just add a comment suggesting Do notation
-      return fixer.replaceText(node, `/* TODO: Consider Do notation for complex chains */ ${text}`)
-    }
-
-    /**
-     * Detect mixed monad usage by walking the AST under `node` and counting
-     * *distinct* monad constructor calls — not substring matches.
-     *
-     * A "monad constructor call" is a CallExpression whose callee is either:
-     * - a bare identifier matching a known monad type (`Option(...)`, `Try(...)`),
-     *   or
-     * - a member expression whose object is a known monad type
-     *   (`Option.none()`, `Either.right(...)`, `Try.success(...)`).
-     *
-     * Method calls like `.toEither(...)`, `.toOption()`, `.toTry()` are NOT
-     * constructor calls — they're the idiomatic *conversion* API for crossing
-     * monad boundaries. The old substring-based check fired on these because
-     * `.toEither` contains "Either" as a substring; the AST check correctly
-     * sees them as method calls, not new monad constructions.
-     *
-     * Implementation is pure recursion over the AST: `monadAt` reports what
-     * a single node names; `monadsIn` returns the union of `monadAt(self)`
-     * with the results from each child. No mutable accumulator, no for-loops
-     * driving state changes.
+     * Mixed monads along one composition chain: `option.flatMap((x) => Either.right(x)).flatMap((y) => Try(…))`.
+     * Only the chain's own steps count, not every monad written somewhere inside its callbacks, and
+     * only a chain that starts from a monad: an array's `.map((x) => Option(x))` is not a mix.
+     * Conversions such as `.toEither(…)` and terminal handlers such as `.fold(…)` are not steps (#205).
      */
     function checkMixedMonads(node: ASTNode): void {
-      if (!detectMixedMonads) return
-      // Only flag genuine composition chains (.flatMap/.map/.filter stacked at
-      // least twice deep). Terminal handlers (.fold/.match/.getOrElse) and
-      // bare co-occurrence in arg lists are conversions, not compositions —
-      // Do notation doesn't apply. See issue #205.
-      if (!isCompositionChain(node)) return
-      if (monadsIn(node).size >= 2) {
-        context.report({ node, messageId: "preferDoForMixedMonads" })
-      }
+      if (!detectMixedMonads || !isCompositionChain(node) || hasStepAbove(node, COMPOSITION_METHODS)) return
+      if (!startsFromMonad(chainRoot(node))) return
+      if (monadsAlongChain(node).size >= 2) context.report({ node, messageId: "preferDoForMixedMonads" })
     }
 
     return {

@@ -1,6 +1,7 @@
-import { describe } from "vitest"
-import { VisualRuleTester, showTransformations } from "../utils/visual-rule-tester"
+import { describe, expect, it } from "vitest"
+
 import rule from "../../src/rules/prefer-do-notation"
+import { showTransformations, VisualRuleTester } from "../utils/visual-rule-tester"
 
 describe("prefer-do-notation", () => {
   VisualRuleTester.run(
@@ -113,7 +114,67 @@ describe("prefer-do-notation", () => {
           const result = Try(() => parse(x)).getOrElse(Option.none())
         `,
         },
+        // #444 1c: an array's flatMap chain is not a monad chain
+        {
+          name: "An array flatMap chain is not a monad chain",
+          code: `
+          export const words = (lines: string[]): string[] =>
+            lines.flatMap((l) => l.split(" ")).flatMap((w) => w.split("-")).flatMap((p) => p.split("_"))
+        `,
+        },
+        // #444 1d: monads built inside an array chain's callbacks are not a mix
+        {
+          name: "An array chain whose callbacks build different monads is not a mix",
+          code: `
+          import { Option, Either } from "functype"
+          export const ids = (xs: string[]) =>
+            xs.map((x) => Option(x)).filter((o) => o.isSome()).map((o) => Either.right(o))
+        `,
+        },
+        // #444 1e: operands that don't guard one another
+        {
+          name: "An && chain whose operands don't guard one another",
+          code: `
+          export const show = (isAdmin: boolean, settings: { theme: string }, user: { profile: { name: string } }) =>
+            isAdmin && settings.theme && user.profile.name
+        `,
+        },
+        {
+          name: "Optional chaining is already the fix",
+          code: "const name = user && user?.profile && user?.profile?.name",
+        },
+        {
+          name: "Monads written inside a callback, not returned by it, are not steps",
+          code: `
+          const result = option
+            .flatMap((x) => { log(Either.right(x)); return getOption(x) })
+            .map((y) => y + 1)
+        `,
+        },
         // Bare co-occurrence in a function arg list isn't composition
+        // A conversion keeps the chain in one monad: every step here is an Option
+        {
+          name: "A step that converts with toOption() stays in the chain's monad",
+          code: `
+          export const parseDsn = (dsn: string | undefined) =>
+            Option(dsn)
+              .flatMap((value) => Try(() => new URL(value)).toOption())
+              .flatMap((url) => Option(url.pathname.split("/").at(-1)).map((id) => ({ host: url.host, id })))
+        `,
+        },
+        {
+          name: "Both branches of a conditional step are Options",
+          code: `
+          const header = Try(() => JSON.parse(line))
+            .toOption()
+            .flatMap((h) => (typeof h.dsn === "string" ? parseDsn(h.dsn) : Option.none()))
+            .map((p) => p.host)
+        `,
+        },
+        {
+          name: "Two flatMaps on a constructor root are two levels, below the default of 3",
+          code: "const r = Option(x).flatMap((a) => Option(a + 1)).flatMap((b) => Option(b * 2))",
+        },
         {
           name: "Function args mixing monads is not composition",
           code: `
@@ -126,14 +187,7 @@ describe("prefer-do-notation", () => {
         {
           name: "Nested null checks should use Do notation",
           code: "const city = user && user.address && user.address.city && user.address.city.name",
-          errors: [
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-          ],
+          errors: [{ messageId: "preferDoForNestedChecks" }],
         },
         // Multiple chained flatMaps
         {
@@ -145,16 +199,7 @@ describe("prefer-do-notation", () => {
             .flatMap(z => getOption4(z))
             .flatMap(w => getOption5(w))
         `,
-          errors: [
-            {
-              messageId: "preferDoForChainedMethods",
-              data: { count: "4" },
-            },
-            {
-              messageId: "preferDoForChainedMethods",
-              data: { count: "3" },
-            },
-          ],
+          errors: [{ messageId: "preferDoForChainedMethods", data: { count: "4" } }],
         },
         // Real-world user data access example
         {
@@ -164,14 +209,7 @@ describe("prefer-do-notation", () => {
             return user && user.profile && user.profile.address && user.profile.address.city
           }
         `,
-          errors: [
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-          ],
+          errors: [{ messageId: "preferDoForNestedChecks" }],
         },
         // Mixed monad types
         {
@@ -217,24 +255,76 @@ describe("prefer-do-notation", () => {
             },
           ],
         },
+        // #444 1a: still reported, and no longer rewritten into code that doesn't compile
+        {
+          name: "Nested checks in a file that imports Do are reported, not rewritten",
+          code: `
+          import { Do } from "functype"
+          export const name = (user?: { profile?: { name?: string } }) => user && user.profile && user.profile.name
+        `,
+          errors: [{ messageId: "preferDoForNestedChecks" }],
+        },
+        // #444 1b: reported once, and no TODO comment is added
+        {
+          name: "A flatMap chain in a file that imports Do is reported, not commented",
+          code: `
+          import { Do, Option } from "functype"
+          export const v = (o: Option<number>) =>
+            o.flatMap((a) => Option(a + 1)).flatMap((b) => Option(b * 2)).flatMap((c) => Option(c - 1))
+        `,
+          errors: [{ messageId: "preferDoForChainedMethods", data: { count: "3" } }],
+        },
+        {
+          name: "A guard run after an unrelated operand",
+          code: "const name = isAdmin && user && user.profile && user.profile.name",
+          errors: [{ messageId: "preferDoForNestedChecks" }],
+        },
+        {
+          name: "A trailing fold doesn't hide the flatMap chain under it",
+          code: `
+          const total = Option(1)
+            .flatMap((a) => Option(a + 1))
+            .flatMap((b) => Option(b * 2))
+            .flatMap((c) => Option(c - 1))
+            .fold(() => 0, (n) => n)
+        `,
+          errors: [{ messageId: "preferDoForChainedMethods", data: { count: "3" } }],
+        },
+        {
+          name: "A mix returned from a block-bodied callback",
+          code: `
+          const result = Option(input)
+            .flatMap((x) => {
+              if (x > 0) return Either.right(x)
+              return Either.left("negative")
+            })
+            .map((y) => y + 1)
+        `,
+          errors: [{ messageId: "preferDoForMixedMonads" }],
+        },
+        {
+          name: "A step that converts to another monad is a mix",
+          code: `
+          const result = Option(input)
+            .flatMap((x) => Try(() => parse(x)).toEither((e) => e.message))
+            .map((y) => y + 1)
+        `,
+          errors: [{ messageId: "preferDoForMixedMonads" }],
+        },
         // Deeply nested && chain (4+ levels)
         {
           name: "Deeply nested && chain with property access",
           code: "const x = a && a.b && a.b.c && a.b.c.d && a.b.c.d.e",
-          errors: [
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-            {
-              messageId: "preferDoForNestedChecks",
-            },
-          ],
+          errors: [{ messageId: "preferDoForNestedChecks" }],
         },
       ]),
     },
     { showAll: true },
   )
+})
+
+describe("prefer-do-notation fixes", () => {
+  it("has no autofix, so eslint --fix can't change code on its behalf (#444)", () => {
+    expect(rule.meta?.fixable).toBeUndefined()
+  })
 })
