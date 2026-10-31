@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.23.0 - 2026-10-31
+
 - **`prefer-either` no longer reports a router's control-flow throws.** TanStack Router, React Router and Remix redirect or show Not found only when a loader or route guard throws `redirect()`, `notFound()` and the like, so `throw redirect({ to: "/" })` is the router's API, not an error. The rule now skips a throw of one of those helpers when it's imported from `@tanstack/react-router`, `@tanstack/router-core`, `react-router`, `react-router-dom`, `@remix-run/node` or `@remix-run/cloudflare`, under any local name or through a namespace import. A local `redirect` helper, `throw new Response(…)`, and every other throw in the same function are still reported, which an `@interop` tag on the route couldn't do. A new `hostThrows` option adds modules or helpers to the defaults, and a module set to `[]` turns its defaults off.
 
 - **`prefer-option` gives `a?: T` and `a: T | undefined` the same verdict.** On a type-literal or interface member, or a parameter, `a?: string` was never reported but `a: string | undefined` and `a?: string | undefined` were, so the rule taught people to make a required key optional just to silence it, and it fought `exactOptionalPropertyTypes`. Both spellings mean "may be absent", so both are now skipped there. `T | null`, return types, variables, class fields and generic arguments are still reported. A new `checkOptionalMembers` option reports both spellings instead, `a?: T` included.
