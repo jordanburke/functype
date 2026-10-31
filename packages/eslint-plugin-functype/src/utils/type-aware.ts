@@ -137,16 +137,26 @@ type SymbolShape = {
 const SERIALIZE_DEPTH = 4
 
 /** A name to show for a container type: `Either`, `Option`, `List`, or the generic fallback. */
+/** Member names TypeScript shows once a union loses its alias (`Either<E, A> | null`), mapped back. */
+const MEMBER_TO_CONTAINER: Readonly<Record<string, string>> = { LeftOf: "Either", RightOf: "Either" }
+
 const containerName = (type: TypeShape): string => {
-  const name = type.aliasSymbol?.name ?? type.getSymbol?.()?.name
-  return name !== undefined && !name.startsWith("__") ? name : "functype container"
+  // A bundled .d.ts renames a clashing declaration `Map$1`.
+  const raw = (type.aliasSymbol?.name ?? type.getSymbol?.()?.name)?.replace(/\$\d+$/, "")
+  if (raw === undefined || raw.startsWith("__")) return "functype container"
+  return MEMBER_TO_CONTAINER[raw] ?? raw
 }
 
 /** Declared in a dependency or the TypeScript lib: Stripe objects, Date, Request. Never descended into. */
-const isFromDependency = (type: TypeShape): boolean =>
-  ((type.aliasSymbol ?? type.getSymbol?.())?.getDeclarations?.() ?? []).some((declaration) =>
+const isFromDependency = (type: TypeShape): boolean => {
+  // The type's own symbol, not its alias: `Partial<User>` and `Omit<Row, "x">` are anonymous mapped
+  // types whose alias is declared in TypeScript's lib, and their properties are the caller's.
+  const symbol = type.getSymbol?.()
+  if (symbol === undefined || symbol.name.startsWith("__")) return false
+  return (symbol.getDeclarations?.() ?? []).some((declaration) =>
     declaration.getSourceFile().fileName.includes("/node_modules/"),
   )
+}
 
 /**
  * The first functype container inside the value `node` evaluates to, and the path to it: `subscription`,
@@ -173,13 +183,12 @@ export const containerInsideByType = (node: ASTNode, context: Rule.RuleContext):
     if (depth > SERIALIZE_DEPTH || seen.has(type) || isTypeParameter(type)) return undefined
     seen.add(type)
     const shape = type as TypeShape
-    if (shape.isUnionOrIntersection?.() === true) {
-      const hit = (shape.types ?? []).map((member) => find(member, path, depth)).find((h) => h !== undefined)
-      return hit !== undefined && shape.aliasSymbol !== undefined
-        ? { path: hit.path, name: shape.aliasSymbol.name }
-        : hit
-    }
+    // Before splitting: an Either union has `_tag` and `fold` on every member, and `Stack` is an
+    // intersection whose `_tag` and `fold` come from different members.
     if (isContainer(type)) return { path, name: containerName(shape) }
+    if (shape.isUnionOrIntersection?.() === true) {
+      return (shape.types ?? []).map((member) => find(member, path, depth)).find((h) => h !== undefined)
+    }
     if ((shape.getCallSignatures?.() ?? []).length > 0) return undefined
     if (checker.isArrayLikeType(type) || checker.isTupleType(type)) {
       return checker

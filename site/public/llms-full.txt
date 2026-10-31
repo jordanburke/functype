@@ -4280,7 +4280,7 @@ return c.json(result.toJSON()) // fine: the envelope on purpose
 ```
 
 - **Sinks:** `JSON.stringify(x)`, and any `.json(x)` call with an argument: Hono's `c.json`, `Response.json`, Express's `res.json`. `new Response(JSON.stringify(x))` is covered by the first. A read such as `await res.json()` has no argument, so it never matches.
-- **What counts:** a type with `_tag` and `fold`, which every functype container has and its `toJSON()` envelope doesn't. The rule looks through unions, array and tuple elements, object properties and `Record` values, up to 4 levels deep, and names the path in the message.
+- **What counts:** a type with `_tag` and `fold`, which every functype container has and its `toJSON()` envelope doesn't. The rule looks through unions and intersections, array and tuple elements, object properties, `Record` values and utility types such as `Partial<T>` and `Omit<T, K>`, up to 4 levels deep, and names the path in the message.
 - **The envelope on purpose:** call `.toJSON()` or `.serialize()` first. A test that checks a container's JSON output is reported too, so call `.toJSON()` there as well.
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.

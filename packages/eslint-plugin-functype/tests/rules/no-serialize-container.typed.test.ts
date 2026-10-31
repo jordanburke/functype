@@ -10,7 +10,7 @@ import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
  * `JSON.stringify({ success: true, checkout })` reported success on failure (#364).
  */
 const decls = [
-  'import { Either, List, Option } from "functype"',
+  'import { Either, List, Map as FMap, Option, Stack } from "functype"',
   "type Details = { readonly hasStripeCustomer: boolean }",
   "declare const c: { json(body: unknown, status?: number): Response }",
   "declare const svc: { getDetails(id: string): Promise<Either<Error, Details>> }",
@@ -23,6 +23,17 @@ const decls = [
   "declare const rows: ReadonlyArray<Option<string>>",
   "declare const byId: Record<string, Option<string>>",
   "declare const res: { json(): Promise<unknown> }",
+  "type User = { readonly id: string; readonly plan: Option<string> }",
+  "declare const patch: Partial<User>",
+  'declare const row: Omit<User, "id">',
+  'declare const pair: Record<"a" | "b", Option<string>>',
+  "declare const stack: Stack<number>",
+  "declare const loose: { readonly e?: Either<Error, number> }",
+  "declare const orNull: Either<Error, number> | null",
+  "type Named = { readonly x: number } | { readonly e: Either<Error, number> }",
+  "declare const named: Named",
+  "declare const fmap: FMap<string, number>",
+  "declare const maybeC: { json(body: unknown): Response } | undefined",
   "",
 ].join("; ")
 
@@ -66,6 +77,15 @@ describe("no-serialize-container (type-aware)", () => {
         "Option",
         " at data.nested.value",
       ),
+      sent("export const a = c.json(patch)", "Option", " at plan"),
+      sent("export const a = c.json(row)", "Option", " at plan"),
+      sent("export const a = c.json(pair)", "Option", " at a"),
+      sent("export const a = c.json(stack)", "Stack"),
+      sent("export const a = c.json(loose)", "Either", " at e"),
+      sent("export const a = c.json(orNull)", "Either"),
+      sent("export const a = c.json(named)", "Either", " at e"),
+      sent("export const a = c.json(fmap)", "Map"),
+      sent("export const a = maybeC?.json(maybe)", "Option"),
     ],
   })
 })
