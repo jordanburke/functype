@@ -5,13 +5,16 @@ import type { ASTNode } from "../types/ast"
 /**
  * Router helpers whose return value a loader or route guard throws to redirect or show Not found
  * (#445). The throw is the framework's API, not an error path: returning `Either.left(…)` instead
- * breaks it. Each name was checked against the package's exports on 2026-10-31.
+ * breaks it. Each name was checked against the package's exports on 2026-10-31. React Router 6 loaders
+ * import from react-router-dom, and Remix on Workers from @remix-run/cloudflare.
  */
 export const DEFAULT_HOST_THROWS: Readonly<Record<string, ReadonlyArray<string>>> = {
   "@tanstack/react-router": ["redirect", "notFound"],
   "@tanstack/router-core": ["redirect", "notFound"],
   "react-router": ["redirect", "redirectDocument", "replace", "data"],
+  "react-router-dom": ["redirect", "redirectDocument", "replace", "data", "json"],
   "@remix-run/node": ["redirect", "redirectDocument", "replace", "data", "json"],
+  "@remix-run/cloudflare": ["redirect", "redirectDocument", "replace", "data", "json"],
 }
 
 export const HOST_THROWS_SCHEMA = {
@@ -20,14 +23,23 @@ export const HOST_THROWS_SCHEMA = {
 } as const
 
 /**
- * The defaults with a project's own `hostThrows` laid over them: a module the project names replaces
- * that module's default list, so `{ "react-router": [] }` turns the react-router defaults off, and a
- * module the defaults don't name is added.
+ * The defaults with a project's own `hostThrows` added: naming a module adds helpers to its defaults,
+ * so `{ "react-router": ["myRedirect"] }` keeps `redirect` and the rest, and `[]` turns that module's
+ * defaults off. A module the defaults don't name is added.
  */
 export const hostThrowsWith = (
   overrides: Readonly<Record<string, ReadonlyArray<string>>> | undefined,
-): ReadonlyMap<string, ReadonlySet<string>> =>
-  new Map(Object.entries({ ...DEFAULT_HOST_THROWS, ...overrides }).map(([module, names]) => [module, new Set(names)]))
+): ReadonlyMap<string, ReadonlySet<string>> => {
+  const modules = new Set([...Object.keys(DEFAULT_HOST_THROWS), ...Object.keys(overrides ?? {})])
+  return new Map(
+    [...modules].map((module) => {
+      const added = overrides?.[module]
+      const names =
+        added !== undefined && added.length === 0 ? [] : [...(DEFAULT_HOST_THROWS[module] ?? []), ...(added ?? [])]
+      return [module, new Set(names)]
+    }),
+  )
+}
 
 type ImportDef = {
   readonly type: string

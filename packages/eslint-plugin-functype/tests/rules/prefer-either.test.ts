@@ -489,6 +489,29 @@ export const route = {
         options: [{ hostThrows: { "@acme/router": ["bounce"] } }],
       },
       {
+        name: "Naming a default module adds to its helpers instead of replacing them",
+        code: route('import { data } from "react-router"', 'if (params.id) throw data("gone", { status: 410 })'),
+        options: [{ hostThrows: { "react-router": ["myRedirect"] } }],
+      },
+      {
+        name: "A string-named import",
+        code: route(
+          'import { "redirect" as go } from "@tanstack/react-router"',
+          'if (params.id) throw go({ to: "/" })',
+        ),
+      },
+      {
+        name: "React Router 6, from react-router-dom",
+        code: route(
+          'import { json, redirect } from "react-router-dom"',
+          'if (params.id === "a") throw redirect("/")\n    if (params.id === "b") throw json({}, { status: 404 })',
+        ),
+      },
+      {
+        name: "Remix on Workers, from @remix-run/cloudflare",
+        code: route('import { redirect } from "@remix-run/cloudflare"', 'if (params.id) throw redirect("/")'),
+      },
+      {
         name: "hostThrows adds to the defaults rather than replacing them",
         code: route('import { redirect } from "@tanstack/react-router"', 'if (params.id) throw redirect({ to: "/" })'),
         options: [{ hostThrows: { "@acme/router": ["bounce"] } }],
@@ -506,6 +529,14 @@ export const route = {
       {
         name: "A local redirect helper is not the router's",
         code: route("const redirect = (to: string) => new Error(to)", 'if (params.id) throw redirect("/")'),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "An import shadowed by a nested local",
+        code: route(
+          'import { redirect } from "@tanstack/react-router"',
+          'const redirect = (to: string) => new Error(to)\n    if (params.id) throw redirect("/")',
+        ),
         errors: [{ messageId: "preferEitherOverThrow" }],
       },
       {

@@ -4116,11 +4116,11 @@ const value = either.orThrow((left) => new StepError(left.message))
 
 TanStack Router redirects or shows Not found only when `beforeLoad` or `loader` throws the value `redirect()` or `notFound()` returns, and React Router and Remix loaders work the same way. That throw is the router's API, so `prefer-either` leaves it alone when the helper is imported from one of these modules, under any local name or through a namespace import:
 
-| Module                                            | Helpers                                                   |
-| ------------------------------------------------- | --------------------------------------------------------- |
-| `@tanstack/react-router`, `@tanstack/router-core` | `redirect`, `notFound`                                    |
-| `react-router`                                    | `redirect`, `redirectDocument`, `replace`, `data`         |
-| `@remix-run/node`                                 | `redirect`, `redirectDocument`, `replace`, `data`, `json` |
+| Module                                                                          | Helpers                                                   |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `@tanstack/react-router`, `@tanstack/router-core`                               | `redirect`, `notFound`                                    |
+| `react-router`                                                                  | `redirect`, `redirectDocument`, `replace`, `data`         |
+| `react-router-dom` (React Router 6), `@remix-run/node`, `@remix-run/cloudflare` | `redirect`, `redirectDocument`, `replace`, `data`, `json` |
 
 ```ts
 import { redirect } from "@tanstack/react-router"
@@ -4131,7 +4131,7 @@ beforeLoad: ({ params }) => {
 }
 ```
 
-Unlike `@interop`, this exempts only the router's own throws, so a real error thrown in the same function is still reported. A local `redirect` helper isn't the router's, and neither is `throw new Response(…)`. Add your own framework with the `hostThrows` option: `{ hostThrows: { "@acme/router": ["bounce"] } }`. It adds to the defaults, and a module set to `[]` turns that module's defaults off.
+Unlike `@interop`, this exempts only the router's own throws, so a real error thrown in the same function is still reported. A local `redirect` helper isn't the router's, and neither is `throw new Response(…)`. Add your own framework with the `hostThrows` option: `{ hostThrows: { "@acme/router": ["bounce"] } }`. It adds to the defaults: naming a default module adds helpers to its list rather than replacing it, and a module set to `[]` turns that module's defaults off.
 
 Prefer either tool to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". `rg 'invariant\('` lists every bug check, and `rg '@interop'` lists every place the code touches a throw-based host.
 
