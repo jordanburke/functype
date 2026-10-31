@@ -4084,6 +4084,7 @@ A rule is **`error` in `recommended` once it is right on ~95–99% of real code*
 | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | A bug check: the condition can only fail because of a programmer error                                          | `invariant(cond, msg)` from `functype`                        |
 | A host contract: the caller (React `use()`, React Query, a step runner, an MCP tool) needs a throw or rejection | `@interop <reason>` on the declaration, or `orThrow(builder)` |
+| A router's control flow: `throw redirect(…)` or `throw notFound()` in a loader or route guard                   | nothing: recognized by its import (below)                     |
 | Anything that can fail in normal operation                                                                      | return an `Either`                                            |
 
 ```ts
@@ -4111,6 +4112,27 @@ const value = either.orThrow((left) => new StepError(left.message))
 - **The reason is required**, on the same line as the tag. A bare `@interop` exempts nothing.
 - **Only JSDoc (`/** … */`) counts.** A `//` comment mentioning the tag does not.
 - **Opt out** per rule with `allowInteropMarker: false`.
+
+### Router control-flow throws
+
+TanStack Router redirects or shows Not found only when `beforeLoad` or `loader` throws the value `redirect()` or `notFound()` returns, and React Router and Remix loaders work the same way. That throw is the router's API, so `prefer-either` leaves it alone when the helper is imported from one of these modules, under any local name or through a namespace import:
+
+| Module                                                                          | Helpers                                                   |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `@tanstack/react-router`, `@tanstack/router-core`                               | `redirect`, `notFound`                                    |
+| `react-router`                                                                  | `redirect`, `redirectDocument`, `replace`, `data`         |
+| `react-router-dom` (React Router 6), `@remix-run/node`, `@remix-run/cloudflare` | `redirect`, `redirectDocument`, `replace`, `data`, `json` |
+
+```ts
+import { redirect } from "@tanstack/react-router"
+
+beforeLoad: ({ params }) => {
+  if (params.id === "all") throw redirect({ to: "/queue" }) // fine: the router's redirect
+  if (!isValid(params.id)) throw new Error("bad id") // still reported
+}
+```
+
+Unlike `@interop`, this exempts only the router's own throws, so a real error thrown in the same function is still reported. A local `redirect` helper isn't the router's, and neither is `throw new Response(…)`. Add your own framework with the `hostThrows` option: `{ hostThrows: { "@acme/router": ["bounce"] } }`. It adds to the defaults: naming a default module adds helpers to its list rather than replacing it, and a module set to `[]` turns that module's defaults off.
 
 Prefer either tool to `eslint-disable`. A disable covers a whole file or line and says only "be quiet". `rg 'invariant\('` lists every bug check, and `rg '@interop'` lists every place the code touches a throw-based host.
 

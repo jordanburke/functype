@@ -431,3 +431,135 @@ describe("prefer-either messages and options (#342)", () => {
     expect(Object.keys(schema[0]!.properties)).not.toContain("allowInvariantMarker")
   })
 })
+
+/**
+ * #445: TanStack Router redirects or shows Not found only when a loader throws `redirect()` or
+ * `notFound()`, and React Router and Remix loaders work the same way. Those throws are the router's
+ * API, recognized by import, so a real bug throw beside them is still reported.
+ */
+describe("prefer-either host throws (#445)", () => {
+  const route = (imports: string, body: string) => `${imports}
+export const route = {
+  beforeLoad: ({ params }: { params: { id: string } }) => {
+    ${body}
+  },
+}`
+
+  ruleTester.run("prefer-either", rule, {
+    valid: [
+      {
+        name: "TanStack Router redirect() and notFound()",
+        code: route(
+          'import { redirect, notFound } from "@tanstack/react-router"',
+          'if (params.id === "all") throw redirect({ to: "/queue" })\n    if (params.id === "") throw notFound()',
+        ),
+      },
+      {
+        name: "@tanstack/router-core",
+        code: route('import { redirect } from "@tanstack/router-core"', 'if (params.id) throw redirect({ to: "/" })'),
+      },
+      {
+        name: "React Router redirect(), redirectDocument(), replace() and data()",
+        code: route(
+          'import { data, redirect, redirectDocument, replace } from "react-router"',
+          'if (params.id === "a") throw redirect("/")\n    if (params.id === "b") throw redirectDocument("/")\n    if (params.id === "c") throw replace("/")\n    if (params.id === "d") throw data("gone", { status: 410 })',
+        ),
+      },
+      {
+        name: "Remix json() and redirect()",
+        code: route(
+          'import { json, redirect } from "@remix-run/node"',
+          'if (params.id === "a") throw json({ error: "x" }, { status: 400 })\n    if (params.id === "b") throw redirect("/")',
+        ),
+      },
+      {
+        name: "An aliased import",
+        code: route(
+          'import { redirect as goTo } from "@tanstack/react-router"',
+          'if (params.id) throw goTo({ to: "/" })',
+        ),
+      },
+      {
+        name: "A namespace import",
+        code: route('import * as Router from "react-router"', 'if (params.id) throw Router.redirect("/")'),
+      },
+      {
+        name: "A project's own host module, through hostThrows",
+        code: route('import { bounce } from "@acme/router"', 'if (params.id) throw bounce("/")'),
+        options: [{ hostThrows: { "@acme/router": ["bounce"] } }],
+      },
+      {
+        name: "Naming a default module adds to its helpers instead of replacing them",
+        code: route('import { data } from "react-router"', 'if (params.id) throw data("gone", { status: 410 })'),
+        options: [{ hostThrows: { "react-router": ["myRedirect"] } }],
+      },
+      {
+        name: "A string-named import",
+        code: route(
+          'import { "redirect" as go } from "@tanstack/react-router"',
+          'if (params.id) throw go({ to: "/" })',
+        ),
+      },
+      {
+        name: "React Router 6, from react-router-dom",
+        code: route(
+          'import { json, redirect } from "react-router-dom"',
+          'if (params.id === "a") throw redirect("/")\n    if (params.id === "b") throw json({}, { status: 404 })',
+        ),
+      },
+      {
+        name: "Remix on Workers, from @remix-run/cloudflare",
+        code: route('import { redirect } from "@remix-run/cloudflare"', 'if (params.id) throw redirect("/")'),
+      },
+      {
+        name: "hostThrows adds to the defaults rather than replacing them",
+        code: route('import { redirect } from "@tanstack/react-router"', 'if (params.id) throw redirect({ to: "/" })'),
+        options: [{ hostThrows: { "@acme/router": ["bounce"] } }],
+      },
+    ],
+    invalid: [
+      {
+        name: "A real bug throw beside a redirect is still reported",
+        code: route(
+          'import { redirect } from "@tanstack/react-router"',
+          'if (params.id === "all") throw redirect({ to: "/queue" })\n    if (params.id === "x") throw new Error("a real bug")',
+        ),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "A local redirect helper is not the router's",
+        code: route("const redirect = (to: string) => new Error(to)", 'if (params.id) throw redirect("/")'),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "An import shadowed by a nested local",
+        code: route(
+          'import { redirect } from "@tanstack/react-router"',
+          'const redirect = (to: string) => new Error(to)\n    if (params.id) throw redirect("/")',
+        ),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "A name the module doesn't list",
+        code: route('import { useNavigate } from "@tanstack/react-router"', "if (params.id) throw useNavigate()"),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "The same name from an unlisted module",
+        code: route('import { redirect } from "./my-router"', 'if (params.id) throw redirect("/")'),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "A module set to [] turns its defaults off",
+        code: route('import { redirect } from "react-router"', 'if (params.id) throw redirect("/")'),
+        options: [{ hostThrows: { "react-router": [] } }],
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+      {
+        name: "throw new Response(…) is a global, not an import, so it's still reported",
+        code: route("", 'if (params.id) throw new Response("gone", { status: 410 })'),
+        errors: [{ messageId: "preferEitherOverThrow" }],
+      },
+    ],
+  })
+})
