@@ -46,7 +46,12 @@ Everything in `recommended` plus:
 
 ### `test-overrides`
 
-Extension point for test files (`*.test.ts`, `*.spec.ts`, `test/**`, `tests/**`, `__tests__/**`).
+For test files (`*.test.ts`, `*.spec.ts` and their `.tsx`, `.mts`, `.cts` forms, `test/**`, `tests/**`, `__tests__/**`). Put it after `recommended` or `strict`, so it wins. It turns off the two rules that misread a test's shape:
+
+- `@typescript-eslint/require-await`: tests stub async contracts with async functions that never await.
+- `@typescript-eslint/no-unnecessary-condition`: tests probe values the types say are present, with `?.` and `??` in assertions.
+
+Everything else stays on for tests. `eslint-plugin-functype` has a `tests` config for its own rules.
 
 ## Pairing with eslint-plugin-functype
 
