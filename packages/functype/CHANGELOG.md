@@ -22,6 +22,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+## 1.24.1 - 2026-11-04
+
+- **`eslint-config-functype` no longer installs `@eslint/eslintrc`.** It declared the package and never imported it, which put `minimatch` 3.x in every consumer's tree. `npm audit` flags that copy under GHSA-g3hv-75wg-m249, although 3.x lacks the affected code and has no newer release to move to. A project that imports `FlatCompat` and relied on getting it this way must now declare `@eslint/eslintrc` itself.
+
+## 1.24.0 - 2026-11-03
+
+- **The eslint pair now has working configs for test files.** `eslint-config-functype`'s `test-overrides` was an empty extension point, so tests linted under `recommended` failed on patterns that are normal in tests. On SomaMCP's tests that was 85 of 105 problems. It now turns off `@typescript-eslint/require-await` and `@typescript-eslint/no-unnecessary-condition`, and also matches `.tsx`, `.mts` and `.cts` test files. `eslint-plugin-functype` adds `configs.tests`, which turns off its own `prefer-option`, `prefer-either` and `prefer-try` for the same files. They change no other rule. Put both after your recommended configs: `[recommended, functype.configs.recommended, testOverrides, functype.configs.tests]`. Anyone already spreading `test-overrides` only loses problems.
+
 ## 1.23.0 - 2026-10-31
 
 - **`prefer-either` no longer reports a router's control-flow throws.** TanStack Router, React Router and Remix redirect or show Not found only when a loader or route guard throws `redirect()`, `notFound()` and the like, so `throw redirect({ to: "/" })` is the router's API, not an error. The rule now skips a throw of one of those helpers when it's imported from `@tanstack/react-router`, `@tanstack/router-core`, `react-router`, `react-router-dom`, `@remix-run/node` or `@remix-run/cloudflare`, under any local name or through a namespace import. A local `redirect` helper, `throw new Response(…)`, and every other throw in the same function are still reported, which an `@interop` tag on the route couldn't do. A new `hostThrows` option adds modules or helpers to the defaults, and a module set to `[]` turns its defaults off.
