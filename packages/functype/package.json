@@ -1,6 +1,6 @@
 {
   "name": "functype",
-  "version": "1.23.0",
+  "version": "1.24.1",
   "type": "module",
   "description": "A functional programming library for TypeScript, using immutable data structures and type classes",
   "keywords": [
@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.1",
+    "@eslint/eslintrc": "^3.3.7",
     "@types/node": "~24.19.2",
     "eslint-config-functype": "workspace:*",
     "eslint-plugin-functional": "^10.0.1",
