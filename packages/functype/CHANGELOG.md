@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.24.1 - 2026-11-04
+
 - **`eslint-config-functype` no longer installs `@eslint/eslintrc`.** It declared the package and never imported it, which put `minimatch` 3.x in every consumer's tree. `npm audit` flags that copy under GHSA-g3hv-75wg-m249, although 3.x lacks the affected code and has no newer release to move to. A project that imports `FlatCompat` and relied on getting it this way must now declare `@eslint/eslintrc` itself.
 
 ## 1.24.0 - 2026-11-03
