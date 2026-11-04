@@ -1,6 +1,7 @@
 import agentRules from "./configs/agent"
 import recommendedRules from "./configs/recommended"
 import strictRules from "./configs/strict"
+import testRules, { testFiles } from "./configs/tests"
 import rules from "./rules"
 
 const plugin = {
@@ -28,6 +29,12 @@ plugin.configs = {
     name: "functype-plugin/agent",
     plugins: { functype: plugin },
     rules: agentRules,
+  },
+  tests: {
+    name: "functype-plugin/tests",
+    plugins: { functype: plugin },
+    files: testFiles,
+    rules: testRules,
   },
 }
 
