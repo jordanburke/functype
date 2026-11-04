@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`eslint-config-functype` no longer installs `@eslint/eslintrc`.** It declared the package and never imported it, which put `minimatch` 3.x, with no fix available for GHSA-g3hv-75wg-m249, in every consumer's tree. A project that imports `FlatCompat` and relied on getting it this way must now declare `@eslint/eslintrc` itself.
+
 ## 1.24.0 - 2026-11-03
 
 - **The eslint pair now has working configs for test files.** `eslint-config-functype`'s `test-overrides` was an empty extension point, so tests linted under `recommended` failed on patterns that are normal in tests. On SomaMCP's tests that was 85 of 105 problems. It now turns off `@typescript-eslint/require-await` and `@typescript-eslint/no-unnecessary-condition`, and also matches `.tsx`, `.mts` and `.cts` test files. `eslint-plugin-functype` adds `configs.tests`, which turns off its own `prefer-option`, `prefer-either` and `prefer-try` for the same files. They change no other rule. Put both after your recommended configs: `[recommended, functype.configs.recommended, testOverrides, functype.configs.tests]`. Anyone already spreading `test-overrides` only loses problems.

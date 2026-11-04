@@ -2,7 +2,6 @@ import type { UserConfig } from "tsdown"
 
 const peerDeps = [
   "eslint",
-  "@eslint/eslintrc",
   "@eslint/js",
   "@typescript-eslint/eslint-plugin",
   "@typescript-eslint/parser",
