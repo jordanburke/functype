@@ -51,7 +51,7 @@ For test files (`*.test.ts`, `*.spec.ts` and their `.tsx`, `.mts`, `.cts` forms,
 - `@typescript-eslint/require-await`: tests stub async contracts with async functions that never await.
 - `@typescript-eslint/no-unnecessary-condition`: tests probe values the types say are present, with `?.` and `??` in assertions.
 
-Everything else stays on for tests. `eslint-plugin-functype` has a `tests` config for its own rules.
+It changes nothing else. `eslint-plugin-functype` has a `tests` config for its own rules.
 
 ## Pairing with eslint-plugin-functype
 

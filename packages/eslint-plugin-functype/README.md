@@ -535,7 +535,7 @@ import functype from "eslint-plugin-functype"
 export default [recommended, functype.configs.recommended, testOverrides, functype.configs.tests]
 ```
 
-`functype.configs.tests` turns off `prefer-option`, `prefer-either` and `prefer-try` for the same test files as `test-overrides`: tests call plain `T | undefined` APIs and assert on thrown errors. The structural rules, such as `no-let` and `no-imperative-loops`, stay on. Put both after the recommended configs, so they win.
+`functype.configs.tests` turns off `prefer-option`, `prefer-either` and `prefer-try` for the same test files as `test-overrides`: tests call plain `T | undefined` APIs and assert on thrown errors. It changes no other rule. `no-let` and `no-imperative-loops` already skip test files themselves, unless you set their `allowInTests: false`. Put both after the recommended configs, so they win.
 
 ## License
 

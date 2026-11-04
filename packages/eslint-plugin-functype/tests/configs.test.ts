@@ -168,6 +168,8 @@ describe("the test-file configs", () => {
     "functype/prefer-try",
   ]
   const OFF = 0
+  /** A rule no config mentions comes back undefined, so "not off" alone would pass for a rule that's gone. */
+  const ON = [1, 2]
 
   it("match the same files in both packages", () => {
     expect(tests.files).toEqual(testOverrides.files)
@@ -185,16 +187,16 @@ describe("the test-file configs", () => {
       })
 
       it.each(["functype/no-let", "functype/no-imperative-loops", "functype/prefer-fold", "functype/prefer-map"])(
-        "keeps %s on",
+        "keeps %s configured on",
         async (rule) => {
-          expect(await severity(file, rule)).not.toBe(OFF)
+          expect(ON).toContain(await severity(file, rule))
         },
       )
     },
   )
 
   it.each(relaxed)("src/foo.ts keeps %s on", async (rule) => {
-    expect(await severity("src/foo.ts", rule)).not.toBe(OFF)
+    expect(ON).toContain(await severity("src/foo.ts", rule))
   })
 
   it("test-overrides alone, without the plugin, loads and lints a file", async () => {
