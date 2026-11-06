@@ -22,6 +22,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+- **functype-log: `withContext` no longer changes the logger it's called on.** On the console, `fromLogLayer` and `logLayerAdapter` paths, `const reqLog = log.withContext({ c: 1 })` also put `c: 1` on `log` and on every logger made from it, so one request's context could reach another's logs. It now returns a separate logger, as the sink and test loggers already did. If you call `withContext` and ignore the result, that call now does nothing. A `setLevel`, `addTransport` or `muteContext` on your root `LogLayer` after that no longer reaches loggers already derived from it, as with `child()`.
+
+## 1.25.0 - 2026-11-06
+
+- **functype-log: `createConsoleLogger` now honors `level`.** It accepted the option and ignored it, so `{ level: "warn" }` still wrote `info`. This also fixes `LoggerLive.console` and `createDirectConsoleLogger`. If you pass `level` today, you'll now see fewer logs: the ones you asked to drop.
+- **functype-log: new `sink` option, `(entry: LogEntry) => void`.** It hands each entry to your function instead of a console, for pino, a vendor, or OpenTelemetry trace IDs read from the active span. It doesn't use loglayer, so it's the path to build on: `LoggerLive.fromLogLayer` and `logLayerAdapter` are planned for removal in 2.0. Works through `createConsoleLogger`, `LoggerLive.console` and `createDirectConsoleLogger`, and exports a `LogSink` type.
+
 ## 1.24.1 - 2026-11-04
 
 - **`eslint-config-functype` no longer installs `@eslint/eslintrc`.** It declared the package and never imported it, which put `minimatch` 3.x in every consumer's tree. `npm audit` flags that copy under GHSA-g3hv-75wg-m249, although 3.x lacks the affected code and has no newer release to move to. A project that imports `FlatCompat` and relied on getting it this way must now declare `@eslint/eslintrc` itself.
