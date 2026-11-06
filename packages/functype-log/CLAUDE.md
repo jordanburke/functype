@@ -81,7 +81,7 @@ All functype imports use the barrel export (`"functype"`, not subpaths) per func
 ## Key Types
 
 - `Logger` — Interface + Tag (declaration merging). Methods return `IO<never, never, void>`
-- `LoggerLive` — Layer constructors: `.console()`, `.silent()`, `.fromLogLayer()`
+- `LoggerLive` — Layer constructors: `.console()` (its `sink` option hands each `LogEntry` to a function, with no loglayer), `.silent()`, `.fromLogLayer()`
 - `TestLoggerHandle` — `{ logger, entries(), clear(), hasEntry() }`
 - `LogEntry` — `{ level, message, metadata?, error?, timestamp }`
 
