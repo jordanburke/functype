@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **functype-log: `withContext` no longer changes the logger it's called on.** On the console and `fromLogLayer` paths, `const reqLog = log.withContext({ c: 1 })` also put `c: 1` on `log` and on every logger made from it, so one request's context could reach another's logs. It now returns a separate logger, as the sink and test loggers already did. If you call `withContext` and ignore the result, that call now does nothing.
+
 ## 1.25.0 - 2026-11-06
 
 - **functype-log: `createConsoleLogger` now honors `level`.** It accepted the option and ignored it, so `{ level: "warn" }` still wrote `info`. This also fixes `LoggerLive.console` and `createDirectConsoleLogger`. If you pass `level` today, you'll now see fewer logs: the ones you asked to drop.

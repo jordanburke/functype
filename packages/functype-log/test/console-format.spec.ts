@@ -77,6 +77,49 @@ describe("ConsoleLogger: output format", () => {
     ])
   })
 
+  it("keeps withContext's context off the logger it was called on", () => {
+    expect(
+      written((log) => {
+        const scoped = log.withContext({ c: 1 })
+        log.info("parent").runSyncOrThrow()
+        scoped.info("scoped").runSyncOrThrow()
+      }),
+    ).toEqual([
+      ["info", "parent"],
+      ["info", { c: 1 }, "scoped"],
+    ])
+  })
+
+  it("keeps sibling and chained contexts apart", () => {
+    expect(
+      written((log) => {
+        const a = log.withContext({ a: 1 })
+        const b = log.withContext({ b: 2 })
+        const ab = a.withContext({ ab: 3 })
+        a.info("a").runSyncOrThrow()
+        b.info("b").runSyncOrThrow()
+        ab.info("ab").runSyncOrThrow()
+      }),
+    ).toEqual([
+      ["info", { a: 1 }, "a"],
+      ["info", { b: 2 }, "b"],
+      ["info", { a: 1, ab: 3 }, "ab"],
+    ])
+  })
+
+  it("keeps the prefix, the level and withError's error through withContext", () => {
+    const err = new Error("x")
+    expect(
+      written(
+        (log) => {
+          log.withContext({ c: 1 }).info("dropped").runSyncOrThrow()
+          log.withError(err).withContext({ c: 1 }).error("kept").runSyncOrThrow()
+        },
+        { level: "warn", prefix: "[P]" },
+      ),
+    ).toEqual([["error", { c: 1, err }, "[P] kept"]])
+  })
+
   it("writes withError's error under err, on every call", () => {
     const err = new Error("x")
     expect(

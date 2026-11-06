@@ -20,7 +20,8 @@ export const logLayerAdapter = (logLayer: ILogLayer, baseError?: Error): Logger 
   error: makeMethod(logLayer, "error", baseError),
   fatal: makeMethod(logLayer, "fatal", baseError),
   withError: (err: Error) => logLayerAdapter(logLayer, err),
-  withContext: (ctx: LogMetadata) => logLayerAdapter(logLayer.withContext(ctx), baseError),
+  // loglayer's withContext changes the instance it's called on, so give the new context its own child.
+  withContext: (ctx: LogMetadata) => logLayerAdapter(logLayer.child().withContext(ctx), baseError),
   child: (ctx?: LogMetadata) => {
     const childLog = logLayer.child()
     return ctx ? logLayerAdapter(childLog.withContext(ctx)) : logLayerAdapter(childLog)
