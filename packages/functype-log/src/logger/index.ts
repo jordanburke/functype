@@ -1,2 +1,2 @@
-export type { LogEntry, LogLevel, LogMetadata } from "./Logger"
+export type { LogEntry, LogLevel, LogMetadata, LogSink } from "./Logger"
 export { Logger } from "./Logger"

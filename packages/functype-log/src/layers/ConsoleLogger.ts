@@ -1,7 +1,8 @@
 import { ConsoleTransport, LogLayer } from "loglayer"
 
 import { logLayerAdapter } from "../adapter/LogLayerAdapter"
-import type { Logger, LogLevel } from "../logger/Logger"
+import type { Logger, LogLevel, LogSink } from "../logger/Logger"
+import { createSinkLogger } from "./SinkLogger"
 
 /**
  * Console sink shape expected by `loglayer`'s `ConsoleTransport`. Matches
@@ -27,6 +28,7 @@ const stderrConsole: ConsoleSink = {
 }
 
 export type ConsoleLoggerOptions = {
+  /** Drop entries below this level. Every level passes when unset. */
   readonly level?: LogLevel
   readonly prefix?: string
   /**
@@ -50,6 +52,11 @@ export type ConsoleLoggerOptions = {
    * present (`log`/`info`/`debug`/`trace`/`warn`/`error`).
    */
   readonly console?: Partial<Console>
+  /**
+   * Hand each `LogEntry` to this function instead of writing to a console. Takes precedence over
+   * `console` and `stream`. `level` and `prefix` still apply, and the logger doesn't use loglayer.
+   */
+  readonly sink?: LogSink
 }
 
 const resolveSink = (options?: ConsoleLoggerOptions): Partial<Console> => {
@@ -59,8 +66,18 @@ const resolveSink = (options?: ConsoleLoggerOptions): Partial<Console> => {
 }
 
 export const createConsoleLogger = (options?: ConsoleLoggerOptions): Logger => {
+  if (options?.sink) {
+    return createSinkLogger(options.sink, {
+      ...(options.level ? { level: options.level } : {}),
+      ...(options.prefix ? { prefix: options.prefix } : {}),
+    })
+  }
+
   const logLayer = new LogLayer({
-    transport: new ConsoleTransport({ logger: resolveSink(options) as Console }),
+    transport: new ConsoleTransport({
+      logger: resolveSink(options) as Console,
+      ...(options?.level ? { level: options.level } : {}),
+    }),
     ...(options?.prefix ? { prefix: options.prefix } : {}),
   })
 
