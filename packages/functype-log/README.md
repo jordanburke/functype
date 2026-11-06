@@ -131,6 +131,7 @@ import pino from "pino"
 import { LoggerLive, type LogSink } from "functype-log"
 
 const pinoLog = pino()
+const tracer = trace.getTracer("app")
 
 const sink: LogSink = ({ level, message, metadata, error }) => {
   const span = trace.getActiveSpan()?.spanContext()

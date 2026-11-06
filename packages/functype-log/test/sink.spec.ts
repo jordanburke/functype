@@ -33,6 +33,7 @@ describe("ConsoleLogger: sink", () => {
   it("leaves metadata and error undefined when there are none", () => {
     const { entries, sink } = collect()
     createConsoleLogger({ sink }).info("m").runSyncOrThrow()
+    expect(entries).toHaveLength(1)
     expect(entries[0]?.metadata).toBeUndefined()
     expect(entries[0]?.error).toBeUndefined()
   })
@@ -90,6 +91,7 @@ describe("ConsoleLogger: sink", () => {
   it("doesn't pass withError's error on to a child", () => {
     const { entries, sink } = collect()
     createConsoleLogger({ sink }).withError(new Error("x")).child().error("m").runSyncOrThrow()
+    expect(entries).toHaveLength(1)
     expect(entries[0]?.error).toBeUndefined()
   })
 
