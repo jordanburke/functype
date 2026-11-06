@@ -1,5 +1,5 @@
 // Logger interface + Tag
-export type { LogEntry, LogLevel, LogMetadata } from "./logger"
+export type { LogEntry, LogLevel, LogMetadata, LogSink } from "./logger"
 export { Logger } from "./logger"
 
 // Layer constructors

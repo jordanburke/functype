@@ -37,9 +37,12 @@ await program.provideLayer(LoggerLive.console()).runOrThrow()
 await program.provideLayer(LoggerLive.console({ prefix: "[APP]" })).runOrThrow()
 ```
 
-`ConsoleLoggerOptions` accepts `level`, `prefix`, `stream`, and `console`:
+`ConsoleLoggerOptions` accepts `level`, `prefix`, `stream`, `console`, and `sink` (see [Custom sink](#custom-sink)):
 
 ```typescript
+// Drop anything below this level. Every level passes when it isn't set.
+LoggerLive.console({ level: "warn" })
+
 // Default — info/debug → stdout (console.info/console.debug),
 // warn/error → stderr (console.warn/console.error). Matches loglayer's
 // per-level routing and the convention of pino / winston / bunyan.
@@ -76,6 +79,26 @@ const log = createDirectConsoleLogger({ stream: "stderr" }) // MCP-safe
 log.info("connection established") // → stderr, not stdout
 ```
 
+### Custom sink
+
+`sink` hands each `LogEntry` to your function instead of writing to a console. It's the way to reach pino or a vendor, and it doesn't use LogLayer.
+
+```typescript
+import pino from "pino"
+import { LoggerLive, type LogSink } from "functype-log"
+
+const pinoLog = pino()
+
+const sink: LogSink = ({ level, message, metadata, error }) =>
+  pinoLog[level]({ ...metadata, ...(error ? { err: error } : {}) }, message)
+
+await program.provideLayer(LoggerLive.console({ sink })).runOrThrow()
+```
+
+- It takes precedence over `console` and `stream`. `level` and `prefix` still apply.
+- It works the same through `createDirectConsoleLogger({ sink })`.
+- It runs inside the log call. If it throws, the error surfaces to whatever ran that call, so catch inside the sink if logging must never fail.
+
 ### Silent (testing/suppression)
 
 ```typescript
@@ -100,16 +123,42 @@ await program.provideLayer(LoggerLive.fromLogLayer(pinoLog)).runOrThrow()
 
 ### OpenTelemetry
 
+To put trace IDs in your logs, read the active span in a [sink](#custom-sink). This needs only `@opentelemetry/api` and a registered OpenTelemetry SDK, and functype-log doesn't depend on either.
+
 ```typescript
-import { openTelemetryPlugin } from "@loglayer/plugin-opentelemetry"
+import { trace } from "@opentelemetry/api"
+import pino from "pino"
+import { LoggerLive, type LogSink } from "functype-log"
 
-const otelLog = new LogLayer({
-  transport: new PinoTransport({ logger: pino() }),
-  plugins: [openTelemetryPlugin()],
+const pinoLog = pino()
+
+const sink: LogSink = ({ level, message, metadata, error }) => {
+  const span = trace.getActiveSpan()?.spanContext()
+  pinoLog[level](
+    {
+      ...metadata,
+      ...(error ? { err: error } : {}),
+      ...(span
+        ? {
+            trace_id: span.traceId,
+            span_id: span.spanId,
+            trace_flags: span.traceFlags.toString(16).padStart(2, "0"),
+          }
+        : {}),
+    },
+    message,
+  )
+}
+
+await tracer.startActiveSpan("request", async (span) => {
+  await program.provideLayer(LoggerLive.console({ sink })).runOrThrow()
+  span.end()
 })
-
-await program.provideLayer(LoggerLive.fromLogLayer(otelLog)).runOrThrow()
 ```
+
+The field names match `@loglayer/plugin-opentelemetry`, so log parsers keep working if you move from it. Use this path for new code: `LoggerLive.fromLogLayer` and `logLayerAdapter` are planned for removal in 2.0.
+
+The active span comes from OpenTelemetry's context manager, which uses `AsyncLocalStorage` on Node. It works for `Logger` and `DirectLogger` calls, including after an `await`.
 
 ## Logger API
 

@@ -6,6 +6,9 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **functype-log: `createConsoleLogger` now honors `level`.** It accepted the option and ignored it, so `{ level: "warn" }` still wrote `info`. This also fixes `LoggerLive.console` and `createDirectConsoleLogger`. If you pass `level` today, you'll now see fewer logs: the ones you asked to drop.
+- **functype-log: new `sink` option, `(entry: LogEntry) => void`.** It hands each entry to your function instead of a console, for pino, a vendor, or OpenTelemetry trace IDs read from the active span. It doesn't use loglayer, so it's the path to build on: `LoggerLive.fromLogLayer` and `logLayerAdapter` are planned for removal in 2.0. Works through `createConsoleLogger`, `LoggerLive.console` and `createDirectConsoleLogger`, and exports a `LogSink` type.
+
 ## 1.24.1 - 2026-11-04
 
 - **`eslint-config-functype` no longer installs `@eslint/eslintrc`.** It declared the package and never imported it, which put `minimatch` 3.x in every consumer's tree. `npm audit` flags that copy under GHSA-g3hv-75wg-m249, although 3.x lacks the affected code and has no newer release to move to. A project that imports `FlatCompat` and relied on getting it this way must now declare `@eslint/eslintrc` itself.
