@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.25.1 - 2026-11-06
+
 - **functype-log: `withContext` no longer changes the logger it's called on.** On the console, `fromLogLayer` and `logLayerAdapter` paths, `const reqLog = log.withContext({ c: 1 })` also put `c: 1` on `log` and on every logger made from it, so one request's context could reach another's logs. It now returns a separate logger, as the sink and test loggers already did. If you call `withContext` and ignore the result, that call now does nothing. A `setLevel`, `addTransport` or `muteContext` on your root `LogLayer` after that no longer reaches loggers already derived from it, as with `child()`.
 
 ## 1.25.0 - 2026-11-06
