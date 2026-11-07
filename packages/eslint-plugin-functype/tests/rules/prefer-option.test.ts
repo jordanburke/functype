@@ -84,6 +84,18 @@ type WebhookBody = { readonly customer: string | null }`,
         name: "Multi-type union with null is not flagged",
         code: "const value: string | number | null = null",
       },
+      {
+        name: "A three-state union inside Wire is the declared shape",
+        code: "type Clearable = Wire<string | null | undefined>\ntype Patch = { name: Wire<string | null | undefined> }",
+      },
+      {
+        name: "A three-state union with two value types stays unreported, as every multi-type union does",
+        code: "type Mixed = string | number | null | undefined",
+      },
+      {
+        name: "@interop exempts a three-state union",
+        code: "/** @interop The host requires this shape. */\ntype Clearable = string | null | undefined",
+      },
     ],
     invalid: [
       {
@@ -422,6 +434,65 @@ describe("prefer-option optional members and parameters (#446)", () => {
           { messageId: "preferOption", suggestions: 2 },
           { messageId: "preferOption", suggestions: 2 },
         ],
+      },
+      {
+        name: "The message names Wire as the way out for a row, body or payload field",
+        code: "type UserRow = { readonly email: string | null }",
+        errors: [
+          {
+            message:
+              "Prefer Option<string> over nullable type 'string | null'. If this is a row, body or payload shape, wrap the type in Wire<…>",
+            suggestions: 2,
+          },
+        ],
+      },
+      {
+        name: "checkOptionalMembers names Wire too",
+        code: "type UserRow = { email?: string }",
+        options: [{ checkOptionalMembers: true }],
+        errors: [
+          {
+            message:
+              "Prefer 'email: Option<string>' over the optional 'email?'. If this is a row, body or payload shape, wrap the type in Wire<…>",
+          },
+        ],
+      },
+      {
+        name: "A type alias holding null and undefined gets the three-state message, and no Option suggestion",
+        code: "type Clearable = string | null | undefined",
+        errors: [
+          {
+            message:
+              "A union with both null and undefined has three states that Option cannot hold. Wrap it in Wire<…>",
+            suggestions: 0,
+          },
+        ],
+      },
+      {
+        name: "A property holding null and undefined gets the three-state message, in any order",
+        code: "type Patch = { name: undefined | string | null }\ninterface Body { age: number | null | undefined }",
+        errors: [
+          { messageId: "preferWireForThreeStates", suggestions: 0 },
+          { messageId: "preferWireForThreeStates", suggestions: 0 },
+        ],
+      },
+      {
+        name: "A parameter holding null and undefined is a converter's input, so it keeps the Option message",
+        code: "const f = (x: string | null | undefined) => x\ntype G = (y: number | null | undefined) => void",
+        errors: [
+          { messageId: "preferOption", suggestions: 2 },
+          { messageId: "preferOption", suggestions: 2 },
+        ],
+      },
+      {
+        name: "A return type holding null and undefined keeps the Option message",
+        code: "function f(): string | null | undefined { return null }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A generic argument holding null and undefined keeps the Option message",
+        code: "type Xs = ReadonlyArray<string | null | undefined>",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
       },
       {
         name: "A string-literal key is named without its quotes",

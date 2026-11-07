@@ -1,7 +1,7 @@
 {
   "functype": {
-    "version": "1.1.0",
-    "sha256": "a8e3d777bade6b7cc70e6d8d6bc140a89065292e6ca0b76954c9b373645553ba"
+    "version": "1.1.1",
+    "sha256": "ac2f38803ff4c06947912c8e12ab740945a45c123d313d78fda00fcfeb931dc1"
   },
   "functype-developer": {
     "version": "1.0.3",

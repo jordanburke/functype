@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype: `prefer-option` now says when `Wire` is the fix.** Its message used to offer only `Option`, so people and agents converted rows and bodies that needed to stay as they were. It now ends "If this is a row, body or payload shape, wrap the type in Wire<…>". One union holding both `null` and `undefined`, in a type alias or property, gets its own message and no `Option` suggestion, because left out, cleared and set are three states and `Option` has two. The rule reports the same code as before; only the text and that suggestion change. The Wire docs add a "Wire or Option?" section.
+
 ## 1.25.1 - 2026-11-06
 
 - **functype-log: `withContext` no longer changes the logger it's called on.** On the console, `fromLogLayer` and `logLayerAdapter` paths, `const reqLog = log.withContext({ c: 1 })` also put `c: 1` on `log` and on every logger made from it, so one request's context could reach another's logs. It now returns a separate logger, as the sink and test loggers already did. If you call `withContext` and ignore the result, that call now does nothing. A `setLevel`, `addTransport` or `muteContext` on your root `LogLayer` after that no longer reaches loggers already derived from it, as with `child()`.
