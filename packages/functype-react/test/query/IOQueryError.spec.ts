@@ -132,6 +132,8 @@ describe("IOQueryError.name", () => {
 
   it("falls back to the tag for a Throwable with no name of its own", () => {
     expect(new IOQueryError(Throwable.apply("boom")).name).toBe("Throwable")
+    expect(new IOQueryError(Throwable.apply("boom", undefined, { name: "", description: "" })).name).toBe("Throwable")
+    expect(new IOQueryError({ _tag: "Throwable" }).name).toBe("Throwable")
   })
 
   it("reads .name only for a Throwable: any other tag wins over a cause's name", () => {
