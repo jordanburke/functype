@@ -516,6 +516,9 @@ Option.fromBinary<string>(binaryData)
 | --- | --- | --- |
 | DB row / HTTP body / JSONB with `null` fields or arrays | `type UserRow = Wire<{ email: string \| null; tags: ReadonlyArray<string> }>` | `eslint-disable` on each field |
 | A collection at a boundary | `Wire<ReadonlyArray<Row>>` (not `Wire<Row>`, which is one row) | `Row[]` |
+| A patch field that can be left out, cleared or set | `type Clearable<T> = Wire<T \| null \| undefined>` (`undefined` keeps, `null` removes, a value replaces) | `Option<T>`, which has only two states |
+| A type inferred from a schema (`z.infer`, valibot, a decoder) | Wrap the alias in `Wire<…>`, and convert a field to `Option` where code first decides from it | `eslint-disable` on the alias |
+| A function result your code reads | `Option<T>`, converted once from the driver's row or `undefined` | `Wire<T \| null>` flowing past the first function that decides from it |
 | A bridge whose host requires a throw / rejection / nullable (React `use()`, React Query, a nullable→Option converter) | JSDoc `@interop <reason>` on the function | file-level `eslint-disable` |
 | A throw for a programmer error, not an expected failure | `invariant(cond, "msg")` — narrows `cond` after it | `throw` (reported), `Either` for an impossible case, or a disable |
 | A host needs a throw built from the failure | `either.orThrow((l) => new StepError(l.message))` | `throw` inside a `fold` |
