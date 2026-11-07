@@ -69,7 +69,6 @@ describe("IOQueryError", () => {
   it("is a real Error instance — the footgun this whole module exists to fix", () => {
     const boxed = new IOQueryError(error)
     expect(boxed instanceof Error).toBe(true)
-    expect(boxed.name).toBe("IOQueryError")
   })
 
   it("round-trips the raw typed error on .error", () => {
@@ -103,5 +102,40 @@ describe("isIOQueryError", () => {
     expect(isIOQueryError(new Error("plain"))).toBe(false)
     expect(isIOQueryError({ _tag: "DecodeError" })).toBe(false)
     expect(isIOQueryError(undefined)).toBe(false)
+  })
+})
+
+describe("IOQueryError.name", () => {
+  it("is the cause's tag for a typed failure, so trackers can group by cause", () => {
+    const boxed = new IOQueryError({ _tag: "OAuthFlowError", message: "OAuth window closed" })
+    expect(boxed.name).toBe("OAuthFlowError")
+    expect(String(boxed)).toBe("OAuthFlowError: OAuth window closed")
+  })
+
+  it("is the tag even when formatError supplies the message", () => {
+    expect(new IOQueryError({ _tag: "DecodeError" }, "Bad data").name).toBe("DecodeError")
+  })
+
+  it("stays IOQueryError for a defect, whatever its tag", () => {
+    expect(new IOQueryError({ _tag: "InterruptedError" }, undefined, true).name).toBe("IOQueryError")
+    expect(new IOQueryError(new Error("boom"), undefined, true).name).toBe("IOQueryError")
+  })
+
+  it.each([
+    ["a raw Error", new Error("boom")],
+    ["an untagged object", { code: "E_LIMIT" }],
+    ["a string", "plain string"],
+    ["null", null],
+    ["a non-string tag", { _tag: 42 }],
+    ["an empty tag", { _tag: "" }],
+  ])("stays IOQueryError for %s", (_label, cause) => {
+    expect(new IOQueryError(cause).name).toBe("IOQueryError")
+  })
+
+  it("keeps instanceof and isIOQueryError working when the name changes", () => {
+    const boxed = new IOQueryError({ _tag: "HttpStatusError", url: "/x", status: 500, statusText: "" })
+    expect(boxed).toBeInstanceOf(IOQueryError)
+    expect(boxed).toBeInstanceOf(Error)
+    expect(isIOQueryError(boxed)).toBe(true)
   })
 })
