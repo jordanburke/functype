@@ -71,6 +71,14 @@ export const formatIOError = (error: unknown): string => {
 }
 
 /**
+ * What `name` reads for a boxed failure. Error trackers title and group by `name`, so a typed failure
+ * takes its cause's tag (`OAuthFlowError`, `HttpStatusError`) and a closed popup doesn't land in the same
+ * group as a 500. A defect's cause isn't an `E`, so it stays `IOQueryError`, whatever tag it carries.
+ */
+const nameOf = (error: unknown, defect: boolean): string =>
+  !defect && isTaggedError(error) && error._tag.length > 0 ? error._tag : "IOQueryError"
+
+/**
  * An `Error` subclass carrying the typed functype error channel.
  *
  * ```ts
@@ -78,6 +86,7 @@ export const formatIOError = (error: unknown): string => {
  *
  * error instanceof Error // true
  * error.message          // "HTTP 403 Forbidden — /api/limits"
+ * error.name             // "HttpStatusError"
  *
  * HttpErrors.match(error.error, {
  *   NetworkError: (e) => retryBanner(e),
@@ -115,7 +124,7 @@ export class IOQueryError<E> extends Error {
 
   constructor(error: E, message?: string, defect = false) {
     super(message ?? formatIOError(error), { cause: error })
-    this.name = "IOQueryError"
+    this.name = nameOf(error, defect)
     this.error = error
     this.defect = defect
   }

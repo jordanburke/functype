@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **functype-react: `IOQueryError.name` is now its cause's tag.** A failure with a `_tag` takes that tag as its `name` (`OAuthFlowError`, `HttpStatusError`), so error trackers stop grouping a closed popup with a 500. A defect or an untagged cause keeps `IOQueryError`. If you match on `error.name === "IOQueryError"`, use `isIOQueryError(error)` or `instanceof IOQueryError` instead; both work as before.
+
 ## 1.25.1 - 2026-11-06
 
 - **functype-log: `withContext` no longer changes the logger it's called on.** On the console, `fromLogLayer` and `logLayerAdapter` paths, `const reqLog = log.withContext({ c: 1 })` also put `c: 1` on `log` and on every logger made from it, so one request's context could reach another's logs. It now returns a separate logger, as the sink and test loggers already did. If you call `withContext` and ignore the result, that call now does nothing. A `setLevel`, `addTransport` or `muteContext` on your root `LogLayer` after that no longer reaches loggers already derived from it, as with `child()`.
