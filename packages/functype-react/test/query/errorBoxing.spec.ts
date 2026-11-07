@@ -83,6 +83,20 @@ describe("error boxing", () => {
       expect(boxed.error).toEqual({ _tag: "AuthError", message: "no session" })
     })
 
+    it("names a boxed failure after its cause, and only a typed failure", async () => {
+      const typed = await boxedFrom(ioMutationFn(() => IO.fail({ _tag: "AuthError" as const, message: "no session" })))
+      const defect = await boxedFrom(ioMutationFn(() => IO.die({ _tag: "AuthError" })))
+      const factory = await boxedFrom(
+        ioMutationFn(() => {
+          throw new Error("factory bug")
+        }),
+      )
+
+      expect(typed.name).toBe("AuthError")
+      expect(defect.name).toBe("IOQueryError")
+      expect(factory.name).toBe("IOQueryError")
+    })
+
     it("is true when the effect factory throws", async () => {
       const boxed = await boxedFrom(
         ioMutationFn(() => {
@@ -130,6 +144,8 @@ describe("error boxing", () => {
 
     it("is true for interruption, whose InterruptedError is no more an E than a defect", async () => {
       const boxed = await boxedFrom(ioMutationFn(() => IO.interrupt()))
+
+      expect(boxed.name).toBe("IOQueryError")
 
       expect(boxed.defect).toBe(true)
     })
@@ -182,7 +198,7 @@ describe("error boxing", () => {
       const boxed = await boxedFrom(ioMutationFn(() => IO.fail({ _tag: "AuthError" as const, message: "no session" })))
 
       expect(boxed).toBeInstanceOf(Error)
-      expect(boxed.name).toBe("IOQueryError")
+      expect(boxed.name).toBe("AuthError")
       expect(boxed.message).toBe("no session")
     })
   })
