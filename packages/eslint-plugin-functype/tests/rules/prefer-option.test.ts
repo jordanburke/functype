@@ -85,6 +85,14 @@ type WebhookBody = { readonly customer: string | null }`,
         code: "const value: string | number | null = null",
       },
       {
+        name: "A nested union of only null and undefined adds no report the outer union didn't have",
+        code: "type A = (null | undefined) | string\ntype B = string | (null | undefined)\ntype C = (null | undefined) | string | null\ntype D = { a?: (null | undefined) | string }",
+      },
+      {
+        name: "A nullable union whose one other member is itself a union of values stays unreported",
+        code: "const v: (string | number) | null = null",
+      },
+      {
         name: "A nested union with two value types is a multi-type union, so it stays unreported",
         code: "type A = (string | null) | number\ntype B = string | (number | undefined)",
       },
@@ -533,7 +541,7 @@ describe("prefer-option optional members and parameters (#446)", () => {
         errors: [
           {
             message:
-              'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the ? or the | null and use Option<string>',
+              'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the | null or the | undefined and use Option<string>',
             suggestions: 0,
           },
         ],

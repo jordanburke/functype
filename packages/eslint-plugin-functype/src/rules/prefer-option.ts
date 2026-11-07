@@ -45,15 +45,18 @@ function unionMembers(union: ASTNode): ReadonlyArray<ASTNode> {
  * `Option` has two (#448). That's a type alias's body or a type-literal or interface member holding both
  * `null` and `undefined`, or an optional member that can also be `null` (`a?: T | null`). A parameter is a
  * converter's input and a return type is a result, so neither counts.
+ *
+ * Returns the two spellings of "absent" the type uses, for the message to say which to drop, or `undefined`
+ * when the union isn't a three-state shape.
  */
-function isThreeStateShape(union: ASTNode, members: ReadonlyArray<ASTNode>): boolean {
-  if (!members.some((t) => t.type === "TSNullKeyword")) return false
+function threeStateSpellings(union: ASTNode, members: ReadonlyArray<ASTNode>): string | undefined {
+  if (!members.some((t) => t.type === "TSNullKeyword")) return undefined
   const parent = union.parent as ASTNode | undefined
   const owner = parent?.type === "TSTypeAnnotation" ? (parent.parent as ASTNode | undefined) : undefined
   const member = owner?.type === "TSPropertySignature" ? owner : undefined
-  if (member?.optional === true) return true
-  if (!members.some((t) => t.type === "TSUndefinedKeyword")) return false
-  return parent?.type === "TSTypeAliasDeclaration" || member !== undefined
+  if (member?.optional === true) return "the ? or the | null"
+  if (!members.some((t) => t.type === "TSUndefinedKeyword")) return undefined
+  return parent?.type === "TSTypeAliasDeclaration" || member !== undefined ? "the | null or the | undefined" : undefined
 }
 
 const rule: Rule.RuleModule = {
@@ -96,7 +99,7 @@ const rule: Rule.RuleModule = {
       preferOptionOverOptional:
         "Prefer '{{name}}: Option<{{type}}>' over the optional '{{name}}?'. If this is a row, body or payload shape, wrap the type in Wire<…>",
       preferWireForThreeStates:
-        'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the ? or the | null and use Option<{{type}}>',
+        'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop {{drop}} and use Option<{{type}}>',
       suggestOptionType: "Replace with Option<{{type}}>",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -173,6 +176,10 @@ const rule: Rule.RuleModule = {
         if (isInsideWireType(node, wireTypes)) return
         if (isExemptByMarker(node)) return
         if (!node.types || node.types.length < 2) return
+        // The gate the rule always had: a nullish member of its own beside exactly one other. Spreading
+        // nested unions below only refines what that one member is, so nothing new gets reported.
+        const direct: ReadonlyArray<ASTNode> = node.types
+        if (!direct.some((t) => isNullish(t)) || direct.filter((t) => !isNullish(t)).length !== 1) return
         if (allowUseState && isInHookTypeArgument(node)) return
 
         const members = unionMembers(node)
@@ -205,8 +212,9 @@ const rule: Rule.RuleModule = {
           // Skip if it's already an Option type (fallback check)
           if (nonNullTypeText.startsWith("Option<")) return
 
-          if (isThreeStateShape(node, members)) {
-            context.report({ node, messageId: "preferWireForThreeStates", data: { type: nonNullTypeText } })
+          const drop = threeStateSpellings(node, members)
+          if (drop !== undefined) {
+            context.report({ node, messageId: "preferWireForThreeStates", data: { type: nonNullTypeText, drop } })
             return
           }
 
