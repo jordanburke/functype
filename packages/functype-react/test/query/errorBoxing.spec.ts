@@ -145,6 +145,8 @@ describe("error boxing", () => {
     it("is true for interruption, whose InterruptedError is no more an E than a defect", async () => {
       const boxed = await boxedFrom(ioMutationFn(() => IO.interrupt()))
 
+      expect(boxed.name).toBe("IOQueryError")
+
       expect(boxed.defect).toBe(true)
     })
 

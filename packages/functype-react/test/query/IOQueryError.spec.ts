@@ -134,6 +134,7 @@ describe("IOQueryError.name", () => {
 
   it("keeps instanceof and isIOQueryError working when the name changes", () => {
     const boxed = new IOQueryError({ _tag: "HttpStatusError", url: "/x", status: 500, statusText: "" })
+    expect(boxed.name).toBe("HttpStatusError")
     expect(boxed).toBeInstanceOf(IOQueryError)
     expect(boxed).toBeInstanceOf(Error)
     expect(isIOQueryError(boxed)).toBe(true)
