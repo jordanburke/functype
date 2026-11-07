@@ -6,6 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+<<<<<<< HEAD
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -23,6 +24,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
 - **functype-react: `IOQueryError.name` is now its cause's tag.** A failure with a `_tag` takes that tag as its `name` (`OAuthFlowError`, `HttpStatusError`), so error trackers stop grouping a closed popup with a 500. A defect or an untagged cause keeps `IOQueryError`. If you match on `error.name === "IOQueryError"`, use `isIOQueryError(error)` or `instanceof IOQueryError` instead; both work as before.
+=======
+- **Correction to the 1.24.1 note on `@eslint/eslintrc`.** It says `npm audit` flags `minimatch` 3.x under GHSA-g3hv-75wg-m249. `npm audit` no longer does, because GitHub narrowed that advisory on 2026-11-04 to `>=7.0.0 <11.0.1`. The note's instruction still holds: a project that imports `FlatCompat` must declare `@eslint/eslintrc` itself.
+- **functype-react: `IOQueryError.name` is now its cause's tag.** A failure with a `_tag` takes that tag as its `name` (`OAuthFlowError`, `HttpStatusError`), so error trackers stop grouping a closed popup with a 500. A functype `TypedError` takes its code (`NOT_FOUND`), and a `Throwable` takes its own name when it has one, because they all share the tag `Throwable`. A defect or an untagged cause keeps `IOQueryError`. If you match on `error.name === "IOQueryError"`, use `isIOQueryError(error)` or `instanceof IOQueryError` instead; both work as before.
+>>>>>>> origin/release/1.x
 - **eslint-plugin-functype: `prefer-option` now says when `Wire` is the fix.** Its message used to offer only `Option`, so people and agents converted rows and bodies that needed to stay as they were. It now ends "If this is a row, body or payload shape, wrap the type in Wire<…>". One union holding both `null` and `undefined`, as a type alias's body or a type-literal or interface member, gets its own message and no `Option` suggestion, because left out, cleared and set are three states and `Option` has two. The rule reports the same code as before; only the text and that suggestion change. The Wire docs add a "Wire or Option?" section.
 
 ## 1.25.1 - 2026-11-06
