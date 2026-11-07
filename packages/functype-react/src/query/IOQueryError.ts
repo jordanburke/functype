@@ -16,6 +16,7 @@ import { Try } from "functype"
 /** Structural view of a tagged functype error (e.g. any `HttpError` variant). */
 type TaggedError = {
   readonly _tag: string
+  readonly name?: unknown
   readonly url?: unknown
   readonly status?: unknown
   readonly statusText?: unknown
@@ -74,9 +75,14 @@ export const formatIOError = (error: unknown): string => {
  * What `name` reads for a boxed failure. Error trackers title and group by `name`, so a typed failure
  * takes its cause's tag (`OAuthFlowError`, `HttpStatusError`) and a closed popup doesn't land in the same
  * group as a 500. A defect's cause isn't an `E`, so it stays `IOQueryError`, whatever tag it carries.
+ *
+ * Every functype `Throwable` shares the tag `Throwable`, so one's specific name is in `.name`: a
+ * `TypedError`'s code (`NOT_FOUND`), or a `Throwable`'s `taskInfo.name`.
  */
-const nameOf = (error: unknown, defect: boolean): string =>
-  !defect && isTaggedError(error) && error._tag.length > 0 ? error._tag : "IOQueryError"
+const nameOf = (error: unknown, defect: boolean): string => {
+  if (defect || !isTaggedError(error) || error._tag.length === 0) return "IOQueryError"
+  return error._tag === "Throwable" && typeof error.name === "string" && error.name.length > 0 ? error.name : error._tag
+}
 
 /**
  * An `Error` subclass carrying the typed functype error channel.
