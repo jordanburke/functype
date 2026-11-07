@@ -128,7 +128,7 @@ type ChainRow = Wire<{
 }>;
 ```
 
-**Three states: left out, cleared, set.** This is the case where `Option` is wrong, not just awkward. A patch body's field can be left out (keep the old value), sent as `null` (remove it) or sent with a value (replace it). `Option<T>` has two states, so converting loses the difference. `prefer-option` says so when one union, as a type alias's body or a type-literal or interface member, holds both `null` and `undefined`.
+**Three states: left out, cleared, set.** This is the case where `Option` is wrong, not just awkward. A patch body's field can be left out (keep the old value), sent as `null` (remove it) or sent with a value (replace it). `Option<T>` has two states, so converting loses the difference. `prefer-option` says so when one union, as a type alias's body or a type-literal or interface member, holds both `null` and `undefined`, and when an optional member can also be `null` (`a?: T | null`). The message names both fixes, because a domain type written that way often only meant "may be absent".
 
 ```typescript
 import type { Wire } from "functype";
