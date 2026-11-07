@@ -485,6 +485,16 @@ describe("prefer-option optional members and parameters (#446)", () => {
         ],
       },
       {
+        name: "A member inside a parameter's type is a shape, so it gets the three-state message",
+        code: "const f = (o: { readonly a: string | null | undefined }) => o",
+        errors: [{ messageId: "preferWireForThreeStates", suggestions: 0 }],
+      },
+      {
+        name: "A class field holding null and undefined keeps the Option message",
+        code: "class C { a: string | null | undefined = null }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
         name: "A return type holding null and undefined keeps the Option message",
         code: "function f(): string | null | undefined { return null }",
         errors: [{ messageId: "preferOption", suggestions: 2 }],

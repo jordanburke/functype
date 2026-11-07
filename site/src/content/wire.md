@@ -128,7 +128,7 @@ type ChainRow = Wire<{
 }>;
 ```
 
-**Three states: left out, cleared, set.** This is the case where `Option` is wrong, not just awkward. A patch body's field can be left out (keep the old value), sent as `null` (remove it) or sent with a value (replace it). `Option<T>` has two states, so converting loses the difference. `prefer-option` says so when one union in a type alias or property holds both `null` and `undefined`.
+**Three states: left out, cleared, set.** This is the case where `Option` is wrong, not just awkward. A patch body's field can be left out (keep the old value), sent as `null` (remove it) or sent with a value (replace it). `Option<T>` has two states, so converting loses the difference. `prefer-option` says so when one union, as a type alias's body or a type-literal or interface member, holds both `null` and `undefined`.
 
 ```typescript
 import type { Wire } from "functype";
@@ -161,7 +161,7 @@ const quantity = (
   value === null || unit === null ? null : { value, unit };
 ```
 
-**Props and options objects.** The caller writes `<X a="v" />`, so these are host shapes. `prefer-option` already skips `a?: T` and `a: T | undefined` on a member or parameter.
+**Props and options objects.** The caller writes `<X a="v" />`, so these are host shapes. `prefer-option` skips `a?: T` and `a: T | undefined` on a member or parameter by default.
 
 ### Where Option stays the answer
 

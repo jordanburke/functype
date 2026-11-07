@@ -426,7 +426,7 @@ When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsyn
 
 The message names both ways out, because a nullable type can be a correct boundary shape. Use `Option` when your own code reads the absence, and `Wire<…>` when a serializer, driver, schema or host reads it. [Wire or Option?](https://functype.org/wire#wire-or-option) has the full rule.
 
-One union holding both `null` and `undefined`, in a type alias or property, gets its own message and no `Option` suggestion. Left out, cleared and set are three states, and `Option` has two, so the fix is `Wire<T | null | undefined>`. A parameter, return type or variable with that union keeps the `Option` message: there it's a converter's input or a result, not a shape.
+One union holding both `null` and `undefined`, as a type alias's body or a type-literal or interface member, gets its own message and no `Option` suggestion. Left out, cleared and set are three states, and `Option` has two, so the fix is `Wire<T | null | undefined>`. A parameter's own type, a return type, a variable or a class field with that union keeps the `Option` message. A member inside a parameter's type, such as an options bag, is still a shape, so it gets the three-state message.
 
 On a type-literal or interface member, and on a parameter, `a?: T` and `a: T | undefined` both mean "may be absent", so both are skipped by default. The caller writes `<X b="v" />` or `f()`, and an `Option` there would make every caller wrap the value. Skipping only one spelling would teach people to rewrite `b: string | undefined` as `b?: string`, which makes a required key optional.
 
