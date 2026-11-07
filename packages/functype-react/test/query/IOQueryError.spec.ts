@@ -1,3 +1,4 @@
+import { Throwable, TypedError } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { formatIOError, IOQueryError, isIOQueryError } from "../../src/query/IOQueryError"
@@ -114,6 +115,32 @@ describe("IOQueryError.name", () => {
 
   it("is the tag even when formatError supplies the message", () => {
     expect(new IOQueryError({ _tag: "DecodeError" }, "Bad data").name).toBe("DecodeError")
+  })
+
+  it("is a TypedError's code, because every TypedError shares one tag", () => {
+    const notFound = new IOQueryError(TypedError.notFound("user", "1"))
+    const timeout = new IOQueryError(TypedError.timeout(100, "/x"))
+    expect(notFound.name).toBe("NOT_FOUND")
+    expect(timeout.name).toBe("TIMEOUT")
+    expect(String(notFound)).toBe("NOT_FOUND: Not found: user with id 1")
+  })
+
+  it("is a Throwable's own name when it has one", () => {
+    const named = Throwable.apply("boom", undefined, { name: "UserFetch", description: "Fetch a user" })
+    expect(new IOQueryError(named).name).toBe("UserFetch")
+  })
+
+  it("falls back to the tag for a Throwable with no name of its own", () => {
+    expect(new IOQueryError(Throwable.apply("boom")).name).toBe("Throwable")
+  })
+
+  it("reads .name only for a Throwable: any other tag wins over a cause's name", () => {
+    const custom = Object.assign(new Error("boom"), { _tag: "Custom", name: "CustomError" })
+    expect(new IOQueryError(custom).name).toBe("Custom")
+  })
+
+  it("stays IOQueryError for a TypedError that arrives as a defect", () => {
+    expect(new IOQueryError(TypedError.notFound("user", "1"), undefined, true).name).toBe("IOQueryError")
   })
 
   it("stays IOQueryError for a defect, whatever its tag", () => {
