@@ -33,18 +33,27 @@ function memberOrParameterOf(annotation: ASTNode | undefined): ASTNode | undefin
 }
 
 /**
- * Does a union holding both `null` and `undefined` describe a shape: a type alias's body, or a type-literal
- * or interface member? There, left out, cleared and set are three states, and `Option` has two. A parameter
- * is a converter's input and a return type is a result, so neither counts (#448).
+ * A union's members, with nested unions spread in. The parser drops parentheses, so `(A | null) | undefined`
+ * is a union holding a union; spread, it holds A, null and undefined.
  */
-function isThreeStateShape(union: ASTNode): boolean {
-  const hasBoth =
-    union.types.some((t: ASTNode) => t.type === "TSNullKeyword") &&
-    union.types.some((t: ASTNode) => t.type === "TSUndefinedKeyword")
-  if (!hasBoth) return false
+function unionMembers(union: ASTNode): ReadonlyArray<ASTNode> {
+  return union.types.flatMap((t: ASTNode) => (t.type === "TSUnionType" ? unionMembers(t) : [t]))
+}
+
+/**
+ * Does a nullable union describe a three-state shape? Left out, cleared and set are three states, and
+ * `Option` has two (#448). That's a type alias's body or a type-literal or interface member holding both
+ * `null` and `undefined`, or an optional member that can also be `null` (`a?: T | null`). A parameter is a
+ * converter's input and a return type is a result, so neither counts.
+ */
+function isThreeStateShape(union: ASTNode, members: ReadonlyArray<ASTNode>): boolean {
+  if (!members.some((t) => t.type === "TSNullKeyword")) return false
   const parent = union.parent as ASTNode | undefined
-  if (parent?.type === "TSTypeAliasDeclaration") return true
-  return parent?.type === "TSTypeAnnotation" && (parent.parent as ASTNode | undefined)?.type === "TSPropertySignature"
+  const owner = parent?.type === "TSTypeAnnotation" ? (parent.parent as ASTNode | undefined) : undefined
+  const member = owner?.type === "TSPropertySignature" ? owner : undefined
+  if (member?.optional === true) return true
+  if (!members.some((t) => t.type === "TSUndefinedKeyword")) return false
+  return parent?.type === "TSTypeAliasDeclaration" || member !== undefined
 }
 
 const rule: Rule.RuleModule = {
@@ -87,7 +96,7 @@ const rule: Rule.RuleModule = {
       preferOptionOverOptional:
         "Prefer '{{name}}: Option<{{type}}>' over the optional '{{name}}?'. If this is a row, body or payload shape, wrap the type in Wire<…>",
       preferWireForThreeStates:
-        "A union with both null and undefined has three states that Option cannot hold. Wrap it in Wire<…>",
+        'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the ? or the | null and use Option<{{type}}>',
       suggestOptionType: "Replace with Option<{{type}}>",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -135,10 +144,10 @@ const rule: Rule.RuleModule = {
       if (isInsideWireType(node, wireTypes) || isExemptByMarker(node)) return
       const annotation = (node.typeAnnotation as ASTNode | undefined)?.typeAnnotation as ASTNode | undefined
       if (!annotation || isFunctypeType(annotation, functypeImports)) return
-      // `a?: T | null` is reported once, by the union check, which keeps its suggestions.
-      if (annotation.type === "TSUnionType" && annotation.types.some((t: ASTNode) => t.type === "TSNullKeyword")) return
-      const kept =
-        annotation.type === "TSUnionType" ? annotation.types.filter((t: ASTNode) => !isNullish(t)) : [annotation]
+      const members = annotation.type === "TSUnionType" ? unionMembers(annotation) : [annotation]
+      // `a?: T | null` is reported once, by the union check.
+      if (members.some((t) => t.type === "TSNullKeyword")) return
+      const kept = members.filter((t) => !isNullish(t))
       if (kept.length !== 1 || isFunctypeType(kept[0], functypeImports)) return
       const key = (node.type === "TSPropertySignature" ? node.key : node) as ASTNode
       const name =
@@ -159,12 +168,15 @@ const rule: Rule.RuleModule = {
       Identifier: checkOptional,
 
       TSUnionType(node: ASTNode) {
+        // A union nested in a union is part of the outer one, which reports for both.
+        if ((node.parent as ASTNode | undefined)?.type === "TSUnionType") return
         if (isInsideWireType(node, wireTypes)) return
         if (isExemptByMarker(node)) return
         if (!node.types || node.types.length < 2) return
         if (allowUseState && isInHookTypeArgument(node)) return
 
-        const hasNull = node.types.some((type: ASTNode) => isNullish(type))
+        const members = unionMembers(node)
+        const hasNull = members.some((type) => isNullish(type))
 
         if (!hasNull) return
 
@@ -172,10 +184,10 @@ const rule: Rule.RuleModule = {
         // checkOptionalMembers is on, and never reported on an optional one (`c?: T | undefined` is the
         // spelling exactOptionalPropertyTypes needs; the optional-member check reports it, once).
         const owner = memberOrParameterOf(node.parent)
-        const undefinedOnly = !node.types.some((type: ASTNode) => type.type === "TSNullKeyword")
+        const undefinedOnly = !members.some((type) => type.type === "TSNullKeyword")
         if (owner && undefinedOnly && (!checkOptionalMembers || owner.optional === true)) return
 
-        const nonNullTypes = node.types.filter((type: ASTNode) => !isNullish(type))
+        const nonNullTypes = members.filter((type) => !isNullish(type))
 
         if (nonNullTypes.length === 1) {
           const nonNullType = nonNullTypes[0]
@@ -193,8 +205,8 @@ const rule: Rule.RuleModule = {
           // Skip if it's already an Option type (fallback check)
           if (nonNullTypeText.startsWith("Option<")) return
 
-          if (isThreeStateShape(node)) {
-            context.report({ node, messageId: "preferWireForThreeStates" })
+          if (isThreeStateShape(node, members)) {
+            context.report({ node, messageId: "preferWireForThreeStates", data: { type: nonNullTypeText } })
             return
           }
 

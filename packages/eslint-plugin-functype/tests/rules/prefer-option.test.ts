@@ -85,6 +85,14 @@ type WebhookBody = { readonly customer: string | null }`,
         code: "const value: string | number | null = null",
       },
       {
+        name: "A nested union with two value types is a multi-type union, so it stays unreported",
+        code: "type A = (string | null) | number\ntype B = string | (number | undefined)",
+      },
+      {
+        name: "An optional nullable member inside Wire is the declared shape",
+        code: "type Patch = Wire<{ a?: string | null }>\ntype Row = { a?: Wire<string | null> }",
+      },
+      {
         name: "A three-state union inside Wire is the declared shape",
         code: "type Clearable = Wire<string | null | undefined>\ntype Patch = { name: Wire<string | null | undefined> }",
       },
@@ -392,9 +400,9 @@ describe("prefer-option optional members and parameters (#446)", () => {
         errors: [{ messageId: "preferOption", suggestions: 2 }],
       },
       {
-        name: "?: T | null is still reported",
+        name: "?: T | null is still reported, as a three-state shape",
         code: "type Props = { c?: string | null }",
-        errors: [{ messageId: "preferOption", suggestions: 2 }],
+        errors: [{ messageId: "preferWireForThreeStates", suggestions: 0 }],
       },
       {
         name: "A return type is still reported",
@@ -431,6 +439,68 @@ describe("prefer-option optional members and parameters (#446)", () => {
         code: "type P = { c?: string | null }\nconst f = (x?: string | null) => x",
         options: [{ checkOptionalMembers: true }],
         errors: [
+          { messageId: "preferWireForThreeStates", suggestions: 0 },
+          { messageId: "preferOption", suggestions: 2 },
+        ],
+      },
+      {
+        name: "An optional member that can also be null has three states",
+        code: "type Patch = { a?: string | null }\ninterface Body { readonly b?: null | number }",
+        errors: [
+          {
+            message:
+              'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the ? or the | null and use Option<string>',
+            suggestions: 0,
+          },
+          { messageId: "preferWireForThreeStates", suggestions: 0 },
+        ],
+      },
+      {
+        name: "An optional member inside a parameter's type is a shape, so it gets the three-state message",
+        code: "const f = (o: { a?: string | null }) => o",
+        errors: [{ messageId: "preferWireForThreeStates", suggestions: 0 }],
+      },
+      {
+        name: "An optional parameter that can also be null keeps the Option message",
+        code: "const f = (x?: string | null) => x",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "An optional class field that can also be null keeps the Option message",
+        code: "class C { a?: string | null }",
+        errors: [{ messageId: "preferOption", suggestions: 2 }],
+      },
+      {
+        name: "A nested union is reported once, at the outer union",
+        code: "const v: (string | null) | undefined = null",
+        errors: [
+          {
+            messageId: "preferOption",
+            data: { type: "string", nullable: "(string | null) | undefined" },
+            suggestions: [
+              {
+                messageId: "suggestOptionType",
+                data: { type: "string" },
+                output: "const v: Option<string> = null",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "Option" },
+                output: 'import { Option } from "functype"\nconst v: (string | null) | undefined = null',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A nested union in a type alias, holding null and undefined, gets the three-state message once",
+        code: "type Clearable = undefined | (string | null)",
+        errors: [{ messageId: "preferWireForThreeStates", suggestions: 0 }],
+      },
+      {
+        name: "A nullable union inside a generic argument is its own type, so both are reported",
+        code: "const v: ReadonlyArray<string | null> | undefined = undefined",
+        errors: [
           { messageId: "preferOption", suggestions: 2 },
           { messageId: "preferOption", suggestions: 2 },
         ],
@@ -463,7 +533,7 @@ describe("prefer-option optional members and parameters (#446)", () => {
         errors: [
           {
             message:
-              "A union with both null and undefined has three states that Option cannot hold. Wrap it in Wire<…>",
+              'This type has three states, left out, null and set, and Option holds two. If it\'s a row, body or payload shape, wrap the type in Wire<…>. If it only meant "may be absent", drop the ? or the | null and use Option<string>',
             suggestions: 0,
           },
         ],
