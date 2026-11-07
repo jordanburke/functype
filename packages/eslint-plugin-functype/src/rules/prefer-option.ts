@@ -32,6 +32,21 @@ function memberOrParameterOf(annotation: ASTNode | undefined): ASTNode | undefin
   return isParameter(owner) ? owner : undefined
 }
 
+/**
+ * Does a union holding both `null` and `undefined` describe a shape: a type alias's body, or a type-literal
+ * or interface member? There, left out, cleared and set are three states, and `Option` has two. A parameter
+ * is a converter's input and a return type is a result, so neither counts (#448).
+ */
+function isThreeStateShape(union: ASTNode): boolean {
+  const hasBoth =
+    union.types.some((t: ASTNode) => t.type === "TSNullKeyword") &&
+    union.types.some((t: ASTNode) => t.type === "TSUndefinedKeyword")
+  if (!hasBoth) return false
+  const parent = union.parent as ASTNode | undefined
+  if (parent?.type === "TSTypeAliasDeclaration") return true
+  return parent?.type === "TSTypeAnnotation" && (parent.parent as ASTNode | undefined)?.type === "TSPropertySignature"
+}
+
 const rule: Rule.RuleModule = {
   meta: {
     type: "suggestion",
@@ -66,9 +81,13 @@ const rule: Rule.RuleModule = {
       },
     ],
     messages: {
-      preferOption: "Prefer Option<{{type}}> over nullable type '{{nullable}}'",
+      preferOption:
+        "Prefer Option<{{type}}> over nullable type '{{nullable}}'. If this is a row, body or payload shape, wrap the type in Wire<…>",
       preferOptionReturn: "Prefer Option<{{type}}> as return type over nullable '{{nullable}}'",
-      preferOptionOverOptional: "Prefer '{{name}}: Option<{{type}}>' over the optional '{{name}}?'",
+      preferOptionOverOptional:
+        "Prefer '{{name}}: Option<{{type}}>' over the optional '{{name}}?'. If this is a row, body or payload shape, wrap the type in Wire<…>",
+      preferWireForThreeStates:
+        "A union with both null and undefined has three states that Option cannot hold. Wrap it in Wire<…>",
       suggestOptionType: "Replace with Option<{{type}}>",
       suggestAddImport: "Add {{symbol}} import from functype",
     },
@@ -173,6 +192,11 @@ const rule: Rule.RuleModule = {
 
           // Skip if it's already an Option type (fallback check)
           if (nonNullTypeText.startsWith("Option<")) return
+
+          if (isThreeStateShape(node)) {
+            context.report({ node, messageId: "preferWireForThreeStates" })
+            return
+          }
 
           const suggestions: Rule.SuggestionReportDescriptor[] = [
             {

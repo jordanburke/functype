@@ -7,6 +7,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 ## Unreleased
 
 - **functype-react: `IOQueryError.name` is now its cause's tag.** A failure with a `_tag` takes that tag as its `name` (`OAuthFlowError`, `HttpStatusError`), so error trackers stop grouping a closed popup with a 500. A defect or an untagged cause keeps `IOQueryError`. If you match on `error.name === "IOQueryError"`, use `isIOQueryError(error)` or `instanceof IOQueryError` instead; both work as before.
+- **eslint-plugin-functype: `prefer-option` now says when `Wire` is the fix.** Its message used to offer only `Option`, so people and agents converted rows and bodies that needed to stay as they were. It now ends "If this is a row, body or payload shape, wrap the type in Wire<…>". One union holding both `null` and `undefined`, as a type alias's body or a type-literal or interface member, gets its own message and no `Option` suggestion, because left out, cleared and set are three states and `Option` has two. The rule reports the same code as before; only the text and that suggestion change. The Wire docs add a "Wire or Option?" section.
 
 ## 1.25.1 - 2026-11-06
 

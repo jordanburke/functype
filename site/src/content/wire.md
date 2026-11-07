@@ -105,3 +105,81 @@ The break is loud, not silent: a `Wire<Row>` that meant an array fails to compil
 
 - Values you're about to transform. Convert to `List<T>` / `Option<T>` first.
 - Function-local variables that never cross a boundary.
+
+## Wire or Option?
+
+Ask who reads the absence.
+
+- **Use `Option` when your own code reads it.** You branch on it, map it, or return it to code that does.
+- **Use `Wire` when something outside your code reads it, or when the absence is part of the format.** That reader is a serializer, a driver, a schema library or a host API.
+- **Convert once, at the edge.** The first function that receives a `Wire` value turns it into `Option` if later code decides anything from it.
+
+### Where Wire is the answer
+
+**Serialized shapes.** `Option` doesn't survive `JSON.stringify`, and drivers return `null`.
+
+```typescript
+import type { Wire } from "functype";
+
+type ChainRow = Wire<{
+  readonly id: string;
+  readonly entity_id: string | null;
+  readonly literal: string | null;
+}>;
+```
+
+**Three states: left out, cleared, set.** This is the case where `Option` is wrong, not just awkward. A patch body's field can be left out (keep the old value), sent as `null` (remove it) or sent with a value (replace it). `Option<T>` has two states, so converting loses the difference. `prefer-option` says so when one union, as a type alias's body or a type-literal or interface member, holds both `null` and `undefined`.
+
+```typescript
+import type { Wire } from "functype";
+
+type Clearable<T> = Wire<T | null | undefined>; // undefined: keep, null: remove, T: replace
+
+const keep = <T>(next: Wire<T | undefined>, old: T): T =>
+  next === undefined ? old : next;
+```
+
+**Types inferred from a schema.** A type from `z.infer`, valibot or a decoder is the wire shape by definition. Wrap the alias, and convert a field to `Option` when code first decides something from it.
+
+```typescript
+import type { Wire } from "functype";
+
+type Given<T> = Wire<T | undefined>; // a tool input field that may be left out
+```
+
+**Helpers that pass a wire value through.** A row mapper that reads a nullable column and writes a nullable field decides nothing about the absence. An `Option` there only adds a conversion you undo.
+
+```typescript
+import type { Wire } from "functype";
+
+type Quantity = { readonly value: number; readonly unit: string };
+
+const quantity = (
+  value: Wire<number | null>,
+  unit: Wire<string | null>,
+): Wire<Quantity | null> =>
+  value === null || unit === null ? null : { value, unit };
+```
+
+**Props and options objects.** The caller writes `<X a="v" />`, so these are host shapes. `prefer-option` skips `a?: T` and `a: T | undefined` on a member or parameter by default.
+
+### Where Option stays the answer
+
+A function result that code goes on to read is an `Option`. The driver returns a row or `undefined`, the function converts it once, and callers `fold`.
+
+```typescript
+import { Option } from "functype";
+
+type Entity = { readonly name: string };
+
+const findByName = (
+  entities: ReadonlyArray<Entity>,
+  name: string,
+): Option<Entity> => Option(entities.find((entity) => entity.name === name));
+```
+
+### Misuses
+
+- **`Wire` on a domain type just to quiet the rule.** Ask whether the value really crosses a boundary in this exact shape.
+- **`Option` inside a row or body type.** It serializes as an object and doesn't round-trip.
+- **A `Wire` value that keeps flowing** past the first function that decides something from it.
