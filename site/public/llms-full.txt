@@ -1380,6 +1380,8 @@ Note: `fold` has different semantics per type category:
 - `exists(p: (value: A) => boolean): boolean`
 - `forEach(f: (value: A) => void): void`
 
+`every(p)`, the dual of `exists`, is on `Option`, on `FunctypeSum` (so `Either` and `Try`) and on `CollectionOps` (`List`, `Set`). It gives `true` when there's no value: `None`, `Left`, `Failure` or an empty collection. `Lazy` and `Obj` don't have it.
+
 ### CollectionOps
 
 - `every(p: (value: A) => boolean): boolean`
@@ -1551,6 +1553,11 @@ Option(5).filter((x) => x > 10); // None
 
 // forEach - side effect only, runs when the value is present
 Option(5).forEach((x) => console.log(x)); // logs 5
+
+// exists / every - test the value. None gives false for exists and true for every
+Option(5).exists((x) => x > 3); // true
+Option<number>(null).exists((x) => x > 3); // false
+Option<number>(null).every((x) => x > 3); // true: "absent, or present and matching"
 ```
 
 ## Pattern Matching
@@ -1678,6 +1685,10 @@ either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
 );
+
+// Exists / Every - test the Right value. A Left gives false for exists and true for every
+Right<string, number>(5).every((x) => x > 3); // true
+Left<string, number>("err").every((x) => x > 3); // true: no Right value to fail
 
 // FilterOrElse - turn a value-level guard into a typed Left without breaking the chain
 Right<string, number>(5).filterOrElse(
@@ -1829,6 +1840,12 @@ Try(() => riskyOperation()).recover((error) => fallbackValue);
 
 // RecoverWith - handle with another Try
 Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
+
+// Exists / Every - test the success value. A Failure gives false for exists and true for every
+Try(() => 5).every((x) => x > 3); // true
+Try<number>(() => {
+  throw new Error("boom");
+}).every((x) => x > 3); // true: no success value to fail
 
 // FilterOrElse - turn a value-level guard into a typed Failure (no manual throw)
 Try.success(parse(raw))
@@ -4678,6 +4695,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 - `.isSome()`
 - `.isNone()`
 - `.isEmpty`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 
@@ -4718,6 +4737,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mon
 
 - `.isRight()`
 - `.isLeft()`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 
@@ -4763,6 +4784,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 
 - `.isSuccess()`
 - `.isFailure()`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 

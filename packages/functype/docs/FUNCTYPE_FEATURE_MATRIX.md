@@ -269,6 +269,8 @@ Note: `fold` has different semantics per type category:
 - `exists(p: (value: A) => boolean): boolean`
 - `forEach(f: (value: A) => void): void`
 
+`every(p)`, the dual of `exists`, is on `Option`, on `FunctypeSum` (so `Either` and `Try`) and on `CollectionOps` (`List`, `Set`). It gives `true` when there's no value: `None`, `Left`, `Failure` or an empty collection. `Lazy` and `Obj` don't have it.
+
 ### CollectionOps
 
 - `every(p: (value: A) => boolean): boolean`

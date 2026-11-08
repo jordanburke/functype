@@ -139,6 +139,18 @@ export interface Option<out T extends Type>
    */
   contains(value: T): boolean
   /**
+   * Tests whether the value, if there is one, satisfies the predicate. The dual of `exists`, and
+   * Scala's `forall`: `None` gives `true`, the same way `[].every(p)` does.
+   * @param p - The predicate to test the value with
+   * @returns `true` for None, otherwise `p(value)`
+   * @example
+   * ```typescript
+   * Option("abc").every((s) => s.length > 2) // true
+   * Option<string>(undefined).every((s) => s.length > 2) // true: nothing to fail
+   * ```
+   */
+  every(p: (a: T) => boolean): boolean
+  /**
    * Converts this Option to a List.
    * @returns A List containing the value if Some, or empty List if None
    */
@@ -221,6 +233,7 @@ export const Some = <T extends Type>(value: T): Option<T> => ({
   count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
   find: (p: (a: T) => boolean) => (p(value) ? Some(value) : (NONE as unknown as Option<T>)),
   exists: (p: (a: T) => boolean) => p(value),
+  every: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),
   fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
     return onSome(value)
@@ -297,6 +310,7 @@ const NONE: Option<never> = {
   count: (_p: (x: never) => boolean) => 0,
   find: (_p: (a: never) => boolean) => NONE as unknown as Option<never>,
   exists: (_p: (a: never) => boolean) => false,
+  every: (_p: (a: never) => boolean) => true,
   forEach: (_f: (a: never) => void) => {},
   flatMap: <U extends Type>(_f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
   flatMapAsync: <U extends Type>(_f: (value: never) => Promise<Option<U>>): Promise<Option<U>> => {

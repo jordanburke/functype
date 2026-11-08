@@ -687,6 +687,9 @@ list.find((x) => x > 3) // Some(4)
 opt.exists((x) => x === 42) // true
 list.exists((x) => x === 3) // true
 
+opt.every((x) => x > 40) // true (and true for None: nothing to fail)
+list.every((x) => x > 0) // true (and true for an empty List)
+
 opt.forEach(console.log) // Logs: 42
 list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 ```

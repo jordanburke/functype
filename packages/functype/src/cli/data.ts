@@ -56,7 +56,7 @@ export const TYPES: Record<string, TypeData> = {
       // isSome()/isNone() are type-guard METHODS (parens required); isEmpty
       // is a plain boolean property. `isDefined` was advertised here pre-1.3.1
       // but never existed in Option.ts — removed.
-      check: [".isSome()", ".isNone()", ".isEmpty"],
+      check: [".isSome()", ".isNone()", ".isEmpty", ".exists(p)", ".every(p)"],
       other: ["Option.sequence(arr)", "Option.traverse(arr, f)"],
     },
   },
@@ -75,7 +75,7 @@ export const TYPES: Record<string, TypeData> = {
         ".expect((l) => never)",
         ".match({Left, Right})",
       ],
-      check: [".isRight()", ".isLeft()"],
+      check: [".isRight()", ".isLeft()", ".exists(p)", ".every(p)"],
       other: [
         "Either.sequence(arr)",
         "Either.traverse(arr, f)",
@@ -108,7 +108,7 @@ export const TYPES: Record<string, TypeData> = {
         ".toList()",
         ".toArray()",
       ],
-      check: [".isSuccess()", ".isFailure()"],
+      check: [".isSuccess()", ".isFailure()", ".exists(p)", ".every(p)"],
       other: ["Try.sequence(arr)", "Try.traverse(arr, f)"],
     },
   },

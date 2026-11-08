@@ -53,6 +53,12 @@ Try(() => riskyOperation()).recover((error) => fallbackValue);
 // RecoverWith - handle with another Try
 Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
 
+// Exists / Every - test the success value. A Failure gives false for exists and true for every
+Try(() => 5).every((x) => x > 3); // true
+Try<number>(() => {
+  throw new Error("boom");
+}).every((x) => x > 3); // true: no success value to fail
+
 // FilterOrElse - turn a value-level guard into a typed Failure (no manual throw)
 Try.success(parse(raw))
   .filterOrElse(
