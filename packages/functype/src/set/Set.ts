@@ -6,7 +6,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer } from "@/serialization"
-import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
+import { type Flattened, type NoStringElements, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 type NativeSet<T> = globalThis.Set<T>
@@ -55,6 +55,25 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
+  // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
+  /** Keep the first `n` elements. `n` of 0 or less keeps none. */
+  take: (n: number) => Set<A>
+  takeWhile: (p: (a: A) => boolean) => Set<A>
+  /** Keep the last `n` elements. `n` of 0 or less keeps none. */
+  takeRight: (n: number) => Set<A>
+  /** Drop the first `n` elements. `n` of 0 or less drops nothing. */
+  drop: (n: number) => Set<A>
+  /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
+  dropRight: (n: number) => Set<A>
+  dropWhile: (p: (a: A) => boolean) => Set<A>
+  get tail(): Set<A>
+  get init(): Set<A>
+  /**
+   * Spread each element that's an array or another non-string iterable into the result, keeping other
+   * elements as they are. A Set holding strings doesn't compile; see `NoStringElements`.
+   */
+  flatten<B>(this: Set<Iterable<B>> & NoStringElements<A>): Set<B>
+  flatten<B = Flattened<A>>(this: Set<A> & NoStringElements<A>): Set<B>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>
@@ -247,9 +266,12 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return createSet(results)
     },
 
-    drop: (n: number) => createSet(Array.from(values).slice(n)),
+    drop: (n: number) => createSet(Array.from(values).slice(Math.max(0, n))),
 
-    dropRight: (n: number) => createSet(Array.from(values).slice(0, -n)),
+    dropRight: (n: number) => {
+      const arr = Array.from(values)
+      return createSet(n <= 0 ? arr : arr.slice(0, Math.max(0, arr.length - n)))
+    },
 
     dropWhile: (p: (a: A) => boolean) => {
       const arr = Array.from(values)

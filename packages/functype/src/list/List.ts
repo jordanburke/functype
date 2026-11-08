@@ -12,8 +12,12 @@ import { Set } from "@/set/Set"
 import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
-import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
+import { type Flattened, type NoStringElements, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
+
+/** An array or another non-string iterable: what `flatten` spreads. */
+const isSpreadable = <B>(item: unknown): item is Iterable<B> =>
+  Array.isArray(item) || (typeof item === "object" && item !== null && Symbol.iterator in item)
 
 /**
  * Immutable List. Covariant in A (`<out A>`) — mirrors Scala's `List[+A]`.
@@ -70,6 +74,23 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   take: (n: number) => List<A>
   takeWhile: (p: (a: A) => boolean) => List<A>
   takeRight: (n: number) => List<A>
+  /** Drop the first `n` elements. `n` of 0 or less drops nothing. */
+  drop: (n: number) => List<A>
+  /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
+  dropRight: (n: number) => List<A>
+  /** Drop elements while `p` holds. Gives an empty List when every element matches. */
+  dropWhile: (p: (a: A) => boolean) => List<A>
+  /**
+   * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
+   * keeping other elements as they are. A List holding strings doesn't compile; see `NoStringElements`.
+   * @example
+   * ```typescript
+   * List([[1, 2], [3]]).flatten() // List([1, 2, 3])
+   * List([List([1]), List([2])]).flatten() // List([1, 2])
+   * ```
+   */
+  flatten<B>(this: List<Iterable<B>> & NoStringElements<A>): List<B>
+  flatten<B = Flattened<A>>(this: List<A> & NoStringElements<A>): List<B>
   get last(): A | undefined
   get lastOption(): Option<A>
   get tail(): List<A>
@@ -301,13 +322,17 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     slice: (start: number, end: number) => ListObject(array.slice(start, end)),
 
-    drop: (n: number) => ListObject(array.slice(n)),
+    drop: (n: number) => ListObject(array.slice(Math.max(0, n))),
 
-    dropRight: (n: number) => ListObject(array.slice(0, -n)),
+    dropRight: (n: number) => ListObject(n <= 0 ? array.slice() : array.slice(0, Math.max(0, array.length - n))),
 
-    dropWhile: (p: (a: A) => boolean) => ListObject(array.slice(array.findIndex((x) => !p(x)))),
+    dropWhile: (p: (a: A) => boolean) => {
+      const first = array.findIndex((x) => !p(x))
+      return ListObject(first === -1 ? [] : array.slice(first))
+    },
 
-    flatten: <B>() => ListObject(array.flatMap((item) => (Array.isArray(item) ? item : ([item] as unknown as B[])))),
+    flatten: <B>() =>
+      ListObject<B>(array.flatMap((item) => (isSpreadable<B>(item) ? [...item] : [item as unknown as B]))),
 
     toList: () => list,
 

@@ -501,6 +501,23 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   take: (n: number) => List<A>
   takeWhile: (p: (a: A) => boolean) => List<A>
   takeRight: (n: number) => List<A>
+  /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
+  drop: (n: number) => List<A>
+  /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
+  dropRight: (n: number) => List<A>
+  /** Drop elements while \`p\` holds. Gives an empty List when every element matches. */
+  dropWhile: (p: (a: A) => boolean) => List<A>
+  /**
+   * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
+   * keeping other elements as they are. A List holding strings doesn't compile; see \`NoStringElements\`.
+   * @example
+   * \`\`\`typescript
+   * List([[1, 2], [3]]).flatten() // List([1, 2, 3])
+   * List([List([1]), List([2])]).flatten() // List([1, 2])
+   * \`\`\`
+   */
+  flatten<B>(this: List<Iterable<B>> & NoStringElements<A>): List<B>
+  flatten<B = Flattened<A>>(this: List<A> & NoStringElements<A>): List<B>
   get last(): A | undefined
   get lastOption(): Option<A>
   get tail(): List<A>
@@ -564,6 +581,25 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
+  // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
+  /** Keep the first \`n\` elements. \`n\` of 0 or less keeps none. */
+  take: (n: number) => Set<A>
+  takeWhile: (p: (a: A) => boolean) => Set<A>
+  /** Keep the last \`n\` elements. \`n\` of 0 or less keeps none. */
+  takeRight: (n: number) => Set<A>
+  /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
+  drop: (n: number) => Set<A>
+  /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
+  dropRight: (n: number) => Set<A>
+  dropWhile: (p: (a: A) => boolean) => Set<A>
+  get tail(): Set<A>
+  get init(): Set<A>
+  /**
+   * Spread each element that's an array or another non-string iterable into the result, keeping other
+   * elements as they are. A Set holding strings doesn't compile; see \`NoStringElements\`.
+   */
+  flatten<B>(this: Set<Iterable<B>> & NoStringElements<A>): Set<B>
+  flatten<B = Flattened<A>>(this: Set<A> & NoStringElements<A>): Set<B>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>
