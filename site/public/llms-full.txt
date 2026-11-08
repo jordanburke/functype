@@ -1388,7 +1388,7 @@ Note: `fold` has different semantics per type category:
 - `drop(n: number): Self`
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
-- `flatten(): Self`
+- `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. Strings stay whole
 - `head: A | undefined`
 - `headOption: Option<A>`
 - `take(n: number): Self`
@@ -1397,8 +1397,11 @@ Note: `fold` has different semantics per type category:
 - `last: A | undefined`
 - `lastOption: Option<A>`
 - `tail: Self`
+
 - `init: Self`
 - `toArray(): A[]`
+
+`List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.
 
 ### List-specific Methods
 
@@ -1997,8 +2000,16 @@ await List(ids).mapAsync(fetchUser, { concurrency: 4 }); // up to 4 at once
 List([1, 2, 3, 4, 5]).take(3); // List([1, 2, 3])
 List([1, 2, 3, 4, 5]).takeRight(2); // List([4, 5])
 List([1, 2, 3, 4, 5]).drop(2); // List([3, 4, 5])
+List([1, 2, 3, 4, 5]).dropRight(2); // List([1, 2, 3])
+List([1, 2, 3]).drop(-1); // List([1, 2, 3]): n of 0 or less drops nothing
 List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4); // List([1, 2, 3])
+List([1, 2, 3]).dropWhile((x) => x < 10); // List([]): every element matched
 List([1, 2, 3, 4, 5]).slice(1, 4); // List([2, 3, 4])
+
+// Flatten - spread arrays, Lists and Sets into one List
+List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
+List([List([1]), Set([2])]).flatten(); // List([1, 2])
+// Strings stay whole. For characters, use flatMap((s) => [...s])
 
 // Element access
 List([1, 2, 3]).head; // 1
@@ -4872,7 +4883,9 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 - `.takeWhile(p)`
 - `.takeRight(n)`
 - `.drop(n)`
+- `.dropRight(n)`
 - `.dropWhile(p)`
+- `.flatten()`
 - `.concat(list)`
 - `.reverse()`
 - `.distinct()`
