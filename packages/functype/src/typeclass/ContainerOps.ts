@@ -142,3 +142,10 @@ export interface CollectionOps<out A extends Type, Self> {
    */
   toArray<B = A>(): B[]
 }
+
+/**
+ * What `flatten` yields for one element: an iterable's items, and anything else, including a string, as
+ * itself. That matches the runtime, which spreads arrays and other non-string iterables. Languages
+ * disagree on strings: Scala and Python split them into characters, JavaScript's `flat` keeps them whole.
+ */
+export type Flattened<A> = A extends string ? A : A extends Iterable<infer B> ? B : A

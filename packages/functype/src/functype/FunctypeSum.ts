@@ -19,7 +19,7 @@ import type { Type } from "@/types"
  * lighter `IterableOnce[+A]`.
  *
  * Only the covariance-safe subset of `ContainerOps` is included inline: `contains`,
- * `exists`, and `forEach` all place A only in contravariant (callback input) position.
+ * `exists`, `every` and `forEach` all place A only in contravariant (callback input) position.
  * `find` (returns `Option<A>`) and `count` are intentionally omitted — if a sum type
  * needs them it can declare them directly.
  *
@@ -32,5 +32,10 @@ export interface FunctypeSum<A extends Type, Tag extends string = string>
   readonly [Symbol.toStringTag]: string
   contains(value: A): boolean
   exists(p: (a: A) => boolean): boolean
+  /**
+   * Tests whether the success value, if there is one, satisfies the predicate. The dual of
+   * `exists`, and Scala's `forall`: with no success value it gives `true`, as `[].every(p)` does.
+   */
+  every(p: (a: A) => boolean): boolean
   forEach(f: (a: A) => void): void
 }

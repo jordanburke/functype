@@ -225,6 +225,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   serialize: () => createSerializer("Either", "Right", value),
   contains: (v: R) => value === v,
   exists: (p: (a: R) => boolean) => p(value),
+  every: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<R> {
@@ -311,6 +312,7 @@ const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R>
   serialize: () => createSerializer("Either", "Left", value),
   contains: (_v: R) => false,
   exists: (_p: (a: R) => boolean) => false,
+  every: (_p: (a: R) => boolean) => true,
   forEach: (_f: (a: R) => void) => {},
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<never> {

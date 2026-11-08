@@ -122,6 +122,18 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   contains(value: T): boolean
   /**
+   * Tests whether the value, if there is one, satisfies the predicate. The dual of \`exists\`, and
+   * Scala's \`forall\`: \`None\` gives \`true\`, the same way \`[].every(p)\` does.
+   * @param p - The predicate to test the value with
+   * @returns \`true\` for None, otherwise \`p(value)\`
+   * @example
+   * \`\`\`typescript
+   * Option("abc").every((s) => s.length > 2) // true
+   * Option<string>(undefined).every((s) => s.length > 2) // true: nothing to fail
+   * \`\`\`
+   */
+  every(p: (a: T) => boolean): boolean
+  /**
    * Converts this Option to a List.
    * @returns A List containing the value if Some, or empty List if None
    */
@@ -250,6 +262,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   serialize: () => createSerializer("Either", "Right", value),
   contains: (v: R) => value === v,
   exists: (p: (a: R) => boolean) => p(value),
+  every: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<R> {
@@ -501,6 +514,22 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   take: (n: number) => List<A>
   takeWhile: (p: (a: A) => boolean) => List<A>
   takeRight: (n: number) => List<A>
+  /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
+  drop: (n: number) => List<A>
+  /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
+  dropRight: (n: number) => List<A>
+  /** Drop elements while \`p\` holds. Gives an empty List when every element matches. */
+  dropWhile: (p: (a: A) => boolean) => List<A>
+  /**
+   * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
+   * one level deep, keeping other elements, strings included, as they are.
+   * @example
+   * \`\`\`typescript
+   * List([[1, 2], [3]]).flatten() // List([1, 2, 3])
+   * List([List([1]), List([2])]).flatten() // List([1, 2])
+   * \`\`\`
+   */
+  flatten<B = Flattened<A>>(): List<B>
   get last(): A | undefined
   get lastOption(): Option<A>
   get tail(): List<A>
@@ -564,6 +593,24 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
   filter: (p: (a: A) => boolean) => Set<A>
   filterNot: (p: (a: A) => boolean) => Set<A>
+  // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
+  /** Keep the first \`n\` elements. \`n\` of 0 or less keeps none. */
+  take: (n: number) => Set<A>
+  takeWhile: (p: (a: A) => boolean) => Set<A>
+  /** Keep the last \`n\` elements. \`n\` of 0 or less keeps none. */
+  takeRight: (n: number) => Set<A>
+  /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
+  drop: (n: number) => Set<A>
+  /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
+  dropRight: (n: number) => Set<A>
+  dropWhile: (p: (a: A) => boolean) => Set<A>
+  get tail(): Set<A>
+  get init(): Set<A>
+  /**
+   * Spread each element that's an array or another non-string iterable into the result, one level deep,
+   * keeping other elements, strings included, as they are.
+   */
+  flatten<B = Flattened<A>>(): Set<B>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>

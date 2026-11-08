@@ -55,6 +55,10 @@ either.bimap(
   (right) => right * 2,
 );
 
+// Exists / Every - test the Right value. A Left gives false for exists and true for every
+Right<string, number>(5).every((x) => x > 3); // true
+Left<string, number>("err").every((x) => x > 3); // true: no Right value to fail
+
 // FilterOrElse - turn a value-level guard into a typed Left without breaking the chain
 Right<string, number>(5).filterOrElse(
   (n) => n > 10,
