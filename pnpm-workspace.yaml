@@ -15,6 +15,14 @@ overrides:
   # GHSA alert #345: deepmerge-ts <8 (stack exhaustion on recursive objects), via eslint-plugin-functional@10's
   # ^7.1.5. Dev only; the plugin imports only deepmerge(), which 8 keeps. Drop once the plugin allows ^8.
   deepmerge-ts: ^8.0.2
+  # GHSA alert #382: GHSA-g3hv-75wg-m249, minimatch >=7.0.0 <11.0.1 (DoS via globparts amplification), reached
+  # via ESLint 10 (^10.2.5), @eslint/config-array, @typescript-eslint/typescript-estree, @ts-morph/common,
+  # type-coverage-core and TypeDoc. No patched 10.x exists. The full validate passes with ESLint on 11.0.5.
+  # Drop once ESLint's floor is >=11.0.1.
+  "minimatch@>=7.0.0 <11.0.1": ^11.0.1
+  # TypeDoc 0.28.20 calls minimatch's matchOne(), which 11.0 removed, so the docs build crashes on 11.
+  # Keep TypeDoc on 10 until TypeStrong/typedoc#3151 (minimatch 11) ships, then drop this line.
+  "typedoc>minimatch": ^10.2.6
   eslint-plugin-functype: "workspace:*"
   eslint-config-functype: "workspace:*"
 
