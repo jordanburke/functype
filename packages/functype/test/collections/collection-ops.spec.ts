@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest"
 
+import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { List } from "@/list"
 import { Set } from "@/set"
@@ -65,13 +66,32 @@ describe("flatten types", () => {
     expectTypeOf(List<number | number[]>([1, [2, 3]]).flatten<number>()).toEqualTypeOf<List<number>>()
   })
 
-  it("rejects a collection holding strings", () => {
-    // @ts-expect-error a List of strings can't be flattened
-    expect(() => List(["ab", "cd"]).flatten()).not.toThrow()
-    // @ts-expect-error nor a List mixing strings and arrays
-    expect(() => List<string | string[]>(["a", ["b"]]).flatten()).not.toThrow()
-    // @ts-expect-error nor a Set of strings
-    expect(() => Set(["ab"]).flatten()).not.toThrow()
+  it("types strings as kept whole, which is what the runtime does", () => {
+    expectTypeOf(List(["ab", "cd"]).flatten()).toEqualTypeOf<List<string>>()
+    expectTypeOf(List<string | string[]>(["a", ["b"]]).flatten()).toEqualTypeOf<List<string>>()
+    expectTypeOf(Set(["ab"]).flatten()).toEqualTypeOf<Set<string>>()
+    expect(List(["ab", "cd"]).flatten().toArray()).toEqual(["ab", "cd"])
+  })
+
+  it("keeps any as any", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- what JSON.parse gives
+    const parsed: List<any> = List([1])
+    expectTypeOf(parsed.flatten()).toEqualTypeOf<List<any>>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- what JSON.parse gives
+    expectTypeOf(Set<any>([1]).flatten()).toEqualTypeOf<Set<any>>()
+  })
+
+  it("compiles inside generic helpers", () => {
+    const anyElement = <T>(xs: List<T>) => xs.flatten()
+    const numbers = <T extends number>(xs: List<T>) => xs.flatten()
+    const arrays = <T>(xs: List<T[]>) => xs.flatten()
+    const explicit = <T>(xs: List<T>) => xs.flatten<T>()
+    const sets = <T>(xs: Set<T[]>) => xs.flatten()
+    expect(anyElement(List([[1]])).toArray()).toEqual([1])
+    expect(numbers(List([1])).toArray()).toEqual([1])
+    expectTypeOf(arrays(List([[1], [2]]))).toEqualTypeOf<List<number>>()
+    expect(explicit(List([1])).toArray()).toEqual([1])
+    expect(sets(Set([[1]])).toArray()).toEqual([1])
   })
 })
 
@@ -87,6 +107,10 @@ describe("positional methods at the edges", () => {
     ["dropRight(-1)", (l: List<number>) => l.dropRight(-1), [1, 2, 3]],
     ["dropRight(1)", (l: List<number>) => l.dropRight(1), [1, 2]],
     ["dropRight(9)", (l: List<number>) => l.dropRight(9), []],
+    ["dropRight(1.5)", (l: List<number>) => l.dropRight(1.5), [1, 2]],
+    ["dropRight(NaN)", (l: List<number>) => l.dropRight(Number.NaN), [1, 2, 3]],
+    ["drop(NaN)", (l: List<number>) => l.drop(Number.NaN), [1, 2, 3]],
+    ["drop(1.5)", (l: List<number>) => l.drop(1.5), [2, 3]],
     ["dropWhile(all)", (l: List<number>) => l.dropWhile((x) => x < 10), []],
     ["dropWhile(none)", (l: List<number>) => l.dropWhile((x) => x > 10), [1, 2, 3]],
     ["dropWhile(<2)", (l: List<number>) => l.dropWhile((x) => x < 2), [2, 3]],
@@ -108,6 +132,8 @@ describe("positional methods at the edges", () => {
     ["dropRight(-1)", (s: Set<number>) => s.dropRight(-1), [1, 2, 3]],
     ["dropRight(1)", (s: Set<number>) => s.dropRight(1), [1, 2]],
     ["dropRight(9)", (s: Set<number>) => s.dropRight(9), []],
+    ["dropRight(1.5)", (s: Set<number>) => s.dropRight(1.5), [1, 2]],
+    ["dropRight(NaN)", (s: Set<number>) => s.dropRight(Number.NaN), [1, 2, 3]],
     ["dropWhile(all)", (s: Set<number>) => s.dropWhile((x) => x < 10), []],
     ["take(-1)", (s: Set<number>) => s.take(-1), []],
     ["takeRight(0)", (s: Set<number>) => s.takeRight(0), []],
@@ -152,7 +178,15 @@ describe("flatten at runtime", () => {
     ).toEqual([1, 2, 3])
   })
 
-  it("keeps values that aren't iterable, and a string that slipped past the types, whole", () => {
+  it("spreads an Either, so a Left contributes nothing", () => {
+    expect(
+      List([Right<string, number>(1), Left<string, number>("e"), Right<string, number>(2)])
+        .flatten()
+        .toArray(),
+    ).toEqual([1, 2])
+  })
+
+  it("keeps values that aren't iterable, and strings, whole", () => {
     expect(
       List<number | number[]>([1, [2, 3]])
         .flatten()

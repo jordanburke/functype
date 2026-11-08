@@ -269,13 +269,15 @@ Note: `fold` has different semantics per type category:
 - `exists(p: (value: A) => boolean): boolean`
 - `forEach(f: (value: A) => void): void`
 
+`every(p)`, the dual of `exists`, is on `Option`, on `FunctypeSum` (so `Either` and `Try`) and on `CollectionOps` (`List`, `Set`). It gives `true` when there's no value: `None`, `Left`, `Failure` or an empty collection. `Lazy` and `Obj` don't have it.
+
 ### CollectionOps
 
 - `every(p: (value: A) => boolean): boolean`
 - `drop(n: number): Self`
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
-- `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. A collection holding strings doesn't compile
+- `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. Strings stay whole
 - `head: A | undefined`
 - `headOption: Option<A>`
 - `take(n: number): Self`
@@ -285,10 +287,10 @@ Note: `fold` has different semantics per type category:
 - `lastOption: Option<A>`
 - `tail: Self`
 
-`List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.
-
 - `init: Self`
 - `toArray(): A[]`
+
+`List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.
 
 ### List-specific Methods
 

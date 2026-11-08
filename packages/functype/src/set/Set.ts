@@ -6,7 +6,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer } from "@/serialization"
-import { type Flattened, type NoStringElements, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
+import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 type NativeSet<T> = globalThis.Set<T>
@@ -69,11 +69,10 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   get tail(): Set<A>
   get init(): Set<A>
   /**
-   * Spread each element that's an array or another non-string iterable into the result, keeping other
-   * elements as they are. A Set holding strings doesn't compile; see `NoStringElements`.
+   * Spread each element that's an array or another non-string iterable into the result, one level deep,
+   * keeping other elements, strings included, as they are.
    */
-  flatten<B>(this: Set<Iterable<B>> & NoStringElements<A>): Set<B>
-  flatten<B = Flattened<A>>(this: Set<A> & NoStringElements<A>): Set<B>
+  flatten<B = Flattened<A>>(): Set<B>
   fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
   toList: () => List<A>
   toSet: () => Set<A>
@@ -270,7 +269,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     dropRight: (n: number) => {
       const arr = Array.from(values)
-      return createSet(n <= 0 ? arr : arr.slice(0, Math.max(0, arr.length - n)))
+      return createSet(n > 0 ? arr.slice(0, Math.max(0, arr.length - Math.trunc(n))) : arr)
     },
 
     dropWhile: (p: (a: A) => boolean) => {

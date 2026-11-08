@@ -143,15 +143,9 @@ export interface CollectionOps<out A extends Type, Self> {
   toArray<B = A>(): B[]
 }
 
-/** What `flatten` yields for one element: an iterable's items, a string as itself, anything else as itself. */
-export type Flattened<A> = A extends string ? A : A extends Iterable<infer B> ? B : A
-
 /**
- * Rejects `flatten()` on a collection holding strings. Languages disagree on what that means: Scala and
- * Python split a string into characters, JavaScript's `flat` and Ruby keep it whole, and Rust and Kotlin
- * refuse to compile. functype refuses too, so neither reading compiles and silently does the other.
- * At runtime, `flatten` spreads arrays and other non-string iterables and keeps everything else whole.
+ * What `flatten` yields for one element: an iterable's items, and anything else, including a string, as
+ * itself. That matches the runtime, which spreads arrays and other non-string iterables. Languages
+ * disagree on strings: Scala and Python split them into characters, JavaScript's `flat` keeps them whole.
  */
-export type NoStringElements<A> = [Extract<A, string>] extends [never]
-  ? unknown
-  : { readonly "flatten() refuses strings. For characters, use flatMap((s) => [...s])": true }
+export type Flattened<A> = A extends string ? A : A extends Iterable<infer B> ? B : A

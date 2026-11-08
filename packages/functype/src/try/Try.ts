@@ -174,6 +174,7 @@ const Success = <T>(value: T): Try<T> => ({
   serialize: () => createSerializer("Try", "Success", value),
   contains: (v: T) => value === v,
   exists: (p: (a: T) => boolean) => p(value),
+  every: (p: (a: T) => boolean) => p(value),
   forEach: (f: (a: T) => void) => f(value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<T> {
@@ -246,6 +247,7 @@ const Failure = <T>(error: Error): Try<T> => ({
   serialize: () => createTaggedSerializer("Try", "Failure", { error: serializeError(error) }),
   contains: (_v: T) => false,
   exists: (_p: (a: T) => boolean) => false,
+  every: (_p: (a: T) => boolean) => true,
   forEach: (_f: (a: T) => void) => {},
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<never> {

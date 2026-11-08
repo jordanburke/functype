@@ -67,7 +67,7 @@ List([1, 2, 3, 4, 5]).slice(1, 4); // List([2, 3, 4])
 // Flatten - spread arrays, Lists and Sets into one List
 List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
 List([List([1]), Set([2])]).flatten(); // List([1, 2])
-// A List of strings doesn't compile: for characters, use flatMap((s) => [...s])
+// Strings stay whole. For characters, use flatMap((s) => [...s])
 
 // Element access
 List([1, 2, 3]).head; // 1

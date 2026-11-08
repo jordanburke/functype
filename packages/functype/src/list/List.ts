@@ -12,7 +12,7 @@ import { Set } from "@/set/Set"
 import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
-import { type Flattened, type NoStringElements, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
+import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
 /** An array or another non-string iterable: what `flatten` spreads. */
@@ -82,15 +82,14 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   dropWhile: (p: (a: A) => boolean) => List<A>
   /**
    * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
-   * keeping other elements as they are. A List holding strings doesn't compile; see `NoStringElements`.
+   * one level deep, keeping other elements, strings included, as they are.
    * @example
    * ```typescript
    * List([[1, 2], [3]]).flatten() // List([1, 2, 3])
    * List([List([1]), List([2])]).flatten() // List([1, 2])
    * ```
    */
-  flatten<B>(this: List<Iterable<B>> & NoStringElements<A>): List<B>
-  flatten<B = Flattened<A>>(this: List<A> & NoStringElements<A>): List<B>
+  flatten<B = Flattened<A>>(): List<B>
   get last(): A | undefined
   get lastOption(): Option<A>
   get tail(): List<A>
@@ -324,7 +323,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     drop: (n: number) => ListObject(array.slice(Math.max(0, n))),
 
-    dropRight: (n: number) => ListObject(n <= 0 ? array.slice() : array.slice(0, Math.max(0, array.length - n))),
+    dropRight: (n: number) =>
+      ListObject(n > 0 ? array.slice(0, Math.max(0, array.length - Math.trunc(n))) : array.slice()),
 
     dropWhile: (p: (a: A) => boolean) => {
       const first = array.findIndex((x) => !p(x))
