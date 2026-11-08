@@ -121,7 +121,7 @@ Three base interfaces define the type hierarchy:
 - **`FunctypeSum<A, Tag>`** (`src/functype/FunctypeSum.ts`): Sum types — no collection ops (Either, Try). Scala-aligned: Either/Try are disjoint unions, not iterables.
 - **`FunctypeCollection<A, Tag>`** (`src/functype/Functype.ts`): Collections (List, Set) with Iterable + CollectionOps.
 
-Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toString`, `contains`, `exists`, `forEach`.
+Core methods available on all containers: `map`, `flatMap`, `fold`, `pipe`, `toString`, `contains`, `exists`, `forEach`. `every`, the dual of `exists`, is on Option, Either, Try, List, Set and LazyList, but not Lazy or Obj.
 
 ### Variance (0.60.0+)
 

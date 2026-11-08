@@ -58,8 +58,16 @@ await List(ids).mapAsync(fetchUser, { concurrency: 4 }); // up to 4 at once
 List([1, 2, 3, 4, 5]).take(3); // List([1, 2, 3])
 List([1, 2, 3, 4, 5]).takeRight(2); // List([4, 5])
 List([1, 2, 3, 4, 5]).drop(2); // List([3, 4, 5])
+List([1, 2, 3, 4, 5]).dropRight(2); // List([1, 2, 3])
+List([1, 2, 3]).drop(-1); // List([1, 2, 3]): n of 0 or less drops nothing
 List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4); // List([1, 2, 3])
+List([1, 2, 3]).dropWhile((x) => x < 10); // List([]): every element matched
 List([1, 2, 3, 4, 5]).slice(1, 4); // List([2, 3, 4])
+
+// Flatten - spread arrays, Lists and Sets into one List
+List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
+List([List([1]), Set([2])]).flatten(); // List([1, 2])
+// Strings stay whole. For characters, use flatMap((s) => [...s])
 
 // Element access
 List([1, 2, 3]).head; // 1

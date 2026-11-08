@@ -1,4 +1,4 @@
-# Functype v1.25.1
+# Functype v1.26.0
 
 > A functional programming library for TypeScript, using immutable data structures and type classes, with Scala-inspired patterns.
 
@@ -1380,13 +1380,15 @@ Note: `fold` has different semantics per type category:
 - `exists(p: (value: A) => boolean): boolean`
 - `forEach(f: (value: A) => void): void`
 
+`every(p)`, the dual of `exists`, is on `Option`, on `FunctypeSum` (so `Either` and `Try`) and on `CollectionOps` (`List`, `Set`). It gives `true` when there's no value: `None`, `Left`, `Failure` or an empty collection. `Lazy` and `Obj` don't have it.
+
 ### CollectionOps
 
 - `every(p: (value: A) => boolean): boolean`
 - `drop(n: number): Self`
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
-- `flatten(): Self`
+- `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. Strings stay whole
 - `head: A | undefined`
 - `headOption: Option<A>`
 - `take(n: number): Self`
@@ -1395,8 +1397,11 @@ Note: `fold` has different semantics per type category:
 - `last: A | undefined`
 - `lastOption: Option<A>`
 - `tail: Self`
+
 - `init: Self`
 - `toArray(): A[]`
+
+`List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.
 
 ### List-specific Methods
 
@@ -1551,6 +1556,11 @@ Option(5).filter((x) => x > 10); // None
 
 // forEach - side effect only, runs when the value is present
 Option(5).forEach((x) => console.log(x)); // logs 5
+
+// exists / every - test the value. None gives false for exists and true for every
+Option(5).exists((x) => x > 3); // true
+Option<number>(null).exists((x) => x > 3); // false
+Option<number>(null).every((x) => x > 3); // true: "absent, or present and matching"
 ```
 
 ## Pattern Matching
@@ -1678,6 +1688,10 @@ either.bimap(
   (left) => `Error: ${left}`,
   (right) => right * 2,
 );
+
+// Exists / Every - test the Right value. A Left gives false for exists and true for every
+Right<string, number>(5).every((x) => x > 3); // true
+Left<string, number>("err").every((x) => x > 3); // true: no Right value to fail
 
 // FilterOrElse - turn a value-level guard into a typed Left without breaking the chain
 Right<string, number>(5).filterOrElse(
@@ -1830,6 +1844,12 @@ Try(() => riskyOperation()).recover((error) => fallbackValue);
 // RecoverWith - handle with another Try
 Try(() => primarySource()).recoverWith((error) => Try(() => backupSource()));
 
+// Exists / Every - test the success value. A Failure gives false for exists and true for every
+Try(() => 5).every((x) => x > 3); // true
+Try<number>(() => {
+  throw new Error("boom");
+}).every((x) => x > 3); // true: no success value to fail
+
 // FilterOrElse - turn a value-level guard into a typed Failure (no manual throw)
 Try.success(parse(raw))
   .filterOrElse(
@@ -1980,8 +2000,16 @@ await List(ids).mapAsync(fetchUser, { concurrency: 4 }); // up to 4 at once
 List([1, 2, 3, 4, 5]).take(3); // List([1, 2, 3])
 List([1, 2, 3, 4, 5]).takeRight(2); // List([4, 5])
 List([1, 2, 3, 4, 5]).drop(2); // List([3, 4, 5])
+List([1, 2, 3, 4, 5]).dropRight(2); // List([1, 2, 3])
+List([1, 2, 3]).drop(-1); // List([1, 2, 3]): n of 0 or less drops nothing
 List([1, 2, 3, 4, 5]).takeWhile((x) => x < 4); // List([1, 2, 3])
+List([1, 2, 3]).dropWhile((x) => x < 10); // List([]): every element matched
 List([1, 2, 3, 4, 5]).slice(1, 4); // List([2, 3, 4])
+
+// Flatten - spread arrays, Lists and Sets into one List
+List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
+List([List([1]), Set([2])]).flatten(); // List([1, 2])
+// Strings stay whole. For characters, use flatMap((s) => [...s])
 
 // Element access
 List([1, 2, 3]).head; // 1
@@ -4634,7 +4662,7 @@ MIT
 ## API Reference
 ────────────────────────────────────────────────────────────────────────────────
 
-# Functype API reference (v1.25.1)
+# Functype API reference (v1.26.0)
 
 Generated from the functype CLI data — the same source as `npx functype` and the MCP server's `search_docs`. Types are grouped as in the CLI overview.
 
@@ -4678,6 +4706,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 - `.isSome()`
 - `.isNone()`
 - `.isEmpty`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 
@@ -4718,6 +4748,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mon
 
 - `.isRight()`
 - `.isLeft()`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 
@@ -4763,6 +4795,8 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 
 - `.isSuccess()`
 - `.isFailure()`
+- `.exists(p)`
+- `.every(p)`
 
 **Other**
 
@@ -4849,7 +4883,9 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 - `.takeWhile(p)`
 - `.takeRight(n)`
 - `.drop(n)`
+- `.dropRight(n)`
 - `.dropWhile(p)`
+- `.flatten()`
 - `.concat(list)`
 - `.reverse()`
 - `.distinct()`
