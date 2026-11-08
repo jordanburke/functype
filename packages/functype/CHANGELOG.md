@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.26.0 - 2026-11-08
+
 - **`every(p)` on `Option`, `Either` and `Try`** (#481), the dual of `exists` and Scala's `forall`. It gives `true` when there's no success value, as `[].every(p)` does, and `p(value)` otherwise. "Absent, or present and matching" no longer needs `fold(() => true, p)`, and `exists` isn't the tempting wrong answer: it gives `false` for `None`. It's declared on `Option` and on `FunctypeSum`, not on `ContainerOps`, which `Lazy`, `Obj` and `TaskOutcome` implement without it. Like other methods added in 1.x, it's a required member, so a type outside functype that implements `FunctypeSum` needs to add it.
 - **`List` and `Set` collection methods return `List` and `Set`** (#480). `drop`, `dropRight`, `dropWhile` and `flatten` on `List`, and every positional method on `Set` (`take`, `takeWhile`, `takeRight`, `drop`, `dropRight`, `dropWhile`, `tail`, `init`), were typed as `FunctypeCollection`, so `list.drop(1).get(0)` didn't compile. They already returned a real `List` or `Set` at runtime. A type test now finds every `CollectionOps` method that returns the collection's own type and fails if `List` or `Set` doesn't override it.
 - **`drop`, `dropRight` and `List.dropWhile` return the right elements.** A count of 0 or less, or `NaN`, now drops nothing, as `take` already treated it, and a fractional count drops its whole part:
