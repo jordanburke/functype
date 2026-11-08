@@ -101,7 +101,7 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Contains value      | `contains(value)` | `boolean` |
 | Is empty (List)     | `isEmpty`         | `boolean` |
 | Any match           | `exists(p)`       | `boolean` |
-| All match (List, Set) | `every(p)`      | `boolean` |
+| All match (`true` when empty, None, Left or Failure) | `every(p)` | `boolean` |
 
 ## Collection Operations
 

@@ -53,6 +53,11 @@ Option(5).filter((x) => x > 10); // None
 
 // forEach - side effect only, runs when the value is present
 Option(5).forEach((x) => console.log(x)); // logs 5
+
+// exists / every - test the value. None gives false for exists and true for every
+Option(5).exists((x) => x > 3); // true
+Option<number>(null).exists((x) => x > 3); // false
+Option<number>(null).every((x) => x > 3); // true: "absent, or present and matching"
 ```
 
 ## Pattern Matching

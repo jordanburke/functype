@@ -122,6 +122,18 @@ export const FULL_INTERFACES: Record<string, string> = {
    */
   contains(value: T): boolean
   /**
+   * Tests whether the value, if there is one, satisfies the predicate. The dual of \`exists\`, and
+   * Scala's \`forall\`: \`None\` gives \`true\`, the same way \`[].every(p)\` does.
+   * @param p - The predicate to test the value with
+   * @returns \`true\` for None, otherwise \`p(value)\`
+   * @example
+   * \`\`\`typescript
+   * Option("abc").every((s) => s.length > 2) // true
+   * Option<string>(undefined).every((s) => s.length > 2) // true: nothing to fail
+   * \`\`\`
+   */
+  every(p: (a: T) => boolean): boolean
+  /**
    * Converts this Option to a List.
    * @returns A List containing the value if Some, or empty List if None
    */
@@ -250,6 +262,7 @@ const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, 
   serialize: () => createSerializer("Either", "Right", value),
   contains: (v: R) => value === v,
   exists: (p: (a: R) => boolean) => p(value),
+  every: (p: (a: R) => boolean) => p(value),
   forEach: (f: (a: R) => void) => f(value),
   // Implement Doable interface for Do-notation
   doUnwrap(): DoResult<R> {
