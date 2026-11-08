@@ -17,6 +17,12 @@ describe("every on Option, Either and Try", () => {
     ["Some(3)", () => Some(3).every(isEven), false],
     ["None", () => None<number>().every(isEven), true],
     ["Option(undefined)", () => Option<number>(undefined).every(isEven), true],
+    [
+      "Some(undefined) is present, so p runs",
+      () => Some<number | undefined>(undefined).every((v) => v === undefined),
+      true,
+    ],
+    ["Some(null) is present, so p runs", () => Some<number | null>(null).every((v) => v !== null), false],
     ["Right(2)", () => Right<string, number>(2).every(isEven), true],
     ["Right(3)", () => Right<string, number>(3).every(isEven), false],
     ["Left", () => Left<string, number>("e").every(isEven), true],
