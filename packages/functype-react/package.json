@@ -67,7 +67,7 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "ts-builds": "^4.0.2",
-    "tsdown": "^0.23.4"
+    "tsdown": "^0.23.7"
   },
   "type": "module",
   "main": "./dist/index.js",
