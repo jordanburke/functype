@@ -26,6 +26,16 @@ overrides:
   eslint-plugin-functype: "workspace:*"
   eslint-config-functype: "workspace:*"
 
+# @astrojs/astro2tsx 0.1.2 (under @astrojs/check) pins @emnapi/core 1.11.3 but never declares
+# @emnapi/runtime, so pnpm filled @napi-rs/wasm-runtime's runtime peer with the 2.0.0-beta.2 that
+# @rolldown/binding-wasm32-wasi pins. The mismatched pair crashes on import, and Astro reports
+# @astrojs/check as missing, which failed site#validate (#490, fixed by #501). Keyed to 0.1.2, so it
+# stops applying when astro2tsx bumps; drop it then if `astro check` still loads.
+packageExtensions:
+  "@astrojs/astro2tsx@0.1.2":
+    dependencies:
+      "@emnapi/runtime": 1.11.3
+
 publicHoistPattern:
   - "*eslint*"
   - "*prettier*"
