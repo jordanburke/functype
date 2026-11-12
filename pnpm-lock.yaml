@@ -66,8 +66,8 @@ importers:
         specifier: ^14.0.0
         version: 14.0.0(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -91,8 +91,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -121,8 +121,8 @@ importers:
         specifier: ^17.13.0
         version: 17.13.0
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -164,8 +164,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -189,8 +189,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -207,8 +207,8 @@ importers:
         specifier: workspace:^
         version: link:../functype
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -255,8 +255,8 @@ importers:
         specifier: ^19.3.0
         version: 19.3.0(react@19.3.0)
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -280,8 +280,8 @@ importers:
         specifier: ^24.19.1
         version: 24.19.1
       ts-builds:
-        specifier: ^4.3.0
-        version: 4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+        specifier: ^4.5.0
+        version: 4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       tsdown:
         specifier: ^0.23.0
         version: 0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
@@ -3951,8 +3951,8 @@ packages:
     peerDependencies:
       typescript: '>=4.8.4'
 
-  ts-builds@4.3.0:
-    resolution: {integrity: sha512-iBIPkG1r1oUdTIi1dcNo68ag4ygKNT5KjxzLSiTNmpZquSoJ0RKxDn0UuuFu13bx9T3vTcabsRwW2iHAaXZnnw==}
+  ts-builds@4.5.0:
+    resolution: {integrity: sha512-UHENyXpN4wuM2itgJZ9T3r8hc30gX1vz5Jej108qhsnsiD4wljbHFtuWWOc3avkIQHoz0roUtPOR9x0UOMfrbQ==}
     engines: {node: ^22.12.0 || ^24.0.0 || >=26.0.0}
     hasBin: true
     peerDependencies:
@@ -8161,7 +8161,7 @@ snapshots:
     dependencies:
       typescript: 6.0.3
 
-  ts-builds@4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
+  ts-builds@4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(supports-color@7.2.0)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.11.0(jiti@2.7.0)(supports-color@7.2.0))
       '@vitest/coverage-v8': 5.0.3(vitest@5.0.3)
@@ -8201,7 +8201,7 @@ snapshots:
       - msw
       - supports-color
 
-  ts-builds@4.3.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
+  ts-builds@4.5.0(@types/node@24.19.1)(jiti@2.7.0)(jsdom@30.1.1)(tsdown@0.23.0(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.1(@types/node@24.19.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)):
     dependencies:
       '@eslint/js': 10.0.1(eslint@10.11.0(jiti@2.7.0))
       '@vitest/coverage-v8': 5.0.3(vitest@5.0.3)
