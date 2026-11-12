@@ -2,6 +2,12 @@
   "$schema": "https://turbo.build/schema.json",
   "agentGuidance": false,
   "ui": "stream",
+  "globalPassThroughEnv": [
+    "TS_BUILDS_TELEMETRY",
+    "TS_BUILDS_TELEMETRY_URL",
+    "TS_BUILDS_TELEMETRY_DEBUG",
+    "DO_NOT_TRACK"
+  ],
   "tasks": {
     "build": {
       "dependsOn": [
