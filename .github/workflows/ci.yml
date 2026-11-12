@@ -13,6 +13,12 @@ concurrency:
 permissions:
   contents: read
 
+# Opt-in lint telemetry from ts-builds: per-rule finding and silence counts,
+# no source or paths. Receiver: https://github.com/jordanburke/lint-telemetry
+env:
+  TS_BUILDS_TELEMETRY: "1"
+  TS_BUILDS_TELEMETRY_URL: https://otel.tsnpm.com/v1/lint
+
 jobs:
   validate:
     name: Validate (lint + test + build)
