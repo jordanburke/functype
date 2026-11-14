@@ -50,6 +50,18 @@ describe("Fs", () => {
         expect(result.value.message).toContain("readFile")
       }
     })
+
+    it("keeps the system error as the cause", async () => {
+      const missing = path.join(tmpDir, "missing.txt")
+      const result = await Fs.readFile(missing).run()
+      expect(result.isLeft()).toBe(true)
+      if (result.isLeft()) {
+        const cause = result.value.cause as NodeJS.ErrnoException
+        expect(cause).toBeInstanceOf(Error)
+        expect(cause.code).toBe("ENOENT")
+        expect(cause.path).toBe(missing)
+      }
+    })
   })
 
   describe("readFileOpt", () => {

@@ -336,6 +336,27 @@ describe("Throwable", () => {
     expect((throwable as Record<string, unknown>).hint).toBe("You will need to rewrite or cast the expression.")
   })
 
+  it("keeps the cause of an error-shaped object", () => {
+    const enoent = Object.assign(new Error("ENOENT: no such file or directory, open '/k'"), { code: "ENOENT" })
+    const throwable = Throwable.apply({
+      _tag: "FsError",
+      path: "/k",
+      message: "readFile failed for '/k'",
+      cause: enoent,
+    })
+
+    expect(throwable.cause).toBe(enoent)
+    expect((throwable.cause as NodeJS.ErrnoException).code).toBe("ENOENT")
+    expect(throwable.message).toBe("readFile failed for '/k'")
+    expect((throwable as Record<string, unknown>).path).toBe("/k")
+  })
+
+  it("leaves cause unset when an object's cause isn't an Error", () => {
+    const throwable = Throwable.apply({ message: "boom", cause: "a string" })
+
+    expect(throwable.cause).toBeUndefined()
+  })
+
   it("should handle object errors without a message property", () => {
     const errorObject = {
       code: "UNKNOWN",

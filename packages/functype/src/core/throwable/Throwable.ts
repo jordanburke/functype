@@ -118,7 +118,10 @@ export class Throwable extends Error implements ThrowableType {
                 Object.getOwnPropertyNames(errorObj).filter((key) => errorObj[key] !== undefined),
               )}`
 
-      const throwable = new Throwable(message, { data: data ?? errorObj, taskInfo })
+      // An error-shaped object's cause (such as functype-os's FsError, wrapping the system error) is
+      // kept. The copy below can't carry it: Throwable already has a `cause` member, so it is skipped.
+      const cause = errorObj.cause instanceof Error ? errorObj.cause : undefined
+      const throwable = new Throwable(message, { data: data ?? errorObj, cause, taskInfo })
 
       // Copy all properties from the source object
       for (const key of Object.keys(errorObj)) {
