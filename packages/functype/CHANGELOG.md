@@ -6,7 +6,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **`Throwable.apply` keeps an error-shaped object's `cause`.** A plain object whose `cause` is an `Error` now gives a `Throwable` with that `cause`. Before, the cause was dropped, because the property copy skips names `Throwable` already has. This reached functype-os: every async `Fs` failure is an `FsError` passed through `Err`, so `result.error.cause` was `undefined`, and the system error's `code` (`ENOENT`, `EACCES`) and `path` were only in the message text. They're now on `result.error.cause`. A `cause` that isn't an `Error` is still left out.
+- **`Throwable.apply` keeps an error-shaped object's `cause`.** A plain object whose `cause` is an `Error` now gives a `Throwable` with that `cause`. Before, the cause was dropped, because the property copy skips names `Throwable` already has. This reached functype-os: every async `Fs` failure is an `FsError` passed through `Err`, so `result.error.cause` was `undefined`, and the system error's `code` (`ENOENT`, `EACCES`) and `path` were reachable only through the untyped `result.error.data`. They're now on `result.error.cause`. A `cause` that isn't an `Error` is still left out. Because these errors now have a cause, `formatError` and `Task.formatErrorChain` print one more `↳` line for them, `Task.getErrorChain` returns one more entry, and `createErrorSerializer` and `serialize()` include the cause.
 
 ## 1.26.0 - 2026-11-08
 
