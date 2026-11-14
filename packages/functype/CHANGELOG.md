@@ -22,6 +22,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+## 1.26.1 - 2026-11-14
+
+- **`Throwable.apply` keeps an error-shaped object's `cause`.** A plain object whose `cause` is an `Error` now gives a `Throwable` with that `cause`. Before, the cause was dropped, because the property copy skips names `Throwable` already has. This reached functype-os: every async `Fs` failure is an `FsError` passed through `Err`, so `result.error.cause` was `undefined`, and the system error's `code` (`ENOENT`, `EACCES`) and `path` were reachable only through the untyped `result.error.data`. They're now on `result.error.cause`. A `cause` that isn't an `Error` is still left out. Because these errors now have a cause, `formatError` and `Task.formatErrorChain` print one more `↳` line for them, `Task.getErrorChain` returns one more entry, and `createErrorSerializer` and `serialize()` include the cause.
+
 ## 1.26.0 - 2026-11-08
 
 - **`every(p)` on `Option`, `Either` and `Try`** (#481), the dual of `exists` and Scala's `forall`. It gives `true` when there's no success value, as `[].every(p)` does, and `p(value)` otherwise. "Absent, or present and matching" no longer needs `fold(() => true, p)`, and `exists` isn't the tempting wrong answer: it gives `false` for `None`. It's declared on `Option` and on `FunctypeSum`, not on `ContainerOps`, which `Lazy`, `Obj` and `TaskOutcome` implement without it. Like other methods added in 1.x, it's a required member, so a type outside functype that implements `FunctypeSum` needs to add it.
