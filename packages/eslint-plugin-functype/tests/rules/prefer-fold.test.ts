@@ -12,7 +12,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
       },
       // #325 — a null check on a plain value is not a fold of a functype value. Whether that value should
       // be an Option is prefer-option's call; reporting it here at error fired on JSX, style objects and
-      // conditional spreads (31 of 31 hits in CivalaOS). Opt in with { checkNullable: true }.
+      // conditional spreads (31 of 31 hits in a private app monorepo). Opt in with { checkNullable: true }.
       {
         name: "A null check on a plain value is not reported by default",
         code: 'const label = avg === null ? "—" : `${avg}%`',

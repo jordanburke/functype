@@ -6,7 +6,7 @@ import { typedFilename, typedRuleTester, typedTsxFilename } from "../utils/typed
 /**
  * With type information, an array literal passed where an array is expected is the boundary itself:
  * it goes straight to code that requires an array (drizzle's `.values([...])`, an index definition, a
- * schema `target: [...]`) and never becomes a collection in your own code. CivalaOS: 616 of its 821
+ * schema `target: [...]`) and never becomes a collection in your own code. In a private app monorepo, 616 of its 821
  * prefer-list hits were literals, nearly all of this kind.
  */
 

@@ -99,7 +99,7 @@ describe("Http.client beforeRequest", () => {
 
     const http = Http.client({
       fetch: fetch as unknown as typeof globalThis.fetch,
-      defaultHeaders: { "x-app": "civala", "x-default": "stays" },
+      defaultHeaders: { "x-app": "demo", "x-default": "stays" },
       beforeRequest: (r) => {
         observed.push(r)
         return IO.succeed(r)
@@ -110,7 +110,7 @@ describe("Http.client beforeRequest", () => {
 
     expect(observed).toHaveLength(1)
     expect(observed[0]?.headers).toEqual({
-      "x-app": "civala",
+      "x-app": "demo",
       "x-default": "overridden",
       "x-per-call": "yes",
     })
