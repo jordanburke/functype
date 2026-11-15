@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.27.0 - 2026-11-15
+
 - **`List`, `Set`, `Map`, `Stack`, `LazyList` and `Obj` are 2 to 17 times cheaper to build** (#511). Building a `List` cost about 35 times an `Option`, even an empty one. A getter anywhere in an object literal makes V8 define each of its ~60 properties one at a time on every call. So these literals now hold no getters. Values that can't change after construction, such as `List`'s `size`, `length`, `isEmpty`, `head` and `last`, are plain properties. The getters that must stay lazy, such as `tail` and `init`, are attached after the literal from one shared set. Per construction, on Node 24: `List` 3.91 → 0.63 µs, `Set` 2.55 → 0.70, `Map` 1.45 → 0.16, `Stack` 1.06 → 0.06, `LazyList` 1.39 → 0.63, `Obj` 1.68 → 0.25. There's no API change. These behaviour changes come with it:
   - **Instances of these six types are frozen.** Their derived properties stay read-only, as they were as getters, and freezing costs about 0.05 µs. Marking just those properties read-only cost 4 µs. A frozen instance also rejects new properties and replaced methods, so `list.extra = 1`, `vi.spyOn(list, "map")` or patching a method on an instance now throws a `TypeError` in strict mode. So does a `Proxy` whose `get` trap returns a wrapped method, because a frozen target's proxy must return the real value. Spy on or wrap the function that builds the value instead.
   - **The lazy getters read the instance through `this`.** Reading one with a different receiver, as `Reflect.get(list, "tail", other)` does, now throws. Normal reads, destructuring and spread work as before.
