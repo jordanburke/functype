@@ -143,6 +143,23 @@ export const createCustomSerializer = (data: Record<string, unknown>): Serializa
   toBinary: () => utf8ToBase64(JSON.stringify(data)),
 })
 
+/** A parsed envelope, from JSON or YAML, before a companion rebuilds its type from it. */
+export type ParsedEnvelope = { _tag?: string; [key: string]: unknown }
+
+/**
+ * Throws when an envelope carries another type's `@functype` marker. An envelope without a marker
+ * passes, because envelopes written before 1.2.0 have none.
+ * @param parsed - The parsed envelope
+ * @param marker - The marker this companion reads, such as `"List"`
+ * @param method - The calling method, named in the error, such as `"fromYAML"`
+ */
+export const expectMarker = (parsed: ParsedEnvelope, marker: string, method: string): void => {
+  const found = parsed[FUNCTYPE_MARKER]
+  if (found !== undefined && found !== marker) {
+    throw new Error(`${marker}.${method}: expected @functype="${marker}", got ${JSON.stringify(found)}`)
+  }
+}
+
 /**
  * Generic deserializer from JSON. The `reconstructor` receives the full
  * parsed envelope including any `@functype` marker; per-type companions
@@ -157,7 +174,10 @@ export const fromJSON = <T>(
 }
 
 /**
- * Generic deserializer from YAML (simple format)
+ * Generic deserializer from YAML, the `key: value` lines that `toYAML` writes. It reads each field
+ * by its key, not its line number, so it reads YAML written before and after 1.2.0 added the
+ * `@functype` line. A value of `undefined`, which `toYAML` writes for an undefined value, reads
+ * back as `undefined`.
  * @param yaml - The YAML string to parse
  * @param reconstructor - Function to reconstruct the type from parsed data
  * @returns Reconstructed instance
@@ -178,6 +198,11 @@ export const fromYAML = <T>(
 
     if (!valueStr) {
       parsed[key] = null
+      continue
+    }
+
+    if (valueStr === "undefined") {
+      parsed[key] = undefined
       continue
     }
 

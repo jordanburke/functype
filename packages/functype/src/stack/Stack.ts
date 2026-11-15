@@ -6,7 +6,7 @@ import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
-import { createSerializer } from "@/serialization"
+import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import type { Traversable } from "@/traversable/Traversable"
 import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
@@ -257,6 +257,12 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
 
 const StackConstructor = <A extends Type>(values: A[] = []): Stack<A> => StackObject(values)
 
+/** Rebuilds a Stack from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const stackFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Stack<A> => {
+  expectMarker(parsed, "Stack", method)
+  return Stack<A>((parsed.value ?? []) as A[])
+}
+
 const StackCompanion = {
   /**
    * Creates an empty stack
@@ -278,28 +284,14 @@ const StackCompanion = {
    * @param json - The JSON string
    * @returns Stack instance
    */
-  fromJSON: <A>(json: string): Stack<A> => {
-    const parsed = JSON.parse(json) as { "@functype"?: string; _tag?: string; value: A[] }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Stack") {
-      throw new Error(`Stack.fromJSON: expected @functype="Stack", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    return Stack<A>(parsed.value)
-  },
+  fromJSON: <A>(json: string): Stack<A> => stackFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
 
   /**
    * Creates a Stack from YAML string
    * @param yaml - The YAML string
    * @returns Stack instance
    */
-  fromYAML: <A>(yaml: string): Stack<A> => {
-    const lines = yaml.split("\n")
-    const valueStr = lines[1]?.split(": ")[1]
-    if (!valueStr) {
-      return Stack<A>([])
-    }
-    const value = JSON.parse(valueStr)
-    return Stack<A>(value)
-  },
+  fromYAML: <A>(yaml: string): Stack<A> => readYAML(yaml, (parsed) => stackFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a Stack from binary string

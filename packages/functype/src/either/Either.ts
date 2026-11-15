@@ -9,7 +9,7 @@ import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
-import { createSerializer } from "@/serialization"
+import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import { Try } from "@/try"
 import type { AsyncMonad, Promisable } from "@/typeclass"
 import type { Type } from "@/types"
@@ -361,6 +361,12 @@ export const tryCatchAsync = async <L extends Type, R extends Type>(
 const EitherConstructor = <L extends Type, R extends Type>(value: R | L, isRight: boolean): Either<L, R> =>
   isRight ? Right<L, R>(value as R) : Left<L, R>(value as L)
 
+/** Rebuilds an Either from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const eitherFromEnvelope = <L extends Type, R extends Type>(parsed: ParsedEnvelope, method: string): Either<L, R> => {
+  expectMarker(parsed, "Either", method)
+  return parsed._tag === "Right" ? Right<L, R>(parsed.value as R) : Left<L, R>(parsed.value as L)
+}
+
 const EitherCompanion = {
   /**
    * Creates a Left instance
@@ -508,29 +514,22 @@ const EitherCompanion = {
    * @param json - The JSON string
    * @returns Either instance
    */
-  fromJSON: <L extends Type, R extends Type>(json: string): Either<L, R> => {
-    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: L | R }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Either") {
-      throw new Error(`Either.fromJSON: expected @functype="Either", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    return parsed._tag === "Right" ? Right<L, R>(parsed.value as R) : Left<L, R>(parsed.value as L)
-  },
+  fromJSON: <L extends Type, R extends Type>(json: string): Either<L, R> =>
+    eitherFromEnvelope<L, R>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
 
   /**
    * Creates an Either from YAML string
    * @param yaml - The YAML string
    * @returns Either instance
    */
-  fromYAML: <L extends Type, R extends Type>(yaml: string): Either<L, R> => {
-    const lines = yaml.split("\n")
-    const tag = lines[0]?.split(": ")[1]
-    const valueStr = lines[1]?.split(": ")[1]
-    if (!tag || !valueStr) {
-      throw new Error("Invalid YAML format for Either")
-    }
-    const value = JSON.parse(valueStr) as L | R
-    return tag === "Right" ? Right<L, R>(value as R) : Left<L, R>(value as L)
-  },
+  fromYAML: <L extends Type, R extends Type>(yaml: string): Either<L, R> =>
+    readYAML(yaml, (parsed) => {
+      expectMarker(parsed, "Either", "fromYAML")
+      if (typeof parsed._tag !== "string" || !("value" in parsed)) {
+        throw new Error("Invalid YAML format for Either")
+      }
+      return eitherFromEnvelope<L, R>(parsed, "fromYAML")
+    }),
 
   /**
    * Creates an Either from binary string

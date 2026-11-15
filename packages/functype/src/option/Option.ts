@@ -4,7 +4,7 @@ import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { showValue } from "@/internal/stringify"
 import type { Reshapeable } from "@/reshapeable"
-import { createSerializer } from "@/serialization"
+import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import type { Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -378,6 +378,12 @@ export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T
 export const OptionConstructor = <T extends Type>(value: T | null | undefined): Option<T> =>
   value !== null && value !== undefined ? Some<T>(value) : None<T>()
 
+/** Rebuilds an Option from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const optionFromEnvelope = <T>(parsed: ParsedEnvelope, method: string): Option<T> => {
+  expectMarker(parsed, "Option", method)
+  return parsed._tag === "Some" ? Some<T>(parsed.value as T) : None<T>()
+}
+
 const OptionCompanion = {
   /**
    * Creates an Option from any value. Alias for Option function.
@@ -409,28 +415,13 @@ const OptionCompanion = {
    * @param json - The JSON string
    * @returns Option instance
    */
-  fromJSON: <T>(json: string): Option<T> => {
-    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: T | null }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Option") {
-      throw new Error(`Option.fromJSON: expected @functype="Option", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    return parsed._tag === "Some" ? Some<T>(parsed.value as T) : None<T>()
-  },
+  fromJSON: <T>(json: string): Option<T> => optionFromEnvelope<T>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
   /**
    * Creates an Option from YAML string
    * @param yaml - The YAML string
    * @returns Option instance
    */
-  fromYAML: <T>(yaml: string): Option<T> => {
-    const lines = yaml.split("\n")
-    const tag = lines[0]?.split(": ")[1]
-    const valueStr = lines[1]?.split(": ")[1]
-    if (!tag || !valueStr) {
-      return None<T>()
-    }
-    const value = valueStr === "null" ? null : (JSON.parse(valueStr) as T)
-    return tag === "Some" ? Some<T>(value as T) : None<T>()
-  },
+  fromYAML: <T>(yaml: string): Option<T> => readYAML(yaml, (parsed) => optionFromEnvelope<T>(parsed, "fromYAML")),
   /**
    * Creates an Option from binary string
    * @param binary - The binary string
