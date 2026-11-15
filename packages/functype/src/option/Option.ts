@@ -3,6 +3,7 @@ import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { showValue } from "@/internal/stringify"
+import { hasYAMLValue } from "@/internal/yaml"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import type { Promisable, Widen } from "@/typeclass"
@@ -421,7 +422,14 @@ const OptionCompanion = {
    * @param yaml - The YAML string
    * @returns Option instance
    */
-  fromYAML: <T>(yaml: string): Option<T> => readYAML(yaml, (parsed) => optionFromEnvelope<T>(parsed, "fromYAML")),
+  fromYAML: <T>(yaml: string): Option<T> =>
+    readYAML(yaml, (parsed) => {
+      expectMarker(parsed, "Option", "fromYAML")
+      if (typeof parsed._tag !== "string" || !hasYAMLValue(yaml, "value")) {
+        return None<T>()
+      }
+      return optionFromEnvelope<T>(parsed, "fromYAML")
+    }),
   /**
    * Creates an Option from binary string
    * @param binary - The binary string

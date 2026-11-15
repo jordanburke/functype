@@ -6,6 +6,7 @@ import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { showValue } from "@/internal/stringify"
+import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -371,10 +372,10 @@ const TryCompanion = {
       if (typeof parsed._tag !== "string") {
         return Failure<T>(new Error("Invalid YAML format for Try"))
       }
-      if (parsed._tag === "Success" && !("value" in parsed)) {
+      if (parsed._tag === "Success" && !hasYAMLValue(yaml, "value")) {
         return Failure<T>(new Error("Invalid YAML format for Try Success"))
       }
-      if (parsed._tag !== "Success" && parsed.error === undefined) {
+      if (parsed._tag !== "Success" && !hasYAMLValue(yaml, "error")) {
         return Failure<T>(new Error("Invalid YAML format for Try Failure"))
       }
       return tryFromEnvelope<T>(parsed, "fromYAML")

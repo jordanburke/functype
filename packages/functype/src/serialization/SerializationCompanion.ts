@@ -1,5 +1,6 @@
 import { base64ToUtf8, utf8ToBase64 } from "@/internal/base64"
 import { safeStringify } from "@/internal/stringify"
+import { yamlLines } from "@/internal/yaml"
 
 /**
  * Serialization result containing methods for different formats
@@ -177,7 +178,7 @@ export const fromJSON = <T>(
  * Generic deserializer from YAML, the `key: value` lines that `toYAML` writes. It reads each field
  * by its key, not its line number, so it reads YAML written before and after 1.2.0 added the
  * `@functype` line. A value of `undefined`, which `toYAML` writes for an undefined value, reads
- * back as `undefined`.
+ * back as `undefined`. It accepts `\r\n` line endings and indented keys.
  * @param yaml - The YAML string to parse
  * @param reconstructor - Function to reconstruct the type from parsed data
  * @returns Reconstructed instance
@@ -186,14 +187,13 @@ export const fromYAML = <T>(
   yaml: string,
   reconstructor: (parsed: { _tag?: string; [key: string]: unknown }) => T,
 ): T => {
-  const lines = yaml.split("\n")
   const parsed: Record<string, unknown> = {}
 
-  for (const line of lines) {
+  for (const line of yamlLines(yaml)) {
     const colonIndex = line.indexOf(": ")
     if (colonIndex === -1) continue
 
-    const key = line.substring(0, colonIndex)
+    const key = line.substring(0, colonIndex).trim()
     const valueStr = line.substring(colonIndex + 2)
 
     if (!valueStr) {

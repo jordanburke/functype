@@ -75,6 +75,26 @@ describe("fromYAML reads what toYAML writes", () => {
   })
 })
 
+describe("fromYAML accepts other line endings and indentation", () => {
+  it("reads \\r\\n line endings", () => {
+    const crlf = yamlOf(List([1, 2])).replace(/\n/g, "\r\n")
+    expect(List.fromYAML<number>(crlf).toArray()).toEqual([1, 2])
+    expect(Option.fromYAML<number>(yamlOf(Some(1)).replace(/\n/g, "\r\n")).orUndefined()).toBe(1)
+  })
+
+  it("reads indented keys", () => {
+    expect(Option.fromYAML<number>("  _tag: Some\n  value: 1").orUndefined()).toBe(1)
+    expect(List.fromYAML<number>("  @functype: List\n  value: [1]").toArray()).toEqual([1])
+  })
+})
+
+describe("Try.fromJSON on a Failure with a null error", () => {
+  it("gives a Failure with an empty message instead of throwing", () => {
+    const failure = Try.fromJSON('{"_tag":"Failure","error":null}')
+    expect(failure.fold((e) => e.message, String)).toBe("")
+  })
+})
+
 describe("fromYAML still reads the two-line format from before 1.2.0", () => {
   it("reads _tag then value", () => {
     expect(List.fromYAML<number>("_tag: List\nvalue: [1,2]").toArray()).toEqual([1, 2])
@@ -89,17 +109,35 @@ describe("fromYAML still reads the two-line format from before 1.2.0", () => {
   })
 
   it("reads the 1.1.0 flat Failure shape", () => {
-    const failure = Try.fromYAML<number>('_tag: Failure\nerror: "boom"\nstack: "Error: boom"')
+    // 1.1.0 quoted every field and escaped the stack's line breaks.
+    const failure = Try.fromYAML<number>('_tag: "Failure"\nerror: "boom"\nstack: "Error: boom\\n    at x"')
     const error = failure.fold(
       (e) => e,
       () => undefined,
     )
     expect(error?.message).toBe("boom")
-    expect(error?.stack).toBe("Error: boom")
+    expect(error?.stack).toBe("Error: boom\n    at x")
   })
 })
 
 describe("fromYAML on input it can't read", () => {
+  it("treats an empty or missing value as bad input, as before", () => {
+    expect(Option.fromYAML<number>("_tag: Some")._tag).toBe("None")
+    expect(Option.fromYAML<number>("_tag: Some\nvalue: ")._tag).toBe("None")
+    expect(() => Either.fromYAML("_tag: Right\nvalue: ")).toThrow("Invalid YAML format for Either")
+    expect(Try.fromYAML("_tag: Success\nvalue: ").fold((e) => e.message, String)).toBe(
+      "Invalid YAML format for Try Success",
+    )
+    expect(Try.fromYAML("_tag: Failure\nerror: ").fold((e) => e.message, String)).toBe(
+      "Invalid YAML format for Try Failure",
+    )
+  })
+
+  it("keeps a written null, which isn't missing", () => {
+    expect(Option.fromYAML<null>("_tag: Some\nvalue: null")._tag).toBe("Some")
+    expect(Either.fromYAML<string, null>("_tag: Right\nvalue: null").value).toBeNull()
+  })
+
   it("keeps each type's result for a missing value or tag", () => {
     expect(List.fromYAML<number>("@functype: List").toArray()).toEqual([])
     expect(Set.fromYAML<number>("").toArray()).toEqual([])

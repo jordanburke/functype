@@ -5,6 +5,7 @@ import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { showValue } from "@/internal/stringify"
+import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -525,7 +526,7 @@ const EitherCompanion = {
   fromYAML: <L extends Type, R extends Type>(yaml: string): Either<L, R> =>
     readYAML(yaml, (parsed) => {
       expectMarker(parsed, "Either", "fromYAML")
-      if (typeof parsed._tag !== "string" || !("value" in parsed)) {
+      if (typeof parsed._tag !== "string" || !hasYAMLValue(yaml, "value")) {
         throw new Error("Invalid YAML format for Either")
       }
       return eitherFromEnvelope<L, R>(parsed, "fromYAML")
