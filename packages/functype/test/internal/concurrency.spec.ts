@@ -6,7 +6,7 @@ import { List } from "@/list"
 import { Set } from "@/set"
 
 /**
- * Two consumers (CivalaOS, ts-builds) hand-rolled sequential async traversal after `no-imperative-loops`
+ * Two consumers (a private app monorepo and ts-builds) hand-rolled sequential async traversal after `no-imperative-loops`
  * flagged their awaiting loops, because the only built-in, `List.flatMapAsync`, started every call at once.
  * These tests pin the concurrency contract the replacements rely on.
  */

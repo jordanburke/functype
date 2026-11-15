@@ -339,7 +339,7 @@ const rule: Rule.RuleModule = {
     const minComplexity = options.minComplexity || 2
     // Off by default (#325): a null check on a plain value (`x === null ? a : b`) is not a fold of a
     // functype value. Whether that value should be an Option is prefer-option's call, and at error this
-    // path fired on JSX conditionals, style objects and conditional spreads (31 of 31 hits in CivalaOS,
+    // path fired on JSX conditionals, style objects and conditional spreads (31 of 31 hits in a private app monorepo,
     // 0 of which were functype values). Predicate calls (`o.isSome()`, `e.isLeft()`) are always checked.
     const checkNullable = options.checkNullable === true
     // Guard-then-unwrap (`if (e.isLeft()) return …; use(e.value)`). Opt-in while it's measured on real
