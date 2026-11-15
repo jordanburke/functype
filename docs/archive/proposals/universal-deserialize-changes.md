@@ -219,9 +219,9 @@ Plus nested cases (`Right(Some(5))`, `List([Some(1), None])`) and malformed inpu
 
 ## What this unblocks downstream (context, not a functype concern)
 
-Civala's PDOS engine runs functype-typed code inside DBOS durable workflows; DBOS
+A consuming app's workflow engine runs functype-typed code inside DBOS durable workflows; DBOS
 (via SuperJSON) strips functype prototypes at step boundaries. With Changes 1–2,
-the entire civala-side fix is one host recipe wrapping `isFunctypeValue` +
+the entire consumer-side fix is one host recipe wrapping `isFunctypeValue` +
 `serialize` + `deserialize` — no per-type maintenance, and functype stays
 serializer-agnostic. Same shape serves any future SuperJSON/queue/cache/RPC
 boundary, for any functype user.
@@ -242,4 +242,4 @@ boundary, for any functype user.
       must NOT be claimed) cases.
 - [ ] Decide the 3 remaining open questions (return type, export surface,
       unknown-type policy). #4 (envelope marker) is DECIDED → Change 0.
-- [ ] Release 1.2.0; bump civala workspace; civala adds the one host recipe.
+- [ ] Release 1.2.0; bump the consumer's workspace; the consumer adds the one host recipe.

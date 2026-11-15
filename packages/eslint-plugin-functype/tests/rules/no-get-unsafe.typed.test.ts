@@ -6,7 +6,7 @@ import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
 /**
  * With type information, no-get-unsafe decides by the receiver's type instead of its name.
  * The name heuristic missed bare `.orThrow()` on an Option bound to any other name (three live
- * cases in civala: `missing.orThrow()` from `List.find`, `normalized.orThrow()`, …) and could
+ * cases in a private app: `missing.orThrow()` from `List.find`, `normalized.orThrow()`, …) and could
  * flag a native Map whose variable happened to be called `options`.
  */
 // The fixture lives under tests/, which the rule skips by default (allowInTests).

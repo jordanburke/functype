@@ -347,7 +347,7 @@ const addBearer =
 
 const api = Http.client({
   baseUrl: "https://api.example.com",
-  defaultHeaders: { "x-app": "civala" },
+  defaultHeaders: { "x-app": "my-app" },
   beforeRequest: (r) =>
     IO.succeed(r)
       .map(addRequestId) // sync header injection

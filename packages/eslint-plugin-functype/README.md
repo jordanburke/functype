@@ -163,7 +163,7 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 
 Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Generators with no marker, such as Supabase's types, need an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
 
-Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: CivalaOS 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of CivalaOS with the rule on takes about 18 seconds.
+Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: a private app monorepo 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of that monorepo with the rule on takes about 18 seconds.
 
 **Boundary recipe (recommended for codebases touching serialization boundaries):**
 
@@ -236,7 +236,7 @@ void save(user) // fine: a deliberate drop
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). It recognizes `IO` by its type (it has `runExit` and `provideLayer`), whatever the call is named. Without type information it reports nothing.
 
-Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and civala.ai's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
+Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and a private web app's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
 
 ### `functype/no-floating-result`
 
@@ -367,7 +367,7 @@ A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this r
 | -------------------- | :-----: | ---------------------------------------------------------- |
 | `allowInteropMarker` | `true`  | Skip code inside a declaration tagged `@interop <reason>`. |
 
-Measured (2026-10-25) with both rules on functype-react's source and tests (type-aware), and on agent-todo, mnemons and civala.ai (1,403 files, without type information): no reports. None of that code uses these shapes in a component, and `useIOValue`'s `exit.orThrow()` is guarded by `exit.isSuccess()`, so the measurement shows the false-positive rate, not the hit rate.
+Measured (2026-10-25) with both rules on functype-react's source and tests (type-aware), and on agent-todo, mnemons and a private web app (1,403 files, without type information): no reports. None of that code uses these shapes in a component, and `useIOValue`'s `exit.orThrow()` is guarded by `exit.isSuccess()`, so the measurement shows the false-positive rate, not the hit rate.
 
 ### `functype/no-get-unsafe`
 
@@ -413,7 +413,7 @@ if (t.isFailure()) {
 
 Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why this is planned for `strict`, not `recommended`, in 2.0.
 
-When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On CivalaOS it finds 75 guards, all of this shape.
+When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On a private app monorepo it finds 75 guards, all of this shape.
 
 ### `functype/prefer-option`
 

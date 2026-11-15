@@ -6,7 +6,7 @@ import { ruleTester } from "../utils/rule-tester"
 /**
  * `checkGuards`: an early-exit guard followed by unwrapping (`if (e.isLeft()) return …; use(e.value)`)
  * is imperative branching. `orElse(default)` and `fold` are both proper ways to leave the container and
- * are never flagged. CivalaOS: 7 of 15 type-aware no-get-unsafe hits were `.orThrow()` right after a guard.
+ * are never flagged. In a private app monorepo, 7 of 15 type-aware no-get-unsafe hits were `.orThrow()` right after a guard.
  */
 const options = [{ checkGuards: true }]
 

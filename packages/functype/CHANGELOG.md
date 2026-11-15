@@ -199,7 +199,7 @@ First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases 
 
 ## 1.15.0 - 2026-10-10
 
-- **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (CivalaOS 821 → 215, agent-todo 843 → 328). CivalaOS's hits were classified with civala's agent, and the design was reviewed by a second model.
+- **`prefer-list` reports the defect, not every array.** It was 75% array literals handed straight to libraries. Measured on five consumers with type-aware linting, it goes from 2,000 hits to 696 (a private app monorepo 821 → 215, agent-todo 843 → 328). That monorepo's hits were classified with an agent, and the design was reviewed by a second model.
   - Mutable `T[]` / `Array<T>` suggests `ReadonlyArray<T>` first, then `List<T>`.
   - An array changed in place (`push`, `sort`, `x[i] = …`, on a binding, a literal accumulator or a field) gets advice instead of a suggestion that wouldn't compile.
   - A cast of untyped data (`JSON.parse(raw) as Row[]`) points at `Wire<ReadonlyArray<Row>>`, with type information.
@@ -208,7 +208,7 @@ First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases 
   - Single-value reads are temporaries: `.length`, `[i]`, `join` / `includes` / `find`…, and chains ending in one. Chains that produce another collection (`map`, `filter`, `slice`) are reported, unless their result goes to JSX children or an array slot.
   - Also skipped: `as const` and tuple assertions, tuple rest elements, rest parameters, literals passed into `List(…)` / `Set(…)`, and files marked generated.
   - `prefer-list` stays `off` in `recommended` and `warn` in `strict` for now.
-- **`prefer-fold` can report a guard followed by an unwrap** (`checkGuards`, off by default): `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()`. The message gives advice based on what the guard does: `flatMap` when it hands the failure back (including `Failure(t.error)` for `Try`), `mapLeft(…).flatMap` when it builds a new one, `map(…).orElse` for a plain fallback, `fold` when the fallback reads the failure or the guard does other work first, `orThrow((e) => …)` for a host throw, `Do` for several pass-through guards in a row, and the async forms when the rest awaits. `orElse`, `fold` and `orThrow(error)` are never reported. On CivalaOS it finds 75 guards. It's opt-in because `prefer-fold` is `error` in `recommended`. In 2.0 it's planned to be on in `strict`, not `recommended`: pass-through guards are clear defects, but fallback guards are closer to style.
+- **`prefer-fold` can report a guard followed by an unwrap** (`checkGuards`, off by default): `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()`. The message gives advice based on what the guard does: `flatMap` when it hands the failure back (including `Failure(t.error)` for `Try`), `mapLeft(…).flatMap` when it builds a new one, `map(…).orElse` for a plain fallback, `fold` when the fallback reads the failure or the guard does other work first, `orThrow((e) => …)` for a host throw, `Do` for several pass-through guards in a row, and the async forms when the rest awaits. `orElse`, `fold` and `orThrow(error)` are never reported. On a private app monorepo it finds 75 guards. It's opt-in because `prefer-fold` is `error` in `recommended`. In 2.0 it's planned to be on in `strict`, not `recommended`: pass-through guards are clear defects, but fallback guards are closer to style.
 - **New rule `functype/no-array-mutation`** (type-aware): reports changing an array in place.
   - **What it reports:** `push` / `pop` / `shift` / `unshift` / `splice` / `sort` / `reverse` / `fill` / `copyWithin`, element assignment (`xs[i] = v`, `+=`, `++`), `delete xs[i]`, and setting `length`.
   - **Why it's needed:** it catches the mutation wherever the array came from, including an inferred `const rows = load(); rows.push(x)` that `prefer-list` can't see.
@@ -232,7 +232,7 @@ First release from `release/1.x`: `main` is 2.0-bound, so additive 1.x releases 
   - Calls inside an `@interop <reason>` declaration are allowed, as in `prefer-either` (option `allowInteropMarker`, default `true`).
   - A bare `.orThrow()`, `.get()`, `.unwrap()` or `.expect()` is still reported.
   - The message now names the fix for a host throw.
-  - **With type-aware linting, it checks the receiver's type instead of guessing from its name.** Previously `missing.orThrow()` on an `Option` passed because `missing` isn't an Option-sounding name (three live cases in civala), and a native `Map` named `options` could be flagged. Now any type with both `orThrow` and `fold` is checked, whatever it's called. Without type information it falls back to the name heuristic. This is the first type-aware check in the plugin; it adds no runtime dependency on `typescript`.
+  - **With type-aware linting, it checks the receiver's type instead of guessing from its name.** Previously `missing.orThrow()` on an `Option` passed because `missing` isn't an Option-sounding name (three live cases in a private app), and a native `Map` named `options` could be flagged. Now any type with both `orThrow` and `fold` is checked, whatever it's called. Without type information it falls back to the name heuristic. This is the first type-aware check in the plugin; it adds no runtime dependency on `typescript`.
 
 ## 1.13.0 - 2026-10-04
 
@@ -260,9 +260,9 @@ The convention, now written down: import functype's collections under their own 
 
 ## 1.11.1 - 2026-10-02
 
-**`eslint-plugin-functype` — `prefer-functype-map` / `prefer-functype-set` fixes found by the civala.ai upgrade.**
+**`eslint-plugin-functype` — `prefer-functype-map` / `prefer-functype-set` fixes found by upgrading a private web app.**
 
-- **No more reports on a declared native read-only contract.** A `new Map(...)` / `new Set(...)` that flows directly into a `ReadonlyMap` / `ReadonlySet` declared type is exempt. That covers a return from a function declared to return one (or `Promise<…>` of one), an arrow body with that return type, an annotated variable, class field or parameter default, and an `as` / `satisfies` assertion, through ternary and `??` / `||` / `&&` branches. The rules never reported the `ReadonlyMap` annotation, but they reported the constructor it requires, so an interface typed `ReadonlyMap` (civala's fixture-replay engine) left no clean fix. Mutable `Map<K, V>` annotations are still reported, and a nested callback doesn't inherit the outer function's return type.
+- **No more reports on a declared native read-only contract.** A `new Map(...)` / `new Set(...)` that flows directly into a `ReadonlyMap` / `ReadonlySet` declared type is exempt. That covers a return from a function declared to return one (or `Promise<…>` of one), an arrow body with that return type, an annotated variable, class field or parameter default, and an `as` / `satisfies` assertion, through ternary and `??` / `||` / `&&` branches. The rules never reported the `ReadonlyMap` annotation, but they reported the constructor it requires, so an interface typed `ReadonlyMap` (a consuming app's fixture-replay engine) left no clean fix. Mutable `Map<K, V>` annotations are still reported, and a nested callback doesn't inherit the outer function's return type.
 - **An aliased import no longer silences the whole file.** The rules decided from the file's import list, so `import { Map as FMap } from "functype"` skipped every native `new Map(...)` in that file. They now resolve `Map` / `Set` where it's used: functype's import (any name) or a local shadow is skipped, and the built-in is reported. Suggestions use the existing name (`FMap(entries)`, `FMap.empty()`, or renaming a `Map<K, V>` annotation to `FMap`) instead of adding a second import. **This adds reports** in files that alias functype's `Map` / `Set`.
 
 ## 1.11.0 - 2026-10-02
@@ -369,10 +369,10 @@ Scope is `Option` only. The wrapper shape repeats mechanically for the other con
 
 **`eslint-plugin-functype` — `recommended` now errors on the rules that are reliably right (#325). Upgrade note: expect new lint errors.**
 
-`recommended` used to warn on every rule except `no-let`. In CivalaOS that meant 1,143 warnings and an agent shipping 85 new violations under "lint OK", because the gate counts errors. The plugin now follows a stated severity policy: a rule is `error` once it is right on ~95–99% of real code and its known false-positive classes are closed. With #323 and #324 closing those classes, five rules graduate:
+`recommended` used to warn on every rule except `no-let`. In a private app monorepo that meant 1,143 warnings and an agent shipping 85 new violations under "lint OK", because the gate counts errors. The plugin now follows a stated severity policy: a rule is `error` once it is right on ~95–99% of real code and its known false-positive classes are closed. With #323 and #324 closing those classes, five rules graduate:
 
 - `no-imperative-loops`, `prefer-functype-map`, `prefer-functype-set`, `prefer-map`, `prefer-fold` → **`error`** (joining `no-let`).
-- **`prefer-fold`** now reports only functype checks (`isSome()`, `isLeft()`, `isSuccess()`, …). Its null-check heuristic (`x === null ? a : b` on a plain value) is opt-in via `checkNullable`. Measured on CivalaOS, that path produced 31 of 31 hits on plain nullables (JSX conditionals, style objects, conditional spreads) and none on functype values. Whether such a value should be an `Option` is `prefer-option`'s call.
+- **`prefer-fold`** now reports only functype checks (`isSome()`, `isLeft()`, `isSuccess()`, …). Its null-check heuristic (`x === null ? a : b` on a plain value) is opt-in via `checkNullable`. Measured on a private app monorepo, that path produced 31 of 31 hits on plain nullables (JSX conditionals, style objects, conditional spreads) and none on functype values. Whether such a value should be an `Option` is `prefer-option`'s call.
 - **`prefer-map`** no longer reports `for` loops by default (`checkForLoops` now defaults to `false`). `no-imperative-loops` already reports them, so each such loop used to be two errors. `prefer-map` still reports `.push` inside `forEach`.
 - `prefer-option`, `prefer-either`, `prefer-try` stay `warn` until the boundary cases close (serialization rows/DTOs, invariant throws). `prefer-flatmap` and `prefer-do-notation` stay `warn` because their precision is unmeasured.
 
@@ -861,7 +861,7 @@ Type-tightening on `toEnvelope` output (and new `JSONValue` type export) so the 
 
 ## 1.2.1 - 2026-06-01
 
-Post-1.2.0 conformance review (civala PDOS engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/archive/proposals/serialization-1.2.1-followups.md`.
+Post-1.2.0 conformance review (a consuming app's workflow engine, which nests functype values inside DBOS durable-workflow checkpoints via SuperJSON) verified that 1.2.0's universal codec is correct and complete — all 12 Serializable types round-trip with methods intact, the `@functype` marker dispatches without Effect/fp-ts collision, malformed input returns `Failure` instead of throwing. This patch lands the one small enhancement that surfaced + two doc clarifications. None block 1.2.0 adoption; consumers can drop their inline shims once 1.2.1 ships. See `docs/archive/proposals/serialization-1.2.1-followups.md`.
 
 **New (additive):**
 
