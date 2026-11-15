@@ -79,7 +79,7 @@ DBOS.registerSerialization({
 ```
 
 That `JSON.parse(serialize(...))` / `deserialize(JSON.stringify(...))` dance is an
-application-level shim for a library-shaped gap. that consumer is only the **first**
+application-level shim for a library-shaped gap. That consumer is only the **first**
 structured-serializer consumer; any future DBOS/queue/cache/RPC boundary hits the
 same wall, so the fix belongs in functype.
 
