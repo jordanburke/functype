@@ -3,6 +3,7 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
+import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer } from "@/serialization"
@@ -80,14 +81,44 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   toString: () => string
 }
 
+/** The getters that stay lazy: each reads the elements in order. See internal/lazyProperties. */
+type SetLazy = "head" | "headOption" | "last" | "lastOption" | "tail" | "init"
+
+const SET_GETTERS = lazyGetters<Set<unknown>>({
+  head() {
+    return this.toArray()[0]
+  },
+  headOption() {
+    return Option(this.toArray()[0])
+  },
+  last() {
+    const arr = this.toArray()
+    return arr[arr.length - 1]
+  },
+  lastOption() {
+    const arr = this.toArray()
+    return Option(arr[arr.length - 1])
+  },
+  tail() {
+    return createSet(this.toArray().slice(1))
+  },
+  init() {
+    const arr = this.toArray()
+    return createSet(arr.length === 0 ? [] : arr.slice(0, -1))
+  },
+})
+
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: NativeSet<A> = new NativeSet<A>(iterable)
 
-  const set: Set<A> = {
-    [Symbol.toStringTag]: "FunctypeSet",
+  // No getters and no computed keys before the closures: see internal/lazyProperties. The native
+  // Set is never changed after this point, so size and isEmpty can't go stale.
+  const fields: Omit<Set<A>, SetLazy> = {
     _tag: "Set",
 
-    [Symbol.iterator]: () => values[Symbol.iterator](),
+    size: values.size,
+
+    isEmpty: values.size === 0,
 
     add: <B>(value: B): Set<A | B> => createSet<A | B>([...(values as NativeSet<A | B>), value]),
 
@@ -196,14 +227,6 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
         return arr.reduceRight((acc, value) => op(value, acc), z)
       },
 
-    get size() {
-      return values.size
-    },
-
-    get isEmpty() {
-      return values.size === 0
-    },
-
     reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
       const arr = Array.from(values)
       if (arr.length === 0) throw new Error("Cannot reduce empty Set")
@@ -296,15 +319,6 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return createSet(results)
     },
 
-    get head() {
-      return Array.from(values)[0] as A | undefined
-    },
-
-    get headOption() {
-      const first = Array.from(values)[0]
-      return Option(first)
-    },
-
     take: (n: number) => createSet(Array.from(values).slice(0, Math.max(0, n))),
 
     takeWhile: (p: (a: A) => boolean) => {
@@ -322,25 +336,6 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
       return createSet(n <= 0 ? [] : arr.slice(-n))
     },
 
-    get last() {
-      const arr = Array.from(values)
-      return arr[arr.length - 1] as A | undefined
-    },
-
-    get lastOption() {
-      const arr = Array.from(values)
-      return Option(arr[arr.length - 1])
-    },
-
-    get tail() {
-      return createSet(Array.from(values).slice(1))
-    },
-
-    get init() {
-      const arr = Array.from(values)
-      return createSet(arr.length === 0 ? [] : arr.slice(0, -1))
-    },
-
     toList: (): List<A> => List(Array.from(values)),
 
     toSet: (): Set<A> => set,
@@ -356,8 +351,13 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     pipe: <U>(f: (value: A[]) => U) => f(Array.from(values)),
 
     serialize: () => createSerializer("Set", Array.from(values)),
+
+    [Symbol.toStringTag]: "FunctypeSet",
+
+    [Symbol.iterator]: () => values[Symbol.iterator](),
   }
 
+  const set = withLazyGetters<Set<A>>(fields, SET_GETTERS)
   return set
 }
 
