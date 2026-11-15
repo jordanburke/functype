@@ -180,12 +180,6 @@ export interface Obj<T extends Record<string, Type>>
 }
 
 /**
- * Creates an Obj instance wrapping a plain object with immutable operations.
- * @param data - The plain object to wrap
- * @returns A new Obj instance
- * @typeParam T - The record type
- */
-/**
  * size and isEmpty stay getters: an Obj wraps the object it's given without copying it, so they
  * count its keys when read. They're attached after the literal: see internal/lazyProperties.
  */
@@ -198,6 +192,12 @@ const OBJ_GETTERS = lazyGetters<{ readonly data: Record<string, Type> }>({
   },
 })
 
+/**
+ * Creates an Obj instance wrapping a plain object with immutable operations.
+ * @param data - The plain object to wrap
+ * @returns A new Obj instance
+ * @typeParam T - The record type
+ */
 const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => {
   const fields: Omit<Obj<T>, "isEmpty" | "size"> = {
     _tag: "Obj",

@@ -8,10 +8,15 @@
  *   better than times do. Each bound sits between the measured ratio before the fix and after it,
  *   loose enough for a slow or instrumented runner.
  *
- * Ratios this test measured on Node 24.20.0, before -> after the fix: List 12.9x -> 4.3x,
- * Map 8.9x -> 1.4x, Stack 7.2x -> 0.6x, Obj 14.2x -> 2.1x. (Against the built package the gaps are
- * wider: List 33x -> 5.7x.) Set went from 8.3x to 5.6x and LazyList from 11.6x to 5.7x. Those gaps
- * are too narrow for a timing bound, so only their shape is checked.
+ * Ratios this test measured locally on Node 24.20.0, before -> after the fix: Map 8.9x -> 1.4x,
+ * Stack 7.2x -> 0.6x, Obj 14.2x -> 2.1x. Over 20 runs with the full suite running alongside, the
+ * worst were Map 1.7x, Stack 0.6x and Obj 6.9x. On GitHub Actions they were Map 2.5x, Stack 0.6x
+ * and Obj 2.8x.
+ *
+ * List, Set and LazyList have only the shape check. Here List went from 12.9x to 4.3x, but it
+ * measured 7.0x on GitHub Actions, too close to any bound below the old ratio. (Against the built
+ * package the gap is wider: 33x -> 5.7x.) Set went from 8.3x to 5.6x and LazyList from 11.6x to
+ * 5.7x.
  */
 import { describe, expect, it } from "vitest"
 
@@ -67,7 +72,7 @@ describe("construction shape", () => {
 })
 
 describe("construction cost", () => {
-  const RUNS = 7
+  const RUNS = 9
   const N = 20_000
 
   const timePerCall = (make: () => unknown): number => {
@@ -93,11 +98,9 @@ describe("construction cost", () => {
   }
 
   it.each([
-    ["List", 8, () => List(["a", "b"])],
-    ["List()", 8, () => List()],
-    ["Map", 4, () => Map([["a", 1]])],
+    ["Map", 5, () => Map([["a", 1]])],
     ["Stack", 3, () => Stack(["a", "b"])],
-    ["Obj", 6, () => Obj({ a: 1 })],
+    ["Obj", 9, () => Obj({ a: 1 })],
   ] as const)("building a %s costs at most %d times an Option", (name, bound, make) => {
     const ratio = ratioToOption(make)
     console.info(`${name}: ${ratio.toFixed(1)}x an Option (bound ${bound}x)`)

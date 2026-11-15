@@ -515,3 +515,47 @@ describe("every changed type", () => {
     }
   })
 })
+
+describe("match, Do-notation, ap and async results on the other types", () => {
+  it("match picks the right branch on Map, Stack and Obj", () => {
+    expect(Map([["a", 1]]).match({ Empty: () => "empty", NonEmpty: (entries) => `${entries.length}` })).toBe("1")
+    expect(Map().match({ Empty: () => "empty", NonEmpty: () => "full" })).toBe("empty")
+    expect(Stack([1, 2]).match({ Empty: () => "empty", NonEmpty: (xs) => xs.join(",") })).toBe("1,2")
+    expect(Stack().match({ Empty: () => "empty", NonEmpty: () => "full" })).toBe("empty")
+    expect(Obj({ a: 1 }).match({ Obj: (value) => value.a })).toBe(1)
+  })
+
+  it("Obj unwraps and works in Do-notation", () => {
+    expect(Obj({ a: 1 }).doUnwrap()).toEqual({ ok: true, value: { a: 1 } })
+    const result = Do(function* () {
+      const value = yield* $(Obj({ a: 1 }))
+      return value.a + 1
+    })
+    // Do-notation that starts from an Obj gives a List of the results.
+    expect((result as unknown as List<number>).toArray()).toEqual([2])
+  })
+
+  it("ap gives the right size on Map and Stack", () => {
+    const map = Map([
+      ["a", 1],
+      ["b", 2],
+    ]).ap(Map([["a", (v: number) => v * 10]]))
+    expect([map.size, map.isEmpty, [...map]]).toEqual([1, false, [["a", 10]]])
+    const stack = Stack([1, 2]).ap(Stack([(x: number) => x + 1, (x: number) => x * 10]))
+    expect([stack.size, stack.isEmpty]).toEqual([stack.toArray().length, false])
+  })
+
+  it("mapAsync and flatMapAsync results have the right derived properties", async () => {
+    expectList(await List([3, 1, 2]).mapAsync(async (x) => x * 2), [6, 2, 4])
+    expectList(await List([3, 1]).flatMapAsync(async (x) => [x, x]), [3, 3, 1, 1])
+    expectList(await List<number>([]).mapAsync(async (x) => x), [])
+    expectMatches(await Set([3, 1, 2]).mapAsync(async (x) => x * 2), [6, 2, 4])
+    expectMatches(await Set([3, 1]).flatMapAsync(async (x) => [x, x + 10]), [3, 13, 1, 11])
+    const map = await Map([["a", 1]]).flatMapAsync(async (v) => Map([["b", v + 1]]))
+    expect([map.size, map.isEmpty, [...map]]).toEqual([1, false, [["b", 2]]])
+    const stack = await Stack([1, 2]).flatMapAsync(async (x) => Stack([x, x]))
+    expect([stack.size, stack.toArray()]).toEqual([4, [1, 1, 2, 2]])
+    const obj = await Obj({ a: 1 }).flatMapAsync(async (value) => Obj({ ...value, b: 2 }))
+    expect([obj.size, obj.isEmpty]).toEqual([2, false])
+  })
+})
