@@ -2,7 +2,7 @@
  * Severity policy (#325): a rule is `error` once it is right on ~95–99% of real code and its known
  * false-positive classes are closed; it stays `warn` only while those classes are still open. FP here
  * is governance — a rule that is reliably right should fail the build, not print advice nobody reads
- * (CivalaOS shipped 85 new violations under "lint OK" because every rule but `no-let` warned).
+ * (a private app monorepo shipped 85 new violations under "lint OK" because every rule but `no-let` warned).
  *
  * Still `warn`, and why:
  * - prefer-option / prefer-either / prefer-try: fire on correct code at serialization boundaries
@@ -12,7 +12,7 @@
  *
  * Graduated with a precision condition: prefer-fold checks functype predicate calls (`isSome()`,
  * `isLeft()`) only; its null-check heuristic is opt-in (`checkNullable`) because it fired on plain
- * nullables — 31 of 31 hits in CivalaOS. prefer-map leaves loops to no-imperative-loops (`checkForLoops`
+ * nullables — 31 of 31 hits in a private app monorepo. prefer-map leaves loops to no-imperative-loops (`checkForLoops`
  * off), so one loop is one error.
  *
  * collection-naming is a convention, not a heuristic — functype's Map/Set imported under their own names,

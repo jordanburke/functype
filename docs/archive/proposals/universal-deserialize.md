@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 **Target:** functype 1.2.0 (additive minor)
-**Author:** drafted with Jordan Burke (Civala / DBOS integration driver)
+**Author:** drafted with Jordan Burke (DBOS integration driver)
 **Constraint honored:** functype is **dependency-free** (`dependencies: {}`, `peerDependencies: {}`). This proposal adds only JSON + tag dispatch — **no new deps**.
 
 ---
@@ -24,7 +24,7 @@ The serialize side already round-trips uniformly; this makes the **deserialize s
 
 ### The concrete trigger: DBOS durable-workflow step boundaries
 
-The Civala PDOS engine runs functype-typed code inside [DBOS](https://docs.dbos.dev) durable workflows. DBOS **JSON-serializes every workflow-step return value** for crash-safe checkpointing. A functype `Either` survives the round-trip as *data* but loses its *prototype* — the deserialized object has `{ _tag: "Left", value }` but no `.isLeft()` / `.fold()` methods. The next line in the workflow does:
+A consuming app's workflow engine runs functype-typed code inside [DBOS](https://docs.dbos.dev) durable workflows. DBOS **JSON-serializes every workflow-step return value** for crash-safe checkpointing. A functype `Either` survives the round-trip as *data* but loses its *prototype* — the deserialized object has `{ _tag: "Left", value }` but no `.isLeft()` / `.fold()` methods. The next line in the workflow does:
 
 ```ts
 const budget = await Steps.checkBudget(...)   // returns Either<BudgetExceeded, BudgetOk>
@@ -132,9 +132,9 @@ export function isFunctypeValue(v: unknown): v is Serializable<unknown>
 
 ---
 
-## Civala-side payoff (the consumer this unblocks)
+## Consumer-side payoff (the consumer this unblocks)
 
-Once shipped, the PDOS DBOS fix is the single generic recipe shown above, registered in `apps/pdos-runtime` bootstrap **before `DBOS.launch()`** (DBOS throws if a serializer is registered after launch). This removes the per-type recipe boilerplate Civala would otherwise carry and re-sync on every functype release, and it future-proofs every other serialization boundary in the platform.
+Once shipped, the consumer's DBOS fix is the single generic recipe shown above, registered in the app's runtime bootstrap **before `DBOS.launch()`** (DBOS throws if a serializer is registered after launch). This removes the per-type recipe boilerplate the consumer would otherwise carry and re-sync on every functype release, and it future-proofs every other serialization boundary in the platform.
 
 ---
 

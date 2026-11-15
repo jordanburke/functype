@@ -3,7 +3,7 @@
 Companion to `universal-deserialize.md` / `universal-deserialize-changes.md`. After
 1.2.0 shipped the universal codec (`Serialization.serialize` / `deserialize` /
 `isFunctypeValue` + the `@functype` envelope marker, #169), it was run through a
-full conformance pass by its first real consumer — civala's PDOS engine, which
+full conformance pass by its first real consumer — a consuming app's workflow engine, which
 nests functype values inside DBOS durable-workflow checkpoints (SuperJSON under
 the hood). This doc records what that pass found.
 
@@ -69,7 +69,7 @@ So the consumer cannot pass `Serialization.serialize` / `deserialize` directly t
 the custom-transformer hook. It has to wrap them:
 
 ```ts
-// civala's DBOS host recipe today — the wrap is the workaround we'd rather not own
+// the consumer's DBOS host recipe today — the wrap is the workaround we'd rather not own
 DBOS.registerSerialization({
   name: "functype",
   isApplicable: Serialization.isFunctypeValue,
@@ -79,7 +79,7 @@ DBOS.registerSerialization({
 ```
 
 That `JSON.parse(serialize(...))` / `deserialize(JSON.stringify(...))` dance is an
-application-level shim for a library-shaped gap. civala is only the **first**
+application-level shim for a library-shaped gap. That consumer is only the **first**
 structured-serializer consumer; any future DBOS/queue/cache/RPC boundary hits the
 same wall, so the fix belongs in functype.
 
@@ -149,7 +149,7 @@ functype `Option` except by inspecting the result for methods/markers.
    values are reconstructed. Only malformed JSON yields `Failure`."*
 2. *(Optional)* offer a strict mode for boundaries that want a hard signal — e.g.
    `deserialize(json, { strict: true })` returning `Failure` when no `@functype`
-   marker is present. Not needed by civala (the `isFunctypeValue` gate covers the
+   marker is present. Not needed by that consumer (the `isFunctypeValue` gate covers the
    write side), but useful for RPC/queue consumers that expect functype on the
    wire.
 
@@ -164,7 +164,7 @@ functype `Option` except by inspecting the result for methods/markers.
 no error). So the true contract is *"serialize any value to JSON, stamping
 functype values with their envelope marker,"* not *"serialize a functype value."*
 
-This is harmless for civala (the recipe only calls `serialize` behind the
+This is harmless for that consumer (the recipe only calls `serialize` behind the
 `isFunctypeValue` gate) and pairs symmetrically with the #2 pass-through on the way
 back. The only ask is **contract clarity**: document that `serialize`/`deserialize`
 are a *lenient JSON codec that additionally round-trips functype values*, so the
@@ -192,7 +192,7 @@ non-functype value of that shape is therefore "claimed":
   picked up by the transformer and round-trips method-less.
 
 Empirically reproduced with a hand-rolled `{ _tag: "X", serialize() {…} }`. It is
-**latent** for civala — no domain type has that shape — but the gate is exactly
+**latent** for that consumer — no domain type has that shape — but the gate is exactly
 where it would bite, and consumers reasonably trust `isFunctypeValue` to mean
 "this is one of ours."
 
