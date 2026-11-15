@@ -174,16 +174,16 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     return patterns.NonEmpty(getEntries())
   }
 
-  return {
-    [Symbol.toStringTag]: "FunctypeMap",
+  // No getters and no computed keys before the closures (issue #511): V8 copies such a literal from a
+  // cached template. The native Map is never changed after construction, so size and isEmpty can't
+  // go stale. Frozen so they stay read-only, as they were when they were getters.
+  return Object.freeze<Map<K, V>>({
     _tag,
-    [Symbol.iterator]: () => state.values.entries(),
+    size: size(),
+    isEmpty: isEmpty(),
     add,
     remove,
     contains,
-    get size() {
-      return size()
-    },
     map,
     ap,
     flatMap,
@@ -199,9 +199,6 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     keys,
     values,
     getOrElse,
-    get isEmpty() {
-      return isEmpty()
-    },
     orElse,
     toList,
     toSet,
@@ -214,7 +211,9 @@ const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterat
     }),
     pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
     serialize: () => createSerializer("Map", Array.from(state.values.entries())),
-  }
+    [Symbol.toStringTag]: "FunctypeMap",
+    [Symbol.iterator]: () => state.values.entries(),
+  })
 }
 
 const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>

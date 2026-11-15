@@ -3,6 +3,7 @@ import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
+import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
@@ -184,128 +185,138 @@ export interface Obj<T extends Record<string, Type>>
  * @returns A new Obj instance
  * @typeParam T - The record type
  */
-const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => ({
-  [Symbol.toStringTag]: "Obj",
-  _tag: "Obj",
-  data,
-
-  // --- Core object operations ---
-
-  get: <K extends keyof T>(key: K): Option<T[K]> => Option(data[key] as T[K] | undefined),
-
-  set: <K extends keyof T>(key: K, val: T[K]): Obj<T> => ObjObject({ ...data, [key]: val } as T),
-
-  assign: (partial: Partial<T>): Obj<T> => ObjObject({ ...data, ...partial }),
-
-  merge: <U extends Record<string, Type>>(other: U): Obj<T & U> => ObjObject({ ...data, ...other } as T & U),
-
-  when: (condition: boolean | (() => boolean), partial: Partial<T>): Obj<T> => {
-    const shouldApply = typeof condition === "function" ? condition() : condition
-    return shouldApply ? ObjObject({ ...data, ...partial }) : ObjObject(data)
+/**
+ * size and isEmpty stay getters: an Obj wraps the object it's given without copying it, so they
+ * count its keys when read. They're attached after the literal: see internal/lazyProperties.
+ */
+const OBJ_GETTERS = lazyGetters<{ readonly data: Record<string, Type> }>({
+  isEmpty() {
+    return Object.keys(this.data).length === 0
   },
-
-  omit: <K extends keyof T>(...keys: K[]): Obj<Omit<T, K>> => {
-    const result = { ...data }
-    for (const key of keys) delete result[key]
-    return ObjObject(result as Omit<T, K>)
-  },
-
-  pick: <K extends keyof T>(...keys: K[]): Obj<Pick<T, K>> => {
-    const result = {} as Pick<T, K>
-    for (const key of keys) {
-      if (key in data) (result as Record<string, unknown>)[key as string] = data[key]
-    }
-    return ObjObject(result)
-  },
-
-  keys: () => List(Object.keys(data)),
-
-  values: () => List(Object.values(data) as T[keyof T][]),
-
-  entries: () => List(Object.entries(data).map(([k, v]) => Tuple([k, v] as [string, T[keyof T]]))),
-
-  has: <K extends keyof T>(key: K): boolean => key in data,
-
-  value: () => data,
-
-  // --- Functype contract ---
-
-  get isEmpty() {
-    return Object.keys(data).length === 0
-  },
-
-  get size() {
-    return Object.keys(data).length
-  },
-
-  map: <U extends Record<string, Type>>(f: (value: T) => U): Obj<U> => ObjObject(f(data)),
-
-  flatMap: <U extends Record<string, Type>>(f: (value: T) => Obj<U>): Obj<U> => f(data),
-
-  flatMapAsync: async <U extends Record<string, Type>>(f: (value: T) => PromiseLike<Obj<U>>): Promise<Obj<U>> =>
-    await f(data),
-
-  ap: <U extends Record<string, Type>>(ff: Obj<Record<string, Type>>): Obj<U> => {
-    const fn = ff.data as unknown as (value: T) => U
-    return ObjObject(fn(data))
-  },
-
-  fold: <U extends Type>(onEmpty: () => U, onValue: (value: T) => U) =>
-    Object.keys(data).length === 0 ? onEmpty() : onValue(data),
-
-  match: <R>(patterns: { Obj: (value: T) => R }): R => patterns.Obj(data),
-
-  foldLeft:
-    <B>(z: B) =>
-    (op: (b: B, a: T) => B) =>
-      op(z, data),
-
-  foldRight:
-    <B>(z: B) =>
-    (op: (a: T, b: B) => B) =>
-      op(data, z),
-
-  count: (p: (x: T) => boolean) => (p(data) ? 1 : 0),
-  find: (p: (a: T) => boolean) => (p(data) ? Option(data) : Option(undefined as T | undefined)),
-  exists: (p: (a: T) => boolean) => p(data),
-  forEach: (f: (a: T) => void) => f(data),
-
-  reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => data as unknown as Widen<T, B>,
-  reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-    data as unknown as Widen<T, B>,
-
-  contains: (value: unknown) => JSON.stringify(data) === JSON.stringify(value),
-
-  // --- Extractable ---
-
-  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => data,
-  orThrow: (_error?: Error) => data,
-  or: <T2 extends Type>(_alternative: Extractable<T2>): Extractable<T | T2> => ObjObject(data) as Extractable<T | T2>,
-  orNull: () => data,
-  orUndefined: () => data,
-
-  // --- Reshapeable ---
-
-  toOption: () => Option(data),
-  toEither: <E>(_left: E) => Right<E, T>(data),
-  toList: () => List<T>([data]),
-  toTry: () => Try(() => data),
-  toPromise: (): Promise<T> => Promise.resolve(data),
-
-  // --- Serialization ---
-
-  toString: () => `Obj(${safeStringify(data)})`,
-  toValue: () => ({ _tag: "Obj" as const, value: data }),
-  toJSON: () => ({ "@functype": "Obj" as const, _tag: "Obj" as const, value: data }),
-  pipe: <U extends Type>(f: (value: T) => U) => f(data),
-  serialize: () => createSerializer("Obj", data),
-
-  // --- Doable ---
-
-  doUnwrap(): DoResult<T> {
-    return { ok: true, value: data }
+  size() {
+    return Object.keys(this.data).length
   },
 })
+
+const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => {
+  const fields: Omit<Obj<T>, "isEmpty" | "size"> = {
+    _tag: "Obj",
+    data,
+
+    // --- Core object operations ---
+
+    get: <K extends keyof T>(key: K): Option<T[K]> => Option(data[key] as T[K] | undefined),
+
+    set: <K extends keyof T>(key: K, val: T[K]): Obj<T> => ObjObject({ ...data, [key]: val } as T),
+
+    assign: (partial: Partial<T>): Obj<T> => ObjObject({ ...data, ...partial }),
+
+    merge: <U extends Record<string, Type>>(other: U): Obj<T & U> => ObjObject({ ...data, ...other } as T & U),
+
+    when: (condition: boolean | (() => boolean), partial: Partial<T>): Obj<T> => {
+      const shouldApply = typeof condition === "function" ? condition() : condition
+      return shouldApply ? ObjObject({ ...data, ...partial }) : ObjObject(data)
+    },
+
+    omit: <K extends keyof T>(...keys: K[]): Obj<Omit<T, K>> => {
+      const result = { ...data }
+      for (const key of keys) delete result[key]
+      return ObjObject(result as Omit<T, K>)
+    },
+
+    pick: <K extends keyof T>(...keys: K[]): Obj<Pick<T, K>> => {
+      const result = {} as Pick<T, K>
+      for (const key of keys) {
+        if (key in data) (result as Record<string, unknown>)[key as string] = data[key]
+      }
+      return ObjObject(result)
+    },
+
+    keys: () => List(Object.keys(data)),
+
+    values: () => List(Object.values(data) as T[keyof T][]),
+
+    entries: () => List(Object.entries(data).map(([k, v]) => Tuple([k, v] as [string, T[keyof T]]))),
+
+    has: <K extends keyof T>(key: K): boolean => key in data,
+
+    value: () => data,
+
+    // --- Functype contract ---
+
+    map: <U extends Record<string, Type>>(f: (value: T) => U): Obj<U> => ObjObject(f(data)),
+
+    flatMap: <U extends Record<string, Type>>(f: (value: T) => Obj<U>): Obj<U> => f(data),
+
+    flatMapAsync: async <U extends Record<string, Type>>(f: (value: T) => PromiseLike<Obj<U>>): Promise<Obj<U>> =>
+      await f(data),
+
+    ap: <U extends Record<string, Type>>(ff: Obj<Record<string, Type>>): Obj<U> => {
+      const fn = ff.data as unknown as (value: T) => U
+      return ObjObject(fn(data))
+    },
+
+    fold: <U extends Type>(onEmpty: () => U, onValue: (value: T) => U) =>
+      Object.keys(data).length === 0 ? onEmpty() : onValue(data),
+
+    match: <R>(patterns: { Obj: (value: T) => R }): R => patterns.Obj(data),
+
+    foldLeft:
+      <B>(z: B) =>
+      (op: (b: B, a: T) => B) =>
+        op(z, data),
+
+    foldRight:
+      <B>(z: B) =>
+      (op: (a: T, b: B) => B) =>
+        op(data, z),
+
+    count: (p: (x: T) => boolean) => (p(data) ? 1 : 0),
+    find: (p: (a: T) => boolean) => (p(data) ? Option(data) : Option(undefined as T | undefined)),
+    exists: (p: (a: T) => boolean) => p(data),
+    forEach: (f: (a: T) => void) => f(data),
+
+    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      data as unknown as Widen<T, B>,
+    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
+      data as unknown as Widen<T, B>,
+
+    contains: (value: unknown) => JSON.stringify(data) === JSON.stringify(value),
+
+    // --- Extractable ---
+
+    orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => data,
+    orThrow: (_error?: Error) => data,
+    or: <T2 extends Type>(_alternative: Extractable<T2>): Extractable<T | T2> => ObjObject(data) as Extractable<T | T2>,
+    orNull: () => data,
+    orUndefined: () => data,
+
+    // --- Reshapeable ---
+
+    toOption: () => Option(data),
+    toEither: <E>(_left: E) => Right<E, T>(data),
+    toList: () => List<T>([data]),
+    toTry: () => Try(() => data),
+    toPromise: (): Promise<T> => Promise.resolve(data),
+
+    // --- Serialization ---
+
+    toString: () => `Obj(${safeStringify(data)})`,
+    toValue: () => ({ _tag: "Obj" as const, value: data }),
+    toJSON: () => ({ "@functype": "Obj" as const, _tag: "Obj" as const, value: data }),
+    pipe: <U extends Type>(f: (value: T) => U) => f(data),
+    serialize: () => createSerializer("Obj", data),
+
+    // --- Doable ---
+
+    doUnwrap(): DoResult<T> {
+      return { ok: true, value: data }
+    },
+
+    [Symbol.toStringTag]: "Obj",
+  }
+  return withLazyGetters<Obj<T>>(fields, OBJ_GETTERS)
+}
 
 /**
  * Creates an Obj wrapping a plain object.

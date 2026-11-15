@@ -223,15 +223,13 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     return isEmpty() ? patterns.Empty() : patterns.NonEmpty([...items])
   }
 
-  return {
-    [Symbol.toStringTag]: "Stack",
+  // No getters and no computed keys before the closures (issue #511): V8 copies such a literal from a
+  // cached template. items is a private copy that nothing changes, so size and isEmpty can't go
+  // stale. Frozen so they stay read-only, as they were when they were getters.
+  return Object.freeze<Stack<A>>({
     _tag,
-    get size() {
-      return size()
-    },
-    get isEmpty() {
-      return isEmpty()
-    },
+    size: size(),
+    isEmpty: isEmpty(),
     contains,
     reduce,
     reduceRight,
@@ -249,11 +247,12 @@ const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
     foldLeft,
     foldRight,
     match,
-    toValue: () => ({ _tag: "Stack", value: items }),
+    toValue: () => ({ _tag: "Stack", value: [...items] }),
     toJSON: () => ({ "@functype": "Stack" as const, _tag: "Stack" as const, value: [...items] }),
     pipe: <U>(f: (value: A[]) => U) => f([...items]),
     serialize: () => createSerializer("Stack", items),
-  }
+    [Symbol.toStringTag]: "Stack",
+  })
 }
 
 const StackConstructor = <A extends Type>(values: A[] = []): Stack<A> => StackObject(values)
