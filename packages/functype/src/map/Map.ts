@@ -6,7 +6,7 @@ import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
-import { createSerializer } from "@/serialization"
+import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import { Set } from "@/set/Set"
 import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
@@ -222,6 +222,12 @@ const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableI
 // Singleton empty map - uses 'never' which is subtype of all types
 const EMPTY_MAP: Map<never, never> = MapObject<never, never>([])
 
+/** Rebuilds a Map from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const mapFromEnvelope = <K, V>(parsed: ParsedEnvelope, method: string): Map<K, V> => {
+  expectMarker(parsed, "Map", method)
+  return Map<K, V>((parsed.value ?? []) as Array<[K, V]>)
+}
+
 const MapCompanion = {
   /**
    * Creates an empty Map
@@ -242,28 +248,14 @@ const MapCompanion = {
    * @param json - The JSON string
    * @returns Map instance
    */
-  fromJSON: <K, V>(json: string): Map<K, V> => {
-    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: Array<[K, V]> }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Map") {
-      throw new Error(`Map.fromJSON: expected @functype="Map", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    return Map<K, V>(parsed.value)
-  },
+  fromJSON: <K, V>(json: string): Map<K, V> => mapFromEnvelope<K, V>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
 
   /**
    * Creates a Map from YAML string
    * @param yaml - The YAML string
    * @returns Map instance
    */
-  fromYAML: <K, V>(yaml: string): Map<K, V> => {
-    const lines = yaml.split("\n")
-    const valueStr = lines[1]?.split(": ")[1]
-    if (!valueStr) {
-      return Map<K, V>([])
-    }
-    const value = JSON.parse(valueStr) as Array<[K, V]>
-    return Map<K, V>(value)
-  },
+  fromYAML: <K, V>(yaml: string): Map<K, V> => readYAML(yaml, (parsed) => mapFromEnvelope<K, V>(parsed, "fromYAML")),
 
   /**
    * Creates a Map from binary string
