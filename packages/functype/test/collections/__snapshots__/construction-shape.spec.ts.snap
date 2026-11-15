@@ -1,0 +1,740 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`every changed type > LazyList(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "concat",
+  "count",
+  "distinct",
+  "drop",
+  "dropWhile",
+  "every",
+  "filter",
+  "find",
+  "flatMap",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "head",
+  "headOption",
+  "init",
+  "last",
+  "lastOption",
+  "map",
+  "pipe",
+  "reduce",
+  "reverse",
+  "serialize",
+  "some",
+  "tail",
+  "take",
+  "takeRight",
+  "takeWhile",
+  "toArray",
+  "toJSON",
+  "toList",
+  "toString",
+  "zip",
+  "zipWithIndex",
+]
+`;
+
+exports[`every changed type > LazyList(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJMYXp5TGlzdCIsIl90YWciOiJMYXp5TGlzdCIsInZhbHVlIjpbMywxLDJdfQ==",
+  "serializeJSON": "{"@functype":"LazyList","_tag":"LazyList","value":[3,1,2]}",
+  "serializeYAML": "@functype: LazyList
+_tag: LazyList
+value: [3,1,2]",
+  "stringify": "{"@functype":"LazyList","_tag":"LazyList","value":[3,1,2]}",
+  "toJSON": {
+    "@functype": "LazyList",
+    "_tag": "LazyList",
+    "value": [
+      3,
+      1,
+      2,
+    ],
+  },
+  "toString": "LazyList(3, 1, 2)",
+  "toValue": "(none)",
+}
+`;
+
+exports[`every changed type > List(empty) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "concat",
+  "contains",
+  "count",
+  "distinct",
+  "doUnwrap",
+  "drop",
+  "dropRight",
+  "dropWhile",
+  "every",
+  "exists",
+  "filter",
+  "filterNot",
+  "filterType",
+  "find",
+  "flatMap",
+  "flatMapAsync",
+  "flatten",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "get",
+  "groupBy",
+  "head",
+  "headOption",
+  "indexOf",
+  "init",
+  "isEmpty",
+  "last",
+  "lastOption",
+  "length",
+  "map",
+  "mapAsync",
+  "match",
+  "partition",
+  "pipe",
+  "prepend",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "removeAt",
+  "reverse",
+  "serialize",
+  "size",
+  "slice",
+  "sortBy",
+  "sorted",
+  "span",
+  "tail",
+  "take",
+  "takeRight",
+  "takeWhile",
+  "toArray",
+  "toEither",
+  "toJSON",
+  "toList",
+  "toOption",
+  "toSet",
+  "toString",
+  "toTry",
+  "toValue",
+  "zip",
+  "zipWithIndex",
+]
+`;
+
+exports[`every changed type > List(empty) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJMaXN0IiwiX3RhZyI6Ikxpc3QiLCJ2YWx1ZSI6W119",
+  "serializeJSON": "{"@functype":"List","_tag":"List","value":[]}",
+  "serializeYAML": "@functype: List
+_tag: List
+value: []",
+  "stringify": "{"@functype":"List","_tag":"List","value":[]}",
+  "toJSON": {
+    "@functype": "List",
+    "_tag": "List",
+    "value": [],
+  },
+  "toString": "List([])",
+  "toValue": {
+    "_tag": "List",
+    "value": [],
+  },
+}
+`;
+
+exports[`every changed type > List(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "concat",
+  "contains",
+  "count",
+  "distinct",
+  "doUnwrap",
+  "drop",
+  "dropRight",
+  "dropWhile",
+  "every",
+  "exists",
+  "filter",
+  "filterNot",
+  "filterType",
+  "find",
+  "flatMap",
+  "flatMapAsync",
+  "flatten",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "get",
+  "groupBy",
+  "head",
+  "headOption",
+  "indexOf",
+  "init",
+  "isEmpty",
+  "last",
+  "lastOption",
+  "length",
+  "map",
+  "mapAsync",
+  "match",
+  "partition",
+  "pipe",
+  "prepend",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "removeAt",
+  "reverse",
+  "serialize",
+  "size",
+  "slice",
+  "sortBy",
+  "sorted",
+  "span",
+  "tail",
+  "take",
+  "takeRight",
+  "takeWhile",
+  "toArray",
+  "toEither",
+  "toJSON",
+  "toList",
+  "toOption",
+  "toSet",
+  "toString",
+  "toTry",
+  "toValue",
+  "zip",
+  "zipWithIndex",
+]
+`;
+
+exports[`every changed type > List(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJMaXN0IiwiX3RhZyI6Ikxpc3QiLCJ2YWx1ZSI6WzMsMSwyXX0=",
+  "serializeJSON": "{"@functype":"List","_tag":"List","value":[3,1,2]}",
+  "serializeYAML": "@functype: List
+_tag: List
+value: [3,1,2]",
+  "stringify": "{"@functype":"List","_tag":"List","value":[3,1,2]}",
+  "toJSON": {
+    "@functype": "List",
+    "_tag": "List",
+    "value": [
+      3,
+      1,
+      2,
+    ],
+  },
+  "toString": "List([3,1,2])",
+  "toValue": {
+    "_tag": "List",
+    "value": [
+      3,
+      1,
+      2,
+    ],
+  },
+}
+`;
+
+exports[`every changed type > Map(empty) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "contains",
+  "flatMap",
+  "flatMapAsync",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "get",
+  "getOrElse",
+  "has",
+  "isEmpty",
+  "keys",
+  "map",
+  "match",
+  "orElse",
+  "pipe",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "serialize",
+  "size",
+  "toJSON",
+  "toList",
+  "toSet",
+  "toString",
+  "toValue",
+  "values",
+]
+`;
+
+exports[`every changed type > Map(empty) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJNYXAiLCJfdGFnIjoiTWFwIiwidmFsdWUiOltdfQ==",
+  "serializeJSON": "{"@functype":"Map","_tag":"Map","value":[]}",
+  "serializeYAML": "@functype: Map
+_tag: Map
+value: []",
+  "stringify": "{"@functype":"Map","_tag":"Map","value":[]}",
+  "toJSON": {
+    "@functype": "Map",
+    "_tag": "Map",
+    "value": [],
+  },
+  "toString": "Map()",
+  "toValue": {
+    "_tag": "Map",
+    "value": [],
+  },
+}
+`;
+
+exports[`every changed type > Map(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "contains",
+  "flatMap",
+  "flatMapAsync",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "get",
+  "getOrElse",
+  "has",
+  "isEmpty",
+  "keys",
+  "map",
+  "match",
+  "orElse",
+  "pipe",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "serialize",
+  "size",
+  "toJSON",
+  "toList",
+  "toSet",
+  "toString",
+  "toValue",
+  "values",
+]
+`;
+
+exports[`every changed type > Map(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJNYXAiLCJfdGFnIjoiTWFwIiwidmFsdWUiOltbImEiLDFdLFsiYiIsMl1dfQ==",
+  "serializeJSON": "{"@functype":"Map","_tag":"Map","value":[["a",1],["b",2]]}",
+  "serializeYAML": "@functype: Map
+_tag: Map
+value: [["a",1],["b",2]]",
+  "stringify": "{"@functype":"Map","_tag":"Map","value":[["a",1],["b",2]]}",
+  "toJSON": {
+    "@functype": "Map",
+    "_tag": "Map",
+    "value": [
+      [
+        "a",
+        1,
+      ],
+      [
+        "b",
+        2,
+      ],
+    ],
+  },
+  "toString": "Map(Tuple(a, 1),Tuple(b, 2))",
+  "toValue": {
+    "_tag": "Map",
+    "value": [
+      [
+        "a",
+        1,
+      ],
+      [
+        "b",
+        2,
+      ],
+    ],
+  },
+}
+`;
+
+exports[`every changed type > Obj(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "ap",
+  "assign",
+  "contains",
+  "count",
+  "data",
+  "doUnwrap",
+  "entries",
+  "exists",
+  "find",
+  "flatMap",
+  "flatMapAsync",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "get",
+  "has",
+  "isEmpty",
+  "keys",
+  "map",
+  "match",
+  "merge",
+  "omit",
+  "or",
+  "orElse",
+  "orNull",
+  "orThrow",
+  "orUndefined",
+  "pick",
+  "pipe",
+  "reduce",
+  "reduceRight",
+  "serialize",
+  "set",
+  "size",
+  "toEither",
+  "toJSON",
+  "toList",
+  "toOption",
+  "toPromise",
+  "toString",
+  "toTry",
+  "toValue",
+  "value",
+  "values",
+  "when",
+]
+`;
+
+exports[`every changed type > Obj(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJPYmoiLCJfdGFnIjoiT2JqIiwidmFsdWUiOnsiYSI6MSwiYiI6WzIsM119fQ==",
+  "serializeJSON": "{"@functype":"Obj","_tag":"Obj","value":{"a":1,"b":[2,3]}}",
+  "serializeYAML": "@functype: Obj
+_tag: Obj
+value: {"a":1,"b":[2,3]}",
+  "stringify": "{"@functype":"Obj","_tag":"Obj","value":{"a":1,"b":[2,3]}}",
+  "toJSON": {
+    "@functype": "Obj",
+    "_tag": "Obj",
+    "value": {
+      "a": 1,
+      "b": [
+        2,
+        3,
+      ],
+    },
+  },
+  "toString": "Obj({"a":1,"b":[2,3]})",
+  "toValue": {
+    "_tag": "Obj",
+    "value": {
+      "a": 1,
+      "b": [
+        2,
+        3,
+      ],
+    },
+  },
+}
+`;
+
+exports[`every changed type > Set(empty) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "contains",
+  "count",
+  "difference",
+  "drop",
+  "dropRight",
+  "dropWhile",
+  "every",
+  "exists",
+  "filter",
+  "filterNot",
+  "find",
+  "flatMap",
+  "flatMapAsync",
+  "flatten",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "has",
+  "head",
+  "headOption",
+  "init",
+  "intersection",
+  "isDisjointFrom",
+  "isEmpty",
+  "isSubsetOf",
+  "isSupersetOf",
+  "last",
+  "lastOption",
+  "map",
+  "mapAsync",
+  "pipe",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "serialize",
+  "size",
+  "symmetricDifference",
+  "tail",
+  "take",
+  "takeRight",
+  "takeWhile",
+  "toArray",
+  "toJSON",
+  "toList",
+  "toSet",
+  "toString",
+  "toValue",
+  "union",
+]
+`;
+
+exports[`every changed type > Set(empty) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJTZXQiLCJfdGFnIjoiU2V0IiwidmFsdWUiOltdfQ==",
+  "serializeJSON": "{"@functype":"Set","_tag":"Set","value":[]}",
+  "serializeYAML": "@functype: Set
+_tag: Set
+value: []",
+  "stringify": "{"@functype":"Set","_tag":"Set","value":[]}",
+  "toJSON": {
+    "@functype": "Set",
+    "_tag": "Set",
+    "value": [],
+  },
+  "toString": "Set()",
+  "toValue": {
+    "_tag": "Set",
+    "value": [],
+  },
+}
+`;
+
+exports[`every changed type > Set(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "add",
+  "ap",
+  "contains",
+  "count",
+  "difference",
+  "drop",
+  "dropRight",
+  "dropWhile",
+  "every",
+  "exists",
+  "filter",
+  "filterNot",
+  "find",
+  "flatMap",
+  "flatMapAsync",
+  "flatten",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "forEach",
+  "has",
+  "head",
+  "headOption",
+  "init",
+  "intersection",
+  "isDisjointFrom",
+  "isEmpty",
+  "isSubsetOf",
+  "isSupersetOf",
+  "last",
+  "lastOption",
+  "map",
+  "mapAsync",
+  "pipe",
+  "reduce",
+  "reduceRight",
+  "remove",
+  "serialize",
+  "size",
+  "symmetricDifference",
+  "tail",
+  "take",
+  "takeRight",
+  "takeWhile",
+  "toArray",
+  "toJSON",
+  "toList",
+  "toSet",
+  "toString",
+  "toValue",
+  "union",
+]
+`;
+
+exports[`every changed type > Set(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJTZXQiLCJfdGFnIjoiU2V0IiwidmFsdWUiOlszLDEsMl19",
+  "serializeJSON": "{"@functype":"Set","_tag":"Set","value":[3,1,2]}",
+  "serializeYAML": "@functype: Set
+_tag: Set
+value: [3,1,2]",
+  "stringify": "{"@functype":"Set","_tag":"Set","value":[3,1,2]}",
+  "toJSON": {
+    "@functype": "Set",
+    "_tag": "Set",
+    "value": [
+      3,
+      1,
+      2,
+    ],
+  },
+  "toString": "Set(3,1,2)",
+  "toValue": {
+    "_tag": "Set",
+    "value": [
+      3,
+      1,
+      2,
+    ],
+  },
+}
+`;
+
+exports[`every changed type > Stack(empty) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "ap",
+  "contains",
+  "flatMap",
+  "flatMapAsync",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "isEmpty",
+  "map",
+  "match",
+  "peek",
+  "pipe",
+  "pop",
+  "push",
+  "reduce",
+  "reduceRight",
+  "serialize",
+  "size",
+  "toArray",
+  "toJSON",
+  "toList",
+  "toString",
+  "toValue",
+]
+`;
+
+exports[`every changed type > Stack(empty) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJTdGFjayIsIl90YWciOiJTdGFjayIsInZhbHVlIjpbXX0=",
+  "serializeJSON": "{"@functype":"Stack","_tag":"Stack","value":[]}",
+  "serializeYAML": "@functype: Stack
+_tag: Stack
+value: []",
+  "stringify": "{"@functype":"Stack","_tag":"Stack","value":[]}",
+  "toJSON": {
+    "@functype": "Stack",
+    "_tag": "Stack",
+    "value": [],
+  },
+  "toString": "Stack()",
+  "toValue": {
+    "_tag": "Stack",
+    "value": [],
+  },
+}
+`;
+
+exports[`every changed type > Stack(many) keeps the same own enumerable properties 1`] = `
+[
+  "_tag",
+  "ap",
+  "contains",
+  "flatMap",
+  "flatMapAsync",
+  "fold",
+  "foldLeft",
+  "foldRight",
+  "isEmpty",
+  "map",
+  "match",
+  "peek",
+  "pipe",
+  "pop",
+  "push",
+  "reduce",
+  "reduceRight",
+  "serialize",
+  "size",
+  "toArray",
+  "toJSON",
+  "toList",
+  "toString",
+  "toValue",
+]
+`;
+
+exports[`every changed type > Stack(many) serializes the same way 1`] = `
+{
+  "serializeBinary": "eyJAZnVuY3R5cGUiOiJTdGFjayIsIl90YWciOiJTdGFjayIsInZhbHVlIjpbMSwyLDNdfQ==",
+  "serializeJSON": "{"@functype":"Stack","_tag":"Stack","value":[1,2,3]}",
+  "serializeYAML": "@functype: Stack
+_tag: Stack
+value: [1,2,3]",
+  "stringify": "{"@functype":"Stack","_tag":"Stack","value":[1,2,3]}",
+  "toJSON": {
+    "@functype": "Stack",
+    "_tag": "Stack",
+    "value": [
+      1,
+      2,
+      3,
+    ],
+  },
+  "toString": "Stack(1, 2, 3)",
+  "toValue": {
+    "_tag": "Stack",
+    "value": [
+      1,
+      2,
+      3,
+    ],
+  },
+}
+`;

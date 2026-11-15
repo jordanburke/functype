@@ -4,6 +4,7 @@ import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
+import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -116,22 +117,41 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 }
 
+/** The getters that must stay lazy: each builds an Option or a new List. See internal/lazyProperties. */
+type ListLazy = "headOption" | "lastOption" | "tail" | "init"
+
+const LIST_GETTERS = lazyGetters<List<unknown>>({
+  headOption() {
+    return this.get(0)
+  },
+  lastOption() {
+    return this.get(this.length - 1)
+  },
+  tail() {
+    return this.drop(1)
+  },
+  init() {
+    return this.dropRight(1)
+  },
+})
+
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
 
-  const list: List<A> = {
-    [Symbol.toStringTag]: "List",
+  // No getters and no computed keys before the closures: see internal/lazyProperties. The backing
+  // array is never changed after this point, so size, length, isEmpty, head and last can't go stale.
+  const fields: Omit<List<A>, ListLazy> = {
     _tag: "List" as const,
 
-    [Symbol.iterator]: () => array[Symbol.iterator](),
+    size: array.length,
 
-    get size() {
-      return array.length
-    },
+    length: array.length,
 
-    get length() {
-      return array.length
-    },
+    isEmpty: array.length === 0,
+
+    head: array[0],
+
+    last: array[array.length - 1],
 
     map: <B>(f: (a: A) => B) => ListObject(array.map(f)),
 
@@ -167,18 +187,6 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => {
       const result = array.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))
       return Option<T>(result as T | null | undefined)
-    },
-
-    get head() {
-      return array[0] as A | undefined
-    },
-
-    get headOption() {
-      return array.length > 0 ? Option(array[0]) : None<A>()
-    },
-
-    get isEmpty() {
-      return array.length === 0
     },
 
     toArray: <B = A>(): B[] => [...array] as unknown as B[],
@@ -229,22 +237,6 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     },
 
     takeRight: (n: number) => ListObject(n <= 0 ? [] : array.slice(-n)),
-
-    get last() {
-      return array[array.length - 1] as A | undefined
-    },
-
-    get lastOption() {
-      return array.length > 0 ? Option(array[array.length - 1]) : None<A>()
-    },
-
-    get tail() {
-      return ListObject(array.slice(1))
-    },
-
-    get init() {
-      return ListObject(array.length === 0 ? [] : array.slice(0, -1))
-    },
 
     reverse: () => ListObject([...array].reverse()),
 
@@ -351,7 +343,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     toString: () => `List(${safeStringify(array)})`,
 
-    toValue: () => ({ _tag: "List", value: array }),
+    toValue: () => ({ _tag: "List", value: [...array] }),
 
     toJSON: () => ({ "@functype": "List" as const, _tag: "List" as const, value: [...array] }),
 
@@ -365,8 +357,13 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       }
       return { ok: true, value: array[0]! }
     },
+
+    [Symbol.toStringTag]: "List",
+
+    [Symbol.iterator]: () => array[Symbol.iterator](),
   }
 
+  const list = withLazyGetters<List<A>>(fields, LIST_GETTERS)
   return list
 }
 
