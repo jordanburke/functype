@@ -11,6 +11,11 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - **The lazy getters read the instance through `this`.** Reading one with a different receiver, as `Reflect.get(list, "tail", other)` does, now throws. Normal reads, destructuring and spread work as before.
   - **`List` and `Stack`'s `toValue()` returns a copy of the elements.** It returned the internal array, so changing the result changed the collection, and `size` would now go stale.
   - **`size` is now fixed at construction.** Native callbacks still receive the backing array as their third argument, so `list.forEach((x, i, arr) => arr.push(9))` still changes the elements, but `size`, `length`, `head` and `last` no longer follow. Changing that array was never supported.
+- **`fromYAML` reads what `toYAML` writes** (#514). Since 1.2.0, `serialize().toYAML()` writes a `@functype` line first, and every `fromYAML` still read fixed line numbers from the older two-line format. So `List`, `Set`, `Stack`, `Map`, `Option` and `Either` threw on their own YAML, and `Try.fromYAML` read a `Success` back as a `Failure`. They now read each field by its key, through the parser `createSerializationCompanion` already used, and rebuild the value the way `fromJSON` does. YAML in the older format still reads, and so does a value containing `": "`. Other changes that come with it:
+  - **`fromYAML` rejects another type's YAML** with the error `fromJSON` already gave, such as `List.fromYAML: expected @functype="List", got "Set"`. Before, it threw a `SyntaxError` or, for `Try`, returned a `Failure`.
+  - **The shared YAML parser reads `value: undefined` as `undefined`,** not the string `"undefined"`. `toYAML` writes that line for an undefined value, such as `Try(() => undefined)`. It also reads `\r\n` line endings and indented keys. These also change `fromYAML` from `createSerializationCompanion` and `functype/serialization`.
+  - **`Stack.fromJSON` with a `null` value gives an empty `Stack`** instead of throwing a `TypeError`, as `List`, `Set` and `Map` already did.
+  - **`Try.fromJSON` with a `null` error gives a `Failure` with an empty message** instead of throwing a `TypeError`. On the 1.1.0 flat shape, a `stack` that isn't a string is now left off the error.
 
 ## 1.26.1 - 2026-11-14
 

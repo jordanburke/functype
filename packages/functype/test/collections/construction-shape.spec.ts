@@ -469,20 +469,23 @@ describe("every changed type", () => {
     }).toMatchSnapshot()
   })
 
-  // the _tag since the @functype marker was added, so it can't read what toYAML writes.
-  it("round-trips through fromJSON and fromBinary", () => {
+  it("round-trips through fromJSON, fromYAML and fromBinary", () => {
     const list = List([3, 1, 2])
     expectList(List.fromJSON<number>(list.serialize().toJSON()), [3, 1, 2])
+    expectList(List.fromYAML<number>(list.serialize().toYAML()), [3, 1, 2])
     expectList(List.fromBinary<number>(list.serialize().toBinary()), [3, 1, 2])
     const set = Set([3, 1, 2])
     expectMatches(Set.fromJSON<number>(set.serialize().toJSON()), [3, 1, 2])
+    expectMatches(Set.fromYAML<number>(set.serialize().toYAML()), [3, 1, 2])
     expectMatches(Set.fromBinary<number>(set.serialize().toBinary()), [3, 1, 2])
     const map = Map([["a", 1]])
     expect([...Map.fromJSON<string, number>(map.serialize().toJSON())]).toEqual([["a", 1]])
+    expect([...Map.fromYAML<string, number>(map.serialize().toYAML())]).toEqual([["a", 1]])
     expect([...Map.fromBinary<string, number>(map.serialize().toBinary())]).toEqual([["a", 1]])
     expect(Map.fromJSON<string, number>(map.serialize().toJSON()).size).toBe(1)
     const stack = Stack([1, 2])
     expect(Stack.fromJSON<number>(stack.serialize().toJSON()).toArray()).toEqual([1, 2])
+    expect(Stack.fromYAML<number>(stack.serialize().toYAML()).toArray()).toEqual([1, 2])
     expect(Stack.fromBinary<number>(stack.serialize().toBinary()).size).toBe(2)
     expectSequence(LazyList.fromJSON<number>(LazyList([3, 1, 2]).serialize().toJSON()), [3, 1, 2])
     expect(Obj.fromJSON<{ a: number }>(Obj({ a: 1 }).serialize().toJSON()).size).toBe(1)

@@ -6,7 +6,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
-import { createSerializer } from "@/serialization"
+import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
 import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -366,6 +366,12 @@ const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => createSet(iterable
 // Singleton empty set - uses 'never' which is subtype of all types
 const EMPTY_SET: Set<never> = createSet<never>([])
 
+/** Rebuilds a Set from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
+  expectMarker(parsed, "Set", method)
+  return Set<A>((parsed.value ?? []) as A[])
+}
+
 const SetCompanion = {
   /**
    * Creates an empty Set
@@ -386,28 +392,14 @@ const SetCompanion = {
    * @param json - The JSON string
    * @returns Set instance
    */
-  fromJSON: <A>(json: string): Set<A> => {
-    const parsed = JSON.parse(json) as { "@functype"?: string; _tag: string; value: A[] }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Set") {
-      throw new Error(`Set.fromJSON: expected @functype="Set", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    return Set<A>(parsed.value)
-  },
+  fromJSON: <A>(json: string): Set<A> => setFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
 
   /**
    * Creates a Set from YAML string
    * @param yaml - The YAML string
    * @returns Set instance
    */
-  fromYAML: <A>(yaml: string): Set<A> => {
-    const lines = yaml.split("\n")
-    const valueStr = lines[1]?.split(": ")[1]
-    if (!valueStr) {
-      return Set<A>([])
-    }
-    const value = JSON.parse(valueStr) as A[]
-    return Set<A>(value)
-  },
+  fromYAML: <A>(yaml: string): Set<A> => readYAML(yaml, (parsed) => setFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a Set from binary string
