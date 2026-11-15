@@ -6,12 +6,21 @@ import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { showValue } from "@/internal/stringify"
+import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
 import type { Reshapeable } from "@/reshapeable"
 import type { SerializedError } from "@/serialization"
-import { createSerializer, createTaggedSerializer, deserializeError, serializeError } from "@/serialization"
+import {
+  createSerializer,
+  createTaggedSerializer,
+  deserializeError,
+  expectMarker,
+  fromYAML as readYAML,
+  type ParsedEnvelope,
+  serializeError,
+} from "@/serialization"
 import type { Promisable } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -263,6 +272,24 @@ const TryConstructor = <T>(f: () => T): Try<T> => {
   }
 }
 
+/** Rebuilds a Try from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+const tryFromEnvelope = <T>(parsed: ParsedEnvelope, method: string): Try<T> => {
+  expectMarker(parsed, "Try", method)
+  if (parsed._tag === "Success") {
+    return Success<T>(parsed.value as T)
+  }
+  // Failure: prefer the SerializedError shape (an object); fall back to the
+  // 1.1.0 flat shape ({error: string, stack: string}) for back-compat.
+  if (parsed.error !== undefined && parsed.error !== null && typeof parsed.error === "object") {
+    return Failure<T>(deserializeError(parsed.error as SerializedError))
+  }
+  const legacyError = new Error(typeof parsed.error === "string" ? parsed.error : "")
+  if (typeof parsed.stack === "string" && parsed.stack) {
+    legacyError.stack = parsed.stack
+  }
+  return Failure<T>(legacyError)
+}
+
 const TryCompanion = {
   /**
    * Creates a Success directly without needing a callback
@@ -332,67 +359,27 @@ const TryCompanion = {
    * @param json - The JSON string
    * @returns Try instance
    */
-  fromJSON: <T>(json: string): Try<T> => {
-    const parsed = JSON.parse(json) as {
-      "@functype"?: string
-      _tag?: string
-      value?: T
-      error?: SerializedError | string
-      // 1.1.0 back-compat — older Failure envelopes used flat {error, stack} strings.
-      stack?: string
-    }
-    if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Try") {
-      throw new Error(`Try.fromJSON: expected @functype="Try", got ${JSON.stringify(parsed["@functype"])}`)
-    }
-    if (parsed._tag === "Success") {
-      return Success<T>(parsed.value as T)
-    }
-    // Failure: prefer the new SerializedError shape (object); fall back to the
-    // 1.1.0 flat shape ({error: string, stack: string}) for back-compat.
-    if (parsed.error !== undefined && typeof parsed.error === "object") {
-      return Failure<T>(deserializeError(parsed.error))
-    }
-    const legacyError = new Error(typeof parsed.error === "string" ? parsed.error : "")
-    if (parsed.stack) {
-      legacyError.stack = parsed.stack
-    }
-    return Failure<T>(legacyError)
-  },
+  fromJSON: <T>(json: string): Try<T> => tryFromEnvelope<T>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
 
   /**
    * Creates a Try from YAML string
    * @param yaml - The YAML string
    * @returns Try instance
    */
-  fromYAML: <T>(yaml: string): Try<T> => {
-    const lines = yaml.split("\n")
-    const tag = lines[0]?.split(": ")[1]
-
-    if (!tag) {
-      return Failure<T>(new Error("Invalid YAML format for Try"))
-    }
-
-    if (tag === "Success") {
-      const valueStr = lines[1]?.split(": ")[1]
-      if (!valueStr) {
+  fromYAML: <T>(yaml: string): Try<T> =>
+    readYAML(yaml, (parsed) => {
+      expectMarker(parsed, "Try", "fromYAML")
+      if (typeof parsed._tag !== "string") {
+        return Failure<T>(new Error("Invalid YAML format for Try"))
+      }
+      if (parsed._tag === "Success" && !hasYAMLValue(yaml, "value")) {
         return Failure<T>(new Error("Invalid YAML format for Try Success"))
       }
-      const value = JSON.parse(valueStr) as T
-      return Success<T>(value)
-    } else {
-      const errorMsg = lines[1]?.split(": ")[1]
-      if (!errorMsg) {
+      if (parsed._tag !== "Success" && !hasYAMLValue(yaml, "error")) {
         return Failure<T>(new Error("Invalid YAML format for Try Failure"))
       }
-      const stackLine = lines[2]?.split(": ")
-      const stack = stackLine && stackLine.length > 1 ? stackLine.slice(1).join(": ") : undefined
-      const error = new Error(errorMsg)
-      if (stack) {
-        error.stack = stack
-      }
-      return Failure<T>(error)
-    }
-  },
+      return tryFromEnvelope<T>(parsed, "fromYAML")
+    }),
 
   /**
    * Creates a Try from binary string
