@@ -183,18 +183,11 @@ const rule: Rule.RuleModule = {
     }
 
     /**
-     * Skip the warning when the receiver (`.map`'s left side) is a known
-     * non-collection monad constructor call. The rule has no type info, so
-     * it can't tell `arr.map(cb => arr2)` (collection, .flatMap is the fix)
-     * from `Try(...).map(cb => arr)` (non-collection — .flatMap on Try
-     * expects Try<T>, not an array, so .flatMap is NOT the fix).
-     *
-     * We can't enumerate every non-collection receiver, but we *can* detect
-     * the unambiguous case: the receiver is literally `Try(...)` /
-     * `Option(...)` / `Either(...)` / `Right(...)` / `Left(...)` / etc.
-     * When that holds, suppress the warning. For bare identifiers (`items`)
-     * or array literals or array-method chains, we can't tell, so the rule
-     * still fires as before.
+     * The syntactic half of the receiver check, used with or without type information: the receiver
+     * is literally a constructor or companion call, `Try(...)` / `Option(...)` / `Either.right(x)` /
+     * etc. `.flatMap` on those expects the same container back, not an array. A bare identifier, an
+     * array literal or an array-method chain can't be told apart without types, so it still reports;
+     * `isNonCollectionReceiver` adds the type-aware check for those.
      */
     function isNonCollectionMonadReceiver(node: ASTNode): boolean {
       const monadConstructors = new Set([
