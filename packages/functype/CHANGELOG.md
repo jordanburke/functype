@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype: `prefer-flatmap` no longer reports a `.map` on an Option, Either, Try, Lazy, Obj, Exit, TaskOutcome or IO value** (#520). Their `flatMap` expects the same container back, so when the callback returns an array, `.flatMap` won't compile. The rule already skipped a receiver written as a constructor call, such as `Option(x).map(…)`. With type-aware linting it now also skips any value of those types, however it was built: a variable, a parameter or a function's return. Without type information, only the constructor call is recognized, as before. The chained form, `.map(…).map(…)`, gets the same exemptions; before, it had none. Arrays, tuples and functype's `List` and `Set` still report, because their `flatMap` takes an iterable.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
