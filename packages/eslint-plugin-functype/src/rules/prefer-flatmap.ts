@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { isExtractableByType, isIOByType } from "../utils/type-aware"
 
 /** Array-prototype methods whose call expression always returns an array. */
 const ARRAY_PRODUCING_METHODS: ReadonlySet<string> = new Set(["map", "filter", "slice", "concat", "split"])
@@ -231,6 +232,22 @@ const rule: Rule.RuleModule = {
       return false
     }
 
+    /**
+     * Is `.map`'s receiver a container that isn't a collection, so `.flatMap` expects the same
+     * container back and an array won't do (#520)? A literal constructor call counts. With type
+     * information, so does any Option, Either, Try, Lazy, TaskOutcome or IO value, however it was
+     * built: a variable, a parameter, a function's return. Collections (List, Set, arrays) have no
+     * `orThrow` and aren't IO, so they still report. Without type information only the literal
+     * call is recognized.
+     */
+    function isNonCollectionReceiver(receiver: ASTNode): boolean {
+      return (
+        isNonCollectionMonadReceiver(receiver) ||
+        isExtractableByType(receiver, context) === true ||
+        isIOByType(receiver, context) === true
+      )
+    }
+
     return {
       CallExpression(node: ASTNode) {
         // Check for .map().flat() pattern first (highest priority)
@@ -264,7 +281,7 @@ const rule: Rule.RuleModule = {
           ) {
             // Check if the first map returns arrays
             const firstMapCallback = object.arguments[0]
-            if (firstMapCallback && returnsArray(firstMapCallback)) {
+            if (firstMapCallback && returnsArray(firstMapCallback) && !isNonCollectionReceiver(object.callee.object)) {
               context.report({
                 node: object, // Report on the first map call
                 messageId: "preferFlatMapChain",
@@ -306,10 +323,9 @@ const rule: Rule.RuleModule = {
             return // Skip - this feeds into a chain
           }
 
-          // Don't flag when the receiver is a known non-collection monad
-          // constructor — .flatMap on Try / Option / Either / etc. expects
-          // a wrapped value, not an array, so suggesting it is wrong.
-          if (object && isNonCollectionMonadReceiver(object)) {
+          // Don't flag when the receiver is a non-collection container: .flatMap on
+          // Try / Option / Either / IO / etc. expects a wrapped value, not an array.
+          if (object && isNonCollectionReceiver(object)) {
             return
           }
 

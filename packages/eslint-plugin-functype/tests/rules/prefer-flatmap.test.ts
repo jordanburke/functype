@@ -111,6 +111,11 @@ describe("prefer-flatmap", () => {
           const items = Option(maybeList).map(list => list.filter(p))
         `,
       },
+      // #520 — a literal container receiver in a chain whose first map returns an array.
+      {
+        name: "Option(...).map returning an array, then mapped again, is not a flatten candidate",
+        code: "const count = Option(maybe).map((n) => lookup.filter((r) => r.id === n)).map((xs) => xs.length)",
+      },
       // Companion call receiver: Either.right(...).map returning array
       {
         name: "Either.right(...).map returning array is not a flatten candidate",

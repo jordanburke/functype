@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype: `prefer-flatmap` no longer reports a `.map` on an Option, Either, Try, Lazy, TaskOutcome or IO value** (#520). Their `flatMap` expects the same container back, so when the callback returns an array, `.flatMap` won't compile. The rule already skipped a receiver written as a constructor call, such as `Option(x).map(…)`. With type-aware linting it now also skips any value of those types, however it was built: a variable, a parameter or a function's return. Without type information, only the constructor call is recognized, as before. The chained form, `.map(…).map(…)`, gets the same exemptions; before, it had none. Arrays, tuples and functype's `List` and `Set` still report, because their `flatMap` takes an iterable.
+
 ## 1.27.0 - 2026-11-15
 
 - **`List`, `Set`, `Map`, `Stack`, `LazyList` and `Obj` are 2 to 17 times cheaper to build** (#511). Building a `List` cost about 35 times an `Option`, even an empty one. A getter anywhere in an object literal makes V8 define each of its ~60 properties one at a time on every call. So these literals now hold no getters. Values that can't change after construction, such as `List`'s `size`, `length`, `isEmpty`, `head` and `last`, are plain properties. The getters that must stay lazy, such as `tail` and `init`, are attached after the literal from one shared set. Per construction, on Node 24: `List` 3.91 → 0.63 µs, `Set` 2.55 → 0.70, `Map` 1.45 → 0.16, `Stack` 1.06 → 0.06, `LazyList` 1.39 → 0.63, `Obj` 1.68 → 0.25. There's no API change. These behaviour changes come with it:
