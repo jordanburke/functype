@@ -5,12 +5,12 @@ import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
 
 /**
  * With type information, `prefer-flatmap` skips a `.map` whose receiver is a functype container that
- * isn't a collection (#520): Option, Either, Try, Lazy, IO, Task. Their `flatMap` expects the same
+ * isn't a collection (#520): Option, Either, Try, Lazy, Exit, IO. Their `flatMap` expects the same
  * container back, not an array, so `.flatMap` wouldn't compile. Collections and native arrays still
  * report, because their `flatMap` takes an iterable.
  */
 const prelude = `
-  import { Either, IO, Lazy, List, Option, Set, type TaskOutcome, Try } from "functype"
+  import { Either, type Exit, IO, Lazy, List, Option, Set, Try } from "functype"
   declare const capped: ReadonlyArray<{ file: string }>
   declare const lookup: ReadonlyArray<{ id: number }>
 `
@@ -69,9 +69,9 @@ describe("prefer-flatmap (type-aware)", () => {
          export const rows = effect.map((n) => lookup.filter((r) => r.id === n))`,
       ),
       ok(
-        "A TaskOutcome-typed identifier",
-        `declare const outcome: TaskOutcome<number>
-         export const rows = outcome.map((n) => lookup.filter((r) => r.id === n))`,
+        "An Exit-typed identifier",
+        `declare const done: Exit<Error, number>
+         export const rows = done.map((n) => lookup.filter((r) => r.id === n))`,
       ),
       ok(
         "An Option in a chain whose first map returns an array",
