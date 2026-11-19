@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process"
 import { dirname } from "node:path"
 import { fileURLToPath } from "node:url"
 
-import { FastMCP } from "fastmcp"
+import { createServer as createSomaServer } from "somamcp/node"
 import { z } from "zod"
 
 import { initDocsData, TYPES, VERSION } from "./lib/docs/data"
@@ -54,9 +54,13 @@ function createServer() {
       : []),
   ].join("\n")
 
-  const server = new FastMCP({
+  const server = createSomaServer({
     name: "functype-mcp-server",
     version: SERVER_VERSION,
+    // Serve only the tools below: no introspection tool, dashboard or /info route.
+    enableIntrospection: false,
+    enableDashboard: false,
+    enableInfoEndpoint: false,
     instructions: `Functype MCP Server — documentation lookup and code validation for the functype TypeScript FP library (v${VERSION}).
 
 Available tools:
