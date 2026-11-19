@@ -6,7 +6,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments and replies, stdio and `TRANSPORT_TYPE=httpStream` (on loopback by default, with `set_functype_version` left off over HTTP) work as before. It drops FastMCP's dependencies, which brought 18 of the 35 advisories `pnpm audit --prod` reported across the workspace, and adds none.
+- **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
+  - **The legacy SSE endpoint, `/sse`, is gone.** A client configured with `http://…/sse` gets a 404. Point it at `/mcp`, the Streamable HTTP endpoint every current client supports.
+  - **No CORS headers.** A browser page calling the server directly fails its preflight; desktop and CLI clients are unaffected.
+  - **Bad tool arguments come back as a tool result with `isError: true`,** not a JSON-RPC `-32602` error, so the SDK client's `callTool` resolves instead of throwing.
+  - **The HTTP endpoint is stateless:** no `Mcp-Session-Id`, and `GET` or `DELETE` on `/mcp` answers 405. `/health` returns JSON, and `/ready` is gone.
+
+  It drops FastMCP's dependencies along with every security advisory `pnpm audit --prod` reported in them, and adds none.
+
 - **eslint-plugin-functype: `prefer-flatmap` no longer reports a `.map` on an Option, Either, Try, Lazy, Obj, Exit, TaskOutcome or IO value** (#520). Their `flatMap` expects the same container back, so when the callback returns an array, `.flatMap` won't compile. The rule already skipped a receiver written as a constructor call, such as `Option(x).map(…)`. With type-aware linting it now also skips any value of those types, however it was built: a variable, a parameter or a function's return. Without type information, only the constructor call is recognized, as before. The chained form, `.map(…).map(…)`, gets the same exemptions; before, it had none. Arrays, tuples and functype's `List` and `Set` still report, because their `flatMap` takes an iterable.
 
 ## 1.27.0 - 2026-11-15
