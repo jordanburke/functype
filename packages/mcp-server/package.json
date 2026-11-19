@@ -10,7 +10,7 @@
     "model-context-protocol",
     "claude",
     "ai-assistant",
-    "fastmcp",
+    "somamcp",
     "type-checking"
   ],
   "author": "Jordan Burke <jordan.burke@gmail.com>",
@@ -64,8 +64,8 @@
     "LICENSE"
   ],
   "dependencies": {
-    "fastmcp": "^4.22.1",
     "functype": "workspace:*",
+    "somamcp": "^2.10.1",
     "typescript": "^6.0.3",
     "zod": "^4.6.5"
   },
