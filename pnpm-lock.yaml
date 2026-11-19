@@ -459,8 +459,8 @@ importers:
   packages/mcp-server:
     dependencies:
       fastmcp:
-        specifier: ^4.24.3
-        version: 4.24.3(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(jose@6.2.12)(openapi-types@12.1.3)(supports-color@7.2.0)
+        specifier: ^4.26.2
+        version: 4.26.2(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(jose@6.2.12)(openapi-types@12.1.3)(supports-color@7.2.0)
       functype:
         specifier: workspace:*
         version: link:../functype
@@ -2940,8 +2940,8 @@ packages:
   fast-wrap-ansi@0.2.2:
     resolution: {integrity: sha512-7F2Fl+TjRSenLqlU3UjSH0iyqopqoZIu7eZVpEirP2g1GtWa2G/ecEmBdgz31+Mxr+ELclgg6sokpSFIQiZ02Q==}
 
-  fastmcp@4.24.3:
-    resolution: {integrity: sha512-30LJ80yRqPkliBNK6VPa+qU41a+U3OLgTSISagvxfxkuW1To5TOnbQFm61yu/qpOppKIi3tWUCSilytbezLHCw==}
+  fastmcp@4.26.2:
+    resolution: {integrity: sha512-jYodlv0jpipNITtHzpcznr/X+A2fFsx4JnTpPJQc2oVjNLbXKYTVQI09VGDUwZdcpRbl/NYqNq4mhCi0tLwIew==}
     hasBin: true
     peerDependencies:
       ajv: ^8.0.0
@@ -7031,7 +7031,7 @@ snapshots:
     dependencies:
       fast-string-width: 3.0.2
 
-  fastmcp@4.24.3(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(jose@6.2.12)(openapi-types@12.1.3)(supports-color@7.2.0):
+  fastmcp@4.26.2(ajv-formats@3.0.1(ajv@8.20.0))(ajv@8.20.0)(jose@6.2.12)(openapi-types@12.1.3)(supports-color@7.2.0):
     dependencies:
       '@apidevtools/swagger-parser': 13.1.0(openapi-types@12.1.3)
       '@modelcontextprotocol/sdk': 1.32.1(supports-color@7.2.0)(zod@4.6.7)
