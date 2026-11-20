@@ -873,29 +873,31 @@ export interface FailureOf<out T> extends TryBase<T> {
   toJSON(): { "@functype": "Task"; _tag: "Ok"; value: T } | { "@functype": "Task"; _tag: "Err"; error: SerializedError }
 }`,
 
-  Exit: `export interface Exit<E extends Type, A extends Type> {
+  Exit: `export type Exit<E extends Type, A extends Type> =
+  SuccessExitOf<E, A> | FailureExitOf<E, A> | DieExitOf<E, A> | InterruptedExitOf<E, A>
+
+export interface ExitBase<E extends Type, A extends Type> {
   readonly [Symbol.toStringTag]: string
-  readonly _tag: ExitTag
 
   /**
    * Type guard to check if this is a Success
    */
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A }
+  isSuccess(): this is SuccessExitOf<E, A>
 
   /**
    * Type guard to check if this is a Failure
    */
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E }
+  isFailure(): this is FailureExitOf<E, A>
 
   /**
    * Type guard to check if this is a Die (a defect — the carried value is not an \`E\`)
    */
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown }
+  isDie(): this is DieExitOf<E, A>
 
   /**
    * Type guard to check if this is Interrupted
    */
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string }
+  isInterrupted(): this is InterruptedExitOf<E, A>
 
   /**
    * Maps the success value
@@ -983,6 +985,26 @@ export interface FailureOf<out T> extends TryBase<T> {
    * JSON serialization
    */
   toJSON(): { _tag: ExitTag; value?: A; error?: E; defect?: unknown; fiberId?: string }
+}
+
+export interface SuccessExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Success"
+  readonly value: A
+}
+
+export interface FailureExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Failure"
+  readonly error: E
+}
+
+export interface DieExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Die"
+  readonly defect: unknown
+}
+
+export interface InterruptedExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Interrupted"
+  readonly fiberId: string
 }`,
 
   Tuple: `export interface Tuple<out T extends Type[]>

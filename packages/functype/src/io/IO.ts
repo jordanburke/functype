@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import { type Concurrency, type ConcurrencyOptions, workerCount } from "@/internal/concurrency"
+import { type A as AnyR, type B as AnyE, type C as AnyA, define, type Mutable } from "@/internal/define"
 import { anySignal } from "@/internal/signal"
 import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
@@ -173,14 +174,15 @@ export class RepeatExhausted<A = unknown> extends Error {
  */
 
 /**
- * Unique symbol for the internal effect representation.
- * Using a symbol key makes IO structurally opaque — TypeScript won't
- * deeply compare IOEffect types when checking IO assignability.
- * This allows IO<never, never, void> to be assignable to IO<any, any, any>
- * (needed for IO.gen) without deep variance failures on the effect ADT.
+ * The key an IO keeps its effect under: an IO's one own field, its data.
+ *
+ * It is a plain string key so test matchers compare it. With a symbol key, vitest's `toEqual`
+ * walked the IO's iterator, met the IO itself, and saw no string keys, so it called any two IOs
+ * equal. It used to be a symbol so IO.gen's yields would assign without deep variance failures;
+ * test/io/io-variance.spec.ts guards that, and passes with this key too.
  * @internal
  */
-export const IOEffectKey: unique symbol = Symbol.for("functype/IO/effect")
+export const IOEffectKey = "effect" as const
 export type IOEffectKey = typeof IOEffectKey
 
 /**
@@ -712,287 +714,266 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 const _fx = <R, E, A>(io: IO<R, E, A>): IOEffect<R, E, A> => (io as any)[IOEffectKey]
 
 /**
- * Creates an IO instance from an effect
+ * Every IO shares these methods (#276 §14). An IO's own data is its effect, under `effect`
+ * ({@link IOEffectKey}); each method reads `this`, the IO it was called on.
+ */
+const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
+  [Symbol.toStringTag]: "IO",
+
+  // Core Operations
+  map(f) {
+    return createIO(unsafeCoerce({ _tag: "Map", effect: this, f }))
+  },
+
+  flatMap(f) {
+    return createIO(unsafeCoerce({ _tag: "FlatMap", effect: this, f }))
+  },
+
+  tap(f) {
+    return this.map((a) => {
+      f(a)
+      return a
+    })
+  },
+
+  tapEffect(f) {
+    return this.flatMap((a) => f(a).map(() => a))
+  },
+
+  // Error Handling
+  mapError(f) {
+    return createIO(unsafeCoerce({ _tag: "MapError", effect: this, f }))
+  },
+
+  tapError(f) {
+    return this.mapError((e) => {
+      f(e)
+      return e
+    })
+  },
+
+  recover(fallback) {
+    return createIO(unsafeCoerce({ _tag: "Recover", effect: this, fallback }))
+  },
+
+  recoverWith(f) {
+    return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: this, f }))
+  },
+
+  fold(onFailure, onSuccess) {
+    return createIO(unsafeCoerce({ _tag: "Fold", effect: this, onFailure, onSuccess }))
+  },
+
+  match(patterns) {
+    return this.fold(patterns.failure, patterns.success)
+  },
+
+  catchTag(tag, handler) {
+    const f = (e: unknown): IO<Type, Type, Type> => {
+      if (typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: unknown })._tag === tag) {
+        return unsafeCoerce(handler(unsafeCoerce(e)))
+      }
+      return unsafeCoerce(IOCompanion.fail(e))
+    }
+    return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: this, f }))
+  },
+
+  catchAll(handler) {
+    return this.recoverWith(handler)
+  },
+
+  retry(n) {
+    if (n <= 0) return this
+    return this.recoverWith(() => this.retry(n - 1))
+  },
+
+  retryWithDelay(n, delayMs) {
+    if (n <= 0) return this
+    return this.recoverWith(() => IOCompanion.sleep(delayMs).flatMap(() => this.retryWithDelay(n - 1, delayMs)))
+  },
+
+  retryWhile(opts) {
+    const go = (remaining: number, attempt: number): IO<AnyR, AnyE, AnyA> =>
+      this.recoverWith((e): IO<AnyR, AnyE, AnyA> => {
+        if (remaining <= 0 || !opts.while(e, attempt)) {
+          return unsafeCoerce(IOCompanion.fail(e))
+        }
+        const next = go(remaining - 1, attempt + 1)
+        return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
+      })
+    return go(opts.n, 1)
+  },
+
+  retryWithBackoff(opts) {
+    const factor = opts.factor ?? 2
+    const maxMs = opts.maxMs ?? 30_000
+    const jitter = opts.jitter ?? true
+    const whileFn = opts.while ?? ((): boolean => true)
+
+    const go = (remaining: number, attempt: number): IO<AnyR, AnyE, AnyA> =>
+      this.recoverWith((e): IO<AnyR, AnyE, AnyA> => {
+        if (remaining <= 0 || !whileFn(e, attempt)) {
+          return unsafeCoerce(IOCompanion.fail(e))
+        }
+        const computed = Math.min(maxMs, opts.baseMs * Math.pow(factor, attempt - 1))
+        const delay = jitter ? computed * (0.5 + Math.random() * 0.5) : computed
+        const next = go(remaining - 1, attempt + 1)
+        return unsafeCoerce(IOCompanion.sleep(delay).flatMap(() => next))
+      })
+    return go(opts.n, 1)
+  },
+
+  repeatUntil(done, opts) {
+    if (opts.max <= 0) {
+      return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<AnyA>(opts.max)))
+    }
+    const go = (remaining: number): IO<AnyR, AnyE | RepeatExhausted<AnyA>, AnyA> =>
+      this.flatMap((a): IO<AnyR, AnyE | RepeatExhausted<AnyA>, AnyA> => {
+        if (done(a)) return unsafeCoerce(IOCompanion.succeed(a))
+        if (remaining <= 1) return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<AnyA>(opts.max, a)))
+        const next = go(remaining - 1)
+        return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
+      })
+    return go(opts.max)
+  },
+
+  repeatWhile(cont, opts) {
+    return this.repeatUntil((a) => !cont(a), opts)
+  },
+
+  // Combinators
+  zipRight(that) {
+    return this.flatMap(() => that)
+  },
+
+  zipLeft(that) {
+    return this.flatMap((a) => that.map(() => a))
+  },
+
+  zip(that) {
+    return this.flatMap((a) => that.map((b) => [a, b] as const))
+  },
+
+  flatten() {
+    return this.flatMap((inner) => inner)
+  },
+
+  // Dependency Injection
+  provideContext(context) {
+    return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: this, context }))
+  },
+
+  provideService(tag, service) {
+    const context = ContextCompanion.make(tag, service)
+    return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: this, context }))
+  },
+
+  provideLayer(layer) {
+    // Build the layer and provide its context
+    const buildIO: IO<Type, Type, Context<Type>> = unsafeCoerce(
+      IOCompanion.async(async () => {
+        const inputContext = ContextCompanion.empty()
+        return await layer.build(unsafeCoerce(inputContext))
+      }),
+    )
+    const provideFn = (context: Context<Type>): IO<Type, Type, Type> =>
+      createIO(unsafeCoerce({ _tag: "ProvideContext", effect: this, context }))
+    return unsafeCoerce(buildIO.flatMap(provideFn))
+  },
+
+  // Execution
+  async run() {
+    return toEither(await runEffect(_fx(this)))
+  },
+
+  async runOrThrow() {
+    return valueOrThrow(await runEffect(_fx(this)))
+  },
+
+  runSync() {
+    return toEither(runEffectSync(_fx(this)))
+  },
+
+  runSyncOrThrow() {
+    return valueOrThrow(runEffectSync(_fx(this)))
+  },
+
+  async runExit(options) {
+    const signal = options?.signal
+    if (!signal) return runEffect(_fx(this))
+    // A failure after the abort is reported as the cancellation, as at an interruptOn
+    // boundary; a defect stays a defect.
+    const exit = await runEffect(_fx(this), undefined, signal)
+    return signal.aborted && exit.isFailure() ? Exit.interrupted() : exit
+  },
+
+  async runOption() {
+    const exit = await runEffect(_fx(this))
+    return exit.isSuccess() ? Some(exit.value) : None()
+  },
+
+  async runTry() {
+    const exit = await runEffect(_fx(this))
+    if (exit.isSuccess()) {
+      return unsafeCoerce(Try(() => exit.value))
+    }
+    const channel = errorChannel(exit)
+    const error = channel ? channel.value : new Error("Effect was interrupted")
+    return unsafeCoerce(
+      Try(() => {
+        throw error
+      }),
+    )
+  },
+
+  runCancellable() {
+    const controller = new AbortController()
+    return { result: this.interruptOn(controller.signal).run(), cancel: () => controller.abort() }
+  },
+
+  // Utilities
+  pipe(f) {
+    return f(this)
+  },
+
+  delay(ms) {
+    return IOCompanion.sleep(ms).flatMap(() => this)
+  },
+
+  timeout(ms) {
+    return createIO(unsafeCoerce({ _tag: "Timeout", effect: this, duration: ms }))
+  },
+
+  timeoutTo(ms, fallback) {
+    return unsafeCoerce(this.timeout(ms).recover(unsafeCoerce(fallback)))
+  },
+
+  interruptOn(signal) {
+    return createIO(unsafeCoerce({ _tag: "InterruptWhen", effect: this, signal }))
+  },
+
+  toString() {
+    return `IO(${safeStringify(this[IOEffectKey]._tag)})`
+  },
+
+  toJSON() {
+    return { _tag: "IO", effect: this[IOEffectKey]._tag }
+  },
+
+  *[Symbol.iterator](): Generator<IO<AnyR, AnyE, AnyA>, AnyA, unknown> {
+    return (yield this) as AnyA
+  },
+})
+
+/**
+ * Creates an IO from an effect. Written by hand: direct field writes are the cheapest way to build
+ * a value, and every `map` or `flatMap` builds one.
  */
 const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffect<R, E, A>): IO<R, E, A> => {
-  const io: IO<R, E, A> = {
-    [Symbol.toStringTag]: "IO",
-    [IOEffectKey]: effect,
-
-    // Core Operations
-    map<B extends Type>(f: (a: A) => B): IO<R, E, B> {
-      return createIO(unsafeCoerce({ _tag: "Map", effect: io, f }))
-    },
-
-    flatMap<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, B> {
-      return createIO(unsafeCoerce({ _tag: "FlatMap", effect: io, f }))
-    },
-
-    tap(f: (a: A) => void): IO<R, E, A> {
-      return io.map((a) => {
-        f(a)
-        return a
-      })
-    },
-
-    tapEffect<R2 extends Type, E2 extends Type, B extends Type>(f: (a: A) => IO<R2, E2, B>): IO<R | R2, E | E2, A> {
-      return io.flatMap((a) => f(a).map(() => a))
-    },
-
-    // Error Handling
-    mapError<E2 extends Type>(f: (e: E) => E2): IO<R, E2, A> {
-      return createIO(unsafeCoerce({ _tag: "MapError", effect: io, f }))
-    },
-
-    tapError(f: (e: E) => void): IO<R, E, A> {
-      return io.mapError((e) => {
-        f(e)
-        return e
-      })
-    },
-
-    recover<B extends Type>(fallback: B): IO<R, never, A | B> {
-      return createIO(unsafeCoerce({ _tag: "Recover", effect: io, fallback }))
-    },
-
-    recoverWith<R2 extends Type, E2 extends Type, B extends Type>(f: (e: E) => IO<R2, E2, B>): IO<R | R2, E2, A | B> {
-      return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: io, f }))
-    },
-
-    fold<B extends Type>(onFailure: (e: E) => B, onSuccess: (a: A) => B): IO<R, never, B> {
-      return createIO(unsafeCoerce({ _tag: "Fold", effect: io, onFailure, onSuccess }))
-    },
-
-    match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B> {
-      return io.fold(patterns.failure, patterns.success)
-    },
-
-    catchTag<
-      K extends (E extends { _tag: string } ? E["_tag"] : never),
-      R2 extends Type,
-      E2 extends Type,
-      B extends Type,
-    >(tag: K, handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B> {
-      const f = (e: E): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B> => {
-        if (typeof e === "object" && e !== null && "_tag" in e && (e as { _tag: string })._tag === tag) {
-          return unsafeCoerce(handler(e as Extract<E, { _tag: K }>))
-        }
-        return unsafeCoerce(IOCompanion.fail(e))
-      }
-      return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: io, f }))
-    },
-
-    catchAll<R2 extends Type, E2 extends Type, B extends Type>(
-      handler: (e: E) => IO<R2, E2, B>,
-    ): IO<R | R2, E2, A | B> {
-      return io.recoverWith(handler)
-    },
-
-    retry(n: number): IO<R, E, A> {
-      if (n <= 0) return io
-      return io.recoverWith(() => io.retry(n - 1))
-    },
-
-    retryWithDelay(n: number, delayMs: number): IO<R, E, A> {
-      if (n <= 0) return io
-      return io.recoverWith(() => IOCompanion.sleep(delayMs).flatMap(() => io.retryWithDelay(n - 1, delayMs)))
-    },
-
-    retryWhile(opts: {
-      readonly n: number
-      readonly while: (error: E, attempt: number) => boolean
-      readonly delayMs?: number
-    }): IO<R, E, A> {
-      const go = (remaining: number, attempt: number): IO<R, E, A> =>
-        io.recoverWith((e): IO<R, E, A> => {
-          if (remaining <= 0 || !opts.while(e, attempt)) {
-            return unsafeCoerce(IOCompanion.fail(e))
-          }
-          const next = go(remaining - 1, attempt + 1)
-          return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
-        })
-      return go(opts.n, 1)
-    },
-
-    retryWithBackoff(opts: {
-      readonly n: number
-      readonly baseMs: number
-      readonly maxMs?: number
-      readonly factor?: number
-      readonly jitter?: boolean
-      readonly while?: (error: E, attempt: number) => boolean
-    }): IO<R, E, A> {
-      const factor = opts.factor ?? 2
-      const maxMs = opts.maxMs ?? 30_000
-      const jitter = opts.jitter ?? true
-      const whileFn = opts.while ?? ((): boolean => true)
-
-      const go = (remaining: number, attempt: number): IO<R, E, A> =>
-        io.recoverWith((e): IO<R, E, A> => {
-          if (remaining <= 0 || !whileFn(e, attempt)) {
-            return unsafeCoerce(IOCompanion.fail(e))
-          }
-          const computed = Math.min(maxMs, opts.baseMs * Math.pow(factor, attempt - 1))
-          const delay = jitter ? computed * (0.5 + Math.random() * 0.5) : computed
-          const next = go(remaining - 1, attempt + 1)
-          return unsafeCoerce(IOCompanion.sleep(delay).flatMap(() => next))
-        })
-      return go(opts.n, 1)
-    },
-
-    repeatUntil(
-      done: (a: A) => boolean,
-      opts: { readonly max: number; readonly delayMs?: number },
-    ): IO<R, E | RepeatExhausted<A>, A> {
-      if (opts.max <= 0) {
-        return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<A>(opts.max)))
-      }
-      const go = (remaining: number): IO<R, E | RepeatExhausted<A>, A> =>
-        io.flatMap((a): IO<R, E | RepeatExhausted<A>, A> => {
-          if (done(a)) return unsafeCoerce(IOCompanion.succeed(a))
-          if (remaining <= 1) return unsafeCoerce(IOCompanion.fail(new RepeatExhausted<A>(opts.max, a)))
-          const next = go(remaining - 1)
-          return opts.delayMs !== undefined ? unsafeCoerce(IOCompanion.sleep(opts.delayMs).flatMap(() => next)) : next
-        })
-      return go(opts.max)
-    },
-
-    repeatWhile(
-      cont: (a: A) => boolean,
-      opts: { readonly max: number; readonly delayMs?: number },
-    ): IO<R, E | RepeatExhausted<A>, A> {
-      return io.repeatUntil((a) => !cont(a), opts)
-    },
-
-    // Combinators
-    zipRight<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, B> {
-      return io.flatMap(() => that)
-    },
-
-    zipLeft<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, A> {
-      return io.flatMap((a) => that.map(() => a))
-    },
-
-    zip<R2 extends Type, E2 extends Type, B extends Type>(that: IO<R2, E2, B>): IO<R | R2, E | E2, readonly [A, B]> {
-      return io.flatMap((a) => that.map((b) => [a, b] as const))
-    },
-
-    flatten<R2 extends Type, E2 extends Type, B extends Type>(this: IO<R, E, IO<R2, E2, B>>): IO<R | R2, E | E2, B> {
-      return this.flatMap((inner) => inner)
-    },
-
-    // Dependency Injection
-    provideContext<R2 extends R>(context: Context<R2>): IO<Exclude<R, R2>, E, A> {
-      return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
-    },
-
-    provideService<S extends Type>(tag: Tag<S>, service: S): IO<Exclude<R, S>, E, A> {
-      const context = ContextCompanion.make(tag, service)
-      return createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
-    },
-
-    provideLayer<RIn extends Type, E2 extends Type, ROut extends R>(
-      layer: Layer<RIn, E2, ROut>,
-    ): IO<RIn | Exclude<R, ROut>, E | E2, A> {
-      // Build the layer and provide its context
-      const buildIO: IO<RIn, E2, Context<ROut>> = unsafeCoerce(
-        IOCompanion.async(async () => {
-          const inputContext = ContextCompanion.empty()
-          return await layer.build(unsafeCoerce(inputContext))
-        }),
-      )
-      const provideFn = (context: Context<ROut>): IO<Exclude<R, ROut>, E, A> =>
-        createIO(unsafeCoerce({ _tag: "ProvideContext", effect: io, context }))
-      return unsafeCoerce(buildIO.flatMap(provideFn))
-    },
-
-    // Execution
-    async run(this: IO<never, E, A>): Promise<Either<E, A>> {
-      return toEither(await runEffect(_fx(this)))
-    },
-
-    async runOrThrow(this: IO<never, E, A>): Promise<A> {
-      return valueOrThrow(await runEffect(_fx(this)))
-    },
-
-    runSync(this: IO<never, E, A>): Either<E, A> {
-      return toEither(runEffectSync(_fx(this)))
-    },
-
-    runSyncOrThrow(this: IO<never, E, A>): A {
-      return valueOrThrow(runEffectSync(_fx(this)))
-    },
-
-    async runExit(this: IO<never, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>> {
-      const signal = options?.signal
-      if (!signal) return runEffect(_fx(this))
-      // A failure after the abort is reported as the cancellation, as at an interruptOn
-      // boundary; a defect stays a defect.
-      const exit = await runEffect(_fx(this), undefined, signal)
-      return signal.aborted && exit.isFailure() ? Exit.interrupted() : exit
-    },
-
-    async runOption(this: IO<never, E, A>): Promise<Option<A>> {
-      const exit = await runEffect(_fx(this))
-      if (exit.isSuccess()) {
-        return Some(exit.orThrow())
-      }
-      return None()
-    },
-
-    async runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>> {
-      const exit = await runEffect(_fx(this))
-      if (exit.isSuccess()) {
-        return unsafeCoerce(Try(() => exit.orThrow()))
-      }
-      const channel = errorChannel(exit)
-      const error = channel ? channel.value : new Error("Effect was interrupted")
-      return unsafeCoerce(
-        Try(() => {
-          throw error
-        }),
-      )
-    },
-
-    runCancellable(this: IO<never, E, A>) {
-      const controller = new AbortController()
-      return { result: this.interruptOn(controller.signal).run(), cancel: () => controller.abort() }
-    },
-
-    // Utilities
-    pipe<B>(f: (self: IO<R, E, A>) => B): B {
-      return f(io)
-    },
-
-    delay(ms: number): IO<R, E, A> {
-      return IOCompanion.sleep(ms).flatMap(() => io)
-    },
-
-    timeout(ms: number): IO<R, E | TimeoutError, A> {
-      return createIO(unsafeCoerce({ _tag: "Timeout", effect: io, duration: ms }))
-    },
-
-    timeoutTo<B extends Type>(ms: number, fallback: B): IO<R, E, A | B> {
-      return unsafeCoerce(io.timeout(ms).recover(unsafeCoerce(fallback)))
-    },
-
-    interruptOn(signal: AbortSignal): IO<R, E | InterruptedError, A> {
-      return createIO(unsafeCoerce({ _tag: "InterruptWhen", effect: io, signal }))
-    },
-
-    toString() {
-      return `IO(${safeStringify(effect._tag)})`
-    },
-
-    toJSON() {
-      return { _tag: "IO", effect: effect._tag }
-    },
-
-    *[Symbol.iterator](): Generator<IO<R, E, A>, A, unknown> {
-      return (yield io) as A
-    },
-  }
-
+  // The one cast: a prototype checked at the opaque AnyR, AnyE and AnyA works for every R, E and A.
+  const io = Object.create(IOProto) as Mutable<IO<R, E, A>>
+  // eslint-disable-next-line functional/immutable-data -- fills in the object it just created
+  io[IOEffectKey] = effect
   return io
 }
 
@@ -1010,9 +991,8 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
  * `Die` exactly as they saw it before `Die` existed. Interruption stays excluded (#243).
  */
 const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined => {
-  const raw = exit.toValue()
-  if (raw._tag === "Failure") return { value: raw.error }
-  if (raw._tag === "Die") return { value: raw.defect }
+  if (exit._tag === "Failure") return { value: exit.error }
+  if (exit._tag === "Die") return { value: exit.defect }
   return undefined
 }
 
@@ -1024,7 +1004,13 @@ const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unkno
  * boundary unchanged. The async interpreter never produces it.
  */
 const syncErrorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined =>
-  exit.isDie() && exit.toValue().defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
+  exit._tag === "Die" && exit.defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
+
+/**
+ * The context a run starts with. A context never changes (`add` and `merge` build new ones), so one
+ * serves every run. Building it took about 190 ns, most of a one-step `runSync`.
+ */
+const noServices: Context<never> = ContextCompanion.empty()
 
 /** The defect for an `IO.async` (or an `IO(...)` thunk that returned a promise) under `runSync`. */
 const cannotRunAsync = (): Error => new Error("Cannot run async effect synchronously")
@@ -1036,18 +1022,16 @@ const serviceNotFound = (tag: { readonly id: string }): Error => new Error(`Serv
  * How `run()` and `runSync()` report an outcome. A typed failure is a `Left`. A defect is thrown
  * as is, and an interruption as an `InterruptedError`, so the `Either` holds only real `E`s.
  */
-const toEither = <E, A>(exit: ExitType<E, A>): Either<E, A> => {
-  const raw = exit.toValue()
-  if (raw._tag === "Success") return Right(raw.value as A)
-  if (raw._tag === "Failure") return Left(raw.error as E)
-  throw raw._tag === "Die" ? raw.defect : new InterruptedError()
+const toEither = <E extends Type, A extends Type>(exit: ExitType<E, A>): Either<E, A> => {
+  if (exit._tag === "Success") return Right(exit.value)
+  if (exit._tag === "Failure") return Left(exit.error)
+  throw exit._tag === "Die" ? exit.defect : new InterruptedError()
 }
 
 /** How `runOrThrow()` and `runSyncOrThrow()` report an outcome: the value, or a throw. */
-const valueOrThrow = <E, A>(exit: ExitType<E, A>): A => {
-  const raw = exit.toValue()
-  if (raw._tag === "Success") return raw.value as A
-  throw raw._tag === "Failure" ? raw.error : raw._tag === "Die" ? raw.defect : new InterruptedError()
+const valueOrThrow = <E extends Type, A extends Type>(exit: ExitType<E, A>): A => {
+  if (exit._tag === "Success") return exit.value
+  throw exit._tag === "Failure" ? exit.error : exit._tag === "Die" ? exit.defect : new InterruptedError()
 }
 
 /** Runs `step`, turning a throw from it into a `Die`. */
@@ -1070,7 +1054,7 @@ const attemptSync = <E, A>(step: () => ExitType<E, A>): ExitType<E, A> => {
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
-  context: Context<R> = ContextCompanion.empty() as Context<R>,
+  context: Context<R> = noServices as Context<R>,
 ): ExitType<E, A> => {
   try {
     switch (effect._tag) {
@@ -1089,12 +1073,12 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "Map": {
         const exitA = runEffectSync(_fx(effect.effect), context)
         if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return Exit.succeed(effect.f(exitA.orThrow()))
+        return Exit.succeed(effect.f(exitA.value))
       }
       case "FlatMap": {
         const exitA = runEffectSync(_fx(effect.effect), context)
         if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return runEffectSync(_fx(effect.f(exitA.orThrow())), context)
+        return runEffectSync(_fx(effect.f(exitA.value)), context)
       }
       case "MapError": {
         const exitA = runEffectSync(_fx(effect.effect), context)
@@ -1114,7 +1098,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         const exitA = runEffectSync(_fx(effect.effect), context)
         const channel = syncErrorChannel(exitA)
         if (channel) return Exit.succeed(effect.onFailure(channel.value))
-        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.value))
         return unsafeCoerce(exitA)
       }
       case "Service": {
@@ -1130,7 +1114,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "Bracket": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
         const releaseExit = runEffectSync(_fx(effect.release(resource)), context)
         // A failed release replaces the outcome, as a throwing `finally` would.
@@ -1139,7 +1123,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "BracketExit": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
         const releaseExit = runEffectSync(_fx(effect.release(resource, useExit)), context)
         return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
@@ -1187,7 +1171,7 @@ const runAllSync = <R extends Type, E extends Type>(
   for (const child of effects) {
     const exit = runEffectSync(_fx(child), context)
     if (!exit.isSuccess()) return unsafeCoerce(exit)
-    results.push(exit.orThrow())
+    results.push(exit.value)
   }
   return Exit.succeed(results)
 }
@@ -1242,7 +1226,7 @@ const regionOutcome = <E, A>(
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
-  context: Context<R> = ContextCompanion.empty() as Context<R>,
+  context: Context<R> = noServices as Context<R>,
   interruption?: AbortSignal,
 ): Promise<ExitType<E, A>> => {
   if (interruption?.aborted) return Exit.interrupted()
@@ -1290,7 +1274,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return unsafeCoerce(exitA)
         }
         if (cancelled()) return Exit.interrupted()
-        return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
+        return unsafeCoerce(Exit.succeed(effect.f(exitA.value)))
       }
       case "FlatMap": {
         const exitA = await runEffect(_fx(effect.effect), context, interruption)
@@ -1298,7 +1282,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return unsafeCoerce(exitA)
         }
         if (cancelled()) return Exit.interrupted()
-        const nextIO = effect.f(exitA.orThrow())
+        const nextIO = effect.f(exitA.value)
         return runEffect(_fx(nextIO), context, interruption)
       }
       case "MapError": {
@@ -1345,7 +1329,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         }
         if (exitA.isSuccess()) {
           if (cancelled()) return Exit.interrupted()
-          return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+          return Exit.succeed(effect.onSuccess(exitA.value))
         }
         return exitA as ExitType<E, A>
       }
@@ -1370,7 +1354,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         try {
           if (cancelled()) return Exit.interrupted()
           return await runEffect(_fx(effect.use(resource)), context, interruption)
@@ -1384,7 +1368,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit: ExitType<E, A> = cancelled()
           ? Exit.interrupted()
           : await runEffect(_fx(effect.use(resource)), context, interruption)
@@ -1546,7 +1530,7 @@ const runAll = <R extends Type, E extends Type>(
           finish(unsafeCoerce(exit))
           return
         }
-        results[index] = exit.orThrow()
+        results[index] = exit.value
         state.succeeded = state.succeeded + 1
         if (state.succeeded === effects.length) finish(Exit.succeed(results))
         else start()

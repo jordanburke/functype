@@ -40,7 +40,15 @@ export { Layer } from "./Layer"
 export { Tag } from "./Tag"
 export { TestClock, TestClockTag, TestContext } from "./TestClock"
 export type { ContextServices, Context as ContextType, HasService } from "./Context"
-export type { ExitTag, Exit as ExitType } from "./Exit"
+export type {
+  DieExitOf,
+  ExitBase,
+  ExitTag,
+  Exit as ExitType,
+  FailureExitOf,
+  InterruptedExitOf,
+  SuccessExitOf,
+} from "./Exit"
 export type { Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
 export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./Layer"
 export type { TagService, Tag as TagType } from "./Tag"

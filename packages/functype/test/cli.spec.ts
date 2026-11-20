@@ -250,6 +250,17 @@ describe("Full Interfaces", () => {
     expect(Object.keys(FULL_INTERFACES).length).toBeGreaterThanOrEqual(8)
   })
 
+  it("should include Exit as a union of its four variants", () => {
+    expect(FULL_INTERFACES.Exit).toContain("export type Exit<E extends Type, A extends Type> =")
+    expect(FULL_INTERFACES.Exit).toContain("export interface ExitBase<E extends Type, A extends Type>")
+    ;["SuccessExitOf", "FailureExitOf", "DieExitOf", "InterruptedExitOf"].forEach((variant) => {
+      expect(FULL_INTERFACES.Exit).toContain(`export interface ${variant}<E extends Type, A extends Type>`)
+    })
+    expect(FULL_INTERFACES.Exit).toContain("isDie(): this is DieExitOf<E, A>")
+    // The scan stops at the end of each definition, so no implementation leaks into the docs.
+    expect(FULL_INTERFACES.Exit).not.toContain("define<")
+  })
+
   it("should include Option interface with JSDoc", () => {
     expect(FULL_INTERFACES.Option).toBeDefined()
     expect(FULL_INTERFACES.Option).toContain("export type Option<T extends Type> = SomeOf<T> | NoneOf<T>")

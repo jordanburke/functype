@@ -1,4 +1,4 @@
-import { Left, None, Right, Some, Try } from "functype"
+import { Exit, IO, Left, None, Right, Some, Try } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { referenceEq, structuralEq, tagEq } from "../../src/hooks/eq"
@@ -85,6 +85,26 @@ describe("structuralEq with functype values, whose methods live on a shared prot
     expect(structuralEq(Some(/a/), Some(/b/))).toBe(false)
     expect(structuralEq(Some(/a/g), Some(/a/g))).toBe(true)
     expect(structuralEq(Some(new URL("https://a.test")), Some(new URL("https://b.test")))).toBe(false)
+  })
+
+  it("compares Exits and IOs by data", () => {
+    expect(structuralEq(Exit.succeed(1), Exit.succeed(1))).toBe(true)
+    expect(structuralEq(Exit.succeed(1), Exit.succeed(2))).toBe(false)
+    expect(structuralEq(Exit.fail("e"), Exit.die("e"))).toBe(false)
+    expect(structuralEq(Exit.interrupt("f"), Exit.interrupt("f"))).toBe(true)
+    // An IO's only own key is its effect, so two IOs are equal when their effects are: the same
+    // steps, values and functions.
+    const inc = (x: number): number => x + 1
+    expect(structuralEq(IO.succeed(1), IO.succeed(1))).toBe(true)
+    expect(structuralEq(IO.succeed(1).map(inc), IO.succeed(1).map(inc))).toBe(true)
+    expect(structuralEq(IO.succeed(1), IO.succeed(2))).toBe(false)
+    expect(structuralEq(IO.succeed(1), IO.fail(1))).toBe(false)
+    expect(
+      structuralEq(
+        IO.succeed(1).map(inc),
+        IO.succeed(1).map((x) => x * 2),
+      ),
+    ).toBe(false)
   })
 
   it("never calls objects with different prototypes equal", () => {

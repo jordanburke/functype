@@ -404,8 +404,8 @@ export const TYPES: Record<string, TypeData> = {
     // interface JSDoc, which `npx functype Exit --full` prints.
     description:
       "Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() rejects on it.",
-    // Exit is declared inline (no `extends` chain), so its interface list is
-    // curated. Source of truth: the Exit interface body in src/io/Exit.ts.
+    // ExitBase extends no functype interface, so the list is empty. Source of truth:
+    // ExitBase and the four variant interfaces in src/io/Exit.ts.
     interfaces: [],
     methods: {
       create: ["Exit.succeed(v)", "Exit.fail(e)", "Exit.die(defect)", "Exit.interrupt(fiberId)", "Exit.interrupted()"],
