@@ -990,9 +990,8 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
  * `Die` exactly as they saw it before `Die` existed. Interruption stays excluded (#243).
  */
 const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined => {
-  const raw = exit.toValue()
-  if (raw._tag === "Failure") return { value: raw.error }
-  if (raw._tag === "Die") return { value: raw.defect }
+  if (exit._tag === "Failure") return { value: exit.error }
+  if (exit._tag === "Die") return { value: exit.defect }
   return undefined
 }
 
@@ -1004,7 +1003,7 @@ const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unkno
  * boundary unchanged. The async interpreter never produces it.
  */
 const syncErrorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined =>
-  exit.isDie() && exit.toValue().defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
+  exit._tag === "Die" && exit.defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
 
 /** The defect for an `IO.async` (or an `IO(...)` thunk that returned a promise) under `runSync`. */
 const cannotRunAsync = (): Error => new Error("Cannot run async effect synchronously")
@@ -1016,18 +1015,16 @@ const serviceNotFound = (tag: { readonly id: string }): Error => new Error(`Serv
  * How `run()` and `runSync()` report an outcome. A typed failure is a `Left`. A defect is thrown
  * as is, and an interruption as an `InterruptedError`, so the `Either` holds only real `E`s.
  */
-const toEither = <E, A>(exit: ExitType<E, A>): Either<E, A> => {
-  const raw = exit.toValue()
-  if (raw._tag === "Success") return Right(raw.value as A)
-  if (raw._tag === "Failure") return Left(raw.error as E)
-  throw raw._tag === "Die" ? raw.defect : new InterruptedError()
+const toEither = <E extends Type, A extends Type>(exit: ExitType<E, A>): Either<E, A> => {
+  if (exit._tag === "Success") return Right(exit.value)
+  if (exit._tag === "Failure") return Left(exit.error)
+  throw exit._tag === "Die" ? exit.defect : new InterruptedError()
 }
 
 /** How `runOrThrow()` and `runSyncOrThrow()` report an outcome: the value, or a throw. */
-const valueOrThrow = <E, A>(exit: ExitType<E, A>): A => {
-  const raw = exit.toValue()
-  if (raw._tag === "Success") return raw.value as A
-  throw raw._tag === "Failure" ? raw.error : raw._tag === "Die" ? raw.defect : new InterruptedError()
+const valueOrThrow = <E extends Type, A extends Type>(exit: ExitType<E, A>): A => {
+  if (exit._tag === "Success") return exit.value
+  throw exit._tag === "Failure" ? exit.error : exit._tag === "Die" ? exit.defect : new InterruptedError()
 }
 
 /** Runs `step`, turning a throw from it into a `Die`. */
@@ -1069,12 +1066,12 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "Map": {
         const exitA = runEffectSync(_fx(effect.effect), context)
         if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return Exit.succeed(effect.f(exitA.orThrow()))
+        return Exit.succeed(effect.f(exitA.value))
       }
       case "FlatMap": {
         const exitA = runEffectSync(_fx(effect.effect), context)
         if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return runEffectSync(_fx(effect.f(exitA.orThrow())), context)
+        return runEffectSync(_fx(effect.f(exitA.value)), context)
       }
       case "MapError": {
         const exitA = runEffectSync(_fx(effect.effect), context)
@@ -1094,7 +1091,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         const exitA = runEffectSync(_fx(effect.effect), context)
         const channel = syncErrorChannel(exitA)
         if (channel) return Exit.succeed(effect.onFailure(channel.value))
-        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.value))
         return unsafeCoerce(exitA)
       }
       case "Service": {
@@ -1110,7 +1107,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "Bracket": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
         const releaseExit = runEffectSync(_fx(effect.release(resource)), context)
         // A failed release replaces the outcome, as a throwing `finally` would.
@@ -1119,7 +1116,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "BracketExit": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context)
         if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
         const releaseExit = runEffectSync(_fx(effect.release(resource, useExit)), context)
         return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
@@ -1167,7 +1164,7 @@ const runAllSync = <R extends Type, E extends Type>(
   for (const child of effects) {
     const exit = runEffectSync(_fx(child), context)
     if (!exit.isSuccess()) return unsafeCoerce(exit)
-    results.push(exit.orThrow())
+    results.push(exit.value)
   }
   return Exit.succeed(results)
 }
@@ -1270,7 +1267,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return unsafeCoerce(exitA)
         }
         if (cancelled()) return Exit.interrupted()
-        return unsafeCoerce(Exit.succeed(effect.f(exitA.orThrow())))
+        return unsafeCoerce(Exit.succeed(effect.f(exitA.value)))
       }
       case "FlatMap": {
         const exitA = await runEffect(_fx(effect.effect), context, interruption)
@@ -1278,7 +1275,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return unsafeCoerce(exitA)
         }
         if (cancelled()) return Exit.interrupted()
-        const nextIO = effect.f(exitA.orThrow())
+        const nextIO = effect.f(exitA.value)
         return runEffect(_fx(nextIO), context, interruption)
       }
       case "MapError": {
@@ -1325,7 +1322,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         }
         if (exitA.isSuccess()) {
           if (cancelled()) return Exit.interrupted()
-          return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+          return Exit.succeed(effect.onSuccess(exitA.value))
         }
         return exitA as ExitType<E, A>
       }
@@ -1350,7 +1347,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         try {
           if (cancelled()) return Exit.interrupted()
           return await runEffect(_fx(effect.use(resource)), context, interruption)
@@ -1364,7 +1361,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (!acquireExit.isSuccess()) {
           return acquireExit as ExitType<E, A>
         }
-        const resource = acquireExit.orThrow()
+        const resource = acquireExit.value
         const useExit: ExitType<E, A> = cancelled()
           ? Exit.interrupted()
           : await runEffect(_fx(effect.use(resource)), context, interruption)
@@ -1526,7 +1523,7 @@ const runAll = <R extends Type, E extends Type>(
           finish(unsafeCoerce(exit))
           return
         }
-        results[index] = exit.orThrow()
+        results[index] = exit.value
         state.succeeded = state.succeeded + 1
         if (state.succeeded === effects.length) finish(Exit.succeed(results))
         else start()
