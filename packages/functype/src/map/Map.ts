@@ -2,6 +2,7 @@ import type { Collection } from "@/collections"
 import type { Typeable } from "@/index"
 import { Companion, type Foldable } from "@/index"
 import { base64ToUtf8 } from "@/internal/base64"
+import { type A, type B, define, type Mutable } from "@/internal/define"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -12,7 +13,7 @@ import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
 import type { Widen } from "@/typeclass"
 
-import { ESMap, type ESMapType } from "./shim"
+import { ESMap } from "./shim"
 
 export interface Map<K, out V>
   extends
@@ -67,160 +68,185 @@ export interface Map<K, out V>
   toValue(): { _tag: "Map"; value: [K, V][] }
 }
 
-type MapState<K, V> = {
-  values: ESMapType<K, V>
+/**
+ * A Map's own data: its tag and the native Map it wraps. The native Map is never changed after the
+ * Map is built, so `size` and `isEmpty` can't go stale. @internal
+ */
+interface MapOf<K, out V> extends Map<K, V> {
+  readonly value: ReadonlyMap<K, V>
 }
 
-const MapObject = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> => {
-  const _tag = "Map"
-  const state: MapState<K, V> = {
-    values: new ESMap<K, V>(entries),
-  }
+/** The entries as Tuples, in insertion order. */
+const tuplesOf = <K, V>(values: ReadonlyMap<K, V>): Tuple<[K, V]>[] =>
+  Array.from(values, ([key, value]) => Tuple<[K, V]>([key, value]))
 
-  const getEntries = () => Array.from(state.values.entries()).map(([key, value]) => Tuple<[K, V]>([key, value]))
+/* eslint-disable functional/immutable-data -- methods build fresh native Maps, and wrap fills in the Map it just created */
 
-  const add = (item: Tuple<[K, V]>): Map<K, V> =>
-    MapObject(new ESMap(state.values).set(item.toArray()[0], item.toArray()[1]).entries())
+/** Every Map shares these methods (#276 §14). `this.value` is the Map's own native Map. */
+const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
+  [Symbol.toStringTag]: "FunctypeMap",
 
-  const remove = (value: K): Map<K, V> => {
-    const newMap = new ESMap(state.values)
-    return newMap.delete(value) ? MapObject(newMap.entries()) : MapObject(state.values.entries())
-  }
+  get size() {
+    return this.value.size
+  },
 
-  const contains = (value: unknown): boolean => {
+  get isEmpty() {
+    return this.value.size === 0
+  },
+
+  [Symbol.iterator]() {
+    return this.value.entries()
+  },
+
+  add(item) {
+    const [key, value] = item.toArray()
+    return wrap(new ESMap(this.value).set(key, value))
+  },
+
+  remove(key) {
+    if (!this.value.has(key)) return this
+    const next = new ESMap(this.value)
+    next.delete(key)
+    return wrap(next)
+  },
+
+  contains(value) {
     if (!value || typeof (value as { toArray?: unknown }).toArray !== "function") return false
-    const tuple = (value as Tuple<[K, V]>).toArray()
-    return state.values.get(tuple[0]) === tuple[1]
-  }
+    const [key, entry] = (value as Tuple<[A, B]>).toArray()
+    return this.value.get(key) === entry
+  },
 
-  const size = (): number => state.values.size
+  map<U>(f: (value: B) => U): Map<A, U> {
+    return wrap(new ESMap(Array.from(this.value, ([k, v]): [A, U] => [k, f(v)])))
+  },
 
-  const map = <U>(f: (value: V) => U): Map<K, U> =>
-    MapObject(Array.from(state.values.entries()).map(([k, v]) => [k, f(v)]))
+  flatMap<K2, V2>(f: (entry: Tuple<[A, B]>) => Iterable<[K2, V2]>): Map<K2, V2> {
+    return wrap(new ESMap(tuplesOf(this.value).flatMap((entry) => Array.from(f(entry)))))
+  },
 
-  const flatMap = <K2, V2>(f: (entry: Tuple<[K, V]>) => Iterable<[K2, V2]>): Map<K2, V2> => {
-    const list = MapObject(state.values.entries()).toList()
-    return MapObject(list.flatMap(f).toArray())
-  }
-
-  const ap = <U>(ff: Map<K, (value: V) => U>): Map<K, U> => {
-    const newEntries: Array<[K, U]> = []
-    for (const [key, value] of state.values.entries()) {
+  ap<U>(ff: Map<A, (value: B) => U>): Map<A, U> {
+    const newEntries: Array<[A, U]> = []
+    for (const [key, value] of this.value) {
       const fn = ff.get(key)
       if (fn._tag === "Some" && fn.value) {
         newEntries.push([key, fn.value(value)])
       }
     }
-    return MapObject(newEntries)
-  }
+    return wrap(new ESMap(newEntries))
+  },
 
-  const flatMapAsync = async <U>(f: (value: V) => PromiseLike<Map<K, U>>): Promise<Map<K, U>> => {
-    const results = new ESMap<K, U>()
-    for (const [_key, value] of state.values.entries()) {
+  async flatMapAsync<U>(f: (value: B) => PromiseLike<Map<A, U>>): Promise<Map<A, U>> {
+    const results = new ESMap<A, U>()
+    for (const value of this.value.values()) {
       const mappedMap = await f(value)
       // Merge all entries from the resulting map
-      for (const entry of mappedMap.toList()) {
-        const [k, v] = entry.toArray()
+      for (const [k, v] of mappedMap) {
         results.set(k, v)
       }
     }
-    return MapObject(results.entries())
-  }
+    return wrap(results)
+  },
 
-  const reduce = <B = Tuple<[K, V]>>(
-    op: (b: Widen<Tuple<[K, V]>, B>, a: Widen<Tuple<[K, V]>, B>) => Widen<Tuple<[K, V]>, B>,
-  ): Widen<Tuple<[K, V]>, B> => List(getEntries()).reduce(op)
+  reduce<R = Tuple<[A, B]>>(
+    op: (b: Widen<Tuple<[A, B]>, R>, a: Widen<Tuple<[A, B]>, R>) => Widen<Tuple<[A, B]>, R>,
+  ): Widen<Tuple<[A, B]>, R> {
+    return List(tuplesOf(this.value)).reduce(op)
+  },
 
-  const reduceRight = <B = Tuple<[K, V]>>(
-    op: (b: Widen<Tuple<[K, V]>, B>, a: Widen<Tuple<[K, V]>, B>) => Widen<Tuple<[K, V]>, B>,
-  ): Widen<Tuple<[K, V]>, B> => List(getEntries()).reduceRight(op)
+  reduceRight<R = Tuple<[A, B]>>(
+    op: (b: Widen<Tuple<[A, B]>, R>, a: Widen<Tuple<[A, B]>, R>) => Widen<Tuple<[A, B]>, R>,
+  ): Widen<Tuple<[A, B]>, R> {
+    return List(tuplesOf(this.value)).reduceRight(op)
+  },
 
-  const foldLeft =
-    <B>(z: B) =>
-    (op: (b: B, a: Tuple<[K, V]>) => B): B =>
-      List(getEntries()).foldLeft(z)(op)
+  foldLeft(z) {
+    return (op) => tuplesOf(this.value).reduce((acc, entry) => op(acc, entry), z)
+  },
 
-  const foldRight =
-    <B>(z: B) =>
-    (op: (a: Tuple<[K, V]>, b: B) => B): B =>
-      List(getEntries()).foldRight(z)(op)
+  foldRight(z) {
+    return (op) => tuplesOf(this.value).reduceRight((acc, entry) => op(entry, acc), z)
+  },
 
-  const get = (key: K): Option<V> => Option(state.values.get(key))
+  fold(initial, fn) {
+    return tuplesOf(this.value).reduce((acc, entry) => fn(acc, entry), initial)
+  },
 
-  const has = (key: K): boolean => state.values.has(key)
+  match(patterns) {
+    return this.value.size === 0 ? patterns.Empty() : patterns.NonEmpty(tuplesOf(this.value))
+  },
 
-  const keys = (): List<K> => List(Array.from(state.values.keys()))
+  get(key) {
+    return Option(this.value.get(key))
+  },
 
-  const values = (): List<V> => List(Array.from(state.values.values()))
+  has(key) {
+    return this.value.has(key)
+  },
 
-  const getOrElse = (key: K, defaultValue: V): V => Option(state.values.get(key)).orElse(defaultValue)
+  keys() {
+    return List(this.value.keys())
+  },
 
-  const isEmpty = (): boolean => state.values.size === 0
+  values() {
+    return List(this.value.values())
+  },
 
-  const orElse = (key: K, alternative: Option<V>): Option<V> => Option(state.values.get(key)).or(alternative)
+  getOrElse(key, defaultValue) {
+    return Option(this.value.get(key)).orElse(defaultValue)
+  },
 
-  const fold = <B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B => List(getEntries()).fold(initial, fn)
+  orElse(key, alternative) {
+    return Option(this.value.get(key)).or(alternative)
+  },
 
-  const toList = (): List<Tuple<[K, V]>> => List(getEntries())
+  toList() {
+    return List(tuplesOf(this.value))
+  },
 
-  const toSet = (): Set<Tuple<[K, V]>> => Set(getEntries())
+  toSet() {
+    return Set(tuplesOf(this.value))
+  },
 
-  const toString = (): string => `Map(${getEntries().toString()})`
+  toString() {
+    return `Map(${tuplesOf(this.value).toString()})`
+  },
 
-  const match = <R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R => {
-    if (isEmpty()) {
-      return patterns.Empty()
-    }
-    return patterns.NonEmpty(getEntries())
-  }
+  toValue() {
+    return { _tag: "Map" as const, value: Array.from(this.value.entries()) }
+  },
 
-  // No getters and no computed keys before the closures (issue #511): V8 copies such a literal from a
-  // cached template. The native Map is never changed after construction, so size and isEmpty can't
-  // go stale. Frozen so they stay read-only, as they were when they were getters.
-  return Object.freeze<Map<K, V>>({
-    _tag,
-    size: size(),
-    isEmpty: isEmpty(),
-    add,
-    remove,
-    contains,
-    map,
-    ap,
-    flatMap,
-    flatMapAsync,
-    reduce,
-    reduceRight,
-    foldLeft,
-    foldRight,
-    fold,
-    match,
-    get,
-    has,
-    keys,
-    values,
-    getOrElse,
-    orElse,
-    toList,
-    toSet,
-    toString,
-    toValue: () => ({ _tag: "Map" as const, value: Array.from(state.values.entries()) }),
-    toJSON: () => ({
-      "@functype": "Map" as const,
-      _tag: "Map" as const,
-      value: Array.from(state.values.entries()),
-    }),
-    pipe: <U>(f: (value: [K, V][]) => U) => f(Array.from(state.values.entries())),
-    serialize: () => createSerializer("Map", Array.from(state.values.entries())),
-    [Symbol.toStringTag]: "FunctypeMap",
-    [Symbol.iterator]: () => state.values.entries(),
-  })
+  toJSON() {
+    return { "@functype": "Map" as const, _tag: "Map" as const, value: Array.from(this.value.entries()) }
+  },
+
+  pipe(f) {
+    return f(Array.from(this.value.entries()))
+  },
+
+  serialize() {
+    return createSerializer("Map", Array.from(this.value.entries()))
+  },
+})
+
+/**
+ * Builds a Map around a native Map it now owns: nothing may change the native Map afterwards.
+ * Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
+ */
+const wrap = <K, V>(values: ReadonlyMap<K, V>): Map<K, V> => {
+  // The one cast: a prototype checked at the opaque A and B works for every K and V.
+  const map = Object.create(MapProto) as Mutable<MapOf<K, V>>
+  map._tag = "Map"
+  map.value = values
+  return Object.freeze(map)
 }
 
+/* eslint-enable functional/immutable-data */
+
 const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
-  MapObject(entries)
+  wrap(new ESMap<K, V>(entries))
 
 // Singleton empty map - uses 'never' which is subtype of all types
-const EMPTY_MAP: Map<never, never> = MapObject<never, never>([])
+const EMPTY_MAP: Map<never, never> = wrap(new ESMap<never, never>())
 
 /** Rebuilds a Map from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
 const mapFromEnvelope = <K, V>(parsed: ParsedEnvelope, method: string): Map<K, V> => {
@@ -241,7 +267,7 @@ const MapCompanion = {
    * @param entries - Key-value pairs to create map from
    * @returns A Map containing the entries
    */
-  of: <K, V>(...entries: [K, V][]): Map<K, V> => MapObject<K, V>(entries),
+  of: <K, V>(...entries: [K, V][]): Map<K, V> => wrap(new ESMap<K, V>(entries)),
 
   /**
    * Creates a Map from JSON string
