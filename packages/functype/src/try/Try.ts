@@ -41,7 +41,7 @@ export interface Try<out T>
    * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
    */
-  orThrow: (error?: Error | ((error: Error) => Error)) => T
+  orThrow(error?: Error | ((error: Error) => Error)): T
   /**
    * Returns the success value, or calls the never-returning handler with the Failure's error.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the program —
@@ -49,17 +49,17 @@ export interface Try<out T>
    * `if (t.isFailure()) fail(...)` fails to narrow `t.value` when `fail` is an arrow function
    * typed as `(...): never`.
    */
-  expect: (handler: (error: Error) => never) => T
+  expect(handler: (error: Error) => never): T
   or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
-  orNull: () => T | null
-  orUndefined: () => T | undefined
-  toOption: () => Option<T>
+  orNull(): T | null
+  orUndefined(): T | undefined
+  toOption(): Option<T>
   /**
    * Converts to a plain readonly array: `[value]` for Success, `[]` for Failure.
    * Symmetric with `Try.toList()` but skips the List wrapper for code that
    * just wants to feed Array.prototype methods or spread into another array.
    */
-  toArray: () => readonly T[]
+  toArray(): readonly T[]
   /**
    * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
    * or Left(leftValue) when given a value. Success becomes Right(value).
@@ -68,28 +68,28 @@ export interface Try<out T>
    *
    *   Try.fromYAML(text).toEither((e) => `parse failed: ${e.message}`)
    */
-  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) => Either<E, T>
-  toTry: () => Try<T>
-  map: <U>(f: (value: T) => U) => Try<U>
-  ap: <U>(ff: Try<(value: T) => U>) => Try<U>
-  flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
-  flatMapAsync: <U>(f: (value: T) => Promise<Try<U>>) => Promise<Try<U>>
+  toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)): Either<E, T>
+  toTry(): Try<T>
+  map<U>(f: (value: T) => U): Try<U>
+  ap<U>(ff: Try<(value: T) => U>): Try<U>
+  flatMap<U>(f: (value: T) => Try<U>): Try<U>
+  flatMapAsync<U>(f: (value: T) => Promise<Try<U>>): Promise<Try<U>>
   /**
    * Pattern matches over the Try, applying onFailure if Failure and onSuccess if Success
    * @param onFailure - Function to apply if the Try is Failure
    * @param onSuccess - Function to apply if the Try is Success
    * @returns The result of applying the appropriate function
    */
-  fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
+  fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
    */
-  foldAsync: <U extends Type>(
+  foldAsync<U extends Type>(
     onFailure: (error: Error) => U | Promise<U>,
     onSuccess: (value: T) => U | Promise<U>,
-  ) => Promise<U>
-  toString: () => string
+  ): Promise<U>
+  toString(): string
   /**
    * Pattern matches over the Try, applying a handler function based on the variant
    * @param patterns - Object with handler functions for Success and Failure variants
