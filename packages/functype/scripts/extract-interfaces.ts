@@ -57,7 +57,17 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   // The four Exit variants are easy to conflate — particularly Failure vs Die, whose
   // difference is the *declared* error channel rather than anything visible at the call
   // site. `npx functype Exit --full` surfaces the interface JSDoc that explains it.
-  Exit: { file: "src/io/Exit.ts" },
+  Exit: {
+    file: "src/io/Exit.ts",
+    isType: true,
+    extras: [
+      { name: "ExitBase" },
+      { name: "SuccessExitOf" },
+      { name: "FailureExitOf" },
+      { name: "DieExitOf" },
+      { name: "InterruptedExitOf" },
+    ],
+  },
   Tuple: { file: "src/tuple/Tuple.ts" },
   Stack: { file: "src/stack/Stack.ts", isType: true },
   HttpError: { file: "src/fetch/HttpError.ts", isType: true },

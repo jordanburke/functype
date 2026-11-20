@@ -145,6 +145,10 @@ const MEMBER_TO_CONTAINER: Readonly<Record<string, string>> = {
   NoneOf: "Option",
   SuccessOf: "Try",
   FailureOf: "Try",
+  SuccessExitOf: "Exit",
+  FailureExitOf: "Exit",
+  DieExitOf: "Exit",
+  InterruptedExitOf: "Exit",
 }
 
 const containerName = (type: TypeShape): string => {
