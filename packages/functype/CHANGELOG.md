@@ -97,6 +97,23 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - Assigning over a method throws in strict mode, because the prototypes are frozen. `structuredClone(exit)` returns a copy with the data and no methods. `console.log` prints `Success [Exit] { _tag: 'Success', value: 1 }` and `IO { effect: { _tag: 'Succeed', value: 1 } }`.
 - functype-react's `structuralEq` now calls two Exits with the same data equal, and two IOs with the same effect equal.
 
+**2.0 (breaking): `Task` is deleted. Use `IO`.** From §1 of #276 (the 2.0 release plan).
+
+- `Task`, `TaskOutcome`, `TaskResult`, `Ok`, `Err`, `TaskParams`, `TaskMetadata`, `TaskSuccess`, `TaskFailure`, `CancellationToken`, `CancellationTokenSource`, `createCancellationTokenSource` and the `functype/task` entry point are gone. That is about 1,060 lines of source and 2,600 lines of tests.
+- `getErrorChain` and `formatErrorChain` move to the error module and keep their behaviour. Import them from `functype`: `Task.getErrorChain(e)` becomes `getErrorChain(e)`. `TaggedThrowable` and `isTaggedThrowable` move with them. `formatError` and `createErrorSerializer` work as before.
+- **Upgrade:** each Task call has an IO equivalent.
+  - `Task(params).Sync(f, onError)` → `IO.tryCatch(f, onError).runSync()`, an `Either<E, A>`.
+  - `await Task(params).Async(f, onError)` → `await IO.tryPromise({ try: f, catch: onError }).run()`. `IO.async(f)` works when the error can stay `unknown`. A `finally` callback becomes `IO.bracket` or `acquireRelease`.
+  - `Task.ok(v)` / `Task.err(e)` and `Ok(v)` / `Err(e)` → `IO.succeed(v)` / `IO.fail(e)`, or `Right(v)` / `Left(e)` for a plain value.
+  - A `TaskOutcome` → the `Either` that `run()` returns, or the `Exit` from `runExit()`. `isOk()` → `isRight()`, `isErr()` → `isLeft()`.
+  - `Task.fromEither` / `Task.fromTry` → `IO.fromEither` / `IO.fromTry`. `Task.fromPromise(fn)` → `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`. `Task.toPromise(outcome)` → `effect.runOrThrow()`.
+  - `Task.race(tasks, ms)` → `IO.race(effects).timeout(ms)`, which also stops the losers.
+  - `Task.cancellable(fn)` and `CancellationToken` → `effect.runCancellable()` for a `{ result, cancel }` handle, `runExit({ signal })` with your own `AbortController`, or `interruptOn(signal)`. `IO.async` and `IO.tryPromise` thunks receive the run's signal; pass it to `fetch` to stop the request.
+  - `Task.withProgress` and task names (`_meta`) have no replacement, because nothing used them. Call your own progress callback inside the effect.
+- **Stored Task JSON no longer deserializes.** `Serialization.deserialize` of a `{ "@functype": "Task", "_tag": "Ok" | "Err", … }` envelope, at the top level or nested, now returns a `Failure` for an unknown `@functype` marker. Convert stored Task values before upgrading. The compiler can't see this change.
+- eslint-plugin-functype no longer treats `Task`, `Ok` or `Err` as functype types. `prefer-do-notation` no longer reads a receiver named `task` or `…Task` as a monad, so it reports less.
+- The MCP server's `search_docs` no longer lists Task, and `validate_code`'s automatic import no longer names `Task`, `Ok` or `Err`. The site's Task page is replaced by a "Moving from Task" table on the IO page.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
