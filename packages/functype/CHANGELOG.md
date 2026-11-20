@@ -30,6 +30,9 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **A Success keeps its value as data.** It was reachable only through methods; `Object.keys(Try(() => 1))` is now `["_tag", "value", "error"]`.
 - Assigning over a method on a value throws in strict mode, because the prototype is frozen. `structuredClone(opt)` returns a copy with the data and no methods, where it threw `DataCloneError` before. A plain-object check such as `Object.getPrototypeOf(v) === Object.prototype` is now false.
 - Also better: `expect(Some(1)).toEqual(Some(1))` passes, where it failed before, and `console.log` prints `Some [Option] { _tag: 'Some', value: 1 }` instead of 40 functions.
+- **Some methods return the same value instead of a copy:** `or`, `filter`, `find`, `toOption`, `tap`, `tapLeft`, `filterOrElse`, `recover`, `recoverWith` and `toTry`, when the result would hold the same data. Code that compared results with `===` sees `true` where it saw `false`.
+- **Methods read the value's own fields.** Writing over `value` through a cast now changes what the methods return. Before, each method kept the value it was built with. The types mark these fields `readonly`.
+- **functype-react's `structuralEq` compares `Date` and `Error` by content, and never calls objects with different prototypes equal.** It compared own keys only. That used to work for functype values by accident, because their per-value methods never compared equal. With methods shared, `Left(new Error("a"))` and `Left(new Error("b"))` would have looked equal, so `useStableState` would have kept a stale error.
 
 **2.0 (breaking): Option and Try are discriminated unions, like Either.** From §9a of #276 (the 2.0 release plan).
 

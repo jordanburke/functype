@@ -30,9 +30,13 @@ export const tagEq: Eq<unknown> = (a, b) => {
 }
 
 /**
- * Recursive structural equality. Handles primitives, arrays, plain objects, and
- * tagged ADTs. Cycles are not detected — passing cyclic structures is undefined
- * behavior. Functions compare by reference.
+ * Recursive structural equality. Handles primitives, arrays, plain objects, tagged ADTs, `Date` and
+ * `Error`. Two objects with different prototypes are never equal. Cycles are not detected — passing
+ * cyclic structures is undefined behavior. Functions compare by reference.
+ *
+ * functype values keep only their data as own properties (functype 2.0), so the walk below sees
+ * `_tag` and `value`. A `Date` or `Error` has no enumerable own keys, so it gets compared first;
+ * otherwise `Some(new Date(0))` and `Some(new Date(1))` would look equal.
  */
 export const structuralEq: Eq<unknown> = (a, b) => {
   if (Object.is(a, b)) return true
@@ -45,6 +49,13 @@ export const structuralEq: Eq<unknown> = (a, b) => {
     return a.every((item, i) => structuralEq(item, b[i]))
   }
   if (Array.isArray(b)) return false
+  if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false
+
+  if (a instanceof Date) return a.getTime() === (b as Date).getTime()
+  if (a instanceof Error) {
+    const e = b as Error
+    if (a.name !== e.name || a.message !== e.message || !structuralEq(a.cause, e.cause)) return false
+  }
 
   const ka = Object.keys(a as object)
   const kb = Object.keys(b as object)

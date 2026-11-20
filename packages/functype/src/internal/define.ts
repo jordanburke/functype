@@ -10,8 +10,11 @@ declare const holeA: unique symbol
 declare const holeB: unique symbol
 
 /**
- * Stands in for "any T" while a prototype is checked. It's opaque, so a method can't depend on
- * what T is: a prototype that checks at `A` works for every `T`.
+ * Stands in for "any T" while a prototype is checked. It's opaque, so a method can't build or pick
+ * apart a T, which catches most mistakes. It isn't a full proof that the prototype works for every
+ * T: `A` is an object type, so `this.value.toString()` or `"x" in this.value` compile here and would
+ * throw for `null` or a primitive. And `Object.create` returns `any`, so a constructor that uses the
+ * wrong prototype or skips a field also compiles. The prototype tests guard those.
  */
 export type A = { readonly [holeA]: true }
 /** A second, distinct hole, for variants with two type parameters such as `Either<L, R>`. */

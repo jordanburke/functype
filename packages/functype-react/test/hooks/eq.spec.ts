@@ -1,3 +1,4 @@
+import { Left, None, Right, Some, Try } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { referenceEq, structuralEq, tagEq } from "../../src/hooks/eq"
@@ -50,5 +51,33 @@ describe("structuralEq", () => {
     expect(structuralEq(null, null)).toBe(true)
     expect(structuralEq(null, {})).toBe(false)
     expect(structuralEq({}, null)).toBe(false)
+  })
+})
+
+describe("structuralEq with functype values, whose methods live on a shared prototype", () => {
+  it("compares their data", () => {
+    expect(structuralEq(Some(1), Some(1))).toBe(true)
+    expect(structuralEq(Some(1), Some(2))).toBe(false)
+    expect(structuralEq(Some(1), None())).toBe(false)
+    expect(structuralEq(Right(1), Left(1))).toBe(false)
+  })
+
+  it("tells apart values holding different Errors or Dates", () => {
+    expect(structuralEq(Left(new Error("a")), Left(new Error("b")))).toBe(false)
+    expect(structuralEq(Left(new Error("a")), Left(new Error("a")))).toBe(true)
+    expect(structuralEq(Left(new TypeError("a")), Left(new Error("a")))).toBe(false)
+    expect(structuralEq(new Error("a", { cause: 1 }), new Error("a", { cause: 2 }))).toBe(false)
+    const fail = (message: string) =>
+      Try(() => {
+        throw new Error(message)
+      })
+    expect(structuralEq(fail("a"), fail("b"))).toBe(false)
+    expect(structuralEq(Some(new Date(0)), Some(new Date(1e12)))).toBe(false)
+    expect(structuralEq(Some(new Date(5)), Some(new Date(5)))).toBe(true)
+  })
+
+  it("never calls objects with different prototypes equal", () => {
+    expect(structuralEq(new Date(0), {})).toBe(false)
+    expect(structuralEq(Some(1), { _tag: "Some", value: 1 })).toBe(false)
   })
 })
