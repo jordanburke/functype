@@ -138,30 +138,29 @@ set.union(set2) // Set([1, 2, 3, 4, 5, 6, 7])
 set.intersect(set2) // Set([4, 5])
 ```
 
-### Task
+### IO<R, E, A>
 
 ```typescript
-// Create: Task().Sync() or Task().Async()
-const syncTask = Task().Sync(
-  () => 42,
+// Create: nothing runs until a run method
+const parsed = IO.tryCatch(
+  () => JSON.parse(raw) as unknown,
   (err) => new Error(`Failed: ${err}`),
 )
 
-const asyncTask = Task().Async(
-  async () => await fetchData(),
-  async (err) => new Error(`Fetch failed: ${err}`),
+const fetched = IO.tryPromise({
+  try: (signal) => fetchData(signal),
+  catch: (err) => new Error(`Fetch failed: ${err}`),
+})
+
+// Run: Either<E, A>, or Exit<E, A> for all four outcomes
+const result = await fetched.run()
+result.fold(
+  (error) => console.error(error),
+  (value) => console.log(value),
 )
 
-// From promise
-const fetchUser = Task.fromPromise(fetchUserAPI, { name: "UserFetch" })
-
-// Usage
-const result = syncTask
-if (result.isSuccess()) {
-  console.log(result.value)
-} else {
-  console.error(result.error)
-}
+// Cancel: a handle, or your own AbortSignal
+const { cancel } = fetched.runCancellable()
 ```
 
 ### Tuple
@@ -676,48 +675,49 @@ set.isDisjointFrom([7, 8]) // true if no element is shared
 set.every((x) => x > 0) // true if all elements match predicate
 ```
 
-## Task
+## IO
+
+IO is a lazy effect: nothing runs until a `run` method.
 
 ```typescript
-import { Task } from "functype/task"
+import { Right } from "functype/either"
+import { IO } from "functype/io"
 
-// Synchronous tasks return a TaskOutcome (Ok or Err)
-const syncTask = Task().Sync(
-  () => 42,
+// Sync work that may throw
+const parsed = IO.tryCatch(
+  () => JSON.parse("{}") as unknown,
   (err) => new Error(`Failed: ${String(err)}`),
 )
+const parsedNow = parsed.runSync() // Either<Error, unknown>
 
-// Asynchronous tasks return a Promise of a TaskOutcome
-const asyncTask = Task().Async(
-  async () => (await fetch("/api").then((r) => r.json())) as unknown,
-  (err) => new Error(`Fetch failed: ${String(err)}`),
-)
-
-// Named tasks (for debugging and error identification)
-const namedTask = Task({ name: "UserFetch" }).Sync(
-  () => ({ id: 1, name: "John" }),
-  (err) => new Error(`User fetch failed: ${String(err)}`),
-)
-
-// A throw becomes an Err; the outcome carries the task name
-const outcome = await Task({ name: "DataProcessor" }).Async(() => {
-  throw new Error("Processing failed")
+// Async work
+const fetched = IO.tryPromise({
+  try: (signal) => fetch("/api", { signal }).then((r) => r.json() as Promise<unknown>),
+  catch: (err) => new Error(`Fetch failed: ${String(err)}`),
 })
-outcome.fold(
-  (error) => `Failed: ${error.message}`,
-  (value) => `Done: ${String(value)}`,
-)
+const result = await fetched.run() // Either<Error, unknown>
 
-// Companion functions
-Task.success(42, { name: "SuccessResult" }) // Ok outcome
-Task.fail(new Error("Failed"), data, { name: "FailureResult" }) // Err outcome with a name
+// Ready-made outcomes
+IO.succeed(42)
+IO.fail(new Error("Failed"))
+IO.fromEither(Right<Error, number>(42))
 
-// Adapting functions
+// Adapting a promise-returning function
 const fetchAPI = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<User>)
-const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
+const getUser = (id: string) => IO.tryPromise({ try: () => fetchAPI(id), catch: (err) => new Error(String(err)) })
 
-// Converting
-const promise = Task.toPromise(syncTask) // Standard Promise
+// Cancelling
+const { result: pending, cancel } = getUser("1").runCancellable()
+const controller = new AbortController()
+const exit = await getUser("1").runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
+
+// Racing and timing out
+const first = await IO.race([getUser("1"), getUser("2")])
+  .timeout(5000)
+  .run()
+
+// Back to a Promise
+const user = await getUser("1").runOrThrow()
 ```
 
 ## Tuple
@@ -1122,42 +1122,40 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Core Interfaces
 
-| Data Structure     | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
-| ------------------ | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
-| **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
-| **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
-| **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Http**           |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
-| **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Obj<T>**         |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
-| **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| Data Structure  | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
+| --------------- | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
+| **Try<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
+| **IO<R,E,A>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Http**        |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **List<A>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Set<A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Obj<T>**      |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Map<K,V>**    |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
+| **Lazy<T>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Stack<A>**    |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>** |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**  |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 
 ## Variance (0.6.0+)
 
-| Data Structure     | Variance                   | Notes                                                                                                                                    |
-| ------------------ | :------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Option<T>**      | `<out T>`                  | covariant                                                                                                                                |
-| **Either<L,R>**    | `<out L, out R>`           | covariant in both                                                                                                                        |
-| **Try<T>**         | `<out T>`                  | covariant                                                                                                                                |
-| **List<A>**        | `<out A>`                  | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
-| **Set<A>**         | `<out A>`                  | covariant. Same patterns as List                                                                                                         |
-| **LazyList<A>**    | `<out A>`                  | covariant. `concat<B>` widens                                                                                                            |
-| **Lazy<T>**        | `<out T>`                  | covariant                                                                                                                                |
-| **Identity<T>**    | `<out T>`                  | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
-| **Tuple<T[]>**     | `<out T>`                  | covariant                                                                                                                                |
-| **Map<K,V>**       | `<K, out V>`               | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
-| **TaskOutcome<T>** | `<out T>`                  | covariant. `recover<U>` / `recoverWith<U>` widen to `Ok<T \| U>`                                                                         |
-| **Stack<A>**       | structural covariant       | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
-| **Obj<T>**         | invariant (by design)      | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
-| **Ref<A>**         | invariant (by design)      | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
-| **IO<R,E,A>**      | `<in out R, out E, out A>` | E and A covariant; R invariant. `IO<R, never, A>` widens to `IO<R, AnyError, A>` without a cast. ZIO-style `<in R>` still deferred.      |
+| Data Structure  | Variance                   | Notes                                                                                                                                    |
+| --------------- | :------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Option<T>**   | `<out T>`                  | covariant                                                                                                                                |
+| **Either<L,R>** | `<out L, out R>`           | covariant in both                                                                                                                        |
+| **Try<T>**      | `<out T>`                  | covariant                                                                                                                                |
+| **List<A>**     | `<out A>`                  | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
+| **Set<A>**      | `<out A>`                  | covariant. Same patterns as List                                                                                                         |
+| **LazyList<A>** | `<out A>`                  | covariant. `concat<B>` widens                                                                                                            |
+| **Lazy<T>**     | `<out T>`                  | covariant                                                                                                                                |
+| **Identity<T>** | `<out T>`                  | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
+| **Tuple<T[]>**  | `<out T>`                  | covariant                                                                                                                                |
+| **Map<K,V>**    | `<K, out V>`               | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
+| **Stack<A>**    | structural covariant       | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
+| **Obj<T>**      | invariant (by design)      | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
+| **Ref<A>**      | invariant (by design)      | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
+| **IO<R,E,A>**   | `<in out R, out E, out A>` | E and A covariant; R invariant. `IO<R, never, A>` widens to `IO<R, AnyError, A>` without a cast. ZIO-style `<in R>` still deferred.      |
 
 All base typeclasses (`Traversable`, `Extractable`, `Functor`, `Applicative`, `Monad`, `AsyncMonad`, `ContainerOps`, `CollectionOps`, `Foldable`, `Serializable`, `Pipe`, `Matchable`, `Promisable`, `Doable`, `Reshapeable`) declared `<out T>` / `<out A>`.
 
@@ -1167,22 +1165,21 @@ Collections (`List`, `Set`, `LazyList`, `Stack`, `Map`, `Obj`) keep `Traversable
 
 ## Additional Properties
 
-| Data Structure     | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
-| ------------------ | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
-| **Option<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
-| **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
-| **Http**           |    ✗     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
-| **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Obj<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **LazyList<A>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
+| Data Structure  | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
+| --------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
+| **Option<T>**   |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Either<L,R>** |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
+| **Try<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **IO<R,E,A>**   |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
+| **Http**        |    ✗     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **List<A>**     |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
+| **Set<A>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Obj<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Map<K,V>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Lazy<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Stack<A>**    |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **LazyList<A>** |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Tuple<T[]>**  |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 
 ## Companion Methods
 
@@ -1328,7 +1325,7 @@ All Serializable types provide static deserialization methods:
 
 Note: `fold` has different semantics per type category:
 
-- **Sum types** (Option, Either, Try, IO, TaskOutcome): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
+- **Sum types** (Option, Either, Try, IO): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
 - **Collections** (List, Set, Map, Stack, Tuple, LazyList): `fold<B>(initial: B, fn: (acc: B, a: A) => B): B` — left-reduce accumulator
 
 `foldAsync` (Option, Either, Try) — same shape as `fold` but accepts sync or async handlers and always returns `Promise<B>`. Use when at least one branch performs async work to avoid `T | Promise<T>` unions.
@@ -1459,13 +1456,12 @@ Provides conversion to Promise for async interop:
 
 5. **Reshapeable**: Enables conversion between different monad types, allowing flexible composition in Do-notation when mixing types.
 
-6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either, Try, and TaskOutcome.
+6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either and Try.
 
 7. **Utility Types** (not in matrix):
    - **Cond**: Conditional expression builder
    - **Match**: Pattern matching utility
    - **ValidatedBrand**: Branded types with validation
-   - **Task**: Sync/async operation orchestrator returning TaskOutcome<T> with Ok/Err constructors. Includes conversion methods: toEither(), toTry(), toOption(), fromEither(), fromTry().
    - **Throwable**: Enhanced error type
 
 8. **IO<R,E,A>**: Lazy, composable effect type with typed errors and dependency injection.
@@ -2342,54 +2338,6 @@ const result = Obj({ a: 1, b: 2, c: 3 })
 
 
 ────────────────────────────────────────────────────────────────────────────────
-## task
-────────────────────────────────────────────────────────────────────────────────
-
-# Task<T>
-
-Task is going away. functype 2.0 removes it.
-
-## Overview
-
-Use [IO](/io) for new code. IO is lazy, keeps the error type, and cancels through an `AbortSignal`. Task stays in the 1.x line so existing code keeps working, and its API reference is in the [API docs](https://functype.org/api-docs/variables/Task.html).
-
-## Moving from Task to IO
-
-| Task (1.x)                                    | IO                                                                         |
-| --------------------------------------------- | -------------------------------------------------------------------------- |
-| `Task(params).Sync(() => value)`              | `IO.sync(() => value).runSync()` → `Either<E, A>`                          |
-| `await Task(params).Async(async () => value)` | `await IO.tryPromise({ try, catch }).run()` → `Either<E, A>`               |
-| `TaskOutcome` (`Ok` / `Err`)                  | `Either` from `run()`, or `Exit` from `runExit()`                          |
-| `Task.cancellable(fn)` with `cancel()`        | `effect.runCancellable()` → `{ result, cancel }`, or `runExit({ signal })` |
-| `outcome.map` / `flatMap` / `recover`         | `effect.map` / `flatMap` / `recover`, before running                       |
-
-```typescript
-import { IO } from "functype/io";
-
-const loadUser = (id: string) =>
-  IO.tryPromise({
-    // pass the run's signal to fetch, so cancelling stops the request itself
-    try: (signal) =>
-      fetch(`/api/users/${id}`, { signal }).then(
-        (r) => r.json() as Promise<User>,
-      ),
-    catch: (error) => new Error(`Failed to load ${id}: ${String(error)}`),
-  });
-
-// Nothing runs until here
-const user = await loadUser("42").run(); // Either<Error, User>
-
-// Cancellable: a handle, or your own AbortController
-const { result, cancel } = loadUser("42").runCancellable();
-const controller = new AbortController();
-const exit = loadUser("42").runExit({ signal: controller.signal });
-controller.abort(); // the Exit is Interrupted
-```
-
-See [IO](/io) for retries, timeouts, typed error recovery and dependency injection.
-
-
-────────────────────────────────────────────────────────────────────────────────
 ## io
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -2726,15 +2674,46 @@ IO.iterate(
 ); // → IO<never, RepeatExhausted<number>, number> settling on 10
 ```
 
-## IO vs Task
+## Moving from Task
 
-| Feature              | IO<R,E,A>            | Task<T>                        |
-| -------------------- | -------------------- | ------------------------------ |
-| Typed Errors         | Yes (E parameter)    | No                             |
-| Dependency Injection | Yes (R parameter)    | No                             |
-| Cancellation         | Via interrupt        | Built-in                       |
-| Progress Tracking    | No                   | Yes                            |
-| Best For             | Complex apps with DI | Simple async with cancellation |
+functype 2.0 deleted `Task`. IO does what it did, except progress reporting and task names, which nothing used.
+
+| Task (1.x)                                                         | IO                                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `Task(params).Sync(f, onError)`                                    | `IO.tryCatch(f, onError).runSync()` → `Either<E, A>`                         |
+| `await Task(params).Async(f, onError)`                             | `await IO.tryPromise({ try: f, catch: onError }).run()` → `Either<E, A>`     |
+| `Task.ok` / `Task.err`, `Task.success` / `Task.fail`, `Ok` / `Err` | `IO.succeed(v)` / `IO.fail(e)`, or `Right` / `Left`                          |
+| `TaskOutcome`                                                      | `Either` from `run()`, or `Exit` from `runExit()`                            |
+| `Task.fromEither` / `Task.fromTry`                                 | `IO.fromEither` / `IO.fromTry`                                               |
+| `Task.fromPromise(fn)`                                             | `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`              |
+| `Task.toPromise(outcome)`                                          | `effect.runOrThrow()`                                                        |
+| `Task.fromNodeCallback(fn)`                                        | `IO.tryPromise` around `util.promisify(fn)`                                  |
+| `Task.race(tasks, ms)`                                             | `IO.race(effects).timeout(ms)`                                               |
+| `Task.cancellable(fn)`, `CancellationToken`                        | `effect.runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`    |
+| `Task.getErrorChain` / `Task.formatErrorChain`                     | `getErrorChain` / `formatErrorChain`, exported from `functype`               |
+| `Task.withProgress`, `AsyncWithProgress`                           | none: call your own callback inside the effect                               |
+| Task JSON (`"@functype": "Task"`), `Task.fromJSON`                 | none: `Serialization.deserialize` returns a `Failure` for the unknown marker |
+
+```typescript
+const loadUser = (id: string) =>
+  IO.tryPromise({
+    // pass the run's signal to fetch, so cancelling stops the request itself
+    try: (signal) =>
+      fetch(`/api/users/${id}`, { signal }).then(
+        (r) => r.json() as Promise<{ name: string }>,
+      ),
+    catch: (error) => new Error(`Failed to load ${id}: ${String(error)}`),
+  });
+
+// Nothing runs until here
+const user = await loadUser("42").run(); // Either<Error, { name: string }>
+
+// Cancellable: a handle, or your own AbortController
+const { result, cancel } = loadUser("42").runCancellable();
+const controller = new AbortController();
+const exit = loadUser("42").runExit({ signal: controller.signal });
+controller.abort(); // the Exit is Interrupted
+```
 
 ## When to Use IO
 
@@ -4368,7 +4347,7 @@ await audit.write(entry).tapLeft((e) => log.error(e)) // fine: a best-effort wri
 void (await cache.refresh()) // fine: a deliberate drop
 ```
 
-- **What counts:** a type, or a member of its union, with `fold` and `isLeft` or `isFailure`. That covers `Either`, `Try`, `Exit`, `Validation`, `Task`'s result (`TaskOutcome`) and Either-shaped wrappers such as a `ServiceResult`. An ignored `Option` or `List` loses no error, so it isn't reported. An `IO` that is never run is `no-floating-io`'s.
+- **What counts:** a type, or a member of its union, with `fold` and `isLeft` or `isFailure`. That covers `Either`, `Try`, `Exit`, `Validation` and Either-shaped wrappers such as a `ServiceResult`. An ignored `Option` or `List` loses no error, so it isn't reported. An `IO` that is never run is `no-floating-io`'s.
 - **Handled chains:** a chain that passes through `.tapError(…)` or `.tapLeft(…)` isn't reported, because it handles its failure. A `.flatMap(…)` after the handler can bring in a new failure, so that chain is reported again. `Try` has no failure tap, so mark a deliberate `Try` drop with `void`.
 - **Tests:** a test that calls something for its side effect and then checks mocks is reported too. Assert on the result, or turn the rule off for test files.
 - **Not seen yet:** a drop inside a callback, such as `xs.forEach((x) => save(x))`, or in the first part of a comma expression, isn't its own statement, so it isn't reported. `ok && save(x)` and `ok ? a() : b()` are.
@@ -4566,7 +4545,7 @@ Return types, variables, class fields and generic arguments (`Array<string | und
 | Option              | Default | Description                                                                               |
 | ------------------- | ------- | ----------------------------------------------------------------------------------------- |
 | `minChainDepth`     | `3`     | Report a `.flatMap(…)` chain once it has this many `flatMap`/`map`/`filter`/`fold` steps. |
-| `detectMixedMonads` | `true`  | Report a composition chain that moves between Option, Either, Try and Task.               |
+| `detectMixedMonads` | `true`  | Report a composition chain that moves between Option, Either and Try.                     |
 
 It reports three shapes, each once, at the outermost step:
 
@@ -5243,104 +5222,6 @@ Outcome of running an IO effect — Success | Failure | Die | Interrupted, retur
 - `// onDie / Die are optional and fall back to the failure handler`
 - `// defects stay recoverable: .recover/.recoverWith/.fold/.mapError treat Die as Failure`
 
-### Task
-
-Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable
-
-Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Monad, Promisable, Serializable, Traversable
-
-**Create**
-
-- `Task(params).Async(fn, errFn)`
-- `Task(params).Sync(fn, errFn)`
-- `Task.ok(value)`
-- `Task.err(error)`
-- `Task.fromEither(either)`
-- `Task.fromTry(try)`
-- `Task.fromPromise(fn)`
-- `Task.fromNodeCallback(fn)`
-- `Task.fromJSON(json) — reconstruct from serialize() output`
-
-**Transform**
-
-- `.map(f)`
-- `.flatMap(f)`
-- `.mapError(f)`
-- `.recover(v)`
-- `.recoverWith(f)`
-
-**Extract**
-
-- `.fold(onErr, onOk)`
-- `.match({Ok, Err})`
-- `.orElse(v)`
-- `.orThrow()`
-- `.toEither()`
-- `.toOption()`
-- `.toJSON()`
-
-**Other**
-
-- `Task.cancellable(fn)`
-- `Task.withProgress(fn, onProgress)`
-- `Task.race(tasks, timeout?)`
-- `Task.getErrorChain(error)`
-- `Task.formatErrorChain(error)`
-
-### TaskOutcome
-
-Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().
-
-Implements: AsyncMonad, Extractable, Foldable, Functor, Serializable
-
-**Create**
-
-- `Ok(value)`
-- `Err(error)`
-- `Task.ok(value)`
-- `Task.err(error)`
-
-**Transform**
-
-- `.map(f)`
-- `.flatMap(f)`
-- `.mapError(f)`
-- `.recover(v)`
-- `.recoverWith(f)`
-- `.mapAsync(f)`
-- `.flatMapAsync(f)`
-
-**Extract**
-
-- `.fold(onErr, onOk)`
-- `.match({Ok, Err})`
-- `.orElse(v)`
-- `.orThrow()`
-- `.toEither()`
-- `.toOption()`
-- `.toJSON()`
-
-**Check**
-
-- `.isOk()`
-- `.isErr()`
-- `.isSuccess()`
-- `.isFailure()`
-
-### TaskResult
-
-Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.
-
-**Create**
-
-- `Task(params).Async(fn, errFn) → TaskResult<T>`
-- `Task.fromPromise(fn) → (...args) => TaskResult<U>`
-
-**Other**
-
-- `await taskResult → TaskOutcome<T>`
-- `// then use any TaskOutcome method (.fold, .map, .toEither, ...)`
-
 ### Http
 
 HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
@@ -5659,6 +5540,7 @@ Code-tagged structured error ADT (extends Throwable); TypedError.validation(...)
 
 - `Fields: .code, .message, .status (HTTP), .context, .timestamp, .traceId?`
 - `VALIDATION_FAILED context shape: { field, value, rule }`
+- `getErrorChain(error) → Error[] and formatErrorChain(error, { includeTasks? }) walk any error's cause chain`
 
 ### Validation
 
@@ -5703,13 +5585,13 @@ Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON
 
 - `Plain JSON passthrough: non-functype data walks through unchanged (use deserializeStrict to reject)`
 - `Strict policy on unknown markers: unknown @functype marker → Try.Failure`
-- `Dispatch table covers all 12 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy, Task)`
+- `Dispatch table covers all 11 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy)`
 - `Algebraic square: serialize ≡ JSON.stringify ∘ toEnvelope; deserialize ≡ fromEnvelope ∘ JSON.parse`
 - `No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines via toEnvelope/fromEnvelope`
 
 ### SerializedError
 
-Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
+Canonical Error projection used by Try.Failure and Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
 
 **Create**
 

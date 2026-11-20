@@ -63,7 +63,7 @@ describe("no-floating-io (type-aware)", () => {
       {
         name: "Other functype containers are not IO",
         filename: typedFilename,
-        code: 'import { Option, Task } from "functype"; export function f() { Option(1).map((n) => n); Task().Sync(() => 1) }',
+        code: 'import { Option, Try } from "functype"; export function f() { Option(1).map((n) => n); Try(() => 1) }',
       },
       {
         name: "An object with a run method is not an IO",

@@ -53,7 +53,6 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
   Map: { file: "src/map/Map.ts" },
   Lazy: { file: "src/lazy/Lazy.ts" },
   LazyList: { file: "src/list/LazyList.ts" },
-  TaskOutcome: { file: "src/core/task/Task.ts" },
   // The four Exit variants are easy to conflate — particularly Failure vs Die, whose
   // difference is the *declared* error channel rather than anything visible at the call
   // site. `npx functype Exit --full` surfaces the interface JSDoc that explains it.

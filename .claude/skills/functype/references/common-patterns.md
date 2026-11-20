@@ -524,74 +524,77 @@ const program = IO.bracket(
 // Connection is always closed, even if query fails
 ```
 
-## Task Patterns
+## Cancellation Patterns
 
-### Basic Async with Cancellation
+### Cancel an Async Effect
 
 ```typescript
-import { Task } from "functype"
+import { IO } from "functype"
 
-const { task, cancel } = Task.cancellable(async (token) => {
-  const response = await fetch("/api/data")
-  if (token.isCancelled) return
-  return response.json()
+const load = IO.tryPromise({
+  // the run's signal reaches fetch, so cancelling stops the request itself
+  try: (signal) => fetch("/api/data", { signal }).then((r) => r.json() as Promise<unknown>),
+  catch: (error) => new Error(`Load failed: ${String(error)}`),
 })
+
+const { result, cancel } = load.runCancellable()
 
 // Cancel if user navigates away
 onNavigateAway(() => cancel())
 
-const result = await task
-result.fold(
+const outcome = await result // Left(InterruptedError) once cancelled
+outcome.fold(
   (error) => console.error("Failed:", error.message),
   (data) => renderData(data),
 )
 ```
 
-### Progress Tracking
+### Report Progress From Inside the Effect
+
+IO has no progress channel. Call your own callback as the work advances, and cancel with a signal:
 
 ```typescript
-import { Task } from "functype"
+import { IO } from "functype"
 
-const { task, cancel, currentProgress } = Task.withProgress(
-  async (updateProgress, token) => {
+const upload = IO.tryPromise({
+  try: async (signal) => {
     const chunks = splitIntoChunks(data)
-    for (let i = 0; i < chunks.length; i++) {
-      if (token.isCancelled) throw new Error("Cancelled")
-      await uploadChunk(chunks[i])
-      updateProgress(((i + 1) / chunks.length) * 100)
+    for (const [i, chunk] of chunks.entries()) {
+      signal?.throwIfAborted()
+      await uploadChunk(chunk)
+      updateProgressBar(((i + 1) / chunks.length) * 100)
     }
     return { uploaded: chunks.length }
   },
-  (percent) => updateProgressBar(percent),
-  { name: "Upload", description: "Uploading file chunks" },
-)
-
-const outcome = await task
-```
-
-### TaskOutcome Pattern Matching
-
-```typescript
-import { Task, Ok, Err } from "functype"
-
-const result = await Task({ name: "ParseConfig" }).Async(
-  () => loadAndParseConfig(),
-  (error) => error,
-)
-
-// Pattern match with match
-const message = result.match({
-  Ok: (config) => `Loaded ${config.name}`,
-  Err: (error) => `Failed: ${error.message}`,
+  catch: (error) => new Error(`Upload failed: ${String(error)}`),
 })
 
-// Convert to other functype types
-const configOption = result.toOption() // Option<Config> - None on error
-const configEither = result.toEither() // Either<Throwable, Config>
-const configTry = result.toTry() // Try<Config>
+const controller = new AbortController()
+const exit = await upload.runExit({ signal: controller.signal }) // Interrupted once aborted
+```
 
-// Chain with map/flatMap (TaskOutcome is a Functor/Monad)
-const name = result.map((config) => config.name).orElse("default")
+### Matching on the Outcome
+
+```typescript
+import { IO } from "functype"
+
+const config = IO.tryPromise({ try: () => loadAndParseConfig(), catch: (error) => new Error(String(error)) })
+
+// run() gives an Either: typed failures only
+const result = await config.run()
+const message = result.fold(
+  (error) => `Failed: ${error.message}`,
+  (loaded) => `Loaded ${loaded.name}`,
+)
+
+// runExit() also tells a defect and an interruption apart
+const exit = await config.runExit()
+const status = exit.match({
+  Success: (loaded) => `Loaded ${loaded.name}`,
+  Failure: (error) => `Failed: ${error.message}`,
+  Interrupted: () => "Cancelled",
+  Die: () => "Bug",
+})
 ```
 
 ## Do-Notation Patterns

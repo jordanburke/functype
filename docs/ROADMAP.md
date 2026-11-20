@@ -70,6 +70,11 @@ marketing artifact no competing FP library has.
 
 ## 3. Task → IO consolidation
 
+**Status (2026-11-20): done on `main` for 2.0.** Task is deleted, and IO's `runCancellable`,
+`runExit({ signal })` and `interruptOn` replace its cancellation. Progress reporting and task
+metadata were dropped, not moved to IO, because nothing used them. The plan below is kept as
+history.
+
 **Goal:** one effect type. Two overlapping effect types ("async with Ok/Err" vs "lazy effects with
 typed errors") confuse newcomers and LLMs alike — which directly undercuts the thesis. IO absorbs
 Task's unique capabilities; Task becomes a deprecated alias layer, removed in 2.0.

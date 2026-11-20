@@ -57,7 +57,7 @@ git push --follow-tags             # push the tag to trigger the CI publish
 
 - **TypeScript strict everywhere.** `tsconfig.base.json` sets `strict: true`, `noUncheckedIndexedAccess: true`, `verbatimModuleSyntax: true`, `noImplicitReturns: true`. Per-package configs only add paths/outDir/include/lib.
 - **No `any`.** Use `unknown` and narrow.
-- **functype patterns when modeling state.** Option for nullables, Either/Try for errors, IO/Task for effects, Validated for accumulating errors. (`packages/functype/CLAUDE.md` covers the full library.)
+- **functype patterns when modeling state.** Option for nullables, Either/Try for errors, IO for effects, Validated for accumulating errors. (`packages/functype/CLAUDE.md` covers the full library.)
 - **Functional style.** Immutable data; constructor functions over classes; method chaining or pipe.
 - **Tests are tightly colocated** — `test/` mirrors `src/` per package. Use `vitest`.
 - **CHANGELOG: add to `## Unreleased`.** User-facing changes go under the `## Unreleased` heading in `packages/functype/CHANGELOG.md` — the family changelog for all 8 packages. `pnpm release` cuts that section into `## {version} - {date}`. It touches **only** that file — the other per-package CHANGELOGs are not maintained by the release flow (most sit frozen at the changesets-era `1.0.1` / `2.100.1`), so don't add entries there and don't hand-edit already-released sections.

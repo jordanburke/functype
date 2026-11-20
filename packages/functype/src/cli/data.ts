@@ -320,84 +320,6 @@ export const TYPES: Record<string, TypeData> = {
     },
   },
 
-  Task: {
-    description:
-      "Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable",
-    interfaces: mergeInterfaces("Task"),
-    methods: {
-      create: [
-        "Task(params).Async(fn, errFn)",
-        "Task(params).Sync(fn, errFn)",
-        "Task.ok(value)",
-        "Task.err(error)",
-        "Task.fromEither(either)",
-        "Task.fromTry(try)",
-        "Task.fromPromise(fn)",
-        "Task.fromNodeCallback(fn)",
-        "Task.fromJSON(json) — reconstruct from serialize() output",
-      ],
-      transform: [".map(f)", ".flatMap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
-      extract: [
-        ".fold(onErr, onOk)",
-        ".match({Ok, Err})",
-        ".orElse(v)",
-        ".orThrow()",
-        ".toEither()",
-        ".toOption()",
-        ".toJSON()",
-      ],
-      other: [
-        "Task.cancellable(fn)",
-        "Task.withProgress(fn, onProgress)",
-        "Task.race(tasks, timeout?)",
-        "Task.getErrorChain(error)",
-        "Task.formatErrorChain(error)",
-      ],
-    },
-  },
-
-  TaskOutcome: {
-    description:
-      "Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().",
-    // TaskOutcome is declared inline (no `extends` chain), so its interface
-    // list is curated rather than mergeInterfaces-derived. Source of truth:
-    // the TaskOutcome interface body in src/core/task/Task.ts.
-    interfaces: ["AsyncMonad", "Extractable", "Foldable", "Functor", "Serializable"],
-    methods: {
-      create: ["Ok(value)", "Err(error)", "Task.ok(value)", "Task.err(error)"],
-      transform: [
-        ".map(f)",
-        ".flatMap(f)",
-        ".mapError(f)",
-        ".recover(v)",
-        ".recoverWith(f)",
-        ".mapAsync(f)",
-        ".flatMapAsync(f)",
-      ],
-      extract: [
-        ".fold(onErr, onOk)",
-        ".match({Ok, Err})",
-        ".orElse(v)",
-        ".orThrow()",
-        ".toEither()",
-        ".toOption()",
-        ".toJSON()",
-      ],
-      check: [".isOk()", ".isErr()", ".isSuccess()", ".isFailure()"],
-    },
-  },
-
-  TaskResult: {
-    description:
-      "Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.",
-    // Type alias has no own methods — point users at TaskOutcome.
-    interfaces: [],
-    methods: {
-      create: ["Task(params).Async(fn, errFn) → TaskResult<T>", "Task.fromPromise(fn) → (...args) => TaskResult<U>"],
-      other: ["await taskResult → TaskOutcome<T>", "// then use any TaskOutcome method (.fold, .map, .toEither, ...)"],
-    },
-  },
-
   Exit: {
     // Kept terse on purpose: `formatOverview` prints every description and the CLI
     // holds a word budget (test/cli.spec.ts). The full explanation lives in the Exit
@@ -748,7 +670,7 @@ export const TYPES: Record<string, TypeData> = {
       other: [
         "Plain JSON passthrough: non-functype data walks through unchanged (use deserializeStrict to reject)",
         "Strict policy on unknown markers: unknown @functype marker → Try.Failure",
-        "Dispatch table covers all 12 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy, Task)",
+        "Dispatch table covers all 11 Serializable types (Option, Either, Try, List, Set, Map, Obj, Stack, Tuple, LazyList, Lazy)",
         "Algebraic square: serialize ≡ JSON.stringify ∘ toEnvelope; deserialize ≡ fromEnvelope ∘ JSON.parse",
         "No DBOS / SuperJSON facade — consumers wire host serializer in ~8 lines via toEnvelope/fromEnvelope",
       ],
@@ -757,7 +679,7 @@ export const TYPES: Record<string, TypeData> = {
 
   SerializedError: {
     description:
-      "Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.",
+      "Canonical Error projection used by Try.Failure and Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.",
     interfaces: [],
     methods: {
       create: ["serializeError(err: unknown): SerializedError", "deserializeError(s: SerializedError | string): Error"],
@@ -807,6 +729,7 @@ export const TYPES: Record<string, TypeData> = {
       other: [
         "Fields: .code, .message, .status (HTTP), .context, .timestamp, .traceId?",
         "VALIDATION_FAILED context shape: { field, value, rule }",
+        "getErrorChain(error) → Error[] and formatErrorChain(error, { includeTasks? }) walk any error's cause chain",
       ],
     },
   },
@@ -895,7 +818,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
 export const CATEGORIES = {
   Core: ["Option", "Either", "Try", "Obj", "Identity"],
   Collection: ["List", "Set", "Map", "LazyList", "Tuple", "Stack"],
-  Effect: ["IO", "Exit", "Task", "TaskOutcome", "TaskResult", "Http", "HttpError", "Decoder", "DecoderError"],
+  Effect: ["IO", "Exit", "Http", "HttpError", "Decoder", "DecoderError"],
   Utility: ["Lazy", "Cond", "Match", "Do", "Ref", "Brand", "ValidatedBrand", "Wire", "invariant", "TracedOption"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],

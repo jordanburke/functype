@@ -4,13 +4,13 @@ This repository hosts the functype family of TypeScript functional programming l
 
 ## Packages
 
-| Package | Description | npm |
-|---|---|---|
-| [`functype`](./packages/functype) | Core FP library: Option, Either, Try, List, Set, Map, IO, Task, Match, Cond, and more | `functype` |
-| [`functype-os`](./packages/functype-os) | OS utilities (env vars, paths, file ops, platform detection) | `functype-os` |
-| [`functype-log`](./packages/functype-log) | IO-native logging wrapping LogLayer with Tag/Layer DI | `functype-log` |
-| [`functype-react`](./packages/functype-react) | React bindings (in progress) | `functype-react` |
-| [`functype-mcp-server`](./packages/mcp-server) | MCP server for functype documentation lookup and code validation | `functype-mcp-server` |
+| Package                                        | Description                                                                     | npm                   |
+| ---------------------------------------------- | ------------------------------------------------------------------------------- | --------------------- |
+| [`functype`](./packages/functype)              | Core FP library: Option, Either, Try, List, Set, Map, IO, Match, Cond, and more | `functype`            |
+| [`functype-os`](./packages/functype-os)        | OS utilities (env vars, paths, file ops, platform detection)                    | `functype-os`         |
+| [`functype-log`](./packages/functype-log)      | IO-native logging wrapping LogLayer with Tag/Layer DI                           | `functype-log`        |
+| [`functype-react`](./packages/functype-react)  | React bindings (in progress)                                                    | `functype-react`      |
+| [`functype-mcp-server`](./packages/mcp-server) | MCP server for functype documentation lookup and code validation                | `functype-mcp-server` |
 
 The Astro documentation site lives in [`site/`](./site).
 

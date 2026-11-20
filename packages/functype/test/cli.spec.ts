@@ -24,7 +24,6 @@ describe("CLI Data", () => {
       "Map",
       "Lazy",
       "LazyList",
-      "Task",
       "Cond",
       "Match",
       "Brand",
@@ -220,13 +219,15 @@ describe("Token Efficiency", () => {
     // 800 in 1.10.0 when the module-registry spec forced the five public
     // types that had shipped unregistered — Do, Identity, Ref, TracedOption,
     // Tracer — into the data (the Logger entry was trimmed to offset part of
-    // it). Still very compact for an LLM-targeted overview across 35 types.
+    // it). Lowered to 800 in 2.0, when deleting Task, TaskOutcome and
+    // TaskResult took the overview to 742 words. Still very compact for an
+    // LLM-targeted overview across 33 types.
     //
     // This is a ratchet, not a cap to design around: keep descriptions terse
     // (the full prose belongs in the interface JSDoc, which `--full` prints)
     // and bump this with a reason when a genuinely new type lands.
     const wordCount = output.split(/\s+/).length
-    expect(wordCount).toBeLessThan(840)
+    expect(wordCount).toBeLessThan(800)
   })
 
   it("type output should be compact", () => {

@@ -44,7 +44,6 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Map      | `Map([[k, v], ...])`, `.of()`, `.empty()`                       | `Map.of(["a", 1])`, `Map.empty()`                                                          |
 | Lazy     | `Lazy(() => expression)`                                        | `Lazy(() => expensiveComputation())`                                                       |
 | IO       | `IO.sync()`, `IO.succeed()`, `IO.fail()`                        | `IO.sync(() => value)`, `IO.succeed(42)`                                                   |
-| Task     | `Task(params).Async()`, `.Sync()`                               | `Task({ name: "Fetch" }).Async(() => fetch(url))`                                          |
 | Tuple    | `Tuple(...values)`                                              | `Tuple(42, "hello")`, `Tuple(1, 2, 3)`                                                     |
 | Stack    | `Stack.of()`, `Stack.empty()`                                   | `Stack.of(1, 2, 3)`, `Stack.empty<number>()`                                               |
 | LazyList | `LazyList(array)`, `.of()`, `.empty()`                          | `LazyList([1, 2])`, `LazyList.of(1, 2, 3)`                                                 |
@@ -511,22 +510,6 @@ bootDiagnostics({
 });
 // returns Either<List<MissingKey>, void>; failOn="missing" → process.exit(1)
 ```
-
-## Task Operations
-
-| Operation       | Method                          | Example                                             |
-| --------------- | ------------------------------- | --------------------------------------------------- |
-| Async operation | `Task(params).Async(fn, errFn)` | `Task({ name: "Fetch" }).Async(() => fetch(url))`   |
-| Sync operation  | `Task(params).Sync(fn, errFn)`  | `Task({ name: "Parse" }).Sync(() => JSON.parse(s))` |
-| Ok result       | `Task.ok(value)`                | `Task.ok(42)`                                       |
-| Err result      | `Task.err(error)`               | `Task.err("failed")`                                |
-| Cancellable     | `Task.cancellable(fn)`          | `Task.cancellable(async (token) => { ... })`        |
-| With progress   | `Task.withProgress(fn, onProg)` | `Task.withProgress(fn, p => console.log(p))`        |
-| Race            | `Task.race(tasks, timeout?)`    | `Task.race([p1, p2], 5000)`                         |
-| From promise fn | `Task.fromPromise(fn)`          | `Task.fromPromise(fetchUser)`                       |
-| From callback   | `Task.fromNodeCallback(fn)`     | `Task.fromNodeCallback(fs.readFile)`                |
-| Match outcome   | `outcome.fold(onErr, onOk)`     | `result.fold(e => "fail", v => "ok")`               |
-| Convert         | `outcome.toEither()`            | `result.toEither()`, `.toOption()`, `.toTry()`      |
 
 ## Tuple Operations
 

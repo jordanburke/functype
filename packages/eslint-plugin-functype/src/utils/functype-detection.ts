@@ -12,17 +12,7 @@ import type { ASTNode } from "../types/ast"
  * folds/filters/maps over those trees.
  */
 
-const TYPE_NAMES: ReadonlySet<string> = new Set([
-  "Option",
-  "Either",
-  "List",
-  "LazyList",
-  "Task",
-  "Try",
-  "Map",
-  "Set",
-  "Stack",
-])
+const TYPE_NAMES: ReadonlySet<string> = new Set(["Option", "Either", "List", "LazyList", "Try", "Map", "Set", "Stack"])
 
 /** `import ... from "functype"` — including `functype/<subpath>` */
 const isFunctypeImport = (node: ASTNode): boolean =>
@@ -103,8 +93,7 @@ export function isFunctypeType(node: ASTNode, functypeImports: FunctypeImports |
   if (node.type === "TSTypeReference" && node.typeName?.type === "Identifier") {
     const typeName = node.typeName.name
     return (
-      types.has(typeName) ||
-      ["Option", "Either", "List", "LazyList", "Task", "Try", "Map", "Set", "Stack"].includes(typeName)
+      types.has(typeName) || ["Option", "Either", "List", "LazyList", "Try", "Map", "Set", "Stack"].includes(typeName)
     )
   }
 

@@ -19,7 +19,7 @@ const MODULE_DOCS: Readonly<Record<string, ReadonlyArray<string> | { readonly in
   collections: { internal: "the Collection interface — documented under `npx functype interfaces`" },
   companion: { internal: "Companion() — construction utility for implementers of new types" },
   conditional: ["Cond", "Match"],
-  core: ["Task", "TaskOutcome", "TaskResult"],
+  core: { internal: "Base and Throwable, the building blocks the documented types are made from" },
   decoder: ["Decoder", "DecoderError"],
   do: ["Do"],
   either: ["Either"],

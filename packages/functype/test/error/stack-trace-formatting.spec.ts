@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { Task } from "@/core"
+import { Throwable } from "@/core"
 import { formatError, formatStackTrace, safeStringify } from "@/error"
 
 describe("Stack Trace Formatting", () => {
@@ -81,13 +81,14 @@ describe("Stack Trace Formatting", () => {
   })
 
   it("formats error messages with formatError", () => {
-    // Create a task error to format
-    const taskError = Task({ name: "ExampleTask" }).Sync(() => {
-      throw new Error("Task failed with an error")
-    }).error as Error
+    // Create a named step error to format
+    const stepError = Throwable.apply(new Error("Step failed with an error"), undefined, {
+      name: "ExampleStep",
+      description: "",
+    })
 
     // Format the error with stack trace
-    const formattedError = formatError(taskError, {
+    const formattedError = formatError(stepError, {
       includeTasks: true,
       includeStackTrace: true,
       maxStackFrames: 3,
@@ -95,15 +96,15 @@ describe("Stack Trace Formatting", () => {
     })
 
     // Check that the formatted error contains task info
-    expect(formattedError).toContain("ExampleTask")
-    expect(formattedError).toContain("Task failed with an error")
+    expect(formattedError).toContain("ExampleStep")
+    expect(formattedError).toContain("Step failed with an error")
 
     // Output the formatted error
-    console.log("\nTask Error Formatted:")
+    console.log("\nStep Error Formatted:")
     console.log(formattedError)
 
     // Try with colors option
-    const coloredError = formatError(taskError, {
+    const coloredError = formatError(stepError, {
       includeTasks: true,
       includeStackTrace: true,
       maxStackFrames: 2,

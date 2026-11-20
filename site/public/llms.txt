@@ -28,9 +28,6 @@ Install with `npm install functype`. Every type listed below is also available f
 
 - [IO](https://functype.org/io.md): Lazy effect type with typed errors and dependency injection
 - [Exit](https://functype.org/reference.md#exit): Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() rejects on it.
-- [Task](https://functype.org/task.md): Async operations with cancellation and progress tracking. Returns TaskOutcome<T> (Ok/Err) which implements Functor, AsyncMonad, Foldable, Extractable, Serializable
-- [TaskOutcome](https://functype.org/task.md): Result of a Task execution — Ok<T> or Err<T>. Implements Functor, AsyncMonad, Foldable, Extractable, Serializable. Construct via Ok(v) / Err(e) or as the resolved value of Task(...).Sync() / Task(...).Async().
-- [TaskResult](https://functype.org/task.md): Type alias for `Promise<TaskOutcome<T>>`. Returned by Task(params).Async(...) and adapter functions like Fs.readFile, Process.exec. Await it to get the inner TaskOutcome; chain Promise methods on the outside, TaskOutcome methods after the await.
 - [Http](https://functype.org/http.md): HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
 - [HttpError](https://functype.org/http.md): Three-variant ADT for HTTP failures: NetworkError | HttpStatusError | DecodeError (also exported as ResponseDecodeError alias)
 - [Decoder](https://functype.org/reference.md#decoder): Either-returning decoder contract: `Decoder<A> = (raw: unknown) => Either<DecoderError, A>`. Bundled combinators for primitives + functype ADTs (Option/Either/List/Map, null-bias). `Decoder.tagged.*` round-trips the `{_tag, value}` shape for functype-to-functype services.
@@ -57,7 +54,7 @@ Install with `npm install functype`. Every type listed below is also available f
 ## Serialization
 
 - [Serialization](https://functype.org/reference.md#serialization): Universal `@functype`-marked JSON serialization. `deserialize` walks parsed JSON and reconstructs any functype value found — no type argument needed. Lenient: plain JSON passes through. Strict on unknown markers (defends against Effect/fp-ts `_tag` collision). 1.2.1 adds `toEnvelope`/`fromEnvelope` for nesting inside structured serializers (SuperJSON, DBOS), and `deserializeStrict` for boundaries that require functype on the wire.
-- [SerializedError](https://functype.org/reference.md#serializederror): Canonical Error projection used by Try.Failure, Task.Err, Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
+- [SerializedError](https://functype.org/reference.md#serializederror): Canonical Error projection used by Try.Failure and Lazy-with-thrown-thunk. Round-trips name + message + stack + cause chain. `e.name === 'TypeError'` survives; `instanceof TypeError` does NOT.
 
 ## Service
 
@@ -85,5 +82,4 @@ Install with `npm install functype`. Every type listed below is also available f
 - [HKT](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/HKT.md): Higher-kinded types and core architecture
 - [Bundle Optimization](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/BUNDLE_OPTIMIZATION.md): Tree-shaking and import strategies
 - [Tuple Examples](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/TUPLE-EXAMPLES.md): Fixed-length typed arrays
-- [Task Migration Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/tasks/v3/TASK_MIGRATION_GUIDE.md): Task version upgrade guide
 - [Roadmap](https://github.com/jordanburke/functype/blob/main/docs/ROADMAP.md): Planned features

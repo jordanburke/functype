@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import { Brand, ValidatedBrand } from "@/branded"
 import { Cond } from "@/conditional"
 import { Match } from "@/conditional"
-import { Task } from "@/core/task"
 import { $, Do, DoAsync } from "@/do"
 import { Either, Left, Right } from "@/either"
 import { Lazy } from "@/lazy"
@@ -215,39 +214,6 @@ describe("Documentation Examples", () => {
       expect((result as Option<number>).orElse(0)).toBe(17)
       expect((validation as Either<string, { name: string; age: number }>).isRight()).toBe(true)
       // Note: _asyncResult is a Promise, would need await to test
-    })
-
-    it("should demonstrate Task basic usage", () => {
-      //#region readme-task-basic
-      // Task v2: All operations return TaskOutcome<T>
-      const syncResult = Task().Sync(() => "success")
-      // Returns: TaskSuccess<string> (extends TaskOutcome<string>)
-
-      void Task().Async(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 100))
-        return "async success"
-      }) // asyncResult
-      // Returns: Promise<TaskSuccess<string>>
-
-      // Error handling
-      const errorResult = Task().Sync(() => {
-        throw new Error("Something failed")
-      })
-      // Returns: TaskFailure<string>
-
-      // Transform successful results
-      const _transformed = Task().Sync(() => 42)
-      const doubled = _transformed.map((value) => value * 2)
-
-      // Chain operations with error handling
-      const chained = Task().Sync(() => 5)
-      void chained.flatMap((value) => Right(value * 2)) // chainResult
-      //#endregion readme-task-basic
-
-      expect(syncResult.isSuccess()).toBe(true)
-      expect(syncResult.value).toBe("success")
-      expect(errorResult.isFailure()).toBe(true)
-      expect(doubled.orElse(0)).toBe(84)
     })
 
     it("should demonstrate Branded Types", () => {
@@ -548,55 +514,6 @@ describe("Documentation Examples", () => {
       //#endregion site-list-flatmap
 
       expect(pairs.toArray()).toEqual([1, 10, 2, 20, 3, 30])
-    })
-
-    it("should demonstrate Task sync and async patterns", () => {
-      //#region site-task-sync-async
-      // Synchronous task
-      const sync = Task().Sync(
-        () => 42,
-        (err) => new Error("Failed"),
-      )
-
-      // Asynchronous task
-      const asyncTask = Task().Async(
-        async () => await fetchData(),
-        async () => new Error("Fetch error"),
-      )
-      void asyncTask
-      //#endregion site-task-sync-async
-
-      expect(sync.isSuccess()).toBe(true)
-      async function fetchData() {
-        return "data"
-      }
-    })
-
-    it("should demonstrate Task error handling patterns", async () => {
-      //#region site-task-error
-      try {
-        await Task({ name: "DataProcessor" }).Async(() => {
-          throw new Error("Processing failed")
-        })
-      } catch (error: unknown) {
-        if (error && typeof error === "object" && "taskInfo" in error) {
-          console.log((error as { taskInfo: { name: string } }).taskInfo.name) // "DataProcessor"
-        }
-      }
-      //#endregion site-task-error
-
-      expect(true).toBe(true)
-    })
-
-    it("should demonstrate Task conversion patterns", () => {
-      //#region site-task-conversion
-      const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
-      //#endregion site-task-conversion
-
-      expect(getUser).toBeDefined()
-      async function fetchAPI() {
-        return { id: 1, name: "User" }
-      }
     })
 
     it("should demonstrate Do Option chaining patterns", () => {

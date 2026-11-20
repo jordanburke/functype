@@ -271,7 +271,7 @@ IO integrates with functype's sync data types (no Task/Task integration):
 
 **No integration for now.** IO is a standalone effect type:
 
-- **Task**: Unchanged, continues to exist
+- **Task**: Unchanged at the time. Deleted in 2.0; IO replaces it.
 - **IO**: New standalone type, no dependencies on Task
 
 Users can choose which to use based on their needs. Integration/migration can be added later if desired.

@@ -10,13 +10,10 @@ const PRESERVE_FILES = [
   "BUNDLE_OPTIMIZATION.md",
   "HKT.md",
   "ROADMAP.md",
-  "TASK-TODO.md",
   "TUPLE-EXAMPLES.md",
   "ai-guide.md",
   "examples.md",
   "quick-reference.md",
-  "task-error-handling.md",
-  "tasks.md",
   "type-index.md",
 ]
 
@@ -132,7 +129,6 @@ const either = right("value")
 | List     | ~170 bytes                  | ~125 bytes   |
 | Try      | ~170 bytes                  | ~125 bytes   |
 | Tuple    | ~120 bytes                  | ~100 bytes   |
-| Task     | ~200 bytes                  | ~140 bytes   |
 
 ## Additional Tips
 
