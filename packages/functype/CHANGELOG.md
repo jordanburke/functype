@@ -6,16 +6,6 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
-- **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
-  - **The legacy SSE endpoint, `/sse`, is gone.** A client configured with `http://…/sse` gets a 404. Point it at `/mcp`, the Streamable HTTP endpoint every current client supports.
-  - **No CORS headers.** A browser page calling the server directly fails its preflight; desktop and CLI clients are unaffected.
-  - **Bad tool arguments come back as a tool result with `isError: true`,** not a JSON-RPC `-32602` error, so the SDK client's `callTool` resolves instead of throwing.
-  - **The HTTP endpoint is stateless:** no `Mcp-Session-Id`, and `GET` or `DELETE` on `/mcp` answers 405. `/health` returns JSON, and `/ready` is gone.
-
-  It drops FastMCP's dependencies along with every security advisory `pnpm audit --prod` reported in them, and adds none.
-
-- **eslint-plugin-functype: `prefer-flatmap` no longer reports a `.map` on an Option, Either, Try, Lazy, Obj, Exit, TaskOutcome or IO value** (#520). Their `flatMap` expects the same container back, so when the callback returns an array, `.flatMap` won't compile. The rule already skipped a receiver written as a constructor call, such as `Option(x).map(…)`. With type-aware linting it now also skips any value of those types, however it was built: a variable, a parameter or a function's return. Without type information, only the constructor call is recognized, as before. The chained form, `.map(…).map(…)`, gets the same exemptions; before, it had none. Arrays, tuples and functype's `List` and `Set` still report, because their `flatMap` takes an iterable.
-
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -31,6 +21,24 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+
+## 1.27.1 - 2026-11-19
+
+- **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
+  - **The legacy SSE endpoint, `/sse`, is gone.** A client configured with `http://…/sse` gets a 404. Point it at `/mcp`, the Streamable HTTP endpoint every current client supports.
+  - **No CORS headers.** A browser page calling the server directly fails its preflight; desktop and CLI clients are unaffected.
+  - **Bad tool arguments come back as a tool result with `isError: true`,** not a JSON-RPC `-32602` error, so the SDK client's `callTool` resolves instead of throwing.
+  - **The HTTP endpoint is stateless:** no `Mcp-Session-Id`, and `GET` or `DELETE` on `/mcp` answers 405. `/health` returns JSON, and `/ready` is gone.
+
+  It drops FastMCP's dependencies along with every security advisory `pnpm audit --prod` reported in them, and adds none.
+
+- **eslint-plugin-functype: `prefer-flatmap` no longer reports a `.map` on an Option, Either, Try, Lazy, Obj, Exit, TaskOutcome or IO value** (#520). Their `flatMap` expects the same container back, so when the callback returns an array, `.flatMap` won't compile. The rule already skipped a receiver written as a constructor call, such as `Option(x).map(…)`. With type-aware linting it now also skips any value of those types, however it was built: a variable, a parameter or a function's return. Without type information, only the constructor call is recognized, as before. The chained form, `.map(…).map(…)`, gets the same exemptions; before, it had none. Arrays, tuples and functype's `List` and `Set` still report, because their `flatMap` takes an iterable.
+
+- **`takeRight(NaN)` keeps nothing on List, Set and LazyList,** the way `take(NaN)` and `take(0)` do. It used to return every element. `LazyList.take(NaN)` also returned every element, and now keeps nothing too.
+
+- **eslint-plugin-functype's `meta.version` reports the published version.** It was hard-coded to `2.0.0`; it now comes from `package.json` at build time.
+
+- **The `functype` Claude plugin runs `functype-mcp-server@latest`** and is now version 1.1.4, so an installed plugin updates and picks up the SomaMCP server. Before, `npx` could keep serving an older cached copy.
 
 ## 1.27.0 - 2026-11-15
 

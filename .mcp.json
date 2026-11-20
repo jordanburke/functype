@@ -2,7 +2,7 @@
   "mcpServers": {
     "functype": {
       "command": "npx",
-      "args": ["-y", "functype-mcp-server"]
+      "args": ["-y", "functype-mcp-server@latest"]
     }
   }
 }

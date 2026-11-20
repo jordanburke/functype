@@ -165,7 +165,8 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
         (function* () {
           const counter = Counter(0)
           for (const item of iterable) {
-            if (counter.get() >= n) break
+            // `!(count < n)` stops at once for NaN, as List.take does.
+            if (!(counter.get() < n)) break
             yield item
             counter.increment()
           }
@@ -284,7 +285,8 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
 
     takeRight: (n: number) => {
       const arr = Array.from(iterable) as A[]
-      return LazyListObject<A>(n <= 0 ? [] : arr.slice(-n))
+      // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+      return LazyListObject<A>(!(n > 0) ? [] : arr.slice(-n))
     },
 
     reverse: () => LazyListObject<A>((Array.from(iterable) as A[]).reverse()),

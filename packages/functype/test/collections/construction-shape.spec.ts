@@ -519,6 +519,23 @@ describe("every changed type", () => {
   })
 })
 
+// The lazy getters come from one descriptor map per type (src/internal/lazyProperties.ts), so two
+// instances share each getter function. A per-instance closure here would bring back the slow
+// construction of #511.
+describe("lazy getters are shared, not built per instance", () => {
+  it.each([
+    ["List", List([1, 2]), List([3]), ["headOption", "lastOption", "tail", "init"]],
+    ["Set", Set([1, 2]), Set([3]), ["head", "headOption", "last", "lastOption", "tail", "init"]],
+    ["LazyList", LazyList([1, 2]), LazyList([3]), ["head", "last", "headOption", "lastOption", "tail", "init"]],
+  ] as const)("%s", (_, a, b, keys) => {
+    for (const key of keys) {
+      const getter = Object.getOwnPropertyDescriptor(a, key)?.get
+      expect(getter, key).toBeTypeOf("function")
+      expect(Object.getOwnPropertyDescriptor(b, key)?.get, key).toBe(getter)
+    }
+  })
+})
+
 describe("match, Do-notation, ap and async results on the other types", () => {
   it("match picks the right branch on Map, Stack and Obj", () => {
     expect(Map([["a", 1]]).match({ Empty: () => "empty", NonEmpty: (entries) => `${entries.length}` })).toBe("1")
