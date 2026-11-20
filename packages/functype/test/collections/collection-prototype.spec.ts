@@ -55,7 +55,7 @@ describe("each collection's shape", () => {
     ["Set", [() => Set([1]), () => Set(["a"]).filter(() => false), () => Set.empty()]],
     ["Map", [() => Map([["a", 1]]), () => Map.empty<string, number>().map((x) => x + 1), () => Map.empty()]],
     ["Stack", [() => Stack([1]), () => Stack([1]).push(2), () => Stack.empty()]],
-    ["LazyList", [() => LazyList([1]), () => LazyList([1]).tail(), () => LazyList.empty()]],
+    ["LazyList", [() => LazyList([1]), () => LazyList([1]).map((x) => x + 1), () => LazyList.empty()]],
     ["Obj", [() => Obj({ a: 1 }), () => Obj({ a: 1 }).set("a", 2), () => Obj.empty()]],
   ]
   it.each(families)("every %s shares one frozen prototype, and each value is frozen", (_, makers) => {
@@ -248,6 +248,23 @@ describe("the collections' 2.0 breaks", () => {
         record.extra = 1
       }).toThrow(TypeError)
     }
+  })
+
+  it("some methods return the value itself when the result would hold the same data", () => {
+    const list = List([1, 2])
+    expect(list.dropRight(0)).toBe(list)
+    expect(list.span(() => true)[0]).toBe(list)
+    const set = Set([1, 2])
+    expect(set.dropRight(0)).toBe(set)
+    const map = Map([["a", 1]])
+    expect(map.remove("missing")).toBe(map)
+    const empty = Stack<number>()
+    expect(empty.pop()[0]).toBe(empty)
+  })
+
+  it("callbacks still get the index and array, as the native methods pass them", () => {
+    expect(List(["1", "2", "3"]).map(parseInt).toArray()).toEqual([1, NaN, NaN])
+    expect(Stack(["1", "2", "3"]).map(parseInt).toArray()).toEqual([1, NaN, NaN])
   })
 
   it("a plain-object check is false, because a value's prototype is its type's", () => {

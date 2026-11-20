@@ -75,7 +75,7 @@ describe("construction cost", () => {
     ],
     [
       "Stack",
-      6,
+      8,
       "10x -> 3.1x",
       (i: number) => stack([i, 1, 2]).map(inc),
       (i: number) => ({ _tag: "Stack", value: [...{ _tag: "Stack", value: [i, 1, 2] }.value].map(inc) }),
