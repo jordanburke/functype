@@ -2678,20 +2678,21 @@ IO.iterate(
 
 functype 2.0 deleted `Task`. IO does what it did, except progress reporting and task names, which nothing used.
 
-| Task (1.x)                                     | IO                                                                           |
-| ---------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Task(params).Sync(f, onError)`                | `IO.tryCatch(f, onError).runSync()` → `Either<E, A>`                         |
-| `await Task(params).Async(f, onError)`         | `await IO.tryPromise({ try: f, catch: onError }).run()` → `Either<E, A>`     |
-| `Task.ok(v)` / `Task.err(e)`, `Ok` / `Err`     | `IO.succeed(v)` / `IO.fail(e)`, or `Right` / `Left`                          |
-| `TaskOutcome`                                  | `Either` from `run()`, or `Exit` from `runExit()`                            |
-| `Task.fromEither` / `Task.fromTry`             | `IO.fromEither` / `IO.fromTry`                                               |
-| `Task.fromPromise(fn)`                         | `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`              |
-| `Task.toPromise(outcome)`                      | `effect.runOrThrow()`                                                        |
-| `Task.race(tasks, ms)`                         | `IO.race(effects).timeout(ms)`                                               |
-| `Task.cancellable(fn)`, `CancellationToken`    | `effect.runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`    |
-| `Task.getErrorChain` / `Task.formatErrorChain` | `getErrorChain` / `formatErrorChain`, exported from `functype`               |
-| `Task.withProgress(fn, onProgress)`            | none: call your own callback inside the effect                               |
-| Task JSON (`"@functype": "Task"`)              | none: `Serialization.deserialize` returns a `Failure` for the unknown marker |
+| Task (1.x)                                                         | IO                                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `Task(params).Sync(f, onError)`                                    | `IO.tryCatch(f, onError).runSync()` → `Either<E, A>`                         |
+| `await Task(params).Async(f, onError)`                             | `await IO.tryPromise({ try: f, catch: onError }).run()` → `Either<E, A>`     |
+| `Task.ok` / `Task.err`, `Task.success` / `Task.fail`, `Ok` / `Err` | `IO.succeed(v)` / `IO.fail(e)`, or `Right` / `Left`                          |
+| `TaskOutcome`                                                      | `Either` from `run()`, or `Exit` from `runExit()`                            |
+| `Task.fromEither` / `Task.fromTry`                                 | `IO.fromEither` / `IO.fromTry`                                               |
+| `Task.fromPromise(fn)`                                             | `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`              |
+| `Task.toPromise(outcome)`                                          | `effect.runOrThrow()`                                                        |
+| `Task.fromNodeCallback(fn)`                                        | `IO.tryPromise` around `util.promisify(fn)`                                  |
+| `Task.race(tasks, ms)`                                             | `IO.race(effects).timeout(ms)`                                               |
+| `Task.cancellable(fn)`, `CancellationToken`                        | `effect.runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`    |
+| `Task.getErrorChain` / `Task.formatErrorChain`                     | `getErrorChain` / `formatErrorChain`, exported from `functype`               |
+| `Task.withProgress`, `AsyncWithProgress`                           | none: call your own callback inside the effect                               |
+| Task JSON (`"@functype": "Task"`), `Task.fromJSON`                 | none: `Serialization.deserialize` returns a `Failure` for the unknown marker |
 
 ```typescript
 const loadUser = (id: string) =>

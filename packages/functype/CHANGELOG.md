@@ -99,18 +99,18 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 **2.0 (breaking): `Task` is deleted. Use `IO`.** From §1 of #276 (the 2.0 release plan).
 
-- `Task`, `TaskOutcome`, `TaskResult`, `Ok`, `Err`, `TaskParams`, `TaskMetadata`, `TaskSuccess`, `TaskFailure`, `CancellationToken`, `CancellationTokenSource`, `createCancellationTokenSource` and the `functype/task` entry point are gone. That is about 1,060 lines of source and 2,600 lines of tests.
+- `Task`, `TaskOutcome`, `TaskResult`, `Ok`, `Err`, `TaskParams`, `TaskMetadata`, `TaskSuccess`, `TaskFailure`, the `Sync` / `Async` type aliases, `CancellationToken`, `CancellationTokenSource`, `createCancellationTokenSource` and the `functype/task` entry point are gone. That is about 1,060 lines of source and 2,600 lines of tests.
 - `getErrorChain` and `formatErrorChain` move to the error module and keep their behaviour. Import them from `functype`: `Task.getErrorChain(e)` becomes `getErrorChain(e)`. `TaggedThrowable` and `isTaggedThrowable` move with them. `formatError` and `createErrorSerializer` work as before.
 - **Upgrade:** each Task call has an IO equivalent.
   - `Task(params).Sync(f, onError)` → `IO.tryCatch(f, onError).runSync()`, an `Either<E, A>`.
   - `await Task(params).Async(f, onError)` → `await IO.tryPromise({ try: f, catch: onError }).run()`. `IO.async(f)` works when the error can stay `unknown`. A `finally` callback becomes `IO.bracket` or `acquireRelease`.
-  - `Task.ok(v)` / `Task.err(e)` and `Ok(v)` / `Err(e)` → `IO.succeed(v)` / `IO.fail(e)`, or `Right(v)` / `Left(e)` for a plain value.
+  - `Task.ok(v)` / `Task.err(e)`, `Task.success` / `Task.fail`, and `Ok(v)` / `Err(e)` → `IO.succeed(v)` / `IO.fail(e)`, or `Right(v)` / `Left(e)` for a plain value.
   - A `TaskOutcome` → the `Either` that `run()` returns, or the `Exit` from `runExit()`. `isOk()` → `isRight()`, `isErr()` → `isLeft()`.
-  - `Task.fromEither` / `Task.fromTry` → `IO.fromEither` / `IO.fromTry`. `Task.fromPromise(fn)` → `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`. `Task.toPromise(outcome)` → `effect.runOrThrow()`.
+  - `Task.fromEither` / `Task.fromTry` → `IO.fromEither` / `IO.fromTry`. `Task.fromPromise(fn)` → `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`. `Task.toPromise(outcome)` → `effect.runOrThrow()`. `Task.fromNodeCallback(fn)` → `IO.tryPromise` around `util.promisify(fn)`.
   - `Task.race(tasks, ms)` → `IO.race(effects).timeout(ms)`, which also stops the losers.
   - `Task.cancellable(fn)` and `CancellationToken` → `effect.runCancellable()` for a `{ result, cancel }` handle, `runExit({ signal })` with your own `AbortController`, or `interruptOn(signal)`. `IO.async` and `IO.tryPromise` thunks receive the run's signal; pass it to `fetch` to stop the request.
-  - `Task.withProgress` and task names (`_meta`) have no replacement, because nothing used them. Call your own progress callback inside the effect.
-- **Stored Task JSON no longer deserializes.** `Serialization.deserialize` of a `{ "@functype": "Task", "_tag": "Ok" | "Err", … }` envelope, at the top level or nested, now returns a `Failure` for an unknown `@functype` marker. Convert stored Task values before upgrading. The compiler can't see this change.
+  - `Task.withProgress`, `AsyncWithProgress` and task names (`_meta`) have no replacement, because nothing used them. Call your own progress callback inside the effect.
+- **Stored Task JSON no longer deserializes.** `Serialization.deserialize` of a `{ "@functype": "Task", "_tag": "Ok" | "Err", … }` envelope, at the top level or nested, now returns a `Failure` for an unknown `@functype` marker. `Task.fromJSON` is gone with it. Convert stored Task values before upgrading. The compiler can't see this change.
 - eslint-plugin-functype no longer treats `Task`, `Ok` or `Err` as functype types. `prefer-do-notation` no longer reads a receiver named `task` or `…Task` as a monad, so it reports less.
 - The MCP server's `search_docs` no longer lists Task, and `validate_code`'s automatic import no longer names `Task`, `Ok` or `Err`. The site's Task page is replaced by a "Moving from Task" table on the IO page.
 

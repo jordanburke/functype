@@ -791,7 +791,7 @@ const exit = await fetched.runExit({ signal: controller.signal }) // Success | F
 ```typescript
 import { IO } from "functype"
 
-const fetchUser = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json())
+const fetchUser = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<User>)
 
 // Wrap the promise-returning function
 const getUser = (id: string) =>
@@ -1519,7 +1519,7 @@ validationResult.fold(
 ### Data Fetching and Processing
 
 ```typescript
-import { IO, Option, Either, pipe, List } from "functype"
+import { IO } from "functype"
 
 // Define types
 type User = {
@@ -1587,35 +1587,35 @@ async function getUserContentSummary(userId: string) {
   const userResult = await api.fetchUser(userId).run()
 
   if (userResult.isLeft()) {
-    return `Error fetching user: ${userResult.getLeft().message}`
+    return `Error fetching user: ${userResult.value.message}`
   }
 
-  const user = userResult.get()
+  const user = userResult.value
 
   // Fetch user's posts
   const postsResult = await api.fetchUserPosts(userId).run()
 
   if (postsResult.isLeft()) {
-    return `Error fetching posts: ${postsResult.getLeft().message}`
+    return `Error fetching posts: ${postsResult.value.message}`
   }
 
-  const posts = postsResult.get()
-
-  if (posts.length === 0) {
-    return `User ${user.name} has no posts.`
-  }
+  const posts = postsResult.value
 
   // Take the latest post
   const latestPost = posts[0]
+
+  if (latestPost === undefined) {
+    return `User ${user.name} has no posts.`
+  }
 
   // Fetch comments for the latest post
   const commentsResult = await api.fetchPostComments(latestPost.id).run()
 
   if (commentsResult.isLeft()) {
-    return `Error fetching comments: ${commentsResult.getLeft().message}`
+    return `Error fetching comments: ${commentsResult.value.message}`
   }
 
-  const comments = commentsResult.get()
+  const comments = commentsResult.value
 
   // Create summary
   return {
