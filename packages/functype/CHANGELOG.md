@@ -135,6 +135,22 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **Some methods return the same value instead of a copy**, when the result would hold the same data: List's `dropRight(0)`, and `span` when every element matches; Set's `dropRight(0)`; Map's `remove` of a missing key; Stack's `pop` on an empty Stack. Code that compared results with `===` sees `true` where it saw `false`.
 - functype-react's `structuralEq` now calls two collections with the same data equal. List, Stack and Obj compare element by element. Set and Map compare as the native Set or Map they hold. A LazyList compares its source by reference.
 
+**2.0 (breaking): functype-log drops `loglayer`.** From §12 of #276 (the 2.0 release plan).
+
+- `logLayerAdapter` and `LoggerLive.fromLogLayer` are deleted. functype-log has no runtime dependencies now; `loglayer` is gone from its `dependencies`.
+- `createConsoleLogger`, `LoggerLive.console` and `createDirectConsoleLogger` write to the console themselves. The arguments are the same as before: the message alone, or a data object then the message. The data object holds the context, the metadata and the `withError` error under `err`. `fatal` writes with `console.error`. A test that pins this passes unchanged.
+- Three cases differ, and the compiler can't see them. A `Promise` in metadata is written as it is, at once, where loglayer waited for it and wrote the result later. An empty `withContext({})` adds nothing, where loglayer wrote `{}` before the message. A `level` that isn't a level name, such as `"WARN"`, now lets every level through with the `sink` option too, as the console already did; before, the sink got nothing.
+- **Upgrade:** a consumer that passed a LogLayer instance to `LoggerLive.fromLogLayer` writes a `sink` for the library behind it:
+
+  ```typescript
+  const pinoLog = pino()
+  const sink: LogSink = ({ level, message, metadata, error }) =>
+    pinoLog[level]({ ...metadata, ...(error ? { err: error } : {}) }, message)
+  LoggerLive.console({ sink })
+  ```
+
+  For trace IDs in logs, read OpenTelemetry's active span in the sink instead of using `@loglayer/plugin-opentelemetry`. functype-log's README shows how, with the same `trace_id`, `span_id` and `trace_flags` field names.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:

@@ -1,12 +1,11 @@
 {
   "name": "functype-log",
   "version": "1.27.1",
-  "description": "IO-native logging for functype — wraps LogLayer with Tag/Layer DI, structured logging, and test utilities",
+  "description": "IO-native logging for functype — Tag/Layer DI, a console logger, a one-function sink, and test utilities",
   "keywords": [
     "functype",
     "functional",
     "logging",
-    "loglayer",
     "io",
     "dependency-injection",
     "typescript"
@@ -38,9 +37,6 @@
   },
   "peerDependencies": {
     "functype": ">=0.60.0"
-  },
-  "dependencies": {
-    "loglayer": "^9.4.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
