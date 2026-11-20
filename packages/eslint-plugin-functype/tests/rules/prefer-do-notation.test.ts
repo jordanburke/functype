@@ -324,7 +324,7 @@ describe("prefer-do-notation", () => {
         `,
           errors: [{ messageId: "preferDoForMixedMonads" }],
         },
-        ...["userOption", "parseResult", "loadTry", "task"].map((name) => ({
+        ...["userOption", "parseResult", "loadTry", "maybe"].map((name) => ({
           name: `A receiver named ${name} is a monad`,
           code: `const out = ${name}.flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))`,
           errors: [{ messageId: "preferDoForChainedMethods" as const, data: { count: "3" } }],

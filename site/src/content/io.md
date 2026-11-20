@@ -331,15 +331,46 @@ IO.iterate(
 ); // → IO<never, RepeatExhausted<number>, number> settling on 10
 ```
 
-## IO vs Task
+## Moving from Task
 
-| Feature              | IO<R,E,A>            | Task<T>                        |
-| -------------------- | -------------------- | ------------------------------ |
-| Typed Errors         | Yes (E parameter)    | No                             |
-| Dependency Injection | Yes (R parameter)    | No                             |
-| Cancellation         | Via interrupt        | Built-in                       |
-| Progress Tracking    | No                   | Yes                            |
-| Best For             | Complex apps with DI | Simple async with cancellation |
+functype 2.0 deleted `Task`. IO does what it did, except progress reporting and task names, which nothing used.
+
+| Task (1.x)                                                         | IO                                                                           |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `Task(params).Sync(f, onError)`                                    | `IO.tryCatch(f, onError).runSync()` → `Either<E, A>`                         |
+| `await Task(params).Async(f, onError)`                             | `await IO.tryPromise({ try: f, catch: onError }).run()` → `Either<E, A>`     |
+| `Task.ok` / `Task.err`, `Task.success` / `Task.fail`, `Ok` / `Err` | `IO.succeed(v)` / `IO.fail(e)`, or `Right` / `Left`                          |
+| `TaskOutcome`                                                      | `Either` from `run()`, or `Exit` from `runExit()`                            |
+| `Task.fromEither` / `Task.fromTry`                                 | `IO.fromEither` / `IO.fromTry`                                               |
+| `Task.fromPromise(fn)`                                             | `(...args) => IO.tryPromise({ try: () => fn(...args), catch })`              |
+| `Task.toPromise(outcome)`                                          | `effect.runOrThrow()`                                                        |
+| `Task.fromNodeCallback(fn)`                                        | `IO.tryPromise` around `util.promisify(fn)`                                  |
+| `Task.race(tasks, ms)`                                             | `IO.race(effects).timeout(ms)`                                               |
+| `Task.cancellable(fn)`, `CancellationToken`                        | `effect.runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`    |
+| `Task.getErrorChain` / `Task.formatErrorChain`                     | `getErrorChain` / `formatErrorChain`, exported from `functype`               |
+| `Task.withProgress`, `AsyncWithProgress`                           | none: call your own callback inside the effect                               |
+| Task JSON (`"@functype": "Task"`), `Task.fromJSON`                 | none: `Serialization.deserialize` returns a `Failure` for the unknown marker |
+
+```typescript
+const loadUser = (id: string) =>
+  IO.tryPromise({
+    // pass the run's signal to fetch, so cancelling stops the request itself
+    try: (signal) =>
+      fetch(`/api/users/${id}`, { signal }).then(
+        (r) => r.json() as Promise<{ name: string }>,
+      ),
+    catch: (error) => new Error(`Failed to load ${id}: ${String(error)}`),
+  });
+
+// Nothing runs until here
+const user = await loadUser("42").run(); // Either<Error, { name: string }>
+
+// Cancellable: a handle, or your own AbortController
+const { result, cancel } = loadUser("42").runCancellable();
+const controller = new AbortController();
+const exit = loadUser("42").runExit({ signal: controller.signal });
+controller.abort(); // the Exit is Interrupted
+```
 
 ## When to Use IO
 

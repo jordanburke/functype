@@ -442,7 +442,6 @@ const SITE_PAGES = [
   "obj",
   "option",
   "set",
-  "task",
   "try",
   "wire",
 ] as const

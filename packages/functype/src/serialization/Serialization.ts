@@ -21,7 +21,6 @@
  * See `docs/archive/proposals/universal-deserialize.md` for the design rationale.
  */
 
-import { Task } from "@/core/task/Task"
 import { Left, Right } from "@/either/Either"
 import { Lazy } from "@/lazy/Lazy"
 import { LazyList } from "@/list/LazyList"
@@ -88,14 +87,6 @@ const getReconstructors = (): Record<string, Reconstructor> => {
         return Lazy.fail(err)
       }
       return Lazy.evaluated(p.value)
-    },
-    Task: (p) => {
-      if (p._tag === "Ok") return Task.ok(p.value)
-      const err =
-        p.error !== undefined && typeof p.error === "object"
-          ? deserializeError(p.error as SerializedError)
-          : new Error(typeof p.error === "string" ? p.error : "Unknown Task error")
-      return Task.err(err)
     },
   }
   return reconstructorCache

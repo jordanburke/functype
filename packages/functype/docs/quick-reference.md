@@ -267,48 +267,49 @@ set.isDisjointFrom([7, 8]) // true if no element is shared
 set.every((x) => x > 0) // true if all elements match predicate
 ```
 
-## Task
+## IO
+
+IO is a lazy effect: nothing runs until a `run` method.
 
 ```typescript
-import { Task } from "functype/task"
+import { Right } from "functype/either"
+import { IO } from "functype/io"
 
-// Synchronous tasks return a TaskOutcome (Ok or Err)
-const syncTask = Task().Sync(
-  () => 42,
+// Sync work that may throw
+const parsed = IO.tryCatch(
+  () => JSON.parse("{}") as unknown,
   (err) => new Error(`Failed: ${String(err)}`),
 )
+const parsedNow = parsed.runSync() // Either<Error, unknown>
 
-// Asynchronous tasks return a Promise of a TaskOutcome
-const asyncTask = Task().Async(
-  async () => (await fetch("/api").then((r) => r.json())) as unknown,
-  (err) => new Error(`Fetch failed: ${String(err)}`),
-)
-
-// Named tasks (for debugging and error identification)
-const namedTask = Task({ name: "UserFetch" }).Sync(
-  () => ({ id: 1, name: "John" }),
-  (err) => new Error(`User fetch failed: ${String(err)}`),
-)
-
-// A throw becomes an Err; the outcome carries the task name
-const outcome = await Task({ name: "DataProcessor" }).Async(() => {
-  throw new Error("Processing failed")
+// Async work
+const fetched = IO.tryPromise({
+  try: (signal) => fetch("/api", { signal }).then((r) => r.json() as Promise<unknown>),
+  catch: (err) => new Error(`Fetch failed: ${String(err)}`),
 })
-outcome.fold(
-  (error) => `Failed: ${error.message}`,
-  (value) => `Done: ${String(value)}`,
-)
+const result = await fetched.run() // Either<Error, unknown>
 
-// Companion functions
-Task.success(42, { name: "SuccessResult" }) // Ok outcome
-Task.fail(new Error("Failed"), data, { name: "FailureResult" }) // Err outcome with a name
+// Ready-made outcomes
+IO.succeed(42)
+IO.fail(new Error("Failed"))
+IO.fromEither(Right<Error, number>(42))
 
-// Adapting functions
+// Adapting a promise-returning function
 const fetchAPI = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json() as Promise<User>)
-const getUser = Task.fromPromise(fetchAPI, { name: "UserFetch" })
+const getUser = (id: string) => IO.tryPromise({ try: () => fetchAPI(id), catch: (err) => new Error(String(err)) })
 
-// Converting
-const promise = Task.toPromise(syncTask) // Standard Promise
+// Cancelling
+const { result: pending, cancel } = getUser("1").runCancellable()
+const controller = new AbortController()
+const exit = await getUser("1").runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
+
+// Racing and timing out
+const first = await IO.race([getUser("1"), getUser("2")])
+  .timeout(5000)
+  .run()
+
+// Back to a Promise
+const user = await getUser("1").runOrThrow()
 ```
 
 ## Tuple

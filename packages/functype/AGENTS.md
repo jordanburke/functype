@@ -51,7 +51,6 @@ Selective imports supported: `import { Option } from "functype/option"`
 | List     | Immutable array with functional operations                          |
 | Set      | Immutable set with functional operations                            |
 | Map      | Immutable key-value store                                           |
-| Task     | Sync/async operations with structured error handling                |
 | IO       | Lazy, composable effects with typed errors and dependency injection |
 | Lazy     | Deferred evaluation with memoization                                |
 | Tuple    | Fixed-length typed arrays                                           |

@@ -13,7 +13,6 @@
     "option",
     "either",
     "try",
-    "task",
     "io",
     "list",
     "immutable",
@@ -140,11 +139,6 @@
       "types": "./dist/invariant/index.d.ts",
       "import": "./dist/invariant/index.js",
       "default": "./dist/invariant/index.js"
-    },
-    "./task": {
-      "types": "./dist/core/task/index.d.ts",
-      "import": "./dist/core/task/index.js",
-      "default": "./dist/core/task/index.js"
     },
     "./io": {
       "types": "./dist/io/index.d.ts",

@@ -12,7 +12,7 @@ import { Either, Identity, Lazy, LazyList, List, Map, Obj, Option, Set, Stack, T
  *
  * Only entries written as `.name...` are checked; static calls (`Lazy.fromJSON`),
  * imports and iteration notes are skipped. Types that need an effect or setup to
- * build a sample (IO, Task, Http, ...) are not covered yet.
+ * build a sample (IO, Http, ...) are not covered yet.
  */
 const samples: Record<string, object> = {
   Option: Option(1),

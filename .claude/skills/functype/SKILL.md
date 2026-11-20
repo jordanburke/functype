@@ -1,13 +1,13 @@
 ---
 name: functype
-description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry), working with immutable collections like List and Set, running async operations with Task, or making HTTP requests with Http (typed fetch wrapper).
+description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry, cancellation), working with immutable collections like List and Set, or making HTTP requests with Http (typed fetch wrapper).
 ---
 
 # Functype User Guide
 
 ## Overview
 
-Transform TypeScript code to use functype - a Scala-inspired functional programming library providing type-safe alternatives to null checks, exceptions, and imperative patterns. This skill helps integrate Option, Either, Try, List, IO, Task, and other functional types into projects.
+Transform TypeScript code to use functype - a Scala-inspired functional programming library providing type-safe alternatives to null checks, exceptions, and imperative patterns. This skill helps integrate Option, Either, Try, List, IO, and other functional types into projects.
 
 ## When to Use This Skill
 
@@ -19,7 +19,7 @@ Trigger this skill when users:
 - Replace try-catch with functional error handling
 - Work with immutable collections
 - Compose side effects, async operations, or dependency injection with IO
-- Run async operations with cancellation or progress tracking (Task)
+- Run async operations with cancellation (IO's `runCancellable`, `interruptOn`)
 - Debug functype code or understand error messages
 
 ## Quick Start
@@ -36,7 +36,7 @@ pnpm add functype
 
 ```typescript
 // Import from main bundle
-import { Option, Either, Left, Right, Try, List, IO, Tag, Task, Layer } from "functype"
+import { Option, Either, Left, Right, Try, List, IO, Tag, Layer } from "functype"
 ```
 
 ## Constructor vs Companion Methods

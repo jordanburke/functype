@@ -116,26 +116,22 @@ Use the following Prettier configuration:
 
 ```typescript
 // Example using Companion pattern
-const TaskImpl = <T extends Type>() =>
+const BoxImpl = <T extends Type>(value: T) =>
   // Implementation details
-  {
-    // Return object with methods
-  }
+  ({
+    value,
+    map: <U extends Type>(f: (value: T) => U) => BoxImpl(f(value)),
+  })
 
-const TaskCompanion = {
-  Sync: <T>(fn: () => T): TaskOutcome<T> => {
-    /*...*/
-  },
-  Async: <T>(fn: () => Promise<T>): Promise<TaskOutcome<T>> => {
-    /*...*/
-  },
+const BoxCompanion = {
+  of: <T extends Type>(value: T) => BoxImpl(value),
   // Additional static methods
 }
 
-export const Task = Companion(TaskImpl, TaskCompanion)
+export const Box = Companion(BoxImpl, BoxCompanion)
 
 // Usage
-const result = Task().Sync(() => 42)
+const result = Box(21).map((n) => n * 2)
 ```
 
 ### Import Organization
@@ -193,7 +189,7 @@ const processInput = (input: string): Option<number> =>
   - `option/`: Option type implementation
   - `either/`: Either type implementation
   - `try/`: Try type implementation
-  - `task/`: Task implementation
+  - `io/`: IO effect implementation
   - `utility/`: General utilities
 
 ## Type Definitions

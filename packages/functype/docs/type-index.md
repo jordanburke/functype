@@ -4,22 +4,21 @@ This document provides a comprehensive index of all types and data structures in
 
 ## Core Data Structures
 
-| Data Structure | Description                                                                                                                                     | Import Path          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
-| `Option<T>`    | Represents a value that may or may not exist                                                                                                    | `functype/option`    |
-| `Either<L, R>` | Represents a value of one of two possible types                                                                                                 | `functype/either`    |
-| `Try<T>`       | Represents a computation that might throw                                                                                                       | `functype/try`       |
-| `List<T>`      | Immutable list collection                                                                                                                       | `functype/list`      |
-| `Map<K, V>`    | Immutable key-value map                                                                                                                         | `functype/map`       |
-| `Set<T>`       | Immutable set collection                                                                                                                        | `functype/set`       |
-| `Tuple<...T>`  | Type-safe fixed-length array                                                                                                                    | `functype/tuple`     |
-| `IO<R, E, A>`  | Lazy effect with typed error channel + dependency injection — the async-with-typed-errors default                                               | `functype/io`        |
-| `Task<T>`      | Eager async wrapper with cancellation / progress / serialization; errors flow untyped as `TaskOutcome`                                          | `functype/core/task` |
-| `Brand<T, B>`  | Nominal typing for TypeScript                                                                                                                   | `functype/branded`   |
-| `Wire<T>`      | Serialization-boundary marker for a row, collection or nullable field — zero runtime, exempts its contents from `prefer-list` / `prefer-option` | `functype/wire`      |
-| `Identity<T>`  | Identity monad                                                                                                                                  | `functype/identity`  |
-| `Stack<T>`     | Immutable stack collection                                                                                                                      | `functype/stack`     |
-| `Http`         | HTTP fetch wrapper returning IO effects (unknown data by default, provide validate for typed responses)                                         | `functype/fetch`     |
+| Data Structure | Description                                                                                                                                     | Import Path         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| `Option<T>`    | Represents a value that may or may not exist                                                                                                    | `functype/option`   |
+| `Either<L, R>` | Represents a value of one of two possible types                                                                                                 | `functype/either`   |
+| `Try<T>`       | Represents a computation that might throw                                                                                                       | `functype/try`      |
+| `List<T>`      | Immutable list collection                                                                                                                       | `functype/list`     |
+| `Map<K, V>`    | Immutable key-value map                                                                                                                         | `functype/map`      |
+| `Set<T>`       | Immutable set collection                                                                                                                        | `functype/set`      |
+| `Tuple<...T>`  | Type-safe fixed-length array                                                                                                                    | `functype/tuple`    |
+| `IO<R, E, A>`  | Lazy effect with typed error channel + dependency injection — the async-with-typed-errors default                                               | `functype/io`       |
+| `Brand<T, B>`  | Nominal typing for TypeScript                                                                                                                   | `functype/branded`  |
+| `Wire<T>`      | Serialization-boundary marker for a row, collection or nullable field — zero runtime, exempts its contents from `prefer-list` / `prefer-option` | `functype/wire`     |
+| `Identity<T>`  | Identity monad                                                                                                                                  | `functype/identity` |
+| `Stack<T>`     | Immutable stack collection                                                                                                                      | `functype/stack`    |
+| `Http`         | HTTP fetch wrapper returning IO effects (unknown data by default, provide validate for typed responses)                                         | `functype/fetch`    |
 
 ## Type Class Implementations
 
@@ -35,7 +34,6 @@ The table below shows which type classes each data structure implements.
 | `Set<T>`       | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
 | `Tuple<...T>`  | ✅      | ✅       | ❌        | ❌          | ✅           | ✅       | ✅       |
 | `IO<R, E, A>`  | ✅      | ❌       | ❌        | ❌          | ❌           | ✅       | ❌       |
-| `Task<T>`      | ✅      | ✅       | ❌        | ❌          | ✅           | ✅       | ❌       |
 | `Identity<T>`  | ✅      | ✅       | ✅        | ✅          | ✅           | ✅       | ✅       |
 | `Stack<T>`     | ✅      | ✅       | ✅        | ❌          | ✅           | ✅       | ✅       |
 
@@ -131,18 +129,6 @@ type IO<R, E, A> = {
 ```
 
 Lazy effect type. Preferred for async-with-typed-errors (`R`: required dependencies, `E`: typed error channel, `A`: success value). Composes retry / backoff / timeout / DI. See [`docs/FUNCTYPE_FEATURE_MATRIX.md`](./FUNCTYPE_FEATURE_MATRIX.md) IO row.
-
-### Task<T>
-
-```typescript
-type Task<T> = {
-  Async(fn: () => Promise<T>): Promise<TaskOutcome<T>>
-  Sync(fn: () => T): TaskOutcome<T>
-}
-type TaskOutcome<T> = Ok<T> | Err<T> // errors carried as `unknown`
-```
-
-Eager async wrapper for cancellation, progress tracking, and serializable outcomes. **Errors are untyped** (`unknown` on `Err<T>`); reach for `IO<R, E, A>` when you need a typed error branch, or return `Promise<Either<E, A>>` for a plain one-shot async call.
 
 ### Identity<T>
 

@@ -36,8 +36,6 @@ export const TYPE_SOURCES: Record<string, SourceLocation> = {
   Lazy: { file: "src/lazy/Lazy.ts", name: "Lazy" },
   LazyList: { file: "src/list/LazyList.ts", name: "LazyList" },
   Tuple: { file: "src/tuple/Tuple.ts", name: "Tuple" },
-  // Task entries in data.ts describe the TaskOutcome surface.
-  Task: { file: "src/core/task/Task.ts", name: "TaskOutcome" },
 }
 
 /**

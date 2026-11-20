@@ -17,7 +17,7 @@ import { Try } from "functype/try"
 import { List } from "functype/list"
 
 // Or import everything from the root:
-import { Option, Either, Try, List, IO, Task } from "functype"
+import { Option, Either, Try, List, IO } from "functype"
 ```
 
 ---
@@ -121,7 +121,7 @@ functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators, an
 | `for { ... } yield`           | `pipe(..., chain(...))`          | `IO.gen(function*() { ... })`      |
 | `effect.unsafeRun`            | `effect()`                       | `await effect.run()` / `runSync()` |
 
-`Task<T>` is the simpler async wrapper (returns `TaskOutcome<T>`); reach for `IO<R, E, A>` when you need typed errors and dependency injection.
+`IO<R, E, A>` is functype's one effect type. functype 2.0 deleted `Task`: cancel an IO with `runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`.
 
 ---
 

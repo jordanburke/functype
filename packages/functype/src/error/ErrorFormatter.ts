@@ -1,5 +1,6 @@
-import { Task } from "@/core"
 import { Throwable } from "@/core/throwable/Throwable"
+
+import { formatErrorChain, getErrorChain } from "./ErrorChain"
 
 /**
  * Type definition for task information that may be attached to errors
@@ -129,8 +130,7 @@ export function formatError(error: unknown, options?: ErrorFormatterOptions): st
   // If it's not an Error object, wrap it with Throwable
   const throwableError = error instanceof Error ? error : Throwable.apply(error)
 
-  // Try to get the error chain if possible
-  const errorChain = Task?.getErrorChain ? Task.getErrorChain(throwableError as Error) : [throwableError]
+  const errorChain = getErrorChain(throwableError as Error)
 
   // Format the title
   const title = opts.colors
@@ -230,25 +230,23 @@ export function createErrorSerializer() {
       serialized.data = (error as ErrorWithTaskInfo).data
     }
 
-    // Add Error Chain if the error came from a Task
-    if (typeof Task?.getErrorChain === "function") {
-      try {
-        const errorChain = Task.getErrorChain(error)
-        if (errorChain.length > 1) {
-          serialized.errorChain = Task.formatErrorChain(error, { includeTasks: true })
+    // Add the error chain when the error has a cause
+    try {
+      const errorChain = getErrorChain(error)
+      if (errorChain.length > 1) {
+        serialized.errorChain = formatErrorChain(error, { includeTasks: true })
 
-          // Also include structured error chain for processing
-          serialized.structuredErrorChain = errorChain.map((e) => ({
-            message: e.message,
-            name: e.name,
-            taskInfo: (e as ErrorWithTaskInfo).taskInfo,
-            // Format stack trace for each error in the chain
-            stack: (e as Error).stack ? formatStackTrace((e as Error).stack) : undefined,
-          }))
-        }
-      } catch (_e) {
-        // If error chain extraction fails, ignore it
+        // Also include structured error chain for processing
+        serialized.structuredErrorChain = errorChain.map((e) => ({
+          message: e.message,
+          name: e.name,
+          taskInfo: (e as ErrorWithTaskInfo).taskInfo,
+          // Format stack trace for each error in the chain
+          stack: (e as Error).stack ? formatStackTrace((e as Error).stack) : undefined,
+        }))
       }
+    } catch (_e) {
+      // If error chain extraction fails, ignore it
     }
 
     // Copy all enumerable properties from the error object

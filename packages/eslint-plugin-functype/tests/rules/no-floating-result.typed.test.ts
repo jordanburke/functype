@@ -9,7 +9,7 @@ import { typedFilename, typedRuleTester } from "../utils/typed-rule-tester"
  * `userService.updateSubscription(…)` on its own line, so a failed write still answered Stripe 200 (#365).
  */
 const svc = [
-  'import { Either, IO, List, Option, Task, Try } from "functype"',
+  'import { Either, IO, List, Option, Try } from "functype"',
   "type ServiceResult<T> = Either<Error, T>",
   "declare function update(id: number): Promise<ServiceResult<void>>",
   "declare function parse(raw: string): Either<string, number>",
@@ -73,7 +73,6 @@ describe("no-floating-result (type-aware)", () => {
       dropped("export async function f(ok: boolean) { ok && (await update(1)) }"),
       dropped("export function f(ok: boolean) { ok ? parse('1') : parse('2') }"),
       dropped("export function f() { parse('1').tapLeft((e) => console.error(e)).flatMap(sub) }"),
-      dropped("export function f() { Task().Sync(() => 1) }"),
     ],
   })
 })

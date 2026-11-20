@@ -27,7 +27,7 @@ describe("prefer-flatmap", () => {
         code: "const grid = rows.map((r) => (r as Row).cells.map(render))",
       },
       // #324 — a callback that transforms its own element's array keeps the shape (a matrix, or an array
-      // inside an Either/Option/Task); nothing is being flattened, so .flatMap is not the fix.
+      // inside an Either/Option/IO); nothing is being flattened, so .flatMap is not the fix.
       {
         name: "Either.map wrapping an array chain on its own parameter",
         code: "listed.map((members) => members.filter((m) => m > 0).map((m) => m * 2))",

@@ -111,7 +111,7 @@ const rule: Rule.RuleModule = {
     /**
      * A callback that transforms its OWN element's array (`(r) => r.cells.map(f)`, `(s) => s.split(" ")`,
      * `(xs) => xs.filter(p).map(g)`) keeps the shape: one array per element, a matrix, or an array inside
-     * an Either/Option/Task being mapped. Nothing is being flattened, so .flatMap is not the fix (#324).
+     * an Either/Option/IO being mapped. Nothing is being flattened, so .flatMap is not the fix (#324).
      */
     function isShapePreserving(functionNode: ASTNode, returned: ASTNode): boolean {
       const root = chainRoot(returned)
@@ -200,9 +200,6 @@ const rule: Rule.RuleModule = {
         "Try",
         "Success",
         "Failure",
-        "Task",
-        "Ok",
-        "Err",
         "IO",
       ])
       // Bare constructor: Try(...), Option(...), Right(x), etc.
@@ -228,7 +225,7 @@ const rule: Rule.RuleModule = {
     /**
      * Is `.map`'s receiver a container that isn't a collection, so `.flatMap` expects the same
      * container back and an array won't do (#520)? A literal constructor call counts. With type
-     * information, so does any Option, Either, Try, Lazy, TaskOutcome or IO value, however it was
+     * information, so does any Option, Either, Try, Lazy or IO value, however it was
      * built: a variable, a parameter, a function's return. Collections (List, Set, arrays) have no
      * `orThrow` and aren't IO, so they still report. Without type information only the literal
      * call is recognized.
