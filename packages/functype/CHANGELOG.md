@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.27.1 - 2026-11-19
+
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
   - **The legacy SSE endpoint, `/sse`, is gone.** A client configured with `http://…/sse` gets a 404. Point it at `/mcp`, the Streamable HTTP endpoint every current client supports.
   - **No CORS headers.** A browser page calling the server directly fails its preflight; desktop and CLI clients are unaffected.
