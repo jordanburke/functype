@@ -1005,6 +1005,12 @@ const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unkno
 const syncErrorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined =>
   exit._tag === "Die" && exit.defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
 
+/**
+ * The context a run starts with. A context never changes (`add` and `merge` build new ones), so one
+ * serves every run. Building it took about 190 ns, most of a one-step `runSync`.
+ */
+const noServices: Context<never> = ContextCompanion.empty()
+
 /** The defect for an `IO.async` (or an `IO(...)` thunk that returned a promise) under `runSync`. */
 const cannotRunAsync = (): Error => new Error("Cannot run async effect synchronously")
 
@@ -1047,7 +1053,7 @@ const attemptSync = <E, A>(step: () => ExitType<E, A>): ExitType<E, A> => {
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
-  context: Context<R> = ContextCompanion.empty() as Context<R>,
+  context: Context<R> = noServices as Context<R>,
 ): ExitType<E, A> => {
   try {
     switch (effect._tag) {
@@ -1219,7 +1225,7 @@ const regionOutcome = <E, A>(
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
-  context: Context<R> = ContextCompanion.empty() as Context<R>,
+  context: Context<R> = noServices as Context<R>,
   interruption?: AbortSignal,
 ): Promise<ExitType<E, A>> => {
   if (interruption?.aborted) return Exit.interrupted()

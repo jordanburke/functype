@@ -130,4 +130,12 @@ describe("IO's construction cost", () => {
     console.info(`IO.succeed(i).map: ${ratio.toFixed(1)}x a plain object (bound 15x)`)
     expect(ratio).toBeLessThan(15)
   })
+
+  // Measured the same way: 136x to 137x before this PR, 4.6x to 4.7x after. Most of the old cost was a new
+  // empty Context per run, about 190 ns.
+  it("building and running a one-step IO costs at most 25 times a plain object", () => {
+    const ratio = ratioToPlain((i) => succeed(i).map(inc).runSyncOrThrow())
+    console.info(`IO.succeed(i).map(inc).runSyncOrThrow(): ${ratio.toFixed(1)}x a plain object (bound 25x)`)
+    expect(ratio).toBeLessThan(25)
+  })
 })
