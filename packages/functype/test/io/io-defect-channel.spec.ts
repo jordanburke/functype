@@ -185,15 +185,17 @@ describe("defects are distinguishable from typed failures", () => {
    * raw value in the `Left` exactly as before — `runExit()` is the terminal that carries
    * the distinction, and no existing caller changes behaviour.
    */
-  describe("the Either terminals are unchanged", () => {
-    it("run puts a defect in the Left, raw", async () => {
+  // In 2.0 the Either terminals hold only typed errors (#276 §3): a defect or an interruption
+  // rejects `run()` and throws from `runSync()`.
+  describe("the Either terminals", () => {
+    it("run rejects with the defect itself", async () => {
       const defect = new Error("defect")
-      const result = await IO.sync(() => {
-        throw defect
-      }).run()
 
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBe(defect)
+      await expect(
+        IO.sync(() => {
+          throw defect
+        }).run(),
+      ).rejects.toBe(defect)
     })
 
     it("runOrThrow throws the defect itself", async () => {
@@ -206,19 +208,18 @@ describe("defects are distinguishable from typed failures", () => {
       ).rejects.toBe(defect)
     })
 
-    it("runSync puts a defect in the Left, raw", () => {
+    it("runSync throws the defect itself", () => {
       const defect = new Error("defect")
-      const result = IO.sync(() => {
-        throw defect
-      }).runSync()
 
-      expect(result.isLeft() && result.value).toBe(defect)
+      expect(() =>
+        IO.sync(() => {
+          throw defect
+        }).runSync(),
+      ).toThrow(defect)
     })
 
-    it("run still surfaces interruption as InterruptedError", async () => {
-      const result = await IO.interrupt().run()
-
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+    it("run rejects with InterruptedError on an interruption", async () => {
+      await expect(IO.interrupt().run()).rejects.toBeInstanceOf(InterruptedError)
     })
   })
 

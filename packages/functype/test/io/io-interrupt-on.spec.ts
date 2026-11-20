@@ -255,8 +255,8 @@ describe("IO.interruptOn", () => {
     expect(result.orThrow()).toBe("handled")
   })
 
-  it("without a region, interruption behaves as before", async () => {
-    expect(isInterruption(await IO.interrupt().run())).toBe(true)
+  it("without a region, interruption is not a typed failure: run() rejects", async () => {
+    await expect(IO.interrupt().run()).rejects.toBeInstanceOf(InterruptedError)
     expect((await IO.interrupt().recover(42).runExit()).isInterrupted()).toBe(true)
   })
 

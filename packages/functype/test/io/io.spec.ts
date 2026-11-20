@@ -354,11 +354,10 @@ describe("IO", () => {
       expect(result.isLeft()).toBe(true)
     })
 
-    it("should return Left on async effects (cannot run async synchronously)", () => {
+    it("should throw on async effects (cannot run async synchronously)", () => {
       const io = IO.async(() => Promise.resolve(42))
-      const result = io.runSync()
-      // Async effects cannot be run synchronously, so we get Left with the error
-      expect(result.isLeft()).toBe(true)
+      // An async effect under runSync is a defect, so runSync throws it (#276 §3)
+      expect(() => io.runSync()).toThrow("Cannot run async effect synchronously")
     })
   })
 
@@ -1671,9 +1670,9 @@ describe("Dependency Injection", () => {
       expect(result).toBe("fast")
     })
 
-    it("should handle empty array", async () => {
+    it("should die on an empty array: there is nothing to race", async () => {
       const exit = await IO.race<never, never, never>([]).runExit()
-      expect(exit.isFailure()).toBe(true)
+      expect(exit.isDie()).toBe(true)
     })
 
     it("should work with immediate values", async () => {
@@ -1696,9 +1695,9 @@ describe("Dependency Injection", () => {
       await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).runOrThrow()).rejects.toBe("error2")
     })
 
-    it("should handle empty array", async () => {
+    it("should die on an empty array: no effect can succeed", async () => {
       const exit = await IO.any<never, never, never>([]).runExit()
-      expect(exit.isFailure()).toBe(true)
+      expect(exit.isDie()).toBe(true)
     })
   })
 

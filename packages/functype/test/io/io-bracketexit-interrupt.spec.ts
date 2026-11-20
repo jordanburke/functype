@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { IO } from "@/io"
+import { InterruptedError, IO } from "@/io"
 
 /**
  * `bracketExit`'s contract is that `release` receives the `Exit` describing how `use`
@@ -25,7 +25,9 @@ describe("bracketExit reports interruption to release", () => {
   it("sync: release sees Interrupted, not Failure", () => {
     const { seen, release } = spy()
 
-    IO.bracketExit(IO.succeed("resource"), () => IO.interrupt(), release).runSync()
+    expect(() => IO.bracketExit(IO.succeed("resource"), () => IO.interrupt(), release).runSync()).toThrow(
+      InterruptedError,
+    )
 
     expect(seen).toEqual(["interrupted"])
   })
@@ -55,11 +57,12 @@ describe("bracketExit reports interruption to release", () => {
     expect(seen).toEqual(["success"])
   })
 
+  // In 2.0 `runSync()` throws an interruption rather than returning it in the Left (#276 §3).
   it("sync: the interruption still propagates to the caller", () => {
     const { release } = spy()
 
-    const result = IO.bracketExit(IO.succeed("resource"), () => IO.interrupt(), release).runSync()
-
-    expect(result.isLeft()).toBe(true)
+    expect(() => IO.bracketExit(IO.succeed("resource"), () => IO.interrupt(), release).runSync()).toThrow(
+      InterruptedError,
+    )
   })
 })

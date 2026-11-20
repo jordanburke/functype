@@ -3,7 +3,8 @@
  *
  * Bridges `IO<never, E, A>` (e.g. the `Http` client from `functype/fetch`) onto React
  * Query's resolve/reject contract, preserving the typed error channel that both
- * `.run()` (never throws) and `.runOrThrow()` (throws a non-`Error` tagged object) lose.
+ * `.run()` (resolves a typed failure as a `Left`) and `.runOrThrow()` (throws a non-`Error` tagged
+ * object) lose.
  *
  * Requires `@tanstack/react-query` — an *optional* peer dependency, so consumers who
  * don't import this subpath neither install it nor bundle it.

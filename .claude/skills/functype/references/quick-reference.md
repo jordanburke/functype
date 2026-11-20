@@ -274,7 +274,7 @@ IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
 IO.forEach(urls, fetchPage, { concurrency: 4 })      // up to 4 at once; first failure interrupts the rest
 ```
 
-`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.mapAsync`, `Set.flatMapAsync`, `Either.traverseAsync`, `IO.all` and `IO.forEach` run one at a time; `List.flatMapAsync` starts every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` is an alias of `IO.forEach` and runs in order; use `IO.forEach(items, f, { concurrency })`.
+`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.mapAsync`, `Set.flatMapAsync`, `Either.traverseAsync`, and `IO.forEach` run one at a time; `IO.all` (since 2.0) and `List.flatMapAsync` start every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` is an alias of `IO.forEach` and runs in order; use `IO.forEach(items, f, { concurrency })`.
 
 ## Pipeline Composition
 
@@ -387,8 +387,9 @@ const pairs = Do(function* () {
 
 ## Exit — the outcome of `runExit()`
 
-`Either` has two branches; `Exit` has four. Use `run()` when all you need is
-success-or-not, `runExit()` to tell a typed failure from a **defect** or an interruption.
+`Either` has two branches; `Exit` has four. `run()`'s `Left` is always an `E`: since 2.0 a
+defect rejects the promise with the raw value, and an interruption with an `InterruptedError`.
+Use `runExit()` to tell a typed failure from a **defect** or an interruption without a `try`.
 
 | Operation          | Method                                              | Notes                                                       |
 | ------------------ | --------------------------------------------------- | ----------------------------------------------------------- |
@@ -409,8 +410,8 @@ the *declared* channel, not whether something threw — `IO.async` and `IO(...)`
 
 Defects stay **recoverable**: `recover` / `recoverWith` / `fold` / `mapError` treat a
 `Die` exactly as a `Failure`. `Exit.Die` records what the outcome was when nothing
-recovered it. The sync interpreter can't make the distinction — `runSync()` returns
-`Either` and signals failure by throwing the raw value.
+recovered it. `runSync()` follows `run()`: a typed failure is a `Left`, and a defect or an
+interruption is thrown.
 
 ## HTTP (1.3+)
 

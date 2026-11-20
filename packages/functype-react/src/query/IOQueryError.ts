@@ -2,7 +2,7 @@
  * Error boxing for the React Query bridge.
  *
  * `IO`'s own terminals don't fit React Query's contract: `.run()` returns
- * `Promise<Either<E, A>>` and never throws (so RQ never sees a failure), while
+ * `Promise<Either<E, A>>` and resolves a typed failure as a `Left` (so RQ never sees it), while
  * `.runOrThrow()` throws the *raw* tagged error object — `{ _tag: "NetworkError", ... }`
  * is not an `Error` instance, so the ubiquitous
  * `error instanceof Error ? error.message : fallback` handler silently degrades.

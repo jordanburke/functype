@@ -210,30 +210,20 @@ describe("sleep without an abort", () => {
 
 describe("sleep under runSync", () => {
   it("is an unsupported operation that recovery can't swallow", () => {
-    const outcome = (() => {
+    const thrown = (() => {
       try {
-        return IO.sleep(0).recover(undefined).runSync()
+        IO.sleep(0).recover(undefined).runSync()
+        return undefined
       } catch (e) {
         return e
       }
     })()
-    const error = outcome instanceof UnsupportedSyncOperationError ? outcome : (outcome as Either<unknown, void>).value
-    expect(error).toBeInstanceOf(UnsupportedSyncOperationError)
-    expect((error as UnsupportedSyncOperationError).operation).toBe("sleep")
+    expect(thrown).toBeInstanceOf(UnsupportedSyncOperationError)
+    expect((thrown as UnsupportedSyncOperationError).operation).toBe("sleep")
   })
 
   it("covers IO.never and .delay too", () => {
-    const operationOf = (run: () => unknown): unknown => {
-      try {
-        const result = run() as Either<unknown, unknown>
-        return result.isLeft() && result.value instanceof UnsupportedSyncOperationError
-          ? result.value.operation
-          : undefined
-      } catch (e) {
-        return e instanceof UnsupportedSyncOperationError ? e.operation : undefined
-      }
-    }
-    expect(operationOf(() => IO.never().runSync())).toBe("sleep")
-    expect(operationOf(() => IO.succeed(1).delay(0).runSync())).toBe("sleep")
+    expect(() => IO.never().runSync()).toThrow(UnsupportedSyncOperationError)
+    expect(() => IO.succeed(1).delay(0).runSync()).toThrow(UnsupportedSyncOperationError)
   })
 })

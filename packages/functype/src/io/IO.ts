@@ -68,10 +68,10 @@ export class InterruptedError extends Error {
  *
  * This is a **programmer error, not a domain failure**: it says the effect was built
  * wrong for the terminal it was run with, so recovery combinators deliberately do not
- * catch it (see {@link rethrowIfNonRecoverable}). Before it had its own type it was a
+ * catch it (see {@link syncErrorChannel}). Before it had its own type it was a
  * plain `Error`, indistinguishable from a failed effect, so any downstream `.recover()`
  * absorbed it and silently produced the fallback — `IO.succeed(1).timeoutTo(50, 99)`
- * returned `Right(99)` under `runSync()`. See #246.
+ * returned `Right(99)` under `runSync()`. See #246. It is a defect, so `runSync()` throws it.
  */
 // eslint-disable-next-line functional/no-classes
 export class UnsupportedSyncOperationError extends Error {
@@ -539,8 +539,13 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
   // ============================================
 
   /**
-   * Runs the effect and returns an Either. Never throws.
-   * This is the safe default - all errors become Left.
+   * Runs the effect and returns an Either of its typed error or its value.
+   *
+   * The `Left` holds only a typed failure, an `E`. A defect (a bug: a throw from `IO.sync`, a
+   * `map` callback, `IO.die`) rejects the promise with the thrown value, and an interruption
+   * rejects it with an `InterruptedError`. Use {@link runExit} to get all four outcomes without
+   * a rejection. An `interruptOn` region turns its cancellation into a typed `InterruptedError`,
+   * so that one resolves as a `Left`.
    * Requires R = never.
    */
   run(this: IO<never, E, A>): Promise<Either<E, A>>
@@ -553,9 +558,12 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
   runOrThrow(this: IO<never, E, A>): Promise<A>
 
   /**
-   * Runs a sync effect and returns an Either. Never throws.
-   * This is the safe default - all errors become Left.
-   * Throws only if the effect is async (cannot be made safe synchronously).
+   * Runs a sync effect and returns an Either of its typed error or its value.
+   *
+   * Like {@link run}, the `Left` holds only a typed failure. A defect is thrown as is, and an
+   * interruption as an `InterruptedError`. An effect it can't run synchronously is a defect too:
+   * an `IO.async` throws an `Error`, and `timeout`, `race` and `sleep` throw
+   * {@link UnsupportedSyncOperationError}.
    * Requires R = never.
    */
   runSync(this: IO<never, E, A>): Either<E, A>
@@ -595,6 +603,7 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * Starts the effect and returns a handle that cancels it, with {@link IO.interruptOn}
    * semantics: after `cancel()`, no further step runs and `result` resolves to
    * `Left(InterruptedError)`. Calling `cancel()` after the effect finished does nothing.
+   * As with {@link run}, a defect rejects `result`.
    * Requires R = never.
    *
    * @example
@@ -899,36 +908,19 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 
     // Execution
     async run(this: IO<never, E, A>): Promise<Either<E, A>> {
-      const exit = await runEffect(_fx(this))
-      if (exit.isSuccess()) {
-        return Right(exit.orThrow())
-      }
-      // All errors including InterruptedError go to Left. A defect lands here too, as the
-      // raw thrown value — `Either` has no third branch for it. `runExit()` is the
-      // terminal that keeps the distinction.
-      const channel = errorChannel(exit)
-      return Left((channel ? channel.value : new InterruptedError()) as E)
+      return toEither(await runEffect(_fx(this)))
     },
 
     async runOrThrow(this: IO<never, E, A>): Promise<A> {
-      const exit = await runEffect(_fx(this))
-      if (exit.isSuccess()) {
-        return exit.orThrow()
-      }
-      const channel = errorChannel(exit)
-      throw channel ? channel.value : new InterruptedError()
+      return valueOrThrow(await runEffect(_fx(this)))
     },
 
     runSync(this: IO<never, E, A>): Either<E, A> {
-      try {
-        return Right(runEffectSync(_fx(this)))
-      } catch (e) {
-        return Left(e as E)
-      }
+      return toEither(runEffectSync(_fx(this)))
     },
 
     runSyncOrThrow(this: IO<never, E, A>): A {
-      return runEffectSync(_fx(this))
+      return valueOrThrow(runEffectSync(_fx(this)))
     },
 
     async runExit(this: IO<never, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>> {
@@ -1005,50 +997,6 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
 }
 
 /**
- * The sync interpreter uses `throw` for two things that are *not* domain failures, so
- * the error-handling combinators' `catch` blocks would otherwise absorb them — turning
- * them into a successful value (`Recover` / `RecoverWith` / `Fold`) or into a domain
- * error of the caller's choosing (`MapError`):
- *
- * - `InterruptedError` — interruption is control flow. A cancelled effect must not be
- *   resurrected by a fallback (#243).
- * - `UnsupportedSyncOperationError` — the effect contains `timeout` / `race`, which have
- *   no sync semantics. Recovering from it hides the mistake and hands back the fallback
- *   as if the effect had genuinely failed (#246).
- *
- * Both must pass through every recovery boundary unchanged, so callers see the real
- * outcome rather than a plausible-looking substitute.
- *
- * The async interpreter gets this for free by branching on {@link errorChannel}, which
- * excludes Interrupted; the sync path needs it stated explicitly.
- */
-const rethrowIfNonRecoverable = (e: unknown): void => {
-  if (isControlFlowInterruption(e) || e instanceof UnsupportedSyncOperationError) {
-    throw e
-  }
-}
-
-/**
- * `InterruptedError`s that an `interruptOn` region has turned into its typed failure.
- *
- * The sync interpreter throws `InterruptedError` for two different things: interruption as
- * control flow, which no recovery may catch, and, at a region boundary, the region's typed
- * `E`, which `catchTag` outside the region must be able to catch. Both are the same class,
- * so membership here tells them apart. The async interpreter doesn't need this: there the
- * two are an `Interrupted` and a `Failure` Exit.
- */
-const typedInterruptions = new WeakSet<InterruptedError>()
-
-const typedInterruption = (): InterruptedError => {
-  const error = new InterruptedError()
-  typedInterruptions.add(error)
-  return error
-}
-
-const isControlFlowInterruption = (e: unknown): e is InterruptedError =>
-  e instanceof InterruptedError && !typedInterruptions.has(e)
-
-/**
  * The value in an Exit's error channel, if it has one: the typed error of a `Failure`,
  * or the defect of a `Die`. `undefined` for `Success` and `Interrupted`, which carry
  * neither.
@@ -1069,146 +1017,179 @@ const errorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unkno
 }
 
 /**
- * Interprets and runs an effect synchronously
+ * The sync interpreter's {@link errorChannel}: the same, except that a `Die` holding an
+ * `UnsupportedSyncOperationError` has none. That defect says the effect contains `timeout`,
+ * `race` or `sleep`, which have no sync semantics. Recovering from it would hide the mistake and
+ * hand back the fallback as if the effect had genuinely failed (#246), so it passes every recovery
+ * boundary unchanged. The async interpreter never produces it.
+ */
+const syncErrorChannel = (exit: ExitType<unknown, unknown>): { readonly value: unknown } | undefined =>
+  exit.isDie() && exit.toValue().defect instanceof UnsupportedSyncOperationError ? undefined : errorChannel(exit)
+
+/** The defect for an `IO.async` (or an `IO(...)` thunk that returned a promise) under `runSync`. */
+const cannotRunAsync = (): Error => new Error("Cannot run async effect synchronously")
+
+/** The defect for an `IO.service` whose service was never provided. */
+const serviceNotFound = (tag: { readonly id: string }): Error => new Error(`Service not found: ${tag.id}`)
+
+/**
+ * How `run()` and `runSync()` report an outcome. A typed failure is a `Left`. A defect is thrown
+ * as is, and an interruption as an `InterruptedError`, so the `Either` holds only real `E`s.
+ */
+const toEither = <E, A>(exit: ExitType<E, A>): Either<E, A> => {
+  const raw = exit.toValue()
+  if (raw._tag === "Success") return Right(raw.value as A)
+  if (raw._tag === "Failure") return Left(raw.error as E)
+  throw raw._tag === "Die" ? raw.defect : new InterruptedError()
+}
+
+/** How `runOrThrow()` and `runSyncOrThrow()` report an outcome: the value, or a throw. */
+const valueOrThrow = <E, A>(exit: ExitType<E, A>): A => {
+  const raw = exit.toValue()
+  if (raw._tag === "Success") return raw.value as A
+  throw raw._tag === "Failure" ? raw.error : raw._tag === "Die" ? raw.defect : new InterruptedError()
+}
+
+/** Runs `step`, turning a throw from it into a `Die`. */
+const attemptSync = <E, A>(step: () => ExitType<E, A>): ExitType<E, A> => {
+  try {
+    return step()
+  } catch (e) {
+    return Exit.die(e)
+  }
+}
+
+/**
+ * Interprets and runs an effect synchronously, and returns its Exit.
+ *
+ * It classifies outcomes as the async interpreter does, so `runSync()` can tell a typed failure
+ * from a defect. A throw from a `Sync` thunk or a callback is a `Die`; a throw from an `IO(...)`
+ * thunk is a `Failure`, because that constructor declares `E = unknown`. What it can't run (an
+ * `IO.async`, `timeout`, `race`, `sleep`) is a `Die` too. It has no signal to watch, so
+ * `interruptOn` only sees a signal that was already aborted.
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
   context: Context<R> = ContextCompanion.empty() as Context<R>,
-): A => {
-  switch (effect._tag) {
-    case "Succeed":
-      return effect.value
-    case "Fail":
-      throw effect.error
-    case "Die":
-      throw effect.defect
-    case "Sync":
-      return effect.thunk()
-    case "Async":
-      throw new Error("Cannot run async effect synchronously")
-    case "Auto": {
-      const result = effect.thunk()
-      if (result instanceof Promise) {
-        throw new Error("Cannot run async effect synchronously")
+): ExitType<E, A> => {
+  try {
+    switch (effect._tag) {
+      case "Succeed":
+        return Exit.succeed(effect.value)
+      case "Fail":
+        return Exit.fail(effect.error)
+      case "Die":
+        return Exit.die(effect.defect)
+      case "Sync":
+        return Exit.succeed(effect.thunk())
+      case "Async":
+        return Exit.die(cannotRunAsync())
+      case "Auto":
+        return unsafeCoerce(runAutoSync(effect.thunk))
+      case "Map": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        if (!exitA.isSuccess()) return unsafeCoerce(exitA)
+        return Exit.succeed(effect.f(exitA.orThrow()))
       }
-      return result
-    }
-    case "Map": {
-      const a = runEffectSync(_fx(effect.effect), context)
-      return effect.f(a)
-    }
-    case "FlatMap": {
-      const a = runEffectSync(_fx(effect.effect), context)
-      const nextIO = effect.f(a)
-      return runEffectSync(_fx(nextIO), context)
-    }
-    case "MapError": {
-      try {
-        return runEffectSync(_fx(effect.effect), context)
-      } catch (e) {
-        rethrowIfNonRecoverable(e)
-        throw effect.f(e)
+      case "FlatMap": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        if (!exitA.isSuccess()) return unsafeCoerce(exitA)
+        return runEffectSync(_fx(effect.f(exitA.orThrow())), context)
       }
-    }
-    case "Recover": {
-      try {
-        return runEffectSync(_fx(effect.effect), context)
-      } catch (e) {
-        rethrowIfNonRecoverable(e)
-        return effect.fallback
+      case "MapError": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        const channel = syncErrorChannel(exitA)
+        return channel ? Exit.fail(effect.f(channel.value)) : unsafeCoerce(exitA)
       }
-    }
-    case "RecoverWith": {
-      try {
-        // effect.effect is IO<R, unknown, unknown> (E-erased for variance); success value
-        // is known at runtime to match A since RecoverWith preserves the outer A.
-        return unsafeCoerce(runEffectSync(_fx(effect.effect), context))
-      } catch (e) {
-        rethrowIfNonRecoverable(e)
-        const recoveryIO = effect.f(e)
-        return runEffectSync(_fx(recoveryIO), context)
+      case "Recover": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        return syncErrorChannel(exitA) ? Exit.succeed(effect.fallback) : unsafeCoerce(exitA)
       }
-    }
-    case "Fold": {
-      try {
-        const a = runEffectSync(_fx(effect.effect), context)
-        return effect.onSuccess(a)
-      } catch (e) {
-        rethrowIfNonRecoverable(e)
-        return effect.onFailure(e)
+      case "RecoverWith": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        const channel = syncErrorChannel(exitA)
+        return channel ? runEffectSync(_fx(effect.f(channel.value)), context) : unsafeCoerce(exitA)
       }
-    }
-    case "Service": {
-      const service = context.get(effect.tag)
-      if (service.isNone()) {
-        throw new Error(`Service not found: ${effect.tag.id}`)
+      case "Fold": {
+        const exitA = runEffectSync(_fx(effect.effect), context)
+        const channel = syncErrorChannel(exitA)
+        if (channel) return Exit.succeed(effect.onFailure(channel.value))
+        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.orThrow()))
+        return unsafeCoerce(exitA)
       }
-      return service.orThrow() as A
-    }
-    case "ProvideContext": {
-      const mergedContext = context.merge(effect.context)
-      return runEffectSync(_fx(effect.effect), mergedContext as Context<R>)
-    }
-    case "Interrupt":
-      throw new InterruptedError()
-    case "Bracket": {
-      const resource = runEffectSync(_fx(effect.acquire), context)
-      try {
-        return runEffectSync(_fx(effect.use(resource)), context)
-      } finally {
-        runEffectSync(_fx(effect.release(resource)), context)
+      case "Service": {
+        const service = context.get(effect.tag)
+        return service.isNone() ? Exit.die(serviceNotFound(effect.tag)) : Exit.succeed(service.orThrow() as A)
       }
-    }
-    case "BracketExit": {
-      const resource = runEffectSync(_fx(effect.acquire), context)
-      let exit: ExitType<E, A>
-      try {
-        const useResult = runEffectSync(_fx(effect.use(resource)), context)
-        exit = unsafeCoerce(Exit.succeed(useResult))
-        return useResult
-      } catch (e) {
-        // `release` is contracted to receive the Exit describing how `use` ended, so an
-        // interrupted `use` must arrive as Interrupted rather than Failure — otherwise a
-        // release that branches on cancellation (distinct rollback, telemetry) can't see
-        // it. The async interpreter already passes the real Exit through; this keeps the
-        // sync path in agreement.
-        //
-        // `UnsupportedSyncOperationError` is the one defect the sync interpreter can name
-        // with certainty, so it arrives as Die. Everything else is ambiguous here: the
-        // sync interpreter signals `Fail` and `Die` with the same bare `throw`, so a
-        // thrown value could be either and Failure stays the honest default.
-        exit = isControlFlowInterruption(e)
-          ? unsafeCoerce(Exit.interrupted())
-          : e instanceof UnsupportedSyncOperationError
-            ? unsafeCoerce(Exit.die(e))
-            : unsafeCoerce(Exit.fail(e as E))
-        throw e
-      } finally {
-        runEffectSync(_fx(effect.release(resource, exit!)), context)
+      case "ProvideContext": {
+        const mergedContext = context.merge(effect.context)
+        return runEffectSync(_fx(effect.effect), mergedContext as Context<R>)
+      }
+      case "Interrupt":
+        return Exit.interrupted()
+      case "Bracket": {
+        const acquireExit = runEffectSync(_fx(effect.acquire), context)
+        if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
+        const resource = acquireExit.orThrow()
+        const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
+        const releaseExit = runEffectSync(_fx(effect.release(resource)), context)
+        // A failed release replaces the outcome, as a throwing `finally` would.
+        return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
+      }
+      case "BracketExit": {
+        const acquireExit = runEffectSync(_fx(effect.acquire), context)
+        if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
+        const resource = acquireExit.orThrow()
+        const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context))
+        const releaseExit = runEffectSync(_fx(effect.release(resource, useExit)), context)
+        return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
+      }
+      case "All":
+        // A synchronous run has no concurrency to offer: running in order gives the same results.
+        return unsafeCoerce(runAllSync(effect.effects, context))
+      case "Race":
+        return Exit.die(new UnsupportedSyncOperationError("race"))
+      case "Timeout":
+        return Exit.die(new UnsupportedSyncOperationError("timeout"))
+      case "Sleep":
+        return Exit.die(new UnsupportedSyncOperationError("sleep"))
+      case "InterruptWhen": {
+        // A synchronous run can't observe an abort from outside while it runs, so only a
+        // signal that is already aborted here counts. An `IO.interrupt()` inside the region
+        // becomes the region's typed failure, matching the async interpreter.
+        if (effect.signal.aborted) return Exit.fail(new InterruptedError() as E)
+        const exit = runEffectSync(_fx(effect.effect), context)
+        return exit.isInterrupted() ? Exit.fail(new InterruptedError() as E) : exit
       }
     }
-    case "All":
-      // A synchronous run has no concurrency to offer: running in order gives the same results.
-      return unsafeCoerce(effect.effects.map((e) => runEffectSync(_fx(e), context)))
-    case "Race":
-      throw new UnsupportedSyncOperationError("race")
-    case "Sleep":
-      throw new UnsupportedSyncOperationError("sleep")
-    case "Timeout":
-      throw new UnsupportedSyncOperationError("timeout")
-    case "InterruptWhen": {
-      // A synchronous run can't observe an abort from outside while it runs, so only a
-      // signal that is already aborted here counts. An `IO.interrupt()` inside the region
-      // becomes the region's typed failure, matching the async interpreter.
-      if (effect.signal.aborted) throw typedInterruption()
-      try {
-        return runEffectSync(_fx(effect.effect), context)
-      } catch (e) {
-        if (isControlFlowInterruption(e)) throw typedInterruption()
-        throw e
-      }
-    }
+  } catch (e) {
+    // A throw out of a `Sync` thunk or a callback the type system said could not produce an `E`.
+    return Exit.die(e)
   }
+}
+
+/** An `IO(...)` thunk under `runSync`: it declares `E = unknown`, so a throw is a typed failure. */
+const runAutoSync = <A>(thunk: () => A | Promise<A>): ExitType<unknown, A> => {
+  try {
+    const result = thunk()
+    return result instanceof Promise ? Exit.die(cannotRunAsync()) : Exit.succeed(result)
+  } catch (e) {
+    return Exit.fail(e)
+  }
+}
+
+/** `IO.all` under `runSync`: in order, stopping at the first effect that doesn't succeed. */
+const runAllSync = <R extends Type, E extends Type>(
+  effects: readonly IO<R, E, unknown>[],
+  context: Context<R>,
+): ExitType<E, readonly unknown[]> => {
+  const results: unknown[] = []
+  for (const child of effects) {
+    const exit = runEffectSync(_fx(child), context)
+    if (!exit.isSuccess()) return unsafeCoerce(exit)
+    results.push(exit.orThrow())
+  }
+  return Exit.succeed(results)
 }
 
 /**
@@ -1371,7 +1352,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       case "Service": {
         const service = context.get(effect.tag)
         if (service.isNone()) {
-          return Exit.fail(new Error(`Service not found: ${effect.tag.id}`) as E)
+          return Exit.die(serviceNotFound(effect.tag))
         }
         return Exit.succeed(service.orThrow() as A)
       }
@@ -1413,7 +1394,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "Race": {
         if (effect.effects.length === 0) {
-          return Exit.fail(new Error("No effects to race") as E)
+          return Exit.die(new Error("No effects to race"))
         }
         return await runRace(effect.effects, context, interruption)
       }
@@ -1634,13 +1615,13 @@ const IOCompanion = {
    * Creates an IO from a function that might throw.
    */
   tryCatch: <A extends Type, E extends Type>(f: () => A, onError: (error: unknown) => E): IO<never, E, A> =>
-    IOCompanion.sync(() => {
+    IOCompanion.sync((): Either<E, A> => {
       try {
-        return f()
+        return Right(f())
       } catch (e) {
-        throw onError(e)
+        return Left(onError(e))
       }
-    }) as unknown as IO<never, E, A>,
+    }).flatMap((either) => IOCompanion.fromEither(either)),
 
   // ============================================
   // Lifting Functions
@@ -1851,7 +1832,8 @@ const IOCompanion = {
 
   /**
    * Creates an IO that requires a service identified by the tag.
-   * The service must be provided before the effect can be run.
+   * The service must be provided before the effect can be run. If it reaches the interpreter
+   * unprovided (through a cast), the run dies with a "Service not found" defect.
    *
    * @example
    * ```typescript
@@ -1973,10 +1955,11 @@ const IOCompanion = {
 
   /**
    * Runs IOs in sequence, returning the first success or last failure.
+   * An empty array is a defect (`Die`), since no effect can succeed.
    */
   firstSuccessOf: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
     if (effects.length === 0) {
-      return unsafeCoerce(IOCompanion.fail(new Error("No effects provided")))
+      return unsafeCoerce(IOCompanion.die(new Error("No effects provided")))
     }
     return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
   },
@@ -2144,7 +2127,7 @@ const IOCompanion = {
    * settles.
    *
    * First to *settle* wins, so a failure that comes first is the result. This differs from ZIO
-   * and Effect, where `race` returns the first to *succeed*.
+   * and Effect, where `race` returns the first to *succeed*. An empty array is a defect (`Die`).
    *
    * @example
    * ```typescript
@@ -2158,7 +2141,8 @@ const IOCompanion = {
     createIO({ _tag: "Race", effects }),
 
   /**
-   * Returns the first effect to succeed, or fails if all fail.
+   * Returns the first effect to succeed, or fails if all fail. It tries them in sequence.
+   * An empty array is a defect (`Die`), since no effect can succeed.
    *
    * @example
    * ```typescript
@@ -2171,7 +2155,7 @@ const IOCompanion = {
    */
   any: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
     if (effects.length === 0) {
-      return unsafeCoerce(IOCompanion.fail(new Error("No effects provided")))
+      return unsafeCoerce(IOCompanion.die(new Error("No effects provided")))
     }
     // Try each effect, return first success
     return effects.reduce((acc, effect) => acc.recoverWith(() => effect))

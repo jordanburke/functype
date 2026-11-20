@@ -35,7 +35,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - An interrupted effect starts no new step, a sleep in it wakes, and an `IO.async` / `IO.tryPromise` thunk sees its signal abort. Pass that signal to `fetch` to stop the request.
 - The winner's signal stays live, so a response body it returned can still be read.
 - `race` and `timeout` don't wait for an effect that ignores cancellation. Returning doesn't mean such an effect has stopped. Its `bracket` release runs when it settles, and it never becomes an unhandled rejection.
-- `race` still returns the first effect to *settle*, so a failure that comes first is the result. ZIO and Effect return the first to *succeed*; functype does not.
+- `race` still returns the first effect to _settle_, so a failure that comes first is the result. ZIO and Effect return the first to _succeed_; functype does not.
 - `IO.async` thunks inside `race` or `timeout` now receive a signal even when the run has none.
 - **Upgrade:** nothing to change unless code relied on a losing effect finishing its work. Move work that must finish out of the race, or run it with its own `run()`.
 
@@ -45,6 +45,17 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - It is fail-fast: the first failure is the result at once, and the other effects are interrupted. It doesn't wait for one that ignores cancellation; that effect's `bracket` release runs when it settles. Results keep input order.
 - `IO.forEach` still runs one at a time by default.
 - **Upgrade:** where order or "later effects don't start after a failure" matters, pass `{ concurrency: 1 }` to keep the old behaviour. The compiler can't see this change.
+
+**2.0 (breaking): `run()` rejects on a defect or an interruption, so its `Either<E, A>` holds only typed errors.**
+
+- `run()` used to put a defect (a bug: a throw from `IO.sync`, a `map` callback, `IO.die`) and an interruption in the `Left`, typed as `E`. Now a defect rejects the promise with the thrown value, and an interruption rejects it with an `InterruptedError`.
+- `runSync()` follows the same rule: a typed failure is a `Left`, and a defect or an interruption is thrown. The sync interpreter now tells typed failures from defects, as the async one does. An effect it can't run (`IO.async`, `timeout`, `race`, `sleep`) is a defect, so it is thrown too.
+- `runExit()` is unchanged. It never rejects and reports all four outcomes.
+- An `interruptOn` region still turns its cancellation into a typed `InterruptedError`, so `interruptOn(signal).run()` and `runCancellable()` still resolve `Left(InterruptedError)` when cancelled.
+- Values the interpreter used to put in `E` are now defects (`Die`): `IO.race([])`, `IO.any([])`, `IO.firstSuccessOf([])`, and an `IO.service` whose service was never provided.
+- `IO.tryCatch`'s mapped error is now a typed failure. It used to be a defect that happened to land in the `Left`, so after this change it would have rejected `run()`.
+- A `bracketExit` release under `runSync()` now sees `Die` for a defect in `use`, as it does under `run()`. Before, it saw `Failure`.
+- **Upgrade:** a `run()` caller that relied on reading a defect or an interruption from the `Left` must handle the rejection, or switch to `runExit()`. A `runSync()` caller must catch the throw. A `.run()` with no rejection handler becomes an unhandled rejection on a defect. The compiler can't see this change.
 
 ## 1.27.1 - 2026-11-19
 
