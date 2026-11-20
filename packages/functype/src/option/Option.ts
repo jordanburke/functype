@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
+import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
 import { hasYAMLValue } from "@/internal/yaml"
 import type { Reshapeable } from "@/reshapeable"
@@ -198,169 +199,285 @@ export interface Option<out T extends Type>
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 }
 
-/**
- * Creates a Some variant of Option containing a value.
- * @param value - The value to wrap in Some
- * @returns A new Some instance containing the value
- * @typeParam T - The type of the value
- */
-export const Some = <T extends Type>(value: T): Option<T> => ({
+/** A Some as the prototype sees it: the interface, with the variant's data fixed. */
+type SomeShape<T extends Type> = Option<T> & { readonly _tag: "Some"; readonly value: T; readonly isEmpty: false }
+/** A None as the prototype sees it. */
+type NoneShape<T extends Type> = Option<T> & {
+  readonly _tag: "None"
+  readonly value: undefined
+  readonly isEmpty: true
+}
+
+/* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
+
+/** Every Some shares these methods (#276 §14). `this.value` is the Some's own data. */
+const SomeProto = define<SomeShape<A>>()("Some", {
   [Symbol.toStringTag]: "Option",
-  _tag: "Some",
-  value,
   isEmpty: false,
-  isSome(): this is Option<T> & { value: T; isEmpty: false } {
+  size: 1,
+  isSome(): this is Option<A> & { value: A; isEmpty: false } {
     return true
   },
-  isNone(): this is Option<T> & { value: undefined; isEmpty: true } {
+  isNone(): this is Option<A> & { value: undefined; isEmpty: true } {
     return false
   },
-  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
-  orThrow: () => value,
-  expect: (_handler: () => never): T => value,
-  or: <T2 extends Type>(_alternative: Option<T2>): Option<T | T2> => Some<T | T2>(value),
-  orNull: () => value,
-  orUndefined: () => value,
-  map: <U extends Type>(f: (value: T) => U) => Some(f(value)),
-  ap: <U extends Type>(ff: Option<(value: T) => U>) =>
-    ff._tag === "Some" && ff.value ? Some(ff.value(value)) : (NONE as unknown as Option<U>),
-  filter(predicate: (value: T) => boolean) {
-    if (predicate(value)) {
-      return Some<T>(value) // type narrowing
-    } else {
-      return NONE as unknown as Option<T>
-    }
+  orElse() {
+    return this.value
   },
-  count: (p: (x: T) => boolean) => (p(value) ? 1 : 0),
-  find: (p: (a: T) => boolean) => (p(value) ? Some(value) : (NONE as unknown as Option<T>)),
-  exists: (p: (a: T) => boolean) => p(value),
-  every: (p: (a: T) => boolean) => p(value),
-  forEach: (f: (a: T) => void) => f(value),
-  fold: <U extends Type>(_onNone: () => U, onSome: (value: T) => U) => {
-    return onSome(value)
+  orThrow() {
+    return this.value
   },
-  foldAsync: async <U extends Type>(_onNone: () => U | Promise<U>, onSome: (value: T) => U | Promise<U>) =>
-    onSome(value),
-  match: <R>(patterns: { Some: (value: T) => R; None: () => R }): R => {
-    return patterns.Some(value)
+  expect() {
+    return this.value
   },
-  flatMap: <U extends Type>(f: (value: T) => Option<U>) => f(value),
-  flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Option<U>>) => {
-    return await f(value)
+  or() {
+    return this
   },
-  reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> => value as unknown as Widen<T, B>,
-  reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-    value as unknown as Widen<T, B>,
-  foldLeft:
-    <B>(z: B) =>
-    (op: (b: B, a: T) => B) =>
-      op(z, value),
-  foldRight:
-    <B>(z: B) =>
-    (op: (a: T, b: B) => B) =>
-      op(value, z),
-  contains: (val: T) => val === value,
-  toList: () => List<T>([value]),
-  toArray: () => [value] as readonly T[],
-  size: 1,
-  toOption: () => Some(value),
-  toEither: <E>(_leftOrBuilder: E | (() => E)) => Right<E, T>(value),
-  toTry: () => Try(() => value),
-  toPromise: (): Promise<T> => Promise.resolve(value),
-  toString: () => `Some(${showValue(value)})`,
-  toValue: () => ({ _tag: "Some", value }),
-  toJSON: () => ({ "@functype": "Option" as const, _tag: "Some" as const, value }),
-  pipe: <U extends Type>(f: (value: T) => U) => f(value),
-  serialize: () => createSerializer("Option", "Some", value),
-  // Implement Doable interface for Do-notation
-  doUnwrap(): DoResult<T> {
-    return { ok: true, value }
+  orNull() {
+    return this.value
+  },
+  orUndefined() {
+    return this.value
+  },
+  map(f) {
+    return Some(f(this.value))
+  },
+  ap(ff) {
+    return ff._tag === "Some" && ff.value ? Some(ff.value(this.value)) : NONE
+  },
+  filter(predicate) {
+    return predicate(this.value) ? this : NONE
+  },
+  count(p) {
+    return p(this.value) ? 1 : 0
+  },
+  find(p) {
+    return p(this.value) ? this : NONE
+  },
+  exists(p) {
+    return p(this.value)
+  },
+  every(p) {
+    return p(this.value)
+  },
+  forEach(f) {
+    f(this.value)
+  },
+  fold(_onNone, onSome) {
+    return onSome(this.value)
+  },
+  async foldAsync(_onNone, onSome) {
+    return onSome(this.value)
+  },
+  match(patterns) {
+    return patterns.Some(this.value)
+  },
+  flatMap(f) {
+    return f(this.value)
+  },
+  async flatMapAsync(f) {
+    return f(this.value)
+  },
+  reduce<B>() {
+    return this.value as unknown as Widen<A, B>
+  },
+  reduceRight<B>() {
+    return this.value as unknown as Widen<A, B>
+  },
+  foldLeft(z) {
+    return (op) => op(z, this.value)
+  },
+  foldRight(z) {
+    return (op) => op(this.value, z)
+  },
+  contains(val) {
+    return val === this.value
+  },
+  toList() {
+    return List([this.value])
+  },
+  toArray() {
+    return [this.value]
+  },
+  toOption() {
+    return this
+  },
+  toEither() {
+    return Right(this.value)
+  },
+  toTry() {
+    return Try(() => this.value)
+  },
+  toPromise() {
+    return Promise.resolve(this.value)
+  },
+  toString() {
+    return `Some(${showValue(this.value)})`
+  },
+  toValue() {
+    return { _tag: "Some", value: this.value }
+  },
+  toJSON() {
+    return { "@functype": "Option", _tag: "Some", value: this.value }
+  },
+  pipe(f) {
+    return f(this.value)
+  },
+  serialize() {
+    return createSerializer("Option", "Some", this.value)
+  },
+  doUnwrap(): DoResult<A> {
+    return { ok: true, value: this.value }
   },
 })
 
-const NONE: Option<never> = {
+/** The one None's methods. */
+const NoneProto = define<NoneShape<A>>()("None", {
   [Symbol.toStringTag]: "Option",
-  _tag: "None",
-  value: undefined as never,
   isEmpty: true,
-  isSome(): this is Option<never> & { value: never; isEmpty: false } {
+  size: 0,
+  isSome(): this is Option<A> & { value: A; isEmpty: false } {
     return false
   },
-  isNone(): this is Option<never> & { value: undefined; isEmpty: true } {
+  isNone(): this is Option<A> & { value: undefined; isEmpty: true } {
     return true
   },
-  orElse: <T2 extends Type>(defaultValue: T2): never | T2 => defaultValue,
-  orThrow<T>(error?: Error | (() => Error)): T {
+  orElse(defaultValue) {
+    return defaultValue
+  },
+  orThrow(error) {
     throw error === undefined
       ? new Error("Cannot extract value from None")
       : typeof error === "function"
         ? error()
         : error
   },
-  expect(handler: () => never): never {
+  expect(handler) {
     return handler()
   },
-  or: <T2 extends Type>(alternative: Option<T2>): Option<never | T2> => alternative,
-  orNull: () => null,
-  orUndefined: () => undefined,
-  map: <U extends Type>(_f: (value: never) => U) => NONE as unknown as Option<U>,
-  ap: <U extends Type>(_ff: Option<(value: never) => U>) => NONE as unknown as Option<U>,
-  filter(_predicate: (value: never) => boolean): Option<never> {
+  or(alternative) {
+    return alternative
+  },
+  orNull() {
+    return null
+  },
+  orUndefined() {
+    return undefined
+  },
+  map() {
     return NONE
   },
-  count: (_p: (x: never) => boolean) => 0,
-  find: (_p: (a: never) => boolean) => NONE as unknown as Option<never>,
-  exists: (_p: (a: never) => boolean) => false,
-  every: (_p: (a: never) => boolean) => true,
-  forEach: (_f: (a: never) => void) => {},
-  flatMap: <U extends Type>(_f: (value: never) => Option<U>) => NONE as unknown as Option<U>,
-  flatMapAsync: <U extends Type>(_f: (value: never) => Promise<Option<U>>): Promise<Option<U>> => {
-    return Promise.resolve(NONE as unknown as Option<U>)
+  ap() {
+    return NONE
   },
-  reduce: <B = never>(_op: (b: Widen<never, B>, a: Widen<never, B>) => Widen<never, B>): Widen<never, B> => {
-    throw new Error("Cannot reduce an empty Option")
+  filter() {
+    return NONE
   },
-  reduceRight: <B = never>(_op: (b: Widen<never, B>, a: Widen<never, B>) => Widen<never, B>): Widen<never, B> => {
-    throw new Error("Cannot reduceRight an empty Option")
+  count() {
+    return 0
   },
-  fold: <U extends Type>(onNone: () => U, _onSome: (value: never) => U) => {
+  find() {
+    return NONE
+  },
+  exists() {
+    return false
+  },
+  every() {
+    return true
+  },
+  forEach() {},
+  fold(onNone) {
     return onNone()
   },
-  foldAsync: async <U extends Type>(onNone: () => U | Promise<U>, _onSome: (value: never) => U | Promise<U>) =>
-    onNone(),
-  match: <R>(patterns: { Some: (value: never) => R; None: () => R }): R => {
+  async foldAsync(onNone) {
+    return onNone()
+  },
+  match(patterns) {
     return patterns.None()
   },
-  foldLeft:
-    <B>(z: B) =>
-    () =>
-      z,
-  foldRight:
-    <B>(z: B) =>
-    () =>
-      z,
-  contains: () => false,
-  toList: () => List([]),
-  toArray: <T>() => [] as readonly T[],
-  size: 0,
-  toOption: <T>() => NONE as unknown as Option<T>,
-  toEither: <E>(leftOrBuilder: E | (() => E)) =>
-    Left<E, never>(typeof leftOrBuilder === "function" ? (leftOrBuilder as () => E)() : leftOrBuilder),
-  toTry: <T>() =>
-    Try<T>(() => {
+  flatMap() {
+    return NONE
+  },
+  flatMapAsync() {
+    return Promise.resolve(NONE)
+  },
+  reduce() {
+    throw new Error("Cannot reduce an empty Option")
+  },
+  reduceRight() {
+    throw new Error("Cannot reduceRight an empty Option")
+  },
+  foldLeft(z) {
+    return () => z
+  },
+  foldRight(z) {
+    return () => z
+  },
+  contains() {
+    return false
+  },
+  toList() {
+    return List([])
+  },
+  toArray() {
+    return []
+  },
+  toOption() {
+    return NONE
+  },
+  toEither<E>(leftOrBuilder: E | (() => E)) {
+    return Left<E, A>(typeof leftOrBuilder === "function" ? (leftOrBuilder as () => E)() : leftOrBuilder)
+  },
+  toTry() {
+    return Try(() => {
       throw new Error("None")
-    }),
-  toPromise: <T>(): Promise<T> => Promise.reject(new Error("Cannot convert None to Promise")),
-  toString: () => "None",
-  toValue: () => ({ _tag: "None", value: undefined as never }),
-  toJSON: () => ({ "@functype": "Option" as const, _tag: "None" as const, value: null }),
-  pipe: <U extends Type>(f: (_value: never) => U) => f(undefined as never),
-  serialize: () => createSerializer("Option", "None", null),
-  // Implement Doable interface for Do-notation
+    })
+  },
+  toPromise() {
+    return Promise.reject(new Error("Cannot convert None to Promise"))
+  },
+  toString() {
+    return "None"
+  },
+  toValue() {
+    return { _tag: "None", value: undefined as unknown as A }
+  },
+  toJSON() {
+    return { "@functype": "Option", _tag: "None", value: null }
+  },
+  pipe(f) {
+    return f(undefined as unknown as A)
+  },
+  serialize() {
+    return createSerializer("Option", "None", null)
+  },
   doUnwrap(): DoResult<never> {
     return { ok: false, empty: true }
   },
+})
+
+/**
+ * Creates a Some variant of Option containing a value.
+ * @param value - The value to wrap in Some
+ * @returns A new Some instance containing the value
+ * @typeParam T - The type of the value
+ */
+export const Some = <T extends Type>(value: T): Option<T> => {
+  // The one cast: a prototype checked at the opaque A works for every T.
+  const some = Object.create(SomeProto) as Mutable<SomeShape<T>>
+  some._tag = "Some"
+  some.value = value
+  return some
 }
+
+const NONE: Option<never> = (() => {
+  const none = Object.create(NoneProto) as Mutable<NoneShape<never>>
+  none._tag = "None"
+  none.value = undefined
+  return none
+})()
+
+/* eslint-enable functional/immutable-data */
 
 /**
  * Creates a None variant of Option representing absence of a value.
