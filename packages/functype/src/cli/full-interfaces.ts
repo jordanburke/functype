@@ -297,12 +297,17 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   readonly value: R
 }`,
 
-  Try: `export interface Try<out T>
+  Try: `export type Try<T> = SuccessOf<T> | FailureOf<T>
+
+export interface TryBase<out T>
   extends FunctypeSum<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
+  /** The value of a Success; undefined on a Failure */
+  readonly value: T | undefined
+  /** The error of a Failure; undefined on a Success */
   readonly error: Error | undefined
-  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
-  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
+  isSuccess(): this is SuccessOf<T>
+  isFailure(): this is FailureOf<T>
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an \`Error\` to throw it, or a builder to make one from
@@ -393,6 +398,18 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    */
   toJSON():
     { "@functype": "Try"; _tag: "Success"; value: T } | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
+}
+
+export interface SuccessOf<out T> extends TryBase<T> {
+  readonly _tag: "Success"
+  readonly value: T
+  readonly error: undefined
+}
+
+export interface FailureOf<out T> extends TryBase<T> {
+  readonly _tag: "Failure"
+  readonly value: undefined
+  readonly error: Error
 }`,
 
   List: `export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {

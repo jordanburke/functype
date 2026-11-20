@@ -43,7 +43,11 @@ const TYPE_SOURCES: Record<string, TypeSource> = {
     isType: true,
     extras: [{ name: "EitherBase" }, { name: "LeftOf" }, { name: "RightOf" }],
   },
-  Try: { file: "src/try/Try.ts" },
+  Try: {
+    file: "src/try/Try.ts",
+    isType: true,
+    extras: [{ name: "TryBase" }, { name: "SuccessOf" }, { name: "FailureOf" }],
+  },
   List: { file: "src/list/List.ts" },
   Set: { file: "src/set/Set.ts" },
   Map: { file: "src/map/Map.ts" },

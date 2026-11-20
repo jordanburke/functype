@@ -30,12 +30,19 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<out T>
+/**
+ * What every Try has, Success or Failure. `Try<T>` is the union of `SuccessOf<T>` and `FailureOf<T>`,
+ * so TypeScript narrows it on `isSuccess()`, `isFailure()` and `_tag`, as it does Either.
+ */
+export interface TryBase<out T>
   extends FunctypeSum<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
+  /** The value of a Success; undefined on a Failure */
+  readonly value: T | undefined
+  /** The error of a Failure; undefined on a Success */
   readonly error: Error | undefined
-  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
-  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
+  isSuccess(): this is SuccessOf<T>
+  isFailure(): this is FailureOf<T>
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
@@ -128,20 +135,35 @@ export interface Try<out T>
     { "@functype": "Try"; _tag: "Success"; value: T } | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }
 
-/** A Success as its prototype sees it. It now keeps its value as data (#276 §9a, §14). */
-type SuccessShape<T> = Try<T> & { readonly _tag: "Success"; readonly value: T; readonly error: undefined }
-/** A Failure as its prototype sees it. */
-type FailureShape<T> = Try<T> & { readonly _tag: "Failure"; readonly value: undefined; readonly error: Error }
+/** A Try that succeeded. Discriminated by `_tag: "Success"`. */
+export interface SuccessOf<out T> extends TryBase<T> {
+  readonly _tag: "Success"
+  readonly value: T
+  readonly error: undefined
+}
+
+/** A Try that failed. Discriminated by `_tag: "Failure"`. */
+export interface FailureOf<out T> extends TryBase<T> {
+  readonly _tag: "Failure"
+  readonly value: undefined
+  readonly error: Error
+}
+
+/**
+ * The result of a computation that may throw: a Success or a Failure. TypeScript narrows it across
+ * both branches of `isSuccess()` / `isFailure()` and `_tag` checks.
+ */
+export type Try<T> = SuccessOf<T> | FailureOf<T>
 
 const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)))
 
 /** Every Success shares these methods (#276 §14). `this.value` is the Success's own data. */
-const SuccessProto = define<SuccessShape<A>>()("Success", {
+const SuccessProto = define<SuccessOf<A>>()("Success", {
   [Symbol.toStringTag]: "Try",
-  isSuccess(): this is Try<A> & { readonly _tag: "Success"; error: undefined } {
+  isSuccess(): this is SuccessOf<A> {
     return true
   },
-  isFailure(): this is Try<A> & { readonly _tag: "Failure"; error: Error } {
+  isFailure(): this is FailureOf<A> {
     return false
   },
   orElse() {
@@ -253,12 +275,12 @@ const SuccessProto = define<SuccessShape<A>>()("Success", {
 })
 
 /** Every Failure shares these methods. `this.error` is the Failure's own data. */
-const FailureProto = define<FailureShape<A>>()("Failure", {
+const FailureProto = define<FailureOf<A>>()("Failure", {
   [Symbol.toStringTag]: "Try",
-  isSuccess(): this is Try<A> & { readonly _tag: "Success"; error: undefined } {
+  isSuccess(): this is SuccessOf<A> {
     return false
   },
-  isFailure(): this is Try<A> & { readonly _tag: "Failure"; error: Error } {
+  isFailure(): this is FailureOf<A> {
     return true
   },
   orElse(defaultValue) {
@@ -372,7 +394,7 @@ const FailureProto = define<FailureShape<A>>()("Failure", {
 /* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
 // The one cast in each: a prototype checked at the opaque A works for every T.
 const Success = <T>(value: T): Try<T> => {
-  const success = Object.create(SuccessProto) as Mutable<SuccessShape<T>>
+  const success = Object.create(SuccessProto) as Mutable<SuccessOf<T>>
   success._tag = "Success"
   success.value = value
   success.error = undefined
@@ -380,7 +402,7 @@ const Success = <T>(value: T): Try<T> => {
 }
 
 const Failure = <T>(error: Error): Try<T> => {
-  const failure = Object.create(FailureProto) as Mutable<FailureShape<T>>
+  const failure = Object.create(FailureProto) as Mutable<FailureOf<T>>
   failure._tag = "Failure"
   failure.value = undefined
   failure.error = error
@@ -469,15 +491,13 @@ const TryCompanion = {
    * @param tryValue - The Try to check
    * @returns True if Try is Success
    */
-  isSuccess: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Success"; error: undefined } =>
-    tryValue.isSuccess(),
+  isSuccess: <T>(tryValue: Try<T>): tryValue is SuccessOf<T> => tryValue.isSuccess(),
   /**
    * Type guard to check if a Try is Failure
    * @param tryValue - The Try to check
    * @returns True if Try is Failure
    */
-  isFailure: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Failure"; error: Error } =>
-    tryValue.isFailure(),
+  isFailure: <T>(tryValue: Try<T>): tryValue is FailureOf<T> => tryValue.isFailure(),
   /**
    * Creates a Try from JSON string
    * @param json - The JSON string
