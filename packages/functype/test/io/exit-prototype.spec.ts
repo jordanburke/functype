@@ -1,6 +1,6 @@
 /**
- * Exit shares its methods through one prototype per variant (#276 §14). These tests pin the shape
- * and the 2.0 breaks.
+ * Exit shares its methods through one prototype per variant (#276 §14). These tests pin the shape,
+ * the 2.0 breaks, and the cost.
  */
 import { inspect } from "node:util"
 
@@ -78,5 +78,43 @@ describe("Exit's 2.0 breaks", () => {
 
   it("structuredClone copies the data, with no methods", () => {
     expect(structuredClone(Exit.succeed(1))).toEqual({ _tag: "Success", value: 1 })
+  })
+})
+
+describe("Exit's construction cost", () => {
+  const RUNS = 9
+  const N = 50_000
+  const inc = (x: number): number => x + 1
+
+  const timePerCall = (make: (i: number) => unknown): number => {
+    let kept = 0
+    const start = performance.now()
+    for (let i = 0; i < N; i++) {
+      if (make(i) !== undefined) kept++
+    }
+    const elapsed = performance.now() - start
+    expect(kept).toBe(N)
+    return elapsed / N
+  }
+
+  /** Median over interleaved runs of (build + map) / (build a plain object of the same data). */
+  const ratioToPlain = (make: (i: number) => unknown): number => {
+    const plain = (i: number) => ({ _tag: "Success", value: inc(i) })
+    for (let i = 0; i < 5_000; i++) {
+      make(i)
+      plain(i)
+    }
+    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
+    return ratios[Math.floor(RUNS / 2)]!
+  }
+
+  const { succeed } = Exit
+
+  // Measured locally on Node 24.20.0 with this loop: 28x to 30x before the change, 1.1x to 1.2x after.
+  // The bound sits far below the old cost, with room for a slow or instrumented runner.
+  it("Exit.succeed(i).map costs at most 10 times a plain object", () => {
+    const ratio = ratioToPlain((i) => succeed(i).map(inc))
+    console.info(`Exit.succeed(i).map: ${ratio.toFixed(1)}x a plain object (bound 10x)`)
+    expect(ratio).toBeLessThan(10)
   })
 })

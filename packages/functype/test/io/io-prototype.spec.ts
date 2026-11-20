@@ -60,7 +60,8 @@ describe("IO's 2.0 breaks", () => {
     const { tap, match } = IO.succeed(1)
     expect(() => tap(() => undefined)).toThrow(TypeError)
     expect(() => match({ failure: () => 0, success: inc })).toThrow(TypeError)
-    // The runners declare `this: IO<never, E, A>`, so TypeScript rejects a detached call.
+    // The runners declare `this: IO<never, E, A>`, so TypeScript rejects a direct detached call. It
+    // doesn't catch one passed as a callback, such as `[1].map(io.runSync)`.
     const { runSync } = IO.succeed(1)
     // @ts-expect-error -- the detached call is what's under test
     expect(() => runSync()).toThrow(TypeError)
