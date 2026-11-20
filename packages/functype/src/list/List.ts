@@ -236,7 +236,8 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
       return ListObject(result)
     },
 
-    takeRight: (n: number) => ListObject(n <= 0 ? [] : array.slice(-n)),
+    // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+    takeRight: (n: number) => ListObject(!(n > 0) ? [] : array.slice(-n)),
 
     reverse: () => ListObject([...array].reverse()),
 

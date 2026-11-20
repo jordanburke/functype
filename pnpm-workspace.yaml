@@ -37,4 +37,3 @@ minimumReleaseAge: 0
 allowBuilds:
   esbuild: true
   sharp: true
-  tldjs: true
