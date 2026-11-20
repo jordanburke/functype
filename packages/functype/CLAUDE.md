@@ -215,7 +215,9 @@ List.empty<number>()         // typed empty list
 list.concat(other)           // combine lists (returns new List)
 list.toArray()               // convert back to array
 list.filter(fn).map(fn)      // transforms
-list.isEmpty                 // check if empty (property)
+list.isEmpty                 // check if empty (property; so are size and length)
+list.head() / list.headOption() // first element, or as an Option (methods since 2.0)
+list.tail() / list.init()    // a copy without the first / last element (methods since 2.0)
 
 // Set - immutable set
 Set([1, 2, 3])               // create from array

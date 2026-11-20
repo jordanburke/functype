@@ -110,12 +110,12 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Add element            | `add(elem)`           | `list.add(4)`                            |
 | Add at start           | `prepend(elem)`       | `list.prepend(0)`                        |
 | Combine lists          | `concat(other)`       | `list.concat(otherList)`                 |
-| First element          | `head`                | `list.head`                              |
-| First (safe)           | `headOption`          | `list.headOption`                        |
-| Last element           | `last`                | `list.last`                              |
-| Last (safe)            | `lastOption`          | `list.lastOption`                        |
-| Rest of list           | `tail`                | `list.tail`                              |
-| All except last        | `init`                | `list.init`                              |
+| First element          | `head()`              | `list.head()`                            |
+| First (safe)           | `headOption()`        | `list.headOption()`                      |
+| Last element           | `last()`              | `list.last()`                            |
+| Last (safe)            | `lastOption()`        | `list.lastOption()`                      |
+| Rest of list           | `tail()`              | `list.tail()`                            |
+| All except last        | `init()`              | `list.init()`                            |
 | Take first N           | `take(n)`             | `list.take(3)`                           |
 | Take while matching    | `takeWhile(p)`        | `list.takeWhile(x => x < 5)`             |
 | Take last N            | `takeRight(n)`        | `list.takeRight(2)`                      |

@@ -278,16 +278,16 @@ Note: `fold` has different semantics per type category:
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
 - `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. Strings stay whole
-- `head: A | undefined`
-- `headOption: Option<A>`
+- `head(): A | undefined`
+- `headOption(): Option<A>`
 - `take(n: number): Self`
 - `takeWhile(p: (value: A) => boolean): Self`
 - `takeRight(n: number): Self`
-- `last: A | undefined`
-- `lastOption: Option<A>`
-- `tail: Self`
+- `last(): A | undefined`
+- `lastOption(): Option<A>`
+- `tail(): Self`
 
-- `init: Self`
+- `init(): Self`
 - `toArray(): A[]`
 
 `List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.

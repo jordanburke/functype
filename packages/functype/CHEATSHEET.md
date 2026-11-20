@@ -97,6 +97,7 @@ Try(() => yaml.load(text)).toEither((e) => ScopeError(path, `parse: ${e.message}
 | --------------------- | ------------------------------ | --------------------------------------------- |
 | `List(1, 2, 3)`       | `[1, 2, 3]` (with combinators) | `List([1, 2, 3])` or `List.of(1, 2, 3)`       |
 | `list.foldLeft(z)(f)` | `RA.reduce(z, f)`              | `list.fold(z, f)` / `list.reduce(f)`          |
+| `list.head` / `.tail` | `RA.head(xs)` / `RA.tail(xs)`  | `list.head()` / `list.tail()` (methods)       |
 | `list.groupBy(f)`     | `RA.groupBy(f)`                | `list.groupBy(f)`                             |
 | `Set(1, 2, 3)`        | `RS.fromArray(...)`            | `Set([1, 2, 3])` or `Set.of(1, 2, 3)`         |
 | `Map(k -> v, ...)`    | `RM.fromFoldable(...)`         | `Map([[k, v], ...])` or `Map.of([k, v], ...)` |
@@ -104,6 +105,8 @@ Try(() => yaml.load(text)).toEither((e) => ScopeError(path, `parse: ${e.message}
 | `Stack`               | n/a                            | `Stack.of(1, 2, 3)`                           |
 
 functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators, and `Set` / `Map` are the default collections: import them under their own names. When you need the built-in (a cache you mutate, an API that takes a native `ReadonlyMap`), spell it `globalThis.Map` / `globalThis.Set`. The `eslint-plugin-functype` rules `collection-naming`, `prefer-functype-set` and `prefer-functype-map` enforce this; a mutated collection or one passed to a declared `ReadonlyMap` / `ReadonlySet` is allowed.
+
+Unlike Scala, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are methods on List, Set and LazyList (2.0). functype's List is backed by an array, so `tail()` copies the rest of it rather than following a pointer. `size`, `length` and `isEmpty` stay properties. Every collection keeps only its data as own properties and shares its methods through one prototype per type, so a detached call such as `xs.filter(set.has)` throws; write `xs.filter((x) => set.has(x))`.
 
 ---
 
