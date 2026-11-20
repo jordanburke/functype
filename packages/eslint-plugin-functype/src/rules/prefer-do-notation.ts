@@ -4,7 +4,7 @@ import type { ASTNode } from "../types/ast"
 import { isChainedMethodCall } from "../utils/functype-detection"
 import { isExtractableByType } from "../utils/type-aware"
 
-const MONAD_TYPES: ReadonlySet<string> = new Set(["Option", "Either", "Try", "Task"])
+const MONAD_TYPES: ReadonlySet<string> = new Set(["Option", "Either", "Try"])
 
 /** AST keys that don't represent syntax children — back-edges and source metadata. */
 const NON_CHILD_KEYS: ReadonlySet<string> = new Set(["parent", "loc", "range"])
@@ -18,7 +18,7 @@ const union = <T>(a: ReadonlySet<T>, b: ReadonlySet<T>): ReadonlySet<T> => new S
 function monadAt(node: ASTNode): ReadonlySet<string> {
   if (node.type !== "CallExpression") return new Set()
   const callee = node.callee
-  // Bare constructor: Option(...), Try(...), Either(...), Task(...)
+  // Bare constructor: Option(...), Try(...), Either(...)
   if (callee?.type === "Identifier" && MONAD_TYPES.has(callee.name)) {
     return new Set([callee.name])
   }
@@ -122,12 +122,12 @@ function monadOfAnnotation(annotation: ASTNode | undefined): ReadonlySet<string>
 
 /**
  * Receiver names that say "this holds a monad", for code linted without type information: `option`,
- * `opt`, `either`, `result`, `maybe`, `task`, or a numbered one such as `option1`, in any case; or a
+ * `opt`, `either`, `result`, `maybe`, or a numbered one such as `option1`, in any case; or a
  * camelCase suffix such as `userOption` or `parseResult`, which must be capitalized, so `entry`,
  * `retry` and `registry` don't count.
  */
-const MONAD_NAME = /^(option|opt|either|result|maybe|task)\d*$/i
-const MONAD_SUFFIX = /[a-z0-9](Option|Either|Result|Maybe|Try|Task)\d*$/
+const MONAD_NAME = /^(option|opt|either|result|maybe)\d*$/i
+const MONAD_SUFFIX = /[a-z0-9](Option|Either|Result|Maybe|Try)\d*$/
 
 /** Methods that turn one monad into another: `Try(f).toOption()` is an Option. */
 const CONVERSIONS: ReadonlyMap<string, string> = new Map([
