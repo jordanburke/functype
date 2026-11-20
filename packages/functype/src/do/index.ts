@@ -193,6 +193,9 @@ type TryLike = { _tag: "Success" | "Failure"; isSuccess(): boolean; orThrow(): u
  * @returns The same monad type as the first yield
  */
 // Structural type overloads for better TypeScript inference
+// No yield: nothing picks a monad, so the result is a List, as at runtime. This comes first, because a
+// generator that yields nothing yields `never`, which every overload below would otherwise accept.
+export function Do<T>(gen: () => Generator<never, T, unknown>): List<T>
 export function Do<T>(gen: () => Generator<OptionLike, T, unknown>): Option<T>
 export function Do<L, R>(gen: () => Generator<EitherLike, R, unknown>): Either<L, R>
 export function Do<T>(gen: () => Generator<ListLike, T, unknown>): List<T>
@@ -386,6 +389,8 @@ function doListComprehension<T>(gen: () => Generator<unknown, T, unknown>): List
  * @returns Promise of the same monad type as first yield
  */
 // Structural type overloads for better TypeScript inference
+// No yield: a List, as for Do. First, for the same reason.
+export function DoAsync<T>(gen: () => AsyncGenerator<never, T, unknown>): Promise<List<T>>
 export function DoAsync<T>(gen: () => AsyncGenerator<OptionLike, T, unknown>): Promise<Option<T>>
 export function DoAsync<L, R>(gen: () => AsyncGenerator<EitherLike, R, unknown>): Promise<Either<L, R>>
 export function DoAsync<T>(gen: () => AsyncGenerator<ListLike, T, unknown>): Promise<List<T>>

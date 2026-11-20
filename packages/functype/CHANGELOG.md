@@ -22,6 +22,27 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+**2.0 (breaking): Option, Either and Try share their methods instead of copying them onto every value.** From #539 (every method copied onto every value); the design is §14 of #276 (the 2.0 release plan).
+
+- Each value used to be an object literal of about 40 closures. `Some`, `None`, `Right`, `Left`, `Success` and `Failure` now each have one frozen prototype that holds the methods, and a value keeps only its data. Building a value and calling `map` once costs about the same as a plain object: 26–28 ns against 27 ns, down from 219 ns for `Some` and 440 ns for `Right`, in the repo's benchmark on Node 24.20.0. A `Some` uses about 65 bytes instead of 2.5 KB.
+- **A detached method call throws.** `const { orElse } = opt`, `xs.filter(opt.contains)` and `xs.map(either.orElse)` call the method without its value, so `this` is undefined. Call it on the value, or wrap it: `xs.map((x) => opt.orElse(x))`. ts-builds' functype preset is adding a warning for these, `@typescript-eslint/unbound-method`. It only sees members declared with method syntax.
+- **Own keys are only the data.** `Object.keys`, spread and `for…in` see `_tag` and `value` (plus `error` on a Try). A spread copy has no methods. Snapshots of a value need re-recording.
+- **A Success keeps its value as data.** It was reachable only through methods; `Object.keys(Try(() => 1))` is now `["_tag", "value", "error"]`.
+- Assigning over a method on a value throws in strict mode, because the prototype is frozen. `structuredClone(opt)` returns a copy with the data and no methods, where it threw `DataCloneError` before. A plain-object check such as `Object.getPrototypeOf(v) === Object.prototype` is now false.
+- Also better: `expect(Some(1)).toEqual(Some(1))` passes, where it failed before, and `console.log` prints `Some [Option] { _tag: 'Some', value: 1 }` instead of 40 functions.
+- **Some methods return the same value instead of a copy:** `or`, `filter`, `find`, `toOption`, `tap`, `tapLeft`, `filterOrElse`, `recover`, `recoverWith` and `toTry`, when the result would hold the same data. Code that compared results with `===` sees `true` where it saw `false`.
+- **Methods read the value's own fields.** Writing over `value` through a cast now changes what the methods return. Before, each method kept the value it was built with. The types mark these fields `readonly`.
+- **functype-react's `structuralEq` compares `Date` and `Error` by content, and never calls objects with different prototypes equal.** It compared own keys only. That used to work for functype values by accident, because their per-value methods never compared equal. With methods shared, `Left(new Error("a"))` and `Left(new Error("b"))` would have looked equal, so `useStableState` would have kept a stale error.
+
+**2.0 (breaking): Option and Try are discriminated unions, like Either.** From §9a of #276 (the 2.0 release plan).
+
+- `Option<T>` is now `SomeOf<T> | NoneOf<T>`, and `Try<T>` is `SuccessOf<T> | FailureOf<T>`. The methods live on `OptionBase<T>` and `TryBase<T>`. So `if (o.isNone()) return; o.value` gives `T`, not `T | undefined`, and the same holds for `isSome()`, `isSuccess()`, `isFailure()`, `_tag` checks and the companion guards.
+- A Success has a typed `value`; a Failure's `value` is `undefined`.
+- **Upgrade:** `interface X extends Option<T>` or `class X implements Option<T>` must use `OptionBase<T>`, because an interface can't extend a union. The same goes for `Try<T>` and `TryBase<T>`. The compiler reports each one.
+- The API docs move Option and Try from `api-docs/interfaces/` to `api-docs/types/`.
+
+**2.0: a `Do` block that yields nothing is typed `List`.** `Do(function* () { return 5 })` returned `List([5])` but was typed `Option<number>`, because a generator that yields nothing yields `never`, which the Option overload accepted. It's now typed `List<number>`, and `DoAsync` likewise. Nothing changes at runtime.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
