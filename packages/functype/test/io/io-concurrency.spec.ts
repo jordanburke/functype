@@ -4,7 +4,8 @@ import { IO } from "@/io"
 
 /**
  * `IO.all` / `IO.forEach` take `{ concurrency }`, and `IO.async` / `IO.tryPromise` thunks receive
- * the run's abort signal. Defaults are unchanged: both combinators run one effect at a time.
+ * the run's abort signal. In 2.0 `IO.all` starts them all at once by default (#276 §5);
+ * `IO.forEach` still runs one at a time unless told otherwise.
  */
 
 const tick = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -20,10 +21,37 @@ const tracked = (gauge: { now: number; max: number }, value: number, ms: number)
   })
 
 describe("IO.all concurrency", () => {
-  it("runs one at a time by default", async () => {
+  it("starts them all at once by default and keeps input order", async () => {
     const gauge = { now: 0, max: 0 }
-    const result = await IO.all([tracked(gauge, 1, 5), tracked(gauge, 2, 5), tracked(gauge, 3, 5)]).runOrThrow()
+    const effects = [tracked(gauge, 1, 20), tracked(gauge, 2, 5), tracked(gauge, 3, 5)]
+    const result = await IO.all(effects).runOrThrow()
     expect(result).toEqual([1, 2, 3])
+    expect(gauge.max).toBe(3)
+  })
+
+  it("is fail-fast by default: the first failure returns at once and interrupts the others", async () => {
+    const seen: { aborted: boolean } = { aborted: false }
+    const sibling = IO.async(
+      (signal) =>
+        new Promise<number>(() => {
+          signal?.addEventListener("abort", () => {
+            seen.aborted = true
+          })
+        }),
+    )
+    const failing = IO.sleep(5).flatMap(() => IO.fail("boom" as const))
+    const either = await IO.all([sibling, failing]).run()
+    expect(either.isLeft() && either.value).toBe("boom")
+    expect(seen.aborted).toBe(true)
+  })
+
+  it("runs one at a time with { concurrency: 1 }, and stops at the first failure", async () => {
+    const gauge = { now: 0, max: 0 }
+    const started: number[] = []
+    const step = (n: number) => IO.sync(() => started.push(n)).flatMap(() => tracked(gauge, n, 5))
+    const result = await IO.all([step(1), IO.fail("stop" as const), step(3)], { concurrency: 1 }).run()
+    expect(result.isLeft() && result.value).toBe("stop")
+    expect(started).toEqual([1])
     expect(gauge.max).toBe(1)
   })
 
@@ -154,6 +182,13 @@ describe("IO.all concurrency", () => {
 })
 
 describe("IO.forEach concurrency", () => {
+  it("runs one at a time by default", async () => {
+    const gauge = { now: 0, max: 0 }
+    const result = await IO.forEach([1, 2, 3], (n) => tracked(gauge, n, 5)).runOrThrow()
+    expect(result).toEqual([1, 2, 3])
+    expect(gauge.max).toBe(1)
+  })
+
   it("runs up to `concurrency` at once and calls `f` only when the IO runs", async () => {
     const gauge = { now: 0, max: 0 }
     const calls = { n: 0 }

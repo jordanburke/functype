@@ -1938,10 +1938,12 @@ const IOCompanion = {
   /**
    * Runs all IOs and collects the results in input order. Stops at the first failure.
    *
-   * By default they run one after another. Pass `{ concurrency: n }` to run up to `n` at once, or
-   * `"unbounded"` to start them all together. With more than one in flight, the first failure is the
-   * result at once and the others are interrupted: they start no new step, and an `IO.async` thunk
-   * sees its signal abort. A promise that ignores its signal keeps running, but the result doesn't wait.
+   * By default they all start at once. Pass `{ concurrency: n }` to run at most `n` at once, or
+   * `{ concurrency: 1 }` to run them one after another. With more than one in flight, the first
+   * failure is the result at once and the others are interrupted: they start no new step, a sleep
+   * in them wakes, and an `IO.async` thunk sees its signal abort. A promise that ignores its signal
+   * keeps running, but the result doesn't wait; its `bracket` release runs when it settles. An
+   * interruption of the run interrupts every effect.
    *
    * @example
    * ```typescript
@@ -1952,7 +1954,7 @@ const IOCompanion = {
     effects: readonly IO<R, E, A>[],
     options?: ConcurrencyOptions,
   ): IO<R, E, readonly A[]> => {
-    const concurrency = options?.concurrency ?? 1
+    const concurrency = options?.concurrency ?? "unbounded"
     workerCount(concurrency, 1) // a bad value throws RangeError here, not when the IO runs
     if (concurrency !== 1 && effects.length > 1) {
       return createIO(unsafeCoerce({ _tag: "All", effects, concurrency }))
@@ -2178,7 +2180,8 @@ const IOCompanion = {
   /**
    * Executes an effect for each element in the array, collecting results in input order.
    *
-   * Runs them one after another by default. `{ concurrency }` works as it does for `IO.all`.
+   * Runs them one after another by default, unlike `IO.all`. `{ concurrency }` works as it does
+   * for `IO.all`.
    *
    * @example
    * ```typescript
@@ -2197,7 +2200,7 @@ const IOCompanion = {
     workerCount(concurrency, 1) // a bad value throws RangeError here, not when the IO runs
     if (concurrency !== 1) {
       // `f` runs when the IO runs, as it does in the sequential path.
-      return IOCompanion.unit.flatMap(() => IOCompanion.all(items.map(f), options))
+      return IOCompanion.unit.flatMap(() => IOCompanion.all(items.map(f), { concurrency }))
     }
     if (items.length === 0) {
       return unsafeCoerce(IOCompanion.succeed([]))

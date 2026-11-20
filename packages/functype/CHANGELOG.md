@@ -39,6 +39,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `IO.async` thunks inside `race` or `timeout` now receive a signal even when the run has none.
 - **Upgrade:** nothing to change unless code relied on a losing effect finishing its work. Move work that must finish out of the race, or run it with its own `run()`.
 
+**2.0 (breaking): `IO.all` starts its effects at once by default.**
+
+- `IO.all(effects)` now means `IO.all(effects, { concurrency: "unbounded" })`. Before, it ran them one after another.
+- It is fail-fast: the first failure is the result at once, and the other effects are interrupted. It doesn't wait for one that ignores cancellation; that effect's `bracket` release runs when it settles. Results keep input order.
+- `IO.forEach` still runs one at a time by default.
+- **Upgrade:** where order or "later effects don't start after a failure" matters, pass `{ concurrency: 1 }` to keep the old behaviour. The compiler can't see this change.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
