@@ -22,6 +22,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+**2.0 (breaking): Option, Either and Try share their methods instead of copying them onto every value.** From #539 (every method copied onto every value); the design is §14 of #276 (the 2.0 release plan).
+
+- Each value used to be an object literal of about 40 closures. `Some`, `None`, `Right`, `Left`, `Success` and `Failure` now each have one frozen prototype that holds the methods, and a value keeps only its data. Building a value and calling `map` once costs about the same as a plain object: 26–28 ns against 27 ns, down from 219 ns for `Some` and 440 ns for `Right`, in the repo's benchmark on Node 24.20.0. A `Some` uses about 65 bytes instead of 2.5 KB.
+- **A detached method call throws.** `const { orElse } = opt`, `xs.filter(opt.contains)` and `xs.map(either.orElse)` call the method without its value, so `this` is undefined. Call it on the value, or wrap it: `xs.map((x) => opt.orElse(x))`. ts-builds' functype preset is adding a warning for these, `@typescript-eslint/unbound-method`. It only sees members declared with method syntax.
+- **Own keys are only the data.** `Object.keys`, spread and `for…in` see `_tag` and `value` (plus `error` on a Try). A spread copy has no methods. Snapshots of a value need re-recording.
+- **A Success keeps its value as data.** It was reachable only through methods; `Object.keys(Try(() => 1))` is now `["_tag", "value", "error"]`.
+- Assigning over a method on a value throws in strict mode, because the prototype is frozen. `structuredClone(opt)` returns a copy with the data and no methods, where it threw `DataCloneError` before. A plain-object check such as `Object.getPrototypeOf(v) === Object.prototype` is now false.
+- Also better: `expect(Some(1)).toEqual(Some(1))` passes, where it failed before, and `console.log` prints `Some [Option] { _tag: 'Some', value: 1 }` instead of 40 functions.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
