@@ -3,7 +3,7 @@ import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
 import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
+import { type A, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
@@ -12,7 +12,7 @@ import { Tuple } from "@/tuple"
 import type { Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
-import { List, Right, Try } from "../index"
+import { type Either, List, Right, Try } from "../index"
 
 /**
  * Obj type module
@@ -179,144 +179,235 @@ export interface Obj<T extends Record<string, Type>>
   toString(): string
 }
 
+/* eslint-disable functional/immutable-data -- omit and pick fill in the copy they just made, and wrap fills in the Obj it just created */
+
 /**
+ * Every Obj shares these methods (#276 §14). `this.data` is the object the Obj wraps.
+ *
  * size and isEmpty stay getters: an Obj wraps the object it's given without copying it, so they
- * count its keys when read. They're attached after the literal: see internal/lazyProperties.
+ * count its keys when read, like a native Map's size.
  */
-const OBJ_GETTERS = lazyGetters<{ readonly data: Record<string, Type> }>({
-  isEmpty() {
+const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
+  [Symbol.toStringTag]: "Obj",
+
+  get isEmpty() {
     return Object.keys(this.data).length === 0
   },
-  size() {
+
+  get size() {
     return Object.keys(this.data).length
+  },
+
+  // --- Core object operations ---
+
+  get(key) {
+    return Option(this.data[key])
+  },
+
+  set(key, val) {
+    return wrap({ ...this.data, [key]: val })
+  },
+
+  assign(partial) {
+    return wrap({ ...this.data, ...partial })
+  },
+
+  merge<U extends Record<string, Type>>(other: U): Obj<A & U> {
+    return wrap({ ...this.data, ...other })
+  },
+
+  when(condition, partial) {
+    const shouldApply = typeof condition === "function" ? condition() : condition
+    return shouldApply ? wrap({ ...this.data, ...partial }) : wrap(this.data)
+  },
+
+  omit<K extends keyof A>(...keys: K[]): Obj<Omit<A, K>> {
+    const result: Partial<A> = { ...this.data }
+    for (const key of keys) delete result[key]
+    return wrap(result as Omit<A, K>)
+  },
+
+  pick<K extends keyof A>(...keys: K[]): Obj<Pick<A, K>> {
+    const result: Partial<Pick<A, K>> = {}
+    for (const key of keys) {
+      if (key in this.data) result[key] = this.data[key]
+    }
+    return wrap(result as Pick<A, K>)
+  },
+
+  keys() {
+    return List(Object.keys(this.data))
+  },
+
+  values() {
+    return List(Object.values(this.data) as A[keyof A][])
+  },
+
+  entries() {
+    return List(Object.entries(this.data).map(([k, v]) => Tuple([k, v] as [string, A[keyof A]])))
+  },
+
+  has(key) {
+    return key in this.data
+  },
+
+  value() {
+    return this.data
+  },
+
+  // --- Functype contract ---
+
+  map<U extends Record<string, Type>>(f: (value: A) => U): Obj<U> {
+    return wrap(f(this.data))
+  },
+
+  flatMap(f) {
+    return f(this.data)
+  },
+
+  async flatMapAsync<U extends Record<string, Type>>(f: (value: A) => PromiseLike<Obj<U>>): Promise<Obj<U>> {
+    return await f(this.data)
+  },
+
+  ap<U extends Record<string, Type>>(ff: Obj<Record<string, Type>>): Obj<U> {
+    const fn = ff.data as unknown as (value: A) => U
+    return wrap(fn(this.data))
+  },
+
+  fold(onEmpty, onValue) {
+    return Object.keys(this.data).length === 0 ? onEmpty() : onValue(this.data)
+  },
+
+  match<R>(patterns: { Obj: (value: A) => R }): R {
+    return patterns.Obj(this.data)
+  },
+
+  foldLeft(z) {
+    return (op) => op(z, this.data)
+  },
+
+  foldRight(z) {
+    return (op) => op(this.data, z)
+  },
+
+  count(p) {
+    return p(this.data) ? 1 : 0
+  },
+
+  find(p) {
+    return p(this.data) ? Option(this.data) : Option<A>(undefined)
+  },
+
+  exists(p) {
+    return p(this.data)
+  },
+
+  forEach(f) {
+    f(this.data)
+  },
+
+  reduce<B = A>(_op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    return this.data as unknown as Widen<A, B>
+  },
+
+  reduceRight<B = A>(_op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    return this.data as unknown as Widen<A, B>
+  },
+
+  contains(value) {
+    return JSON.stringify(this.data) === JSON.stringify(value)
+  },
+
+  // --- Extractable ---
+
+  orElse() {
+    return this.data
+  },
+
+  orThrow() {
+    return this.data
+  },
+
+  or<T2 extends Type>(_alternative: Extractable<T2>): Extractable<A | T2> {
+    return wrap(this.data)
+  },
+
+  orNull() {
+    return this.data
+  },
+
+  orUndefined() {
+    return this.data
+  },
+
+  // --- Reshapeable ---
+
+  toOption() {
+    return Option(this.data)
+  },
+
+  toEither<E>(_left: E): Either<E, A> {
+    return Right<E, A>(this.data)
+  },
+
+  toList() {
+    return List<A>([this.data])
+  },
+
+  toTry() {
+    const { data } = this
+    return Try(() => data)
+  },
+
+  toPromise() {
+    return Promise.resolve(this.data)
+  },
+
+  // --- Serialization ---
+
+  toString() {
+    return `Obj(${safeStringify(this.data)})`
+  },
+
+  toValue() {
+    return { _tag: "Obj" as const, value: this.data }
+  },
+
+  toJSON() {
+    return { "@functype": "Obj" as const, _tag: "Obj" as const, value: this.data }
+  },
+
+  pipe(f) {
+    return f(this.data)
+  },
+
+  serialize() {
+    return createSerializer("Obj", this.data)
+  },
+
+  // --- Doable ---
+
+  doUnwrap(): DoResult<A> {
+    return { ok: true, value: this.data }
   },
 })
 
 /**
- * Creates an Obj instance wrapping a plain object with immutable operations.
+ * Creates an Obj instance wrapping a plain object with immutable operations. The object isn't
+ * copied. Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
  * @param data - The plain object to wrap
  * @returns A new Obj instance
  * @typeParam T - The record type
  */
-const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => {
-  const fields: Omit<Obj<T>, "isEmpty" | "size"> = {
-    _tag: "Obj",
-    data,
-
-    // --- Core object operations ---
-
-    get: <K extends keyof T>(key: K): Option<T[K]> => Option(data[key] as T[K] | undefined),
-
-    set: <K extends keyof T>(key: K, val: T[K]): Obj<T> => ObjObject({ ...data, [key]: val } as T),
-
-    assign: (partial: Partial<T>): Obj<T> => ObjObject({ ...data, ...partial }),
-
-    merge: <U extends Record<string, Type>>(other: U): Obj<T & U> => ObjObject({ ...data, ...other } as T & U),
-
-    when: (condition: boolean | (() => boolean), partial: Partial<T>): Obj<T> => {
-      const shouldApply = typeof condition === "function" ? condition() : condition
-      return shouldApply ? ObjObject({ ...data, ...partial }) : ObjObject(data)
-    },
-
-    omit: <K extends keyof T>(...keys: K[]): Obj<Omit<T, K>> => {
-      const result = { ...data }
-      for (const key of keys) delete result[key]
-      return ObjObject(result as Omit<T, K>)
-    },
-
-    pick: <K extends keyof T>(...keys: K[]): Obj<Pick<T, K>> => {
-      const result = {} as Pick<T, K>
-      for (const key of keys) {
-        if (key in data) (result as Record<string, unknown>)[key as string] = data[key]
-      }
-      return ObjObject(result)
-    },
-
-    keys: () => List(Object.keys(data)),
-
-    values: () => List(Object.values(data) as T[keyof T][]),
-
-    entries: () => List(Object.entries(data).map(([k, v]) => Tuple([k, v] as [string, T[keyof T]]))),
-
-    has: <K extends keyof T>(key: K): boolean => key in data,
-
-    value: () => data,
-
-    // --- Functype contract ---
-
-    map: <U extends Record<string, Type>>(f: (value: T) => U): Obj<U> => ObjObject(f(data)),
-
-    flatMap: <U extends Record<string, Type>>(f: (value: T) => Obj<U>): Obj<U> => f(data),
-
-    flatMapAsync: async <U extends Record<string, Type>>(f: (value: T) => PromiseLike<Obj<U>>): Promise<Obj<U>> =>
-      await f(data),
-
-    ap: <U extends Record<string, Type>>(ff: Obj<Record<string, Type>>): Obj<U> => {
-      const fn = ff.data as unknown as (value: T) => U
-      return ObjObject(fn(data))
-    },
-
-    fold: <U extends Type>(onEmpty: () => U, onValue: (value: T) => U) =>
-      Object.keys(data).length === 0 ? onEmpty() : onValue(data),
-
-    match: <R>(patterns: { Obj: (value: T) => R }): R => patterns.Obj(data),
-
-    foldLeft:
-      <B>(z: B) =>
-      (op: (b: B, a: T) => B) =>
-        op(z, data),
-
-    foldRight:
-      <B>(z: B) =>
-      (op: (a: T, b: B) => B) =>
-        op(data, z),
-
-    count: (p: (x: T) => boolean) => (p(data) ? 1 : 0),
-    find: (p: (a: T) => boolean) => (p(data) ? Option(data) : Option(undefined as T | undefined)),
-    exists: (p: (a: T) => boolean) => p(data),
-    forEach: (f: (a: T) => void) => f(data),
-
-    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-      data as unknown as Widen<T, B>,
-    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-      data as unknown as Widen<T, B>,
-
-    contains: (value: unknown) => JSON.stringify(data) === JSON.stringify(value),
-
-    // --- Extractable ---
-
-    orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => data,
-    orThrow: (_error?: Error) => data,
-    or: <T2 extends Type>(_alternative: Extractable<T2>): Extractable<T | T2> => ObjObject(data) as Extractable<T | T2>,
-    orNull: () => data,
-    orUndefined: () => data,
-
-    // --- Reshapeable ---
-
-    toOption: () => Option(data),
-    toEither: <E>(_left: E) => Right<E, T>(data),
-    toList: () => List<T>([data]),
-    toTry: () => Try(() => data),
-    toPromise: (): Promise<T> => Promise.resolve(data),
-
-    // --- Serialization ---
-
-    toString: () => `Obj(${safeStringify(data)})`,
-    toValue: () => ({ _tag: "Obj" as const, value: data }),
-    toJSON: () => ({ "@functype": "Obj" as const, _tag: "Obj" as const, value: data }),
-    pipe: <U extends Type>(f: (value: T) => U) => f(data),
-    serialize: () => createSerializer("Obj", data),
-
-    // --- Doable ---
-
-    doUnwrap(): DoResult<T> {
-      return { ok: true, value: data }
-    },
-
-    [Symbol.toStringTag]: "Obj",
-  }
-  return withLazyGetters<Obj<T>>(fields, OBJ_GETTERS)
+const wrap = <T extends Record<string, Type>>(data: T): Obj<T> => {
+  // The one cast: a prototype checked at the opaque A works for every T.
+  const obj = Object.create(ObjProto) as Mutable<Obj<T>>
+  obj._tag = "Obj"
+  obj.data = data
+  return Object.freeze(obj)
 }
+
+/* eslint-enable functional/immutable-data */
 
 /**
  * Creates an Obj wrapping a plain object.
@@ -332,7 +423,7 @@ const ObjObject = <T extends Record<string, Type>>(data: T): Obj<T> => {
  * obj.set("age", 31).value()  // { name: "John", age: 31 }
  * ```
  */
-const ObjConstructor = <T extends Record<string, Type>>(data: T): Obj<T> => ObjObject(data)
+const ObjConstructor = <T extends Record<string, Type>>(data: T): Obj<T> => wrap(data)
 
 const ObjCompanion = {
   /**
@@ -340,13 +431,13 @@ const ObjCompanion = {
    * @param data - The plain object to wrap
    * @returns A new Obj instance
    */
-  of: <T extends Record<string, Type>>(data: T): Obj<T> => ObjObject(data),
+  of: <T extends Record<string, Type>>(data: T): Obj<T> => wrap(data),
 
   /**
    * Creates an empty Obj.
    * @returns An empty Obj instance
    */
-  empty: <T extends Record<string, Type>>(): Obj<T> => ObjObject({} as T),
+  empty: <T extends Record<string, Type>>(): Obj<T> => wrap({} as T),
 
   /**
    * Deserializes an Obj from a JSON string.
@@ -358,7 +449,7 @@ const ObjCompanion = {
     if (parsed["@functype"] !== undefined && parsed["@functype"] !== "Obj") {
       throw new Error(`Obj.fromJSON: expected @functype="Obj", got ${JSON.stringify(parsed["@functype"])}`)
     }
-    return ObjObject(parsed.value)
+    return wrap(parsed.value)
   },
 
   /**

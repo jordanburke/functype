@@ -37,7 +37,7 @@ describe("construction shape", () => {
     ["Map", () => Map([["a", 1]]), []],
     ["Stack", () => Stack([1, 2]), []],
     ["LazyList", () => LazyList([1, 2]), []],
-    ["Obj", () => Obj({ a: 1 }), ["isEmpty", "size"]],
+    ["Obj", () => Obj({ a: 1 }), []],
   ] as const)("%s keeps getters only where they must stay lazy, and is frozen", (_, make, expected) => {
     const value = make()
     expect(accessors(value)).toEqual(expected)
