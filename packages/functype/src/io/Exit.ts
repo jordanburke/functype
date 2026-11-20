@@ -19,36 +19,8 @@ import type { Type } from "@/types"
 export type ExitTag = "Success" | "Failure" | "Die" | "Interrupted"
 
 /**
- * Exit represents the outcome of running an IO effect.
- * - Success: The effect completed successfully with a value
- * - Failure: The effect failed with a typed error — a value from the declared `E` channel
- * - Die: The effect produced a *defect* — a value that is **not** an `E`
- * - Interrupted: The effect was cancelled/interrupted
- *
- * `Die` exists so the error channel stops lying. `IO.sync` and `IO.die` declare
- * `E = never`, so nothing they put in the error channel can be an `E`: a throwing
- * `IO.sync` thunk, a throwing `map`/`flatMap`/`mapError` callback, and `IO.die` all
- * produce values the declared type says cannot exist. Before `Die` these collapsed
- * into `Failure`, so a consumer that pattern-matched on `error._tag` got `undefined`
- * with no runtime signal that anything was wrong.
- *
- * Defects remain **recoverable** — `recover` / `recoverWith` / `fold` / `mapError`
- * treat `Die` exactly as they treat `Failure`. That is deliberate, and it is where
- * functype parts company with ZIO: promoting defects to uncatchable would silently
- * change what every existing `.recover()` catches. `Die` is an *observability* fix,
- * not a control-flow one — it records what the outcome really was when nothing
- * recovered it.
- *
- * Note the sync interpreter cannot distinguish the two. `runSync` returns
- * `Either<E, A>`, which has no third branch to put a defect in: both a failure and a
- * defect land in the `Left` as the raw value — so `Fail` and `Die` arrive
- * identically. `Die` is observable through the async terminals (`runExit`) and
- * through the `Exit` handed to a `bracketExit` release.
- *
- * `Exit` is a discriminated union of {@link SuccessExitOf}, {@link FailureExitOf},
- * {@link DieExitOf} and {@link InterruptedExitOf}. Each variant holds its own field (`value`,
- * `error`, `defect`, `fiberId`), and the guards narrow to it, so `exit.isSuccess() && exit.value`
- * reads the value. The methods live on {@link ExitBase}, shared through one prototype per variant.
+ * What every Exit has, whichever variant it is. `Exit<E, A>` is the union of the four variants, so
+ * TypeScript narrows it on the guards and on `_tag`.
  */
 export interface ExitBase<E extends Type, A extends Type> {
   readonly [Symbol.toStringTag]: string
@@ -185,6 +157,37 @@ export interface InterruptedExitOf<E extends Type, A extends Type> extends ExitB
   readonly fiberId: string
 }
 
+/**
+ * Exit represents the outcome of running an IO effect.
+ * - Success: The effect completed successfully with a value
+ * - Failure: The effect failed with a typed error — a value from the declared `E` channel
+ * - Die: The effect produced a *defect* — a value that is **not** an `E`
+ * - Interrupted: The effect was cancelled/interrupted
+ *
+ * `Die` exists so the error channel stops lying. `IO.sync` and `IO.die` declare
+ * `E = never`, so nothing they put in the error channel can be an `E`: a throwing
+ * `IO.sync` thunk, a throwing `map`/`flatMap`/`mapError` callback, and `IO.die` all
+ * produce values the declared type says cannot exist. Before `Die` these collapsed
+ * into `Failure`, so a consumer that pattern-matched on `error._tag` got `undefined`
+ * with no runtime signal that anything was wrong.
+ *
+ * Defects remain **recoverable** — `recover` / `recoverWith` / `fold` / `mapError`
+ * treat `Die` exactly as they treat `Failure`. That is deliberate, and it is where
+ * functype parts company with ZIO: promoting defects to uncatchable would silently
+ * change what every existing `.recover()` catches. `Die` is an *observability* fix,
+ * not a control-flow one — it records what the outcome really was when nothing
+ * recovered it.
+ *
+ * `run()` and `runSync()` return `Either<E, A>`, which has no branch for a defect, so they
+ * throw it instead. `Die` is observable through `runExit()` and through the `Exit` handed
+ * to a `bracketExit` release.
+ *
+ * `Exit` is a discriminated union of {@link SuccessExitOf}, {@link FailureExitOf},
+ * {@link DieExitOf} and {@link InterruptedExitOf}. Each variant holds its own field (`value`,
+ * `error`, `defect`, `fiberId`), and the guards narrow to it, so `exit.isSuccess() && exit.value`
+ * reads the value. The methods live on {@link ExitBase}, shared through one prototype per variant.
+ * Variance comes from the variants, because a union type alias can't carry its own annotation.
+ */
 export type Exit<E extends Type, A extends Type> =
   SuccessExitOf<E, A> | FailureExitOf<E, A> | DieExitOf<E, A> | InterruptedExitOf<E, A>
 
