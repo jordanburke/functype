@@ -4,6 +4,7 @@ import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
+import { type A, type B, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
 import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list/List"
@@ -38,7 +39,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
    * React Query `queryFn`). With no argument, throws the Left value itself.
    */
-  orThrow: (error?: Error | ((left: L) => Error)) => R
+  orThrow(error?: Error | ((left: L) => Error)): R
   /**
    * Returns the right value, or calls the never-returning handler with the Left's value.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the
@@ -46,34 +47,34 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * narrowing trap where `if (e.isLeft()) fail(...)` fails to narrow `e.value` when
    * `fail` is an arrow function typed as `(...): never`.
    */
-  expect: (handler: (value: L) => never) => R
+  expect(handler: (value: L) => never): R
   or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
-  orNull: () => R | null
-  orUndefined: () => R | undefined
-  readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
-  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>) => Either<L | L2, U>
-  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
+  orNull(): R | null
+  orUndefined(): R | undefined
+  map<U extends Type>(f: (value: R) => U): Either<L, U>
+  ap<L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U>
+  merge<L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]>
   /**
    * Maps the Right value with an async function. A Left resolves unchanged.
    * If `f` rejects or throws, the returned Promise rejects with the same reason: it does not
    * become a Left, and it never throws synchronously. To turn a rejection into a Left, use `Either.fromPromise(p, onRejected)`
    * or `tryCatchAsync`, which take a function from the reason to `L`.
    */
-  mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
+  mapAsync<U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>>
+  flatMap<L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U>
   /**
    * Chains an async function that returns an Either. A Left resolves unchanged.
    * If `f` rejects or throws, the returned Promise rejects with the same reason, as with `mapAsync`.
    */
-  flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
-  toOption: () => Option<R>
-  toString: () => string
+  flatMapAsync<L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>): Promise<Either<L | L2, U>>
+  toOption(): Option<R>
+  toString(): string
   [Symbol.iterator]: () => Iterator<R>
-  yield: () => Generator<R, void, unknown>
-  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U[]>
-  tap: (f: (value: R) => void) => Either<L, R>
-  tapLeft: (f: (value: L) => void) => Either<L, R>
-  mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
+  yield(): Generator<R, void, unknown>
+  traverse<L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]>
+  tap(f: (value: R) => void): Either<L, R>
+  tapLeft(f: (value: L) => void): Either<L, R>
+  mapLeft<L2 extends Type>(f: (value: L) => L2): Either<L2, R>
   /**
    * Applies a predicate to the Right value. If the predicate fails, short-circuits
    * to a Left carrying the value produced by `onUnsatisfied`. Left passes through
@@ -83,18 +84,15 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * @param onUnsatisfied - Builds the new Left value when the predicate fails
    * @returns Right if the predicate holds, Left(onUnsatisfied(value)) otherwise
    */
-  filterOrElse: <L2 extends Type>(
-    predicate: (value: R) => boolean,
-    onUnsatisfied: (value: R) => L2,
-  ) => Either<L | L2, R>
-  bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
-  fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
+  filterOrElse<L2 extends Type>(predicate: (value: R) => boolean, onUnsatisfied: (value: R) => L2): Either<L | L2, R>
+  bimap<L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2): Either<L2, R2>
+  fold<T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T): T
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise, keeping chains fluent when at least one branch is async.
    */
-  foldAsync: <T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) => Promise<T>
-  swap: () => Either<R, L>
+  foldAsync<T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>): Promise<T>
+  swap(): Either<R, L>
   /**
    * Pipes the value through the provided function based on whether this is a Left or Right
    */
@@ -148,178 +146,302 @@ export type Either<L extends Type, R extends Type> = LeftOf<L, R> | RightOf<L, R
 
 export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
 
-const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, R> => ({
+/** Builds a pair typed as a tuple, not an array. */
+const pair = <X, Y>(x: X, y: Y): [X, Y] => [x, y]
+
+/** Every Right shares these methods (#276 §14). `this.value` is the Right's own data. */
+const RightProto = define<RightOf<B, A>>()("Right", {
   [Symbol.toStringTag]: "Either",
-  _tag: "Right" as const,
-  value,
-  isLeft(): this is LeftOf<L, R> {
+  isLeft(): this is LeftOf<B, A> {
     return false
   },
-  isRight(): this is RightOf<L, R> {
+  isRight(): this is RightOf<B, A> {
     return true
   },
-  orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
-  orThrow: () => value,
-  expect: (_handler: (value: L) => never): R => value,
-  or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
-    Right<L | L2, R | R2>(value),
-  orNull: () => value,
-  orUndefined: () => value,
-  map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
-  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
-    ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
-  mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => Right<L, U>(await f(value)),
-  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
-    other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> => f(value),
-  flatMapAsync: async <L2 extends Type, U extends Type>(
-    f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> => await f(value),
-  toOption: () => Some<R>(value),
-  toList: () => List<R>([value]),
-  toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
-  toTry: () => Try(() => value),
-  toJSON() {
-    return { "@functype": "Either" as const, _tag: "Right" as const, value }
+  orElse() {
+    return this.value
   },
-  toString: () => {
-    return `Right(${showValue(value)})`
+  orThrow() {
+    return this.value
+  },
+  expect() {
+    return this.value
+  },
+  or() {
+    return this
+  },
+  orNull() {
+    return this.value
+  },
+  orUndefined() {
+    return this.value
+  },
+  map(f) {
+    return RightConstructor(f(this.value))
+  },
+  ap(ff) {
+    return ff._tag === "Right" ? RightConstructor(ff.value(this.value)) : Left(ff.value)
+  },
+  async mapAsync(f) {
+    return RightConstructor(await f(this.value))
+  },
+  merge(other) {
+    return other.isLeft() ? Left(other.value) : RightConstructor(pair(this.value, other.value))
+  },
+  flatMap(f) {
+    return f(this.value)
+  },
+  async flatMapAsync(f) {
+    return f(this.value)
+  },
+  toOption() {
+    return Some(this.value)
+  },
+  toList() {
+    return List([this.value])
+  },
+  toEither() {
+    return RightConstructor(this.value)
+  },
+  toTry() {
+    return Try(() => this.value)
+  },
+  toJSON() {
+    return { "@functype": "Either", _tag: "Right", value: this.value }
+  },
+  toString() {
+    return `Right(${showValue(this.value)})`
   },
   *[Symbol.iterator]() {
-    yield value
+    yield this.value
   },
   *yield() {
-    yield value
+    yield this.value
   },
-  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]> => {
-    const result = f(value)
-    return result.isLeft() ? Left<L | L2, U[]>(result.value as L2) : Right<L | L2, U[]>([result.value as U])
+  traverse(f) {
+    const result = f(this.value)
+    return result.isLeft() ? Left(result.value) : RightConstructor([result.value])
   },
-  tap: (f: (value: R) => void) => {
-    f(value)
-    return Right<L, R>(value)
+  tap(f) {
+    f(this.value)
+    return this
   },
-  tapLeft: (_f: (value: L) => void) => Right<L, R>(value),
-  mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
-  filterOrElse: <L2 extends Type>(
-    predicate: (value: R) => boolean,
-    onUnsatisfied: (value: R) => L2,
-  ): Either<L | L2, R> => (predicate(value) ? Right<L | L2, R>(value) : Left<L | L2, R>(onUnsatisfied(value))),
-  bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
-  fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
-  foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
-    onRight(value),
-  foldLeft:
-    <B>(z: B) =>
-    (op: (b: B, a: R) => B) =>
-      op(z, value),
-  foldRight:
-    <B>(z: B) =>
-    (op: (a: R, b: B) => B) =>
-      op(value, z),
-  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Right(value),
-  swap: () => Left<R, L>(value),
-  toPromise: (): Promise<R> => Promise.resolve(value),
-  toValue: () => ({ _tag: "Right", value }),
-  pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
-  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Either", "Right", value),
-  contains: (v: R) => value === v,
-  exists: (p: (a: R) => boolean) => p(value),
-  every: (p: (a: R) => boolean) => p(value),
-  forEach: (f: (a: R) => void) => f(value),
-  // Implement Doable interface for Do-notation
-  doUnwrap(): DoResult<R> {
-    return { ok: true, value }
+  tapLeft() {
+    return this
+  },
+  mapLeft() {
+    return RightConstructor(this.value)
+  },
+  filterOrElse(predicate, onUnsatisfied) {
+    return predicate(this.value) ? this : Left(onUnsatisfied(this.value))
+  },
+  bimap(_fl, fr) {
+    return RightConstructor(fr(this.value))
+  },
+  fold(_onLeft, onRight) {
+    return onRight(this.value)
+  },
+  async foldAsync(_onLeft, onRight) {
+    return onRight(this.value)
+  },
+  foldLeft(z) {
+    return (op) => op(z, this.value)
+  },
+  foldRight(z) {
+    return (op) => op(this.value, z)
+  },
+  match(patterns) {
+    return patterns.Right(this.value)
+  },
+  swap() {
+    return Left(this.value)
+  },
+  toPromise() {
+    return Promise.resolve(this.value)
+  },
+  toValue() {
+    return { _tag: "Right", value: this.value }
+  },
+  pipeEither(_onLeft, onRight) {
+    return onRight(this.value)
+  },
+  pipe(f) {
+    return f(this.value)
+  },
+  serialize() {
+    return createSerializer("Either", "Right", this.value)
+  },
+  contains(v) {
+    return this.value === v
+  },
+  exists(p) {
+    return p(this.value)
+  },
+  every(p) {
+    return p(this.value)
+  },
+  forEach(f) {
+    f(this.value)
+  },
+  doUnwrap(): DoResult<A> {
+    return { ok: true, value: this.value }
   },
 })
 
-const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R> => ({
+/** Every Left shares these methods. `this.value` is the Left's own data. */
+const LeftProto = define<LeftOf<B, A>>()("Left", {
   [Symbol.toStringTag]: "Either",
-  _tag: "Left" as const,
-  value,
-  isLeft(): this is LeftOf<L, R> {
+  isLeft(): this is LeftOf<B, A> {
     return true
   },
-  isRight(): this is RightOf<L, R> {
+  isRight(): this is RightOf<B, A> {
     return false
   },
-  orElse: <R2 extends Type>(defaultValue: R2): R | R2 => defaultValue,
-  orThrow: (error?: Error | ((left: L) => Error)) => {
-    throw error === undefined ? value : typeof error === "function" ? error(value) : error
+  orElse(defaultValue) {
+    return defaultValue
   },
-  expect: (handler: (value: L) => never): R => handler(value),
-  or: <L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
-    alternative as Either<L | L2, R | R2>,
-  orNull: () => null,
-  orUndefined: () => undefined,
-  map: <U extends Type>(_f: (value: R) => U): Either<L, U> => Left<L, U>(value),
-  ap: <L2 extends Type, U extends Type>(_ff: Either<L2, (value: R) => U>): Either<L | L2, U> => Left<L | L2, U>(value),
-  mapAsync: <U extends Type>(_f: (value: R) => Promise<U>): Promise<Either<L, U>> => Promise.resolve(Left<L, U>(value)),
-  merge: <L1 extends Type, R1 extends Type>(_other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
-    Left<L | L1, [R, R1]>(value),
-  flatMap: <L2 extends Type, U extends Type>(_f: (value: R) => Either<L2, U>): Either<L | L2, U> =>
-    Left<L | L2, U>(value),
-  flatMapAsync: <L2 extends Type, U extends Type>(
-    _f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> => Promise.resolve(Left<L | L2, U>(value)),
-  toOption: () => None<R>(),
-  toList: () => List<R>(),
-  toEither: <E extends Type>(leftValue: E) => Left<E, R>(leftValue),
-  toTry: () =>
-    Try<R>(() => {
-      throw new Error(String(value))
-    }),
+  orThrow(error) {
+    throw error === undefined ? this.value : typeof error === "function" ? error(this.value) : error
+  },
+  expect(handler) {
+    return handler(this.value)
+  },
+  or(alternative) {
+    return alternative
+  },
+  orNull() {
+    return null
+  },
+  orUndefined() {
+    return undefined
+  },
+  map() {
+    return LeftConstructor(this.value)
+  },
+  ap() {
+    return LeftConstructor(this.value)
+  },
+  mapAsync() {
+    return Promise.resolve(LeftConstructor(this.value))
+  },
+  merge() {
+    return LeftConstructor(this.value)
+  },
+  flatMap() {
+    return LeftConstructor(this.value)
+  },
+  flatMapAsync() {
+    return Promise.resolve(LeftConstructor(this.value))
+  },
+  toOption() {
+    return None()
+  },
+  toList() {
+    return List<A>()
+  },
+  toEither(leftValue) {
+    return LeftConstructor(leftValue)
+  },
+  toTry() {
+    return Try<A>(() => {
+      throw new Error(String(this.value))
+    })
+  },
   toJSON() {
-    return { "@functype": "Either" as const, _tag: "Left" as const, value }
+    return { "@functype": "Either", _tag: "Left", value: this.value }
   },
-  toString: () => `Left(${showValue(value)})`,
+  toString() {
+    return `Left(${showValue(this.value)})`
+  },
   *[Symbol.iterator]() {
-    // Left doesn't yield any values
+    // A Left yields nothing.
   },
   *yield() {
-    // Left doesn't yield any values
+    // A Left yields nothing.
   },
-  traverse: <L2 extends Type, U extends Type>(_f: (value: R) => Either<L2, U>): Either<L | L2, U[]> =>
-    Left<L | L2, U[]>(value),
-  tap: (_f: (value: R) => void) => Left<L, R>(value),
-  tapLeft: (f: (value: L) => void) => {
-    f(value)
-    return Left<L, R>(value)
+  traverse() {
+    return LeftConstructor(this.value)
   },
-  mapLeft: <L2 extends Type>(f: (value: L) => L2) => Left<L2, R>(f(value)),
-  filterOrElse: <L2 extends Type>(
-    _predicate: (value: R) => boolean,
-    _onUnsatisfied: (value: R) => L2,
-  ): Either<L | L2, R> => Left<L | L2, R>(value),
-  bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, _fr: (value: R) => R2) => Left<L2, R2>(fl(value)),
-  fold: <T extends Type>(onLeft: (value: L) => T, _onRight: (value: R) => T) => onLeft(value),
-  foldAsync: async <T extends Type>(onLeft: (value: L) => T | Promise<T>, _onRight: (value: R) => T | Promise<T>) =>
-    onLeft(value),
-  foldLeft:
-    <B>(z: B) =>
-    (_op: (b: B, a: R) => B) =>
-      z,
-  foldRight:
-    <B>(z: B) =>
-    (_op: (a: R, b: B) => B) =>
-      z,
-  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Left(value),
-  swap: () => Right<R, L>(value),
-  toPromise: (): Promise<R> => Promise.reject(value),
-  toValue: () => ({ _tag: "Left", value }),
-  pipeEither: <U extends Type>(onLeft: (value: L) => U, _onRight: (value: R) => U) => onLeft(value),
-  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Either", "Left", value),
-  contains: (_v: R) => false,
-  exists: (_p: (a: R) => boolean) => false,
-  every: (_p: (a: R) => boolean) => true,
-  forEach: (_f: (a: R) => void) => {},
-  // Implement Doable interface for Do-notation
+  tap() {
+    return this
+  },
+  tapLeft(f) {
+    f(this.value)
+    return this
+  },
+  mapLeft(f) {
+    return LeftConstructor(f(this.value))
+  },
+  filterOrElse() {
+    return this
+  },
+  bimap(fl) {
+    return LeftConstructor(fl(this.value))
+  },
+  fold(onLeft) {
+    return onLeft(this.value)
+  },
+  async foldAsync(onLeft) {
+    return onLeft(this.value)
+  },
+  foldLeft(z) {
+    return () => z
+  },
+  foldRight(z) {
+    return () => z
+  },
+  match(patterns) {
+    return patterns.Left(this.value)
+  },
+  swap() {
+    return RightConstructor(this.value)
+  },
+  toPromise() {
+    return Promise.reject(this.value)
+  },
+  toValue() {
+    return { _tag: "Left", value: this.value }
+  },
+  pipeEither(onLeft) {
+    return onLeft(this.value)
+  },
+  pipe(f) {
+    return f(this.value)
+  },
+  serialize() {
+    return createSerializer("Either", "Left", this.value)
+  },
+  contains() {
+    return false
+  },
+  exists() {
+    return false
+  },
+  every() {
+    return true
+  },
+  forEach() {},
   doUnwrap(): DoResult<never> {
-    return { ok: false, empty: false, error: value }
+    return { ok: false, empty: false, error: this.value }
   },
 })
+
+/* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
+// The one cast in each: a prototype checked at the opaque A and B works for every L and R.
+const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, R> => {
+  const right = Object.create(RightProto) as Mutable<RightOf<L, R>>
+  right._tag = "Right"
+  right.value = value
+  return right
+}
+
+const LeftConstructor = <L extends Type, R extends Type>(value: L): LeftOf<L, R> => {
+  const left = Object.create(LeftProto) as Mutable<LeftOf<L, R>>
+  left._tag = "Left"
+  left.value = value
+  return left
+}
+/* eslint-enable functional/immutable-data */
 
 export const Right = <L extends Type, R extends Type>(value: R): Either<L, R> => RightConstructor(value)
 export const Left = <L extends Type, R extends Type>(value: L): Either<L, R> => LeftConstructor(value)

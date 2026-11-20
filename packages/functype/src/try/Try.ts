@@ -5,6 +5,7 @@ import { Left, Right } from "@/either/Either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
+import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
 import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list"
@@ -29,18 +30,25 @@ import type { Type } from "@/types"
  */
 export type TypeNames = "Success" | "Failure"
 
-export interface Try<out T>
+/**
+ * What every Try has, Success or Failure. `Try<T>` is the union of `SuccessOf<T>` and `FailureOf<T>`,
+ * so TypeScript narrows it on `isSuccess()`, `isFailure()` and `_tag`, as it does Either.
+ */
+export interface TryBase<out T>
   extends FunctypeSum<T, TypeNames>, Extractable<T>, Pipe<T>, Promisable<T>, Doable<T>, Reshapeable<T> {
   readonly _tag: TypeNames
+  /** The value of a Success; undefined on a Failure */
+  readonly value: T | undefined
+  /** The error of a Failure; undefined on a Success */
   readonly error: Error | undefined
-  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined }
-  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error }
+  isSuccess(): this is SuccessOf<T>
+  isFailure(): this is FailureOf<T>
   orElse<T2 extends Type>(defaultValue: T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
    */
-  orThrow: (error?: Error | ((error: Error) => Error)) => T
+  orThrow(error?: Error | ((error: Error) => Error)): T
   /**
    * Returns the success value, or calls the never-returning handler with the Failure's error.
    * Use this when you have a helper like `(msg) => fail(msg, 2)` that terminates the program —
@@ -48,17 +56,17 @@ export interface Try<out T>
    * `if (t.isFailure()) fail(...)` fails to narrow `t.value` when `fail` is an arrow function
    * typed as `(...): never`.
    */
-  expect: (handler: (error: Error) => never) => T
+  expect(handler: (error: Error) => never): T
   or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
-  orNull: () => T | null
-  orUndefined: () => T | undefined
-  toOption: () => Option<T>
+  orNull(): T | null
+  orUndefined(): T | undefined
+  toOption(): Option<T>
   /**
    * Converts to a plain readonly array: `[value]` for Success, `[]` for Failure.
    * Symmetric with `Try.toList()` but skips the List wrapper for code that
    * just wants to feed Array.prototype methods or spread into another array.
    */
-  toArray: () => readonly T[]
+  toArray(): readonly T[]
   /**
    * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
    * or Left(leftValue) when given a value. Success becomes Right(value).
@@ -67,28 +75,28 @@ export interface Try<out T>
    *
    *   Try.fromYAML(text).toEither((e) => `parse failed: ${e.message}`)
    */
-  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) => Either<E, T>
-  toTry: () => Try<T>
-  map: <U>(f: (value: T) => U) => Try<U>
-  ap: <U>(ff: Try<(value: T) => U>) => Try<U>
-  flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
-  flatMapAsync: <U>(f: (value: T) => Promise<Try<U>>) => Promise<Try<U>>
+  toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)): Either<E, T>
+  toTry(): Try<T>
+  map<U>(f: (value: T) => U): Try<U>
+  ap<U>(ff: Try<(value: T) => U>): Try<U>
+  flatMap<U>(f: (value: T) => Try<U>): Try<U>
+  flatMapAsync<U>(f: (value: T) => Promise<Try<U>>): Promise<Try<U>>
   /**
    * Pattern matches over the Try, applying onFailure if Failure and onSuccess if Success
    * @param onFailure - Function to apply if the Try is Failure
    * @param onSuccess - Function to apply if the Try is Success
    * @returns The result of applying the appropriate function
    */
-  fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
+  fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
    */
-  foldAsync: <U extends Type>(
+  foldAsync<U extends Type>(
     onFailure: (error: Error) => U | Promise<U>,
     onSuccess: (value: T) => U | Promise<U>,
-  ) => Promise<U>
-  toString: () => string
+  ): Promise<U>
+  toString(): string
   /**
    * Pattern matches over the Try, applying a handler function based on the variant
    * @param patterns - Object with handler functions for Success and Failure variants
@@ -127,142 +135,280 @@ export interface Try<out T>
     { "@functype": "Try"; _tag: "Success"; value: T } | { "@functype": "Try"; _tag: "Failure"; error: SerializedError }
 }
 
-const Success = <T>(value: T): Try<T> => ({
+/** A Try that succeeded. Discriminated by `_tag: "Success"`. */
+export interface SuccessOf<out T> extends TryBase<T> {
+  readonly _tag: "Success"
+  readonly value: T
+  readonly error: undefined
+}
+
+/** A Try that failed. Discriminated by `_tag: "Failure"`. */
+export interface FailureOf<out T> extends TryBase<T> {
+  readonly _tag: "Failure"
+  readonly value: undefined
+  readonly error: Error
+}
+
+/**
+ * The result of a computation that may throw: a Success or a Failure. TypeScript narrows it across
+ * both branches of `isSuccess()` / `isFailure()` and `_tag` checks.
+ */
+export type Try<T> = SuccessOf<T> | FailureOf<T>
+
+const toError = (e: unknown): Error => (e instanceof Error ? e : new Error(String(e)))
+
+/** Every Success shares these methods (#276 §14). `this.value` is the Success's own data. */
+const SuccessProto = define<SuccessOf<A>>()("Success", {
   [Symbol.toStringTag]: "Try",
-  _tag: "Success",
-  error: undefined,
-  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {
+  isSuccess(): this is SuccessOf<A> {
     return true
   },
-  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
+  isFailure(): this is FailureOf<A> {
     return false
   },
-  orElse: <T2 extends Type>(_defaultValue: T2): T | T2 => value,
-  orThrow: () => value,
-  expect: (_handler: (error: Error) => never): T => value,
-  or: <T2 extends Type>(_alternative: Try<T2>): Try<T | T2> => Success<T | T2>(value),
-  orNull: () => value,
-  orUndefined: () => value,
-  toEither: <E extends Type>(_leftOrBuilder: E | ((err: Error) => E)) => Right<E, T>(value),
-  map: <U>(f: (value: T) => U) => Try(() => f(value)),
-  ap: <U>(ff: Try<(value: T) => U>) => ff.map((f) => f(value)),
-  flatMap: <U>(f: (value: T) => Try<U>) => f(value),
-  flatMapAsync: async <U>(f: (value: T) => Promise<Try<U>>) => f(value),
-  fold: <U extends Type>(_onFailure: (error: Error) => U, onSuccess: (value: T) => U): U => onSuccess(value),
-  foldAsync: async <U extends Type>(
-    _onFailure: (error: Error) => U | Promise<U>,
-    onSuccess: (value: T) => U | Promise<U>,
-  ) => onSuccess(value),
-  match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Success(value),
-  recover: <U extends Type>(_f: (error: Error) => U): Try<T | U> => Success<T | U>(value),
-  recoverWith: <U extends Type>(_f: (error: Error) => Try<U>): Try<T | U> => Success<T | U>(value),
-  filterOrElse: (predicate: (value: T) => boolean, onUnsatisfied: (value: T) => Error): Try<T> => {
+  orElse() {
+    return this.value
+  },
+  orThrow() {
+    return this.value
+  },
+  expect() {
+    return this.value
+  },
+  or() {
+    return this
+  },
+  orNull() {
+    return this.value
+  },
+  orUndefined() {
+    return this.value
+  },
+  toEither() {
+    return Right(this.value)
+  },
+  map(f) {
+    return Try(() => f(this.value))
+  },
+  ap(ff) {
+    return ff.map((f) => f(this.value))
+  },
+  flatMap(f) {
+    return f(this.value)
+  },
+  async flatMapAsync(f) {
+    return f(this.value)
+  },
+  fold(_onFailure, onSuccess) {
+    return onSuccess(this.value)
+  },
+  async foldAsync(_onFailure, onSuccess) {
+    return onSuccess(this.value)
+  },
+  match(patterns) {
+    return patterns.Success(this.value)
+  },
+  recover() {
+    return this
+  },
+  recoverWith() {
+    return this
+  },
+  filterOrElse(predicate, onUnsatisfied) {
     try {
-      return predicate(value) ? Success<T>(value) : Failure<T>(onUnsatisfied(value))
+      return predicate(this.value) ? this : Failure(onUnsatisfied(this.value))
     } catch (e) {
-      return Failure<T>(e instanceof Error ? e : new Error(String(e)))
+      return Failure(toError(e))
     }
   },
-  foldLeft:
-    <B>(z: B) =>
-    (op: (b: B, a: T) => B) =>
-      op(z, value),
-  foldRight:
-    <B>(z: B) =>
-    (op: (a: T, b: B) => B) =>
-      op(value, z),
-  toString: () => `Success(${showValue(value)})`,
-  toPromise: (): Promise<T> => Promise.resolve(value),
-  toValue: () => ({ _tag: "Success", value }),
-  toJSON: () => ({ "@functype": "Try" as const, _tag: "Success" as const, value }),
-  toOption: () => Some(value),
-  toList: () => List<T>([value]),
-  toArray: () => [value] as readonly T[],
-  toTry: () => Success(value),
-  pipe: <U>(f: (value: T) => U) => f(value),
-  serialize: () => createSerializer("Try", "Success", value),
-  contains: (v: T) => value === v,
-  exists: (p: (a: T) => boolean) => p(value),
-  every: (p: (a: T) => boolean) => p(value),
-  forEach: (f: (a: T) => void) => f(value),
-  // Implement Doable interface for Do-notation
-  doUnwrap(): DoResult<T> {
-    return { ok: true, value }
+  foldLeft(z) {
+    return (op) => op(z, this.value)
+  },
+  foldRight(z) {
+    return (op) => op(this.value, z)
+  },
+  toString() {
+    return `Success(${showValue(this.value)})`
+  },
+  toPromise() {
+    return Promise.resolve(this.value)
+  },
+  toValue() {
+    return { _tag: "Success", value: this.value }
+  },
+  toJSON() {
+    return { "@functype": "Try", _tag: "Success", value: this.value }
+  },
+  toOption() {
+    return Some(this.value)
+  },
+  toList() {
+    return List([this.value])
+  },
+  toArray() {
+    return [this.value]
+  },
+  toTry() {
+    return this
+  },
+  pipe(f) {
+    return f(this.value)
+  },
+  serialize() {
+    return createSerializer("Try", "Success", this.value)
+  },
+  contains(v) {
+    return this.value === v
+  },
+  exists(p) {
+    return p(this.value)
+  },
+  every(p) {
+    return p(this.value)
+  },
+  forEach(f) {
+    f(this.value)
+  },
+  doUnwrap(): DoResult<A> {
+    return { ok: true, value: this.value }
   },
 })
 
-const Failure = <T>(error: Error): Try<T> => ({
+/** Every Failure shares these methods. `this.error` is the Failure's own data. */
+const FailureProto = define<FailureOf<A>>()("Failure", {
   [Symbol.toStringTag]: "Try",
-  _tag: "Failure",
-  error,
-  isSuccess(): this is Try<T> & { readonly _tag: "Success"; error: undefined } {
+  isSuccess(): this is SuccessOf<A> {
     return false
   },
-  isFailure(): this is Try<T> & { readonly _tag: "Failure"; error: Error } {
+  isFailure(): this is FailureOf<A> {
     return true
   },
-  orElse: <T2 extends Type>(defaultValue: T2): T | T2 => defaultValue,
-  orThrow: (e?: Error | ((error: Error) => Error)) => {
-    throw e === undefined ? error : typeof e === "function" ? e(error) : e
+  orElse(defaultValue) {
+    return defaultValue
   },
-  expect: (handler: (error: Error) => never): T => handler(error),
-  or: <T2 extends Type>(alternative: Try<T2>): Try<T | T2> => alternative as Try<T | T2>,
-  orNull: () => null,
-  orUndefined: () => undefined,
-  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) =>
-    Left<E, T>(typeof leftOrBuilder === "function" ? (leftOrBuilder as (e: Error) => E)(error) : leftOrBuilder),
-  map: <U>(_f: (value: T) => U) => Failure<U>(error),
-  ap: <U>(_ff: Try<(value: T) => U>) => Failure<U>(error),
-  flatMap: <U>(_f: (value: T) => Try<U>) => Failure<U>(error),
-  flatMapAsync: <U>(_f: (value: T) => Promise<Try<U>>): Promise<Try<U>> => Promise.resolve(Failure<U>(error)),
-  fold: <U extends Type>(onFailure: (error: Error) => U, _onSuccess: (value: T) => U): U => onFailure(error),
-  foldAsync: async <U extends Type>(
-    onFailure: (error: Error) => U | Promise<U>,
-    _onSuccess: (value: T) => U | Promise<U>,
-  ) => onFailure(error),
-  match: <R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R => patterns.Failure(error),
-  recover: <U extends Type>(f: (error: Error) => U): Try<T | U> => Try(() => f(error)),
-  recoverWith: <U extends Type>(f: (error: Error) => Try<U>): Try<T | U> => {
+  orThrow(e) {
+    throw e === undefined ? this.error : typeof e === "function" ? e(this.error) : e
+  },
+  expect(handler) {
+    return handler(this.error)
+  },
+  or(alternative) {
+    return alternative
+  },
+  orNull() {
+    return null
+  },
+  orUndefined() {
+    return undefined
+  },
+  toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)) {
+    return Left<E, A>(
+      typeof leftOrBuilder === "function" ? (leftOrBuilder as (e: Error) => E)(this.error) : leftOrBuilder,
+    )
+  },
+  map() {
+    return Failure(this.error)
+  },
+  ap() {
+    return Failure(this.error)
+  },
+  flatMap() {
+    return Failure(this.error)
+  },
+  flatMapAsync() {
+    return Promise.resolve(Failure(this.error))
+  },
+  fold(onFailure) {
+    return onFailure(this.error)
+  },
+  async foldAsync(onFailure) {
+    return onFailure(this.error)
+  },
+  match(patterns) {
+    return patterns.Failure(this.error)
+  },
+  recover(f) {
+    return Try(() => f(this.error))
+  },
+  recoverWith(f) {
     try {
-      return f(error)
+      return f(this.error)
     } catch (e) {
-      return Failure<T | U>(e instanceof Error ? e : new Error(String(e)))
+      return Failure(toError(e))
     }
   },
-  filterOrElse: (_predicate: (value: T) => boolean, _onUnsatisfied: (value: T) => Error): Try<T> => Failure<T>(error),
-  foldLeft:
-    <B>(z: B) =>
-    (_op: (b: B, a: T) => B) =>
-      z, // No transformation on failure
-  foldRight:
-    <B>(z: B) =>
-    (_op: (a: T, b: B) => B) =>
-      z, // No transformation on failure
-  toString: () => `Failure(${showValue(error)})`,
-  toPromise: (): Promise<T> => Promise.reject(error),
-  toValue: () => ({ _tag: "Failure", value: error }),
-  toJSON: () => ({
-    "@functype": "Try" as const,
-    _tag: "Failure" as const,
-    error: serializeError(error),
-  }),
-  toOption: () => Option<T>(null),
-  toList: () => List<T>([]),
-  toArray: () => [] as readonly T[],
-  toTry: () => Failure<T>(error),
-  pipe: <U>(_f: (value: T) => U) => {
-    throw error
+  filterOrElse() {
+    return this
   },
-  serialize: () => createTaggedSerializer("Try", "Failure", { error: serializeError(error) }),
-  contains: (_v: T) => false,
-  exists: (_p: (a: T) => boolean) => false,
-  every: (_p: (a: T) => boolean) => true,
-  forEach: (_f: (a: T) => void) => {},
-  // Implement Doable interface for Do-notation
+  foldLeft(z) {
+    return () => z
+  },
+  foldRight(z) {
+    return () => z
+  },
+  toString() {
+    return `Failure(${showValue(this.error)})`
+  },
+  toPromise() {
+    return Promise.reject(this.error)
+  },
+  toValue() {
+    return { _tag: "Failure", value: this.error }
+  },
+  toJSON() {
+    return { "@functype": "Try", _tag: "Failure", error: serializeError(this.error) }
+  },
+  toOption() {
+    return Option<A>(null)
+  },
+  toList() {
+    return List<A>([])
+  },
+  toArray() {
+    return []
+  },
+  toTry() {
+    return this
+  },
+  pipe() {
+    throw this.error
+  },
+  serialize() {
+    return createTaggedSerializer("Try", "Failure", { error: serializeError(this.error) })
+  },
+  contains() {
+    return false
+  },
+  exists() {
+    return false
+  },
+  every() {
+    return true
+  },
+  forEach() {},
   doUnwrap(): DoResult<never> {
-    return { ok: false, empty: false, error }
+    return { ok: false, empty: false, error: this.error }
   },
 })
+
+/* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
+// The one cast in each: a prototype checked at the opaque A works for every T.
+const Success = <T>(value: T): Try<T> => {
+  const success = Object.create(SuccessProto) as Mutable<SuccessOf<T>>
+  success._tag = "Success"
+  success.value = value
+  success.error = undefined
+  return success
+}
+
+const Failure = <T>(error: Error): Try<T> => {
+  const failure = Object.create(FailureProto) as Mutable<FailureOf<T>>
+  failure._tag = "Failure"
+  failure.value = undefined
+  failure.error = error
+  return failure
+}
+/* eslint-enable functional/immutable-data */
 
 const TryConstructor = <T>(f: () => T): Try<T> => {
   try {
@@ -345,15 +491,13 @@ const TryCompanion = {
    * @param tryValue - The Try to check
    * @returns True if Try is Success
    */
-  isSuccess: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Success"; error: undefined } =>
-    tryValue.isSuccess(),
+  isSuccess: <T>(tryValue: Try<T>): tryValue is SuccessOf<T> => tryValue.isSuccess(),
   /**
    * Type guard to check if a Try is Failure
    * @param tryValue - The Try to check
    * @returns True if Try is Failure
    */
-  isFailure: <T>(tryValue: Try<T>): tryValue is Try<T> & { readonly _tag: "Failure"; error: Error } =>
-    tryValue.isFailure(),
+  isFailure: <T>(tryValue: Try<T>): tryValue is FailureOf<T> => tryValue.isFailure(),
   /**
    * Creates a Try from JSON string
    * @param json - The JSON string
