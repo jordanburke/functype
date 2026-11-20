@@ -160,7 +160,7 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
   },
 
   foldLeft(z) {
-    return (op) => tuplesOf(this.value).reduce((acc, entry) => op(acc, entry), z)
+    return (op) => tuplesOf(this.value).reduce(op, z)
   },
 
   foldRight(z) {
@@ -168,7 +168,7 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
   },
 
   fold(initial, fn) {
-    return tuplesOf(this.value).reduce((acc, entry) => fn(acc, entry), initial)
+    return tuplesOf(this.value).reduce(fn, initial)
   },
 
   match(patterns) {

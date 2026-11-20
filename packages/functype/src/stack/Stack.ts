@@ -162,7 +162,7 @@ const StackProto = define<StackOf<A>, "_tag" | "value">()("Stack", {
   },
 
   map<B extends Type>(f: (a: A) => B): Stack<B> {
-    return wrap(this.value.map((a) => f(a)))
+    return wrap(this.value.map(f))
   },
 
   flatMap<B extends Type>(f: (a: A) => Stack<B>): Stack<B> {
@@ -193,11 +193,11 @@ const StackProto = define<StackOf<A>, "_tag" | "value">()("Stack", {
   },
 
   fold<B>(initial: B, fn: (acc: B, a: A) => B): B {
-    return this.value.reduce((acc, a) => fn(acc, a), initial)
+    return this.value.reduce(fn, initial)
   },
 
   foldLeft<B>(z: B) {
-    return (op: (b: B, a: A) => B): B => this.value.reduce((acc, a) => op(acc, a), z)
+    return (op: (b: B, a: A) => B): B => this.value.reduce(op, z)
   },
 
   foldRight<B>(z: B) {

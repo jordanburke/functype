@@ -197,7 +197,7 @@ const SetProto = define<SetOf<A>, "_tag" | "value">()("Set", {
   },
 
   map(f) {
-    return wrap(new NativeSet(Array.from(this.value, (a) => f(a))))
+    return wrap(new NativeSet(Array.from(this.value).map(f)))
   },
 
   ap<B>(ff: Set<(value: A) => B>): Set<B> {
@@ -293,7 +293,7 @@ const SetProto = define<SetOf<A>, "_tag" | "value">()("Set", {
   },
 
   forEach(f) {
-    this.value.forEach((a) => f(a))
+    this.value.forEach(f)
   },
 
   filter(p) {

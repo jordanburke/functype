@@ -172,7 +172,7 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
   },
 
   map(f) {
-    return wrap(this.value.map((a) => f(a)))
+    return wrap(this.value.map(f))
   },
 
   ap(ff) {
@@ -194,7 +194,7 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
   },
 
   forEach(f) {
-    this.value.forEach((a) => f(a))
+    this.value.forEach(f)
   },
 
   contains(value) {
@@ -202,20 +202,20 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
   },
 
   count(p) {
-    return this.value.filter((a) => p(a)).length
+    return this.value.filter(p).length
   },
 
   exists(p) {
-    return this.value.some((a) => p(a))
+    return this.value.some(p)
   },
 
   every(p) {
-    return this.value.every((a) => p(a))
+    return this.value.every(p)
   },
 
   // Written out: an overloaded member gives no contextual type to its implementation.
   filter<S extends A>(predicate: (a: A) => unknown): List<S> {
-    return wrap(this.value.filter((a) => predicate(a)) as S[])
+    return wrap(this.value.filter(predicate) as S[])
   },
 
   filterNot(p) {
@@ -244,11 +244,11 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
   },
 
   fold(initial, fn) {
-    return this.value.reduce((acc, a) => fn(acc, a), initial)
+    return this.value.reduce(fn, initial)
   },
 
   foldLeft(z) {
-    return (op) => this.value.reduce((acc, a) => op(acc, a), z)
+    return (op) => this.value.reduce(op, z)
   },
 
   foldRight(z) {

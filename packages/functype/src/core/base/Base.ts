@@ -63,14 +63,18 @@ export function Base<T extends Record<string, unknown>>(type: string, body: T) {
 
       // Check for List pattern
       if ("isEmpty" in body && "head" in body) {
-        // A functype collection has isEmpty as a property and head as a method (2.0); accept either form.
-        const empty = typeof body.isEmpty === "function" ? body.isEmpty() : body.isEmpty === true
-        if (empty) {
+        if (typeof body.isEmpty === "function" && body.isEmpty()) {
           // Empty list - return error
           return { ok: false, empty: true }
         }
-        // Non-empty list - return first element
-        return { ok: true, value: typeof body.head === "function" ? body.head() : body.head }
+        if (typeof body.head === "function") {
+          // Non-empty list - return first element
+          return { ok: true, value: body.head() }
+        }
+        // If head is a property, not a function
+        if ("head" in body) {
+          return { ok: true, value: body.head }
+        }
       }
 
       // Default: pass through the value itself
