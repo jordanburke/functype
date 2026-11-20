@@ -1,9 +1,10 @@
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
-import { Left, Right } from "@/either"
+import { type Either, Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
+import { type A, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -116,250 +117,365 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 }
 
-const ListObject = <A>(values?: Iterable<A>): List<A> => {
-  const array: A[] = Array.from(values ?? [])
-
-  // The backing array is never changed after this point, so size, length and isEmpty can't go stale.
-  const fields: List<A> = {
-    _tag: "List" as const,
-
-    size: array.length,
-
-    length: array.length,
-
-    isEmpty: array.length === 0,
-
-    head: () => array[0],
-
-    headOption: () => Option(array[0]),
-
-    last: () => array[array.length - 1],
-
-    lastOption: () => Option(array[array.length - 1]),
-
-    tail: () => ListObject(array.slice(1)),
-
-    init: () => ListObject(array.slice(0, -1)),
-
-    map: <B>(f: (a: A) => B) => ListObject(array.map(f)),
-
-    ap: <B>(ff: List<(value: A) => B>) => ListObject(array.flatMap((a) => Array.from(ff).map((f) => f(a)))),
-
-    flatMap: <B>(f: (a: A) => Iterable<B>) => ListObject(array.flatMap((a) => Array.from(f(a)))),
-
-    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): Promise<List<B>> => {
-      const results = await traverseWithConcurrency(array, f, options?.concurrency ?? "unbounded")
-      return ListObject(results.flatMap((iterable) => Array.from(iterable)))
-    },
-
-    mapAsync: async <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<List<B>> =>
-      ListObject(await traverseWithConcurrency(array, f, options?.concurrency ?? 1)),
-
-    forEach: (f: (a: A) => void) => array.forEach(f),
-
-    contains: (value: unknown): boolean => array.includes(value as A),
-
-    count: (p: (x: A) => boolean) => array.filter(p).length,
-
-    exists: (p: (a: A) => boolean) => array.some(p),
-
-    every: (p: (a: A) => boolean) => array.every(p),
-
-    filter: (predicate: (a: A) => unknown) => ListObject(array.filter(predicate as (a: A) => boolean)),
-
-    filterNot: (p: (a: A) => boolean) => ListObject(array.filter((x) => !p(x))),
-
-    filterType: <T extends Typeable<string, unknown>>(tag: string) =>
-      ListObject(array.filter((x): x is T & A => isTypeable(x, tag))),
-
-    find: <T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>) => {
-      const result = array.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))
-      return Option<T>(result as T | null | undefined)
-    },
-
-    toArray: <B = A>(): B[] => [...array] as unknown as B[],
-
-    reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> =>
-      reduceWiden<A, Widen<A, B>>(array, op),
-
-    reduceRight: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> =>
-      reduceRightWiden<A, Widen<A, B>>(array, op),
-
-    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => array.reduce(fn, initial),
-
-    foldLeft:
-      <B>(z: B) =>
-      (op: (b: B, a: A) => B) =>
-        array.reduce(op, z),
-
-    foldRight:
-      <B>(z: B) =>
-      (op: (a: A, b: B) => B) =>
-        array.reduceRight((acc, value) => op(value, acc), z),
-
-    match: <R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R => {
-      return array.length === 0 ? patterns.Empty() : patterns.NonEmpty([...array])
-    },
-
-    remove: (value: unknown) => ListObject(array.filter((x) => x !== value)),
-
-    removeAt: (index: number) =>
-      index < 0 || index >= array.length ? list : ListObject([...array.slice(0, index), ...array.slice(index + 1)]),
-
-    add: <B>(item: B): List<A | B> => ListObject<A | B>([...(array as (A | B)[]), item]),
-
-    get: (index: number) => Option(array[index]),
-
-    concat: <B>(other: List<B>): List<A | B> =>
-      ListObject<A | B>([...(array as (A | B)[]), ...(other.toArray() as (A | B)[])]),
-
-    take: (n: number) => ListObject(array.slice(0, Math.max(0, n))),
-
-    takeWhile: (p: (a: A) => boolean) => {
-      const result: A[] = []
-      for (const item of array) {
-        if (!p(item)) break
-        result.push(item)
-      }
-      return ListObject(result)
-    },
-
-    // `!(n > 0)` also catches NaN, which `take` already treats as 0.
-    takeRight: (n: number) => ListObject(!(n > 0) ? [] : array.slice(-n)),
-
-    reverse: () => ListObject([...array].reverse()),
-
-    indexOf: (value: unknown) => array.indexOf(value as A),
-
-    prepend: <B>(item: B): List<A | B> => ListObject<A | B>([item, ...(array as (A | B)[])]),
-
-    distinct: () => {
-      const seen = new globalThis.Set<A>()
-      const result: A[] = []
-      for (const item of array) {
-        if (!seen.has(item)) {
-          seen.add(item)
-          result.push(item)
-        }
-      }
-      return ListObject(result)
-    },
-
-    sorted: (compareFn?: (a: A, b: A) => number) => ListObject([...array].sort(compareFn)),
-
-    sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) =>
-      ListObject(
-        [...array].sort((x, y) => {
-          const fx = f(x)
-          const fy = f(y)
-          if (compareFn) return compareFn(fx, fy)
-          return fx < fy ? -1 : fx > fy ? 1 : 0
-        }),
-      ),
-
-    zip: <B>(other: List<B>) => {
-      const otherArr = other.toArray()
-      const len = Math.min(array.length, otherArr.length)
-      const result: [A, B][] = []
-      for (let i = 0; i < len; i++) {
-        result.push([array[i]!, otherArr[i]!])
-      }
-      return ListObject(result)
-    },
-
-    zipWithIndex: () => ListObject(array.map((a, i) => [a, i] as [A, number])),
-
-    groupBy: <K>(f: (a: A) => K) => {
-      const groups = new globalThis.Map<K, A[]>()
-      for (const item of array) {
-        const key = f(item)
-        const group = groups.get(key) ?? []
-        group.push(item)
-        groups.set(key, group)
-      }
-      const result = new globalThis.Map<K, List<A>>()
-      for (const [key, items] of groups) {
-        result.set(key, ListObject(items))
-      }
-      return result
-    },
-
-    partition: (p: (a: A) => boolean): [List<A>, List<A>] => {
-      const yes: A[] = []
-      const no: A[] = []
-      for (const item of array) {
-        if (p(item)) yes.push(item)
-        else no.push(item)
-      }
-      return [ListObject(yes), ListObject(no)]
-    },
-
-    span: (p: (a: A) => boolean): [List<A>, List<A>] => {
-      const idx = array.findIndex((x) => !p(x))
-      if (idx === -1) return [ListObject([...array]), ListObject<A>([])]
-      return [ListObject(array.slice(0, idx)), ListObject(array.slice(idx))]
-    },
-
-    slice: (start: number, end: number) => ListObject(array.slice(start, end)),
-
-    drop: (n: number) => ListObject(array.slice(Math.max(0, n))),
-
-    dropRight: (n: number) =>
-      ListObject(n > 0 ? array.slice(0, Math.max(0, array.length - Math.trunc(n))) : array.slice()),
-
-    dropWhile: (p: (a: A) => boolean) => {
-      const first = array.findIndex((x) => !p(x))
-      return ListObject(first === -1 ? [] : array.slice(first))
-    },
-
-    flatten: <B>() =>
-      ListObject<B>(array.flatMap((item) => (isSpreadable<B>(item) ? [...item] : [item as unknown as B]))),
-
-    toList: () => list,
-
-    toSet: () => Set(array),
-
-    toOption: () => (array.length > 0 ? Option(array[0]) : None<A>()),
-
-    toEither: <E extends Type>(leftValue: E) => (array.length > 0 ? Right<E, A>(array[0]!) : Left<E, A>(leftValue)),
-
-    toTry: () =>
-      array.length > 0
-        ? Try<A>(() => array[0]!)
-        : Try<A>(() => {
-            throw new Error("Empty list")
-          }),
-
-    toString: () => `List(${safeStringify(array)})`,
-
-    toValue: () => ({ _tag: "List", value: [...array] }),
-
-    toJSON: () => ({ "@functype": "List" as const, _tag: "List" as const, value: [...array] }),
-
-    pipe: <U>(f: (value: A[]) => U) => f([...array]),
-
-    serialize: () => createSerializer("List", array),
-    // Implement Doable interface for Do-notation
-    doUnwrap(): DoResult<A> {
-      if (array.length === 0) {
-        return { ok: false, empty: true }
-      }
-      return { ok: true, value: array[0]! }
-    },
-
-    [Symbol.toStringTag]: "List",
-
-    [Symbol.iterator]: () => array[Symbol.iterator](),
-  }
-
-  const list = Object.freeze(fields)
-  return list
+/**
+ * A List's own data: its tag and the array it wraps. The array is never changed after the List is
+ * built, so `size`, `length` and `isEmpty` can't go stale. @internal
+ */
+interface ListOf<out A> extends List<A> {
+  readonly value: readonly A[]
 }
 
-const ListConstructor = <A>(values?: Iterable<A>): List<A> => ListObject(values)
+/* eslint-disable functional/immutable-data -- methods build fresh arrays, and wrap fills in the List it just created */
+
+/** Every List shares these methods (#276 §14). `this.value` is the List's own array. */
+const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
+  [Symbol.toStringTag]: "List",
+
+  get size() {
+    return this.value.length
+  },
+
+  get length() {
+    return this.value.length
+  },
+
+  get isEmpty() {
+    return this.value.length === 0
+  },
+
+  [Symbol.iterator]() {
+    return this.value[Symbol.iterator]()
+  },
+
+  head() {
+    return this.value[0]
+  },
+
+  headOption() {
+    return Option(this.value[0])
+  },
+
+  last() {
+    return this.value[this.value.length - 1]
+  },
+
+  lastOption() {
+    return Option(this.value[this.value.length - 1])
+  },
+
+  tail() {
+    return wrap(this.value.slice(1))
+  },
+
+  init() {
+    return wrap(this.value.slice(0, -1))
+  },
+
+  map(f) {
+    return wrap(this.value.map((a) => f(a)))
+  },
+
+  ap(ff) {
+    const fs = ff.toArray()
+    return wrap(this.value.flatMap((a) => fs.map((f) => f(a))))
+  },
+
+  flatMap(f) {
+    return wrap(this.value.flatMap((a) => Array.from(f(a))))
+  },
+
+  async flatMapAsync(f, options) {
+    const results = await traverseWithConcurrency(this.value, f, options?.concurrency ?? "unbounded")
+    return wrap(results.flatMap((iterable) => Array.from(iterable)))
+  },
+
+  async mapAsync(f, options) {
+    return wrap(await traverseWithConcurrency(this.value, f, options?.concurrency ?? 1))
+  },
+
+  forEach(f) {
+    this.value.forEach((a) => f(a))
+  },
+
+  contains(value) {
+    return (this.value as readonly unknown[]).includes(value)
+  },
+
+  count(p) {
+    return this.value.filter((a) => p(a)).length
+  },
+
+  exists(p) {
+    return this.value.some((a) => p(a))
+  },
+
+  every(p) {
+    return this.value.every((a) => p(a))
+  },
+
+  // Written out: an overloaded member gives no contextual type to its implementation.
+  filter<S extends A>(predicate: (a: A) => unknown): List<S> {
+    return wrap(this.value.filter((a) => predicate(a)) as S[])
+  },
+
+  filterNot(p) {
+    return wrap(this.value.filter((x) => !p(x)))
+  },
+
+  filterType<T extends Typeable<string, unknown>>(tag: string): List<T & A> {
+    return wrap(this.value.filter((x): x is T & A => isTypeable(x, tag)))
+  },
+
+  find<T extends A = A>(predicate: (a: A) => boolean, tag?: ExtractTag<T>): Option<A> {
+    const result = this.value.find((x) => predicate(x) && (tag ? isTypeable(x, tag) : true))
+    return Option(result)
+  },
+
+  toArray<B = A>(): B[] {
+    return [...this.value] as unknown as B[]
+  },
+
+  reduce<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    return reduceWiden<A, Widen<A, B>>(this.value, op)
+  },
+
+  reduceRight<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    return reduceRightWiden<A, Widen<A, B>>(this.value, op)
+  },
+
+  fold(initial, fn) {
+    return this.value.reduce((acc, a) => fn(acc, a), initial)
+  },
+
+  foldLeft(z) {
+    return (op) => this.value.reduce((acc, a) => op(acc, a), z)
+  },
+
+  foldRight(z) {
+    return (op) => this.value.reduceRight((acc, value) => op(value, acc), z)
+  },
+
+  match(patterns) {
+    return this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value])
+  },
+
+  remove(value) {
+    return wrap(this.value.filter((x) => x !== value))
+  },
+
+  removeAt(index) {
+    return index < 0 || index >= this.value.length
+      ? this
+      : wrap([...this.value.slice(0, index), ...this.value.slice(index + 1)])
+  },
+
+  add<B>(item: B): List<A | B> {
+    return wrap<A | B>([...this.value, item])
+  },
+
+  get(index) {
+    return Option(this.value[index])
+  },
+
+  concat<B>(other: List<B>): List<A | B> {
+    return wrap<A | B>([...this.value, ...other.toArray()])
+  },
+
+  take(n) {
+    return wrap(this.value.slice(0, Math.max(0, n)))
+  },
+
+  takeWhile(p) {
+    const result: A[] = []
+    for (const item of this.value) {
+      if (!p(item)) break
+      result.push(item)
+    }
+    return wrap(result)
+  },
+
+  // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+  takeRight(n) {
+    return wrap(!(n > 0) ? [] : this.value.slice(-n))
+  },
+
+  reverse() {
+    return wrap([...this.value].reverse())
+  },
+
+  indexOf(value) {
+    return (this.value as readonly unknown[]).indexOf(value)
+  },
+
+  prepend<B>(item: B): List<A | B> {
+    return wrap<A | B>([item, ...this.value])
+  },
+
+  distinct() {
+    const seen = new globalThis.Set<A>()
+    const result: A[] = []
+    for (const item of this.value) {
+      if (!seen.has(item)) {
+        seen.add(item)
+        result.push(item)
+      }
+    }
+    return wrap(result)
+  },
+
+  sorted(compareFn) {
+    return wrap([...this.value].sort(compareFn))
+  },
+
+  sortBy(f, compareFn) {
+    return wrap(
+      [...this.value].sort((x, y) => {
+        const fx = f(x)
+        const fy = f(y)
+        if (compareFn) return compareFn(fx, fy)
+        return fx < fy ? -1 : fx > fy ? 1 : 0
+      }),
+    )
+  },
+
+  zip<B>(other: List<B>): List<[A, B]> {
+    const otherArr = other.toArray()
+    const len = Math.min(this.value.length, otherArr.length)
+    const result: [A, B][] = []
+    for (let i = 0; i < len; i++) {
+      result.push([this.value[i]!, otherArr[i]!])
+    }
+    return wrap(result)
+  },
+
+  zipWithIndex() {
+    return wrap(this.value.map((a, i): [A, number] => [a, i]))
+  },
+
+  groupBy<K>(f: (a: A) => K): globalThis.Map<K, List<A>> {
+    const groups = new globalThis.Map<K, A[]>()
+    for (const item of this.value) {
+      const key = f(item)
+      const group = groups.get(key) ?? []
+      group.push(item)
+      groups.set(key, group)
+    }
+    const result = new globalThis.Map<K, List<A>>()
+    for (const [key, items] of groups) {
+      result.set(key, wrap(items))
+    }
+    return result
+  },
+
+  partition(p) {
+    const yes: A[] = []
+    const no: A[] = []
+    for (const item of this.value) {
+      if (p(item)) yes.push(item)
+      else no.push(item)
+    }
+    return [wrap(yes), wrap(no)]
+  },
+
+  span(p) {
+    const idx = this.value.findIndex((x) => !p(x))
+    if (idx === -1) return [this, wrap<A>([])]
+    return [wrap(this.value.slice(0, idx)), wrap(this.value.slice(idx))]
+  },
+
+  slice(start, end) {
+    return wrap(this.value.slice(start, end))
+  },
+
+  drop(n) {
+    return wrap(this.value.slice(Math.max(0, n)))
+  },
+
+  dropRight(n) {
+    return n > 0 ? wrap(this.value.slice(0, Math.max(0, this.value.length - Math.trunc(n)))) : this
+  },
+
+  dropWhile(p) {
+    const first = this.value.findIndex((x) => !p(x))
+    return wrap(first === -1 ? [] : this.value.slice(first))
+  },
+
+  flatten<B>(): List<B> {
+    return wrap<B>(this.value.flatMap((item) => (isSpreadable<B>(item) ? [...item] : [item as unknown as B])))
+  },
+
+  toList() {
+    return this
+  },
+
+  toSet() {
+    return Set(this.value)
+  },
+
+  toOption() {
+    return this.value.length > 0 ? Option(this.value[0]) : None<A>()
+  },
+
+  toEither<E extends Type>(leftValue: E): Either<E, A> {
+    return this.value.length > 0 ? Right<E, A>(this.value[0]!) : Left<E, A>(leftValue)
+  },
+
+  toTry() {
+    const array = this.value
+    return array.length > 0
+      ? Try<A>(() => array[0]!)
+      : Try<A>(() => {
+          throw new Error("Empty list")
+        })
+  },
+
+  toString() {
+    return `List(${safeStringify(this.value)})`
+  },
+
+  toValue() {
+    return { _tag: "List" as const, value: [...this.value] }
+  },
+
+  toJSON() {
+    return { "@functype": "List" as const, _tag: "List" as const, value: [...this.value] }
+  },
+
+  pipe(f) {
+    return f([...this.value])
+  },
+
+  serialize() {
+    return createSerializer("List", this.value)
+  },
+
+  // Implement Doable interface for Do-notation
+  doUnwrap(): DoResult<A> {
+    if (this.value.length === 0) {
+      return { ok: false, empty: true }
+    }
+    return { ok: true, value: this.value[0]! }
+  },
+})
+
+/**
+ * Builds a List around an array it now owns: nothing may change the array afterwards. Frozen, as
+ * collections have been since 1.27.0 (#276 §14 Rules).
+ */
+const wrap = <A>(array: readonly A[]): List<A> => {
+  // The one cast: a prototype checked at the opaque A works for every A.
+  const list = Object.create(ListProto) as Mutable<ListOf<A>>
+  list._tag = "List"
+  list.value = array
+  return Object.freeze(list)
+}
+
+/* eslint-enable functional/immutable-data */
+
+const ListConstructor = <A>(values?: Iterable<A>): List<A> => wrap(Array.from(values ?? []))
 
 // Singleton empty list - uses 'never' which is subtype of all types
-const EMPTY_LIST: List<never> = ListObject<never>([])
+const EMPTY_LIST: List<never> = wrap<never>([])
 
 /** Rebuilds a List from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
 const listFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): List<A> => {
@@ -380,7 +496,7 @@ const ListCompanion = {
    * @param values - Values to create list from
    * @returns A List containing the values
    */
-  of: <A extends Type>(...values: A[]): List<A> => ListObject<A>(values),
+  of: <A extends Type>(...values: A[]): List<A> => wrap<A>(values),
 
   /**
    * Creates a List from JSON string

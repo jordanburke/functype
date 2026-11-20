@@ -802,7 +802,7 @@ export interface FailureOf<out T> extends TryBase<T> {
   distinct(): LazyList<A>
   zipWithIndex(): LazyList<[A, number]>
 
-  // Element access (properties)
+  // Element access. Methods, because last, lastOption and init read the whole source
   head(): A | undefined
   headOption(): Option<A>
   last(): A | undefined
