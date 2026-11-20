@@ -8,9 +8,7 @@
  */
 import { describe, test } from "vitest"
 
-import { RightSpike } from "@/either/either-proto.spike"
 import { LazyList, Left, List, Map, Obj, Option, Right, Set, Some, Stack, Try } from "@/index"
-import { SomeSpike } from "@/option/option-proto.spike"
 
 const cases: ReadonlyArray<readonly [string, () => unknown]> = [
   ['List(["a", "b"])', () => List(["a", "b"])],
@@ -36,15 +34,7 @@ describe("construction", () => {
 const inc = (x: number): number => x + 1
 
 // Read each export once. Vitest wraps module exports in getters, which would add to every call.
-const [some, option, right, left, tryOf, someSpike, rightSpike] = [
-  Some,
-  Option,
-  Right,
-  Left,
-  Try,
-  SomeSpike,
-  RightSpike,
-] as const
+const [some, option, right, left, tryOf] = [Some, Option, Right, Left, Try] as const
 
 const valueCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
   ["plain { _tag, value }, for scale", (i) => ({ _tag: "Some", value: inc(i) })],
@@ -53,9 +43,6 @@ const valueCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
   ["Right(i).map", (i) => right<string, number>(i).map(inc)],
   ["Left(i).map", (i) => left<number, number>(i).map(inc)],
   ["Try(() => i).map", (i) => tryOf(() => i).map(inc)],
-  // The #276 §14 spike, timed beside what it replaces. Removed when the real prototypes land.
-  ["spike: SomeSpike(i).map", (i) => someSpike(i).map(inc)],
-  ["spike: RightSpike(i).map", (i) => rightSpike<string, number>(i).map(inc)],
 ]
 
 describe("value construction", () => {
