@@ -27,6 +27,10 @@ export const Process = {
             }
           })
         }),
+      // exec can throw before the command starts, e.g. on a NUL byte in it. That's a failure of this
+      // command, so it stays a typed Left, as in execSync, rather than a defect that rejects run().
+      (error) =>
+        ProcessError(command, Option<number>(undefined), "", error instanceof Error ? error.message : String(error)),
     ),
 
   execSync: (command: string, options?: { timeout?: number; cwd?: string }): Either<ProcessError, ExecResult> => {

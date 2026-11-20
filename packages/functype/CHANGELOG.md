@@ -57,7 +57,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - A `throw` inside an `IO.gen` body is a defect, so `run()` now rejects with it. Use `yield* IO.fail(e)` for a typed failure.
 - `IO.tryCatch`'s mapped error is now a typed failure. It used to be a defect that happened to land in the `Left`, so after this change it would have rejected `run()`.
 - A `bracketExit` release under `runSync()` now sees `Die` for a defect in `use`, as it does under `run()`. Before, it saw `Failure`.
-- **Upgrade:** a `run()` caller that relied on reading a defect or an interruption from the `Left` must handle the rejection, or switch to `runExit()`. A `runSync()` caller must catch the throw. A `.run()` with no rejection handler becomes an unhandled rejection on a defect. The compiler can't see this change.
+- **Upgrade:** a `run()` caller that relied on reading a defect or an interruption from the `Left` must handle the rejection, or switch to `runExit()`. A `runSync()` caller must catch the throw. A `.run()` with no rejection handler becomes an unhandled rejection on a defect. So does `runCancellable().result`: a caller that keeps only `cancel` and drops `result` now gets an unhandled rejection on a defect, so attach a handler to `result`. The compiler can't see this change.
 
 ## 1.27.1 - 2026-11-19
 
