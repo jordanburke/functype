@@ -90,6 +90,24 @@ describe("run() rejects on a defect or an interruption", () => {
   })
 })
 
+describe("a throw inside IO.gen is a defect", () => {
+  it("run() rejects with it; yield* IO.fail(e) is the typed failure", async () => {
+    const defect = new Error("in gen")
+    const throwing = IO.gen(function* () {
+      yield* IO.succeed(1)
+      throw defect
+    })
+    await expect(throwing.run()).rejects.toBe(defect)
+
+    const failing = IO.gen(function* () {
+      yield* IO.succeed(1)
+      return yield* IO.fail("typed" as const)
+    })
+    const result = await failing.run()
+    expect(result.isLeft() && result.value).toBe("typed")
+  })
+})
+
 describe("IO.tryCatch's mapped error is a typed failure, not a defect", () => {
   it("runExit reports Failure", async () => {
     const exit = await IO.tryCatch(

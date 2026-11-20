@@ -30,7 +30,7 @@ export type IOBridgeOptions<E> = {
  * - a defect raised *inside* the effect (`Die`) → boxed with `defect: true`
  * - the factory throwing before an `IO` exists → boxed with `defect: true`
  *
- * The third matters because running an effect never throws, but `io(input)` is
+ * The third matters because `runExit()` never throws, but `io(input)` is
  * ordinary user code that can throw while building the effect. Without this, that
  * throw would escape unboxed and `error.error` would be `undefined` despite the
  * declared type.

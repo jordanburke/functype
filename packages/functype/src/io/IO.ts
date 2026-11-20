@@ -1595,7 +1595,9 @@ const IOCompanion = {
    *
    * Inside an `interruptOn` region (or `runCancellable`, or `runExit({ signal })`), the thunk
    * receives the region's abort signal; pass it to `fetch` and the request stops when the run is
-   * cancelled. Outside a region it receives `undefined`. A function whose first parameter is
+   * cancelled. Inside `race`, `timeout` or an `IO.all` with more than one effect in flight, it
+   * always receives a signal, which aborts when the combinator stops it. Elsewhere it receives
+   * `undefined`. A function whose first parameter is
    * something else (`(page = 1) => load(page)`) would receive the signal in that slot, so wrap
    * it: `IO.async(() => load())`.
    */

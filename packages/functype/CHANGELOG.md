@@ -44,6 +44,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `IO.all(effects)` now means `IO.all(effects, { concurrency: "unbounded" })`. Before, it ran them one after another.
 - It is fail-fast: the first failure is the result at once, and the other effects are interrupted. It doesn't wait for one that ignores cancellation; that effect's `bracket` release runs when it settles. Results keep input order.
 - `IO.forEach` still runs one at a time by default.
+- An `IO.async` / `IO.tryPromise` thunk inside a default `IO.all` now receives an `AbortSignal` as its first argument, even when the run has none. A function whose first parameter is something else (`(page = 1) => load(page)`) gets the signal there; wrap it: `IO.async(() => load())`.
 - **Upgrade:** where order or "later effects don't start after a failure" matters, pass `{ concurrency: 1 }` to keep the old behaviour. The compiler can't see this change.
 
 **2.0 (breaking): `run()` rejects on a defect or an interruption, so its `Either<E, A>` holds only typed errors.**
@@ -53,6 +54,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `runExit()` is unchanged. It never rejects and reports all four outcomes.
 - An `interruptOn` region still turns its cancellation into a typed `InterruptedError`, so `interruptOn(signal).run()` and `runCancellable()` still resolve `Left(InterruptedError)` when cancelled.
 - Values the interpreter used to put in `E` are now defects (`Die`): `IO.race([])`, `IO.any([])`, `IO.firstSuccessOf([])`, and an `IO.service` whose service was never provided.
+- A `throw` inside an `IO.gen` body is a defect, so `run()` now rejects with it. Use `yield* IO.fail(e)` for a typed failure.
 - `IO.tryCatch`'s mapped error is now a typed failure. It used to be a defect that happened to land in the `Left`, so after this change it would have rejected `run()`.
 - A `bracketExit` release under `runSync()` now sees `Die` for a defect in `use`, as it does under `run()`. Before, it saw `Failure`.
 - **Upgrade:** a `run()` caller that relied on reading a defect or an interruption from the `Left` must handle the rejection, or switch to `runExit()`. A `runSync()` caller must catch the throw. A `.run()` with no rejection handler becomes an unhandled rejection on a defect. The compiler can't see this change.

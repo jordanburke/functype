@@ -140,7 +140,7 @@ Errors accumulate applicatively — every failing rule is surfaced in one pass, 
 
 ## Tier 5 — React Query
 
-`Http.get(...)` returns `IO<never, HttpError, HttpResponse<T>>`, and neither `IO` terminal fits TanStack Query: `.run()` never throws (so React Query never sees a failure), and `.runOrThrow()` throws the raw tagged object — which is **not** an `Error`, so the ubiquitous `error instanceof Error ? error.message : fallback` handler silently degrades.
+`Http.get(...)` returns `IO<never, HttpError, HttpResponse<T>>`, and neither `IO` terminal fits TanStack Query: `.run()` resolves a typed failure as a `Left` (so React Query never sees it), and `.runOrThrow()` throws the raw tagged object — which is **not** an `Error`, so the ubiquitous `error instanceof Error ? error.message : fallback` handler silently degrades.
 
 `functype-react/query` owns that bridge. Failures arrive boxed as `IOQueryError<E>`: a real `Error` with a populated `.message`, whose `.error` is still the fully discriminable functype error. Its `.name` is the cause's `_tag`, or a `TypedError`'s code (`NOT_FOUND`), so an error tracker groups by cause and can drop expected failures by name. A defect or an untagged cause keeps the name `IOQueryError`. Use `instanceof IOQueryError` or `isIOQueryError`, not `.name`, to recognize the box.
 
