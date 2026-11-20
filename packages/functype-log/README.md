@@ -113,7 +113,7 @@ const sink: LogSink = ({ level, message, metadata, error }) => {
 }
 ```
 
-The sink runs inside the log call, on the caller's async context. OpenTelemetry's context manager uses `AsyncLocalStorage` on Node, so the span is there for `Logger` and `DirectLogger` calls, including after an `await`. The field names match `@loglayer/plugin-opentelemetry`, so log parsers that read them keep working.
+The span must be active, not only started: open it with `tracer.startActiveSpan` or run the code in `context.with`. A span from `startSpan` alone leaves `getActiveSpan()` empty. The sink runs inside the log call, on the caller's async context. OpenTelemetry's context manager uses `AsyncLocalStorage` on Node, so the span is there for `Logger` and `DirectLogger` calls, including after an `await`. The field names match `@loglayer/plugin-opentelemetry`, so log parsers that read them keep working.
 
 ### Upgrading from LogLayer (2.0)
 
