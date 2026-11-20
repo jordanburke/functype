@@ -110,8 +110,8 @@ export default [
       // layer* of the patterns these rules check. ~half of the ~170 warnings live
       // in code that IS the implementation of the pattern being checked
       // (do/index.ts is the do-notation runtime; list/List.ts contains the
-      // iteration that no-imperative-loops would forbid; core/task/Task.ts is
-      // the Promise plumbing). The naive "uniformity" fix would be per-glob
+      // iteration that no-imperative-loops would forbid; io/IO.ts is the
+      // Promise plumbing). The naive "uniformity" fix would be per-glob
       // eslint overrides for those files — but that would destroy useful signal.
       // The warning count is a real measurement of how much imperative shape
       // lives in the substrate; treating it as a trend (down = healthier, up =

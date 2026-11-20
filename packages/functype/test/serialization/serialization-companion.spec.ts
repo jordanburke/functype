@@ -88,9 +88,9 @@ describe("SerializationCompanion", () => {
     })
 
     it("taggedEnvelope() merges arbitrary fields", () => {
-      const obj = taggedEnvelope("Task", "Err", { error: { name: "Error", message: "x" } })
-      expect(obj[FUNCTYPE_MARKER]).toBe("Task")
-      expect(obj._tag).toBe("Err")
+      const obj = taggedEnvelope("Try", "Failure", { error: { name: "Error", message: "x" } })
+      expect(obj[FUNCTYPE_MARKER]).toBe("Try")
+      expect(obj._tag).toBe("Failure")
       expect(obj.error).toEqual({ name: "Error", message: "x" })
     })
   })

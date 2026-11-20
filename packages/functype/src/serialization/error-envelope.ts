@@ -1,7 +1,7 @@
 /**
  * Canonical projection of `Error` to JSON, shared by every Serializable type
- * that carries an `Error` in its failure branch (`Try.Failure`, `Task.Err`,
- * `Lazy` with a thrown thunk).
+ * that carries an `Error` in its failure branch (`Try.Failure`, `Lazy` with a
+ * thrown thunk).
  *
  * Round-trip guarantees:
  *  - `err.name` survives (preserves discriminator: `e.name === "TypeError"` works)

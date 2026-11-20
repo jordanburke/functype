@@ -29,7 +29,6 @@ const entries = {
   "conditional/index": "src/conditional/index.ts",
   "decoder/index": "src/decoder/index.ts",
   "lazy/index": "src/lazy/index.ts",
-  "core/task/index": "src/core/task/index.ts",
   "io/index": "src/io/index.ts",
   "functype/index": "src/functype/index.ts",
   "typeclass/index": "src/typeclass/index.ts",

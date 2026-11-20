@@ -827,52 +827,6 @@ export interface FailureOf<out T> extends TryBase<T> {
   toString(): string
 }`,
 
-  TaskOutcome: `export interface TaskOutcome<out T>
-  extends FunctypeBase<T, "Ok" | "Err">, Extractable<T>, AsyncMonad<T>, Promisable<T>, Doable<T> {
-  readonly _tag: "Ok" | "Err"
-  readonly _meta: TaskMetadata
-
-  // Value access
-  readonly value?: T
-  readonly error?: Throwable
-
-  // Functional methods
-  readonly map: <U>(f: (value: T) => U) => TaskOutcome<U>
-  readonly flatMap: <U>(f: (value: T) => TaskOutcome<U> | Either<Throwable, U>) => TaskOutcome<U>
-  readonly ap: <U>(ff: TaskOutcome<(value: T) => U>) => TaskOutcome<U>
-  readonly mapAsync: <U>(f: (value: T) => Promise<U>) => Promise<TaskOutcome<U>>
-  readonly flatMapAsync: <U>(f: (value: T) => Promise<TaskOutcome<U>>) => Promise<TaskOutcome<U>>
-
-  // Error handling methods
-  readonly mapError: (f: (error: Throwable) => Throwable) => TaskOutcome<T>
-  recover<U extends Type>(value: U): Ok<T | U>
-  recoverWith<U extends Type>(f: (error: Throwable) => U): Ok<T | U>
-
-  // Type guards
-  readonly isSuccess: () => this is Ok<T>
-  readonly isFailure: () => this is Err<T>
-  readonly isOk: () => this is Ok<T>
-  readonly isErr: () => this is Err<T>
-
-  // Conversion methods
-  readonly toEither: () => Either<Throwable, T>
-  readonly toTry: () => Try<T>
-  readonly toOption: () => Option<T>
-  readonly toList: () => List<T>
-
-  // Pattern matching
-  readonly fold: <U>(onErr: (error: Throwable) => U, onOk: (value: T) => U) => U
-  readonly match: <U>(patterns: { Ok: (value: T) => U; Err: (error: Throwable) => U }) => U
-
-  /**
-   * Custom JSON serialization. Ok emits \`{"@functype":"Task","_tag":"Ok","value":T}\`.
-   * Err emits \`{"@functype":"Task","_tag":"Err","error":SerializedError}\` capturing the
-   * Throwable's name, message, stack, and cause chain. See error-envelope.ts —
-   * \`instanceof\` does NOT survive round-trip but \`error.name\` does.
-   */
-  toJSON(): { "@functype": "Task"; _tag: "Ok"; value: T } | { "@functype": "Task"; _tag: "Err"; error: SerializedError }
-}`,
-
   Exit: `export type Exit<E extends Type, A extends Type> =
   SuccessExitOf<E, A> | FailureExitOf<E, A> | DieExitOf<E, A> | InterruptedExitOf<E, A>
 

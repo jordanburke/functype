@@ -18,7 +18,7 @@ export interface SerializationMethods<T> {
  * marker for back-compat with 1.1.0 readers that did `parsed._tag === "List"`).
  *
  * Payload shape is type-specific: canonical types carry `value`; failure
- * branches (`Try.Failure`, `Task.Err`, `Lazy` with thrown thunk) carry
+ * branches (`Try.Failure`, `Lazy` with thrown thunk) carry
  * `error: SerializedError` instead.
  */
 export interface SerializableEnvelope {

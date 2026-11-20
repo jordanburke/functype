@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import { Left, List, Lazy, Map, Option, Right, Set, Stack, Try, Tuple } from "../src"
 import { Exit } from "../src/io/Exit"
 import { IO } from "../src/io/IO"
-import { Err, Ok } from "../src/core/task/Task"
 import { LazyList } from "../src/list/LazyList"
 
 /**
@@ -89,14 +88,6 @@ describe("Symbol.toStringTag", () => {
       expect(Object.prototype.toString.call(Lazy(() => 42))).toBe("[object Lazy]")
     })
 
-    it("TaskOutcome (Ok)", () => {
-      expect(Object.prototype.toString.call(Ok(42))).toBe("[object TaskOutcome]")
-    })
-
-    it("TaskOutcome (Err)", () => {
-      expect(Object.prototype.toString.call(Err(new Error("fail")))).toBe("[object TaskOutcome]")
-    })
-
     it("IO", () => {
       expect(Object.prototype.toString.call(IO.succeed(42))).toBe("[object IO]")
       expect(Object.prototype.toString.call(IO.fail("error"))).toBe("[object IO]")
@@ -172,14 +163,6 @@ describe("Symbol.toStringTag", () => {
 
     it("Lazy is not a plain object", () => {
       expect(isPlainObject(Lazy(() => 42))).toBe(false)
-    })
-
-    it("TaskOutcome (Ok) is not a plain object", () => {
-      expect(isPlainObject(Ok(42))).toBe(false)
-    })
-
-    it("TaskOutcome (Err) is not a plain object", () => {
-      expect(isPlainObject(Err(new Error("fail")))).toBe(false)
     })
 
     it("IO is not a plain object", () => {

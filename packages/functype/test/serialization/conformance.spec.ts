@@ -15,7 +15,7 @@
  *  - Malformed input → Failure
  *  - Lazy thunk-success and thunk-failure paths
  *  - Try with nested cause chain
- *  - Task with stack preserved
+ *  - Task JSON from 1.x no longer deserializes
  */
 
 import { describe, expect, it } from "vitest"
@@ -35,8 +35,6 @@ import * as Serialization from "@/serialization/Serialization"
 import type { JSONValue as TopLevelJSONValue } from "@/serialization"
 import { Set as FunctypeSet } from "@/set/Set"
 import { Stack } from "@/stack/Stack"
-import { Task, type TaskOutcome } from "@/core/task/Task"
-import type { Throwable } from "@/core/throwable/Throwable"
 import { Try } from "@/try"
 import { Tuple } from "@/tuple/Tuple"
 
@@ -233,29 +231,27 @@ describe("Serialization conformance — round-trip across all 12 Serializable ty
     })
   })
 
-  describe("Task", () => {
-    it("Ok round-trips with methods intact", () => {
-      const original = Task.ok(42)
-      const round = Serialization.deserialize(Serialization.serialize(original)).orThrow() as TaskOutcome<number>
-      expect(round.isOk()).toBe(true)
-      expect(
-        round.fold(
-          (_e: Throwable) => -1,
-          (v: number) => v,
-        ),
-      ).toBe(42)
+  // functype 2.0 deleted Task. JSON that 1.x wrote for a Task outcome now fails
+  // to deserialize, top-level or nested, instead of reviving as something else.
+  describe("Task (removed in 2.0)", () => {
+    const okJson = '{"@functype":"Task","_tag":"Ok","value":42}'
+    const errJson = '{"@functype":"Task","_tag":"Err","error":{"name":"Error","message":"bad task"}}'
+
+    it("an Ok envelope is a Failure naming the unknown marker", () => {
+      const result = Serialization.deserialize(okJson)
+      expect(result.isFailure()).toBe(true)
+      expect(result.error?.message).toContain('unknown @functype marker "Task"')
     })
 
-    it("Err round-trips with message + stack preserved", () => {
-      const original = Task.err<number>(new TypeError("bad task"))
-      const round = Serialization.deserialize(Serialization.serialize(original)).orThrow() as TaskOutcome<number>
-      expect(round.isErr()).toBe(true)
-      // Task wraps thrown values in `Throwable`, which sets `name` to the
-      // task's name (default "Task"). The original Error subclass identity
-      // (TypeError) is lost at wrap time, not at serialize time — same
-      // behavior pre- and post-1.2.0. The message and stack DO survive.
-      expect(round.error?.message).toBe("bad task")
-      expect(round.error?.stack).toBeTruthy()
+    it("an Err envelope is a Failure naming the unknown marker", () => {
+      const result = Serialization.deserialize(errJson)
+      expect(result.isFailure()).toBe(true)
+      expect(result.error?.message).toContain('unknown @functype marker "Task"')
+    })
+
+    it("a Task envelope nested in another value fails the whole value", () => {
+      const result = Serialization.deserialize(`{"@functype":"Option","_tag":"Some","value":${okJson}}`)
+      expect(result.isFailure()).toBe(true)
     })
   })
 })

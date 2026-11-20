@@ -55,18 +55,6 @@ export const GENERATED_INTERFACES = {
   Lazy: ["Applicative", "AsyncMonad", "Extractable", "Foldable", "Functor", "Monad", "Serializable", "Traversable"],
   LazyList: ["Foldable", "Serializable"],
   Tuple: ["Foldable", "Serializable"],
-  Task: [
-    "Applicative",
-    "AsyncMonad",
-    "Doable",
-    "Extractable",
-    "Foldable",
-    "Functor",
-    "Monad",
-    "Promisable",
-    "Serializable",
-    "Traversable",
-  ],
 } as const
 
 export type GeneratedTypeName = keyof typeof GENERATED_INTERFACES
