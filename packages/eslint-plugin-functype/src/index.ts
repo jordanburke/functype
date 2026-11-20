@@ -4,11 +4,14 @@ import strictRules from "./configs/strict"
 import testRules, { testFiles } from "./configs/tests"
 import rules from "./rules"
 
+/** Set from package.json at build time by tsdown.config.ts, and in tests by vitest.config.ts. */
+declare const __VERSION__: string
+
 const plugin = {
   rules,
   meta: {
     name: "eslint-plugin-functype",
-    version: "2.0.0",
+    version: typeof __VERSION__ === "undefined" ? "0.0.0-dev" : __VERSION__,
   },
   configs: {} as Record<string, unknown>,
 }
