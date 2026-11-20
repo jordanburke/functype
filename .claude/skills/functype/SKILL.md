@@ -344,15 +344,15 @@ const findProgram = IO.gen(function* () {
 })
 
 // Execution
-await effect.run() // Returns Promise<Either<E, A>>
+await effect.run() // Returns Promise<Either<E, A>>; the Left is always an E. A defect or interruption rejects (2.0)
 await effect.runOrThrow() // Returns Promise<A>; rejects with the error
-effect.runSync() // Returns Either<E, A>; Left if the effect is async (runSyncOrThrow throws instead)
+effect.runSync() // Returns Either<E, A>; throws a defect, an interruption, or an async/timeout/race/sleep effect
 await effect.runExit() // Returns Promise<Exit<E, A>>
 
-// run() vs runExit(): Either has two branches, Exit has four. Use run() when all you
-// need is success-or-not; use runExit() to tell a typed failure from a *defect* (a
-// value that is not an E — a throwing IO.sync thunk or map/mapError callback, or
-// IO.die) or from an interruption. run() puts both in the Left, raw.
+// run() vs runExit(): Either has two branches, Exit has four. Use run() when the Left is
+// all you handle; use runExit() to tell a typed failure from a *defect* (a value that is
+// not an E — a throwing IO.sync thunk or map/mapError callback, or IO.die) or from an
+// interruption without a try. run() rejects on both: the raw defect, or an InterruptedError.
 const exit = await effect.runExit()
 exit.isSuccess() // completed with a value
 exit.isFailure() // a value from the declared E channel

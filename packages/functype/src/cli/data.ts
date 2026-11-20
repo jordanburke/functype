@@ -403,7 +403,7 @@ export const TYPES: Record<string, TypeData> = {
     // holds a word budget (test/cli.spec.ts). The full explanation lives in the Exit
     // interface JSDoc, which `npx functype Exit --full` prints.
     description:
-      "Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() cannot show it.",
+      "Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() rejects on it.",
     // Exit is declared inline (no `extends` chain), so its interface list is
     // curated. Source of truth: the Exit interface body in src/io/Exit.ts.
     interfaces: [],
@@ -451,9 +451,9 @@ export const TYPES: Record<string, TypeData> = {
       ],
       transform: [".map(f)", ".flatMap(f)", ".tap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
       extract: [
-        ".run() // Either<E,A> — a defect or interruption arrives in the Left, raw",
+        ".run() // Either<E,A> — Left holds only E; a defect or interruption rejects",
         ".runOrThrow()",
-        ".runSync()",
+        ".runSync() // Either<E,A>; throws a defect or interruption",
         ".runSyncOrThrow()",
         ".runExit() // Exit<E,A> — the only terminal that distinguishes Failure/Die/Interrupted",
         ".runCancellable() // { result, cancel }",
@@ -473,15 +473,15 @@ export const TYPES: Record<string, TypeData> = {
         ".retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })",
         ".repeatUntil(done, { max, delayMs? })",
         ".repeatWhile(cont, { max, delayMs? })",
-        ".timeout(ms)",
+        ".timeout(ms) // interrupts the effect at the deadline",
         ".interruptOn(signal) // stops at the next step once the AbortSignal fires; E gains InterruptedError",
         "IO.async((signal?) => fetch(url, { signal })) // thunk gets the run's AbortSignal inside a region",
         ".delay(ms)",
         ".zip(io)",
         ".pipe(f)",
-        "IO.all([...], { concurrency? }) // in order by default; first failure interrupts the rest",
+        "IO.all([...], { concurrency? }) // all at once by default; first failure interrupts the rest",
         "IO.forEach(items, f, { concurrency? })",
-        "IO.race([...])",
+        "IO.race([...]) // first to settle wins; the rest are interrupted",
         "IO.iterate(seed, step, done, { max? })",
         "IO.bracket(acquire, use, release)",
         "IO.gen(function*() {...})",

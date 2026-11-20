@@ -4,6 +4,13 @@ import { Process } from "../../src/process"
 
 describe("Process", () => {
   describe("exec", () => {
+    it("returns a Left, not a rejected run(), when the command can't start", async () => {
+      // node's exec throws synchronously on a NUL byte in the command (ERR_INVALID_ARG_VALUE).
+      const result = await Process.exec("echo a\u0000b").run()
+      expect(result.isLeft()).toBe(true)
+      expect(result.isLeft() && result.value.message).toMatch(/null bytes|ERR_INVALID_ARG_VALUE|argument/i)
+    })
+
     it("should execute command and return Ok with ExecResult", async () => {
       const result = await Process.exec("echo hello").run()
       expect(result.isRight()).toBe(true)

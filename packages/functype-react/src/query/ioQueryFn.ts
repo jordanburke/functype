@@ -30,16 +30,15 @@ export type IOBridgeOptions<E> = {
  * - a defect raised *inside* the effect (`Die`) → boxed with `defect: true`
  * - the factory throwing before an `IO` exists → boxed with `defect: true`
  *
- * The third matters because running an effect never throws, but `io(input)` is
+ * The third matters because `runExit()` never throws, but `io(input)` is
  * ordinary user code that can throw while building the effect. Without this, that
  * throw would escape unboxed and `error.error` would be `undefined` despite the
  * declared type.
  *
- * The second is why this uses `runExit()` rather than `run()`. `run()` returns
- * `Either<E, A>`, which has nowhere to put a defect — a throwing `mapError` handler or
- * `IO.sync` thunk arrived as `Left` and was indistinguishable from a genuine `E`, so
- * `defect` read `false` while `.error` held something that was not an `E` at all
- * (#259). `Exit` keeps the two apart, so the flag can be accurate.
+ * The second is why this uses `runExit()` rather than `run()`. Before 2.0, `run()` put a
+ * defect in the `Left`, indistinguishable from a genuine `E` (#259). Since 2.0 it rejects
+ * with the raw defect instead, which still carries nothing saying it is one. `Exit` keeps
+ * the two apart, so the flag can be accurate.
  *
  * The throws are confined to this function so no caller ever writes one.
  *
@@ -70,8 +69,8 @@ const runBoxed = async <E, A>(
 
   if (exit.isInterrupted()) {
     // An `InterruptedError` is no more an `E` than a defect is, so it carries the same
-    // flag. `run()` put it in the `Left` with `defect: false`, which had the same problem
-    // the rest of this fix is about.
+    // flag. Before 2.0, `run()` put it in the `Left` with `defect: false`, which had the same
+    // problem the rest of this fix is about.
     throw new IOQueryError(new InterruptedError() as E, undefined, true)
   }
 

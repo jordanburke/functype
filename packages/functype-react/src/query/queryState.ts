@@ -52,10 +52,9 @@ export type MutationResultView<E, A> =
  * read `query.data` directly alongside the projection, or branch on
  * `query.isRefetchError` before projecting.
  *
- * **Interruption.** `IO.run()` maps an interrupted effect to `Left(InterruptedError)`,
- * which is not an `E`. Nothing in this subpath interrupts effects, so it will not
- * arise here, but it is worth knowing that `.error` is `E` by construction rather
- * than by proof.
+ * **Interruption.** `.error` is whatever the query rejected with, so it is `E` by
+ * construction rather than by proof. The `ioQueryFn` bridge boxes an interrupted
+ * effect, like a defect, as an `IOQueryError` with `defect: true`.
  */
 export const toQueryState = <E, A>(result: QueryResultView<E, A>): AsyncState<E, A> => {
   switch (result.status) {

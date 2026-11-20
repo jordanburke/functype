@@ -53,11 +53,9 @@ describe("interruption is not recoverable", () => {
       expect(exit.isInterrupted()).toBe(true)
     })
 
-    it("surfaces interruption as Left(InterruptedError) from run()", async () => {
-      const result = await IO.interrupt().recover(42).run()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+    // In 2.0 `run()` rejects on an interruption rather than returning it in the Left (#276 §3).
+    it("surfaces interruption as a rejection with InterruptedError from run()", async () => {
+      await expect(IO.interrupt().recover(42).run()).rejects.toBeInstanceOf(InterruptedError)
     })
 
     // Regressions: recovery must still work for the cases it is *for*.
@@ -85,33 +83,29 @@ describe("interruption is not recoverable", () => {
     })
   })
 
+  // In 2.0 `runSync()` throws an interruption rather than returning it in the Left (#276 §3).
   describe("sync interpreter", () => {
     it("recover passes interruption through", () => {
-      const result = IO.interrupt().recover(42).runSync()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+      expect(() => IO.interrupt().recover(42).runSync()).toThrow(InterruptedError)
     })
 
     it("recoverWith passes interruption through", () => {
-      const result = IO.interrupt()
-        .recoverWith(() => IO.succeed(42))
-        .runSync()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+      expect(() =>
+        IO.interrupt()
+          .recoverWith(() => IO.succeed(42))
+          .runSync(),
+      ).toThrow(InterruptedError)
     })
 
     it("fold passes interruption through", () => {
-      const result = IO.interrupt()
-        .fold(
-          () => "recovered",
-          () => "ok",
-        )
-        .runSync()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+      expect(() =>
+        IO.interrupt()
+          .fold(
+            () => "recovered",
+            () => "ok",
+          )
+          .runSync(),
+      ).toThrow(InterruptedError)
     })
 
     // `mapError` doesn't convert interruption into a *success*, so it reads as harmless —
@@ -119,12 +113,11 @@ describe("interruption is not recoverable", () => {
     // which is just as lossy: downstream `instanceof InterruptedError` checks stop
     // matching, and the async interpreter disagrees with the sync one about the outcome.
     it("mapError passes interruption through unmapped", () => {
-      const result = IO.interrupt()
-        .mapError(() => new Error("mapped"))
-        .runSync()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(InterruptedError)
+      expect(() =>
+        IO.interrupt()
+          .mapError(() => new Error("mapped"))
+          .runSync(),
+      ).toThrow(InterruptedError)
     })
 
     // Regressions.

@@ -17,77 +17,76 @@ import { IO, UnsupportedSyncOperationError } from "@/io"
  * both combinators and must be entirely unaffected.
  */
 describe("unsupported sync operations are not recoverable", () => {
+  // In 2.0 the diagnostic is a defect, so `runSync()` throws it rather than returning it in the
+  // Left (#276 §3).
   describe("the diagnostic survives every recovery boundary", () => {
     it("timeoutTo does not swallow it into the fallback", () => {
-      const result = IO.succeed(1).timeoutTo(50, 99).runSync()
-
-      expect(result.isLeft()).toBe(true)
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+      expect(() => IO.succeed(1).timeoutTo(50, 99).runSync()).toThrow(UnsupportedSyncOperationError)
     })
 
     it("recover does not swallow it", () => {
-      const result = IO.succeed(1).timeout(50).recover(7).runSync()
-
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+      expect(() => IO.succeed(1).timeout(50).recover(7).runSync()).toThrow(UnsupportedSyncOperationError)
     })
 
     it("recoverWith does not swallow it", () => {
-      const result = IO.succeed(1)
-        .timeout(50)
-        .recoverWith(() => IO.succeed(7))
-        .runSync()
-
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+      expect(() =>
+        IO.succeed(1)
+          .timeout(50)
+          .recoverWith(() => IO.succeed(7))
+          .runSync(),
+      ).toThrow(UnsupportedSyncOperationError)
     })
 
     it("fold does not swallow it", () => {
-      const result = IO.succeed(1)
-        .timeout(50)
-        .fold(
-          () => "recovered",
-          () => "ok",
-        )
-        .runSync()
-
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+      expect(() =>
+        IO.succeed(1)
+          .timeout(50)
+          .fold(
+            () => "recovered",
+            () => "ok",
+          )
+          .runSync(),
+      ).toThrow(UnsupportedSyncOperationError)
     })
 
     it("mapError does not rewrite it into a domain error", () => {
-      const result = IO.succeed(1)
-        .timeout(50)
-        .mapError(() => new Error("mapped"))
-        .runSync()
-
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+      expect(() =>
+        IO.succeed(1)
+          .timeout(50)
+          .mapError(() => new Error("mapped"))
+          .runSync(),
+      ).toThrow(UnsupportedSyncOperationError)
     })
 
     it("race is guarded the same way", () => {
-      const result = IO.race([IO.succeed(1)])
-        .recover(7)
-        .runSync()
+      expect(() =>
+        IO.race([IO.succeed(1)])
+          .recover(7)
+          .runSync(),
+      ).toThrow(UnsupportedSyncOperationError)
+    })
 
-      expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+    it("runSyncOrThrow throws it too", () => {
+      expect(() => IO.succeed(1).timeout(50).runSyncOrThrow()).toThrow(UnsupportedSyncOperationError)
     })
   })
 
   it("identifies which combinator was unsupported", () => {
-    // Narrow rather than cast: `.timeout()` widens the declared E to `TimeoutError`, so
-    // reading `.operation` off the static type is not possible — and the guard proves
-    // the instance at the same time.
-    const operationOf = (e: unknown): string | undefined =>
-      e instanceof UnsupportedSyncOperationError ? e.operation : undefined
+    const operationOf = (run: () => unknown): string | undefined => {
+      try {
+        run()
+        return undefined
+      } catch (e) {
+        return e instanceof UnsupportedSyncOperationError ? e.operation : undefined
+      }
+    }
 
-    const timedOut = IO.succeed(1).timeout(50).runSync()
-    const raced = IO.race([IO.succeed(1)]).runSync()
-
-    expect(timedOut.isLeft() && operationOf(timedOut.value)).toBe("timeout")
-    expect(raced.isLeft() && operationOf(raced.value)).toBe("race")
+    expect(operationOf(() => IO.succeed(1).timeout(50).runSync())).toBe("timeout")
+    expect(operationOf(() => IO.race([IO.succeed(1)]).runSync())).toBe("race")
   })
 
   it("is still surfaced with no recovery in the chain", () => {
-    const result = IO.succeed(1).timeout(50).runSync()
-
-    expect(result.isLeft() && result.value).toBeInstanceOf(UnsupportedSyncOperationError)
+    expect(() => IO.succeed(1).timeout(50).runSync()).toThrow(UnsupportedSyncOperationError)
   })
 
   // The async interpreter supports both combinators — none of the above applies there.

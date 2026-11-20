@@ -281,7 +281,7 @@ IO.service(Tag)              // access injected dependency
 effect.provideLayer(layer)   // provide dependencies (or provideService(tag, impl))
 effect.retry(3)              // retry on failure
 effect.runSync()             // execute sync effect
-await effect.run()           // execute, get Either<E,A>
+await effect.run()           // execute, get Either<E,A>; rejects on a defect/interruption
 await effect.runExit()       // execute, get Exit<E,A> (see the Exit block below)
 IO.gen(function*() {         // generator do-notation
   const db = yield* IO.service(Database)
@@ -331,9 +331,9 @@ Exit.succeed(v) / Exit.fail(e) / Exit.die(defect) / Exit.interrupted()
 // IO(...) declare E = unknown, so their rejections stay Failure.
 // Defects stay RECOVERABLE — recover/recoverWith/fold/mapError treat Die as Failure;
 // mapError over a defect yields a Failure since the mapper returns a real E.
-// run()/runSync() still surface a defect as the raw value in the Left (Either has no
-// third branch); runExit() is the terminal that keeps them apart. The sync interpreter
-// cannot distinguish them at all — it signals Fail and Die with the same bare throw.
+// Since 2.0, run()'s Left holds only an E: a defect rejects with the raw value, an
+// interruption with an InterruptedError. runSync() follows it (Left for E, throw otherwise);
+// the sync interpreter returns an Exit, so it tells Fail from Die. runExit() never rejects.
 
 // Retry surface (new in 1.3.0 — pair with HttpError tagged ADT for HTTP retry policy):
 effect.retry(n)                             // retry up to n on any error

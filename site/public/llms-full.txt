@@ -2424,13 +2424,13 @@ const safe = IO.tryCatch(
   (e) => new Error(`Invalid JSON: ${String(e)}`),
 );
 
-// Running effects - safe by default
-const either = await sync.run(); // Either<E, A> - never throws
+// Running effects
+const either = await sync.run(); // Either<E, A> - Left is a typed error; a defect or interruption rejects
 const value = await sync.runOrThrow(); // A - throws on error
 const exit = await sync.runExit(); // Exit<E, A> - full outcome (see below)
 
 // Synchronous execution
-const syncEither = sync.runSync(); // Either<E, A> - never throws
+const syncEither = sync.runSync(); // Either<E, A> - throws a defect or interruption
 const syncValue = sync.runSyncOrThrow(); // A - throws on error
 ```
 
@@ -2446,7 +2446,8 @@ const syncValue = sync.runSyncOrThrow(); // A - throws on error
 | `IO.tryPromise({ try, catch })`       | Convert a Promise to IO, mapping the rejection        |
 | `IO.fromPromiseEither(fn, onReject?)` | Lift `() => Promise<Either<E, A>>`, keeping `E` typed |
 | `IO.unit`                             | Effect that succeeds with void                        |
-| `IO.never`                            | Effect that never completes                           |
+| `IO.never()`                          | Effect that never completes until it is interrupted   |
+| `IO.sleep(ms)`                        | Wait `ms`; an interruption ends the wait at once      |
 
 ## Transformations
 
@@ -2469,13 +2470,14 @@ io.catchAll(() => fallbackIO);
 ## Combining Effects
 
 ```typescript
-// In order by default; all must succeed, and it stops at the first failure
+// All at once by default; all must succeed, and the first failure interrupts the rest
 IO.all([io1, io2, io3]);
-IO.all([io1, io2, io3], { concurrency: 2 }); // Up to 2 at once; the first failure interrupts the rest
+IO.all([io1, io2, io3], { concurrency: 2 }); // Up to 2 at once
+IO.all([io1, io2, io3], { concurrency: 1 }); // One after another; stops at the first failure
 IO.forEach(items, (item) => save(item)); // One effect per item, in order
 IO.forEach(items, (item) => save(item), { concurrency: "unbounded" });
-IO.race([io1, io2]); // First to complete wins
-IO.any([io1, io2, io3]); // First success wins
+IO.race([io1, io2]); // First to settle wins, success or failure; the others are interrupted
+IO.any([io1, io2, io3]); // First success wins, trying them in order
 
 // Zip effects
 io1.zip(io2); // [A, B]
@@ -2596,16 +2598,21 @@ const load = IO.async((signal) => fetch(url, { signal }).then((r) => r.json()));
 
 - Inside the cancelled section, `retry`, `recover` and `catchAll` can't swallow the cancellation.
 - `bracket` / `acquireRelease` cleanup still runs, to completion.
+- `IO.sleep`, `IO.never`, `.delay` and the waits in `retryWithDelay` / `repeatUntil` wake at once.
 - A promise already in flight can't be stopped. The cancellation is seen at the next step, so if that
   promise was the last step, the effect succeeds with its result. Pass the same
   signal to `Http` or `IO.tryAsync` so the request itself aborts.
+- `race`, `timeout` and a parallel `IO.all` interrupt the effects they no longer need, in the same
+  way. They return at once; an effect that ignores its signal may still be running, and its
+  `bracket` release runs when it settles. `race` returns the first effect to settle, even a
+  failure; in ZIO and Effect it is the first to succeed.
 - When `E` is `unknown` (effects from `IO.async`), use `InterruptedError.is(e)`.
 
 ## Outcomes: `Exit`
 
-`.run()` returns `Either<E, A>`, which has exactly two branches — so anything that is
-neither a success nor an `E` has to be crammed into the `Left`. `.runExit()` returns
-`Exit<E, A>`, which names all four outcomes:
+`.run()` returns `Either<E, A>`, which has exactly two branches: a success or an `E`. Anything
+else rejects the promise. `.runExit()` returns `Exit<E, A>`, which names all four outcomes and
+never rejects:
 
 ```typescript
 const exit = await effect.runExit();
@@ -2660,14 +2667,13 @@ exit.match({
 ```
 
 **Reach for `.runExit()` when the difference matters** — telling a real failure from a bug
-in your own code, or a cancellation from either. `.run()` stays the right default when all
-you need is success-or-not; it puts a defect in the `Left` as the raw thrown value, and an
-interruption as an `InterruptedError`.
+in your own code, or a cancellation from either, without a `try`. `.run()` is the right default
+when the `Left` is all you handle: its `Left` is always an `E`. A defect rejects the promise with
+the raw thrown value, and an interruption rejects it with an `InterruptedError`.
 
-> The sync interpreter cannot make this distinction. `runSync()` returns `Either`, with both
-> a failure and a defect in the `Left` as the raw value, so `Fail` and `Die` arrive identically.
-> `Die` is observable through `runExit()` and through the `Exit` handed to a
-> `bracketExit` release.
+`runSync()` follows the same rule: a typed failure is a `Left`, and a defect or an interruption
+is thrown. An effect it can't run synchronously (`IO.async`, `timeout`, `race`, `sleep`) is a
+defect, so it throws too.
 
 ## Error Handling Patterns
 
@@ -5152,9 +5158,9 @@ Implements: Functor, Monad, Foldable, Matchable
 
 **Extract**
 
-- `.run() // Either<E,A> — a defect or interruption arrives in the Left, raw`
+- `.run() // Either<E,A> — Left holds only E; a defect or interruption rejects`
 - `.runOrThrow()`
-- `.runSync()`
+- `.runSync() // Either<E,A>; throws a defect or interruption`
 - `.runSyncOrThrow()`
 - `.runExit() // Exit<E,A> — the only terminal that distinguishes Failure/Die/Interrupted`
 - `.runCancellable() // { result, cancel }`
@@ -5174,15 +5180,15 @@ Implements: Functor, Monad, Foldable, Matchable
 - `.retryWithBackoff({ n, baseMs, maxMs?, factor?, jitter?, while? })`
 - `.repeatUntil(done, { max, delayMs? })`
 - `.repeatWhile(cont, { max, delayMs? })`
-- `.timeout(ms)`
+- `.timeout(ms) // interrupts the effect at the deadline`
 - `.interruptOn(signal) // stops at the next step once the AbortSignal fires; E gains InterruptedError`
 - `IO.async((signal?) => fetch(url, { signal })) // thunk gets the run's AbortSignal inside a region`
 - `.delay(ms)`
 - `.zip(io)`
 - `.pipe(f)`
-- `IO.all([...], { concurrency? }) // in order by default; first failure interrupts the rest`
+- `IO.all([...], { concurrency? }) // all at once by default; first failure interrupts the rest`
 - `IO.forEach(items, f, { concurrency? })`
-- `IO.race([...])`
+- `IO.race([...]) // first to settle wins; the rest are interrupted`
 - `IO.iterate(seed, step, done, { max? })`
 - `IO.bracket(acquire, use, release)`
 - `IO.gen(function*() {...})`
@@ -5193,7 +5199,7 @@ Implements: Functor, Monad, Foldable, Matchable
 
 ### Exit
 
-Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() cannot show it.
+Outcome of running an IO effect — Success | Failure | Die | Interrupted, returned by .runExit(). Die carries a defect: a value that is not an E. Either has no branch for one, so .run() rejects on it.
 
 **Create**
 

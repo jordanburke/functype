@@ -135,8 +135,8 @@ export interface Exit<E extends Type, A extends Type> {
    * Converts to Either (Right for Success, Left for Failure)
    * Throws if Interrupted
    *
-   * A `Die` becomes `Left(defect)`, which widens the Left beyond `E` — the same
-   * lossiness `IO.run()` already has. Use {@link isDie} first if the distinction matters.
+   * A `Die` becomes `Left(defect)`, which widens the Left beyond `E`. (`IO.run()` rejects on a
+   * `Die` instead, so its Left stays an `E`.) Use {@link isDie} first if the distinction matters.
    */
   toEither(): Either<E, A>
 
