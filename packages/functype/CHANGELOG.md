@@ -31,6 +31,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - Assigning over a method on a value throws in strict mode, because the prototype is frozen. `structuredClone(opt)` returns a copy with the data and no methods, where it threw `DataCloneError` before. A plain-object check such as `Object.getPrototypeOf(v) === Object.prototype` is now false.
 - Also better: `expect(Some(1)).toEqual(Some(1))` passes, where it failed before, and `console.log` prints `Some [Option] { _tag: 'Some', value: 1 }` instead of 40 functions.
 
+**2.0 (breaking): Option and Try are discriminated unions, like Either.** From §9a of #276 (the 2.0 release plan).
+
+- `Option<T>` is now `SomeOf<T> | NoneOf<T>`, and `Try<T>` is `SuccessOf<T> | FailureOf<T>`. The methods live on `OptionBase<T>` and `TryBase<T>`. So `if (o.isNone()) return; o.value` gives `T`, not `T | undefined`, and the same holds for `isSome()`, `isSuccess()`, `isFailure()`, `_tag` checks and the companion guards.
+- A Success has a typed `value`; a Failure's `value` is `undefined`.
+- **Upgrade:** `interface X extends Option<T>` or `class X implements Option<T>` must use `OptionBase<T>`, because an interface can't extend a union. The same goes for `Try<T>` and `TryBase<T>`. The compiler reports each one.
+- The API docs move Option and Try from `api-docs/interfaces/` to `api-docs/types/`.
+
+**2.0: a `Do` block that yields nothing is typed `List`.** `Do(function* () { return 5 })` returned `List([5])` but was typed `Option<number>`, because a generator that yields nothing yields `never`, which the Option overload accepted. It's now typed `List<number>`, and `DoAsync` likewise. Nothing changes at runtime.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
