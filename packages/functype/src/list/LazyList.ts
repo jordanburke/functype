@@ -1,6 +1,6 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
+import { type A, define, type Mutable } from "@/internal/define"
 import { Counter } from "@/internal/mutation-utils"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -53,13 +53,13 @@ export interface LazyList<out A extends Type>
   distinct(): LazyList<A>
   zipWithIndex(): LazyList<[A, number]>
 
-  // Element access (properties)
-  get head(): A | undefined
-  get headOption(): Option<A>
-  get last(): A | undefined
-  get lastOption(): Option<A>
-  get tail(): LazyList<A>
-  get init(): LazyList<A>
+  // Element access. Methods, because last, lastOption and init read the whole source
+  head(): A | undefined
+  headOption(): Option<A>
+  last(): A | undefined
+  lastOption(): Option<A>
+  tail(): LazyList<A>
+  init(): LazyList<A>
 
   // Foldable
   fold<B>(initial: B, fn: (acc: B, a: A) => B): B
@@ -78,39 +78,60 @@ export interface LazyList<out A extends Type>
   toString(): string
 }
 
-/** These getters read the source, so they must stay lazy. See internal/lazyProperties. */
-type LazyListLazy = "head" | "headOption" | "last" | "lastOption" | "tail" | "init"
+/**
+ * A LazyList's own data: its tag and the iterable it reads, which it never pulls from until asked.
+ * @internal
+ */
+interface LazyListOf<out A extends Type> extends LazyList<A> {
+  readonly source: Iterable<A>
+}
 
-const LAZY_LIST_GETTERS = lazyGetters<LazyList<Type>>({
+/* eslint-disable functional/immutable-data -- wrap fills in the LazyList it just created */
+
+/**
+ * Every LazyList shares these methods (#276 §14). `this.source` is the iterable it reads. The lazy
+ * operations read it inside a generator, which has its own `this`, so each takes `source` first.
+ */
+const LazyListProto = define<LazyListOf<A>, "_tag" | "source">()("LazyList", {
+  [Symbol.toStringTag]: "LazyList",
+
+  [Symbol.iterator]() {
+    return this.source[Symbol.iterator]()
+  },
+
   head() {
-    const next = this[Symbol.iterator]().next()
+    const next = this.source[Symbol.iterator]().next()
     return next.done ? undefined : next.value
   },
+
   headOption() {
-    const next = this[Symbol.iterator]().next()
-    return next.done ? Option.none() : Option(next.value)
+    const next = this.source[Symbol.iterator]().next()
+    return next.done ? Option.none<A>() : Option(next.value)
   },
+
   last() {
-    let lastValue: Type | undefined = undefined
-    for (const item of this) {
+    let lastValue: A | undefined = undefined
+    for (const item of this.source) {
       lastValue = item
     }
     return lastValue
   },
+
   lastOption() {
-    const lastValue = Ref<Type | undefined>(undefined)
+    const lastValue = Ref<A | undefined>(undefined)
     const hasValue = Ref(false)
-    for (const item of this) {
+    for (const item of this.source) {
       lastValue.set(item)
       hasValue.set(true)
     }
-    return hasValue.get() ? Option(lastValue.get()) : Option.none()
+    return hasValue.get() ? Option(lastValue.get()) : Option.none<A>()
   },
+
   tail() {
-    const iterate = (): Iterator<Type> => this[Symbol.iterator]()
-    return LazyListObject(
+    const { source } = this
+    return wrap(
       (function* () {
-        const iter = iterate()
+        const iter = source[Symbol.iterator]()
         iter.next() // skip first
         let next = iter.next()
         while (!next.done) {
@@ -120,270 +141,295 @@ const LAZY_LIST_GETTERS = lazyGetters<LazyList<Type>>({
       })(),
     )
   },
+
   init() {
-    const arr = Array.from(this)
-    return LazyListObject(arr.length === 0 ? [] : arr.slice(0, -1))
+    const arr = Array.from(this.source)
+    return wrap(arr.length === 0 ? [] : arr.slice(0, -1))
+  },
+
+  map<B extends Type>(f: (a: A) => B): LazyList<B> {
+    const { source } = this
+    return wrap(
+      (function* () {
+        for (const item of source) {
+          yield f(item)
+        }
+      })(),
+    )
+  },
+
+  flatMap<B extends Type>(f: (a: A) => LazyList<B>): LazyList<B> {
+    const { source } = this
+    return wrap(
+      (function* () {
+        for (const item of source) {
+          yield* f(item)
+        }
+      })(),
+    )
+  },
+
+  filter(predicate) {
+    const { source } = this
+    return wrap(
+      (function* () {
+        for (const item of source) {
+          if (predicate(item)) {
+            yield item
+          }
+        }
+      })(),
+    )
+  },
+
+  take(n) {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const counter = Counter(0)
+        for (const item of source) {
+          // `!(count < n)` stops at once for NaN, as List.take does.
+          if (!(counter.get() < n)) break
+          yield item
+          counter.increment()
+        }
+      })(),
+    )
+  },
+
+  drop(n) {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const counter = Counter(0)
+        for (const item of source) {
+          if (counter.get() >= n) {
+            yield item
+          }
+          counter.increment()
+        }
+      })(),
+    )
+  },
+
+  takeWhile(predicate) {
+    const { source } = this
+    return wrap(
+      (function* () {
+        for (const item of source) {
+          if (!predicate(item)) break
+          yield item
+        }
+      })(),
+    )
+  },
+
+  dropWhile(predicate) {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const dropping = Ref(true)
+        for (const item of source) {
+          if (dropping.get() && predicate(item)) continue
+          dropping.set(false)
+          yield item
+        }
+      })(),
+    )
+  },
+
+  concat<B extends Type>(other: LazyList<B>): LazyList<A | B> {
+    const { source } = this
+    return wrap<A | B>(
+      (function* () {
+        yield* source
+        yield* other
+      })(),
+    )
+  },
+
+  zip<B extends Type>(other: LazyList<B>): LazyList<[A, B]> {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const iter1 = source[Symbol.iterator]()
+        const iter2 = other[Symbol.iterator]()
+
+        while (true) {
+          const next1 = iter1.next()
+          const next2 = iter2.next()
+
+          if (next1.done || next2.done) break
+          yield [next1.value, next2.value] as [A, B]
+        }
+      })(),
+    )
+  },
+
+  // Terminal operations
+  toList() {
+    return List(Array.from(this.source))
+  },
+
+  toArray() {
+    return Array.from(this.source)
+  },
+
+  forEach(f) {
+    for (const item of this.source) {
+      f(item)
+    }
+  },
+
+  reduce<B extends Type>(f: (acc: B, a: A) => B, initial: B): B {
+    const acc = Ref(initial)
+    for (const item of this.source) {
+      acc.set(f(acc.get(), item))
+    }
+    return acc.get()
+  },
+
+  find(predicate) {
+    for (const item of this.source) {
+      if (predicate(item)) {
+        return Option(item)
+      }
+    }
+    return Option.none<A>()
+  },
+
+  some(predicate) {
+    for (const item of this.source) {
+      if (predicate(item)) return true
+    }
+    return false
+  },
+
+  every(predicate) {
+    for (const item of this.source) {
+      if (!predicate(item)) return false
+    }
+    return true
+  },
+
+  count() {
+    const counter = Counter(0)
+
+    for (const _ of this.source) {
+      counter.increment()
+    }
+    return counter.get()
+  },
+
+  takeRight(n) {
+    const arr = Array.from(this.source)
+    // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+    return wrap(!(n > 0) ? [] : arr.slice(-n))
+  },
+
+  reverse() {
+    return wrap(Array.from(this.source).reverse())
+  },
+
+  distinct() {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const seen = new globalThis.Set<A>()
+        for (const item of source) {
+          if (!seen.has(item)) {
+            seen.add(item)
+            yield item
+          }
+        }
+      })(),
+    )
+  },
+
+  zipWithIndex() {
+    const { source } = this
+    return wrap(
+      (function* () {
+        const counter = Counter(0)
+        for (const item of source) {
+          yield [item, counter.get()] as [A, number]
+          counter.increment()
+        }
+      })(),
+    )
+  },
+
+  // Foldable implementation
+  fold(initial, fn) {
+    let acc = initial
+    for (const item of this.source) {
+      acc = fn(acc, item)
+    }
+    return acc
+  },
+
+  foldLeft(z) {
+    return (op) => {
+      const acc = Ref(z)
+      for (const item of this.source) {
+        acc.set(op(acc.get(), item))
+      }
+      return acc.get()
+    }
+  },
+
+  foldRight(z) {
+    // For lazy list, we need to materialize to fold right
+    return (op) => Array.from(this.source).reduceRight((acc, value) => op(value, acc), z)
+  },
+
+  // Pipe implementation
+  pipe(f) {
+    return f(this)
+  },
+
+  // Serializable implementation. Materializes the lazy stream into an array before stringifying:
+  // there's no other way to serialize a potentially-infinite iterable.
+  serialize() {
+    return createSerializer("LazyList", Array.from(this.source))
+  },
+
+  toJSON() {
+    return { "@functype": "LazyList" as const, _tag: "LazyList" as const, value: Array.from(this.source) }
+  },
+
+  // Override toString from Base to show elements (limited for infinite lists)
+  toString() {
+    const maxShow = 10
+    const elements: A[] = []
+    const counter = Counter(0)
+    const hasMore = Ref(false)
+
+    for (const item of this.source) {
+      if (counter.get() < maxShow) {
+        elements.push(item)
+        counter.increment()
+      } else {
+        hasMore.set(true)
+        break
+      }
+    }
+
+    const elemStr = elements.map((e) => String(e)).join(", ")
+    return hasMore.get() ? `LazyList(${elemStr}, ...)` : `LazyList(${elemStr})`
   },
 })
 
-const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
-  // No getters and no computed keys before the closures: see internal/lazyProperties.
-  const fields: Omit<LazyList<A>, LazyListLazy> = {
-    _tag: "LazyList" as const,
-
-    map: <B extends Type>(f: (a: A) => B) =>
-      LazyListObject(
-        (function* () {
-          for (const item of iterable) {
-            yield f(item)
-          }
-        })(),
-      ),
-
-    flatMap: <B extends Type>(f: (a: A) => LazyList<B>) =>
-      LazyListObject(
-        (function* () {
-          for (const item of iterable) {
-            yield* f(item)
-          }
-        })(),
-      ),
-
-    filter: (predicate: (a: A) => boolean) =>
-      LazyListObject(
-        (function* () {
-          for (const item of iterable) {
-            if (predicate(item)) {
-              yield item
-            }
-          }
-        })(),
-      ),
-
-    take: (n: number) =>
-      LazyListObject(
-        (function* () {
-          const counter = Counter(0)
-          for (const item of iterable) {
-            // `!(count < n)` stops at once for NaN, as List.take does.
-            if (!(counter.get() < n)) break
-            yield item
-            counter.increment()
-          }
-        })(),
-      ),
-
-    drop: (n: number) =>
-      LazyListObject(
-        (function* () {
-          const counter = Counter(0)
-          for (const item of iterable) {
-            if (counter.get() >= n) {
-              yield item
-            }
-            counter.increment()
-          }
-        })(),
-      ),
-
-    takeWhile: (predicate: (a: A) => boolean) =>
-      LazyListObject(
-        (function* () {
-          for (const item of iterable) {
-            if (!predicate(item)) break
-            yield item
-          }
-        })(),
-      ),
-
-    dropWhile: (predicate: (a: A) => boolean) =>
-      LazyListObject(
-        (function* () {
-          const dropping = Ref(true)
-          for (const item of iterable) {
-            if (dropping.get() && predicate(item)) continue
-            dropping.set(false)
-            yield item
-          }
-        })(),
-      ),
-
-    concat: <B extends Type>(other: LazyList<B>): LazyList<A | B> =>
-      LazyListObject<A | B>(
-        (function* () {
-          yield* iterable as Iterable<A | B>
-          yield* other
-        })(),
-      ),
-
-    zip: <B extends Type>(other: LazyList<B>) =>
-      LazyListObject(
-        (function* () {
-          const iter1 = iterable[Symbol.iterator]()
-          const iter2 = other[Symbol.iterator]()
-
-          while (true) {
-            const next1 = iter1.next()
-            const next2 = iter2.next()
-
-            if (next1.done || next2.done) break
-            yield [next1.value, next2.value] as [A, B]
-          }
-        })(),
-      ),
-
-    // Terminal operations
-    toList: () => List(Array.from(iterable)),
-
-    toArray: () => Array.from(iterable),
-
-    forEach: (f: (a: A) => void) => {
-      for (const item of iterable) {
-        f(item)
-      }
-    },
-
-    reduce: <B extends Type>(f: (acc: B, a: A) => B, initial: B) => {
-      const acc = Ref(initial)
-      for (const item of iterable) {
-        acc.set(f(acc.get(), item))
-      }
-      return acc.get()
-    },
-
-    find: (predicate: (a: A) => boolean) => {
-      for (const item of iterable) {
-        if (predicate(item)) {
-          return Option(item)
-        }
-      }
-      return Option.none()
-    },
-
-    some: (predicate: (a: A) => boolean) => {
-      for (const item of iterable) {
-        if (predicate(item)) return true
-      }
-      return false
-    },
-
-    every: (predicate: (a: A) => boolean) => {
-      for (const item of iterable) {
-        if (!predicate(item)) return false
-      }
-      return true
-    },
-
-    count: () => {
-      const counter = Counter(0)
-
-      for (const _ of iterable) {
-        counter.increment()
-      }
-      return counter.get()
-    },
-
-    takeRight: (n: number) => {
-      const arr = Array.from(iterable) as A[]
-      // `!(n > 0)` also catches NaN, which `take` already treats as 0.
-      return LazyListObject<A>(!(n > 0) ? [] : arr.slice(-n))
-    },
-
-    reverse: () => LazyListObject<A>((Array.from(iterable) as A[]).reverse()),
-
-    distinct: () =>
-      LazyListObject(
-        (function* () {
-          const seen = new globalThis.Set<A>()
-          for (const item of iterable) {
-            if (!seen.has(item)) {
-              seen.add(item)
-              yield item
-            }
-          }
-        })(),
-      ),
-
-    zipWithIndex: () =>
-      LazyListObject(
-        (function* () {
-          const counter = Counter(0)
-          for (const item of iterable) {
-            yield [item, counter.get()] as [A, number]
-            counter.increment()
-          }
-        })(),
-      ),
-
-    // Foldable implementation
-    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => {
-      let acc = initial
-      for (const item of iterable) {
-        acc = fn(acc, item)
-      }
-      return acc
-    },
-
-    foldLeft:
-      <B extends Type>(z: B) =>
-      (op: (b: B, a: A) => B) => {
-        const acc = Ref(z)
-        for (const item of iterable) {
-          acc.set(op(acc.get(), item))
-        }
-        return acc.get()
-      },
-
-    foldRight:
-      <B extends Type>(z: B) =>
-      (op: (a: A, b: B) => B) => {
-        // For lazy list, we need to materialize to fold right
-        const arr = Array.from(iterable)
-        return arr.reduceRight((acc, value) => op(value, acc), z)
-      },
-
-    // Pipe implementation
-    pipe: <U extends Type>(f: (value: LazyList<A>) => U): U => f(lazyList),
-
-    // Serializable implementation. Materializes the lazy stream into an
-    // array before stringifying — there's no other way to serialize a
-    // potentially-infinite iterable.
-    serialize: () => createSerializer("LazyList", Array.from(iterable)),
-    toJSON: () => ({
-      "@functype": "LazyList" as const,
-      _tag: "LazyList" as const,
-      value: Array.from(iterable),
-    }),
-
-    // Override toString from Base to show elements (limited for infinite lists)
-    toString: () => {
-      const maxShow = 10
-      const elements: A[] = []
-      const counter = Counter(0)
-      const hasMore = Ref(false)
-
-      for (const item of iterable) {
-        if (counter.get() < maxShow) {
-          elements.push(item)
-          counter.increment()
-        } else {
-          hasMore.set(true)
-          break
-        }
-      }
-
-      const elemStr = elements.map((e) => String(e)).join(", ")
-      return hasMore.get() ? `LazyList(${elemStr}, ...)` : `LazyList(${elemStr})`
-    },
-
-    [Symbol.toStringTag]: "LazyList",
-
-    [Symbol.iterator]: () => iterable[Symbol.iterator](),
-  }
-
-  const lazyList = withLazyGetters<LazyList<A>>(fields, LAZY_LIST_GETTERS)
-  return lazyList
+/** Builds a LazyList that reads `source`. Frozen, as collections have been since 1.27.0 (#276 §14 Rules). */
+const wrap = <A extends Type>(source: Iterable<A>): LazyList<A> => {
+  // The one cast: a prototype checked at the opaque A works for every A.
+  const lazyList = Object.create(LazyListProto) as Mutable<LazyListOf<A>>
+  lazyList._tag = "LazyList"
+  lazyList.source = source
+  return Object.freeze(lazyList)
 }
+
+/* eslint-enable functional/immutable-data */
 
 /**
  * Create a LazyList from an iterable
@@ -405,7 +451,7 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
  *   .toArray() // [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
  */
 const LazyListConstructor = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
-  return LazyListObject(iterable)
+  return wrap(iterable)
 }
 
 const LazyListCompanion = {
@@ -416,7 +462,7 @@ const LazyListCompanion = {
    * empty.toArray() // []
    */
   empty: <A extends Type>(): LazyList<A> => {
-    return LazyListObject<A>([])
+    return wrap<A>([])
   },
 
   /**
@@ -428,14 +474,14 @@ const LazyListCompanion = {
    * LazyList.of(1, 2, 3).toArray() // [1, 2, 3], same as LazyList.from(1, 2, 3)
    */
   of: <A extends Type>(...values: A[]): LazyList<A> => {
-    return LazyListObject(values)
+    return wrap(values)
   },
 
   /**
    * Create a LazyList from multiple values
    */
   from: <A extends Type>(...values: A[]): LazyList<A> => {
-    return LazyListObject(values)
+    return wrap(values)
   },
 
   /**
@@ -449,7 +495,7 @@ const LazyListCompanion = {
     if (parsed["@functype"] !== undefined && parsed["@functype"] !== "LazyList") {
       throw new Error(`LazyList.fromJSON: expected @functype="LazyList", got ${JSON.stringify(parsed["@functype"])}`)
     }
-    return LazyListObject(parsed.value)
+    return wrap(parsed.value)
   },
 
   /**
@@ -468,7 +514,7 @@ const LazyListCompanion = {
    *   .toArray() // [0, 1, 1, 2, 3, 5, 8, 13]
    */
   iterate: <A extends Type>(initial: A, f: (a: A) => A): LazyList<A> => {
-    return LazyListObject(
+    return wrap(
       (function* () {
         const current = Ref(initial)
         while (true) {
@@ -483,7 +529,7 @@ const LazyListCompanion = {
    * Create an infinite LazyList by repeatedly calling a function
    */
   generate: <A extends Type>(f: () => A): LazyList<A> => {
-    return LazyListObject(
+    return wrap(
       (function* () {
         while (true) {
           yield f()
@@ -506,7 +552,7 @@ const LazyListCompanion = {
    *   .reduce((a, b) => a + b, 0) // 338350
    */
   range: (start: number, end: number, step = 1): LazyList<number> => {
-    return LazyListObject(
+    return wrap(
       (function* () {
         if (step === 0) throw new Error("Step cannot be zero")
 
@@ -530,7 +576,7 @@ const LazyListCompanion = {
    * Create a LazyList that repeats a value n times (or infinitely if n is not provided)
    */
   repeat: <A extends Type>(value: A, n?: number): LazyList<A> => {
-    return LazyListObject(
+    return wrap(
       (function* () {
         if (n === undefined) {
           while (true) yield value
@@ -549,7 +595,7 @@ const LazyListCompanion = {
    * Create a LazyList that cycles through an iterable infinitely
    */
   cycle: <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
-    return LazyListObject(
+    return wrap(
       (function* () {
         const items = Array.from(iterable)
         if (items.length === 0) return

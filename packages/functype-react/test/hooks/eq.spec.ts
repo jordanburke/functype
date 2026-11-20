@@ -1,4 +1,4 @@
-import { Exit, IO, Left, None, Right, Some, Try } from "functype"
+import { Exit, IO, LazyList, Left, List, Map, None, Obj, Right, Set, Some, Stack, Try } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { referenceEq, structuralEq, tagEq } from "../../src/hooks/eq"
@@ -77,11 +77,11 @@ describe("structuralEq with functype values, whose methods live on a shared prot
   })
 
   it("tells apart values holding different Maps, Sets, RegExps or URLs", () => {
-    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map()))).toBe(false)
-    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map([[1, 3]])))).toBe(false)
-    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map([[1, 2]])))).toBe(true)
-    expect(structuralEq(Right(new Set([1])), Right(new Set([2])))).toBe(false)
-    expect(structuralEq(Right(new Set([1, 2])), Right(new Set([2, 1])))).toBe(true)
+    expect(structuralEq(Some(new globalThis.Map([[1, 2]])), Some(new globalThis.Map()))).toBe(false)
+    expect(structuralEq(Some(new globalThis.Map([[1, 2]])), Some(new globalThis.Map([[1, 3]])))).toBe(false)
+    expect(structuralEq(Some(new globalThis.Map([[1, 2]])), Some(new globalThis.Map([[1, 2]])))).toBe(true)
+    expect(structuralEq(Right(new globalThis.Set([1])), Right(new globalThis.Set([2])))).toBe(false)
+    expect(structuralEq(Right(new globalThis.Set([1, 2])), Right(new globalThis.Set([2, 1])))).toBe(true)
     expect(structuralEq(Some(/a/), Some(/b/))).toBe(false)
     expect(structuralEq(Some(/a/g), Some(/a/g))).toBe(true)
     expect(structuralEq(Some(new URL("https://a.test")), Some(new URL("https://b.test")))).toBe(false)
@@ -105,6 +105,34 @@ describe("structuralEq with functype values, whose methods live on a shared prot
         IO.succeed(1).map((x) => x * 2),
       ),
     ).toBe(false)
+  })
+
+  it("compares collections by their elements", () => {
+    expect(structuralEq(List([1, { a: 2 }]), List([1, { a: 2 }]))).toBe(true)
+    expect(structuralEq(List([1, 2]), List([1, 3]))).toBe(false)
+    expect(structuralEq(List([1, 2]), List([1, 2, 3]))).toBe(false)
+    expect(structuralEq(Stack([1, 2]), Stack([1, 2]))).toBe(true)
+    expect(structuralEq(Stack([1, 2]), Stack([2, 1]))).toBe(false)
+    expect(structuralEq(Obj({ a: [1] }), Obj({ a: [1] }))).toBe(true)
+    expect(structuralEq(Obj({ a: 1 }), Obj({ a: 2 }))).toBe(false)
+    // Set and Map hold a native Set or Map, so they compare as those do: Set members by reference,
+    // Map values structurally.
+    expect(structuralEq(Set([1, 2]), Set([1, 2]))).toBe(true)
+    expect(structuralEq(Set([1, 2]), Set([1, 3]))).toBe(false)
+    expect(structuralEq(Map([["a", { b: 1 }]]), Map([["a", { b: 1 }]]))).toBe(true)
+    expect(structuralEq(Map([["a", 1]]), Map([["a", 2]]))).toBe(false)
+    // A LazyList holds the iterable it reads, so two over the same array are equal, and two over
+    // different generators are not: the walk doesn't run a source.
+    const source = [1, 2]
+    expect(structuralEq(LazyList(source), LazyList(source))).toBe(true)
+    expect(
+      structuralEq(
+        LazyList([1, 2]).map((x) => x),
+        LazyList([1, 2]).map((x) => x),
+      ),
+    ).toBe(false)
+    expect(structuralEq(List([1]), Set([1]))).toBe(false)
+    expect(structuralEq(List([1]), Stack([1]))).toBe(false)
   })
 
   it("never calls objects with different prototypes equal", () => {

@@ -1,10 +1,9 @@
 /**
- * Behaviour pinned for the construction-cost fix (issue #511).
- *
- * The fix changes how List, Set, Map, Stack, LazyList and Obj build their objects: values that
- * were getters become plain properties, and the getters that must stay lazy are attached after
- * the object literal. These tests were written against the code before that change and must pass
- * unchanged after it.
+ * Behaviour pinned across changes to how the collections are built: the construction-cost fix
+ * (issue #511), then shared prototypes (#276 §14, PR 3). Each derived value must agree with the
+ * elements after every operation, and collections must serialize the same way. Since 2.0, head,
+ * last, tail, init and their Options are methods (#276 §13); the shape itself is pinned in
+ * collection-prototype.spec.ts.
  */
 import { describe, expect, it } from "vitest"
 
@@ -12,12 +11,12 @@ import { $, Do } from "@/do"
 import { isTypeable, LazyList, List, Map, Obj, Set, Stack, Tuple } from "@/index"
 
 type Sequence<A> = {
-  readonly head: A | undefined
-  readonly last: A | undefined
-  readonly headOption: { orUndefined(): A | undefined }
-  readonly lastOption: { orUndefined(): A | undefined }
-  readonly tail: { toArray(): A[] }
-  readonly init: { toArray(): A[] }
+  head(): A | undefined
+  last(): A | undefined
+  headOption(): { orUndefined(): A | undefined }
+  lastOption(): { orUndefined(): A | undefined }
+  tail(): { toArray(): A[] }
+  init(): { toArray(): A[] }
   toArray(): A[]
 }
 
@@ -26,13 +25,13 @@ type Listish<A> = Sequence<A> & { readonly size: number; readonly isEmpty: boole
 /** head, last, their Options, tail and init must agree with the elements. LazyList has no size. */
 const expectSequence = <A>(actual: Sequence<A>, expected: readonly A[]): void => {
   expect(actual.toArray()).toEqual(expected)
-  expect(actual.head).toBe(expected[0])
-  expect(actual.last).toBe(expected[expected.length - 1])
+  expect(actual.head()).toBe(expected[0])
+  expect(actual.last()).toBe(expected[expected.length - 1])
   // Option(null) and Option(undefined) are None, so a null or undefined end gives None.
-  expect(actual.headOption.orUndefined()).toBe(expected[0] ?? undefined)
-  expect(actual.lastOption.orUndefined()).toBe(expected[expected.length - 1] ?? undefined)
-  expect(actual.tail.toArray()).toEqual(expected.slice(1))
-  expect(actual.init.toArray()).toEqual(expected.slice(0, -1))
+  expect(actual.headOption().orUndefined()).toBe(expected[0] ?? undefined)
+  expect(actual.lastOption().orUndefined()).toBe(expected[expected.length - 1] ?? undefined)
+  expect(actual.tail().toArray()).toEqual(expected.slice(1))
+  expect(actual.init().toArray()).toEqual(expected.slice(0, -1))
 }
 
 /** Every derived property must agree with the elements. */
@@ -127,11 +126,11 @@ describe("List", () => {
       ["sortBy", base.sortBy((x) => -x), [3, 3, 2, 1]],
       ["distinct", base.distinct(), [3, 1, 2]],
       ["slice", base.slice(1, 3), [1, 2]],
-      ["tail", base.tail, [1, 2, 3]],
-      ["init", base.init, [3, 1, 2]],
-      ["tail of tail", base.tail.tail, [2, 3]],
-      ["tail of empty", List<number>([]).tail, []],
-      ["init of empty", List<number>([]).init, []],
+      ["tail", base.tail(), [1, 2, 3]],
+      ["init", base.init(), [3, 1, 2]],
+      ["tail of tail", base.tail().tail(), [2, 3]],
+      ["tail of empty", List<number>([]).tail(), []],
+      ["init of empty", List<number>([]).init(), []],
       ["partition (yes)", base.partition((x) => x > 1)[0], [3, 2, 3]],
       ["partition (no)", base.partition((x) => x > 1)[1], [1]],
       ["span (prefix)", base.span((x) => x > 2)[0], [3]],
@@ -149,7 +148,7 @@ describe("List", () => {
       expect(base.zip(List(["a", "b"])).size).toBe(2)
       expect(base.zip(List(["a", "b"])).length).toBe(2)
       expect(base.zipWithIndex().size).toBe(4)
-      expect(base.zipWithIndex().last).toEqual([3, 3])
+      expect(base.zipWithIndex().last()).toEqual([3, 3])
     })
 
     it("leaves the source unchanged", () => {
@@ -234,9 +233,9 @@ describe("Set", () => {
       ["drop", base.drop(1), [1, 2]],
       ["dropRight", base.dropRight(1), [3, 1]],
       ["dropWhile", base.dropWhile((x) => x > 2), [1, 2]],
-      ["tail", base.tail, [1, 2]],
-      ["init", base.init, [3, 1]],
-      ["tail of empty", Set<number>().tail, []],
+      ["tail", base.tail(), [1, 2]],
+      ["init", base.init(), [3, 1]],
+      ["tail of empty", Set<number>().tail(), []],
       ["flatten", Set([[1, 2], [3]]).flatten<number>(), [1, 2, 3]],
       ["toSet", base.toSet(), [3, 1, 2]],
       ["List.toSet", List([1, 1, 2]).toSet(), [1, 2]],
@@ -354,27 +353,27 @@ describe("LazyList", () => {
     ["take", () => LazyList([3, 1, 2]).take(2), [3, 1]],
   ] as const)("derived properties are right after %s", (_, make, expected) => {
     expect(make().toArray()).toEqual(expected)
-    expect(make().head).toBe(expected[0])
-    expect(make().last).toBe(expected[expected.length - 1])
-    expect(make().headOption.orUndefined()).toBe(expected[0])
-    expect(make().lastOption.orUndefined()).toBe(expected[expected.length - 1])
-    expect(make().tail.toArray()).toEqual(expected.slice(1))
-    expect(make().init.toArray()).toEqual(expected.slice(0, -1))
+    expect(make().head()).toBe(expected[0])
+    expect(make().last()).toBe(expected[expected.length - 1])
+    expect(make().headOption().orUndefined()).toBe(expected[0])
+    expect(make().lastOption().orUndefined()).toBe(expected[expected.length - 1])
+    expect(make().tail().toArray()).toEqual(expected.slice(1))
+    expect(make().init().toArray()).toEqual(expected.slice(0, -1))
   })
 
   it("building one pulls nothing, and head pulls only the first element", () => {
     const { iterable, pulls } = counting()
     const lazy = LazyList(iterable)
     expect(pulls.count).toBe(0)
-    expect(lazy.head).toBe(0)
+    expect(lazy.head()).toBe(0)
     expect(pulls.count).toBe(1)
-    expect(lazy.headOption.orUndefined()).toBe(0)
+    expect(lazy.headOption().orUndefined()).toBe(0)
     expect(pulls.count).toBe(2)
   })
 
   it("tail of an infinite LazyList is lazy", () => {
     const { iterable, pulls } = counting()
-    const tail = LazyList(iterable).tail
+    const tail = LazyList(iterable).tail()
     expect(pulls.count).toBe(0)
     expect(tail.take(2).toArray()).toEqual([1, 2])
     // take reads one element past what it keeps, so three kept elements cost four pulls.
@@ -387,17 +386,17 @@ describe("LazyList", () => {
       .map((x) => x * 10)
       .filter((x) => x > 0)
     expect(pulls.count).toBe(0)
-    expect(mapped.head).toBe(10)
+    expect(mapped.head()).toBe(10)
     expect(pulls.count).toBe(2)
   })
 
   it("last, lastOption and init read the whole finite source", () => {
     const { iterable, pulls } = counting(3)
     const lazy = LazyList(iterable)
-    expect(lazy.last).toBe(2)
+    expect(lazy.last()).toBe(2)
     expect(pulls.count).toBe(3)
-    expect(lazy.lastOption.orUndefined()).toBe(2)
-    expect(lazy.init.toArray()).toEqual([0, 1])
+    expect(lazy.lastOption().orUndefined()).toBe(2)
+    expect(lazy.init().toArray()).toEqual([0, 1])
   })
 
   it("iterates more than once over a re-iterable source", () => {
@@ -452,10 +451,6 @@ describe("every changed type", () => {
     "Obj(many)": Obj({ a: 1, b: [2, 3] }),
   } as const
 
-  it.each(Object.entries(instances))("%s keeps the same own enumerable properties", (_, value) => {
-    expect(Object.keys(value).sort()).toMatchSnapshot()
-  })
-
   it.each(Object.entries(instances))("%s serializes the same way", (_, value) => {
     const serialized = value.serialize()
     expect({
@@ -491,7 +486,8 @@ describe("every changed type", () => {
     expect(Obj.fromJSON<{ a: number }>(Obj({ a: 1 }).serialize().toJSON()).size).toBe(1)
   })
 
-  // Test files are ES modules, so this runs in strict mode, where a failed write throws.
+  // Test files are ES modules, so this runs in strict mode, where a failed write throws. Since 2.0
+  // these are prototype getters and methods, and the value is frozen, so a write throws either way.
   it.each([
     ["List", List([1, 2]), ["size", "length", "isEmpty", "head", "last", "headOption", "lastOption", "tail", "init"]],
     ["Set", Set([1, 2]), ["size", "isEmpty", "head", "last", "headOption", "lastOption", "tail", "init"]],
@@ -515,23 +511,6 @@ describe("every changed type", () => {
       } else {
         expect(after).toEqual(before)
       }
-    }
-  })
-})
-
-// The lazy getters come from one descriptor map per type (src/internal/lazyProperties.ts), so two
-// instances share each getter function. A per-instance closure here would bring back the slow
-// construction of #511.
-describe("lazy getters are shared, not built per instance", () => {
-  it.each([
-    ["List", List([1, 2]), List([3]), ["headOption", "lastOption", "tail", "init"]],
-    ["Set", Set([1, 2]), Set([3]), ["head", "headOption", "last", "lastOption", "tail", "init"]],
-    ["LazyList", LazyList([1, 2]), LazyList([3]), ["head", "last", "headOption", "lastOption", "tail", "init"]],
-  ] as const)("%s", (_, a, b, keys) => {
-    for (const key of keys) {
-      const getter = Object.getOwnPropertyDescriptor(a, key)?.get
-      expect(getter, key).toBeTypeOf("function")
-      expect(Object.getOwnPropertyDescriptor(b, key)?.get, key).toBe(getter)
     }
   })
 })

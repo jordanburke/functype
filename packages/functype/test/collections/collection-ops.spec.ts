@@ -137,8 +137,8 @@ describe("positional methods at the edges", () => {
     ["dropWhile(all)", (s: Set<number>) => s.dropWhile((x) => x < 10), []],
     ["take(-1)", (s: Set<number>) => s.take(-1), []],
     ["takeRight(0)", (s: Set<number>) => s.takeRight(0), []],
-    ["tail", (s: Set<number>) => s.tail, [2, 3]],
-    ["init", (s: Set<number>) => s.init, [1, 2]],
+    ["tail", (s: Set<number>) => s.tail(), [2, 3]],
+    ["init", (s: Set<number>) => s.init(), [1, 2]],
   ])("Set %s", (_label, run, expected) => {
     expect(run(Set(values)).toArray()).toEqual(expected)
   })

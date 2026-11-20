@@ -17,7 +17,7 @@ console.log()
 console.log("  Better alternative:")
 const result1b = Do(function* () {
   const user = yield* $(Option({ name: "Alice", scores: [95, 87, 92] }))
-  const firstScore = yield* $(List(user.scores).headOption) // More explicit!
+  const firstScore = yield* $(List(user.scores).headOption()) // More explicit!
   return `${user.name}'s first score: ${firstScore}`
 })
 console.log("  Result:", result1b)

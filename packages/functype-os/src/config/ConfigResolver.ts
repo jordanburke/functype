@@ -16,10 +16,10 @@ const tryExpandPath = (candidate: string): Option<string> => {
 
 // Checks candidates in order and stops at the first that exists.
 const findFirstExisting = (candidates: List<string>): IO<never, never, Option<string>> =>
-  candidates.headOption.fold(
+  candidates.headOption().fold(
     () => IO.succeed(Option<string>(undefined)),
     (head) =>
-      Fs.exists(head).flatMap((found) => (found ? IO.succeed(Option(head)) : findFirstExisting(candidates.tail))),
+      Fs.exists(head).flatMap((found) => (found ? IO.succeed(Option(head)) : findFirstExisting(candidates.tail()))),
   )
 
 // Expand each candidate; drop entries whose env variables didn't resolve.

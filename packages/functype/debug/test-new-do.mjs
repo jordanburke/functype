@@ -12,8 +12,8 @@ const optionResult = Do(function* () {
 })
 console.log("  Result:", optionResult.toString())
 console.log("  Type:", optionResult.constructor.name)
-console.log("  Head:", optionResult.head)
-console.log("  HeadOption:", optionResult.headOption.toString())
+console.log("  Head:", optionResult.head())
+console.log("  HeadOption:", optionResult.headOption().toString())
 console.log()
 
 // Test 2: List comprehension (unchanged behavior)
@@ -47,7 +47,7 @@ const eitherResult = Do(function* () {
   return { sum: x + y }
 })
 console.log("  Result:", eitherResult.toString())
-console.log("  Head:", JSON.stringify(eitherResult.head))
+console.log("  Head:", JSON.stringify(eitherResult.head()))
 console.log()
 
 // Test 5: Error handling still works
@@ -82,5 +82,5 @@ console.log("Summary of new behavior:")
 console.log("  - Do ALWAYS returns List<T>")
 console.log("  - Single-value monads create List with 1 element")
 console.log("  - Lists create cartesian products")
-console.log("  - Use .head or .headOption to get single values")
+console.log("  - Use .head() or .headOption() to get single values")
 console.log("  - Consistent and predictable!")

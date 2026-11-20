@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import { base64ToUtf8 } from "@/internal/base64"
+import { type A, define, type Mutable } from "@/internal/define"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -106,156 +107,140 @@ export type Stack<A extends Type> = {
   Matchable<A[], "Empty" | "NonEmpty">
 
 /**
- * Creates a new Stack instance
- * @param values - Initial values for the stack (last item will be at the top)
- * @returns A new Stack instance
+ * A Stack's own data: its tag and its items, bottom first, which nothing changes after the Stack is
+ * built. @internal
  */
-const StackObject = <A extends Type>(values: A[] = []): Stack<A> => {
-  const _tag = "Stack"
-  const items = [...values] // Create a copy to ensure immutability
-
-  // Implementation of Traversable interface
-  const size = (): number => items.length
-  const isEmpty = (): boolean => items.length === 0
-
-  const contains = (value: unknown): boolean => items.includes(value as A)
-
-  const reduce = <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
-    if (items.length === 0) {
-      throw new Error("Cannot reduce an empty stack")
-    }
-    return reduceWiden<A, Widen<A, B>>(items, op)
-  }
-
-  const reduceRight = <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
-    if (items.length === 0) {
-      throw new Error("Cannot reduce an empty stack")
-    }
-    return reduceRightWiden<A, Widen<A, B>>(items, op)
-  }
-
-  // Stack-specific operations
-  const push = <B extends Type>(value: B): Stack<A | B> => {
-    return StackObject<A | B>([...(items as (A | B)[]), value])
-  }
-
-  const pop = (): [Stack<A>, Option<A>] => {
-    if (isEmpty()) {
-      return [StackObject<A>([]), Option<A>(null)]
-    }
-
-    const newItems = [...items]
-    const popped = newItems.pop()
-    return [StackObject<A>(newItems), Option<A>(popped as A)]
-  }
-
-  const peek = (): Option<A> => {
-    if (isEmpty()) {
-      return Option<A>(null)
-    }
-    return Option<A>(items[items.length - 1])
-  }
-
-  // Functor implementation
-  const map = <B extends Type>(f: (a: A) => B): Stack<B> => {
-    return StackObject<B>(items.map(f))
-  }
-
-  const flatMap = <B extends Type>(f: (a: A) => Stack<B>): Stack<B> => {
-    if (isEmpty()) {
-      return StackObject<B>([])
-    }
-
-    // Process items from bottom to top to maintain the order
-    return items.reduce((acc: Stack<B>, current: A) => {
-      const result = f(current)
-      return result.toArray().reduce((inner, val) => inner.push(val), acc)
-    }, StackObject<B>([]))
-  }
-
-  const ap = <B extends Type>(ff: Stack<(value: A) => B>): Stack<B> => {
-    const result: B[] = []
-    items.forEach((a) => {
-      ff.toArray().forEach((f) => {
-        result.push(f(a))
-      })
-    })
-    return StackObject<B>(result)
-  }
-
-  const flatMapAsync = async <B extends Type>(f: (value: A) => PromiseLike<Stack<B>>): Promise<Stack<B>> => {
-    if (isEmpty()) {
-      return StackObject<B>([])
-    }
-
-    const results = await Promise.all(items.map(async (a) => await f(a)))
-    return results.reduce((acc: Stack<B>, current: Stack<B>) => {
-      return current.toArray().reduce((inner, val) => inner.push(val), acc)
-    }, StackObject<B>([]))
-  }
-
-  // Conversion methods
-  const toList = (): List<A> => List<A>(items)
-
-  const toArray = (): A[] => [...items]
-
-  const toString = (): string => `Stack(${items.join(", ")})`
-
-  // Fold implementations
-  const fold = <B>(initial: B, fn: (acc: B, a: A) => B): B => {
-    return items.reduce(fn, initial)
-  }
-
-  const foldLeft =
-    <B>(z: B) =>
-    (op: (b: B, a: A) => B): B => {
-      return items.reduce(op, z)
-    }
-
-  const foldRight =
-    <B>(z: B) =>
-    (op: (a: A, b: B) => B): B => {
-      return items.reduceRight((acc, value) => op(value, acc), z)
-    }
-
-  // Pattern matching
-  const match = <R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R => {
-    return isEmpty() ? patterns.Empty() : patterns.NonEmpty([...items])
-  }
-
-  // No getters and no computed keys before the closures (issue #511): V8 copies such a literal from a
-  // cached template. items is a private copy that nothing changes, so size and isEmpty can't go
-  // stale. Frozen so they stay read-only, as they were when they were getters.
-  return Object.freeze<Stack<A>>({
-    _tag,
-    size: size(),
-    isEmpty: isEmpty(),
-    contains,
-    reduce,
-    reduceRight,
-    push,
-    pop,
-    peek,
-    map,
-    flatMap,
-    ap,
-    flatMapAsync,
-    toList,
-    toArray,
-    toString,
-    fold,
-    foldLeft,
-    foldRight,
-    match,
-    toValue: () => ({ _tag: "Stack", value: [...items] }),
-    toJSON: () => ({ "@functype": "Stack" as const, _tag: "Stack" as const, value: [...items] }),
-    pipe: <U>(f: (value: A[]) => U) => f([...items]),
-    serialize: () => createSerializer("Stack", items),
-    [Symbol.toStringTag]: "Stack",
-  })
+type StackOf<A extends Type> = Stack<A> & {
+  readonly value: readonly A[]
 }
 
-const StackConstructor = <A extends Type>(values: A[] = []): Stack<A> => StackObject(values)
+/* eslint-disable functional/immutable-data -- methods build fresh arrays, and wrap fills in the Stack it just created */
+
+/** Every Stack shares these methods (#276 §14). `this.value` is the Stack's own items, bottom first. */
+const StackProto = define<StackOf<A>, "_tag" | "value">()("Stack", {
+  [Symbol.toStringTag]: "Stack",
+
+  get size() {
+    return this.value.length
+  },
+
+  get isEmpty() {
+    return this.value.length === 0
+  },
+
+  contains(value) {
+    return (this.value as readonly unknown[]).includes(value)
+  },
+
+  reduce<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    if (this.value.length === 0) {
+      throw new Error("Cannot reduce an empty stack")
+    }
+    return reduceWiden<A, Widen<A, B>>(this.value, op)
+  },
+
+  reduceRight<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    if (this.value.length === 0) {
+      throw new Error("Cannot reduce an empty stack")
+    }
+    return reduceRightWiden<A, Widen<A, B>>(this.value, op)
+  },
+
+  push<B extends Type>(value: B): Stack<A | B> {
+    return wrap<A | B>([...this.value, value])
+  },
+
+  pop(): [Stack<A>, Option<A>] {
+    if (this.value.length === 0) {
+      return [this, Option<A>(null)]
+    }
+    return [wrap(this.value.slice(0, -1)), Option<A>(this.value[this.value.length - 1])]
+  },
+
+  peek() {
+    return Option<A>(this.value[this.value.length - 1])
+  },
+
+  map<B extends Type>(f: (a: A) => B): Stack<B> {
+    return wrap(this.value.map(f))
+  },
+
+  flatMap<B extends Type>(f: (a: A) => Stack<B>): Stack<B> {
+    // Bottom to top, so each result's items keep their order
+    return wrap(this.value.flatMap((a) => f(a).toArray()))
+  },
+
+  ap<B extends Type>(ff: Stack<(value: A) => B>): Stack<B> {
+    const fs = ff.toArray()
+    return wrap(this.value.flatMap((a) => fs.map((f) => f(a))))
+  },
+
+  async flatMapAsync<B extends Type>(f: (value: A) => PromiseLike<Stack<B>>): Promise<Stack<B>> {
+    const results = await Promise.all(this.value.map(async (a) => await f(a)))
+    return wrap(results.flatMap((stack) => stack.toArray()))
+  },
+
+  toList() {
+    return List<A>(this.value)
+  },
+
+  toArray() {
+    return [...this.value]
+  },
+
+  toString() {
+    return `Stack(${this.value.join(", ")})`
+  },
+
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B {
+    return this.value.reduce(fn, initial)
+  },
+
+  foldLeft<B>(z: B) {
+    return (op: (b: B, a: A) => B): B => this.value.reduce(op, z)
+  },
+
+  foldRight<B>(z: B) {
+    return (op: (a: A, b: B) => B): B => this.value.reduceRight((acc, value) => op(value, acc), z)
+  },
+
+  match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R {
+    return this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value])
+  },
+
+  toValue() {
+    return { _tag: "Stack" as const, value: [...this.value] }
+  },
+
+  toJSON() {
+    return { "@functype": "Stack" as const, _tag: "Stack" as const, value: [...this.value] }
+  },
+
+  pipe<U>(f: (value: A[]) => U): U {
+    return f([...this.value])
+  },
+
+  serialize() {
+    return createSerializer("Stack", this.value)
+  },
+})
+
+/**
+ * Builds a Stack around an array it now owns: nothing may change the array afterwards. Frozen, as
+ * collections have been since 1.27.0 (#276 §14 Rules).
+ */
+const wrap = <A extends Type>(items: readonly A[]): Stack<A> => {
+  // The one cast: a prototype checked at the opaque A works for every A.
+  const stack = Object.create(StackProto) as Mutable<StackOf<A>>
+  stack._tag = "Stack"
+  stack.value = items
+  return Object.freeze(stack)
+}
+
+/* eslint-enable functional/immutable-data */
+
+/** Copies `values`, so a later change to the caller's array can't reach the Stack. */
+const StackConstructor = <A extends Type>(values: readonly A[] = []): Stack<A> => wrap([...values])
 
 /** Rebuilds a Stack from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
 const stackFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Stack<A> => {
@@ -268,7 +253,7 @@ const StackCompanion = {
    * Creates an empty stack
    * @returns An empty Stack instance
    */
-  empty: <A extends Type>(): Stack<A> => StackObject<A>([]),
+  empty: <A extends Type>(): Stack<A> => wrap<A>([]),
 
   /**
    * Creates a Stack from values, like `Stack([...values])`
@@ -277,7 +262,7 @@ const StackCompanion = {
    * @param values - The values to create the stack with
    * @returns A Stack holding the values
    */
-  of: <A extends Type>(...values: A[]): Stack<A> => StackObject<A>(values),
+  of: <A extends Type>(...values: A[]): Stack<A> => wrap<A>(values),
 
   /**
    * Creates a Stack from JSON string

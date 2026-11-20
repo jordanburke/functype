@@ -53,8 +53,8 @@ Nel.fromArray<A>(arr: A[]): Option<NonEmptyList<A>>
 Nel.unsafe<A>(head: A, ...tail: A[]): NonEmptyList<A>  // Throws if empty
 
 // Instance methods
-nel.head: A                          // Always safe, no Option
-nel.tail: List<A>                    // May be empty
+nel.head(): A                        // Always safe, no Option
+nel.tail(): List<A>                  // May be empty
 nel.toList: List<A>                  // Convert to regular List
 nel.map<B>(f: A => B): NonEmptyList<B>
 nel.flatMap<B>(f: A => NonEmptyList<B>): NonEmptyList<B>

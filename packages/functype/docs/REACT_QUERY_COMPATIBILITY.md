@@ -1,5 +1,7 @@
 # functype + React Query: Structural Sharing Causes OOM/CPU Spike
 
+> **Status in 2.0.** This analysis describes 1.x. In 2.0, Fix 2 and Fix 3 below are both done. `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are methods on List, Set and LazyList, so walking a value's keys runs nothing. And Option, Either, Try, IO, Exit, List, Set, Map, Stack, LazyList and Obj are each built with `Object.create` on one shared, named prototype per type, which keeps only the value's data as own keys (`_tag` and `value` for a List), so nothing is copied or deoptimized per value. Tuple and Lazy follow in a later 2.0 change.
+
 ## Summary
 
 functype types (List, Option, Either, etc.) cause React Query's `replaceEqualDeep` to enter infinite recursion, resulting in browser tab crashes (OOM) or extreme CPU usage. This affects any application using functype types as React Query return values — which is the primary use case in our codebase.

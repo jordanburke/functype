@@ -47,10 +47,12 @@ Checklist for adding new methods to existing functype types (List, Set, Map, Opt
 
 ## Property vs Method Convention
 
-- **Properties** (no parentheses): `head`, `tail`, `init`, `last`, `headOption`, `lastOption`, `isEmpty`, `size`
-- **Methods** (with parentheses): `take(n)`, `filter(p)`, `map(f)`, `sorted()`, `reverse()`
+- **Properties** (no parentheses): `isEmpty`, `size`, `length`
+- **Methods** (with parentheses): `head()`, `tail()`, `init()`, `last()`, `headOption()`, `lastOption()`, `take(n)`, `filter(p)`, `map(f)`, `sorted()`, `reverse()`
 
-General rule: zero-arg accessors that don't compute new collections are properties. Operations that transform or require arguments are methods.
+General rule (2.0, #276 §13): only O(1) reads of the data are properties. Anything that builds a value, copies, or reads a lazy source is a method, so a spread or a deep-equality walk of a value's keys never runs it.
+
+Since 2.0 every value keeps only its data as own properties, and its methods live on one frozen prototype per type, built with `define()` from `src/internal/define.ts` (#276 §14). Add a method to the type's interface (method syntax) and to its `define()` call; the compiler reports a missing one on the `define()` call.
 
 ## Shared Interface Methods
 

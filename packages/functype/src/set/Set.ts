@@ -3,7 +3,7 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
+import { type A, define, type Mutable } from "@/internal/define"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
@@ -21,7 +21,7 @@ const NativeSet = globalThis.Set
  */
 export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add<B>(value: B): Set<A | B>
-  remove: (value: unknown) => Set<A>
+  remove(value: unknown): Set<A>
   has(value: unknown): boolean
   /**
    * Elements in this set or `other`. `other` can be any iterable: an array, a native Set or a functype Set.
@@ -46,326 +46,375 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   isSupersetOf(other: Iterable<unknown>): boolean
   /** True if this set and `other` share no element. */
   isDisjointFrom(other: Iterable<unknown>): boolean
-  map: <B>(f: (a: A) => B) => Set<B>
-  flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
+  map<B>(f: (a: A) => B): Set<B>
+  flatMap<B>(f: (a: A) => Iterable<B>): Set<B>
   /**
    * Async map: awaits `f` for each element and collects the results into a Set, so equal results
    * collapse into one. Runs one call at a time by default; pass `{ concurrency: n }` to allow up to
    * `n` at once, or `"unbounded"`. A rejection rejects the result, and no further calls start.
    */
-  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
-  filter: (p: (a: A) => boolean) => Set<A>
-  filterNot: (p: (a: A) => boolean) => Set<A>
+  mapAsync<B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<Set<B>>
+  filter(p: (a: A) => boolean): Set<A>
+  filterNot(p: (a: A) => boolean): Set<A>
   // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
   /** Keep the first `n` elements. `n` of 0 or less keeps none. */
-  take: (n: number) => Set<A>
-  takeWhile: (p: (a: A) => boolean) => Set<A>
+  take(n: number): Set<A>
+  takeWhile(p: (a: A) => boolean): Set<A>
   /** Keep the last `n` elements. `n` of 0 or less keeps none. */
-  takeRight: (n: number) => Set<A>
+  takeRight(n: number): Set<A>
   /** Drop the first `n` elements. `n` of 0 or less drops nothing. */
-  drop: (n: number) => Set<A>
+  drop(n: number): Set<A>
   /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
-  dropRight: (n: number) => Set<A>
-  dropWhile: (p: (a: A) => boolean) => Set<A>
-  get tail(): Set<A>
-  get init(): Set<A>
+  dropRight(n: number): Set<A>
+  dropWhile(p: (a: A) => boolean): Set<A>
+  tail(): Set<A>
+  init(): Set<A>
   /**
    * Spread each element that's an array or another non-string iterable into the result, one level deep,
    * keeping other elements, strings included, as they are.
    */
   flatten<B = Flattened<A>>(): Set<B>
-  fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
-  toList: () => List<A>
-  toSet: () => Set<A>
-  toArray: <B = A>() => B[]
-  toString: () => string
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+  toList(): List<A>
+  toSet(): Set<A>
+  toArray<B = A>(): B[]
+  toString(): string
 }
 
-/** The getters that stay lazy: each reads the elements in order. See internal/lazyProperties. */
-type SetLazy = "head" | "headOption" | "last" | "lastOption" | "tail" | "init"
+/**
+ * A Set's own data: its tag and the native Set it wraps. The native Set is never changed after the
+ * Set is built, so `size` and `isEmpty` can't go stale. @internal
+ */
+interface SetOf<out A> extends Set<A> {
+  readonly value: ReadonlySet<A>
+}
 
-const SET_GETTERS = lazyGetters<Set<unknown>>({
+/* eslint-disable functional/immutable-data -- methods build fresh native Sets, and wrap fills in the Set it just created */
+
+/** Every Set shares these methods (#276 §14). `this.value` is the Set's own native Set. */
+const SetProto = define<SetOf<A>, "_tag" | "value">()("Set", {
+  [Symbol.toStringTag]: "FunctypeSet",
+
+  get size() {
+    return this.value.size
+  },
+
+  get isEmpty() {
+    return this.value.size === 0
+  },
+
+  [Symbol.iterator]() {
+    return this.value[Symbol.iterator]()
+  },
+
   head() {
-    return this.toArray()[0]
+    return this.value.values().next().value
   },
+
   headOption() {
-    return Option(this.toArray()[0])
+    return Option(this.value.values().next().value)
   },
+
   last() {
-    const arr = this.toArray()
-    return arr[arr.length - 1]
+    return Array.from(this.value).at(-1)
   },
+
   lastOption() {
-    const arr = this.toArray()
-    return Option(arr[arr.length - 1])
+    return Option(Array.from(this.value).at(-1))
   },
+
   tail() {
-    return createSet(this.toArray().slice(1))
+    return wrap(new NativeSet(Array.from(this.value).slice(1)))
   },
+
   init() {
-    const arr = this.toArray()
-    return createSet(arr.length === 0 ? [] : arr.slice(0, -1))
+    return wrap(new NativeSet(Array.from(this.value).slice(0, -1)))
+  },
+
+  add<B>(value: B): Set<A | B> {
+    return wrap(new NativeSet<A | B>([...this.value, value]))
+  },
+
+  remove(value) {
+    const newSet = new NativeSet<unknown>(this.value)
+    newSet.delete(value)
+    return wrap(newSet as NativeSet<A>)
+  },
+
+  contains(value) {
+    return (this.value as ReadonlySet<unknown>).has(value)
+  },
+
+  has(value) {
+    return (this.value as ReadonlySet<unknown>).has(value)
+  },
+
+  union<B>(other: Iterable<B>): Set<A | B> {
+    return wrap(new NativeSet<A | B>([...this.value, ...other]))
+  },
+
+  intersection(other) {
+    const others = new NativeSet<unknown>(other)
+    return wrap(new NativeSet([...this.value].filter((a) => others.has(a))))
+  },
+
+  difference(other) {
+    const others = new NativeSet<unknown>(other)
+    return wrap(new NativeSet([...this.value].filter((a) => !others.has(a))))
+  },
+
+  symmetricDifference<B>(other: Iterable<B>): Set<A | B> {
+    const values = this.value as ReadonlySet<unknown>
+    const others = [...new NativeSet<B>(other)]
+    const otherValues = new NativeSet<unknown>(others)
+    return wrap(
+      new NativeSet<A | B>([
+        ...[...this.value].filter((a) => !otherValues.has(a)),
+        ...others.filter((b) => !values.has(b)),
+      ]),
+    )
+  },
+
+  isSubsetOf(other) {
+    const others = new NativeSet<unknown>(other)
+    return [...this.value].every((a) => others.has(a))
+  },
+
+  isSupersetOf(other) {
+    const values = this.value as ReadonlySet<unknown>
+    for (const b of other) {
+      if (!values.has(b)) return false
+    }
+    return true
+  },
+
+  isDisjointFrom(other) {
+    const values = this.value as ReadonlySet<unknown>
+    for (const b of other) {
+      if (values.has(b)) return false
+    }
+    return true
+  },
+
+  map(f) {
+    return wrap(new NativeSet(Array.from(this.value).map(f)))
+  },
+
+  ap<B>(ff: Set<(value: A) => B>): Set<B> {
+    const results = new NativeSet<B>()
+    for (const a of this.value) {
+      for (const f of ff) {
+        results.add(f(a))
+      }
+    }
+    return wrap(results)
+  },
+
+  flatMap<B>(f: (a: A) => Iterable<B>): Set<B> {
+    const results = new NativeSet<B>()
+    for (const a of this.value) {
+      for (const b of f(a)) {
+        results.add(b)
+      }
+    }
+    return wrap(results)
+  },
+
+  async mapAsync(f, options) {
+    return wrap(new NativeSet(await traverseWithConcurrency(this.value, f, options?.concurrency ?? 1)))
+  },
+
+  async flatMapAsync(f, options) {
+    const results = await traverseWithConcurrency(this.value, f, options?.concurrency ?? 1)
+    return wrap(new NativeSet(results.flatMap((iterable) => Array.from(iterable))))
+  },
+
+  fold(initial, fn) {
+    let acc = initial
+    for (const a of this.value) {
+      acc = fn(acc, a)
+    }
+    return acc
+  },
+
+  foldLeft(z) {
+    return (op) => {
+      let acc = z
+      for (const a of this.value) {
+        acc = op(acc, a)
+      }
+      return acc
+    }
+  },
+
+  foldRight(z) {
+    return (op) => Array.from(this.value).reduceRight((acc, value) => op(value, acc), z)
+  },
+
+  reduce<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    const arr = Array.from(this.value)
+    if (arr.length === 0) throw new Error("Cannot reduce empty Set")
+    return reduceWiden<A, Widen<A, B>>(arr, op)
+  },
+
+  reduceRight<B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> {
+    const arr = Array.from(this.value)
+    if (arr.length === 0) throw new Error("Cannot reduceRight empty Set")
+    return reduceRightWiden<A, Widen<A, B>>(arr, op)
+  },
+
+  count(p) {
+    let count = 0
+    for (const a of this.value) {
+      if (p(a)) count++
+    }
+    return count
+  },
+
+  find(p) {
+    for (const a of this.value) {
+      if (p(a)) return Option(a)
+    }
+    return Option<A>(null)
+  },
+
+  exists(p) {
+    for (const a of this.value) {
+      if (p(a)) return true
+    }
+    return false
+  },
+
+  every(p) {
+    for (const a of this.value) {
+      if (!p(a)) return false
+    }
+    return true
+  },
+
+  forEach(f) {
+    this.value.forEach(f)
+  },
+
+  filter(p) {
+    const results = new NativeSet<A>()
+    for (const a of this.value) {
+      if (p(a)) results.add(a)
+    }
+    return wrap(results)
+  },
+
+  filterNot(p) {
+    const results = new NativeSet<A>()
+    for (const a of this.value) {
+      if (!p(a)) results.add(a)
+    }
+    return wrap(results)
+  },
+
+  drop(n) {
+    return wrap(new NativeSet(Array.from(this.value).slice(Math.max(0, n))))
+  },
+
+  dropRight(n) {
+    if (!(n > 0)) return this
+    const arr = Array.from(this.value)
+    return wrap(new NativeSet(arr.slice(0, Math.max(0, arr.length - Math.trunc(n)))))
+  },
+
+  dropWhile(p) {
+    const arr = Array.from(this.value)
+    const idx = arr.findIndex((x) => !p(x))
+    return wrap(new NativeSet(idx === -1 ? [] : arr.slice(idx)))
+  },
+
+  flatten<B>(): Set<B> {
+    const results = new NativeSet<B>()
+    for (const item of this.value) {
+      if (Array.isArray(item)) {
+        for (const subItem of item) {
+          results.add(subItem as B)
+        }
+      } else if (item && typeof item === "object" && Symbol.iterator in item) {
+        for (const subItem of item as Iterable<B>) {
+          results.add(subItem)
+        }
+      } else {
+        results.add(item as unknown as B)
+      }
+    }
+    return wrap(results)
+  },
+
+  take(n) {
+    return wrap(new NativeSet(Array.from(this.value).slice(0, Math.max(0, n))))
+  },
+
+  takeWhile(p) {
+    const result = new NativeSet<A>()
+    for (const item of this.value) {
+      if (!p(item)) break
+      result.add(item)
+    }
+    return wrap(result)
+  },
+
+  takeRight(n) {
+    // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+    return wrap(new NativeSet(!(n > 0) ? [] : Array.from(this.value).slice(-n)))
+  },
+
+  toList() {
+    return List(this.value)
+  },
+
+  toSet() {
+    return this
+  },
+
+  toArray<B = A>(): B[] {
+    return Array.from(this.value) as unknown as B[]
+  },
+
+  toString() {
+    return `Set(${Array.from(this.value).toString()})`
+  },
+
+  toValue() {
+    return { _tag: "Set" as const, value: Array.from(this.value) }
+  },
+
+  toJSON() {
+    return { "@functype": "Set" as const, _tag: "Set" as const, value: Array.from(this.value) }
+  },
+
+  pipe(f) {
+    return f(Array.from(this.value))
+  },
+
+  serialize() {
+    return createSerializer("Set", Array.from(this.value))
   },
 })
 
-const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
-  const values: NativeSet<A> = new NativeSet<A>(iterable)
-
-  // No getters and no computed keys before the closures: see internal/lazyProperties. The native
-  // Set is never changed after this point, so size and isEmpty can't go stale.
-  const fields: Omit<Set<A>, SetLazy> = {
-    _tag: "Set",
-
-    size: values.size,
-
-    isEmpty: values.size === 0,
-
-    add: <B>(value: B): Set<A | B> => createSet<A | B>([...(values as NativeSet<A | B>), value]),
-
-    remove: (value: unknown): Set<A> => {
-      const newSet = new NativeSet(values)
-      newSet.delete(value as A)
-      return createSet(newSet)
-    },
-
-    contains: (value: unknown): boolean => values.has(value as A),
-
-    has: (value: unknown): boolean => values.has(value as A),
-
-    union: <B>(other: Iterable<B>): Set<A | B> => createSet<A | B>([...values, ...other]),
-
-    intersection: (other: Iterable<unknown>): Set<A> => {
-      const others = new NativeSet<unknown>(other)
-      return createSet([...values].filter((a) => others.has(a)))
-    },
-
-    difference: (other: Iterable<unknown>): Set<A> => {
-      const others = new NativeSet<unknown>(other)
-      return createSet([...values].filter((a) => !others.has(a)))
-    },
-
-    symmetricDifference: <B>(other: Iterable<B>): Set<A | B> => {
-      const others = [...new NativeSet<B>(other)]
-      const otherValues = new NativeSet<unknown>(others)
-      return createSet<A | B>([
-        ...[...values].filter((a) => !otherValues.has(a)),
-        ...others.filter((b) => !(values as NativeSet<unknown>).has(b)),
-      ])
-    },
-
-    isSubsetOf: (other: Iterable<unknown>): boolean => {
-      const others = new NativeSet<unknown>(other)
-      return [...values].every((a) => others.has(a))
-    },
-
-    isSupersetOf: (other: Iterable<unknown>): boolean => {
-      for (const b of other) {
-        if (!values.has(b as A)) return false
-      }
-      return true
-    },
-
-    isDisjointFrom: (other: Iterable<unknown>): boolean => {
-      for (const b of other) {
-        if (values.has(b as A)) return false
-      }
-      return true
-    },
-
-    map: <B>(f: (a: A) => B): Set<B> => createSet(Array.from(values).map(f)),
-
-    ap: <B>(ff: Set<(value: A) => B>): Set<B> => {
-      const results = new NativeSet<B>()
-      for (const a of values) {
-        for (const f of ff) {
-          results.add(f(a))
-        }
-      }
-      return createSet(results)
-    },
-
-    flatMap: <B>(f: (a: A) => Iterable<B>): Set<B> => {
-      const results = new NativeSet<B>()
-      for (const a of values) {
-        for (const b of f(a)) {
-          results.add(b)
-        }
-      }
-      return createSet(results)
-    },
-
-    mapAsync: async <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<Set<B>> =>
-      createSet(await traverseWithConcurrency(values, f, options?.concurrency ?? 1)),
-
-    flatMapAsync: async <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): Promise<Set<B>> => {
-      const results = await traverseWithConcurrency(values, f, options?.concurrency ?? 1)
-      return createSet(results.flatMap((iterable) => Array.from(iterable)))
-    },
-
-    fold: <B>(initial: B, fn: (acc: B, a: A) => B): B => {
-      let acc = initial
-      for (const a of values) {
-        acc = fn(acc, a)
-      }
-      return acc
-    },
-
-    foldLeft:
-      <B>(z: B) =>
-      (op: (b: B, a: A) => B) => {
-        let acc = z
-        for (const a of values) {
-          acc = op(acc, a)
-        }
-        return acc
-      },
-
-    foldRight:
-      <B>(z: B) =>
-      (op: (a: A, b: B) => B) => {
-        const arr = Array.from(values)
-        return arr.reduceRight((acc, value) => op(value, acc), z)
-      },
-
-    reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
-      const arr = Array.from(values)
-      if (arr.length === 0) throw new Error("Cannot reduce empty Set")
-      return reduceWiden<A, Widen<A, B>>(arr, op)
-    },
-
-    reduceRight: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B> => {
-      const arr = Array.from(values)
-      if (arr.length === 0) throw new Error("Cannot reduceRight empty Set")
-      return reduceRightWiden<A, Widen<A, B>>(arr, op)
-    },
-
-    count: (p: (x: A) => boolean) => {
-      let count = 0
-      for (const a of values) {
-        if (p(a)) count++
-      }
-      return count
-    },
-
-    find: (p: (a: A) => boolean) => {
-      for (const a of values) {
-        if (p(a)) return Option(a)
-      }
-      return Option<A>(null)
-    },
-
-    exists: (p: (a: A) => boolean) => {
-      for (const a of values) {
-        if (p(a)) return true
-      }
-      return false
-    },
-
-    every: (p: (a: A) => boolean) => {
-      for (const a of values) {
-        if (!p(a)) return false
-      }
-      return true
-    },
-
-    forEach: (f: (a: A) => void) => {
-      values.forEach(f)
-    },
-
-    filter: (p: (a: A) => boolean) => {
-      const results = new NativeSet<A>()
-      for (const a of values) {
-        if (p(a)) results.add(a)
-      }
-      return createSet(results)
-    },
-
-    filterNot: (p: (a: A) => boolean) => {
-      const results = new NativeSet<A>()
-      for (const a of values) {
-        if (!p(a)) results.add(a)
-      }
-      return createSet(results)
-    },
-
-    drop: (n: number) => createSet(Array.from(values).slice(Math.max(0, n))),
-
-    dropRight: (n: number) => {
-      const arr = Array.from(values)
-      return createSet(n > 0 ? arr.slice(0, Math.max(0, arr.length - Math.trunc(n))) : arr)
-    },
-
-    dropWhile: (p: (a: A) => boolean) => {
-      const arr = Array.from(values)
-      const idx = arr.findIndex((x) => !p(x))
-      return createSet(idx === -1 ? [] : arr.slice(idx))
-    },
-
-    flatten: <B>() => {
-      const results = new NativeSet<B>()
-      for (const item of values) {
-        if (Array.isArray(item)) {
-          for (const subItem of item) {
-            results.add(subItem as B)
-          }
-        } else if (item && typeof item === "object" && Symbol.iterator in item) {
-          for (const subItem of item as Iterable<B>) {
-            results.add(subItem)
-          }
-        } else {
-          results.add(item as unknown as B)
-        }
-      }
-      return createSet(results)
-    },
-
-    take: (n: number) => createSet(Array.from(values).slice(0, Math.max(0, n))),
-
-    takeWhile: (p: (a: A) => boolean) => {
-      const arr = Array.from(values)
-      const result: A[] = []
-      for (const item of arr) {
-        if (!p(item)) break
-        result.push(item)
-      }
-      return createSet(result)
-    },
-
-    takeRight: (n: number) => {
-      const arr = Array.from(values)
-      // `!(n > 0)` also catches NaN, which `take` already treats as 0.
-      return createSet(!(n > 0) ? [] : arr.slice(-n))
-    },
-
-    toList: (): List<A> => List(Array.from(values)),
-
-    toSet: (): Set<A> => set,
-
-    toArray: <B = A>(): B[] => Array.from(values) as unknown as B[],
-
-    toString: (): string => `Set(${Array.from(values).toString()})`,
-
-    toValue: (): { _tag: "Set"; value: A[] } => ({ _tag: "Set", value: Array.from(values) }),
-
-    toJSON: () => ({ "@functype": "Set" as const, _tag: "Set" as const, value: Array.from(values) }),
-
-    pipe: <U>(f: (value: A[]) => U) => f(Array.from(values)),
-
-    serialize: () => createSerializer("Set", Array.from(values)),
-
-    [Symbol.toStringTag]: "FunctypeSet",
-
-    [Symbol.iterator]: () => values[Symbol.iterator](),
-  }
-
-  const set = withLazyGetters<Set<A>>(fields, SET_GETTERS)
-  return set
+/**
+ * Builds a Set around a native Set it now owns: nothing may change the native Set afterwards.
+ * Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
+ */
+const wrap = <A>(values: ReadonlySet<A>): Set<A> => {
+  // The one cast: a prototype checked at the opaque A works for every A.
+  const set = Object.create(SetProto) as Mutable<SetOf<A>>
+  set._tag = "Set"
+  set.value = values
+  return Object.freeze(set)
 }
 
-const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => createSet(iterable)
+/* eslint-enable functional/immutable-data */
+
+const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => wrap(new NativeSet<A>(iterable))
 
 // Singleton empty set - uses 'never' which is subtype of all types
-const EMPTY_SET: Set<never> = createSet<never>([])
+const EMPTY_SET: Set<never> = wrap<never>(new NativeSet<never>())
 
 /** Rebuilds a Set from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
 const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
@@ -386,7 +435,7 @@ const SetCompanion = {
    * @param values - Values to create set from
    * @returns A Set containing the unique values
    */
-  of: <A extends Type>(...values: A[]): Set<A> => createSet<A>(values),
+  of: <A extends Type>(...values: A[]): Set<A> => wrap(new NativeSet<A>(values)),
 
   /**
    * Creates a Set from JSON string

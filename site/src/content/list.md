@@ -17,8 +17,8 @@ const empty = List.empty<number>();
 const single = List.of(42);
 
 // Basic operations
-nums.head; // 1
-nums.tail; // List([2, 3, 4, 5])
+nums.head(); // 1
+nums.tail(); // List([2, 3, 4, 5])
 nums.size; // 5
 nums.isEmpty; // false
 ```
@@ -69,13 +69,13 @@ List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
 List([List([1]), Set([2])]).flatten(); // List([1, 2])
 // Strings stay whole. For characters, use flatMap((s) => [...s])
 
-// Element access
-List([1, 2, 3]).head; // 1
-List([1, 2, 3]).headOption; // Option(1)
-List([1, 2, 3]).last; // 3
-List([1, 2, 3]).lastOption; // Option(3)
-List([1, 2, 3]).tail; // List([2, 3])
-List([1, 2, 3]).init; // List([1, 2])
+// Element access. These are methods (2.0); tail() and init() copy the rest of the List
+List([1, 2, 3]).head(); // 1
+List([1, 2, 3]).headOption(); // Option(1)
+List([1, 2, 3]).last(); // 3
+List([1, 2, 3]).lastOption(); // Option(3)
+List([1, 2, 3]).tail(); // List([2, 3])
+List([1, 2, 3]).init(); // List([1, 2])
 
 // Find and contains
 List([1, 2, 3]).find((x) => x > 1); // Some(2), or None when nothing matches
@@ -151,7 +151,7 @@ const result = Do(function* () {
 ```typescript
 list.toArray(); // Convert to native array
 list.toSet(); // Convert to Set<A>
-list.headOption; // Option<A> for first element
+list.headOption(); // Option<A> for first element
 ```
 
 ## API Reference

@@ -235,7 +235,7 @@ expect(hasEntry("info", "Starting")).toBe(true)
 expect(hasEntry("info", /fetched \d+ items/)).toBe(true)
 
 // Entries are List<LogEntry> with full metadata
-const first = entries().head
+const first = entries().head()
 expect(first.level).toBe("info")
 expect(first.metadata).toEqual({ version: "1.0.0" })
 expect(first.timestamp).toBeInstanceOf(Date)

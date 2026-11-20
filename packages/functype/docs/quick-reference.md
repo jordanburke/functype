@@ -146,9 +146,9 @@ list.isEmpty // true if empty, false otherwise
 list.size // Number of elements
 
 // Accessing
-list.headOption // Option.Some with first element or None if empty
-list.head // First element, or undefined if empty
-list.tail // List with all elements except the first
+list.headOption() // Option.Some with first element or None if empty
+list.head() // First element, or undefined if empty
+list.tail() // List with all elements except the first (a copy)
 list.get(2) // Option.Some with element at index or None
 
 // Adding/removing
@@ -203,7 +203,7 @@ Map([
 Map.of<string, number>(["a", 1], ["b", 2]) // Variadic
 Map.empty<string, number>() // Empty map
 
-// Properties (getters, not calls)
+// Properties, not calls
 map.isEmpty // true if empty
 map.size // Number of entries
 
@@ -480,7 +480,7 @@ FoldableUtils.toList(Option(42)) // List([42])
 FoldableUtils.toList(Either.right(42)) // List([42])
 FoldableUtils.toList(Try(() => 42)) // List([42])
 
-List([1, 2, 3]).headOption // Some(1): a List is not a sum type, so take its head
+List([1, 2, 3]).headOption() // Some(1): a List is not a sum type, so take its head
 FoldableUtils.toOption(Either.right(42)) // Some(42)
 FoldableUtils.toOption(Try(() => 42)) // Some(42)
 

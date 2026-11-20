@@ -1,191 +1,113 @@
 /**
- * Guards against the construction cost of issue #511 coming back.
+ * Guards the construction cost of the collections (#276 §14, PR 3; before that, issue #511).
  *
- * Two kinds of check:
- * - Shape, which is deterministic: which own properties are getters, and that instances are frozen.
- *   A getter written back into an object literal shows up here, whatever the machine.
- * - Cost, as a ratio to building the yardstick below over the same loop. The bounds were set as
- *   ratios to an `Option`, which the yardstick now stands in for. Ratios hold across machines far
- *   better than times do. Each bound sits between the measured ratio before the fix and after it,
- *   loose enough for a slow or instrumented runner.
+ * Each case builds a collection and maps it once, and is timed as a ratio to a plain object that
+ * does the same data work: it builds the same arrays, native Sets or native Maps, but has no
+ * methods and isn't frozen. Ratios hold across machines far better than times do. The medians
+ * below were measured locally on Node 24.20.0 with this loop, before (each value built ~30 to 70
+ * closures, 1.27 / origin/main) and after (one shared prototype per type). Each bound sits far
+ * below the old ratio, with room for a slow or instrumented runner.
  *
- * Ratios this test measured locally on Node 24.20.0, before -> after the fix: Map 8.9x -> 1.4x,
- * Stack 7.2x -> 0.6x, Obj 14.2x -> 2.1x. Over 20 runs with the full suite running alongside, the
- * worst were Map 1.7x, Stack 0.6x and Obj 6.9x. On GitHub Actions they were Map 2.5x, Stack 0.6x
- * and Obj 2.8x.
+ * What's left of the cost is mostly Object.freeze: collections stay frozen per value (#276 §14
+ * Rules), and freezing costs about 14 ns, more than building the value on its prototype.
  *
- * List, Set and LazyList have only the shape check. Here List went from 12.9x to 4.3x, but it
- * measured 7.0x on GitHub Actions, too close to any bound below the old ratio. (Against the built
- * package the gap is wider: 33x -> 5.7x.) Set went from 8.3x to 5.6x and LazyList from 11.6x to
- * 5.7x.
+ * The shape (own keys, shared prototype, frozen values) is pinned in collection-prototype.spec.ts.
  */
 import { describe, expect, it } from "vitest"
 
 import { LazyList, List, Map, Obj, Set, Stack } from "@/index"
 
-const accessors = (value: object): string[] =>
-  Object.entries(Object.getOwnPropertyDescriptors(value))
-    .filter(([, descriptor]) => descriptor.get !== undefined)
-    .map(([key]) => key)
-    .sort()
-
-describe("construction shape", () => {
-  it.each([
-    ["List", () => List([1, 2]), ["headOption", "init", "lastOption", "tail"]],
-    ["List()", () => List(), ["headOption", "init", "lastOption", "tail"]],
-    ["Set", () => Set([1, 2]), ["head", "headOption", "init", "last", "lastOption", "tail"]],
-    ["Map", () => Map([["a", 1]]), []],
-    ["Stack", () => Stack([1, 2]), []],
-    ["LazyList", () => LazyList([1, 2]), ["head", "headOption", "init", "last", "lastOption", "tail"]],
-    ["Obj", () => Obj({ a: 1 }), ["isEmpty", "size"]],
-  ] as const)("%s keeps getters only where they must stay lazy, and is frozen", (_, make, expected) => {
-    const value = make()
-    expect(accessors(value)).toEqual(expected)
-    expect(Object.isFrozen(value)).toBe(true)
-  })
-
-  it("rejects new properties and replaced methods", () => {
-    const list = List([1, 2])
-    expect(() => {
-      ;(list as unknown as Record<string, unknown>).extra = 1
-    }).toThrow(TypeError)
-    expect(() => {
-      ;(list as unknown as Record<string, unknown>).map = () => List()
-    }).toThrow(TypeError)
-    expect(list.map((x) => x + 1).toArray()).toEqual([2, 3])
-  })
-
-  it("toValue gives a copy, so changing it can't change the collection", () => {
-    const list = List([1, 2])
-    list.toValue().value.push(3)
-    expect([list.size, list.toArray()]).toEqual([2, [1, 2]])
-    const stack = Stack([1, 2])
-    stack.toValue().value.push(3)
-    expect([stack.size, stack.toArray()]).toEqual([2, [1, 2]])
-  })
-
-  it("Obj still counts the keys of the object it wraps when read", () => {
-    const data: Record<string, number> = { a: 1 }
-    const obj = Obj(data)
-    data.b = 2
-    expect([obj.size, obj.isEmpty]).toEqual([2, false])
-  })
-})
-
-/**
- * The yardstick the bounds below were set against: an object literal holding 70 closures over one
- * value. It costs what `Option` cost until 2.0 (about 128 ns on Node 24.20.0, against 107 ns for 60
- * closures and 158 ns for 80). Option now shares its methods (#276 §14) and costs a few nanoseconds,
- * too little to divide by, so this stands in for the old Option.
- */
-const yardstick = (x: string) => ({
-  _tag: "Some",
-  value: x,
-  m0: () => x,
-  m1: () => x,
-  m2: () => x,
-  m3: () => x,
-  m4: () => x,
-  m5: () => x,
-  m6: () => x,
-  m7: () => x,
-  m8: () => x,
-  m9: () => x,
-  m10: () => x,
-  m11: () => x,
-  m12: () => x,
-  m13: () => x,
-  m14: () => x,
-  m15: () => x,
-  m16: () => x,
-  m17: () => x,
-  m18: () => x,
-  m19: () => x,
-  m20: () => x,
-  m21: () => x,
-  m22: () => x,
-  m23: () => x,
-  m24: () => x,
-  m25: () => x,
-  m26: () => x,
-  m27: () => x,
-  m28: () => x,
-  m29: () => x,
-  m30: () => x,
-  m31: () => x,
-  m32: () => x,
-  m33: () => x,
-  m34: () => x,
-  m35: () => x,
-  m36: () => x,
-  m37: () => x,
-  m38: () => x,
-  m39: () => x,
-  m40: () => x,
-  m41: () => x,
-  m42: () => x,
-  m43: () => x,
-  m44: () => x,
-  m45: () => x,
-  m46: () => x,
-  m47: () => x,
-  m48: () => x,
-  m49: () => x,
-  m50: () => x,
-  m51: () => x,
-  m52: () => x,
-  m53: () => x,
-  m54: () => x,
-  m55: () => x,
-  m56: () => x,
-  m57: () => x,
-  m58: () => x,
-  m59: () => x,
-  m60: () => x,
-  m61: () => x,
-  m62: () => x,
-  m63: () => x,
-  m64: () => x,
-  m65: () => x,
-  m66: () => x,
-  m67: () => x,
-  m68: () => x,
-  m69: () => x,
-})
+const inc = (x: number): number => x + 1
 
 describe("construction cost", () => {
   const RUNS = 9
   const N = 20_000
 
-  const timePerCall = (make: () => unknown): number => {
+  const timePerCall = (make: (i: number) => unknown): number => {
     let kept = 0
     const start = performance.now()
     for (let i = 0; i < N; i++) {
-      if (make() !== undefined) kept++
+      if (make(i) !== undefined) kept++
     }
     const elapsed = performance.now() - start
     expect(kept).toBe(N)
     return elapsed / N
   }
 
-  /** Median over several interleaved runs of (time to build the value) / (time to build the yardstick). */
-  const ratioToYardstick = (make: () => unknown): number => {
-    const reference = () => yardstick("x")
+  /** Median over interleaved runs of (time to build and map the value) / (time for the plain object). */
+  const ratioToPlain = (make: (i: number) => unknown, plain: (i: number) => unknown): number => {
     for (let i = 0; i < 2_000; i++) {
-      make()
-      reference()
+      make(i)
+      plain(i)
     }
-    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(reference)).sort((a, b) => a - b)
+    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
     return ratios[Math.floor(RUNS / 2)]!
   }
 
+  // Read each export once. Vitest wraps module exports in getters, which would add to every call.
+  const [list, set, map, stack, lazyList, obj] = [List, Set, Map, Stack, LazyList, Obj] as const
+  const NativeSet = globalThis.Set
+  const NativeMap = globalThis.Map
+
+  // [name, bound, median measured before -> after, build + map, the plain object doing the same data work]
   it.each([
-    ["Map", 5, () => Map([["a", 1]])],
-    ["Stack", 3, () => Stack(["a", "b"])],
-    ["Obj", 9, () => Obj({ a: 1 })],
-  ] as const)("building a %s costs at most %d times the yardstick", (name, bound, make) => {
-    const ratio = ratioToYardstick(make)
-    console.info(`${name}: ${ratio.toFixed(1)}x the yardstick (bound ${bound}x)`)
-    expect(ratio, `${name} costs ${ratio.toFixed(1)}x the yardstick`).toBeLessThan(bound)
-  })
+    [
+      "List",
+      15,
+      "84x -> 3.4x",
+      (i: number) => list([i, 1, 2]).map(inc),
+      (i: number) => ({ _tag: "List", value: Array.from([i, 1, 2]) }).value.map(inc),
+    ],
+    [
+      "Set",
+      5,
+      "11x -> 1.3x",
+      (i: number) => set([i, 1, 2]).map(inc),
+      (i: number) => new NativeSet(Array.from({ _tag: "Set", value: new NativeSet([i, 1, 2]) }.value, inc)),
+    ],
+    [
+      // Map's map() goes through Tuples on both sides, so this times building alone.
+      "Map",
+      5,
+      "9x -> 1.9x",
+      (i: number) => map([["a", i]]),
+      (i: number) => ({ _tag: "Map", value: new NativeMap([["a", i]]) }),
+    ],
+    [
+      "Stack",
+      8,
+      "10x -> 3.1x",
+      (i: number) => stack([i, 1, 2]).map(inc),
+      (i: number) => ({ _tag: "Stack", value: [...{ _tag: "Stack", value: [i, 1, 2] }.value].map(inc) }),
+    ],
+    [
+      "LazyList",
+      6,
+      "15x -> 1.2x",
+      (i: number) => lazyList([i, 1, 2]).map(inc),
+      (i: number) => {
+        const source = [i, 1, 2]
+        return {
+          _tag: "LazyList",
+          source: (function* () {
+            for (const item of source) yield inc(item)
+          })(),
+        }
+      },
+    ],
+    [
+      "Obj",
+      40,
+      "137x -> 9.1x",
+      (i: number) => obj({ a: i }).map((o) => ({ a: inc(o.a) })),
+      (i: number) => ({ _tag: "Obj", data: { a: inc({ _tag: "Obj", data: { a: i } }.data.a) } }),
+    ],
+  ] as const)(
+    "a %s costs at most %dx a plain object doing the same work (%s)",
+    (name, bound, _measured, make, plain) => {
+      const ratio = ratioToPlain(make, plain)
+      console.info(`${name}: ${ratio.toFixed(1)}x a plain object (bound ${bound}x)`)
+      expect(ratio, `${name} costs ${ratio.toFixed(1)}x a plain object`).toBeLessThan(bound)
+    },
+  )
 })

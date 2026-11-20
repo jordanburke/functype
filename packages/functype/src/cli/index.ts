@@ -143,11 +143,11 @@ const main = (): void => {
           : output(flags.json ? formatJson(getOverviewData()) : formatOverview()),
     )
     .when(
-      () => args.headOption.contains("interfaces"),
+      () => args.headOption().contains("interfaces"),
       () => output(flags.json ? formatJson(getInterfacesData()) : formatInterfaces()),
     )
     .default(() =>
-      args.headOption.fold(
+      args.headOption().fold(
         () => output(flags.json ? formatJson(getOverviewData()) : formatOverview()),
         (command) => handleTypeLookup(command, flags),
       ),

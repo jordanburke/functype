@@ -554,9 +554,9 @@ list.isEmpty // true if empty, false otherwise
 list.size // Number of elements
 
 // Accessing
-list.headOption // Option.Some with first element or None if empty
-list.head // First element, or undefined if empty
-list.tail // List with all elements except the first
+list.headOption() // Option.Some with first element or None if empty
+list.head() // First element, or undefined if empty
+list.tail() // List with all elements except the first (a copy)
 list.get(2) // Option.Some with element at index or None
 
 // Adding/removing
@@ -611,7 +611,7 @@ Map([
 Map.of<string, number>(["a", 1], ["b", 2]) // Variadic
 Map.empty<string, number>() // Empty map
 
-// Properties (getters, not calls)
+// Properties, not calls
 map.isEmpty // true if empty
 map.size // Number of entries
 
@@ -888,7 +888,7 @@ FoldableUtils.toList(Option(42)) // List([42])
 FoldableUtils.toList(Either.right(42)) // List([42])
 FoldableUtils.toList(Try(() => 42)) // List([42])
 
-List([1, 2, 3]).headOption // Some(1): a List is not a sum type, so take its head
+List([1, 2, 3]).headOption() // Some(1): a List is not a sum type, so take its head
 FoldableUtils.toOption(Either.right(42)) // Some(42)
 FoldableUtils.toOption(Try(() => 42)) // Some(42)
 
@@ -1386,16 +1386,16 @@ Note: `fold` has different semantics per type category:
 - `dropRight(n: number): Self`
 - `dropWhile(p: (value: A) => boolean): Self`
 - `flatten()`: the element type flattened, so `List<number[]>` gives `List<number>`. Strings stay whole
-- `head: A | undefined`
-- `headOption: Option<A>`
+- `head(): A | undefined`
+- `headOption(): Option<A>`
 - `take(n: number): Self`
 - `takeWhile(p: (value: A) => boolean): Self`
 - `takeRight(n: number): Self`
-- `last: A | undefined`
-- `lastOption: Option<A>`
-- `tail: Self`
+- `last(): A | undefined`
+- `lastOption(): Option<A>`
+- `tail(): Self`
 
-- `init: Self`
+- `init(): Self`
 - `toArray(): A[]`
 
 `List` and `Set` return `List<A>` and `Set<A>` from every method above that returns `Self`, and a type test fails if a new one isn't overridden. A count `n` of 0 or less means 0: `drop(-1)` drops nothing and `take(-1)` takes nothing.
@@ -1955,8 +1955,8 @@ const empty = List.empty<number>();
 const single = List.of(42);
 
 // Basic operations
-nums.head; // 1
-nums.tail; // List([2, 3, 4, 5])
+nums.head(); // 1
+nums.tail(); // List([2, 3, 4, 5])
 nums.size; // 5
 nums.isEmpty; // false
 ```
@@ -2007,13 +2007,13 @@ List([[1, 2], [3]]).flatten(); // List([1, 2, 3])
 List([List([1]), Set([2])]).flatten(); // List([1, 2])
 // Strings stay whole. For characters, use flatMap((s) => [...s])
 
-// Element access
-List([1, 2, 3]).head; // 1
-List([1, 2, 3]).headOption; // Option(1)
-List([1, 2, 3]).last; // 3
-List([1, 2, 3]).lastOption; // Option(3)
-List([1, 2, 3]).tail; // List([2, 3])
-List([1, 2, 3]).init; // List([1, 2])
+// Element access. These are methods (2.0); tail() and init() copy the rest of the List
+List([1, 2, 3]).head(); // 1
+List([1, 2, 3]).headOption(); // Option(1)
+List([1, 2, 3]).last(); // 3
+List([1, 2, 3]).lastOption(); // Option(3)
+List([1, 2, 3]).tail(); // List([2, 3])
+List([1, 2, 3]).init(); // List([1, 2])
 
 // Find and contains
 List([1, 2, 3]).find((x) => x > 1); // Some(2), or None when nothing matches
@@ -2089,7 +2089,7 @@ const result = Do(function* () {
 ```typescript
 list.toArray(); // Convert to native array
 list.toSet(); // Convert to Set<A>
-list.headOption; // Option<A> for first element
+list.headOption(); // Option<A> for first element
 ```
 
 ## API Reference
@@ -4885,12 +4885,12 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 
 - `.fold(z, f)`
 - `.reduce(f)`
-- `.head`
-- `.headOption`
-- `.tail`
-- `.last`
-- `.lastOption`
-- `.init`
+- `.head()`
+- `.headOption()`
+- `.tail()`
+- `.last()`
+- `.lastOption()`
+- `.init()`
 - `.indexOf(v)`
 - `.toArray()`
 
@@ -5039,12 +5039,12 @@ Implements: Foldable, Functor, Iterable, Monad, Serializable
 
 **Extract**
 
-- `.head`
-- `.headOption`
-- `.tail`
-- `.last`
-- `.lastOption`
-- `.init`
+- `.head()`
+- `.headOption()`
+- `.tail()`
+- `.last()`
+- `.lastOption()`
+- `.init()`
 - `.find(p)`
 - `.toArray()`
 - `.toJSON()`
