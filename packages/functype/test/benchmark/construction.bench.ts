@@ -7,6 +7,8 @@
  * - IO and Exit: #276 §14 (values share their methods). Every `.map` on an IO builds a new IO, and
  *   every interpreter step builds an Exit, so these time building both and running a chain.
  *   test/io/io-prototype.spec.ts holds their CI guard.
+ * - Collections on shared prototypes: #276 §14, PR 3, with §13 (tail() is a method). These build and
+ *   map each collection, and walk a List with tail(), which copies the rest of the List every step.
  * This file is for looking.
  */
 import { describe, test } from "vitest"
@@ -66,5 +68,38 @@ describe("value construction", () => {
         make(i++)
       }).run()
     })
+  })
+})
+
+// Read each export once, as above.
+const [list, set, map, stack, lazyList, obj] = [List, Set, Map, Stack, LazyList, Obj] as const
+const big = list(Array.from({ length: 5_000 }, (_, i) => i))
+
+const collectionCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
+  ["List([i, 1, 2]).map", (i) => list([i, 1, 2]).map(inc)],
+  ["Set([i, 1, 2]).map", (i) => set([i, 1, 2]).map(inc)],
+  ['Map([["a", i]]).map', (i) => map([["a", i]]).map(inc)],
+  ["Stack([i, 1, 2]).map", (i) => stack([i, 1, 2]).map(inc)],
+  ["LazyList([i, 1, 2]).map", (i) => lazyList([i, 1, 2]).map(inc)],
+  ["Obj({ a: i }).map", (i) => obj({ a: i }).map((o) => ({ a: inc(o.a) }))],
+]
+
+describe("collection construction", () => {
+  collectionCases.forEach(([name, make]) => {
+    test(name, async ({ bench }) => {
+      // eslint-disable-next-line functional/no-let -- a fresh input each call, so V8 can't fold the work away
+      let i = 0
+      await bench(name, () => {
+        make(i++)
+      }).run()
+    })
+  })
+
+  test("walk a 5,000-item List with tail()", async ({ bench }) => {
+    await bench("walk a 5,000-item List with tail()", () => {
+      // eslint-disable-next-line functional/no-let -- the walk §13 describes
+      let l = big
+      while (!l.isEmpty) l = l.tail()
+    }).run()
   })
 })
