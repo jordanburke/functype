@@ -47,7 +47,6 @@ minimumReleaseAge: 0
 allowBuilds:
   esbuild: true
   sharp: true
-  tldjs: true
 
 # First-party packages we publish ourselves: the release-age cooldown adds no supply-chain value here.
 minimumReleaseAgeExclude:

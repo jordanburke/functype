@@ -333,7 +333,8 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
 
     takeRight: (n: number) => {
       const arr = Array.from(values)
-      return createSet(n <= 0 ? [] : arr.slice(-n))
+      // `!(n > 0)` also catches NaN, which `take` already treats as 0.
+      return createSet(!(n > 0) ? [] : arr.slice(-n))
     },
 
     toList: (): List<A> => List(Array.from(values)),
