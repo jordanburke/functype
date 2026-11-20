@@ -1,12 +1,5 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`every changed type > LazyList(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "source",
-]
-`;
-
 exports[`every changed type > LazyList(many) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJMYXp5TGlzdCIsIl90YWciOiJMYXp5TGlzdCIsInZhbHVlIjpbMywxLDJdfQ==",
@@ -29,13 +22,6 @@ value: [3,1,2]",
 }
 `;
 
-exports[`every changed type > List(empty) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
-`;
-
 exports[`every changed type > List(empty) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJMaXN0IiwiX3RhZyI6Ikxpc3QiLCJ2YWx1ZSI6W119",
@@ -55,13 +41,6 @@ value: []",
     "value": [],
   },
 }
-`;
-
-exports[`every changed type > List(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
 `;
 
 exports[`every changed type > List(many) serializes the same way 1`] = `
@@ -93,13 +72,6 @@ value: [3,1,2]",
 }
 `;
 
-exports[`every changed type > Map(empty) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
-`;
-
 exports[`every changed type > Map(empty) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJNYXAiLCJfdGFnIjoiTWFwIiwidmFsdWUiOltdfQ==",
@@ -119,13 +91,6 @@ value: []",
     "value": [],
   },
 }
-`;
-
-exports[`every changed type > Map(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
 `;
 
 exports[`every changed type > Map(many) serializes the same way 1`] = `
@@ -167,13 +132,6 @@ value: [["a",1],["b",2]]",
 }
 `;
 
-exports[`every changed type > Obj(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "data",
-]
-`;
-
 exports[`every changed type > Obj(many) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJPYmoiLCJfdGFnIjoiT2JqIiwidmFsdWUiOnsiYSI6MSwiYiI6WzIsM119fQ==",
@@ -207,13 +165,6 @@ value: {"a":1,"b":[2,3]}",
 }
 `;
 
-exports[`every changed type > Set(empty) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
-`;
-
 exports[`every changed type > Set(empty) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJTZXQiLCJfdGFnIjoiU2V0IiwidmFsdWUiOltdfQ==",
@@ -233,13 +184,6 @@ value: []",
     "value": [],
   },
 }
-`;
-
-exports[`every changed type > Set(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
 `;
 
 exports[`every changed type > Set(many) serializes the same way 1`] = `
@@ -271,13 +215,6 @@ value: [3,1,2]",
 }
 `;
 
-exports[`every changed type > Stack(empty) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
-`;
-
 exports[`every changed type > Stack(empty) serializes the same way 1`] = `
 {
   "serializeBinary": "eyJAZnVuY3R5cGUiOiJTdGFjayIsIl90YWciOiJTdGFjayIsInZhbHVlIjpbXX0=",
@@ -297,13 +234,6 @@ value: []",
     "value": [],
   },
 }
-`;
-
-exports[`every changed type > Stack(many) keeps the same own enumerable properties 1`] = `
-[
-  "_tag",
-  "value",
-]
 `;
 
 exports[`every changed type > Stack(many) serializes the same way 1`] = `

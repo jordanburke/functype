@@ -1,10 +1,9 @@
 /**
- * Behaviour pinned for the construction-cost fix (issue #511).
- *
- * The fix changes how List, Set, Map, Stack, LazyList and Obj build their objects: values that
- * were getters become plain properties, and the getters that must stay lazy are attached after
- * the object literal. These tests were written against the code before that change and must pass
- * unchanged after it.
+ * Behaviour pinned across changes to how the collections are built: the construction-cost fix
+ * (issue #511), then shared prototypes (#276 §14, PR 3). Each derived value must agree with the
+ * elements after every operation, and collections must serialize the same way. Since 2.0, head,
+ * last, tail, init and their Options are methods (#276 §13); the shape itself is pinned in
+ * collection-prototype.spec.ts.
  */
 import { describe, expect, it } from "vitest"
 
@@ -452,10 +451,6 @@ describe("every changed type", () => {
     "Obj(many)": Obj({ a: 1, b: [2, 3] }),
   } as const
 
-  it.each(Object.entries(instances))("%s keeps the same own enumerable properties", (_, value) => {
-    expect(Object.keys(value).sort()).toMatchSnapshot()
-  })
-
   it.each(Object.entries(instances))("%s serializes the same way", (_, value) => {
     const serialized = value.serialize()
     expect({
@@ -491,7 +486,8 @@ describe("every changed type", () => {
     expect(Obj.fromJSON<{ a: number }>(Obj({ a: 1 }).serialize().toJSON()).size).toBe(1)
   })
 
-  // Test files are ES modules, so this runs in strict mode, where a failed write throws.
+  // Test files are ES modules, so this runs in strict mode, where a failed write throws. Since 2.0
+  // these are prototype getters and methods, and the value is frozen, so a write throws either way.
   it.each([
     ["List", List([1, 2]), ["size", "length", "isEmpty", "head", "last", "headOption", "lastOption", "tail", "init"]],
     ["Set", Set([1, 2]), ["size", "isEmpty", "head", "last", "headOption", "lastOption", "tail", "init"]],
