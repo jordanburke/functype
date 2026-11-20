@@ -48,8 +48,6 @@ const mustExist = (path: string): string => {
 const PAGE_OVERRIDES: Readonly<Record<string, string>> = {
   Do: "do-notation",
   Cond: "match",
-  TaskOutcome: "task",
-  TaskResult: "task",
   HttpError: "http",
 };
 
@@ -147,11 +145,6 @@ const OPTIONAL: ReadonlyArray<Link> = [
     "Tree-shaking and import strategies",
   ),
   guide("Tuple Examples", "TUPLE-EXAMPLES.md", "Fixed-length typed arrays"),
-  guide(
-    "Task Migration Guide",
-    "tasks/v3/TASK_MIGRATION_GUIDE.md",
-    "Task version upgrade guide",
-  ),
   (() => {
     mustExist(resolve(rootDir, "docs/ROADMAP.md"));
     return {
@@ -274,7 +267,6 @@ const FULL_SECTIONS: ReadonlyArray<{
     "list",
     "set",
     "obj",
-    "task",
     "io",
     "http",
     "logger",
