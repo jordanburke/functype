@@ -76,6 +76,17 @@ describe("structuralEq with functype values, whose methods live on a shared prot
     expect(structuralEq(Some(new Date(5)), Some(new Date(5)))).toBe(true)
   })
 
+  it("tells apart values holding different Maps, Sets, RegExps or URLs", () => {
+    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map()))).toBe(false)
+    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map([[1, 3]])))).toBe(false)
+    expect(structuralEq(Some(new Map([[1, 2]])), Some(new Map([[1, 2]])))).toBe(true)
+    expect(structuralEq(Right(new Set([1])), Right(new Set([2])))).toBe(false)
+    expect(structuralEq(Right(new Set([1, 2])), Right(new Set([2, 1])))).toBe(true)
+    expect(structuralEq(Some(/a/), Some(/b/))).toBe(false)
+    expect(structuralEq(Some(/a/g), Some(/a/g))).toBe(true)
+    expect(structuralEq(Some(new URL("https://a.test")), Some(new URL("https://b.test")))).toBe(false)
+  })
+
   it("never calls objects with different prototypes equal", () => {
     expect(structuralEq(new Date(0), {})).toBe(false)
     expect(structuralEq(Some(1), { _tag: "Some", value: 1 })).toBe(false)

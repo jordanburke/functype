@@ -30,8 +30,9 @@ export const tagEq: Eq<unknown> = (a, b) => {
 }
 
 /**
- * Recursive structural equality. Handles primitives, arrays, plain objects, tagged ADTs, `Date` and
- * `Error`. Two objects with different prototypes are never equal. Cycles are not detected — passing
+ * Recursive structural equality. Handles primitives, arrays, plain objects, tagged ADTs, `Date`,
+ * `Error`, `RegExp`, `Map` and `Set` (whose members compare by reference). Any other object with no
+ * enumerable own keys, such as a URL, is equal only to itself. Two objects with different prototypes are never equal. Cycles are not detected — passing
  * cyclic structures is undefined behavior. Functions compare by reference.
  *
  * functype values keep only their data as own properties (functype 2.0), so the walk below sees
@@ -52,12 +53,25 @@ export const structuralEq: Eq<unknown> = (a, b) => {
   if (Object.getPrototypeOf(a) !== Object.getPrototypeOf(b)) return false
 
   if (a instanceof Date) return a.getTime() === (b as Date).getTime()
+  if (a instanceof RegExp) return a.source === (b as RegExp).source && a.flags === (b as RegExp).flags
+  if (a instanceof Map) {
+    const m = b as ReadonlyMap<unknown, unknown>
+    return a.size === m.size && [...a].every(([k, v]) => m.has(k) && structuralEq(v, m.get(k)))
+  }
+  if (a instanceof Set) {
+    const set = b as ReadonlySet<unknown>
+    return a.size === set.size && [...a].every((item) => set.has(item))
+  }
   if (a instanceof Error) {
     const e = b as Error
     if (a.name !== e.name || a.message !== e.message || !structuralEq(a.cause, e.cause)) return false
   }
 
   const ka = Object.keys(a as object)
+  // Any other built-in, such as a URL, keeps its state where the key walk can't see it, and was
+  // already found not to be the same reference. Call it unequal, the safe direction for a hook.
+  const proto: unknown = Object.getPrototypeOf(a)
+  if (ka.length === 0 && proto !== Object.prototype && proto !== null && !(a instanceof Error)) return false
   const kb = Object.keys(b as object)
   if (ka.length !== kb.length) return false
   return ka.every(
