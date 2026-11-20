@@ -80,6 +80,23 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 **2.0: a `Do` block that yields nothing is typed `List`.** `Do(function* () { return 5 })` returned `List([5])` but was typed `Option<number>`, because a generator that yields nothing yields `never`, which the Option overload accepted. It's now typed `List<number>`, and `DoAsync` likewise. Nothing changes at runtime.
 
+**2.0 (breaking): Exit is a discriminated union, like Either.** From §9 of #276 (the 2.0 release plan).
+
+- `Exit<E, A>` is now `SuccessExitOf<E, A> | FailureExitOf<E, A> | DieExitOf<E, A> | InterruptedExitOf<E, A>`. The methods live on `ExitBase<E, A>`. Each variant holds its own field: `value`, `error`, `defect` or `fiberId`.
+- `isSuccess()`, `isFailure()`, `isDie()`, `isInterrupted()`, the companion guards and a `_tag` check narrow to the variant, and the else branch keeps the other three. A `switch` on `_tag` is exhaustive.
+- **Upgrade:** `interface X extends Exit<E, A>` or `class X implements Exit<E, A>` must use `ExitBase<E, A>`, because an interface can't extend a union. Code that named the old intersections, such as `Exit<E, A> & { value: A }`, can use the variant types instead. The compiler reports each one.
+- The API docs move Exit from `api-docs/interfaces/` to `api-docs/types/`.
+
+**2.0 (breaking): IO and Exit share their methods instead of copying them onto every value.** The design is §14 of #276 (the 2.0 release plan), as #540 (Option, Either and Try share their methods) did for Option, Either and Try. None of this is a type error.
+
+- Every `.map` or `.flatMap` on an IO builds a new IO, and every step the interpreter runs builds an Exit. Both used to be object literals of closures: about 50 for an IO, about 20 for an Exit. Now all IOs share one frozen prototype, and each Exit variant has its own. An IO keeps only its effect, under `IOEffectKey`. An Exit keeps `_tag` and its one field.
+- On Node 24.20.0, against `main` before this change: building `IO.succeed(i).map(inc)` drops from about 430 ns to 13 ns, and `Exit.succeed(i)` from 44 ns to 6 ns. Running a 50-step `map` chain with `runSync` drops from about 2,700 ns to 320 ns, and one `IO.succeed(1).runSyncOrThrow()` from about 260 ns to 9 ns. Most of the last came from building a new empty `Context` for every run, which the interpreter now shares.
+- **A detached method call fails.** On an Exit, `const { orElse } = exit` throws when called. On an IO, a method that calls another method on the IO, such as `tap`, `match`, `catchAll` or `timeoutTo`, throws at once. A detached `map`, `flatMap`, `mapError` or other builder stores `undefined` instead of the IO, so the IO it returns fails with a `TypeError` defect when run. TypeScript already rejects a detached `run`, `runSync`, `runExit` or other runner, because they declare `this`. Call methods on the value, or wrap them: `xs.map((x) => exit.orElse(x))`.
+- **Own keys are only the data.** `Object.keys(exit)` is `["_tag", "value"]` for a Success, and `["_tag", "error"]`, `["_tag", "defect"]` or `["_tag", "fiberId"]` for the others. `Object.keys(io)` is `[]`, and `Reflect.ownKeys(io)` is `[IOEffectKey]`. A spread copy has no methods. Snapshots of either need re-recording.
+- **Vitest's `toEqual` calls any two IOs equal.** An IO's iterator yields the IO itself, and its effect is under a symbol, which `toEqual` doesn't compare once it has walked the iterator. Before, `toEqual` called any two distinct IOs unequal, because each had its own copies of the methods. Neither compared what the IOs do. Compare `io[IOEffectKey]`, or what the IOs produce when run. Exits compare by data: `expect(Exit.succeed(1)).toEqual(Exit.succeed(1))` passes, where it failed before.
+- Assigning over a method throws in strict mode, because the prototypes are frozen. `structuredClone(exit)` returns a copy with the data and no methods. `console.log` prints `Success [Exit] { _tag: 'Success', value: 1 }` and `IO { Symbol(functype/IO/effect): { … } }`.
+- functype-react's `structuralEq` now calls two Exits with the same data equal. Two IOs are still equal only when they are the same IO.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
