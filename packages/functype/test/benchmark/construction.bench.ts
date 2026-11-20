@@ -4,11 +4,14 @@
  *   holds their CI guard.
  * - Option, Either and Try: issue #539 (every method copied onto every value). Each case builds a
  *   value and maps it once, the pattern a render loop runs. The bar is about 2x the plain object.
+ * - IO and Exit: #276 §14 (values share their methods). Every `.map` on an IO builds a new IO, and
+ *   every interpreter step builds an Exit, so these time building both and running a chain.
+ *   test/io/io-prototype.spec.ts holds their CI guard.
  * This file is for looking.
  */
 import { describe, test } from "vitest"
 
-import { LazyList, Left, List, Map, Obj, Option, Right, Set, Some, Stack, Try } from "@/index"
+import { Exit, IO, LazyList, Left, List, Map, Obj, Option, Right, Set, Some, Stack, Try } from "@/index"
 
 const cases: ReadonlyArray<readonly [string, () => unknown]> = [
   ['List(["a", "b"])', () => List(["a", "b"])],
@@ -35,6 +38,9 @@ const inc = (x: number): number => x + 1
 
 // Read each export once. Vitest wraps module exports in getters, which would add to every call.
 const [some, option, right, left, tryOf] = [Some, Option, Right, Left, Try] as const
+const { succeed: ioSucceed } = IO
+const { succeed: exitSucceed, fail: exitFail } = Exit
+const chain50 = Array.from({ length: 50 }).reduce<IO<never, never, number>>((io) => io.map(inc), ioSucceed(0))
 
 const valueCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
   ["plain { _tag, value }, for scale", (i) => ({ _tag: "Some", value: inc(i) })],
@@ -43,6 +49,12 @@ const valueCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
   ["Right(i).map", (i) => right<string, number>(i).map(inc)],
   ["Left(i).map", (i) => left<number, number>(i).map(inc)],
   ["Try(() => i).map", (i) => tryOf(() => i).map(inc)],
+  ["Exit.succeed(i)", (i) => exitSucceed(i)],
+  ["Exit.succeed(i).map", (i) => exitSucceed(i).map(inc)],
+  ["Exit.fail(i)", (i) => exitFail(i)],
+  ["IO.succeed(i).map", (i) => ioSucceed(i).map(inc)],
+  ["IO.succeed(i).map, then runSyncOrThrow", (i) => ioSucceed(i).map(inc).runSyncOrThrow()],
+  ["a 50-step IO map chain, runSync", () => chain50.runSync()],
 ]
 
 describe("value construction", () => {
