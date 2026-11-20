@@ -174,14 +174,15 @@ export class RepeatExhausted<A = unknown> extends Error {
  */
 
 /**
- * Unique symbol for the internal effect representation.
- * Using a symbol key makes IO structurally opaque — TypeScript won't
- * deeply compare IOEffect types when checking IO assignability.
- * This allows IO<never, never, void> to be assignable to IO<any, any, any>
- * (needed for IO.gen) without deep variance failures on the effect ADT.
+ * The key an IO keeps its effect under: an IO's one own field, its data.
+ *
+ * It is a plain string key so test matchers compare it. With a symbol key, vitest's `toEqual`
+ * walked the IO's iterator, met the IO itself, and saw no string keys, so it called any two IOs
+ * equal. It used to be a symbol so IO.gen's yields would assign without deep variance failures;
+ * test/io/io-variance.spec.ts guards that, and passes with this key too.
  * @internal
  */
-export const IOEffectKey: unique symbol = Symbol.for("functype/IO/effect")
+export const IOEffectKey = "effect" as const
 export type IOEffectKey = typeof IOEffectKey
 
 /**
@@ -713,8 +714,8 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 const _fx = <R, E, A>(io: IO<R, E, A>): IOEffect<R, E, A> => (io as any)[IOEffectKey]
 
 /**
- * Every IO shares these methods (#276 §14). An IO's own data is its effect, under
- * {@link IOEffectKey}; each method reads `this`, the IO it was called on.
+ * Every IO shares these methods (#276 §14). An IO's own data is its effect, under `effect`
+ * ({@link IOEffectKey}); each method reads `this`, the IO it was called on.
  */
 const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
   [Symbol.toStringTag]: "IO",

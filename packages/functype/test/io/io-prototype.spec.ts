@@ -5,18 +5,18 @@
  */
 import { inspect } from "node:util"
 
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
-import { IO, IOEffectKey } from "@/io/IO"
+import { Some } from "@/index"
+import { IO } from "@/io/IO"
 
 const inc = (x: number): number => x + 1
 
 describe("IO's shape", () => {
   it("keeps only its effect as an own property", () => {
-    expect(Reflect.ownKeys(IO.succeed(1))).toEqual([IOEffectKey])
-    expect(Reflect.ownKeys(IO.succeed(1).map(inc))).toEqual([IOEffectKey])
-    expect(Object.keys(IO.succeed(1))).toEqual([])
-    expect(IO.succeed(1)[IOEffectKey]).toEqual({ _tag: "Succeed", value: 1 })
+    expect(Reflect.ownKeys(IO.succeed(1))).toEqual(["effect"])
+    expect(Reflect.ownKeys(IO.succeed(1).map(inc))).toEqual(["effect"])
+    expect(IO.succeed(1).effect).toEqual({ _tag: "Succeed", value: 1 })
   })
 
   it("shares one frozen prototype", () => {
@@ -28,7 +28,7 @@ describe("IO's shape", () => {
   })
 
   it("prints its effect", () => {
-    expect(inspect(IO.succeed(1))).toBe("IO { Symbol(functype/IO/effect): { _tag: 'Succeed', value: 1 } }")
+    expect(inspect(IO.succeed(1))).toBe("IO { effect: { _tag: 'Succeed', value: 1 } }")
     expect(Object.prototype.toString.call(IO.succeed(1))).toBe("[object IO]")
     expect(IO.succeed(1).map(inc).toString()).toBe('IO("Map")')
     expect(JSON.stringify(IO.fail("e"))).toBe('{"_tag":"IO","effect":"Fail"}')
@@ -74,7 +74,7 @@ describe("IO's 2.0 breaks", () => {
 
   it("a spread copies only the effect", () => {
     const copy = { ...IO.succeed(1) }
-    expect(Reflect.ownKeys(copy)).toEqual([IOEffectKey])
+    expect(Reflect.ownKeys(copy)).toEqual(["effect"])
     expect("map" in copy).toBe(false)
   })
 
@@ -84,15 +84,35 @@ describe("IO's 2.0 breaks", () => {
       ;(IO.succeed(1) as unknown as Record<string, unknown>).map = () => 0
     }).toThrow(TypeError)
   })
+})
 
-  // An IO's iterator yields the IO itself, and its effect is under a symbol. Vitest's toEqual walks
-  // the iterator, treats the IO it meets as a cycle, then compares string keys, of which an IO has
-  // none. So toEqual calls any two IOs equal. Before 2.0 it called any two distinct IOs unequal,
-  // because each had its own copies of the methods. Compare the effects, or what the IOs produce.
-  it("toEqual can't tell two IOs apart; compare their effects instead", () => {
-    expect(IO.succeed(1)).toEqual(IO.fail(2))
-    expect(IO.succeed(1)[IOEffectKey]).toEqual(IO.succeed(1)[IOEffectKey])
-    expect(IO.succeed(1)[IOEffectKey]).not.toEqual(IO.succeed(2)[IOEffectKey])
+describe("IOs compare by their effect in test matchers", () => {
+  it("two IOs built the same way, with the same functions, are equal", () => {
+    expect(IO.succeed(1)).toEqual(IO.succeed(1))
+    expect(IO.succeed(1).map(inc)).toEqual(IO.succeed(1).map(inc))
+    expect(IO.succeed(1)).toStrictEqual(IO.succeed(1))
+    expect({ io: IO.fail("e") }).toEqual({ io: IO.fail("e") })
+  })
+
+  it("two IOs with different effects are unequal", () => {
+    expect(IO.succeed(1)).not.toEqual(IO.fail(2))
+    expect(IO.succeed(1)).not.toEqual(IO.succeed(2))
+    expect(IO.succeed(1)).not.toStrictEqual(IO.fail(2))
+    expect(IO.succeed(1)).not.toMatchObject(IO.fail(2))
+    expect(IO.succeed(1).map(inc)).not.toEqual(IO.succeed(1).map((x) => x * 2))
+  })
+
+  it("nested in an object, an array or a Some", () => {
+    expect({ io: IO.succeed(1) }).not.toEqual({ io: IO.fail(2) })
+    expect([IO.succeed(1)]).not.toEqual([IO.fail(2)])
+    expect(Some(IO.succeed(1))).not.toEqual(Some(IO.fail(2)))
+  })
+
+  it("toHaveBeenCalledWith tells the right IO from the wrong one", () => {
+    const spy = vi.fn()
+    spy(IO.succeed(1))
+    expect(spy).toHaveBeenCalledWith(IO.succeed(1))
+    expect(spy).not.toHaveBeenCalledWith(IO.fail(2))
   })
 })
 
