@@ -35,13 +35,13 @@ const isSpreadable = <B>(item: unknown): item is Iterable<B> =>
  */
 export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
   readonly length: number
-  readonly [Symbol.iterator]: () => Iterator<A>
+  [Symbol.iterator](): Iterator<A>
   // Override these to return List instead of FunctypeCollection
-  map: <B>(f: (a: A) => B) => List<B>
-  ap: <B>(ff: List<(value: A) => B>) => List<B>
-  flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
+  map<B>(f: (a: A) => B): List<B>
+  ap<B>(ff: List<(value: A) => B>): List<B>
+  flatMap<B>(f: (a: A) => Iterable<B>): List<B>
   /** Async flatMap. Starts every call at once unless `options.concurrency` caps it; `{ concurrency: 1 }` runs them in order. */
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions) => PromiseLike<List<B>>
+  flatMapAsync<B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): PromiseLike<List<B>>
   /**
    * Async map: awaits `f` for each element and keeps the results in input order.
    *
@@ -56,31 +56,31 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
    * const pages = await List(urls).mapAsync(fetchPage, { concurrency: 4 })  // up to 4 at once
    * ```
    */
-  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<List<B>>
+  mapAsync<B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<List<B>>
   // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>
-  filterNot: (p: (a: A) => boolean) => List<A>
+  filterNot(p: (a: A) => boolean): List<A>
   // List-specific methods
   /** @internal */
-  filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
+  filterType<T extends Typeable<string, unknown>>(tag: string): List<T & A>
   /** Remove a value. Accepts `unknown` so an unrelated-type arg is a safe no-op (Scala: `-(elem: Any)`). */
-  remove: (value: unknown) => List<A>
-  removeAt: (index: number) => List<A>
+  remove(value: unknown): List<A>
+  removeAt(index: number): List<A>
   /** Add a value, possibly widening the element type (Scala: `:+[B >: A]`). */
   add<B>(item: B): List<A | B>
-  get: (index: number) => Option<A>
+  get(index: number): Option<A>
   /** Concatenate with another list, possibly widening (Scala: `++[B >: A]`). */
   concat<B>(other: List<B>): List<A | B>
-  take: (n: number) => List<A>
-  takeWhile: (p: (a: A) => boolean) => List<A>
-  takeRight: (n: number) => List<A>
+  take(n: number): List<A>
+  takeWhile(p: (a: A) => boolean): List<A>
+  takeRight(n: number): List<A>
   /** Drop the first `n` elements. `n` of 0 or less drops nothing. */
-  drop: (n: number) => List<A>
+  drop(n: number): List<A>
   /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
-  dropRight: (n: number) => List<A>
+  dropRight(n: number): List<A>
   /** Drop elements while `p` holds. Gives an empty List when every element matches. */
-  dropWhile: (p: (a: A) => boolean) => List<A>
+  dropWhile(p: (a: A) => boolean): List<A>
   /**
    * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
    * one level deep, keeping other elements, strings included, as they are.
@@ -95,20 +95,20 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   get lastOption(): Option<A>
   get tail(): List<A>
   get init(): List<A>
-  reverse: () => List<A>
+  reverse(): List<A>
   /** Find the index of a value. Accepts `unknown` (Scala: `indexOf(elem: Any)`). */
-  indexOf: (value: unknown) => number
+  indexOf(value: unknown): number
   /** Prepend a value, possibly widening (Scala: `+:[B >: A]`). */
   prepend<B>(item: B): List<A | B>
-  distinct: () => List<A>
-  sorted: (compareFn?: (a: A, b: A) => number) => List<A>
-  sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
-  zip: <B>(other: List<B>) => List<[A, B]>
-  zipWithIndex: () => List<[A, number]>
-  groupBy: <K>(f: (a: A) => K) => globalThis.Map<K, List<A>>
-  partition: (p: (a: A) => boolean) => [List<A>, List<A>]
-  span: (p: (a: A) => boolean) => [List<A>, List<A>]
-  slice: (start: number, end: number) => List<A>
+  distinct(): List<A>
+  sorted(compareFn?: (a: A, b: A) => number): List<A>
+  sortBy<B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number): List<A>
+  zip<B>(other: List<B>): List<[A, B]>
+  zipWithIndex(): List<[A, number]>
+  groupBy<K>(f: (a: A) => K): globalThis.Map<K, List<A>>
+  partition(p: (a: A) => boolean): [List<A>, List<A>]
+  span(p: (a: A) => boolean): [List<A>, List<A>]
+  slice(start: number, end: number): List<A>
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants

@@ -21,7 +21,7 @@ const NativeSet = globalThis.Set
  */
 export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add<B>(value: B): Set<A | B>
-  remove: (value: unknown) => Set<A>
+  remove(value: unknown): Set<A>
   has(value: unknown): boolean
   /**
    * Elements in this set or `other`. `other` can be any iterable: an array, a native Set or a functype Set.
@@ -46,27 +46,27 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   isSupersetOf(other: Iterable<unknown>): boolean
   /** True if this set and `other` share no element. */
   isDisjointFrom(other: Iterable<unknown>): boolean
-  map: <B>(f: (a: A) => B) => Set<B>
-  flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
+  map<B>(f: (a: A) => B): Set<B>
+  flatMap<B>(f: (a: A) => Iterable<B>): Set<B>
   /**
    * Async map: awaits `f` for each element and collects the results into a Set, so equal results
    * collapse into one. Runs one call at a time by default; pass `{ concurrency: n }` to allow up to
    * `n` at once, or `"unbounded"`. A rejection rejects the result, and no further calls start.
    */
-  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
-  filter: (p: (a: A) => boolean) => Set<A>
-  filterNot: (p: (a: A) => boolean) => Set<A>
+  mapAsync<B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<Set<B>>
+  filter(p: (a: A) => boolean): Set<A>
+  filterNot(p: (a: A) => boolean): Set<A>
   // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
   /** Keep the first `n` elements. `n` of 0 or less keeps none. */
-  take: (n: number) => Set<A>
-  takeWhile: (p: (a: A) => boolean) => Set<A>
+  take(n: number): Set<A>
+  takeWhile(p: (a: A) => boolean): Set<A>
   /** Keep the last `n` elements. `n` of 0 or less keeps none. */
-  takeRight: (n: number) => Set<A>
+  takeRight(n: number): Set<A>
   /** Drop the first `n` elements. `n` of 0 or less drops nothing. */
-  drop: (n: number) => Set<A>
+  drop(n: number): Set<A>
   /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
-  dropRight: (n: number) => Set<A>
-  dropWhile: (p: (a: A) => boolean) => Set<A>
+  dropRight(n: number): Set<A>
+  dropWhile(p: (a: A) => boolean): Set<A>
   get tail(): Set<A>
   get init(): Set<A>
   /**
@@ -74,11 +74,11 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
    * keeping other elements, strings included, as they are.
    */
   flatten<B = Flattened<A>>(): Set<B>
-  fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
-  toList: () => List<A>
-  toSet: () => Set<A>
-  toArray: <B = A>() => B[]
-  toString: () => string
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+  toList(): List<A>
+  toSet(): Set<A>
+  toArray<B = A>(): B[]
+  toString(): string
 }
 
 /** The getters that stay lazy: each reads the elements in order. See internal/lazyProperties. */
