@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { type A as AnyA, type B as AnyE, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -43,30 +44,34 @@ export type ExitTag = "Success" | "Failure" | "Die" | "Interrupted"
  * defect land in the `Left` as the raw value — so `Fail` and `Die` arrive
  * identically. `Die` is observable through the async terminals (`runExit`) and
  * through the `Exit` handed to a `bracketExit` release.
+ *
+ * `Exit` is a discriminated union of {@link SuccessExitOf}, {@link FailureExitOf},
+ * {@link DieExitOf} and {@link InterruptedExitOf}. Each variant holds its own field (`value`,
+ * `error`, `defect`, `fiberId`), and the guards narrow to it, so `exit.isSuccess() && exit.value`
+ * reads the value. The methods live on {@link ExitBase}, shared through one prototype per variant.
  */
-export interface Exit<E extends Type, A extends Type> {
+export interface ExitBase<E extends Type, A extends Type> {
   readonly [Symbol.toStringTag]: string
-  readonly _tag: ExitTag
 
   /**
    * Type guard to check if this is a Success
    */
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A }
+  isSuccess(): this is SuccessExitOf<E, A>
 
   /**
    * Type guard to check if this is a Failure
    */
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E }
+  isFailure(): this is FailureExitOf<E, A>
 
   /**
    * Type guard to check if this is a Die (a defect — the carried value is not an `E`)
    */
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown }
+  isDie(): this is DieExitOf<E, A>
 
   /**
    * Type guard to check if this is Interrupted
    */
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string }
+  isInterrupted(): this is InterruptedExitOf<E, A>
 
   /**
    * Maps the success value
@@ -156,378 +161,301 @@ export interface Exit<E extends Type, A extends Type> {
   toJSON(): { _tag: ExitTag; value?: A; error?: E; defect?: unknown; fiberId?: string }
 }
 
-/*
- * Each variant carries the field its guard narrows to, so `exit.isSuccess() && exit.value` reads the
- * value instead of `undefined`. The fields stay off the public `Exit` interface: the guards are how a
- * caller reaches them. (2.0 makes `Exit` a discriminated union instead — #276 §9.)
- */
-type SuccessExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Success"; readonly value: A }
-type FailureExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Failure"; readonly error: E }
-type DieExitOf<E extends Type, A extends Type> = Exit<E, A> & { readonly _tag: "Die"; readonly defect: unknown }
-type InterruptedExitOf<E extends Type, A extends Type> = Exit<E, A> & {
+/** The effect completed with a value. */
+export interface SuccessExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Success"
+  readonly value: A
+}
+
+/** The effect failed with a typed error, a value from the declared `E` channel. */
+export interface FailureExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Failure"
+  readonly error: E
+}
+
+/** The effect produced a defect: a value that is not an `E`. */
+export interface DieExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
+  readonly _tag: "Die"
+  readonly defect: unknown
+}
+
+/** The effect was cancelled. */
+export interface InterruptedExitOf<E extends Type, A extends Type> extends ExitBase<E, A> {
   readonly _tag: "Interrupted"
   readonly fiberId: string
 }
 
-/**
- * Creates a Success Exit
- */
-const SuccessExit = <E extends Type, A extends Type>(value: A): SuccessExitOf<E, A> => ({
-  [Symbol.toStringTag]: "Exit",
-  _tag: "Success",
-  value,
+export type Exit<E extends Type, A extends Type> =
+  SuccessExitOf<E, A> | FailureExitOf<E, A> | DieExitOf<E, A> | InterruptedExitOf<E, A>
 
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
+const interruptedError = (fiberId: string): Error => new Error(`Effect was interrupted: ${fiberId}`)
+
+/** Every Success shares these methods (#276 §14). `this.value` is the Success's own data. */
+const SuccessProto = define<SuccessExitOf<AnyE, AnyA>>()("Success", {
+  [Symbol.toStringTag]: "Exit",
+  isSuccess(): this is SuccessExitOf<AnyE, AnyA> {
     return true
   },
-
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E } {
+  isFailure(): this is FailureExitOf<AnyE, AnyA> {
     return false
   },
-
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } {
+  isDie(): this is DieExitOf<AnyE, AnyA> {
     return false
   },
-
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string } {
+  isInterrupted(): this is InterruptedExitOf<AnyE, AnyA> {
     return false
   },
-
-  map<B extends Type>(f: (a: A) => B): Exit<E, B> {
-    return SuccessExit(f(value))
+  map(f) {
+    return SuccessExit(f(this.value))
   },
-
-  mapError<E2 extends Type>(_f: (e: E) => E2): Exit<E2, A> {
-    return SuccessExit(value)
+  mapError() {
+    return SuccessExit(this.value)
   },
-
-  mapBoth<E2 extends Type, B extends Type>(_onError: (e: E) => E2, onSuccess: (a: A) => B): Exit<E2, B> {
-    return SuccessExit(onSuccess(value))
+  mapBoth(_onError, onSuccess) {
+    return SuccessExit(onSuccess(this.value))
   },
-
-  flatMap<B extends Type>(f: (a: A) => Exit<E, B>): Exit<E, B> {
-    return f(value)
+  flatMap(f) {
+    return f(this.value)
   },
-
-  fold<T>(
-    _onFailure: (e: E) => T,
-    onSuccess: (a: A) => T,
-    _onInterrupted?: (fiberId: string) => T,
-    _onDie?: (defect: unknown) => T,
-  ): T {
-    return onSuccess(value)
+  fold(_onFailure, onSuccess) {
+    return onSuccess(this.value)
   },
-
-  match<T>(patterns: {
-    Success: (value: A) => T
-    Failure: (error: E) => T
-    Interrupted: (fiberId: string) => T
-    Die?: (defect: unknown) => T
-  }): T {
-    return patterns.Success(value)
+  match(patterns) {
+    return patterns.Success(this.value)
   },
-
-  orThrow(): A {
-    return value
+  orThrow() {
+    return this.value
   },
-
-  orElse(_defaultValue: A): A {
-    return value
+  orElse() {
+    return this.value
   },
-
-  toOption(): Option<A> {
-    return Some(value)
+  toOption() {
+    return Some(this.value)
   },
-
-  toEither(): Either<E, A> {
-    return Right(value)
+  toEither() {
+    return Right(this.value)
   },
-
   toValue() {
-    return { _tag: "Success" as const, value }
+    return { _tag: "Success" as const, value: this.value }
   },
-
   toString() {
-    return `Exit.Success(${safeStringify(value)})`
+    return `Exit.Success(${safeStringify(this.value)})`
   },
-
   toJSON() {
-    return { _tag: "Success" as const, value }
+    return { _tag: "Success" as const, value: this.value }
   },
 })
 
-/**
- * Creates a Failure Exit
- */
-const FailureExit = <E extends Type, A extends Type>(error: E): FailureExitOf<E, A> => ({
+/** Every Failure shares these methods. `this.error` is the Failure's own data. */
+const FailureProto = define<FailureExitOf<AnyE, AnyA>, "_tag" | "error">()("Failure", {
   [Symbol.toStringTag]: "Exit",
-  _tag: "Failure",
-  error,
-
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
+  isSuccess(): this is SuccessExitOf<AnyE, AnyA> {
     return false
   },
-
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E } {
+  isFailure(): this is FailureExitOf<AnyE, AnyA> {
     return true
   },
-
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } {
+  isDie(): this is DieExitOf<AnyE, AnyA> {
     return false
   },
-
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string } {
+  isInterrupted(): this is InterruptedExitOf<AnyE, AnyA> {
     return false
   },
-
-  map<B extends Type>(_f: (a: A) => B): Exit<E, B> {
-    return FailureExit(error)
+  map() {
+    return FailureExit(this.error)
   },
-
-  mapError<E2 extends Type>(f: (e: E) => E2): Exit<E2, A> {
-    return FailureExit(f(error))
+  mapError(f) {
+    return FailureExit(f(this.error))
   },
-
-  mapBoth<E2 extends Type, B extends Type>(onError: (e: E) => E2, _onSuccess: (a: A) => B): Exit<E2, B> {
-    return FailureExit(onError(error))
+  mapBoth(onError) {
+    return FailureExit(onError(this.error))
   },
-
-  flatMap<B extends Type>(_f: (a: A) => Exit<E, B>): Exit<E, B> {
-    return FailureExit(error)
+  flatMap() {
+    return FailureExit(this.error)
   },
-
-  fold<T>(
-    onFailure: (e: E) => T,
-    _onSuccess: (a: A) => T,
-    _onInterrupted?: (fiberId: string) => T,
-    _onDie?: (defect: unknown) => T,
-  ): T {
-    return onFailure(error)
+  fold(onFailure) {
+    return onFailure(this.error)
   },
-
-  match<T>(patterns: {
-    Success: (value: A) => T
-    Failure: (error: E) => T
-    Interrupted: (fiberId: string) => T
-    Die?: (defect: unknown) => T
-  }): T {
-    return patterns.Failure(error)
+  match(patterns) {
+    return patterns.Failure(this.error)
   },
-
-  orThrow(): A {
-    throw error
+  orThrow() {
+    throw this.error
   },
-
-  orElse(defaultValue: A): A {
+  orElse(defaultValue) {
     return defaultValue
   },
-
-  toOption(): Option<A> {
+  toOption() {
     return None()
   },
-
-  toEither(): Either<E, A> {
-    return Left(error)
+  toEither() {
+    return Left(this.error)
   },
-
   toValue() {
-    return { _tag: "Failure" as const, error }
+    return { _tag: "Failure" as const, error: this.error }
   },
-
   toString() {
-    return `Exit.Failure(${safeStringify(error)})`
+    return `Exit.Failure(${safeStringify(this.error)})`
   },
-
   toJSON() {
-    return { _tag: "Failure" as const, error }
+    return { _tag: "Failure" as const, error: this.error }
   },
 })
 
 /**
- * Creates a Die Exit — an effect that produced a defect rather than a typed error.
+ * Every Die shares these methods. `this.defect` is the Die's own data.
  *
- * Mirrors {@link FailureExit} everywhere the payload can be treated opaquely. It
- * diverges on {@link Exit.mapError}, which is typed `(e: E) => E2`: a defect is not an
- * `E`, so handing it to that callback would be the exact type lie `Die` exists to end.
- * A defect passes through `mapError` unchanged, as an interruption does.
+ * Mirrors Failure everywhere the payload can be treated opaquely. It diverges on
+ * {@link ExitBase.mapError}, which is typed `(e: E) => E2`: a defect is not an `E`, so handing it
+ * to that callback would be the exact type lie `Die` exists to end. A defect passes through
+ * `mapError` unchanged, as an interruption does.
  *
- * (`IO`'s own `.mapError` *does* rewrite a defect — it reads the error channel
- * directly rather than through this method, and its callback is documented to receive
- * `unknown`. That keeps the pre-`Die` behaviour of `.mapError` intact for callers.)
+ * (`IO`'s own `.mapError` *does* rewrite a defect — it reads the error channel directly rather than
+ * through this method, and its callback is documented to receive `unknown`. That keeps the pre-`Die`
+ * behaviour of `.mapError` intact for callers.)
  */
-const DieExit = <E extends Type, A extends Type>(defect: unknown): DieExitOf<E, A> => ({
+const DieProto = define<DieExitOf<AnyE, AnyA>, "_tag" | "defect">()("Die", {
   [Symbol.toStringTag]: "Exit",
-  _tag: "Die",
-  defect,
-
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
+  isSuccess(): this is SuccessExitOf<AnyE, AnyA> {
     return false
   },
-
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E } {
+  isFailure(): this is FailureExitOf<AnyE, AnyA> {
     return false
   },
-
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } {
+  isDie(): this is DieExitOf<AnyE, AnyA> {
     return true
   },
-
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string } {
+  isInterrupted(): this is InterruptedExitOf<AnyE, AnyA> {
     return false
   },
-
-  map<B extends Type>(_f: (a: A) => B): Exit<E, B> {
-    return DieExit(defect)
+  map() {
+    return DieExit(this.defect)
   },
-
-  mapError<E2 extends Type>(_f: (e: E) => E2): Exit<E2, A> {
-    return DieExit(defect)
+  mapError() {
+    return DieExit(this.defect)
   },
-
-  mapBoth<E2 extends Type, B extends Type>(_onError: (e: E) => E2, _onSuccess: (a: A) => B): Exit<E2, B> {
-    return DieExit(defect)
+  mapBoth() {
+    return DieExit(this.defect)
   },
-
-  flatMap<B extends Type>(_f: (a: A) => Exit<E, B>): Exit<E, B> {
-    return DieExit(defect)
+  flatMap() {
+    return DieExit(this.defect)
   },
-
-  fold<T>(
-    onFailure: (e: E) => T,
-    _onSuccess: (a: A) => T,
-    _onInterrupted?: (fiberId: string) => T,
-    onDie?: (defect: unknown) => T,
-  ): T {
-    return onDie ? onDie(defect) : onFailure(defect as E)
+  fold(onFailure, _onSuccess, _onInterrupted, onDie) {
+    return onDie ? onDie(this.defect) : onFailure(this.defect as AnyE)
   },
-
-  match<T>(patterns: {
-    Success: (value: A) => T
-    Failure: (error: E) => T
-    Interrupted: (fiberId: string) => T
-    Die?: (defect: unknown) => T
-  }): T {
-    return patterns.Die ? patterns.Die(defect) : patterns.Failure(defect as E)
+  match(patterns) {
+    return patterns.Die ? patterns.Die(this.defect) : patterns.Failure(this.defect as AnyE)
   },
-
-  orThrow(): A {
-    throw defect
+  orThrow() {
+    throw this.defect
   },
-
-  orElse(defaultValue: A): A {
+  orElse(defaultValue) {
     return defaultValue
   },
-
-  toOption(): Option<A> {
+  toOption() {
     return None()
   },
-
-  toEither(): Either<E, A> {
-    return Left(defect as E)
+  toEither() {
+    return Left(this.defect as AnyE)
   },
-
   toValue() {
-    return { _tag: "Die" as const, defect }
+    return { _tag: "Die" as const, defect: this.defect }
   },
-
   toString() {
-    return `Exit.Die(${safeStringify(defect)})`
+    return `Exit.Die(${safeStringify(this.defect)})`
   },
-
   toJSON() {
-    return { _tag: "Die" as const, defect }
+    return { _tag: "Die" as const, defect: this.defect }
   },
 })
 
-/**
- * Creates an Interrupted Exit
- */
-const InterruptedExit = <E extends Type, A extends Type>(fiberId: string): InterruptedExitOf<E, A> => ({
+/** Every Interrupted shares these methods. `this.fiberId` is the Interrupted's own data. */
+const InterruptedProto = define<InterruptedExitOf<AnyE, AnyA>, "_tag" | "fiberId">()("Interrupted", {
   [Symbol.toStringTag]: "Exit",
-  _tag: "Interrupted",
-  fiberId,
-
-  isSuccess(): this is Exit<E, A> & { readonly _tag: "Success"; value: A } {
+  isSuccess(): this is SuccessExitOf<AnyE, AnyA> {
     return false
   },
-
-  isFailure(): this is Exit<E, A> & { readonly _tag: "Failure"; error: E } {
+  isFailure(): this is FailureExitOf<AnyE, AnyA> {
     return false
   },
-
-  isDie(): this is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } {
+  isDie(): this is DieExitOf<AnyE, AnyA> {
     return false
   },
-
-  isInterrupted(): this is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string } {
+  isInterrupted(): this is InterruptedExitOf<AnyE, AnyA> {
     return true
   },
-
-  map<B extends Type>(_f: (a: A) => B): Exit<E, B> {
-    return InterruptedExit(fiberId)
+  map() {
+    return InterruptedExit(this.fiberId)
   },
-
-  mapError<E2 extends Type>(_f: (e: E) => E2): Exit<E2, A> {
-    return InterruptedExit(fiberId)
+  mapError() {
+    return InterruptedExit(this.fiberId)
   },
-
-  mapBoth<E2 extends Type, B extends Type>(_onError: (e: E) => E2, _onSuccess: (a: A) => B): Exit<E2, B> {
-    return InterruptedExit(fiberId)
+  mapBoth() {
+    return InterruptedExit(this.fiberId)
   },
-
-  flatMap<B extends Type>(_f: (a: A) => Exit<E, B>): Exit<E, B> {
-    return InterruptedExit(fiberId)
+  flatMap() {
+    return InterruptedExit(this.fiberId)
   },
-
-  fold<T>(
-    _onFailure: (e: E) => T,
-    _onSuccess: (a: A) => T,
-    onInterrupted?: (fiberId: string) => T,
-    _onDie?: (defect: unknown) => T,
-  ): T {
-    if (onInterrupted) {
-      return onInterrupted(fiberId)
-    }
-    throw new Error(`Effect was interrupted: ${fiberId}`)
+  fold(_onFailure, _onSuccess, onInterrupted) {
+    if (onInterrupted) return onInterrupted(this.fiberId)
+    throw interruptedError(this.fiberId)
   },
-
-  match<T>(patterns: {
-    Success: (value: A) => T
-    Failure: (error: E) => T
-    Interrupted: (fiberId: string) => T
-    Die?: (defect: unknown) => T
-  }): T {
-    return patterns.Interrupted(fiberId)
+  match(patterns) {
+    return patterns.Interrupted(this.fiberId)
   },
-
-  orThrow(): A {
-    throw new Error(`Effect was interrupted: ${fiberId}`)
+  orThrow() {
+    throw interruptedError(this.fiberId)
   },
-
-  orElse(defaultValue: A): A {
+  orElse(defaultValue) {
     return defaultValue
   },
-
-  toOption(): Option<A> {
+  toOption() {
     return None()
   },
-
-  toEither(): Either<E, A> {
-    throw new Error(`Cannot convert Interrupted Exit to Either: ${fiberId}`)
+  toEither() {
+    throw new Error(`Cannot convert Interrupted Exit to Either: ${this.fiberId}`)
   },
-
   toValue() {
-    return { _tag: "Interrupted" as const, fiberId }
+    return { _tag: "Interrupted" as const, fiberId: this.fiberId }
   },
-
   toString() {
-    return `Exit.Interrupted(${fiberId})`
+    return `Exit.Interrupted(${this.fiberId})`
   },
-
   toJSON() {
-    return { _tag: "Interrupted" as const, fiberId }
+    return { _tag: "Interrupted" as const, fiberId: this.fiberId }
   },
 })
+
+/* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
+// The one cast in each: a prototype checked at the opaque AnyE and AnyA works for every E and A.
+const SuccessExit = <E extends Type, A extends Type>(value: A): SuccessExitOf<E, A> => {
+  const exit = Object.create(SuccessProto) as Mutable<SuccessExitOf<E, A>>
+  exit._tag = "Success"
+  exit.value = value
+  return exit
+}
+
+const FailureExit = <E extends Type, A extends Type>(error: E): FailureExitOf<E, A> => {
+  const exit = Object.create(FailureProto) as Mutable<FailureExitOf<E, A>>
+  exit._tag = "Failure"
+  exit.error = error
+  return exit
+}
+
+const DieExit = <E extends Type, A extends Type>(defect: unknown): DieExitOf<E, A> => {
+  const exit = Object.create(DieProto) as Mutable<DieExitOf<E, A>>
+  exit._tag = "Die"
+  exit.defect = defect
+  return exit
+}
+
+const InterruptedExit = <E extends Type, A extends Type>(fiberId: string): InterruptedExitOf<E, A> => {
+  const exit = Object.create(InterruptedProto) as Mutable<InterruptedExitOf<E, A>>
+  exit._tag = "Interrupted"
+  exit.fiberId = fiberId
+  return exit
+}
+/* eslint-enable functional/immutable-data */
 
 /**
  * Exit companion methods
@@ -561,30 +489,23 @@ const ExitCompanion = {
   /**
    * Type guard for Success
    */
-  isSuccess: <E extends Type, A extends Type>(
-    exit: Exit<E, A>,
-  ): exit is Exit<E, A> & { readonly _tag: "Success"; value: A } => exit.isSuccess(),
+  isSuccess: <E extends Type, A extends Type>(exit: Exit<E, A>): exit is SuccessExitOf<E, A> => exit.isSuccess(),
 
   /**
    * Type guard for Failure
    */
-  isFailure: <E extends Type, A extends Type>(
-    exit: Exit<E, A>,
-  ): exit is Exit<E, A> & { readonly _tag: "Failure"; error: E } => exit.isFailure(),
+  isFailure: <E extends Type, A extends Type>(exit: Exit<E, A>): exit is FailureExitOf<E, A> => exit.isFailure(),
 
   /**
    * Type guard for Die
    */
-  isDie: <E extends Type, A extends Type>(
-    exit: Exit<E, A>,
-  ): exit is Exit<E, A> & { readonly _tag: "Die"; defect: unknown } => exit.isDie(),
+  isDie: <E extends Type, A extends Type>(exit: Exit<E, A>): exit is DieExitOf<E, A> => exit.isDie(),
 
   /**
    * Type guard for Interrupted
    */
-  isInterrupted: <E extends Type, A extends Type>(
-    exit: Exit<E, A>,
-  ): exit is Exit<E, A> & { readonly _tag: "Interrupted"; fiberId: string } => exit.isInterrupted(),
+  isInterrupted: <E extends Type, A extends Type>(exit: Exit<E, A>): exit is InterruptedExitOf<E, A> =>
+    exit.isInterrupted(),
 
   /**
    * Creates an Exit from an Either
