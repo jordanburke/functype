@@ -8,7 +8,7 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 | --------------------- | ------------------------- | --------------------- | ---------------------------------------------------------- |
 | `functype`            | `packages/functype`       | `functype`            | Core FP library — zero runtime deps                        |
 | `functype-os`         | `packages/functype-os`    | `functype-os`         | OS utilities                                               |
-| `functype-log`        | `packages/functype-log`   | `functype-log`        | IO-native logging via LogLayer                             |
+| `functype-log`        | `packages/functype-log`   | `functype-log`        | IO-native logging with a one-function sink                 |
 | `functype-react`      | `packages/functype-react` | `functype-react`      | React bindings (v0.1 scaffold)                             |
 | `functype-eval`       | `packages/functype-eval`  | `functype-eval`       | FP fitness scoring CLI (consumes `eslint-plugin-functype`) |
 | `functype-mcp-server` | `packages/mcp-server`     | `functype-mcp-server` | Documentation/validation MCP server                        |

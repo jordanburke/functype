@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-IO-native logging for the functype ecosystem. Wraps LogLayer with functype's Tag/Layer dependency injection system. Each log method returns `IO<never, never, void>` — logging is lazy, composable, and testable.
+IO-native logging for the functype ecosystem, built on functype's Tag/Layer dependency injection system. Each log method returns `IO<never, never, void>` — logging is lazy, composable, and testable.
 
-**Dependencies**: `functype` (peer, >=0.55.0), `loglayer` (runtime)
+**Dependencies**: `functype` (peer). No runtime dependencies.
 
 ## Development Commands
 
@@ -30,8 +30,8 @@ All scripts delegate to `ts-builds` — prettier, eslint, vitest, and tsdown con
 ```
 src/
   logger/       # Logger interface, Tag, LogLevel, LogMetadata, LogEntry types
-  adapter/      # LogLayerAdapter: ILogLayer → Logger bridge (internal)
-  layers/       # LoggerLive factory: console(), silent(), fromLogLayer()
+  layers/       # LoggerLive factory: console(), silent(); SinkLogger, ConsoleLogger
+  direct/       # DirectLogger: the same API returning void
   testing/      # TestLogger: captures entries as List<LogEntry>
   middleware/   # withLogging, tapLog utilities
 ```
@@ -49,9 +49,9 @@ const program = IO.service(Logger).flatMap((log) => log.info("hello"))
 await program.provideLayer(LoggerLive.console()).runOrThrow()
 ```
 
-### LogLayer is an Implementation Detail
+### Every logger is a sink logger
 
-Users interact with the `Logger` interface and `LoggerLive` layers. LogLayer is only visible through `LoggerLive.fromLogLayer()` for advanced transport configuration (pino, winston, datadog, etc.).
+`createSinkLogger` owns level filtering, the prefix, context merging and `withError`/`child`. `createConsoleLogger` is a sink logger whose sink writes to the console, unless the caller passes its own `sink`. The console output format is pinned by `test/console-format.spec.ts` and `test/console-edges.spec.ts`, because log parsers may read it. functype-log ships no transports: pino, a vendor, or OpenTelemetry trace IDs are a few-line `sink` in the consumer.
 
 ### Subpath Exports
 
@@ -81,7 +81,7 @@ All functype imports use the barrel export (`"functype"`, not subpaths) per func
 ## Key Types
 
 - `Logger` — Interface + Tag (declaration merging). Methods return `IO<never, never, void>`
-- `LoggerLive` — Layer constructors: `.console()` (its `sink` option hands each `LogEntry` to a function, with no loglayer), `.silent()`, `.fromLogLayer()`
+- `LoggerLive` — Layer constructors: `.console()` (its `sink` option hands each `LogEntry` to a function), `.silent()`
 - `TestLoggerHandle` — `{ logger, entries(), clear(), hasEntry() }`
 - `LogEntry` — `{ level, message, metadata?, error?, timestamp }`
 
