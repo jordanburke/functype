@@ -179,20 +179,20 @@ describe("LazyList", () => {
     })
 
     it("should get first element via headOption", () => {
-      const result1 = LazyList([1, 2, 3]).headOption
+      const result1 = LazyList([1, 2, 3]).headOption()
       expect(result1.isEmpty).toBe(false)
       expect(result1.value).toBe(1)
 
-      const result2 = LazyList.empty<number>().headOption
+      const result2 = LazyList.empty<number>().headOption()
       expect(result2.isEmpty).toBe(true)
     })
 
     it("should get last element via lastOption", () => {
-      const result1 = LazyList([1, 2, 3]).lastOption
+      const result1 = LazyList([1, 2, 3]).lastOption()
       expect(result1.isEmpty).toBe(false)
       expect(result1.value).toBe(3)
 
-      const result2 = LazyList.empty<number>().lastOption
+      const result2 = LazyList.empty<number>().lastOption()
       expect(result2.isEmpty).toBe(true)
     })
   })
@@ -342,65 +342,65 @@ describe("LazyList", () => {
 
   describe("element access properties", () => {
     it("head returns first element", () => {
-      expect(LazyList([1, 2, 3]).head).toBe(1)
+      expect(LazyList([1, 2, 3]).head()).toBe(1)
     })
 
     it("head returns undefined on empty", () => {
-      expect(LazyList.empty<number>().head).toBeUndefined()
+      expect(LazyList.empty<number>().head()).toBeUndefined()
     })
 
     it("headOption returns Some for non-empty", () => {
-      const opt = LazyList([10, 20]).headOption
+      const opt = LazyList([10, 20]).headOption()
       expect(opt.isEmpty).toBe(false)
       expect(opt.value).toBe(10)
     })
 
     it("headOption returns None for empty", () => {
-      expect(LazyList.empty<number>().headOption.isEmpty).toBe(true)
+      expect(LazyList.empty<number>().headOption().isEmpty).toBe(true)
     })
 
     it("last returns last element", () => {
-      expect(LazyList([1, 2, 3]).last).toBe(3)
+      expect(LazyList([1, 2, 3]).last()).toBe(3)
     })
 
     it("last returns undefined on empty", () => {
-      expect(LazyList.empty<number>().last).toBeUndefined()
+      expect(LazyList.empty<number>().last()).toBeUndefined()
     })
 
     it("lastOption returns Some for non-empty", () => {
-      const opt = LazyList([10, 20, 30]).lastOption
+      const opt = LazyList([10, 20, 30]).lastOption()
       expect(opt.isEmpty).toBe(false)
       expect(opt.value).toBe(30)
     })
 
     it("lastOption returns None for empty", () => {
-      expect(LazyList.empty<number>().lastOption.isEmpty).toBe(true)
+      expect(LazyList.empty<number>().lastOption().isEmpty).toBe(true)
     })
   })
 
   describe("tail and init", () => {
     it("tail returns lazy list without first", () => {
-      expect(LazyList([1, 2, 3]).tail.toArray()).toEqual([2, 3])
+      expect(LazyList([1, 2, 3]).tail().toArray()).toEqual([2, 3])
     })
 
     it("tail returns empty for empty list", () => {
-      expect(LazyList.empty<number>().tail.toArray()).toEqual([])
+      expect(LazyList.empty<number>().tail().toArray()).toEqual([])
     })
 
     it("tail returns empty for single element", () => {
-      expect(LazyList([42]).tail.toArray()).toEqual([])
+      expect(LazyList([42]).tail().toArray()).toEqual([])
     })
 
     it("init returns lazy list without last", () => {
-      expect(LazyList([1, 2, 3]).init.toArray()).toEqual([1, 2])
+      expect(LazyList([1, 2, 3]).init().toArray()).toEqual([1, 2])
     })
 
     it("init returns empty for empty list", () => {
-      expect(LazyList.empty<number>().init.toArray()).toEqual([])
+      expect(LazyList.empty<number>().init().toArray()).toEqual([])
     })
 
     it("init returns empty for single element", () => {
-      expect(LazyList([42]).init.toArray()).toEqual([])
+      expect(LazyList([42]).init().toArray()).toEqual([])
     })
   })
 

@@ -4,7 +4,6 @@ import { Left, Right } from "@/either"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -91,10 +90,10 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
    * ```
    */
   flatten<B = Flattened<A>>(): List<B>
-  get last(): A | undefined
-  get lastOption(): Option<A>
-  get tail(): List<A>
-  get init(): List<A>
+  last(): A | undefined
+  lastOption(): Option<A>
+  tail(): List<A>
+  init(): List<A>
   reverse(): List<A>
   /** Find the index of a value. Accepts `unknown` (Scala: `indexOf(elem: Any)`). */
   indexOf(value: unknown): number
@@ -117,30 +116,11 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 }
 
-/** The getters that must stay lazy: each builds an Option or a new List. See internal/lazyProperties. */
-type ListLazy = "headOption" | "lastOption" | "tail" | "init"
-
-const LIST_GETTERS = lazyGetters<List<unknown>>({
-  headOption() {
-    return this.get(0)
-  },
-  lastOption() {
-    return this.get(this.length - 1)
-  },
-  tail() {
-    return this.drop(1)
-  },
-  init() {
-    return this.dropRight(1)
-  },
-})
-
 const ListObject = <A>(values?: Iterable<A>): List<A> => {
   const array: A[] = Array.from(values ?? [])
 
-  // No getters and no computed keys before the closures: see internal/lazyProperties. The backing
-  // array is never changed after this point, so size, length, isEmpty, head and last can't go stale.
-  const fields: Omit<List<A>, ListLazy> = {
+  // The backing array is never changed after this point, so size, length and isEmpty can't go stale.
+  const fields: List<A> = {
     _tag: "List" as const,
 
     size: array.length,
@@ -149,9 +129,17 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
 
     isEmpty: array.length === 0,
 
-    head: array[0],
+    head: () => array[0],
 
-    last: array[array.length - 1],
+    headOption: () => Option(array[0]),
+
+    last: () => array[array.length - 1],
+
+    lastOption: () => Option(array[array.length - 1]),
+
+    tail: () => ListObject(array.slice(1)),
+
+    init: () => ListObject(array.slice(0, -1)),
 
     map: <B>(f: (a: A) => B) => ListObject(array.map(f)),
 
@@ -364,7 +352,7 @@ const ListObject = <A>(values?: Iterable<A>): List<A> => {
     [Symbol.iterator]: () => array[Symbol.iterator](),
   }
 
-  const list = withLazyGetters<List<A>>(fields, LIST_GETTERS)
+  const list = Object.freeze(fields)
   return list
 }
 

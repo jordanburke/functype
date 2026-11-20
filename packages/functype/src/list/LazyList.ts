@@ -1,6 +1,5 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { Counter } from "@/internal/mutation-utils"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -53,13 +52,13 @@ export interface LazyList<out A extends Type>
   distinct(): LazyList<A>
   zipWithIndex(): LazyList<[A, number]>
 
-  // Element access (properties)
-  get head(): A | undefined
-  get headOption(): Option<A>
-  get last(): A | undefined
-  get lastOption(): Option<A>
-  get tail(): LazyList<A>
-  get init(): LazyList<A>
+  // Element access. Methods, because last, lastOption and init read the whole source
+  head(): A | undefined
+  headOption(): Option<A>
+  last(): A | undefined
+  lastOption(): Option<A>
+  tail(): LazyList<A>
+  init(): LazyList<A>
 
   // Foldable
   fold<B>(initial: B, fn: (acc: B, a: A) => B): B
@@ -78,58 +77,55 @@ export interface LazyList<out A extends Type>
   toString(): string
 }
 
-/** These getters read the source, so they must stay lazy. See internal/lazyProperties. */
-type LazyListLazy = "head" | "headOption" | "last" | "lastOption" | "tail" | "init"
-
-const LAZY_LIST_GETTERS = lazyGetters<LazyList<Type>>({
-  head() {
-    const next = this[Symbol.iterator]().next()
-    return next.done ? undefined : next.value
-  },
-  headOption() {
-    const next = this[Symbol.iterator]().next()
-    return next.done ? Option.none() : Option(next.value)
-  },
-  last() {
-    let lastValue: Type | undefined = undefined
-    for (const item of this) {
-      lastValue = item
-    }
-    return lastValue
-  },
-  lastOption() {
-    const lastValue = Ref<Type | undefined>(undefined)
-    const hasValue = Ref(false)
-    for (const item of this) {
-      lastValue.set(item)
-      hasValue.set(true)
-    }
-    return hasValue.get() ? Option(lastValue.get()) : Option.none()
-  },
-  tail() {
-    const iterate = (): Iterator<Type> => this[Symbol.iterator]()
-    return LazyListObject(
-      (function* () {
-        const iter = iterate()
-        iter.next() // skip first
-        let next = iter.next()
-        while (!next.done) {
-          yield next.value
-          next = iter.next()
-        }
-      })(),
-    )
-  },
-  init() {
-    const arr = Array.from(this)
-    return LazyListObject(arr.length === 0 ? [] : arr.slice(0, -1))
-  },
-})
-
 const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
-  // No getters and no computed keys before the closures: see internal/lazyProperties.
-  const fields: Omit<LazyList<A>, LazyListLazy> = {
+  const fields: LazyList<A> = {
     _tag: "LazyList" as const,
+
+    head: () => {
+      const next = iterable[Symbol.iterator]().next()
+      return next.done ? undefined : next.value
+    },
+
+    headOption: () => {
+      const next = iterable[Symbol.iterator]().next()
+      return next.done ? Option.none<A>() : Option(next.value)
+    },
+
+    last: () => {
+      let lastValue: A | undefined = undefined
+      for (const item of iterable) {
+        lastValue = item
+      }
+      return lastValue
+    },
+
+    lastOption: () => {
+      const lastValue = Ref<A | undefined>(undefined)
+      const hasValue = Ref(false)
+      for (const item of iterable) {
+        lastValue.set(item)
+        hasValue.set(true)
+      }
+      return hasValue.get() ? Option(lastValue.get()) : Option.none<A>()
+    },
+
+    tail: () =>
+      LazyListObject(
+        (function* () {
+          const iter = iterable[Symbol.iterator]()
+          iter.next() // skip first
+          let next = iter.next()
+          while (!next.done) {
+            yield next.value
+            next = iter.next()
+          }
+        })(),
+      ),
+
+    init: () => {
+      const arr = Array.from(iterable)
+      return LazyListObject(arr.length === 0 ? [] : arr.slice(0, -1))
+    },
 
     map: <B extends Type>(f: (a: A) => B) =>
       LazyListObject(
@@ -381,7 +377,7 @@ const LazyListObject = <A extends Type>(iterable: Iterable<A>): LazyList<A> => {
     [Symbol.iterator]: () => iterable[Symbol.iterator](),
   }
 
-  const lazyList = withLazyGetters<LazyList<A>>(fields, LAZY_LIST_GETTERS)
+  const lazyList = Object.freeze(fields)
   return lazyList
 }
 

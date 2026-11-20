@@ -138,12 +138,12 @@ describe("List", () => {
     expect(isNotEmpty).toBe(false)
   })
 
-  const headOption = list.headOption
+  const headOption = list.headOption()
   it("headOption for non-empty list", () => {
     expect(headOption.toValue()).toEqual(Option(1).toValue())
   })
 
-  const headOptionEmpty = list1.headOption
+  const headOptionEmpty = list1.headOption()
   it("headOption for empty list", () => {
     expect(headOptionEmpty._tag).toBe("None")
   })
@@ -175,8 +175,8 @@ describe("List", () => {
 
   it("head and headOption on empty list", () => {
     const empty = List<number>()
-    expect(empty.head).toBeUndefined()
-    expect(empty.headOption._tag).toBe("None")
+    expect(empty.head()).toBeUndefined()
+    expect(empty.headOption()._tag).toBe("None")
   })
 
   it("removeAt out of bounds returns same list", () => {
@@ -191,7 +191,7 @@ describe("List", () => {
       l = l.flatMap((x) => List([x + 1]))
     }
     expect(l.length).toBe(1)
-    expect(l.head).toBe(1000)
+    expect(l.head()).toBe(1000)
   })
 
   it("concat with empty and non-empty lists", () => {
@@ -373,45 +373,45 @@ describe("List", () => {
 
   describe("element access", () => {
     it("last returns last element", () => {
-      expect(List([1, 2, 3]).last).toBe(3)
+      expect(List([1, 2, 3]).last()).toBe(3)
     })
 
     it("last returns undefined on empty", () => {
-      expect(List.empty<number>().last).toBeUndefined()
+      expect(List.empty<number>().last()).toBeUndefined()
     })
 
     it("lastOption returns Some for non-empty", () => {
-      const opt = List([10, 20, 30]).lastOption
+      const opt = List([10, 20, 30]).lastOption()
       expect(opt._tag).toBe("Some")
       expect(opt.value).toBe(30)
     })
 
     it("lastOption returns None for empty", () => {
-      expect(List.empty<number>().lastOption._tag).toBe("None")
+      expect(List.empty<number>().lastOption()._tag).toBe("None")
     })
 
     it("tail returns all except first", () => {
-      expect(List([1, 2, 3]).tail.toArray()).toEqual([2, 3])
+      expect(List([1, 2, 3]).tail().toArray()).toEqual([2, 3])
     })
 
     it("tail returns empty for empty list", () => {
-      expect(List.empty<number>().tail.toArray()).toEqual([])
+      expect(List.empty<number>().tail().toArray()).toEqual([])
     })
 
     it("tail returns empty for single element", () => {
-      expect(List([42]).tail.toArray()).toEqual([])
+      expect(List([42]).tail().toArray()).toEqual([])
     })
 
     it("init returns all except last", () => {
-      expect(List([1, 2, 3]).init.toArray()).toEqual([1, 2])
+      expect(List([1, 2, 3]).init().toArray()).toEqual([1, 2])
     })
 
     it("init returns empty for empty list", () => {
-      expect(List.empty<number>().init.toArray()).toEqual([])
+      expect(List.empty<number>().init().toArray()).toEqual([])
     })
 
     it("init returns empty for single element", () => {
-      expect(List([42]).init.toArray()).toEqual([])
+      expect(List([42]).init().toArray()).toEqual([])
     })
   })
 

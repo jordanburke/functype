@@ -31,12 +31,12 @@ const accessors = (value: object): string[] =>
 
 describe("construction shape", () => {
   it.each([
-    ["List", () => List([1, 2]), ["headOption", "init", "lastOption", "tail"]],
-    ["List()", () => List(), ["headOption", "init", "lastOption", "tail"]],
-    ["Set", () => Set([1, 2]), ["head", "headOption", "init", "last", "lastOption", "tail"]],
+    ["List", () => List([1, 2]), []],
+    ["List()", () => List(), []],
+    ["Set", () => Set([1, 2]), []],
     ["Map", () => Map([["a", 1]]), []],
     ["Stack", () => Stack([1, 2]), []],
-    ["LazyList", () => LazyList([1, 2]), ["head", "headOption", "init", "last", "lastOption", "tail"]],
+    ["LazyList", () => LazyList([1, 2]), []],
     ["Obj", () => Obj({ a: 1 }), ["isEmpty", "size"]],
   ] as const)("%s keeps getters only where they must stay lazy, and is frozen", (_, make, expected) => {
     const value = make()

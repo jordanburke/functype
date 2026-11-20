@@ -414,13 +414,13 @@ export interface FailureOf<out T> extends TryBase<T> {
 
   List: `export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, Reshapeable<A> {
   readonly length: number
-  readonly [Symbol.iterator]: () => Iterator<A>
+  [Symbol.iterator](): Iterator<A>
   // Override these to return List instead of FunctypeCollection
-  map: <B>(f: (a: A) => B) => List<B>
-  ap: <B>(ff: List<(value: A) => B>) => List<B>
-  flatMap: <B>(f: (a: A) => Iterable<B>) => List<B>
+  map<B>(f: (a: A) => B): List<B>
+  ap<B>(ff: List<(value: A) => B>): List<B>
+  flatMap<B>(f: (a: A) => Iterable<B>): List<B>
   /** Async flatMap. Starts every call at once unless \`options.concurrency\` caps it; \`{ concurrency: 1 }\` runs them in order. */
-  flatMapAsync: <B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions) => PromiseLike<List<B>>
+  flatMapAsync<B>(f: (a: A) => PromiseLike<Iterable<B>>, options?: ConcurrencyOptions): PromiseLike<List<B>>
   /**
    * Async map: awaits \`f\` for each element and keeps the results in input order.
    *
@@ -435,31 +435,31 @@ export interface FailureOf<out T> extends TryBase<T> {
    * const pages = await List(urls).mapAsync(fetchPage, { concurrency: 4 })  // up to 4 at once
    * \`\`\`
    */
-  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<List<B>>
+  mapAsync<B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<List<B>>
   // Override filter for type guard support
   filter<S extends A>(predicate: (a: A) => a is S): List<S>
   filter(predicate: (a: A) => unknown): List<A>
-  filterNot: (p: (a: A) => boolean) => List<A>
+  filterNot(p: (a: A) => boolean): List<A>
   // List-specific methods
   /** @internal */
-  filterType: <T extends Typeable<string, unknown>>(tag: string) => List<T & A>
+  filterType<T extends Typeable<string, unknown>>(tag: string): List<T & A>
   /** Remove a value. Accepts \`unknown\` so an unrelated-type arg is a safe no-op (Scala: \`-(elem: Any)\`). */
-  remove: (value: unknown) => List<A>
-  removeAt: (index: number) => List<A>
+  remove(value: unknown): List<A>
+  removeAt(index: number): List<A>
   /** Add a value, possibly widening the element type (Scala: \`:+[B >: A]\`). */
   add<B>(item: B): List<A | B>
-  get: (index: number) => Option<A>
+  get(index: number): Option<A>
   /** Concatenate with another list, possibly widening (Scala: \`++[B >: A]\`). */
   concat<B>(other: List<B>): List<A | B>
-  take: (n: number) => List<A>
-  takeWhile: (p: (a: A) => boolean) => List<A>
-  takeRight: (n: number) => List<A>
+  take(n: number): List<A>
+  takeWhile(p: (a: A) => boolean): List<A>
+  takeRight(n: number): List<A>
   /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
-  drop: (n: number) => List<A>
+  drop(n: number): List<A>
   /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
-  dropRight: (n: number) => List<A>
+  dropRight(n: number): List<A>
   /** Drop elements while \`p\` holds. Gives an empty List when every element matches. */
-  dropWhile: (p: (a: A) => boolean) => List<A>
+  dropWhile(p: (a: A) => boolean): List<A>
   /**
    * Spread each element that's an array or another non-string iterable (List, Set, ...) into the result,
    * one level deep, keeping other elements, strings included, as they are.
@@ -470,24 +470,24 @@ export interface FailureOf<out T> extends TryBase<T> {
    * \`\`\`
    */
   flatten<B = Flattened<A>>(): List<B>
-  get last(): A | undefined
-  get lastOption(): Option<A>
-  get tail(): List<A>
-  get init(): List<A>
-  reverse: () => List<A>
+  last(): A | undefined
+  lastOption(): Option<A>
+  tail(): List<A>
+  init(): List<A>
+  reverse(): List<A>
   /** Find the index of a value. Accepts \`unknown\` (Scala: \`indexOf(elem: Any)\`). */
-  indexOf: (value: unknown) => number
+  indexOf(value: unknown): number
   /** Prepend a value, possibly widening (Scala: \`+:[B >: A]\`). */
   prepend<B>(item: B): List<A | B>
-  distinct: () => List<A>
-  sorted: (compareFn?: (a: A, b: A) => number) => List<A>
-  sortBy: <B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number) => List<A>
-  zip: <B>(other: List<B>) => List<[A, B]>
-  zipWithIndex: () => List<[A, number]>
-  groupBy: <K>(f: (a: A) => K) => globalThis.Map<K, List<A>>
-  partition: (p: (a: A) => boolean) => [List<A>, List<A>]
-  span: (p: (a: A) => boolean) => [List<A>, List<A>]
-  slice: (start: number, end: number) => List<A>
+  distinct(): List<A>
+  sorted(compareFn?: (a: A, b: A) => number): List<A>
+  sortBy<B>(f: (a: A) => B, compareFn?: (a: B, b: B) => number): List<A>
+  zip<B>(other: List<B>): List<[A, B]>
+  zipWithIndex(): List<[A, number]>
+  groupBy<K>(f: (a: A) => K): globalThis.Map<K, List<A>>
+  partition(p: (a: A) => boolean): [List<A>, List<A>]
+  span(p: (a: A) => boolean): [List<A>, List<A>]
+  slice(start: number, end: number): List<A>
   /**
    * Pattern matches over the List, applying a handler function based on whether it's empty
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
@@ -498,7 +498,7 @@ export interface FailureOf<out T> extends TryBase<T> {
 
   Set: `export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
   add<B>(value: B): Set<A | B>
-  remove: (value: unknown) => Set<A>
+  remove(value: unknown): Set<A>
   has(value: unknown): boolean
   /**
    * Elements in this set or \`other\`. \`other\` can be any iterable: an array, a native Set or a functype Set.
@@ -523,39 +523,39 @@ export interface FailureOf<out T> extends TryBase<T> {
   isSupersetOf(other: Iterable<unknown>): boolean
   /** True if this set and \`other\` share no element. */
   isDisjointFrom(other: Iterable<unknown>): boolean
-  map: <B>(f: (a: A) => B) => Set<B>
-  flatMap: <B>(f: (a: A) => Iterable<B>) => Set<B>
+  map<B>(f: (a: A) => B): Set<B>
+  flatMap<B>(f: (a: A) => Iterable<B>): Set<B>
   /**
    * Async map: awaits \`f\` for each element and collects the results into a Set, so equal results
    * collapse into one. Runs one call at a time by default; pass \`{ concurrency: n }\` to allow up to
    * \`n\` at once, or \`"unbounded"\`. A rejection rejects the result, and no further calls start.
    */
-  mapAsync: <B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions) => Promise<Set<B>>
-  filter: (p: (a: A) => boolean) => Set<A>
-  filterNot: (p: (a: A) => boolean) => Set<A>
+  mapAsync<B>(f: (a: A) => PromiseLike<B>, options?: ConcurrencyOptions): Promise<Set<B>>
+  filter(p: (a: A) => boolean): Set<A>
+  filterNot(p: (a: A) => boolean): Set<A>
   // Positional methods follow insertion order. Override them to return Set instead of FunctypeCollection.
   /** Keep the first \`n\` elements. \`n\` of 0 or less keeps none. */
-  take: (n: number) => Set<A>
-  takeWhile: (p: (a: A) => boolean) => Set<A>
+  take(n: number): Set<A>
+  takeWhile(p: (a: A) => boolean): Set<A>
   /** Keep the last \`n\` elements. \`n\` of 0 or less keeps none. */
-  takeRight: (n: number) => Set<A>
+  takeRight(n: number): Set<A>
   /** Drop the first \`n\` elements. \`n\` of 0 or less drops nothing. */
-  drop: (n: number) => Set<A>
+  drop(n: number): Set<A>
   /** Drop the last \`n\` elements. \`n\` of 0 or less drops nothing. */
-  dropRight: (n: number) => Set<A>
-  dropWhile: (p: (a: A) => boolean) => Set<A>
-  get tail(): Set<A>
-  get init(): Set<A>
+  dropRight(n: number): Set<A>
+  dropWhile(p: (a: A) => boolean): Set<A>
+  tail(): Set<A>
+  init(): Set<A>
   /**
    * Spread each element that's an array or another non-string iterable into the result, one level deep,
    * keeping other elements, strings included, as they are.
    */
   flatten<B = Flattened<A>>(): Set<B>
-  fold: <B>(initial: B, fn: (acc: B, a: A) => B) => B
-  toList: () => List<A>
-  toSet: () => Set<A>
-  toArray: <B = A>() => B[]
-  toString: () => string
+  fold<B>(initial: B, fn: (acc: B, a: A) => B): B
+  toList(): List<A>
+  toSet(): Set<A>
+  toArray<B = A>(): B[]
+  toString(): string
 }`,
 
   Map: `export interface Map<K, out V>
@@ -803,12 +803,12 @@ export interface FailureOf<out T> extends TryBase<T> {
   zipWithIndex(): LazyList<[A, number]>
 
   // Element access (properties)
-  get head(): A | undefined
-  get headOption(): Option<A>
-  get last(): A | undefined
-  get lastOption(): Option<A>
-  get tail(): LazyList<A>
-  get init(): LazyList<A>
+  head(): A | undefined
+  headOption(): Option<A>
+  last(): A | undefined
+  lastOption(): Option<A>
+  tail(): LazyList<A>
+  init(): LazyList<A>
 
   // Foldable
   fold<B>(initial: B, fn: (acc: B, a: A) => B): B

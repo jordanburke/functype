@@ -183,15 +183,15 @@ import { List } from "functype"
 
 const list = List([1, 2, 3, 4, 5])
 
-// Safe head (first element) - headOption is a property, not a method
-const first = list.headOption.orElse(0) // Option<number>
+// Safe head (first element). head, headOption, last, lastOption, tail and init are methods (2.0)
+const first = list.headOption().orElse(0) // 1
 
 // Safe last element
-const end = list.lastOption.orElse(0) // Option<number>
+const end = list.lastOption().orElse(0) // 5
 
-// tail and init are properties
-const restSum = list.tail.foldLeft(0)((sum, n) => sum + n)
-const initSum = list.init.foldLeft(0)((sum, n) => sum + n)
+// tail() and init() copy the rest of the list, so call them once rather than in a loop
+const restSum = list.tail().foldLeft(0)((sum, n) => sum + n)
+const initSum = list.init().foldLeft(0)((sum, n) => sum + n)
 ```
 
 ## Obj Patterns

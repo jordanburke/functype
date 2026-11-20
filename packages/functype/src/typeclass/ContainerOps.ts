@@ -95,12 +95,12 @@ export interface CollectionOps<out A extends Type, Self> {
   /**
    * Gets the first element of the collection.
    */
-  get head(): A | undefined
+  head(): A | undefined
 
   /**
    * Gets the first element wrapped in Option.
    */
-  get headOption(): Option<A>
+  headOption(): Option<A>
 
   /**
    * Takes the first n elements from the collection.
@@ -120,22 +120,23 @@ export interface CollectionOps<out A extends Type, Self> {
   /**
    * Gets the last element of the collection.
    */
-  get last(): A | undefined
+  last(): A | undefined
 
   /**
    * Gets the last element wrapped in Option.
    */
-  get lastOption(): Option<A>
+  lastOption(): Option<A>
 
   /**
-   * Gets all elements except the first.
+   * Gets all elements except the first. A method, not a property (2.0): on a List or Set it copies
+   * the rest of the collection, so a loop that calls it on every step does quadratic work.
    */
-  get tail(): Self
+  tail(): Self
 
   /**
-   * Gets all elements except the last.
+   * Gets all elements except the last. Like `tail()`, it copies the rest of a List or Set.
    */
-  get init(): Self
+  init(): Self
 
   /**
    * Converts the collection to an array.

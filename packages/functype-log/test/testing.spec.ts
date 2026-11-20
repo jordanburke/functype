@@ -11,15 +11,15 @@ describe("TestLogger", () => {
 
       const list = entries()
       expect(list.size).toBe(2)
-      expect(list.head.level).toBe("info")
-      expect(list.head.message).toBe("one")
+      expect(list.head().level).toBe("info")
+      expect(list.head().message).toBe("one")
     })
 
     it("should include timestamps", async () => {
       const { logger, entries } = createTestLogger()
       await logger.info("timed").runOrThrow()
 
-      expect(entries().head.timestamp).toBeInstanceOf(Date)
+      expect(entries().head().timestamp).toBeInstanceOf(Date)
     })
   })
 

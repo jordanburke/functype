@@ -37,8 +37,8 @@ describe("Middleware", () => {
       const result = await tapLog<number>("info", "got result")(effect).provideService(Logger, logger).runOrThrow()
 
       expect(result).toBe(42)
-      expect(entries().head.message).toBe("got result")
-      expect(entries().head.level).toBe("info")
+      expect(entries().head().message).toBe("got result")
+      expect(entries().head().level).toBe("info")
     })
 
     it("should support message function", async () => {
@@ -52,7 +52,7 @@ describe("Middleware", () => {
         .runOrThrow()
 
       expect(result).toEqual([1, 2, 3])
-      expect(entries().head.message).toBe("fetched 3 items")
+      expect(entries().head().message).toBe("fetched 3 items")
     })
   })
 })

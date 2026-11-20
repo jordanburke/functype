@@ -14,5 +14,5 @@ const result = Do(function* () {
 })
 
 console.log("Result:", result)
-console.log("Result.head:", result.head)
+console.log("Result.head():", result.head())
 console.log("Result.toString():", result.toString())

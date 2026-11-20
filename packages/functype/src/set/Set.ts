@@ -3,7 +3,6 @@ import { Companion } from "@/companion/Companion"
 import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
-import { lazyGetters, withLazyGetters } from "@/internal/lazyProperties"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
@@ -67,8 +66,8 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   /** Drop the last `n` elements. `n` of 0 or less drops nothing. */
   dropRight(n: number): Set<A>
   dropWhile(p: (a: A) => boolean): Set<A>
-  get tail(): Set<A>
-  get init(): Set<A>
+  tail(): Set<A>
+  init(): Set<A>
   /**
    * Spread each element that's an array or another non-string iterable into the result, one level deep,
    * keeping other elements, strings included, as they are.
@@ -81,44 +80,28 @@ export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> 
   toString(): string
 }
 
-/** The getters that stay lazy: each reads the elements in order. See internal/lazyProperties. */
-type SetLazy = "head" | "headOption" | "last" | "lastOption" | "tail" | "init"
-
-const SET_GETTERS = lazyGetters<Set<unknown>>({
-  head() {
-    return this.toArray()[0]
-  },
-  headOption() {
-    return Option(this.toArray()[0])
-  },
-  last() {
-    const arr = this.toArray()
-    return arr[arr.length - 1]
-  },
-  lastOption() {
-    const arr = this.toArray()
-    return Option(arr[arr.length - 1])
-  },
-  tail() {
-    return createSet(this.toArray().slice(1))
-  },
-  init() {
-    const arr = this.toArray()
-    return createSet(arr.length === 0 ? [] : arr.slice(0, -1))
-  },
-})
-
 const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
   const values: NativeSet<A> = new NativeSet<A>(iterable)
 
-  // No getters and no computed keys before the closures: see internal/lazyProperties. The native
-  // Set is never changed after this point, so size and isEmpty can't go stale.
-  const fields: Omit<Set<A>, SetLazy> = {
+  // The native Set is never changed after this point, so size and isEmpty can't go stale.
+  const fields: Set<A> = {
     _tag: "Set",
 
     size: values.size,
 
     isEmpty: values.size === 0,
+
+    head: () => values.values().next().value,
+
+    headOption: () => Option(values.values().next().value),
+
+    last: () => Array.from(values).at(-1),
+
+    lastOption: () => Option(Array.from(values).at(-1)),
+
+    tail: () => createSet(Array.from(values).slice(1)),
+
+    init: () => createSet(Array.from(values).slice(0, -1)),
 
     add: <B>(value: B): Set<A | B> => createSet<A | B>([...(values as NativeSet<A | B>), value]),
 
@@ -358,7 +341,7 @@ const createSet = <A>(iterable?: Iterable<A>): Set<A> => {
     [Symbol.iterator]: () => values[Symbol.iterator](),
   }
 
-  const set = withLazyGetters<Set<A>>(fields, SET_GETTERS)
+  const set = Object.freeze(fields)
   return set
 }
 
