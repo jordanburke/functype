@@ -11,8 +11,14 @@ const LEVEL_ORDER: Readonly<Record<LogLevel, number>> = {
   fatal: 5,
 }
 
+/**
+ * Where a level sits in `LEVEL_ORDER`. A name outside `LogLevel`, such as `"WARN"` read from an
+ * environment variable, ranks lowest, so every level passes rather than none.
+ */
+const rank = (level: string): number => (Object.hasOwn(LEVEL_ORDER, level) ? LEVEL_ORDER[level as LogLevel] : 0)
+
 export type SinkLoggerOptions = {
-  /** Drop entries below this level. Every level passes when unset. */
+  /** Drop entries below this level. Every level passes when unset, or when it isn't a `LogLevel`. */
   readonly level?: LogLevel
   /** Put in front of each message, followed by a space. */
   readonly prefix?: string
@@ -34,7 +40,7 @@ const buildEntry = (
 })
 
 const buildLogger = (sink: LogSink, options: SinkLoggerOptions, context: LogMetadata, error?: Error): Logger => {
-  const threshold = LEVEL_ORDER[options.level ?? "trace"]
+  const threshold = rank(options.level ?? "trace")
 
   const method =
     (level: LogLevel) =>
@@ -56,6 +62,6 @@ const buildLogger = (sink: LogSink, options: SinkLoggerOptions, context: LogMeta
   }
 }
 
-/** A `Logger` that hands each entry to `sink`. It doesn't use loglayer. */
+/** A `Logger` that hands each entry to `sink`. */
 export const createSinkLogger = (sink: LogSink, options: SinkLoggerOptions = {}): Logger =>
   buildLogger(sink, options, {})

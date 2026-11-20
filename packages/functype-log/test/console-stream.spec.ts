@@ -7,9 +7,9 @@ import { createDirectConsoleLogger } from "../src/direct/DirectLogger"
  * Stream-routing tests for createConsoleLogger / createDirectConsoleLogger.
  *
  * The default is `stdout` — matches every other Node logging library (pino,
- * winston, bunyan) and loglayer's `ConsoleTransport` per-level routing
- * (info/debug → stdout via `console.info`/`console.debug`; warn/error/trace
- * → stderr via `console.warn`/`console.error`/`console.trace`).
+ * winston, bunyan), with per-level routing (info/debug → stdout via
+ * `console.info`/`console.debug`; warn/error/trace → stderr via
+ * `console.warn`/`console.error`/`console.trace`).
  *
  * Opt into `stream: "stderr"` to route ALL levels through stderr. Required
  * for MCP-over-stdio servers where stdout is reserved for JSON-RPC.
@@ -173,7 +173,7 @@ describe("ConsoleLogger — stream routing", () => {
       const logger = createConsoleLogger()
       await logger.info("backcompat info").runSyncOrThrow()
       await logger.warn("backcompat warn").runSyncOrThrow()
-      // info on stdout (console.info), warn on stderr (console.warn) — loglayer default split
+      // info on stdout (console.info), warn on stderr (console.warn) — the default split
       expect(infoSpy).toHaveBeenCalled()
       expect(warnSpy).toHaveBeenCalled()
     })
