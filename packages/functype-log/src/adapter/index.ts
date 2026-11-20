@@ -1,1 +1,0 @@
-export { logLayerAdapter } from "./LogLayerAdapter"

@@ -6,9 +6,6 @@ export { Logger } from "./logger"
 export type { ConsoleLoggerOptions } from "./layers"
 export { createConsoleLogger, LoggerLive, silentLogger } from "./layers"
 
-// Adapter (for advanced use — creating Logger from ILogLayer directly)
-export { logLayerAdapter } from "./adapter"
-
 // Testing utilities
 export type { TestLoggerHandle } from "./testing"
 export { createTestLogger } from "./testing"
