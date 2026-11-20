@@ -216,8 +216,7 @@ describe("IO.interruptOn", () => {
       const seen: string[] = []
       const pending = IO.bracketExit(
         IO.succeed("resource"),
-        // The step after the sleep is where the cancellation lands: a promise already in
-        // flight (the sleep) can't be stopped, so a lone sleep would finish successfully.
+        // The abort wakes the sleep, so `use` ends as Interrupted and never reaches the map.
         () => IO.sleep(30).map(() => "used"),
         (_, exit) =>
           IO.sync(() => {

@@ -22,6 +22,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
 - functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
 
+**2.0 (breaking): `IO.sleep`, `IO.never` and `.delay` wake when the run is interrupted.**
+
+- All three are now one sleep effect. When the run is cancelled (`interruptOn`, `runCancellable`, `runExit({ signal })`), the wait ends at once and its timer is cleared. Before, the sleep ran its full length, and `IO.never()` never ended.
+- The waits inside `retryWithDelay`, `retryWhile`, `retryWithBackoff`, `repeatUntil` and `repeatWhile` are sleeps, so they wake too.
+- `runSync` can't sleep. `IO.sleep`, `IO.never` and `.delay` now throw `UnsupportedSyncOperationError` with `operation: "sleep"` there, and `recover` can't catch it. Before, they failed with a plain `Error` that `recover` could turn into a fallback. `UnsupportedSyncOperationError.operation` gains `"sleep"`.
+- **Upgrade:** nothing to change unless code relied on a sleep outlasting a cancellation, or ran a sleep under `runSync`. Use `run()` or `runExit()` for an effect that sleeps.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:

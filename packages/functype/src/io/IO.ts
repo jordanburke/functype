@@ -62,8 +62,9 @@ export class InterruptedError extends Error {
 
 /**
  * Error thrown when a combinator that cannot run on the synchronous interpreter is
- * reached by `runSync`. `timeout` and `race` are inherently asynchronous — there is no
- * sync semantics for "wait `ms` then give up", or for racing concurrent effects.
+ * reached by `runSync`. `timeout`, `race` and `sleep` (with `IO.never` and `.delay`, which
+ * are built on it) are inherently asynchronous — there is no sync semantics for "wait `ms`",
+ * "wait `ms` then give up", or for racing concurrent effects.
  *
  * This is a **programmer error, not a domain failure**: it says the effect was built
  * wrong for the terminal it was run with, so recovery combinators deliberately do not
@@ -75,7 +76,7 @@ export class InterruptedError extends Error {
 // eslint-disable-next-line functional/no-classes
 export class UnsupportedSyncOperationError extends Error {
   readonly _tag = "UnsupportedSyncOperationError" as const
-  constructor(readonly operation: "timeout" | "race") {
+  constructor(readonly operation: "timeout" | "race" | "sleep") {
     super(`Cannot run ${operation} effect synchronously — use run()/runExit() instead`)
     this.name = "UnsupportedSyncOperationError"
   }
@@ -193,6 +194,8 @@ type IOEffect<R, E, A> =
   | { readonly _tag: "Fail"; readonly error: E }
   | { readonly _tag: "Die"; readonly defect: unknown }
   | { readonly _tag: "Interrupt" }
+  // `Infinity` sleeps forever (`IO.never`). An abort of the run's signal wakes it as `Interrupted`.
+  | { readonly _tag: "Sleep"; readonly duration: number }
   | { readonly _tag: "FlatMap"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => IO<R, E, A> }
   | { readonly _tag: "Map"; readonly effect: IO<R, E, unknown>; readonly f: (a: unknown) => A }
   | { readonly _tag: "MapError"; readonly effect: IO<R, unknown, A>; readonly f: (e: unknown) => E }
@@ -616,7 +619,8 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
   pipe<B>(f: (self: IO<R, E, A>) => B): B
 
   /**
-   * Delays execution by the specified milliseconds.
+   * Delays execution by the specified milliseconds. The wait is an {@link IO.sleep}, so an
+   * interruption ends it at once.
    */
   delay(ms: number): IO<R, E, A>
 
@@ -645,13 +649,15 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    *
    * - `bracket` / `acquireRelease` cleanup still runs, to completion: acquire and release
    *   are not interruptible.
+   * - `IO.sleep`, `IO.never` and `.delay` wake at once: the wait ends as the cancellation and
+   *   its timer is cleared. The waits inside `retryWithDelay`, `retryWhile`,
+   *   `retryWithBackoff`, `repeatUntil` and `repeatWhile` are sleeps too.
    * - A promise already in flight can't be stopped (JavaScript has no way to). The
    *   cancellation is seen at the next step after it settles, so if that promise was the
-   *   effect's last step, the effect succeeds with its result. `IO.never()` under
-   *   `interruptOn` never resolves for the same reason. `IO.async` and `IO.tryPromise`
+   *   effect's last step, the effect succeeds with its result. `IO.async` and `IO.tryPromise`
    *   thunks receive the region's signal as their argument, so `IO.async((signal) =>
    *   fetch(url, { signal }))` aborts the request itself; its rejection is reported as the
-   *   cancellation. `IO(() => …)` thunks get no signal. `IO.sleep` is not woken early.
+   *   cancellation. `IO(() => …)` thunks get no signal.
    * - A defect (a bug) that happens after the abort is still reported as a defect.
    * - `runSync` only sees a signal that was already aborted when this effect starts.
    * - When `E` is `unknown` (effects from `IO.async` or `IO(...)`), the union collapses to
@@ -962,9 +968,7 @@ const createIO = <R extends Type, E extends Type, A extends Type>(effect: IOEffe
     },
 
     delay(ms: number): IO<R, E, A> {
-      return unsafeCoerce(
-        IOCompanion.async<void>(() => new Promise((resolve) => setTimeout(resolve, ms))).flatMap(() => io),
-      )
+      return IOCompanion.sleep(ms).flatMap(() => io)
     },
 
     timeout(ms: number): IO<R, E | TimeoutError, A> {
@@ -1183,6 +1187,8 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       return unsafeCoerce(effect.effects.map((e) => runEffectSync(_fx(e), context)))
     case "Race":
       throw new UnsupportedSyncOperationError("race")
+    case "Sleep":
+      throw new UnsupportedSyncOperationError("sleep")
     case "Timeout":
       throw new UnsupportedSyncOperationError("timeout")
     case "InterruptWhen": {
@@ -1370,6 +1376,8 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
       }
       case "Interrupt":
         return Exit.interrupted()
+      case "Sleep":
+        return unsafeCoerce(await sleep(effect.duration, interruption))
       case "Bracket": {
         // Acquire and release are masked (no `interruption`): see the runEffect doc.
         const acquireExit = await runEffect(_fx(effect.acquire), context)
@@ -1441,6 +1449,28 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
     return Exit.die(e)
   }
 }
+
+/**
+ * Waits `duration` ms, or forever for `Infinity`. An abort of `signal` ends the wait at once as
+ * `Interrupted` and clears the timer; a wait that ends normally detaches from `signal`, so a
+ * long-lived signal doesn't collect a listener per sleep. No timer is set for `Infinity`:
+ * `setTimeout` fires an out-of-range delay almost at once.
+ */
+const sleep = (duration: number, signal: AbortSignal | undefined): Promise<ExitType<never, void>> =>
+  new Promise((resolve) => {
+    const timer =
+      duration === Infinity
+        ? undefined
+        : setTimeout(() => {
+            signal?.removeEventListener("abort", onAbort)
+            resolve(Exit.succeed(undefined))
+          }, duration)
+    function onAbort(): void {
+      clearTimeout(timer)
+      resolve(Exit.interrupted())
+    }
+    signal?.addEventListener("abort", onAbort, { once: true })
+  })
 
 /**
  * Runs `effects` with at most `concurrency` in flight and collects the results in input order.
@@ -1896,10 +1926,13 @@ const IOCompanion = {
   },
 
   /**
-   * Creates an IO that sleeps for the specified duration.
+   * Creates an IO that waits for the given number of milliseconds, then succeeds.
+   *
+   * An interruption (`interruptOn`, `runCancellable`, `runExit({ signal })`, or a `race`,
+   * `timeout` or parallel `IO.all` stopping it) ends the wait at once and clears its timer.
+   * `runSync` can't sleep: it throws {@link UnsupportedSyncOperationError}.
    */
-  sleep: (ms: number): IO<never, never, void> =>
-    unsafeCoerce(IOCompanion.async(() => new Promise((resolve) => setTimeout(resolve, ms)))),
+  sleep: (ms: number): IO<never, never, void> => createIO(unsafeCoerce({ _tag: "Sleep", duration: ms })),
 
   /**
    * Effectful stateful loop — the value-driven dual of the retry family.
@@ -1950,10 +1983,11 @@ const IOCompanion = {
   },
 
   /**
-   * Creates an IO that never completes.
+   * Creates an IO that never completes on its own. An interruption ends it, as it ends
+   * {@link IO.sleep}; it sets no timer.
    */
   never: <A extends Type = never>(): IO<never, never, A> =>
-    unsafeCoerce(IOCompanion.async(() => new Promise(() => {}))),
+    createIO(unsafeCoerce({ _tag: "Sleep", duration: Infinity })),
 
   /**
    * Creates a unit IO.
