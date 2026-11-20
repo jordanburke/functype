@@ -1038,7 +1038,7 @@ The key principles when converting JavaScript/TypeScript to functype patterns:
 4. **Replace object literals with Map for dynamic keys**
 5. **Replace if-else chains with Cond**
 6. **Replace switch statements with Match**
-7. **Replace Promises with Task for better error handling**
+7. **Replace Promises with IO for typed errors and cancellation**
 8. **Replace mutation with immutable transformations**
 9. **Use composition over imperative loops**
 10. **Leverage type safety with branded types**

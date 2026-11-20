@@ -4,7 +4,7 @@ This guide explains how to effectively format and log errors in Functype, focusi
 
 ## The Challenge of Error Display
 
-JavaScript errors can be challenging to understand, especially in complex functional applications. Functype's `Throwable` and `Task` modules provide robust error handling capabilities, but default error output in logs and consoles doesn't always provide a clear picture of what went wrong.
+JavaScript errors can be challenging to understand, especially in complex functional applications. Functype's `Throwable` and error modules provide robust error handling capabilities, but default error output in logs and consoles doesn't always provide a clear picture of what went wrong.
 
 ## Built-in Error Utilities
 
@@ -29,30 +29,27 @@ const errorWithData = Throwable.apply(new Error("Query failed"), {
 console.error(errorWithData)
 ```
 
-### Task Error Chain
+### Error Chains
 
-Tasks can create error chains that preserve context from nested operations:
+`getErrorChain` and `formatErrorChain` follow an error's `cause` links, from the outermost error to the innermost. A `Throwable` made with a step name shows it in brackets:
 
 ```typescript
-import { Task } from "@/core"
+import { formatErrorChain, getErrorChain, Throwable } from "functype"
 
-try {
-  await Task({ name: "UserService" }).Async(async () => {
-    await Task({ name: "DbQuery" }).Async(async () => {
-      throw new Error("Connection timeout")
-    })
-  })
-} catch (error) {
-  // Extract the full error chain
-  const errorChain = Task.getErrorChain(error as Error)
+const dbError = Throwable.apply(new Error("Connection timeout"), undefined, { name: "DbQuery", description: "" })
+const error = Throwable.apply(new Error("Failed to load user", { cause: dbError }), undefined, {
+  name: "UserService",
+  description: "",
+})
 
-  // Format it as a string
-  const formatted = Task.formatErrorChain(error as Error, { includeTasks: true })
-  console.error(formatted)
-  // Output:
-  // [UserService] UserService: DbQuery: Connection timeout
-  // ↳ [DbQuery] Connection timeout
-}
+// Extract the full error chain
+const errorChain = getErrorChain(error) // [error, dbError]
+
+// Format it as a string
+console.error(formatErrorChain(error, { includeTasks: true }))
+// Output:
+// [UserService] Failed to load user
+// ↳ [DbQuery] Connection timeout
 ```
 
 ## Enhanced Error Formatting
@@ -133,7 +130,7 @@ try {
 
 The generated log will include:
 
-- The full error chain with task info
+- The full error chain, with step names from `taskInfo`
 - Structured error data
 - All enumerable properties from the error
 - Properly formatted stack traces
@@ -253,7 +250,7 @@ console.log(JSON.stringify(createErrorSerializer()(error), null, 2))
 
 Effective error formatting and logging significantly improves debugging and troubleshooting. By using Functype's error utilities, you can:
 
-1. Preserve full error context including task information
+1. Preserve full error context, including step names
 2. Create human-readable error displays for development
 3. Generate structured error logs for production monitoring
 4. Maintain a balance between detail and clarity

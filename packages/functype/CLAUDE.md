@@ -50,7 +50,7 @@ The reason: functype core is the _implementation layer_ of the patterns the
 rules enforce. Roughly half of the ~170 warnings live in code that is the
 implementation of the pattern being checked — `do/index.ts` is the
 do-notation runtime, `list/List.ts` contains the iteration that
-`no-imperative-loops` would forbid, `core/task/Task.ts` is the Promise
+`no-imperative-loops` would forbid, `io/IO.ts` is the Promise
 plumbing. Suppressing those via per-glob eslint overrides would destroy
 useful information: the warning count is a real measurement of how much
 imperative shape lives in the substrate.
@@ -138,7 +138,6 @@ See `docs/variance-guide.md` for the contributor recipe.
 
 - **Option/Either/Try**: For expected, recoverable failures
 - **Throwable**: Enhanced error wrapper preserving context and stack traces
-- **Task**: Sync/async operations returning `TaskOutcome<T>` with Ok/Err pattern
 - **IO<R,E,A>**: Lazy effect type with typed errors and dependency injection
 
 ## Code Style
@@ -289,16 +288,10 @@ IO.gen(function*() {         // generator do-notation
   return user
 })
 
-// Task - async with cancellation and progress tracking
-// Returns TaskOutcome<T> (Ok/Err) with Functor, AsyncMonad, Foldable, Extractable
-Task(params).Async(() => fetch(url))     // async operation → Promise<TaskOutcome<T>>
-Task(params).Sync(() => computation())   // sync operation → TaskOutcome<T>
-Task.ok(value)                           // create Ok result
-Task.err(error)                          // create Err result
-Task.cancellable(fn)                     // { task, cancel }
-Task.withProgress(fn, onProgress)        // { task, cancel, currentProgress }
-outcome.fold(onErr, onOk)               // pattern match on result
-outcome.toEither()                       // convert to Either
+// Cancellation: IO replaced Task (deleted in 2.0)
+effect.runCancellable()      // { result, cancel }
+effect.runExit({ signal })   // an aborted signal ends the run as Interrupted
+effect.interruptOn(signal)   // a cancelled region fails with InterruptedError
 
 // IO<R,E,A> - lazy effects with typed errors and dependency injection
 // Use IO when you need: typed errors, DI, service composition, testability

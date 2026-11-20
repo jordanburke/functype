@@ -36,7 +36,7 @@ npx functype --json       # JSON output for programmatic use
 - **List, Set, Map**: Immutable collection types with functional operators
 - **Try Type**: Safely execute operations that might throw exceptions
 - **Do-notation**: Scala-like for-comprehensions with **optimized List performance** (up to 12x faster than traditional flatMap)
-- **Task**: Handle synchronous and asynchronous operations with error handling
+- **IO**: Lazy effects with typed errors, dependency injection and cancellation
 - **Http**: Typed HTTP fetch wrapper returning IO effects with HttpError ADT, auto content-type detection, and configurable clients
 - **Lazy**: Deferred computation with memoization
 - **Tuple**: Type-safe fixed-length arrays
@@ -261,81 +261,29 @@ const asyncResult = await DoAsync(async function* () {
 - Always returns the type of the first yielded monad
 - Mixed types supported via Reshapeable interface
 
-### Task
+### IO
 
-Task v2 provides structured error handling with the **Ok/Err pattern**, returning `TaskOutcome<T>` for all operations:
+`IO<R, E, A>` is a lazy effect: nothing runs until you call a `run` method. `E` is the typed error and `R` the services it needs. functype 2.0 deleted `Task`, and IO replaces it.
 
 ```typescript
-import { Task, Ok, Err, type TaskOutcome } from "functype"
+import { IO } from "functype"
 
-// Task v2: All operations return TaskOutcome<T>
-const syncResult = Task().Sync(() => "success")
-// Returns: TaskSuccess<string> (extends TaskOutcome<string>)
+type User = { id: string; name: string }
 
-const asyncResult = await Task().Async(async () => "value")
-// Returns: TaskOutcome<string>
+const loadUser = (id: string) =>
+  IO.tryPromise({
+    // the run's signal reaches fetch, so cancelling stops the request
+    try: (signal) => fetch(`/api/users/${id}`, { signal }).then((r) => r.json() as Promise<User>),
+    catch: (error) => new Error(`Failed to load ${id}: ${String(error)}`),
+  })
 
-// Explicit Ok/Err returns for precise control
-const explicitResult = await Task().Async(async (): Promise<TaskOutcome<string>> => {
-  if (Math.random() > 0.5) {
-    return Ok("success") // Explicit success
-  }
-  return Err<string>("failed") // Explicit failure
-})
+// Nothing has run yet. run() gives an Either<Error, User>
+const user = await loadUser("42").retry(2).timeout(5000).run()
 
-// Auto-wrapping: raw values become Ok, thrown errors become Err
-const autoWrapped = await Task().Async(async () => {
-  if (condition) {
-    return "raw value" // Auto-wrapped as Ok("raw value")
-  }
-  throw new Error("failed") // Auto-wrapped as Err(error)
-})
-
-// Error recovery: error handlers can return Ok
-const recovered = await Task().Async(
-  async () => {
-    throw new Error("initial error")
-  },
-  async (error) => Ok("recovered from error"), // Recovery!
-)
-
-// Working with results
-if (asyncResult.isSuccess()) {
-  console.log(asyncResult.value) // Access the success value
-} else {
-  console.error(asyncResult.error) // Access the error (Throwable)
-}
-
-// Chaining with TaskOutcome
-const chainedResult = await Task().Async(async () => {
-  const firstResult = await Task().Async(async () => "first")
-  if (firstResult.isFailure()) {
-    return firstResult // Propagate failure
-  }
-
-  const secondResult = await Task().Async(async () => "second")
-  if (secondResult.isFailure()) {
-    return secondResult
-  }
-
-  return Ok(`${firstResult.value} + ${secondResult.value}`)
-})
-
-// Converting promise-based functions to Task
-const fetchUserAPI = (userId: string): Promise<User> => fetch(`/api/users/${userId}`).then((r) => r.json())
-
-const fetchUser = Task.fromPromise(fetchUserAPI)
-// Returns: (userId: string) => Promise<TaskOutcome<User>>
-
-const userResult = await fetchUser("user123")
-if (userResult.isSuccess()) {
-  console.log(userResult.value) // User object
-}
-
-// Convert TaskOutcome back to Promise (for interop)
-const promise = Task.toPromise(asyncResult)
-// Success → resolves with value
-// Failure → rejects with error
+// Cancel with a handle, or with your own AbortSignal
+const { result, cancel } = loadUser("42").runCancellable()
+const controller = new AbortController()
+const exit = await loadUser("42").runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
 ```
 
 ### Branded Types
@@ -719,20 +667,25 @@ const mappedValue = option.map((x) => x.toString())
 Functype provides utilities for improved error visualization and logging:
 
 ```typescript
-import { formatError, createErrorSerializer } from "functype/error"
+import { Throwable, createErrorSerializer, formatError, formatErrorChain } from "functype"
 
-// Create a nested task error
-const innerTask = Task({ name: "DbQuery" }).Sync(() => {
-  throw new Error("Database connection failed")
+// A failure in a named step, wrapping the error below it as its cause
+const dbError = Throwable.apply(new Error("Database connection failed"), undefined, {
+  name: "DbQuery",
+  description: "Load the user row",
+})
+const error = Throwable.apply(new Error("Failed to fetch user", { cause: dbError }), undefined, {
+  name: "UserFetch",
+  description: "Fetch user data",
 })
 
-const outerTask = Task({ name: "UserFetch" }).Sync(() => {
-  return innerTask.value
-})
+formatErrorChain(error, { includeTasks: true })
+// [UserFetch] Failed to fetch user
+// ↳ [DbQuery] Database connection failed
 
 // Format the error for console display
 console.error(
-  formatError(outerTask.value as Error, {
+  formatError(error, {
     includeTasks: true,
     includeStackTrace: true,
     colors: true,
@@ -750,7 +703,7 @@ const logger = pino({
 // Log the error with full context
 logger.error(
   {
-    err: outerTask.value,
+    err: error,
     requestId: "req-123",
   },
   "Failed to fetch user data",
@@ -857,7 +810,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 Work that shipped but wasn't captured in the planned roadmap above:
 
 - [x] **Scala-aligned covariance for the container family** (0.57.2 → 0.60.0)
-  - ✓ `<out T>` / `<out K, out V>` across Option, Either, Try, List, Set, Map, Lazy, LazyList, Tuple, Identity, Task/TaskOutcome
+  - ✓ `<out T>` / `<out K, out V>` across Option, Either, Try, List, Set, Map, Lazy, LazyList, Tuple, Identity
   - ✓ `FunctypeSum` hierarchy separating sum types (Either, Try) from iterables
   - ✓ `Widen<A, B>` conditional-type helper enforcing Scala's `[B >: A]` lower-bound semantics in `reduce` / `reduceRight`
   - ✓ Method-level widening patterns (`or`, `orElse`, `recover`, `add`, `concat`, etc.)
@@ -866,7 +819,7 @@ Work that shipped but wasn't captured in the planned roadmap above:
 - [x] **Do-notation with generator comprehensions** (`src/do/`)
 - [x] **HTTP module** — typed fetch wrapper with validator support (`src/fetch/` — Http, HttpClient, HttpError, HttpRequest)
 - [x] **Throwable** — enhanced error wrapper preserving stack traces and context (`src/core/throwable/`)
-- [x] **Task / TaskOutcome** — sync/async with cancellation + progress tracking (`src/core/task/`)
+- [x] **Task / TaskOutcome** — deleted in 2.0; IO's `runCancellable`, `runExit({ signal })` and `interruptOn` replace it
 - [x] **IO effect system companions** — Context, Tag, Layer, Exit, TestClock (`src/io/`)
 - [x] **Ref** — mutable reference for controlled mutability (`src/ref/`)
 - [x] **Identity** — trivial covariant container (`src/identity/`)

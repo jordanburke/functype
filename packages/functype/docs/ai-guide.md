@@ -124,30 +124,29 @@ set.union(set2) // Set([1, 2, 3, 4, 5, 6, 7])
 set.intersect(set2) // Set([4, 5])
 ```
 
-### Task
+### IO<R, E, A>
 
 ```typescript
-// Create: Task().Sync() or Task().Async()
-const syncTask = Task().Sync(
-  () => 42,
+// Create: nothing runs until a run method
+const parsed = IO.tryCatch(
+  () => JSON.parse(raw) as unknown,
   (err) => new Error(`Failed: ${err}`),
 )
 
-const asyncTask = Task().Async(
-  async () => await fetchData(),
-  async (err) => new Error(`Fetch failed: ${err}`),
+const fetched = IO.tryPromise({
+  try: (signal) => fetchData(signal),
+  catch: (err) => new Error(`Fetch failed: ${err}`),
+})
+
+// Run: Either<E, A>, or Exit<E, A> for all four outcomes
+const result = await fetched.run()
+result.fold(
+  (error) => console.error(error),
+  (value) => console.log(value),
 )
 
-// From promise
-const fetchUser = Task.fromPromise(fetchUserAPI, { name: "UserFetch" })
-
-// Usage
-const result = syncTask
-if (result.isSuccess()) {
-  console.log(result.value)
-} else {
-  console.error(result.error)
-}
+// Cancel: a handle, or your own AbortSignal
+const { cancel } = fetched.runCancellable()
 ```
 
 ### Tuple

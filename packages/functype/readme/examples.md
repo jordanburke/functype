@@ -10,7 +10,7 @@ This document provides comprehensive examples of using the Functype library. The
 - [List](#list)
 - [Map](#map)
 - [Set](#set)
-- [Task](#task)
+- [IO](#io)
 - [Branded Types](#branded-types)
 - [Tuple](#tuple)
 - [Foldable](#foldable)
@@ -748,120 +748,78 @@ console.log(numbers.exists((x) => x % 2 === 0)) // true
 console.log(numbers.forAll((x) => x < 10)) // true
 ```
 
-## Task
+## IO
 
-The `Task` type represents synchronous and asynchronous operations with error handling.
+The `IO` type is a lazy effect with a typed error. Nothing runs until you call a `run` method.
 
 ### Basic Usage
 
 ```typescript
-import { Task } from "functype"
+import { IO } from "functype"
 
-// Synchronous tasks
-const syncTask = Task().Sync(
-  () => 42, // Success function
-  (error) => new Error(`Failed: ${error}`), // Error function
+// Sync work that may throw
+const parsed = IO.tryCatch(
+  () => JSON.parse('{"id":1}') as { id: number },
+  (error) => new Error(`Failed: ${error}`),
 )
 
-// Asynchronous tasks
-const asyncTask = Task().Async(
-  async () => {
-    const response = await fetch("https://api.example.com/data")
+// Async work
+const fetched = IO.tryPromise({
+  try: async (signal) => {
+    const response = await fetch("https://api.example.com/data", { signal })
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
-    return response.json()
+    return response.json() as Promise<unknown>
   },
-  async (error) => new Error(`Fetch failed: ${error}`),
+  catch: (error) => new Error(`Fetch failed: ${error}`),
+})
+
+// Running: run() gives an Either<E, A>
+const result = await fetched.run()
+result.fold(
+  (error) => console.error("Failed:", error),
+  (data) => console.log("Data:", data),
 )
 
-// Named tasks (for debugging)
-const namedTask = Task({ name: "UserFetch" }).Sync(
-  () => ({ id: 1, name: "John Doe" }),
-  (error) => new Error(`User fetch failed: ${error}`),
-)
-
-// Running tasks
-syncTask.then((value) => console.log("Success:", value)).catch((error) => console.error("Error:", error))
-
-// With async/await
-async function runTask() {
-  try {
-    const result = await asyncTask
-    console.log("Data:", result)
-  } catch (error) {
-    console.error("Failed:", error)
-  }
-}
+// Cancelling: a handle, or your own AbortSignal
+const { result: pending, cancel } = fetched.runCancellable()
+const controller = new AbortController()
+const exit = await fetched.runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
 ```
 
 ### Adapting External APIs
 
 ```typescript
-import { Task } from "functype"
+import { IO } from "functype"
 
-// Convert promise-based APIs to Task
 const fetchUser = (id: string): Promise<User> => fetch(`/api/users/${id}`).then((r) => r.json())
 
-// Create a Task adapter
-const getUser = Task({ name: "UserFetch" }).fromPromise(fetchUser)
+// Wrap the promise-returning function
+const getUser = (id: string) =>
+  IO.tryPromise({ try: () => fetchUser(id), catch: (error) => new Error(`User fetch failed: ${error}`) })
 
-// Use the task
-getUser("user123")
-  .then((user) => console.log(user))
-  .catch((error) => console.error(error))
-
-// Convert back to Promise when needed
-const task = Task().Sync(() => "hello world")
-const promise = Task().toPromise(task) // Promise<string>
+// Back to a Promise when needed: resolves with the value, rejects with the error
+const user = await getUser("user123").runOrThrow()
 ```
 
 ### Composition
 
 ```typescript
-import { Task } from "functype"
+import { IO } from "functype"
 
-// Define component tasks
-const fetchUser = Task({ name: "FetchUser" }).Async(
-  async (userId: string) => {
-    const response = await fetch(`/api/users/${userId}`)
-    if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
-    return response.json()
-  },
-  async (error) => new Error(`User fetch failed: ${error}`),
-)
+const getPosts = (userId: string) =>
+  IO.tryPromise({
+    try: () => fetch(`/api/users/${userId}/posts`).then((r) => r.json() as Promise<Post[]>),
+    catch: (error) => new Error(`Posts fetch failed: ${error}`),
+  })
 
-const fetchPosts = Task({ name: "FetchPosts" }).Async(
-  async (userId: string) => {
-    const response = await fetch(`/api/users/${userId}/posts`)
-    if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
-    return response.json()
-  },
-  async (error) => new Error(`Posts fetch failed: ${error}`),
-)
+// In sequence: the posts request starts after the user loads
+const userWithPosts = (userId: string) =>
+  getUser(userId).flatMap((user) => getPosts(userId).map((posts) => ({ user, posts })))
 
-// Compose tasks
-async function getUserWithPosts(userId: string) {
-  try {
-    // Run tasks in sequence with dependencies
-    const user = await fetchUser(userId)
-    const posts = await fetchPosts(userId)
-    return { user, posts }
-  } catch (error) {
-    console.error("Error:", error)
-    throw error
-  }
-}
+// In parallel, failing fast on the first error
+const users = (userIds: string[]) => IO.all(userIds.map((id) => getUser(id)))
 
-// Run parallel tasks
-async function getMultipleUsers(userIds: string[]) {
-  try {
-    const userTasks = userIds.map((id) => fetchUser(id))
-    const users = await Promise.all(userTasks)
-    return users
-  } catch (error) {
-    console.error("Error:", error)
-    throw error
-  }
-}
+const summary = await userWithPosts("user123").retry(2).timeout(5000).run()
 ```
 
 ## Branded Types
@@ -1033,17 +991,14 @@ const validationPair = Tuple(
 // Check if all Either values are valid
 const allValid = validationPair.toArray().every((either) => either.isRight()) // false
 
-// Combine Tuple and Task
-import { Task } from "functype"
+// Combine Tuple and IO
+import { IO } from "functype"
 
-const taskPair = Tuple(
-  Task().Sync(() => "hello"),
-  Task().Sync(() => 42),
-)
+const effectPair = Tuple([IO.succeed("hello"), IO.succeed(42)] as const)
 
-// Run tasks in parallel
+// Run both effects and get both results
 async function runBoth() {
-  const [str, num] = await Promise.all(taskPair.toArray())
+  const [str, num] = await effectPair.get(0).zip(effectPair.get(1)).runOrThrow()
   console.log(str, num) // "hello" 42
 }
 ```
@@ -1497,7 +1452,7 @@ validationResult.fold(
 ### Data Fetching and Processing
 
 ```typescript
-import { Task, Option, Either, pipe, List, TaskOutcome, Ok, Err } from "functype"
+import { IO, Option, Either, pipe, List } from "functype"
 
 // Define types
 type User = {
@@ -1521,7 +1476,7 @@ type Comment = {
   body: string
 }
 
-// API client using Task
+// API client using IO
 class ApiClient {
   private baseUrl: string
 
@@ -1529,22 +1484,22 @@ class ApiClient {
     this.baseUrl = baseUrl
   }
 
-  fetchUser(userId: string): Promise<TaskOutcome<User>> {
+  fetchUser(userId: string): IO<never, Error, User> {
     return this.fetchResource<User>(`/users/${userId}`)
   }
 
-  fetchUserPosts(userId: string): Promise<TaskOutcome<Post[]>> {
+  fetchUserPosts(userId: string): IO<never, Error, Post[]> {
     return this.fetchResource<Post[]>(`/users/${userId}/posts`)
   }
 
-  fetchPostComments(postId: string): Promise<TaskOutcome<Comment[]>> {
+  fetchPostComments(postId: string): IO<never, Error, Comment[]> {
     return this.fetchResource<Comment[]>(`/posts/${postId}/comments`)
   }
 
-  private async fetchResource<T>(endpoint: string): Promise<TaskOutcome<T>> {
-    return Task({ name: `Fetch ${endpoint}` }).Async(
-      async () => {
-        const response = await fetch(`${this.baseUrl}${endpoint}`)
+  private fetchResource<T>(endpoint: string): IO<never, Error, T> {
+    return IO.tryPromise({
+      try: async (signal) => {
+        const response = await fetch(`${this.baseUrl}${endpoint}`, { signal })
 
         if (!response.ok) {
           throw new Error(`HTTP error: ${response.status}`)
@@ -1552,8 +1507,8 @@ class ApiClient {
 
         return response.json() as Promise<T>
       },
-      async (error) => new Error(`API error: ${error}`),
-    )
+      catch: (error) => new Error(`API error: ${error}`),
+    })
   }
 }
 
@@ -1562,7 +1517,7 @@ async function getUserContentSummary(userId: string) {
   const api = new ApiClient("https://jsonplaceholder.typicode.com")
 
   // Fetch user
-  const userResult = await api.fetchUser(userId)
+  const userResult = await api.fetchUser(userId).run()
 
   if (!userResult.ok) {
     return `Error fetching user: ${userResult.error.message}`
@@ -1571,7 +1526,7 @@ async function getUserContentSummary(userId: string) {
   const user = userResult.value
 
   // Fetch user's posts
-  const postsResult = await api.fetchUserPosts(userId)
+  const postsResult = await api.fetchUserPosts(userId).run()
 
   if (!postsResult.ok) {
     return `Error fetching posts: ${postsResult.error.message}`
@@ -1587,7 +1542,7 @@ async function getUserContentSummary(userId: string) {
   const latestPost = posts[0]
 
   // Fetch comments for the latest post
-  const commentsResult = await api.fetchPostComments(latestPost.id)
+  const commentsResult = await api.fetchPostComments(latestPost.id).run()
 
   if (!commentsResult.ok) {
     return `Error fetching comments: ${commentsResult.error.message}`

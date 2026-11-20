@@ -11,42 +11,40 @@ This matrix shows which interfaces are supported by each data structure in the f
 
 ## Core Interfaces
 
-| Data Structure     | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
-| ------------------ | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
-| **Option<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Either<L,R>**    |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
-| **Try<T>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
-| **IO<R,E,A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Http**           |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
-| **TaskOutcome<T>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **List<A>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Set<A>**         |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
-| **Obj<T>**         |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Map<K,V>**       |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
-| **Lazy<T>**        |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
-| **Stack<A>**       |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **LazyList<A>**    |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
-| **Tuple<T[]>**     |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| Data Structure  | Functor | Applicative | Monad | AsyncMonad | Foldable | Matchable | Serializable | Traversable | Extractable | Unsafe | Pipe | Collection | ContainerOps | CollectionOps |
+| --------------- | :-----: | :---------: | :---: | :--------: | :------: | :-------: | :----------: | :---------: | :---------: | :----: | :--: | :--------: | :----------: | :-----------: |
+| **Option<T>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Either<L,R>** |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✗   |     ✗      |      ◐       |       ✗       |
+| **Try<T>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✗      |      ✓      |   ←    |  ✓   |     ✗      |      ◐       |       ✗       |
+| **IO<R,E,A>**   |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✓     |      ✗       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Http**        |    ✗    |      ✗      |   ✗   |     ✗      |    ✗     |     ✗     |      ✗       |      ✗      |      ✗      |   ✗    |  ✗   |     ✗      |      ✗       |       ✗       |
+| **List<A>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Set<A>**      |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✓      |      ✓       |       ✓       |
+| **Obj<T>**      |    ◐    |      ◐      |   ◐   |     ◐      |    ✓     |     ✓     |      ✓       |      ◐      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Map<K,V>**    |    ◐    |      ✗      |   ✗   |     ✗      |    ✓     |     ✗     |      ✓       |      ◐      |      ✗      |   ✗    |  ✓   |     ✓      |      ✗       |       ✗       |
+| **Lazy<T>**     |    ✓    |      ✓      |   ✓   |     ✓      |    ✓     |     ✗     |      ✓       |      ✓      |      ✓      |   ←    |  ✓   |     ✗      |      ✓       |       ✗       |
+| **Stack<A>**    |    ✗    |      ✗      |   ✗   |     ✗      |    ✓     |     ✓     |      ✓       |      ✓      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **LazyList<A>** |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
+| **Tuple<T[]>**  |    ◐    |      ✗      |   ◐   |     ✗      |    ✓     |     ✗     |      ✓       |      ✗      |      ✗      |   ✗    |  ✓   |     ✗      |      ✗       |       ✗       |
 
 ## Variance (0.6.0+)
 
-| Data Structure     | Variance                   | Notes                                                                                                                                    |
-| ------------------ | :------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Option<T>**      | `<out T>`                  | covariant                                                                                                                                |
-| **Either<L,R>**    | `<out L, out R>`           | covariant in both                                                                                                                        |
-| **Try<T>**         | `<out T>`                  | covariant                                                                                                                                |
-| **List<A>**        | `<out A>`                  | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
-| **Set<A>**         | `<out A>`                  | covariant. Same patterns as List                                                                                                         |
-| **LazyList<A>**    | `<out A>`                  | covariant. `concat<B>` widens                                                                                                            |
-| **Lazy<T>**        | `<out T>`                  | covariant                                                                                                                                |
-| **Identity<T>**    | `<out T>`                  | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
-| **Tuple<T[]>**     | `<out T>`                  | covariant                                                                                                                                |
-| **Map<K,V>**       | `<K, out V>`               | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
-| **TaskOutcome<T>** | `<out T>`                  | covariant. `recover<U>` / `recoverWith<U>` widen to `Ok<T \| U>`                                                                         |
-| **Stack<A>**       | structural covariant       | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
-| **Obj<T>**         | invariant (by design)      | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
-| **Ref<A>**         | invariant (by design)      | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
-| **IO<R,E,A>**      | `<in out R, out E, out A>` | E and A covariant; R invariant. `IO<R, never, A>` widens to `IO<R, AnyError, A>` without a cast. ZIO-style `<in R>` still deferred.      |
+| Data Structure  | Variance                   | Notes                                                                                                                                    |
+| --------------- | :------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Option<T>**   | `<out T>`                  | covariant                                                                                                                                |
+| **Either<L,R>** | `<out L, out R>`           | covariant in both                                                                                                                        |
+| **Try<T>**      | `<out T>`                  | covariant                                                                                                                                |
+| **List<A>**     | `<out A>`                  | covariant. `contains`/`remove`/`indexOf` accept `unknown`; `add`/`prepend`/`concat` widen to `A \| B`; `reduce` guarded by `Widen<A, B>` |
+| **Set<A>**      | `<out A>`                  | covariant. Same patterns as List                                                                                                         |
+| **LazyList<A>** | `<out A>`                  | covariant. `concat<B>` widens                                                                                                            |
+| **Lazy<T>**     | `<out T>`                  | covariant                                                                                                                                |
+| **Identity<T>** | `<out T>`                  | covariant. `isSame` accepts `Identity<unknown>`                                                                                          |
+| **Tuple<T[]>**  | `<out T>`                  | covariant                                                                                                                                |
+| **Map<K,V>**    | `<K, out V>`               | V covariant; K invariant (Scala Map[K, +V] precedent — equality-sensitive keys)                                                          |
+| **Stack<A>**    | structural covariant       | intersection type alias can't carry `<out>`; subtyping works structurally                                                                |
+| **Obj<T>**      | invariant (by design)      | T is a record type; `keyof T` is contravariant, so widening loses key fidelity                                                           |
+| **Ref<A>**      | invariant (by design)      | mutable cell; `set(A)` writes A, widening would be unsound                                                                               |
+| **IO<R,E,A>**   | `<in out R, out E, out A>` | E and A covariant; R invariant. `IO<R, never, A>` widens to `IO<R, AnyError, A>` without a cast. ZIO-style `<in R>` still deferred.      |
 
 All base typeclasses (`Traversable`, `Extractable`, `Functor`, `Applicative`, `Monad`, `AsyncMonad`, `ContainerOps`, `CollectionOps`, `Foldable`, `Serializable`, `Pipe`, `Matchable`, `Promisable`, `Doable`, `Reshapeable`) declared `<out T>` / `<out A>`.
 
@@ -56,22 +54,21 @@ Collections (`List`, `Set`, `LazyList`, `Stack`, `Map`, `Obj`) keep `Traversable
 
 ## Additional Properties
 
-| Data Structure     | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
-| ------------------ | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
-| **Option<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **Either<L,R>**    |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
-| **Try<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **IO<R,E,A>**      |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
-| **Http**           |    ✗     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **List<A>**        |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
-| **Set<A>**         |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Obj<T>**         |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
-| **Map<K,V>**       |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Lazy<T>**        |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Stack<A>**       |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **LazyList<A>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **Tuple<T[]>**     |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
-| **TaskOutcome<T>** |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✗      |     ✓      |
+| Data Structure  | Typeable | Valuable | Iterable | PromiseLike | Do-notation | Reshapeable | Promisable |
+| --------------- | :------: | :------: | :------: | :---------: | :---------: | :---------: | :--------: |
+| **Option<T>**   |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Either<L,R>** |    ✓     |    ✗     |    ✗     |      ✓      |      ✓      |      ✓      |     ✓      |
+| **Try<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **IO<R,E,A>**   |    ✗     |    ✗     |    ✓     |      ✗      |      ✓      |      ✗      |     ✗      |
+| **Http**        |    ✗     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **List<A>**     |    ✓     |    ✗     |    ✓     |      ✗      |      ✓      |      ✓      |     ✗      |
+| **Set<A>**      |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Obj<T>**      |    ✓     |    ✗     |    ✗     |      ✗      |      ✓      |      ✓      |     ✓      |
+| **Map<K,V>**    |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Lazy<T>**     |    ✓     |    ✗     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Stack<A>**    |    ✓     |    ✓     |    ✗     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **LazyList<A>** |    ✓     |    ✗     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
+| **Tuple<T[]>**  |    ✓     |    ✓     |    ✓     |      ✗      |      ✗      |      ✗      |     ✗      |
 
 ## Companion Methods
 
@@ -217,7 +214,7 @@ All Serializable types provide static deserialization methods:
 
 Note: `fold` has different semantics per type category:
 
-- **Sum types** (Option, Either, Try, IO, TaskOutcome): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
+- **Sum types** (Option, Either, Try, IO): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
 - **Collections** (List, Set, Map, Stack, Tuple, LazyList): `fold<B>(initial: B, fn: (acc: B, a: A) => B): B` — left-reduce accumulator
 
 `foldAsync` (Option, Either, Try) — same shape as `fold` but accepts sync or async handlers and always returns `Promise<B>`. Use when at least one branch performs async work to avoid `T | Promise<T>` unions.
@@ -348,13 +345,12 @@ Provides conversion to Promise for async interop:
 
 5. **Reshapeable**: Enables conversion between different monad types, allowing flexible composition in Do-notation when mixing types.
 
-6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either, Try, and TaskOutcome.
+6. **Promisable**: Provides conversion to Promise for async interoperability. Supported by Option, Either and Try.
 
 7. **Utility Types** (not in matrix):
    - **Cond**: Conditional expression builder
    - **Match**: Pattern matching utility
    - **ValidatedBrand**: Branded types with validation
-   - **Task**: Sync/async operation orchestrator returning TaskOutcome<T> with Ok/Err constructors. Includes conversion methods: toEither(), toTry(), toOption(), fromEither(), fromTry().
    - **Throwable**: Enhanced error type
 
 8. **IO<R,E,A>**: Lazy, composable effect type with typed errors and dependency injection.
