@@ -252,7 +252,13 @@ describe("Full Interfaces", () => {
 
   it("should include Option interface with JSDoc", () => {
     expect(FULL_INTERFACES.Option).toBeDefined()
-    expect(FULL_INTERFACES.Option).toContain("export interface Option<out T")
+    expect(FULL_INTERFACES.Option).toContain("export type Option<T extends Type> = SomeOf<T> | NoneOf<T>")
+    expect(FULL_INTERFACES.Option).toContain("export interface OptionBase<out T")
+    expect(FULL_INTERFACES.Option).toContain("export interface SomeOf<out T")
+    expect(FULL_INTERFACES.Option).toContain("export interface NoneOf<out T")
+    // The scan stops at the end of each definition, so no implementation leaks into the docs.
+    expect(FULL_INTERFACES.Option).not.toContain("define<")
+    expect(FULL_INTERFACES.Either).not.toContain("RightConstructor")
     expect(FULL_INTERFACES.Option).toContain("Returns true if this Option is a Some")
     expect(FULL_INTERFACES.Option).toContain("isSome()")
     expect(FULL_INTERFACES.Option).toContain("map<U")

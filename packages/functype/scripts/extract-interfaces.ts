@@ -33,7 +33,11 @@ interface TypeSource {
 }
 
 const TYPE_SOURCES: Record<string, TypeSource> = {
-  Option: { file: "src/option/Option.ts" },
+  Option: {
+    file: "src/option/Option.ts",
+    isType: true,
+    extras: [{ name: "OptionBase" }, { name: "SomeOf" }, { name: "NoneOf" }],
+  },
   Either: {
     file: "src/either/Either.ts",
     isType: true,
@@ -84,6 +88,9 @@ const countChar = (str: string, char: string): number => (str.match(new RegExp(c
 /** Check if line starts a JSDoc comment */
 const isJsDocStart = (trimmed: string): boolean => trimmed.startsWith("/**")
 
+/** Whether a line can end a type alias: it doesn't leave the type open for the next line. */
+const endsStatement = (trimmed: string): boolean => !/[=|&,<(]$/.test(trimmed)
+
 /** Check if line is part of JSDoc */
 const isJsDocLine = (trimmed: string): boolean => trimmed.startsWith("*") || trimmed.startsWith("/**") || trimmed === ""
 
@@ -129,6 +136,12 @@ const processLine = (
 
   // Check if definition is complete
   if (hasSeenOpenBrace && braceCount === 0 && inDefinition) {
+    return { done: true, result, jsDocStart, definitionStart }
+  }
+
+  // A type alias with no braces, such as `type Option<T> = SomeOf<T> | NoneOf<T>`, ends with its
+  // statement. Without this, the scan ran on into whatever came next until some braces balanced.
+  if (keyword === "type" && inDefinition && !hasSeenOpenBrace && endsStatement(trimmed)) {
     return { done: true, result, jsDocStart, definitionStart }
   }
 

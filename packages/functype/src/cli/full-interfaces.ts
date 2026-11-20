@@ -5,22 +5,24 @@
  */
 
 export const FULL_INTERFACES: Record<string, string> = {
-  Option: `export interface Option<out T extends Type>
+  Option: `export type Option<T extends Type> = SomeOf<T> | NoneOf<T>
+
+export interface OptionBase<out T extends Type>
   extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
-  isEmpty: boolean
+  readonly isEmpty: boolean
   /**
    * Returns true if this Option is a Some (contains a value)
    * @returns true if this Option contains a value, false otherwise
    */
-  isSome(): this is Option<T> & { value: T; isEmpty: false }
+  isSome(): this is SomeOf<T>
   /**
    * Returns true if this Option is a None (contains no value)
    * @returns true if this Option is empty, false otherwise
    */
-  isNone(): this is Option<T> & { value: undefined; isEmpty: true }
+  isNone(): this is NoneOf<T>
   /**
    * Returns the contained value or a default value if None. The default may be of a
    * different type; the result widens to \`T | T2\` so Option stays covariant in T.
@@ -178,97 +180,21 @@ export const FULL_INTERFACES: Record<string, string> = {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
+}
+
+export interface SomeOf<out T extends Type> extends OptionBase<T> {
+  readonly _tag: "Some"
+  readonly value: T
+  readonly isEmpty: false
+}
+
+export interface NoneOf<out T extends Type> extends OptionBase<T> {
+  readonly _tag: "None"
+  readonly value: undefined
+  readonly isEmpty: true
 }`,
 
   Either: `export type Either<L extends Type, R extends Type> = LeftOf<L, R> | RightOf<L, R>
-
-export type TestEither<L extends Type, R extends Type> = Either<L, R> & AsyncMonad<R>
-
-const RightConstructor = <L extends Type, R extends Type>(value: R): RightOf<L, R> => ({
-  [Symbol.toStringTag]: "Either",
-  _tag: "Right" as const,
-  value,
-  isLeft(): this is LeftOf<L, R> {
-    return false
-  },
-  isRight(): this is RightOf<L, R> {
-    return true
-  },
-  orElse: <R2 extends Type>(_defaultValue: R2): R | R2 => value,
-  orThrow: () => value,
-  expect: (_handler: (value: L) => never): R => value,
-  or: <L2 extends Type, R2 extends Type>(_alternative: Either<L2, R2>): Either<L | L2, R | R2> =>
-    Right<L | L2, R | R2>(value),
-  orNull: () => value,
-  orUndefined: () => value,
-  map: <U extends Type>(f: (value: R) => U): Either<L, U> => Right(f(value)),
-  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U> =>
-    ff._tag === "Right" ? Right<L | L2, U>((ff.value as (value: R) => U)(value)) : Left<L | L2, U>(ff.value as L2),
-  mapAsync: async <U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>> => Right<L, U>(await f(value)),
-  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]> =>
-    other.isLeft() ? Left<L | L1, [R, R1]>(other.value as L1) : Right<L | L1, [R, R1]>([value, other.value as R1]),
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U> => f(value),
-  flatMapAsync: async <L2 extends Type, U extends Type>(
-    f: (value: R) => Promise<Either<L2, U>>,
-  ): Promise<Either<L | L2, U>> => await f(value),
-  toOption: () => Some<R>(value),
-  toList: () => List<R>([value]),
-  toEither: <E extends Type>(_leftValue: E) => Right<E, R>(value),
-  toTry: () => Try(() => value),
-  toJSON() {
-    return { "@functype": "Either" as const, _tag: "Right" as const, value }
-  },
-  toString: () => {
-    return \`Right(\${showValue(value)})\`
-  },
-  *[Symbol.iterator]() {
-    yield value
-  },
-  *yield() {
-    yield value
-  },
-  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]> => {
-    const result = f(value)
-    return result.isLeft() ? Left<L | L2, U[]>(result.value as L2) : Right<L | L2, U[]>([result.value as U])
-  },
-  tap: (f: (value: R) => void) => {
-    f(value)
-    return Right<L, R>(value)
-  },
-  tapLeft: (_f: (value: L) => void) => Right<L, R>(value),
-  mapLeft: <L2 extends Type>(_f: (value: L) => L2) => Right<L2, R>(value),
-  filterOrElse: <L2 extends Type>(
-    predicate: (value: R) => boolean,
-    onUnsatisfied: (value: R) => L2,
-  ): Either<L | L2, R> => (predicate(value) ? Right<L | L2, R>(value) : Left<L | L2, R>(onUnsatisfied(value))),
-  bimap: <L2 extends Type, R2 extends Type>(_fl: (value: L) => L2, fr: (value: R) => R2) => Right<L2, R2>(fr(value)),
-  fold: <T extends Type>(_onLeft: (value: L) => T, onRight: (value: R) => T) => onRight(value),
-  foldAsync: async <T extends Type>(_onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) =>
-    onRight(value),
-  foldLeft:
-    <B>(z: B) =>
-    (op: (b: B, a: R) => B) =>
-      op(z, value),
-  foldRight:
-    <B>(z: B) =>
-    (op: (a: R, b: B) => B) =>
-      op(value, z),
-  match: <T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T => patterns.Right(value),
-  swap: () => Left<R, L>(value),
-  toPromise: (): Promise<R> => Promise.resolve(value),
-  toValue: () => ({ _tag: "Right", value }),
-  pipeEither: <U extends Type>(_onLeft: (value: L) => U, onRight: (value: R) => U) => onRight(value),
-  pipe: <U extends Type>(f: (value: L | R) => U) => f(value),
-  serialize: () => createSerializer("Either", "Right", value),
-  contains: (v: R) => value === v,
-  exists: (p: (a: R) => boolean) => p(value),
-  every: (p: (a: R) => boolean) => p(value),
-  forEach: (f: (a: R) => void) => f(value),
-  // Implement Doable interface for Do-notation
-  doUnwrap(): DoResult<R> {
-    return { ok: true, value }
-  },
-})
 
 export interface EitherBase<out L extends Type, out R extends Type>
   extends FunctypeSum<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
@@ -280,7 +206,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
    * React Query \`queryFn\`). With no argument, throws the Left value itself.
    */
-  orThrow: (error?: Error | ((left: L) => Error)) => R
+  orThrow(error?: Error | ((left: L) => Error)): R
   /**
    * Returns the right value, or calls the never-returning handler with the Left's value.
    * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the
@@ -288,34 +214,34 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * narrowing trap where \`if (e.isLeft()) fail(...)\` fails to narrow \`e.value\` when
    * \`fail\` is an arrow function typed as \`(...): never\`.
    */
-  expect: (handler: (value: L) => never) => R
+  expect(handler: (value: L) => never): R
   or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
-  orNull: () => R | null
-  orUndefined: () => R | undefined
-  readonly map: <U extends Type>(f: (value: R) => U) => Either<L, U>
-  ap: <L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>) => Either<L | L2, U>
-  merge: <L1 extends Type, R1 extends Type>(other: Either<L1, R1>) => Either<L | L1, [R, R1]>
+  orNull(): R | null
+  orUndefined(): R | undefined
+  map<U extends Type>(f: (value: R) => U): Either<L, U>
+  ap<L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U>
+  merge<L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]>
   /**
    * Maps the Right value with an async function. A Left resolves unchanged.
    * If \`f\` rejects or throws, the returned Promise rejects with the same reason: it does not
    * become a Left, and it never throws synchronously. To turn a rejection into a Left, use \`Either.fromPromise(p, onRejected)\`
    * or \`tryCatchAsync\`, which take a function from the reason to \`L\`.
    */
-  mapAsync: <U extends Type>(f: (value: R) => Promise<U>) => Promise<Either<L, U>>
-  flatMap: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U>
+  mapAsync<U extends Type>(f: (value: R) => Promise<U>): Promise<Either<L, U>>
+  flatMap<L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U>
   /**
    * Chains an async function that returns an Either. A Left resolves unchanged.
    * If \`f\` rejects or throws, the returned Promise rejects with the same reason, as with \`mapAsync\`.
    */
-  flatMapAsync: <L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>) => Promise<Either<L | L2, U>>
-  toOption: () => Option<R>
-  toString: () => string
+  flatMapAsync<L2 extends Type, U extends Type>(f: (value: R) => Promise<Either<L2, U>>): Promise<Either<L | L2, U>>
+  toOption(): Option<R>
+  toString(): string
   [Symbol.iterator]: () => Iterator<R>
-  yield: () => Generator<R, void, unknown>
-  traverse: <L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>) => Either<L | L2, U[]>
-  tap: (f: (value: R) => void) => Either<L, R>
-  tapLeft: (f: (value: L) => void) => Either<L, R>
-  mapLeft: <L2 extends Type>(f: (value: L) => L2) => Either<L2, R>
+  yield(): Generator<R, void, unknown>
+  traverse<L2 extends Type, U extends Type>(f: (value: R) => Either<L2, U>): Either<L | L2, U[]>
+  tap(f: (value: R) => void): Either<L, R>
+  tapLeft(f: (value: L) => void): Either<L, R>
+  mapLeft<L2 extends Type>(f: (value: L) => L2): Either<L2, R>
   /**
    * Applies a predicate to the Right value. If the predicate fails, short-circuits
    * to a Left carrying the value produced by \`onUnsatisfied\`. Left passes through
@@ -325,18 +251,15 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * @param onUnsatisfied - Builds the new Left value when the predicate fails
    * @returns Right if the predicate holds, Left(onUnsatisfied(value)) otherwise
    */
-  filterOrElse: <L2 extends Type>(
-    predicate: (value: R) => boolean,
-    onUnsatisfied: (value: R) => L2,
-  ) => Either<L | L2, R>
-  bimap: <L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2) => Either<L2, R2>
-  fold: <T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T) => T
+  filterOrElse<L2 extends Type>(predicate: (value: R) => boolean, onUnsatisfied: (value: R) => L2): Either<L | L2, R>
+  bimap<L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2): Either<L2, R2>
+  fold<T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T): T
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise, keeping chains fluent when at least one branch is async.
    */
-  foldAsync: <T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>) => Promise<T>
-  swap: () => Either<R, L>
+  foldAsync<T extends Type>(onLeft: (value: L) => T | Promise<T>, onRight: (value: R) => T | Promise<T>): Promise<T>
+  swap(): Either<R, L>
   /**
    * Pipes the value through the provided function based on whether this is a Left or Right
    */
@@ -385,7 +308,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * Returns the value, or throws on a Failure. Pass an \`Error\` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
    */
-  orThrow: (error?: Error | ((error: Error) => Error)) => T
+  orThrow(error?: Error | ((error: Error) => Error)): T
   /**
    * Returns the success value, or calls the never-returning handler with the Failure's error.
    * Use this when you have a helper like \`(msg) => fail(msg, 2)\` that terminates the program —
@@ -393,17 +316,17 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    * \`if (t.isFailure()) fail(...)\` fails to narrow \`t.value\` when \`fail\` is an arrow function
    * typed as \`(...): never\`.
    */
-  expect: (handler: (error: Error) => never) => T
+  expect(handler: (error: Error) => never): T
   or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
-  orNull: () => T | null
-  orUndefined: () => T | undefined
-  toOption: () => Option<T>
+  orNull(): T | null
+  orUndefined(): T | undefined
+  toOption(): Option<T>
   /**
    * Converts to a plain readonly array: \`[value]\` for Success, \`[]\` for Failure.
    * Symmetric with \`Try.toList()\` but skips the List wrapper for code that
    * just wants to feed Array.prototype methods or spread into another array.
    */
-  toArray: () => readonly T[]
+  toArray(): readonly T[]
   /**
    * Converts to Either<E, T>. Failure becomes Left(builder(error)) when given a function,
    * or Left(leftValue) when given a value. Success becomes Right(value).
@@ -412,28 +335,28 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
    *
    *   Try.fromYAML(text).toEither((e) => \`parse failed: \${e.message}\`)
    */
-  toEither: <E extends Type>(leftOrBuilder: E | ((err: Error) => E)) => Either<E, T>
-  toTry: () => Try<T>
-  map: <U>(f: (value: T) => U) => Try<U>
-  ap: <U>(ff: Try<(value: T) => U>) => Try<U>
-  flatMap: <U>(f: (value: T) => Try<U>) => Try<U>
-  flatMapAsync: <U>(f: (value: T) => Promise<Try<U>>) => Promise<Try<U>>
+  toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)): Either<E, T>
+  toTry(): Try<T>
+  map<U>(f: (value: T) => U): Try<U>
+  ap<U>(ff: Try<(value: T) => U>): Try<U>
+  flatMap<U>(f: (value: T) => Try<U>): Try<U>
+  flatMapAsync<U>(f: (value: T) => Promise<Try<U>>): Promise<Try<U>>
   /**
    * Pattern matches over the Try, applying onFailure if Failure and onSuccess if Success
    * @param onFailure - Function to apply if the Try is Failure
    * @param onSuccess - Function to apply if the Try is Success
    * @returns The result of applying the appropriate function
    */
-  fold: <U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U) => U
+  fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
    */
-  foldAsync: <U extends Type>(
+  foldAsync<U extends Type>(
     onFailure: (error: Error) => U | Promise<U>,
     onSuccess: (value: T) => U | Promise<U>,
-  ) => Promise<U>
-  toString: () => string
+  ): Promise<U>
+  toString(): string
   /**
    * Pattern matches over the Try, applying a handler function based on the variant
    * @param patterns - Object with handler functions for Success and Failure variants
@@ -1148,14 +1071,7 @@ export interface RightOf<out L extends Type, out R extends Type> extends EitherB
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
 } & Traversable<A> &`,
 
-  HttpError: `export type HttpError = NetworkError | HttpStatusError | DecodeError
-
-const networkError = (url: string, method: HttpMethod, cause: unknown): NetworkError => ({
-  _tag: "NetworkError",
-  url,
-  method,
-  cause,
-})`,
+  HttpError: `export type HttpError = NetworkError | HttpStatusError | DecodeError`,
 
   Http: `export interface HttpClientConfig {
   readonly baseUrl?: string

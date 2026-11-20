@@ -20,26 +20,26 @@ import { Left, List, Right, Try } from "../index"
  */
 
 /**
- * The Option type represents a value that may or may not exist.
- * It's used to handle potentially null or undefined values in a type-safe way.
+ * What every Option has, Some or None. `Option<T>` is the union of `SomeOf<T>` and `NoneOf<T>`, so
+ * TypeScript narrows it on `isSome()`, `isNone()` and `_tag`, as it does Either.
  * @typeParam T - The type of the value contained in the Option
  */
-export interface Option<out T extends Type>
+export interface OptionBase<out T extends Type>
   extends Functype<T, "Some" | "None">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained value (undefined for None) */
   readonly value: T | undefined
   /** Whether this Option contains no value */
-  isEmpty: boolean
+  readonly isEmpty: boolean
   /**
    * Returns true if this Option is a Some (contains a value)
    * @returns true if this Option contains a value, false otherwise
    */
-  isSome(): this is Option<T> & { value: T; isEmpty: false }
+  isSome(): this is SomeOf<T>
   /**
    * Returns true if this Option is a None (contains no value)
    * @returns true if this Option is empty, false otherwise
    */
-  isNone(): this is Option<T> & { value: undefined; isEmpty: true }
+  isNone(): this is NoneOf<T>
   /**
    * Returns the contained value or a default value if None. The default may be of a
    * different type; the result widens to `T | T2` so Option stays covariant in T.
@@ -199,26 +199,39 @@ export interface Option<out T extends Type>
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
 }
 
-/** A Some as the prototype sees it: the interface, with the variant's data fixed. */
-type SomeShape<T extends Type> = Option<T> & { readonly _tag: "Some"; readonly value: T; readonly isEmpty: false }
-/** A None as the prototype sees it. */
-type NoneShape<T extends Type> = Option<T> & {
+/** An Option holding a value. Discriminated by `_tag: "Some"`. */
+export interface SomeOf<out T extends Type> extends OptionBase<T> {
+  readonly _tag: "Some"
+  readonly value: T
+  readonly isEmpty: false
+}
+
+/** An Option holding nothing. Discriminated by `_tag: "None"`. */
+export interface NoneOf<out T extends Type> extends OptionBase<T> {
   readonly _tag: "None"
   readonly value: undefined
   readonly isEmpty: true
 }
 
+/**
+ * A value that may or may not exist: a Some or a None. TypeScript narrows it across both branches of
+ * `isSome()` / `isNone()` and `_tag` checks. Variance comes from SomeOf and NoneOf, because a union
+ * type alias can't carry its own variance annotation.
+ * @typeParam T - The type of the value contained in the Option
+ */
+export type Option<T extends Type> = SomeOf<T> | NoneOf<T>
+
 /* eslint-disable functional/immutable-data -- each constructor fills in the object it just created */
 
 /** Every Some shares these methods (#276 §14). `this.value` is the Some's own data. */
-const SomeProto = define<SomeShape<A>>()("Some", {
+const SomeProto = define<SomeOf<A>>()("Some", {
   [Symbol.toStringTag]: "Option",
   isEmpty: false,
   size: 1,
-  isSome(): this is Option<A> & { value: A; isEmpty: false } {
+  isSome(): this is SomeOf<A> {
     return true
   },
-  isNone(): this is Option<A> & { value: undefined; isEmpty: true } {
+  isNone(): this is NoneOf<A> {
     return false
   },
   orElse() {
@@ -332,14 +345,14 @@ const SomeProto = define<SomeShape<A>>()("Some", {
 })
 
 /** The one None's methods. */
-const NoneProto = define<NoneShape<A>>()("None", {
+const NoneProto = define<NoneOf<A>>()("None", {
   [Symbol.toStringTag]: "Option",
   isEmpty: true,
   size: 0,
-  isSome(): this is Option<A> & { value: A; isEmpty: false } {
+  isSome(): this is SomeOf<A> {
     return false
   },
-  isNone(): this is Option<A> & { value: undefined; isEmpty: true } {
+  isNone(): this is NoneOf<A> {
     return true
   },
   orElse(defaultValue) {
@@ -464,14 +477,14 @@ const NoneProto = define<NoneShape<A>>()("None", {
  */
 export const Some = <T extends Type>(value: T): Option<T> => {
   // The one cast: a prototype checked at the opaque A works for every T.
-  const some = Object.create(SomeProto) as Mutable<SomeShape<T>>
+  const some = Object.create(SomeProto) as Mutable<SomeOf<T>>
   some._tag = "Some"
   some.value = value
   return some
 }
 
 const NONE: Option<never> = (() => {
-  const none = Object.create(NoneProto) as Mutable<NoneShape<never>>
+  const none = Object.create(NoneProto) as Mutable<NoneOf<never>>
   none._tag = "None"
   none.value = undefined
   return none
@@ -521,13 +534,13 @@ const OptionCompanion = {
    * @param option - The Option to check
    * @returns True if Option is Some
    */
-  isSome: <T>(option: Option<T>): option is Option<T> & { value: T; isEmpty: false } => option.isSome(),
+  isSome: <T>(option: Option<T>): option is SomeOf<T> => option.isSome(),
   /**
    * Type guard to check if an Option is None
    * @param option - The Option to check
    * @returns True if Option is None
    */
-  isNone: <T>(option: Option<T>): option is Option<T> & { value: undefined; isEmpty: true } => option.isNone(),
+  isNone: <T>(option: Option<T>): option is NoneOf<T> => option.isNone(),
   /**
    * Creates an Option from JSON string
    * @param json - The JSON string

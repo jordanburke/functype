@@ -138,7 +138,14 @@ const SERIALIZE_DEPTH = 4
 
 /** A name to show for a container type: `Either`, `Option`, `List`, or the generic fallback. */
 /** Member names TypeScript shows once a union loses its alias (`Either<E, A> | null`), mapped back. */
-const MEMBER_TO_CONTAINER: Readonly<Record<string, string>> = { LeftOf: "Either", RightOf: "Either" }
+const MEMBER_TO_CONTAINER: Readonly<Record<string, string>> = {
+  LeftOf: "Either",
+  RightOf: "Either",
+  SomeOf: "Option",
+  NoneOf: "Option",
+  SuccessOf: "Try",
+  FailureOf: "Try",
+}
 
 const containerName = (type: TypeShape): string => {
   // A bundled .d.ts renames a clashing declaration `Map$1`.

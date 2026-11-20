@@ -122,4 +122,4 @@ option.toPromise(); // Rejected or Resolved Promise
 
 ## API Reference
 
-See full API documentation at [functype API docs](https://functype.org/api-docs/interfaces/Option.html)
+See full API documentation at [functype API docs](https://functype.org/api-docs/types/Option.html)
