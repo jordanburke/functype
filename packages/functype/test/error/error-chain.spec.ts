@@ -50,7 +50,8 @@ describe("getErrorChain", () => {
     const b = new Error("b", { cause: a })
     Object.defineProperty(a, "cause", { value: b })
 
-    expect(getErrorChain(b).length).toBeLessThanOrEqual(102)
+    // The walk stops once the chain holds more than 100 links, so a two-error loop yields exactly 101.
+    expect(getErrorChain(b).length).toBe(101)
   })
 })
 

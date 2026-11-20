@@ -38,7 +38,7 @@ import { Stack } from "@/stack/Stack"
 import { Try } from "@/try"
 import { Tuple } from "@/tuple/Tuple"
 
-describe("Serialization conformance — round-trip across all 12 Serializable types", () => {
+describe("Serialization conformance — round-trip across all 11 Serializable types", () => {
   describe("Option", () => {
     it("Some round-trips with methods intact", () => {
       const original = Some(42)
