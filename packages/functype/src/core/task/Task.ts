@@ -4,6 +4,7 @@ import { Throwable } from "@/core/throwable/Throwable"
 import type { Doable, DoResult } from "@/do/protocol"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { formatErrorChain, getErrorChain, isTaggedThrowable } from "@/error/ErrorChain"
 import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeBase } from "@/functype"
 import { ArrayBuilder } from "@/internal/mutation-utils"
@@ -17,24 +18,6 @@ import type { Try } from "@/try/Try"
 import { Try as TryConstructor } from "@/try/Try"
 import type { AsyncMonad, Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
-
-/**
- * Type definition for errors with a _tag property that identifies them as Throwables
- */
-export type TaggedThrowable = Error & {
-  _tag: "Throwable"
-  cause?: Error
-  taskInfo?: { name: string; description: string }
-}
-
-/**
- * Type guard to check if an error is a TaggedThrowable
- */
-export function isTaggedThrowable(error: unknown): error is TaggedThrowable {
-  return (
-    error instanceof Error && typeof error === "object" && true && (error as { _tag?: string })._tag === "Throwable"
-  )
-}
 
 // Input parameters for tasks (optional)
 export interface TaskParams {
@@ -775,29 +758,7 @@ const TaskCompanion = {
    * @param error - The error to extract the chain from
    * @returns An array of errors in the chain, from outermost to innermost
    */
-  getErrorChain: (error: Error | undefined): Error[] => {
-    if (!error) return []
-
-    const chain = ArrayBuilder<Error>()
-    chain.add(error)
-    const current = Ref(error)
-
-    // Traverse the cause chain
-    while (current.get() && (current.get() as TaggedThrowable).cause) {
-      const { cause } = current.get() as TaggedThrowable
-      if (cause) {
-        chain.add(cause)
-        current.set(cause)
-      } else {
-        break
-      }
-
-      // Prevent infinite loops if circular references exist
-      if (chain.size() > 100) break
-    }
-
-    return chain.build()
-  },
+  getErrorChain: (error: Error | undefined): Error[] => getErrorChain(error),
 
   /**
    * Format the error chain as a string with the option to include task details
@@ -813,31 +774,7 @@ const TaskCompanion = {
       separator?: string
       includeStackTrace?: boolean
     },
-  ): string => {
-    const chain = TaskCompanion.getErrorChain(error)
-    const separator = options?.separator ?? "\n"
-
-    return chain
-      .map((err, index) => {
-        if (!err) {
-          return `${index > 0 ? "↳ " : ""}Unknown error`
-        }
-
-        const { taskInfo } = err as TaggedThrowable
-        const taskName = options?.includeTasks && taskInfo?.name ? `[${taskInfo.name}] ` : ""
-        const message = err.message ?? "No message"
-
-        const result = Ref(`${index > 0 ? "↳ " : ""}${taskName}${message}`)
-
-        // Add stack trace if requested
-        if (options?.includeStackTrace && err.stack) {
-          result.set(`${result.get()}\n${err.stack.split("\n").slice(1).join("\n")}`)
-        }
-
-        return result.get()
-      })
-      .join(separator)
-  },
+  ): string => formatErrorChain(error, options),
 
   /**
    * Convert a Promise-returning function to a Task-compatible function

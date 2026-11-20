@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { Task, Throwable } from "@/core"
+import { Throwable } from "@/core"
 import { createErrorSerializer, formatError } from "@/error/ErrorFormatter"
 import { mergeObjects } from "@/util"
+
+// A failure in a named step, wrapping the error below it as its cause.
+const stepError = (name: string, message: string, cause?: Error, description = ""): Error =>
+  Throwable.apply(new Error(message, { cause }), undefined, { name, description })
 
 /**
  * This test file demonstrates how to effectively log functype errors with Pino
@@ -96,20 +100,10 @@ describe("Pino Error Logging with Functype", () => {
     // Create an error serializer
     const errorSerializer = createErrorSerializer()
 
-    // Create a nested task error scenario
-    const level3Task = Task({ name: "DbConnection" }).Sync(() => {
-      throw new Error("Connection timeout after 30s")
-    })
-
-    const level2Task = Task({ name: "DbQuery" }).Sync(() => {
-      return level3Task.orThrow()
-    })
-
-    const level1Task = Task({ name: "UserService" }).Sync(() => {
-      return level2Task.orThrow()
-    })
-
-    const error = level1Task.error as Error
+    // Create a nested step error scenario
+    const level3 = stepError("DbConnection", "Connection timeout after 30s")
+    const level2 = stepError("DbQuery", "Query failed", level3)
+    const error = stepError("UserService", "User lookup failed", level2)
 
     // Add custom context to the error
     mergeObjects(error, {
@@ -166,30 +160,23 @@ describe("Pino Error Logging with Functype", () => {
     const errorSerializer = createErrorSerializer()
 
     // Simulate a real-world error scenario in a REST API
-    const dbTask = Task({ name: "DatabaseQuery", description: "Query user data from database" }).Sync(() => {
-      const dbError = new Error('ERROR: duplicate key value violates unique constraint "users_email_key"')
-      // Add postgres-like error properties
-      mergeObjects(dbError, {
-        code: "23505",
-        detail: "Key (email)=(user@example.com) already exists.",
-        schema: "public",
-        table: "users",
-        column: "email",
-        constraint: "users_email_key",
-        dataType: "text",
-      })
-      throw dbError
+    const dbError = new Error('ERROR: duplicate key value violates unique constraint "users_email_key"')
+    // Add postgres-like error properties
+    mergeObjects(dbError, {
+      code: "23505",
+      detail: "Key (email)=(user@example.com) already exists.",
+      schema: "public",
+      table: "users",
+      column: "email",
+      constraint: "users_email_key",
+      dataType: "text",
     })
-
-    const userTask = Task({ name: "UserService", description: "User registration service" }).Sync(() => {
-      return dbTask.orThrow()
+    const dbStep = Throwable.apply(dbError, undefined, {
+      name: "DatabaseQuery",
+      description: "Query user data from database",
     })
-
-    const apiTask = Task({ name: "UserController", description: "User registration endpoint" }).Sync(() => {
-      return userTask.orThrow()
-    })
-
-    const error = apiTask.error as Error
+    const userStep = stepError("UserService", "Registration failed", dbStep, "User registration service")
+    const error = stepError("UserController", "Registration failed", userStep, "User registration endpoint")
 
     // Add request context to the error
     mergeObjects(error, {

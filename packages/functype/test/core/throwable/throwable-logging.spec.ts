@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { Task, Throwable } from "@/core"
-import { formatError, createErrorSerializer } from "@/error"
+import { Throwable } from "@/core"
+import { formatError, createErrorSerializer, formatErrorChain } from "@/error"
+
+// A failure in a named step, wrapping the error below it as its cause.
+const stepError = (name: string, message: string, cause?: Error, description = ""): Error =>
+  Throwable.apply(new Error(message, { cause }), undefined, { name, description })
 
 /**
  * This test file demonstrates how functype errors appear in various logging contexts
@@ -95,44 +99,36 @@ describe("Throwable Logging Display", () => {
     console.log(output.join("\n"))
   })
 
-  it("demonstrates task errors when directly logged", () => {
+  it("demonstrates named step errors when directly logged", () => {
     const output = mockConsoleAndRun(() => {
       // Wrap in try/catch to avoid failing the test
       try {
-        // Throw inside a task
-        throw Task({ name: "UserService", description: "Handles user operations" }).Sync(() => {
-          throw new Error("User validation failed")
-        }).error
+        throw stepError("UserService", "User validation failed", undefined, "Handles user operations")
       } catch (error) {
-        console.log("Task Error object:", error)
-        console.log("Task Error toString:", (error as Error).toString())
-        console.error("Task Error in console.error:", error)
+        console.log("Step Error object:", error)
+        console.log("Step Error toString:", (error as Error).toString())
+        console.error("Step Error in console.error:", error)
       }
     })
 
     expect(output.some((line) => line.includes("UserService"))).toBe(true)
-    console.log("\nTask Error outputs:")
+    console.log("\nStep Error outputs:")
     console.log(output.join("\n").substring(0, 500) + "...")
   })
 
   it("demonstrates how error chain formatting improves clarity", () => {
     const output = mockConsoleAndRun(() => {
-      // Create a nested task error
-      const innerTask = Task({ name: "DbQuery", description: "Database query operation" }).Sync(() => {
-        throw new Error("Database connection failed")
-      })
-
-      const outerTask = Task({ name: "UserFetch", description: "Fetch user data" }).Sync(() => {
-        return innerTask.orThrow()
-      })
+      // Create a nested step error
+      const inner = stepError("DbQuery", "Database connection failed", undefined, "Database query operation")
+      const outer = stepError("UserFetch", "Fetch user data failed", inner, "Fetch user data")
 
       // Raw error output
-      console.log("Raw nested error:", JSON.stringify(outerTask.error))
-      console.log("Error message:", (outerTask.error as Error).message)
-      console.log("Error name:", (outerTask.error as Error).name)
+      console.log("Raw nested error:", JSON.stringify(outer))
+      console.log("Error message:", outer.message)
+      console.log("Error name:", outer.name)
 
       // Use the error chain formatter
-      const formattedError = Task.formatErrorChain(outerTask.error as Error, {
+      const formattedError = formatErrorChain(outer, {
         includeTasks: true,
         includeStackTrace: false,
       })
@@ -144,30 +140,18 @@ describe("Throwable Logging Display", () => {
     // In the mock console environment, check that we have some outputs
     expect(output.length).toBeGreaterThan(2)
     expect(output.some((line) => line.includes("Formatted Error Chain"))).toBe(true)
-    console.log("\nNested Task Error with formatting:")
+    expect(output.some((line) => line.includes("[DbQuery] Database connection failed"))).toBe(true)
+    console.log("\nNested Step Error with formatting:")
     console.log(output.join("\n"))
   })
 
   it("demonstrates improved error display format from ErrorFormatter", () => {
     const output = mockConsoleAndRun(() => {
       // Create a deep error chain
-      const level3Task = Task({ name: "DbConnection" }).Sync(() => {
-        throw new Error("Connection timeout")
-      })
-
-      const level2Task = Task({ name: "DbQuery" }).Sync(() => {
-        return level3Task.orThrow()
-      })
-
-      const level1Task = Task({ name: "UserService" }).Sync(() => {
-        return level2Task.orThrow()
-      })
-
-      const mainTask = Task({ name: "ApiHandler" }).Sync(() => {
-        return level1Task.orThrow()
-      })
-
-      const error = mainTask.error as Error
+      const level3 = stepError("DbConnection", "Connection timeout")
+      const level2 = stepError("DbQuery", "Query failed", level3)
+      const level1 = stepError("UserService", "User lookup failed", level2)
+      const error = stepError("ApiHandler", "Request failed", level1)
 
       // Log with standard console
       console.log("Standard error display:", error)
@@ -221,16 +205,9 @@ describe("Throwable Logging Display", () => {
 
     const pinoLogger = createMockPinoLogger()
 
-    // Create a task error
-    const innerTask = Task({ name: "DbQuery" }).Sync(() => {
-      throw new Error("Query syntax error in users table")
-    })
-
-    const outerTask = Task({ name: "UserService" }).Sync(() => {
-      return innerTask.orThrow()
-    })
-
-    const error = outerTask.error as Error
+    // Create a nested step error
+    const inner = stepError("DbQuery", "Query syntax error in users table")
+    const error = stepError("UserService", "Failed to load user", inner)
 
     // Standard Pino error logging
     pinoLogger.error({ err: error }, "Failed to fetch user data")
@@ -239,7 +216,7 @@ describe("Throwable Logging Display", () => {
     pinoLogger.error(
       {
         err: error,
-        errorChain: Task.formatErrorChain(error, { includeTasks: true }),
+        errorChain: formatErrorChain(error, { includeTasks: true }),
         service: "user-api",
         userId: "user123",
         operation: "get-profile",
@@ -259,23 +236,11 @@ describe("Throwable Logging Display", () => {
   })
 
   it("demonstrates the error serializer from ErrorFormatter", () => {
-    // Create a nested task error
-    const level3 = Task({ name: "DbConnection" }).Sync(() => {
-      throw new Error("Connection failed")
-    })
-
-    const level2 = Task({ name: "UserFetch" }).Sync(() => {
-      return level3.orThrow()
-    })
-
-    // Create level1 and get its error for testing
-    Task({ name: "ApiRequest" }).Sync(() => {
-      return level2.orThrow()
-    })
+    // Create a single-level step error
+    const error = stepError("UserFetch", "Connection failed")
 
     // Get serialized error using the provided serializer
     const errorSerializer = createErrorSerializer()
-    const error = level2.error as Error
     const serialized = errorSerializer(error)
 
     // Output the serialized error
