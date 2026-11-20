@@ -1,4 +1,4 @@
-import { Left, None, Right, Some, Try } from "functype"
+import { Exit, IO, Left, None, Right, Some, Try } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { referenceEq, structuralEq, tagEq } from "../../src/hooks/eq"
@@ -85,6 +85,18 @@ describe("structuralEq with functype values, whose methods live on a shared prot
     expect(structuralEq(Some(/a/), Some(/b/))).toBe(false)
     expect(structuralEq(Some(/a/g), Some(/a/g))).toBe(true)
     expect(structuralEq(Some(new URL("https://a.test")), Some(new URL("https://b.test")))).toBe(false)
+  })
+
+  it("compares Exits by data, and IOs by reference", () => {
+    expect(structuralEq(Exit.succeed(1), Exit.succeed(1))).toBe(true)
+    expect(structuralEq(Exit.succeed(1), Exit.succeed(2))).toBe(false)
+    expect(structuralEq(Exit.fail("e"), Exit.die("e"))).toBe(false)
+    expect(structuralEq(Exit.interrupt("f"), Exit.interrupt("f"))).toBe(true)
+    // An IO's only own key is its symbol-keyed effect, which the key walk doesn't see, so two IOs
+    // are equal only when they are the same IO.
+    const io = IO.succeed(1)
+    expect(structuralEq(io, io)).toBe(true)
+    expect(structuralEq(IO.succeed(1), IO.succeed(1))).toBe(false)
   })
 
   it("never calls objects with different prototypes equal", () => {
