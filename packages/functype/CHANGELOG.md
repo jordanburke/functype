@@ -29,6 +29,16 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `runSync` can't sleep. `IO.sleep`, `IO.never` and `.delay` now throw `UnsupportedSyncOperationError` with `operation: "sleep"` there, and `recover` can't catch it. Before, they failed with a plain `Error` that `recover` could turn into a fallback. `UnsupportedSyncOperationError.operation` gains `"sleep"`.
 - **Upgrade:** nothing to change unless code relied on a sleep outlasting a cancellation, or ran a sleep under `runSync`. Use `run()` or `runExit()` for an effect that sleeps.
 
+**2.0 (breaking): `race` and `timeout` stop the effects they no longer need.**
+
+- `IO.race` returns as soon as the first effect settles, and interrupts the others. `timeout` returns its `TimeoutError` at the deadline, and interrupts the effect. Before, both used a bare `Promise.race`, so the loser ran on to completion with its timers, requests and resources.
+- An interrupted effect starts no new step, a sleep in it wakes, and an `IO.async` / `IO.tryPromise` thunk sees its signal abort. Pass that signal to `fetch` to stop the request.
+- The winner's signal stays live, so a response body it returned can still be read.
+- `race` and `timeout` don't wait for an effect that ignores cancellation. Returning doesn't mean such an effect has stopped. Its `bracket` release runs when it settles, and it never becomes an unhandled rejection.
+- `race` still returns the first effect to *settle*, so a failure that comes first is the result. ZIO and Effect return the first to *succeed*; functype does not.
+- `IO.async` thunks inside `race` or `timeout` now receive a signal even when the run has none.
+- **Upgrade:** nothing to change unless code relied on a losing effect finishing its work. Move work that must finish out of the race, or run it with its own `run()`.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:

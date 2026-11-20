@@ -626,6 +626,11 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 
   /**
    * Fails with TimeoutError if the effect doesn't complete within the specified duration.
+   *
+   * At the deadline the effect is interrupted: it starts no new step, a sleep in it wakes, and
+   * an `IO.async` thunk sees its signal abort. The `TimeoutError` comes back at once. An effect
+   * that ignores cancellation may still be running then; its `bracket` release runs when it
+   * settles. When the effect finishes first, the timer is cleared.
    * @param ms - Maximum time in milliseconds
    */
   timeout(ms: number): IO<R, E | TimeoutError, A>
@@ -1410,24 +1415,10 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         if (effect.effects.length === 0) {
           return Exit.fail(new Error("No effects to race") as E)
         }
-        // Race all effects - first one to complete wins
-        const result = await Promise.race(effect.effects.map((e) => runEffect(_fx(e), context, interruption)))
-        return result
+        return await runRace(effect.effects, context, interruption)
       }
-      case "Timeout": {
-        // Clear the timer when the effect wins: a pending timer keeps the process alive for the full
-        // duration. (When the timer wins, the effect still runs on; stopping it is 2.0 — #276 §8b.)
-        let timer: ReturnType<typeof setTimeout> | undefined
-        const timeoutPromise = new Promise<ExitType<E, A>>((resolve) => {
-          timer = setTimeout(() => resolve(Exit.fail(new TimeoutError(effect.duration) as E)), effect.duration)
-        })
-        const effectPromise = runEffect(_fx(effect.effect), context, interruption)
-        try {
-          return await Promise.race([effectPromise, timeoutPromise])
-        } finally {
-          clearTimeout(timer)
-        }
-      }
+      case "Timeout":
+        return unsafeCoerce(await runTimeout(effect.effect, effect.duration, context, interruption))
       case "InterruptWhen": {
         const { signal } = effect
         const region = anySignal([interruption, signal])
@@ -1471,6 +1462,69 @@ const sleep = (duration: number, signal: AbortSignal | undefined): Promise<ExitT
     }
     signal?.addEventListener("abort", onAbort, { once: true })
   })
+
+/**
+ * Runs `effects` at once; the first to settle, success or failure, is the result.
+ *
+ * Each child gets its own abort signal, joined to the enclosing one. When the first child
+ * settles, the others are aborted and `runRace` returns without waiting for them. The winner's
+ * signal stays live, so a `fetch` body it returned can still be read. A loser's `bracket` release
+ * runs when the loser settles; `runEffect` never rejects, so a detached loser can't become an
+ * unhandled rejection.
+ */
+const runRace = <R extends Type, E extends Type, A extends Type>(
+  effects: readonly IO<R, E, A>[],
+  context: Context<R>,
+  interruption: AbortSignal | undefined,
+): Promise<ExitType<E, A>> => {
+  const children = effects.map(() => {
+    const own = new AbortController()
+    return { own, scope: anySignal([interruption, own.signal]) }
+  })
+  const state = { settled: false }
+  return new Promise((resolve) => {
+    effects.forEach((child, index) => {
+      void runEffect(_fx(child), context, children[index]!.scope.signal).then((exit) => {
+        if (state.settled) return
+        state.settled = true
+        children.forEach(({ own, scope }, other) => {
+          if (other !== index) own.abort()
+          scope.dispose()
+        })
+        resolve(exit)
+      })
+    })
+  })
+}
+
+/**
+ * Runs `effect` against a deadline of `duration` ms.
+ *
+ * If the effect settles first, the timer is cleared and the effect's signal stays live. If the
+ * deadline comes first, the effect is aborted and the result is a `TimeoutError` at once, without
+ * waiting for the effect to stop; its `bracket` release runs, detached, when it settles.
+ */
+const runTimeout = <R extends Type, E extends Type, A extends Type>(
+  effect: IO<R, E, A>,
+  duration: number,
+  context: Context<R>,
+  interruption: AbortSignal | undefined,
+): Promise<ExitType<E | TimeoutError, A>> => {
+  const own = new AbortController()
+  const scope = anySignal([interruption, own.signal])
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      own.abort()
+      scope.dispose()
+      resolve(Exit.fail(new TimeoutError(duration)))
+    }, duration)
+    void runEffect(_fx(effect), context, scope.signal).then((exit) => {
+      clearTimeout(timer)
+      scope.dispose()
+      resolve(exit)
+    })
+  })
+}
 
 /**
  * Runs `effects` with at most `concurrency` in flight and collects the results in input order.
@@ -2080,8 +2134,15 @@ const IOCompanion = {
     }),
 
   /**
-   * Races multiple effects, returning the first to complete.
-   * Note: Other effects are NOT cancelled (JS limitation).
+   * Runs the effects at once and returns the first to settle, whether it succeeded or failed.
+   *
+   * The others are interrupted: they start no new step, a sleep in them wakes, and an
+   * `IO.async` thunk sees its signal abort. `race` returns at once and doesn't wait for them, so
+   * an effect that ignores cancellation may still be running; its `bracket` release runs when it
+   * settles.
+   *
+   * First to *settle* wins, so a failure that comes first is the result. This differs from ZIO
+   * and Effect, where `race` returns the first to *succeed*.
    *
    * @example
    * ```typescript
