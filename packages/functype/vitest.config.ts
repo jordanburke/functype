@@ -27,13 +27,13 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       exclude: ["node_modules/", "dist/", "**/*.d.ts", "**/*.test.{js,ts}", "**/*.config.{js,ts}"],
       // A point under the measured level, rounded down, so run-to-run noise doesn't fail CI. Measured on
-      // 2026-11-21: statements 85.05%, branches 76.79%, functions 84.7%, lines 85.92%. To raise the floor,
+      // 2026-11-21: statements 85.34%, branches 76.8%, functions 84.86%, lines 86.27%. To raise the floor,
       // run `pnpm -F functype test:coverage`, read the "All files" row, and set each value a point under it.
       thresholds: {
         statements: 84,
         branches: 75,
         functions: 83,
-        lines: 84,
+        lines: 85,
       },
     },
   },
