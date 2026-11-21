@@ -1114,6 +1114,28 @@ const attemptSync = <E, A>(step: () => ExitType<E, A>): ExitType<E, A> => {
   }
 }
 
+/** An outcome of any type, as the interpreter loops pass it from step to step. */
+type AnyExit = ExitType<unknown, unknown>
+
+/** An effect of any type, as the interpreter loops see it. */
+type AnyEffect = IOEffect<Type, Type, Type>
+
+/**
+ * A step that runs an inner effect, then does something with its outcome: a `map`'s function, a
+ * `flatMap`'s continuation, an error handler. The loops keep these on a stack while the inner
+ * effect runs.
+ */
+type Wrapper = Extract<
+  AnyEffect,
+  { readonly _tag: "Map" | "FlatMap" | "MapError" | "Recover" | "RecoverWith" | "Fold" }
+>
+
+/**
+ * The wrappers waiting on their inner effects, each followed by the context it runs in. Two slots
+ * a wrapper, in one array, so a step allocates nothing.
+ */
+type WrapperStack = (Wrapper | Context<Type>)[]
+
 /**
  * Interprets and runs an effect synchronously, and returns its Exit.
  *
@@ -1122,12 +1144,93 @@ const attemptSync = <E, A>(step: () => ExitType<E, A>): ExitType<E, A> => {
  * thunk is a `Failure`, because that constructor declares `E = unknown`. What it can't run (an
  * `IO.async`, `timeout`, `race`, `sleep`) is a `Die` too. It has no signal to watch, so
  * `interruptOn` only sees a signal that was already aborted.
+ *
+ * It is a loop, not a recursion (#560, IO overflows the stack on chains of 10,000 steps). Going
+ * in, each wrapper goes on a stack and its inner effect runs next. Coming out, each wrapper takes
+ * the outcome, until one, such as a `flatMap`, starts a new effect. So a chain's length is bounded
+ * by memory, not by the call stack. Only `bracket`, `all`, `withSpan` and `interruptOn` run their
+ * inner effects in a nested loop.
  */
 const runEffectSync = <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
   context: Context<R>,
   span: unknown,
 ): ExitType<E, A> => {
+  /* eslint-disable functional/no-let -- the loop's current effect, context and outcome */
+  const stack: WrapperStack = []
+  let fx: AnyEffect = unsafeCoerce(effect)
+  let ctx: Context<Type> = unsafeCoerce(context)
+  let exit: AnyExit | undefined = undefined
+  /* eslint-enable functional/no-let */
+  for (;;) {
+    if (exit === undefined) {
+      switch (fx._tag) {
+        case "Map":
+        case "FlatMap":
+        case "MapError":
+        case "Recover":
+        case "RecoverWith":
+        case "Fold":
+          stack.push(fx, ctx)
+          fx = _fx(fx.effect)
+          continue
+        case "ProvideContext":
+          ctx = ctx.merge(fx.context)
+          fx = _fx(fx.effect)
+          continue
+        default:
+          exit = runLeafSync(fx, ctx, span)
+          continue
+      }
+    }
+    if (stack.length === 0) return unsafeCoerce(exit)
+    const wrapperContext = stack.pop() as Context<Type>
+    const wrapper = stack.pop() as Wrapper
+    try {
+      switch (wrapper._tag) {
+        case "Map":
+          if (exit._tag === "Success") exit = Exit.succeed(wrapper.f(exit.value))
+          break
+        case "FlatMap":
+          if (exit._tag === "Success") {
+            fx = _fx(wrapper.f(exit.value))
+            ctx = wrapperContext
+            exit = undefined
+          }
+          break
+        case "MapError": {
+          const channel = syncErrorChannel(exit)
+          if (channel) exit = Exit.fail(wrapper.f(channel.value))
+          break
+        }
+        case "Recover":
+          if (syncErrorChannel(exit)) exit = Exit.succeed(wrapper.fallback)
+          break
+        case "RecoverWith": {
+          const channel = syncErrorChannel(exit)
+          if (channel) {
+            fx = _fx(wrapper.f(channel.value))
+            ctx = wrapperContext
+            exit = undefined
+          }
+          break
+        }
+        case "Fold": {
+          const channel = syncErrorChannel(exit)
+          if (channel) exit = Exit.succeed(wrapper.onFailure(channel.value))
+          else if (exit._tag === "Success") exit = Exit.succeed(wrapper.onSuccess(exit.value))
+          break
+        }
+      }
+    } catch (e) {
+      // A throw out of a callback the type system said could not produce an `E`.
+      exit = Exit.die(e)
+    }
+  }
+}
+
+/** Runs a step of {@link runEffectSync} that isn't a wrapper, to its outcome. */
+const runLeafSync = (effect: AnyEffect, context: Context<Type>, span: unknown): AnyExit => {
   try {
     switch (effect._tag) {
       case "Succeed":
@@ -1141,68 +1244,33 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
       case "Async":
         return Exit.die(cannotRunAsync())
       case "Auto":
-        return unsafeCoerce(runAutoSync(effect.thunk))
-      case "Map": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return Exit.succeed(effect.f(exitA.value))
-      }
-      case "FlatMap": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        if (!exitA.isSuccess()) return unsafeCoerce(exitA)
-        return runEffectSync(_fx(effect.f(exitA.value)), context, span)
-      }
-      case "MapError": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        const channel = syncErrorChannel(exitA)
-        return channel ? Exit.fail(effect.f(channel.value)) : unsafeCoerce(exitA)
-      }
-      case "Recover": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        return syncErrorChannel(exitA) ? Exit.succeed(effect.fallback) : unsafeCoerce(exitA)
-      }
-      case "RecoverWith": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        const channel = syncErrorChannel(exitA)
-        return channel ? runEffectSync(_fx(effect.f(channel.value)), context, span) : unsafeCoerce(exitA)
-      }
-      case "Fold": {
-        const exitA = runEffectSync(_fx(effect.effect), context, span)
-        const channel = syncErrorChannel(exitA)
-        if (channel) return Exit.succeed(effect.onFailure(channel.value))
-        if (exitA.isSuccess()) return Exit.succeed(effect.onSuccess(exitA.value))
-        return unsafeCoerce(exitA)
-      }
+        return runAutoSync(effect.thunk)
       case "Service": {
         const service = context.get(effect.tag)
-        return service.isNone() ? Exit.die(serviceNotFound(effect.tag)) : Exit.succeed(service.orThrow() as A)
-      }
-      case "ProvideContext": {
-        const mergedContext = context.merge(effect.context)
-        return runEffectSync(_fx(effect.effect), mergedContext as Context<R>, span)
+        return service.isNone() ? Exit.die(serviceNotFound(effect.tag)) : Exit.succeed(service.orThrow())
       }
       case "Interrupt":
         return Exit.interrupted()
       case "Bracket": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context, span)
-        if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
+        if (!acquireExit.isSuccess()) return acquireExit
         const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context, span))
         const releaseExit = runEffectSync(_fx(effect.release(resource)), context, span)
         // A failed release replaces the outcome, as a throwing `finally` would.
-        return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
+        return releaseExit.isSuccess() ? useExit : releaseExit
       }
       case "BracketExit": {
         const acquireExit = runEffectSync(_fx(effect.acquire), context, span)
-        if (!acquireExit.isSuccess()) return unsafeCoerce(acquireExit)
+        if (!acquireExit.isSuccess()) return acquireExit
         const resource = acquireExit.value
         const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context, span))
         const releaseExit = runEffectSync(_fx(effect.release(resource, useExit)), context, span)
-        return releaseExit.isSuccess() ? useExit : unsafeCoerce(releaseExit)
+        return releaseExit.isSuccess() ? useExit : releaseExit
       }
       case "All":
         // A synchronous run has no concurrency to offer: running in order gives the same results.
-        return unsafeCoerce(runAllSync(effect.effects, context, span))
+        return runAllSync(effect.effects, context, span)
       case "Race":
         return Exit.die(new UnsupportedSyncOperationError("race"))
       case "Timeout":
@@ -1215,10 +1283,13 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         // A synchronous run can't observe an abort from outside while it runs, so only a
         // signal that is already aborted here counts. An `IO.interrupt()` inside the region
         // becomes the region's typed failure, matching the async interpreter.
-        if (effect.signal.aborted) return Exit.fail(new InterruptedError() as E)
+        if (effect.signal.aborted) return Exit.fail(new InterruptedError())
         const exit = runEffectSync(_fx(effect.effect), context, span)
-        return exit.isInterrupted() ? Exit.fail(new InterruptedError() as E) : exit
+        return exit.isInterrupted() ? Exit.fail(new InterruptedError()) : exit
       }
+      default:
+        // The loop handles the wrappers and `ProvideContext` itself.
+        return Exit.die(new Error(`Unexpected step: ${effect._tag}`))
     }
   } catch (e) {
     // A throw out of a `Sync` thunk or a callback the type system said could not produce an `E`.
@@ -1315,6 +1386,10 @@ const regionOutcome = <E, A>(
  * uninterruptible: the default, so an effect with no region runs exactly as before. `bracket`
  * acquire and release always run with `undefined` (masked); checking there would let a
  * cancelled region skip its own release and leak the resource.
+ *
+ * Like {@link runEffectSync}, it is a loop over a stack of wrappers, not a recursion (#560, IO
+ * overflows the stack on chains of 10,000 steps). It awaits only a step that returns a promise,
+ * so synchronous steps run back to back. It never rejects.
  */
 const runEffect = async <R extends Type, E extends Type, A extends Type>(
   effect: IOEffect<R, E, A>,
@@ -1322,182 +1397,276 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
   interruption: AbortSignal | undefined,
   span: unknown,
 ): Promise<ExitType<E, A>> => {
-  if (interruption?.aborted) return Exit.interrupted()
+  /* eslint-disable functional/no-let -- the loop's current effect, context and outcome */
+  const stack: WrapperStack = []
+  let fx: AnyEffect = unsafeCoerce(effect)
+  let ctx: Context<Type> = unsafeCoerce(context)
+  let exit: AnyExit | undefined = undefined
+  /* eslint-enable functional/no-let */
   const cancelled = (): boolean => interruption?.aborted ?? false
+  for (;;) {
+    if (exit === undefined) {
+      if (cancelled()) {
+        exit = Exit.interrupted()
+        continue
+      }
+      switch (fx._tag) {
+        case "Map":
+        case "FlatMap":
+        case "MapError":
+        case "Recover":
+        case "RecoverWith":
+        case "Fold":
+          stack.push(fx, ctx)
+          fx = _fx(fx.effect)
+          continue
+        case "ProvideContext":
+          ctx = ctx.merge(fx.context)
+          fx = _fx(fx.effect)
+          continue
+        default: {
+          const out = runLeaf(fx, ctx, interruption, span)
+          exit = out instanceof Promise ? await out : out
+          continue
+        }
+      }
+    }
+    if (stack.length === 0) return unsafeCoerce(exit)
+    const wrapperContext = stack.pop() as Context<Type>
+    const wrapper = stack.pop() as Wrapper
+    try {
+      switch (wrapper._tag) {
+        case "Map":
+          if (exit._tag === "Success") exit = cancelled() ? Exit.interrupted() : Exit.succeed(wrapper.f(exit.value))
+          break
+        case "FlatMap":
+          if (exit._tag === "Success") {
+            if (cancelled()) {
+              exit = Exit.interrupted()
+            } else {
+              fx = _fx(wrapper.f(exit.value))
+              ctx = wrapperContext
+              exit = undefined
+            }
+          }
+          break
+        case "MapError": {
+          const channel = errorChannel(exit)
+          // A mapped defect becomes a `Failure`: the caller's mapper returns a genuine `E`,
+          // so the outcome really is a typed failure from here on.
+          if (channel) exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.fail(wrapper.f(channel.value))
+          break
+        }
+        case "Recover":
+          // Only something in the error channel is recoverable. Success passes through, and
+          // so does Interrupted — interruption is control flow, not a domain error, so a
+          // fallback must never convert a cancelled effect into a successful value.
+          if (errorChannel(exit)) exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.succeed(wrapper.fallback)
+          break
+        case "RecoverWith": {
+          const channel = errorChannel(exit)
+          if (channel) {
+            const skipped = skipHandlerWhenCancelled<unknown, unknown>(exit, cancelled())
+            if (skipped) {
+              exit = skipped
+            } else {
+              fx = _fx(wrapper.f(channel.value))
+              ctx = wrapperContext
+              exit = undefined
+            }
+          }
+          break
+        }
+        case "Fold": {
+          const channel = errorChannel(exit)
+          if (channel) {
+            exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.succeed(wrapper.onFailure(channel.value))
+          } else if (exit._tag === "Success") {
+            exit = cancelled() ? Exit.interrupted() : Exit.succeed(wrapper.onSuccess(exit.value))
+          }
+          break
+        }
+      }
+    } catch (e) {
+      // A throw out of a `map` / `flatMap` / `mapError` function or a `Fold` handler, which the
+      // type system said could not produce an `E`.
+      exit = Exit.die(e)
+    }
+  }
+}
+
+/** A promise of an outcome, with a rejection turned into a `Die`. */
+const orDie = (outcome: Promise<AnyExit>): Promise<AnyExit> => outcome.catch((e: unknown) => Exit.die(e))
+
+/**
+ * Runs a step of {@link runEffect} that isn't a wrapper. A step that has to wait returns a promise
+ * of its outcome, which never rejects; any other step returns its outcome.
+ */
+const runLeaf = (
+  effect: AnyEffect,
+  context: Context<Type>,
+  interruption: AbortSignal | undefined,
+  span: unknown,
+): AnyExit | Promise<AnyExit> => {
   try {
     switch (effect._tag) {
       case "Succeed":
-        return unsafeCoerce(Exit.succeed(effect.value))
+        return Exit.succeed(effect.value)
       case "Fail":
-        return unsafeCoerce(Exit.fail(effect.error))
+        return Exit.fail(effect.error)
       case "Die":
-        return unsafeCoerce(Exit.die(effect.defect))
+        return Exit.die(effect.defect)
       case "Sync":
         // `IO.sync` is `IO<never, never, A>` — a throw here cannot be an `E`, so it falls
         // to the outer catch and becomes a defect.
-        return unsafeCoerce(Exit.succeed(effect.thunk()))
-      case "Async": {
-        // `IO.async` is `IO<never, unknown, A>`: a rejection *is* the declared error
-        // channel, not a defect. Caught here so the outer catch doesn't reclassify it —
-        // `IO.tryPromise` is `async(...).mapError(catch)`, and a `Die` would sail past
-        // `MapError`'s error-channel branch, leaving the `catch` handler never invoked.
-        try {
-          const result = await effect.thunk(interruption)
-          return unsafeCoerce(Exit.succeed(result))
-        } catch (e) {
-          return unsafeCoerce(Exit.fail(e))
-        }
-      }
+        return Exit.succeed(effect.thunk())
+      case "Async":
+        return runAsyncThunk(effect.thunk, interruption)
       case "Auto": {
         // Same reasoning as `Async` — the `IO(...)` constructor also declares `E = unknown`.
         try {
           const result = effect.thunk()
-          if (result instanceof Promise) {
-            return unsafeCoerce(Exit.succeed(await result))
-          } else {
-            return unsafeCoerce(Exit.succeed(result))
-          }
+          return result instanceof Promise
+            ? result.then(
+                (value: unknown) => Exit.succeed(value),
+                (e: unknown) => Exit.fail(e),
+              )
+            : Exit.succeed(result)
         } catch (e) {
-          return unsafeCoerce(Exit.fail(e))
+          return Exit.fail(e)
         }
-      }
-      case "Map": {
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        if (!exitA.isSuccess()) {
-          return unsafeCoerce(exitA)
-        }
-        if (cancelled()) return Exit.interrupted()
-        return unsafeCoerce(Exit.succeed(effect.f(exitA.value)))
-      }
-      case "FlatMap": {
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        if (!exitA.isSuccess()) {
-          return unsafeCoerce(exitA)
-        }
-        if (cancelled()) return Exit.interrupted()
-        const nextIO = effect.f(exitA.value)
-        return runEffect(_fx(nextIO), context, interruption, span)
-      }
-      case "MapError": {
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        const channel = errorChannel(exitA)
-        if (!channel) {
-          return unsafeCoerce(exitA)
-        }
-        const skipped = skipHandlerWhenCancelled<E, A>(exitA, cancelled())
-        if (skipped) return skipped
-        // A mapped defect becomes a `Failure`: the caller's mapper returns a genuine `E`,
-        // so the outcome really is a typed failure from here on.
-        return unsafeCoerce(Exit.fail(effect.f(channel.value)))
-      }
-      case "Recover": {
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        // Only something in the error channel is recoverable. Success passes through, and
-        // so does Interrupted — interruption is control flow, not a domain error, so a
-        // fallback must never convert a cancelled effect into a successful value.
-        // Matches the errorChannel guard in MapError / RecoverWith / Fold.
-        if (!errorChannel(exitA)) {
-          return unsafeCoerce(exitA)
-        }
-        return skipHandlerWhenCancelled<E, A>(exitA, cancelled()) ?? Exit.succeed(effect.fallback)
-      }
-      case "RecoverWith": {
-        // effect.effect is IO<R, unknown, unknown> (E-erased for variance). Exit branches
-        // are re-wrapped via unsafeCoerce — outer A/E are preserved by RecoverWith's semantics.
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        const channel = errorChannel(exitA)
-        if (!channel) {
-          return unsafeCoerce(exitA)
-        }
-        const skipped = skipHandlerWhenCancelled<E, A>(exitA, cancelled())
-        if (skipped) return skipped
-        const recoveryIO = effect.f(channel.value)
-        return runEffect(_fx(recoveryIO), context, interruption, span)
-      }
-      case "Fold": {
-        const exitA = await runEffect(_fx(effect.effect), context, interruption, span)
-        const channel = errorChannel(exitA)
-        if (channel) {
-          return skipHandlerWhenCancelled<E, A>(exitA, cancelled()) ?? Exit.succeed(effect.onFailure(channel.value))
-        }
-        if (exitA.isSuccess()) {
-          if (cancelled()) return Exit.interrupted()
-          return Exit.succeed(effect.onSuccess(exitA.value))
-        }
-        return exitA as ExitType<E, A>
       }
       case "Service": {
         const service = context.get(effect.tag)
-        if (service.isNone()) {
-          return Exit.die(serviceNotFound(effect.tag))
-        }
-        return Exit.succeed(service.orThrow() as A)
-      }
-      case "ProvideContext": {
-        const mergedContext = context.merge(effect.context)
-        return runEffect(_fx(effect.effect), mergedContext as Context<R>, interruption, span)
+        return service.isNone() ? Exit.die(serviceNotFound(effect.tag)) : Exit.succeed(service.orThrow())
       }
       case "Interrupt":
         return Exit.interrupted()
       case "Sleep":
-        return unsafeCoerce(await sleep(effect.duration, interruption))
-      case "Bracket": {
-        // Acquire and release are masked (no `interruption`): see the runEffect doc.
-        const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
-        if (!acquireExit.isSuccess()) {
-          return acquireExit as ExitType<E, A>
-        }
-        const resource = acquireExit.value
-        try {
-          if (cancelled()) return Exit.interrupted()
-          return await runEffect(_fx(effect.use(resource)), context, interruption, span)
-        } finally {
-          // Release always runs, even if use fails or the region was cancelled
-          await runEffect(_fx(effect.release(resource)), context, undefined, span)
-        }
-      }
-      case "BracketExit": {
-        const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
-        if (!acquireExit.isSuccess()) {
-          return acquireExit as ExitType<E, A>
-        }
-        const resource = acquireExit.value
-        const useExit: ExitType<E, A> = cancelled()
-          ? Exit.interrupted()
-          : await runEffect(_fx(effect.use(resource)), context, interruption, span)
-        // Release always runs (masked, like acquire) and receives the use-step's Exit
-        await runEffect(_fx(effect.release(resource, useExit)), context, undefined, span)
-        return useExit
-      }
-      case "Race": {
-        if (effect.effects.length === 0) {
-          return Exit.die(new Error("No effects to race"))
-        }
-        return await runRace(effect.effects, context, interruption, span)
-      }
+        return sleep(effect.duration, interruption)
+      case "Bracket":
+        return orDie(runBracket(effect, context, interruption, span))
+      case "BracketExit":
+        return orDie(runBracketExit(effect, context, interruption, span))
+      case "Race":
+        if (effect.effects.length === 0) return Exit.die(new Error("No effects to race"))
+        return orDie(runRace(effect.effects, context, interruption, span))
       case "Timeout":
-        return unsafeCoerce(await runTimeout(effect.effect, effect.duration, context, interruption, span))
-      case "InterruptWhen": {
-        const { signal } = effect
-        const region = anySignal([interruption, signal])
-        try {
-          const exit = await runEffect(_fx(effect.effect), context, region.signal, span)
-          return unsafeCoerce(regionOutcome(exit, signal, cancelled()))
-        } finally {
-          region.dispose()
-        }
-      }
+        return orDie(runTimeout(effect.effect, effect.duration, context, interruption, span))
+      case "InterruptWhen":
+        return orDie(runRegion(effect, context, interruption, span))
       case "WithSpan":
-        return await runWithSpan(effect, context, interruption, span)
+        return orDie(runWithSpan(effect, context, interruption, span))
       case "All":
-        return unsafeCoerce(await runAll(effect.effects, effect.concurrency, context, interruption, span))
+        return orDie(runAll(effect.effects, effect.concurrency, context, interruption, span))
+      default:
+        // The loop handles the wrappers and `ProvideContext` itself.
+        return Exit.die(new Error(`Unexpected step: ${effect._tag}`))
     }
   } catch (e) {
-    // Everything reaching here threw out of a callback the type system said could not
-    // produce an `E`: a `Sync` thunk, a `map` / `flatMap` / `mapError` function, a `Fold`
-    // handler, a `bracket` release. `Async` and `Auto` rejections are caught at their own
-    // cases above, because those constructors *do* declare `E = unknown`.
+    // A throw out of a `Sync` thunk, which the type system said could not produce an `E`.
+    // `Async` and `Auto` rejections are caught at their own cases, because those constructors
+    // *do* declare `E = unknown`.
     return Exit.die(e)
+  }
+}
+
+/**
+ * An `IO.async` thunk. `IO.async` is `IO<never, unknown, A>`: a rejection *is* the declared error
+ * channel, not a defect. `IO.tryPromise` is `async(...).mapError(catch)`, and a `Die` would sail
+ * past `MapError`'s error-channel branch, leaving the `catch` handler never invoked.
+ */
+const runAsyncThunk = async (
+  thunk: (signal?: AbortSignal) => Promise<unknown>,
+  interruption: AbortSignal | undefined,
+): Promise<AnyExit> => {
+  try {
+    return Exit.succeed(await thunk(interruption))
+  } catch (e) {
+    return Exit.fail(e)
+  }
+}
+
+type BracketEffect = Extract<IOEffect<Type, Type, Type>, { readonly _tag: "Bracket" }>
+type BracketExitEffect = Extract<IOEffect<Type, Type, Type>, { readonly _tag: "BracketExit" }>
+type InterruptWhenEffect = Extract<IOEffect<Type, Type, Type>, { readonly _tag: "InterruptWhen" }>
+
+/**
+ * A `bracket`'s use step: interrupted at once in a cancelled region, and a `Die` when `use` itself
+ * throws, so the release still runs.
+ */
+const runUse = async (
+  use: () => IO<Type, Type, Type>,
+  context: Context<Type>,
+  interruption: AbortSignal | undefined,
+  span: unknown,
+): Promise<AnyExit> => {
+  if (interruption?.aborted) return Exit.interrupted()
+  try {
+    return await runEffect(_fx(use()), context, interruption, span)
+  } catch (e) {
+    return Exit.die(e)
+  }
+}
+
+/** `bracket`. Acquire and release are masked (no `interruption`): see the runEffect doc. */
+const runBracket = async (
+  effect: BracketEffect,
+  context: Context<Type>,
+  interruption: AbortSignal | undefined,
+  span: unknown,
+): Promise<AnyExit> => {
+  try {
+    const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
+    if (!acquireExit.isSuccess()) return acquireExit
+    const resource = acquireExit.value
+    const useExit = await runUse(() => effect.use(resource), context, interruption, span)
+    // Release always runs, even if use fails or the region was cancelled. A failed release
+    // replaces the outcome, as a throwing `finally` would, and as under `runSync`.
+    const releaseExit = await runEffect(_fx(effect.release(resource)), context, undefined, span)
+    return releaseExit.isSuccess() ? useExit : releaseExit
+  } catch (e) {
+    return Exit.die(e)
+  }
+}
+
+/** `bracketExit`: like {@link runBracket}, and release receives the use step's Exit. */
+const runBracketExit = async (
+  effect: BracketExitEffect,
+  context: Context<Type>,
+  interruption: AbortSignal | undefined,
+  span: unknown,
+): Promise<AnyExit> => {
+  try {
+    const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
+    if (!acquireExit.isSuccess()) return acquireExit
+    const resource = acquireExit.value
+    const useExit = await runUse(() => effect.use(resource), context, interruption, span)
+    // Release always runs (masked, like acquire) and receives the use-step's Exit. A failed
+    // release replaces the outcome, as in `bracket`.
+    const releaseExit = await runEffect(_fx(effect.release(resource, useExit)), context, undefined, span)
+    return releaseExit.isSuccess() ? useExit : releaseExit
+  } catch (e) {
+    return Exit.die(e)
+  }
+}
+
+/** `interruptOn`: runs the effect under its own signal joined to the enclosing one. */
+const runRegion = async (
+  effect: InterruptWhenEffect,
+  context: Context<Type>,
+  interruption: AbortSignal | undefined,
+  span: unknown,
+): Promise<AnyExit> => {
+  const { signal } = effect
+  const region = anySignal([interruption, signal])
+  try {
+    const exit = await runEffect(_fx(effect.effect), context, region.signal, span)
+    return regionOutcome(exit, signal, interruption?.aborted ?? false)
+  } catch (e) {
+    return Exit.die(e)
+  } finally {
+    region.dispose()
   }
 }
 

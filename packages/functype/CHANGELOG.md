@@ -222,6 +222,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `Exclude` checks services by shape, as `provideService` always has. A layer for a `Database` therefore discharges a requirement for a wider `BigDb` that has every `Database` member, and the run then dies with "Service not found". Give each service a distinct shape, or a brand field, if two can overlap.
 - **Upgrade:** two kinds of code stop compiling. Running an `IO.gen` whose services aren't provided now fails, as it fails for any other IO: provide them with `provideLayer` or `provideService`. Code that leaned on the `any` error, such as passing the result where a narrower `E` is expected, now sees the real error type: handle it with `catchTag` or `mapError`, or widen the expected type. A `yield* IO.async(...)` declares `E = unknown`, which absorbs the rest of the union; map it with `IO.tryPromise`'s `catch` to keep the union.
 
+**2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
+
+- Both interpreters were recursive, one call per step. 10,000 chained `flatMap`s threw a `RangeError` under `runSync()` and `run()`. Under `runSync()`, so did a recursive loop, an `IO.gen` with 10,000 yields and a `repeatUntil` run 10,000 times. Now each interpreter is a loop over a stack of the steps waiting on their inner effects, so all of these run to 1,000,000 steps. `bracket`, `all`, `withSpan`, `interruptOn`, `race` and `timeout` still run their inner effects in a nested loop, so only nesting those inside each other deepens the call stack.
+- `run()` now awaits only a step that returns a promise, and runs synchronous steps back to back. On Node 24.20.0, a 50-step chain under `run()` went from 5,225 to 1,850 ns. Under `runSync()` it went from 1,550 to 1,380 ns. A one-step `runSync()` costs about 10 ns more, 24 → 34 ns.
+- **Behavior change: a `bracket` or `bracketExit` whose release fails reports the failure under `run()`.** It replaces the use step's outcome, as a throwing `finally` does, and as `runSync()` already did. Before, `run()` dropped it and returned the use step's outcome. A `bracketExit` whose `use` callback throws now runs its release, as `bracket` does.
+- **Upgrade:** nothing to change, unless code relied on `run()` ignoring a failed release.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
