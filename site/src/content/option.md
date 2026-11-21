@@ -80,6 +80,7 @@ const greeting = Option(name).match({
 
 ```typescript
 import { Do, $ } from "functype/do";
+import { Option } from "functype/option";
 
 const result = Do(function* () {
   const a = yield* $(Option(1));

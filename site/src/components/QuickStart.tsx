@@ -41,7 +41,7 @@ export default function QuickStart() {
                   Import what you need
                 </h3>
                 <div className="bg-gray-900 rounded-lg p-4">
-                  <pre className="text-sm font-mono">
+                  <pre data-language="ts" className="text-sm font-mono">
                     <code>
                       <span className="text-purple-400">import</span>{" "}
                       <span className="text-blue-300">
@@ -55,9 +55,9 @@ export default function QuickStart() {
                       </span>
                       {"\n"}
                       <span className="text-purple-400">import</span>{" "}
-                      <span className="text-blue-300">{"{ Option }"}</span>{" "}
+                      <span className="text-blue-300">{"{ Try }"}</span>{" "}
                       <span className="text-purple-400">from</span>{" "}
-                      <span className="text-green-400">"functype/option"</span>
+                      <span className="text-green-400">"functype/try"</span>
                     </code>
                   </pre>
                 </div>
@@ -76,7 +76,10 @@ export default function QuickStart() {
                   Start coding functionally
                 </h3>
                 <div className="bg-gray-900 rounded-lg p-4">
-                  <pre className="text-sm font-mono overflow-x-auto">
+                  <pre
+                    data-language="ts"
+                    className="text-sm font-mono overflow-x-auto"
+                  >
                     <code>
                       <span className="text-purple-400">const</span>{" "}
                       <span className="text-blue-300">result</span>{" "}

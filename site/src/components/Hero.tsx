@@ -47,10 +47,13 @@ export default function Hero() {
         {/* Code Example */}
         <div className="pt-12 max-w-2xl mx-auto">
           <div className="bg-gray-900 rounded-xl p-6 text-left shadow-2xl">
-            <pre className="text-sm md:text-base overflow-x-auto">
+            <pre
+              data-language="ts"
+              className="text-sm md:text-base overflow-x-auto"
+            >
               <code className="text-gray-100 font-mono">
                 <span className="text-purple-400">import</span>{" "}
-                <span className="text-blue-300">{"{ Option, Either }"}</span>{" "}
+                <span className="text-blue-300">{"{ Option, Try }"}</span>{" "}
                 <span className="text-purple-400">from</span>{" "}
                 <span className="text-green-400">"functype"</span>
                 {"\n\n"}
