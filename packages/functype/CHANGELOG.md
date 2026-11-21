@@ -6,6 +6,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (breaking, types only): `getOrElse` keeps a literal union.**
+
+- `getOrElse` now takes `() => T | T2` instead of `() => T2`, with `T2` defaulting to `never`. The default is checked against the container's own type first, so `Option<"light" | "dark">.getOrElse(() => "light")` is `"light" | "dark"`. Before, it was `string`.
+- A default of another type still widens: `Option<number>.getOrElse(() => "x")` is `number | string`. A bare value, `getOrElse(42)`, still fails to compile.
+- Applies to `Option`, `Either`, `Try`, `Lazy`, `TracedOption`, and the `Extractable` interface (so `Obj` too). `Exit` and `Map` already took `() => A` / `() => V`, so they never widened.
+- **Upgrade:** nothing to change unless code relied on the wider type, such as `let theme = o.getOrElse(() => "light")` later reassigned to any string. Annotate the variable, e.g. `let theme: string = ...`.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.

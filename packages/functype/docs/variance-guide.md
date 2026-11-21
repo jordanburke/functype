@@ -87,13 +87,18 @@ reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B
 Methods that "replace" the container's value with a fallback widen the result's type.
 
 ```ts
-getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
 orElse<T2 extends Type>(alternative: () => Extractable<T2>): Extractable<T | T2>
 recover<U extends Type>(f: (error: Error) => U): Try<T | U>
 recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
 ```
 
 **Scala correspondence:** `getOrElse[B >: A](default: => B): B`, `recover[U >: T]`.
+
+`getOrElse` types its default as `T | T2`, not a bare `T2`, so the default is checked against `T` first. On an
+`Option<"light" | "dark">`, `getOrElse(() => "light")` stays `"light" | "dark"`; with a bare `T2` the literal widens
+to `string` and the union is lost. A default of another type still widens: `Option<number>.getOrElse(() => "x")` is
+`number | string`.
 
 **Why it's safe:** The return type `T | U` accurately represents what the runtime produces. If the container holds T, the T branch is taken; if the fallback is used, U is returned. No type lie.
 
