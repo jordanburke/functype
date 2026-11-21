@@ -1,5 +1,6 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
+import { type A, define, type Mutable } from "@/internal/define"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
 import { createSerializer } from "@/serialization"
@@ -19,7 +20,7 @@ export interface Tuple<out T extends Type[]>
 
   toArray(): T
 
-  length: number
+  readonly length: number
 
   [Symbol.iterator](): Iterator<T[number]>
 
@@ -28,81 +29,83 @@ export interface Tuple<out T extends Type[]>
   toValue(): { _tag: "Tuple"; value: T }
 }
 
+/** A Tuple's own data: its tag and the array it wraps. @internal */
+interface TupleOf<out T extends Type[]> extends Tuple<T> {
+  readonly value: T
+}
+
+/* eslint-disable functional/immutable-data -- the constructor fills in the object it just created */
+
+/** Every Tuple shares these methods (#276 §14). `this.value` is the Tuple's own array. */
+const TupleProto = define<TupleOf<A[]>, "_tag" | "value">()("Tuple", {
+  [Symbol.toStringTag]: "Tuple",
+
+  get length() {
+    return this.value.length
+  },
+
+  get(index) {
+    return this.value[index]
+  },
+
+  map(f) {
+    return TupleObject(f(this.value))
+  },
+
+  flatMap(f) {
+    return f(this.value)
+  },
+
+  toArray() {
+    return this.value
+  },
+
+  [Symbol.iterator]() {
+    return this.value[Symbol.iterator]()
+  },
+
+  fold(initial, fn) {
+    return this.value.reduce(fn, initial)
+  },
+
+  foldLeft(z) {
+    return (op) => this.value.reduce(op, z)
+  },
+
+  foldRight(z) {
+    return (op) => this.value.reduceRight((acc, value) => op(value, acc), z)
+  },
+
+  pipe(f) {
+    return f(this)
+  },
+
+  serialize() {
+    return createSerializer("Tuple", this.value)
+  },
+
+  toJSON() {
+    return { "@functype": "Tuple" as const, _tag: "Tuple" as const, value: [...this.value] }
+  },
+
+  toValue() {
+    return { _tag: "Tuple" as const, value: this.value }
+  },
+
+  toString() {
+    return `Tuple(${this.value.map((v) => String(v)).join(", ")})`
+  },
+})
+
 const TupleObject = <T extends Type[]>(values: T): Tuple<T> => {
-  const tuple: Tuple<T> = {
-    [Symbol.toStringTag]: "Tuple",
-    _tag: "Tuple",
-    map: <U extends Type[]>(f: (value: T) => U): Tuple<U> => {
-      const mapValue = f(values)
-      return Tuple(mapValue)
-    },
-
-    flatMap: <U extends Type[]>(f: (value: T) => Tuple<U>): Tuple<U> => {
-      return f(values)
-    },
-
-    get: <K extends number>(index: K): T[K] => {
-      return values[index]
-    },
-
-    toArray: (): T => {
-      return values
-    },
-
-    length: values.length,
-
-    [Symbol.iterator](): Iterator<T[number]> {
-      // eslint-disable-next-line functional/no-let
-      let index = 0
-      return {
-        next: (): IteratorResult<T[number]> => {
-          if (index < values.length) {
-            return {
-              value: values[index++],
-              done: false,
-            }
-          } else {
-            return {
-              value: undefined,
-              done: true,
-            }
-          }
-        },
-      }
-    },
-
-    // Foldable implementation
-    fold: <B>(initial: B, fn: (acc: B, a: T[number]) => B): B => {
-      return values.reduce(fn, initial)
-    },
-
-    foldLeft:
-      <B>(z: B) =>
-      (op: (b: B, a: T[number]) => B) => {
-        return values.reduce(op, z)
-      },
-
-    foldRight:
-      <B>(z: B) =>
-      (op: (a: T[number], b: B) => B): B => {
-        return values.reduceRight<B>((acc, value) => op(value, acc), z)
-      },
-
-    // Pipe implementation
-    pipe: <U>(f: (value: Tuple<T>) => U): U => f(tuple),
-
-    // Serializable implementation
-    serialize: () => createSerializer("Tuple", values),
-    toJSON: () => ({ "@functype": "Tuple" as const, _tag: "Tuple" as const, value: [...values] as T }),
-
-    // Valuable implementation
-    toValue: () => ({ _tag: "Tuple", value: values }),
-
-    toString: () => `Tuple(${values.map((v) => String(v)).join(", ")})`,
-  }
-
+  // The one cast: a prototype checked at the opaque A works for every T.
+  const tuple = Object.create(TupleProto) as Mutable<TupleOf<T>>
+  tuple._tag = "Tuple"
+  tuple.value = values
   return tuple
 }
+
+/* eslint-enable functional/immutable-data */
 
 const TupleConstructor = <T extends Type[]>(values: T): Tuple<T> => {
   return TupleObject(values)
