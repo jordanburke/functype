@@ -202,6 +202,7 @@ type DecodeError = {
 ### Pattern Matching with HttpError.match
 
 ```typescript
+import { Decoder } from "functype/decoder";
 import { Http, HttpError } from "functype/fetch";
 
 const effect = Http.get("/api/users/1", {
@@ -245,7 +246,8 @@ const resilient = Http.get("/api/data").catchTag("NetworkError", () =>
 ### Type Guards
 
 ```typescript
-import { HttpError } from "functype/fetch";
+import { Decoder } from "functype/decoder";
+import { Http, HttpError } from "functype/fetch";
 
 const either = await Http.get("/api/users/1", {
   decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
@@ -324,6 +326,7 @@ Per-request headers always override `defaultHeaders` when keys conflict.
 The response side of an `Http` call composes on the returned `IO` — `.tap`, `.map`, `.flatMap`, `.catchTag`, `.mapError`, `.retry`, `.timeout`. The request side gets the same treatment via `beforeRequest`: an effectful transformer that runs after `defaultHeaders` and per-call headers are merged, but before the request is sent. It receives the assembled `HttpRequestView` and returns an `IO<never, HttpError, HttpRequestView>`, so concerns stack via standard IO operators.
 
 ```typescript
+import { Decoder } from "functype/decoder";
 import { Http, HttpError, type HttpRequestView } from "functype/fetch";
 import { IO } from "functype";
 

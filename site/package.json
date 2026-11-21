@@ -9,10 +9,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "validate": "pnpm format && pnpm check && pnpm build",
+    "validate": "pnpm format && pnpm check && pnpm build && pnpm check:examples",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "astro check",
+    "check:examples": "tsx scripts/check-examples.ts",
     "copy:md": "cp src/content/*.md public/",
     "generate:llms": "tsx scripts/generate-llms.ts"
   },

@@ -109,6 +109,7 @@ Try(() => parseInt(input)).filterOrElse(
 
 ```typescript
 import { Do, $ } from "functype/do";
+import { Try } from "functype/try";
 
 const result = Do(function* () {
   const config = yield* $(Try(() => readConfig()));

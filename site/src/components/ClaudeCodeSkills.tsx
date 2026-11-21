@@ -367,6 +367,7 @@ export default function ClaudeCodeSkills() {
               <div className="bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-x-auto">
                 <div className="text-green-400"># Add to your .mcp.json</div>
                 <pre
+                  data-language="json"
                   className="text-gray-300 mt-2 whitespace-pre"
                   style={{ margin: 0 }}
                 >

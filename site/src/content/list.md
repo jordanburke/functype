@@ -121,6 +121,7 @@ List(["a", "b", "c"]).zipWithIndex(); // List([["a", 0], ["b", 1], ["c", 2]])
 
 ```typescript
 import { Do, $ } from "functype/do";
+import { List } from "functype/list";
 
 // Generate all combinations
 const result = Do(function* () {
