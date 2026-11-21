@@ -518,6 +518,48 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
+        name: "An alternative that starts with `{` is parenthesized, so the thunk body isn't a block",
+        code: "const pick = (a) => (a.isSome() ? a : {}.x)",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestOrElse",
+                data: { receiver: "a", alternative: "{}.x" },
+                output: "const pick = (a) => (a.orElse(() => ({}.x)))",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A sequence alternative is parenthesized, so its comma doesn't split the arguments",
+        code: "const pick = (a, b, c) => (a.isSome() ? a : (b, c))",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestOrElse",
+                data: { receiver: "a", alternative: "b, c" },
+                output: "const pick = (a, b, c) => (a.orElse(() => (b, c)))",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A yielded alternative can't move into a thunk, so it gets no suggestion",
+        code: "function* pick(a, b) { return a.isSome() ? a : yield b }",
+        output: null,
+        errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
+      },
+      {
         name: "An awaited alternative can't move into a thunk, so it gets no suggestion",
         code: "const pick = async (a, b) => (a.isSome() ? a : await b())",
         output: null,

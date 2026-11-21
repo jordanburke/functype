@@ -453,7 +453,10 @@ const rule: Rule.RuleModule = {
           return []
         }
         if (containsAwait(failureNode) || containsYield(failureNode)) return []
-        const thunkBody = failureNode.type === "ObjectExpression" ? `(${failureText})` : failureText
+        // An arrow body that starts with `{` reads as a block, and a sequence's comma would split the call's
+        // arguments, so both go in parentheses: `{}.x` and `(b, c)` stay one expression.
+        const needsParens = failureText.trimStart().startsWith("{") || failureNode.type === "SequenceExpression"
+        const thunkBody = needsParens ? `(${failureText})` : failureText
         return [
           {
             messageId: "suggestOrElse",

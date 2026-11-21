@@ -187,6 +187,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **Compile errors:** a 1.x call fails at the argument. `opt.getOrElse(42)` reads "Argument of type 'number' is not assignable to parameter of type '() => …'", and so does `opt.orElse(someOpt)`. A leftover `.or(x)` is a missing property.
 - **No type error**, so search for these:
   - A caller typed `any`, or untyped JavaScript. `opt.orElse(42)` there now calls `42()` on a None and throws, and on a Some returns the Option, not the value.
+  - An argument typed `any`. A leftover `opt.orElse(JSON.parse(s))` compiles, because `any` passes for the thunk. On a Some it returns the Option itself instead of the value, and on a None it calls the parsed value, which isn't a function, and throws.
   - A default that is itself a function. In 1.x, `opt.orElse(fn)` returned `fn`. Now `opt.getOrElse(fn)` calls it, so write `opt.getOrElse(() => fn)` to get the function back.
   - Side effects in the default. `opt.orElse(compute())` ran `compute()` every time. `opt.getOrElse(() => compute())` runs it only on None, so a log line or a counter in it no longer runs when the value is present.
   - `orElse(() => alt)` written against 1.x, where `orElse` took a plain value. It returned the function itself on a None. In 2.0 the same text means the container fallback and returns `alt`.
