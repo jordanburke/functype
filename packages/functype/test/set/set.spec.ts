@@ -32,10 +32,11 @@ describe("Set", () => {
       expect(set.toArray()).toEqual(expect.arrayContaining([1, 2, 3]))
     })
 
-    test("Set.empty() returns singleton instance", () => {
+    test("Set.empty() builds a new instance each call", () => {
       const a = Set.empty<number>()
       const b = Set.empty<string>()
-      expect(a).toBe(b) // Same instance regardless of type parameter
+      expect(a).not.toBe(b) // a native Set can't be frozen, so empties aren't shared (empty-singletons.spec.ts)
+      expect([a.size, b.size]).toEqual([0, 0])
     })
   })
 

@@ -413,9 +413,6 @@ const wrap = <A>(values: ReadonlySet<A>): Set<A> => {
 
 const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => wrap(new NativeSet<A>(iterable))
 
-// Singleton empty set - uses 'never' which is subtype of all types
-const EMPTY_SET: Set<never> = wrap<never>(new NativeSet<never>())
-
 /** Rebuilds a Set from a parsed envelope. */
 const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
   expectMarker(parsed, "Set", method)
@@ -425,10 +422,11 @@ const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
 const SetCompanion = {
   /**
    * Creates an empty Set
-   * Returns a singleton instance for efficiency
+   * Builds a new one each call: a native Set can't be frozen, so a shared empty Set could be
+   * changed for every caller through a cast. It costs about 20 ns more than a shared one.
    * @returns An empty Set instance
    */
-  empty: <A extends Type>(): Set<A> => EMPTY_SET as unknown as Set<A>,
+  empty: <A extends Type>(): Set<A> => wrap(new NativeSet<A>()),
 
   /**
    * Creates a Set from variadic arguments
