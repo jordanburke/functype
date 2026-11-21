@@ -265,16 +265,18 @@ export interface IOYieldable {
 
 /**
  * The services an `IO.gen` body needs: the union of every yielded IO's `R`.
- * It distributes over the union of yielded IOs, and is `never` when the body yields none.
+ * It distributes over the union of yielded IOs, and is `never` when the body yields none. A yielded
+ * `any` (`0 extends 1 & Y`) names no services, so the IO can still run.
  * @internal
  */
-export type IOGenRequirements<Y> = Y extends IO<infer R, infer _E, infer _A> ? R : never
+export type IOGenRequirements<Y> = 0 extends 1 & Y ? never : Y extends IO<infer R, infer _E, infer _A> ? R : never
 
 /**
- * The errors an `IO.gen` body can fail with: the union of every yielded IO's `E`.
+ * The errors an `IO.gen` body can fail with: the union of every yielded IO's `E`, or `unknown` for a
+ * yielded `any`.
  * @internal
  */
-export type IOGenErrors<Y> = Y extends IO<infer _R, infer E, infer _A> ? E : never
+export type IOGenErrors<Y> = 0 extends 1 & Y ? unknown : Y extends IO<infer _R, infer E, infer _A> ? E : never
 
 export interface IO<in out R extends Type, out E extends Type, out A extends Type> {
   readonly [Symbol.toStringTag]: string

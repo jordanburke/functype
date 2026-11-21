@@ -1,7 +1,7 @@
 import { describe, expect, expectTypeOf, it } from "vitest"
 
 import type { SpanTracer as SpanTracerType } from "@/io"
-import { IO, Layer, SpanTracer, Tag } from "@/io"
+import { Context, IO, Layer, SpanTracer, Tag } from "@/io"
 
 /**
  * `IO.gen` records what its body reads (#277, the 2.0 tracking issue). It was typed
@@ -69,6 +69,15 @@ describe("IO.gen typing", () => {
     expect(await program.runOrThrow()).toBe("fallback")
   })
 
+  it("treats a yielded any as needing no services, with an unknown error", () => {
+    const loose = IO.succeed(1) as unknown as ReturnType<typeof JSON.parse>
+    const program = IO.gen(function* () {
+      const v: number = yield* loose
+      return v
+    })
+    expectTypeOf(program).toEqualTypeOf<IO<never, unknown, number>>()
+  })
+
   it("can't run until its services are provided", () => {
     const program = IO.gen(function* () {
       const d = yield* IO.service(Database)
@@ -117,6 +126,11 @@ describe("provideLayer and provideContext take services the effect doesn't name"
     expectTypeOf(program).toEqualTypeOf<IO<never, never, number>>()
     expect(await program.runOrThrow()).toBe(1)
     expect(names).toEqual(["work"])
+  })
+
+  it("lets provideContext supply a service the effect doesn't name", () => {
+    const program = IO.service(Database).provideContext(Context.make(Clock, clock))
+    expectTypeOf(program).toEqualTypeOf<IO<Database, never, Database>>()
   })
 
   it("leaves the requirement alone when the layer provides something else", () => {
