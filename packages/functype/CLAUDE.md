@@ -295,6 +295,9 @@ effect.runCancellable()      // { result, cancel }
 effect.runExit({ signal })   // an aborted signal ends the run as Interrupted
 effect.interruptOn(signal)   // a cancelled region fails with InterruptedError
 
+// Tracing (2.0): spans nest without passing a parent; no SpanTracer provided means no-op
+effect.withSpan("load", { id }).provideService(SpanTracer, tracer)
+
 // IO<R,E,A> - lazy effects with typed errors and dependency injection
 // Use IO when you need: typed errors, DI, service composition, testability
 IO.sync(() => value)         // sync effect

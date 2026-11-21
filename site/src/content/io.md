@@ -213,6 +213,89 @@ const load = IO.async((signal) => fetch(url, { signal }).then((r) => r.json()));
   failure; in ZIO and Effect it is the first to succeed.
 - When `E` is `unknown` (effects from `IO.async`), use `InterruptedError.is(e)`.
 
+## Tracing
+
+`withSpan(name, attributes?)` runs an effect in a span. A `withSpan` inside it nests under it, without
+being passed a parent. functype ships only the contract, `SpanTracer`, and no tracer. With none
+provided, `withSpan` does nothing: same result, nothing recorded.
+
+```typescript
+import { IO, SpanTracer } from "functype";
+
+const loadUser = (id: string) =>
+  IO.succeed({ id }).withSpan("loadUser", { "user.id": id });
+const checkout = IO.all([loadUser("a"), loadUser("b")]).withSpan("checkout");
+
+// A tracer that only times its spans. Provide it outside the spans.
+const timing: SpanTracer<{ readonly name: string; readonly started: number }> =
+  {
+    start: (name) => ({ name, started: Date.now() }),
+    run: (_span, fn) => fn(),
+    end: (span, exit) =>
+      console.log(
+        `${span.name}: ${exit._tag} in ${Date.now() - span.started} ms`,
+      ),
+  };
+await checkout.provideService(SpanTracer, timing).run();
+```
+
+For each `withSpan`, the interpreter calls the tracer's three methods:
+
+- `start(name, attributes, parent)` opens a span. `parent` is the enclosing span in this run, or
+  `undefined` at the top.
+- `run(span, fn)` runs `fn` with the span active. The whole body runs inside it, so a log sink there can
+  read the trace IDs, even after an `await`.
+- `end(span, exit)` closes the span once, with the body's `Exit`: `Success`, `Failure`, `Die` or
+  `Interrupted`.
+
+### An OpenTelemetry bridge
+
+functype has no OpenTelemetry dependency and ships no bridge. This sketch, with `@opentelemetry/api`, is
+the whole of one:
+
+```ts ignore
+import { context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { SpanTracer } from "functype";
+
+const otel = trace.getTracer("my-app");
+
+export const otelTracer: SpanTracer<Span> = {
+  // With no parent, nest under whatever span is active already, such as an HTTP server's
+  start: (name, attributes, parent) =>
+    otel.startSpan(
+      name,
+      { attributes },
+      parent ? trace.setSpan(context.active(), parent) : context.active(),
+    ),
+  // context.with makes the span active, so trace.getActiveSpan() finds it inside withSpan
+  run: (span, fn) => context.with(trace.setSpan(context.active(), span), fn),
+  end: (span, exit) => {
+    if (exit._tag === "Failure" || exit._tag === "Die")
+      span.setStatus({ code: SpanStatusCode.ERROR });
+    span.end();
+  },
+};
+
+await program.provideService(SpanTracer, otelTracer).run();
+```
+
+- Every outcome closes the span once. A `race` loser or a timed-out effect closes as `Interrupted` when
+  it settles, which may be after `race` or `timeout` has returned. A failure that arrives after the run
+  was cancelled, such as an aborted `fetch`, also closes as `Interrupted`.
+- A span outside `interruptOn(signal)` sees its `InterruptedError` as a typed `Failure`, as the code
+  after it does.
+- Parallel children of `IO.all` and `race` each nest under the enclosing span and see only their own.
+  Two runs at once never share a span: the current span travels with the run, not in the shared
+  services.
+- Provide the tracer outside the spans. In `io.withSpan("a").provideService(SpanTracer, t).withSpan("b")`,
+  only `a` is recorded.
+- It works under `runSync` too, because `run` is synchronous.
+- Provide it with `provideService`. `provideLayer` can't carry it, because a layer may only provide
+  services the effect requires, and `withSpan` doesn't add `SpanTracer` to them.
+- A separate run, such as a `.run()` inside a request handler, starts with no parent. The bridge above
+  falls back to the active OpenTelemetry context then, so its spans still nest under the handler's.
+- A throw from the tracer itself becomes a `Die`.
+
 ## Outcomes: `Exit`
 
 `.run()` returns `Either<E, A>`, which has exactly two branches: a success or an `E`. Anything
