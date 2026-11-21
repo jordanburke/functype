@@ -76,6 +76,29 @@
         "lib/**"
       ]
     },
+    "site#validate": {
+      "env": [
+        "CI"
+      ],
+      "dependsOn": [
+        "^build",
+        "eslint-plugin-functype#build",
+        "eslint-config-functype#build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/packages/functype/src/**",
+        "$TURBO_ROOT$/packages/functype/test/docs/snippet-typecheck.ts",
+        "$TURBO_ROOT$/packages/functype/tsconfig.json",
+        "$TURBO_ROOT$/packages/functype/package.json",
+        "$TURBO_ROOT$/packages/functype-os/src/**",
+        "$TURBO_ROOT$/packages/functype-os/package.json",
+        "$TURBO_ROOT$/packages/functype-log/src/**",
+        "$TURBO_ROOT$/packages/functype-log/package.json",
+        "$TURBO_ROOT$/packages/eslint-plugin-functype/README.md"
+      ],
+      "outputs": []
+    },
     "dev": {
       "cache": false,
       "persistent": true
