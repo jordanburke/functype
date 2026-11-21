@@ -21,83 +21,71 @@
  *                                    packages/functype/test/docs/plugin-skills-lock.spec.ts runs it
  */
 
-import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto"
+import { readdirSync, readFileSync, writeFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
-const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const MANIFEST = ".claude-plugin/marketplace.json";
-const LOCK = "scripts/plugin-skills.lock.json";
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
+const MANIFEST = ".claude-plugin/marketplace.json"
+const LOCK = "scripts/plugin-skills.lock.json"
 
 /** A plugin entry. `source` is "./" for skills in this checkout, or an object for another branch or repo. */
 type Plugin = {
-  name: string;
-  version: string;
-  source: string | object;
-  skills?: readonly string[];
-};
-type Lock = Record<string, { version: string; sha256: string }>;
+  name: string
+  version: string
+  source: string | object
+  skills?: readonly string[]
+}
+type Lock = Record<string, { version: string; sha256: string }>
 
-const checkMode = process.argv.includes("--check");
+const checkMode = process.argv.includes("--check")
 
-const readJson = <T>(relPath: string): T =>
-  JSON.parse(readFileSync(join(repoRoot, relPath), "utf8")) as T;
+const readJson = <T>(relPath: string): T => JSON.parse(readFileSync(join(repoRoot, relPath), "utf8")) as T
 
 // Every file under `dir`, skipping dotfiles (`.DS_Store` and the like), as repo-relative paths.
 const filesUnder = (dir: string): string[] =>
   readdirSync(join(repoRoot, dir), { withFileTypes: true })
     .filter((entry) => !entry.name.startsWith("."))
     .flatMap((entry) => {
-      const path = join(dir, entry.name);
-      return entry.isDirectory() ? filesUnder(path) : [path];
-    });
+      const path = join(dir, entry.name)
+      return entry.isDirectory() ? filesUnder(path) : [path]
+    })
 
 // Line endings are normalized, so a checkout with `core.autocrlf` hashes the same.
 const hashSkills = (skills: readonly string[]): string => {
   const files = skills
     .flatMap((skill) => filesUnder(skill.replace(/^\.\//, "")))
     .map((path) => path.split("\\").join("/"))
-    .sort();
-  const hash = createHash("sha256");
+    .sort()
+  const hash = createHash("sha256")
   files.forEach((path) =>
     hash
       .update(`${path}\0`)
       .update(readFileSync(join(repoRoot, path), "utf8").replace(/\r\n/g, "\n"))
       .update("\0"),
-  );
-  return hash.digest("hex");
-};
+  )
+  return hash.digest("hex")
+}
 
-const allPlugins = readJson<{ plugins: readonly Plugin[] }>(MANIFEST).plugins;
+const allPlugins = readJson<{ plugins: readonly Plugin[] }>(MANIFEST).plugins
 
 // A plugin served from another branch, such as the 1.x skills on release/1.x until 2.0 ships, has
 // no skills in this checkout to hash. Bump its version here by hand whenever that branch's skills
 // change; docs/RELEASE.md, "Docs and the Claude plugin until 2.0", has the steps.
-const remote = allPlugins.filter((plugin) => typeof plugin.source !== "string");
-const plugins = allPlugins.filter(
-  (plugin) => typeof plugin.source === "string",
-);
+const remote = allPlugins.filter((plugin) => typeof plugin.source !== "string")
+const plugins = allPlugins.filter((plugin) => typeof plugin.source === "string")
 const remoteNote =
-  remote.length > 0
-    ? `; served from elsewhere: ${remote.map((p) => `${p.name}@${p.version}`).join(", ")}`
-    : "";
-const lock = readJson<Lock>(LOCK);
+  remote.length > 0 ? `; served from elsewhere: ${remote.map((p) => `${p.name}@${p.version}`).join(", ")}` : ""
+const lock = readJson<Lock>(LOCK)
 const current: Lock = Object.fromEntries(
-  plugins.map((plugin) => [
-    plugin.name,
-    { version: plugin.version, sha256: hashSkills(plugin.skills ?? []) },
-  ]),
-);
+  plugins.map((plugin) => [plugin.name, { version: plugin.version, sha256: hashSkills(plugin.skills ?? []) }]),
+)
 
 const bumpNeeded = plugins.filter((plugin) => {
-  const locked = lock[plugin.name];
-  return (
-    locked !== undefined &&
-    locked.sha256 !== current[plugin.name]?.sha256 &&
-    locked.version === plugin.version
-  );
-});
+  const locked = lock[plugin.name]
+  return locked !== undefined && locked.sha256 !== current[plugin.name]?.sha256 && locked.version === plugin.version
+})
 
 if (bumpNeeded.length > 0) {
   bumpNeeded.forEach((plugin) =>
@@ -105,23 +93,19 @@ if (bumpNeeded.length > 0) {
       `✗ The ${plugin.name} plugin's skills changed, but its version is still ${plugin.version}. ` +
         `Bump it in ${MANIFEST}, then run \`pnpm sync:plugin-lock\`.`,
     ),
-  );
-  process.exit(1);
+  )
+  process.exit(1)
 }
 
-const stale = JSON.stringify(lock) !== JSON.stringify(current);
+const stale = JSON.stringify(lock) !== JSON.stringify(current)
 
 if (checkMode) {
   if (stale) {
-    console.error(
-      `✗ ${LOCK} is out of date with ${MANIFEST}. Run \`pnpm sync:plugin-lock\`.`,
-    );
-    process.exit(1);
+    console.error(`✗ ${LOCK} is out of date with ${MANIFEST}. Run \`pnpm sync:plugin-lock\`.`)
+    process.exit(1)
   }
-  console.log(
-    `✓ plugin skills lock in sync (${plugins.map((p) => `${p.name}@${p.version}`).join(", ")}${remoteNote})`,
-  );
+  console.log(`✓ plugin skills lock in sync (${plugins.map((p) => `${p.name}@${p.version}`).join(", ")}${remoteNote})`)
 } else {
-  writeFileSync(join(repoRoot, LOCK), JSON.stringify(current, null, 2) + "\n");
-  console.log(`✓ ${stale ? "Wrote" : "Already in sync:"} ${LOCK}`);
+  writeFileSync(join(repoRoot, LOCK), JSON.stringify(current, null, 2) + "\n")
+  console.log(`✓ ${stale ? "Wrote" : "Already in sync:"} ${LOCK}`)
 }
