@@ -1,5 +1,7 @@
 # Extractable API Migration Guide
 
+> **Historical (0.16.0).** functype 2.0 renamed these again, to Scala's names with lazy arguments: `orElse(default)` became `getOrElse(() => default)`, and `or(alternative)` became `orElse(() => alternative)`. See the 2.0 notes in [`CHANGELOG.md`](./CHANGELOG.md). The rest of this page describes 0.16.0 to 1.x.
+
 **Version:** 0.16.0+
 **Breaking Change:** Renamed extraction methods — `or(container)` aligns with Rust's `or(other)`; `orElse(default)` is an internally-motivated drop of the `get` prefix.
 

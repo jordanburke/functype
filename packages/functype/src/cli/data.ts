@@ -40,7 +40,7 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Option"),
     methods: {
       create: ["Option(v)", "Option.none()", "Some(v)", "None()"],
-      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
+      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)", ".orElse(() => alt)"],
       extract: [
         ".fold(n, s)",
         ".foldAsync(n, s)",
@@ -66,7 +66,7 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Either", "Traversable"),
     methods: {
       create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
-      transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
+      transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()", ".orElse(() => alt)"],
       extract: [
         ".fold(l, r)",
         ".foldAsync(l, r)",
@@ -96,7 +96,7 @@ export const TYPES: Record<string, TypeData> = {
         "Try.fromPromise(p)",
         "Try.async(() => Promise<T>)",
       ],
-      transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
+      transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)", ".orElse(() => alt)"],
       extract: [
         ".fold(f, s)",
         ".foldAsync(f, s)",
