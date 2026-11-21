@@ -60,6 +60,7 @@ Install with `npm install functype`. Every type listed below is also available f
 
 - [Logger](https://functype.org/logger.md): Minimal 4-method logging interface every functype-* package targets. Type-only, no runtime. Impls live in consumers: consoleBootLogger (functype-os/config), DirectLogger (functype-log/direct). Tracer is type-only on the same terms; Clock/Random are not added.
 - [Tracer](https://functype.org/reference.md#tracer): One-method trace sink consumed by TracedOption. Type-only, like Logger; declare your own Tag for injection.
+- [SpanTracer](https://functype.org/reference.md#spantracer): Type-only span contract behind IO.withSpan, and the Tag withSpan looks up. start(name, attributes, parent) opens a span, run(span, fn) runs the body with it active, end(span, exit) closes it once for every outcome. With no tracer provided, withSpan does nothing. Not TracedOption's Tracer. No implementation ships; an OpenTelemetry bridge is a few lines in your code.
 
 ## Guides
 
