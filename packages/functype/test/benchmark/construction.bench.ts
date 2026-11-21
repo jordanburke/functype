@@ -115,7 +115,7 @@ const tupleLazyCases: ReadonlyArray<readonly [string, (i: number) => unknown]> =
   ["plain { _tag, value }, for scale", (i) => ({ _tag: "Tuple", value: [i, 1] })],
   ["Tuple([i, 1])", (i) => tuple([i, 1])],
   ["Tuple([i, 1]).get(0)", (i) => tuple([i, 1]).get(0)],
-  ["Tuple([i, 1]).map", (i) => tuple([i, 1]).map(([a, b]) => [inc(a), b])],
+  ["Tuple.pair(i, 1).map", (i) => tuple.pair(i, 1).map(([a, b]) => [inc(a), b])],
   ["Lazy(() => i)", (i) => lazy(() => i)],
   ["Lazy(() => i).map", (i) => lazy(() => i).map(inc)],
   ["Lazy(() => i).orThrow(), its first evaluation", (i) => lazy(() => i).orThrow()],
