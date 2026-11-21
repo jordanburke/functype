@@ -23,6 +23,9 @@
       "dependsOn": [
         "^build"
       ],
+      "env": [
+        "CI"
+      ],
       "outputs": [
         "coverage/**"
       ]
@@ -60,6 +63,9 @@
       "outputs": []
     },
     "validate": {
+      "env": [
+        "CI"
+      ],
       "dependsOn": [
         "^build",
         "eslint-plugin-functype#build",
