@@ -17,8 +17,8 @@ describe("no-getOrThrow-in-render", () => {
         code: "function Comp({ o1 }) { return o1.fold(() => <A />, (v) => <B v={v} />) }",
       },
       {
-        name: "orElse reads a fallback",
-        code: "function Comp({ o1 }) { const v = o1.orElse(0); return <A v={v} /> }",
+        name: "getOrElse reads a fallback",
+        code: "function Comp({ o1 }) { const v = o1.getOrElse(() => 0); return <A v={v} /> }",
       },
       {
         name: "A named error is a deliberate throw to an error boundary",

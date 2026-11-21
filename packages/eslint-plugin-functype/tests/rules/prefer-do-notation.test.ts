@@ -109,9 +109,9 @@ describe("prefer-do-notation", () => {
         },
         // getOrElse with a monad fallback is a conversion/exit, not composition
         {
-          name: "Try(...).getOrElse(Option.none()) is a conversion",
+          name: "Try(...).getOrElse(() => Option.none()) is a conversion",
           code: `
-          const result = Try(() => parse(x)).getOrElse(Option.none())
+          const result = Try(() => parse(x)).getOrElse(() => Option.none())
         `,
         },
         // #444 1c: an array's flatMap chain is not a monad chain
@@ -178,7 +178,7 @@ describe("prefer-do-notation", () => {
         })),
         {
           name: "A chain that leaves the monad with getOrElse is an array chain from there on",
-          code: "const out = Option(items).getOrElse([]).flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))",
+          code: "const out = Option(items).getOrElse(() => []).flatMap((a) => f(a)).flatMap((b) => g(b)).flatMap((c) => h(c))",
         },
         {
           name: "A chain that leaves the monad with fold is not a monad chain from there on",

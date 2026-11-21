@@ -2,7 +2,7 @@ import type { Rule, SourceCode } from "eslint"
 
 import type { ASTNode } from "../types/ast"
 import { childNodes, descendants } from "../utils/ast-walk"
-import { containsAwait } from "../utils/async-detection"
+import { containsAwait, containsYield } from "../utils/async-detection"
 import { INTEROP_TAG, isInsideTaggedDeclaration } from "../utils/boundary-tags"
 import { compact, NEGATIVE_PREDICATES, POSITIVE_PREDICATES } from "../utils/functype-predicates"
 
@@ -180,7 +180,7 @@ function ifElseChainLength(node: ASTNode): number {
  *   so the rest of the function is a `flatMap`/`map`.
  * - `mappedFailure`: returns a new failure built from the old one (`return Left({ kind: e.value.kind })`),
  *   so it's `mapLeft(…)` then `flatMap`.
- * - `default`: returns a plain fallback, so it's `map(…).orElse(fallback)` or a `fold`.
+ * - `default`: returns a plain fallback, so it's `map(…).getOrElse(() => fallback)` or a `fold`.
  * - `throw`: a host that needs a throw, so it's `orThrow((e) => …)`.
  * - `effect`: does other work first (logging, setting state), so it's a `fold`.
  */
@@ -246,14 +246,14 @@ function classifyGuardExit(
     return unchanged ? "passthrough" : "mappedFailure"
   }
   // A fallback built from the failure (`c.json({ error: r.value }, 500)`) can only be written as a fold:
-  // outside the guard the failure isn't narrowed, so `map(…).orElse(…)` couldn't read it.
+  // outside the guard the failure isn't narrowed, so `map(…).getOrElse(…)` couldn't read it.
   if (failureMember !== null && readsMember(argument, receiver, failureMember, sourceCode)) return "effect"
   return "default"
 }
 
 /**
  * Does `statements` unwrap `receiver` the imperative way — `receiver.value`, `.orThrow()`, `.get()`?
- * Reads through `map`, `flatMap`, `fold`, `orElse`… are already the functional form and don't count.
+ * Reads through `map`, `flatMap`, `fold`, `getOrElse`… are already the functional form and don't count.
  */
 function unwrapsReceiver(statements: ReadonlyArray<ASTNode>, receiver: string, sourceCode: SourceCode): boolean {
   const nodes = statements.flatMap((statement) => descendants(statement))
@@ -325,8 +325,8 @@ const rule: Rule.RuleModule = {
       preferFoldGuard:
         "{{receiver}} is checked with an early exit and then unwrapped. {{advice}} Branching first and unwrapping after is the imperative form.",
       suggestFold: "Replace with .fold()",
-      suggestOr:
-        "Replace with {{receiver}}.or({{alternative}}) — keep the first when it is present, else the alternative",
+      suggestOrElse:
+        "Replace with {{receiver}}.orElse(() => {{alternative}}) — keep the first when it is present, else the alternative",
     },
   },
 
@@ -358,7 +358,7 @@ const rule: Rule.RuleModule = {
           : `Keep it in the chain: ${r}.flatMap(…) or ${r}.map(…); the failure passes through on its own.`,
       mappedFailure: (r, isAsync) =>
         `Keep it in the chain: ${r}.mapLeft(…).${isAsync ? "flatMapAsync" : "flatMap"}(…) builds the new failure and continues on success.`,
-      default: (r) => `Use ${r}.map(…).orElse(fallback), or ${r}.fold(() => fallback, (value) => …).`,
+      default: (r) => `Use ${r}.map(…).getOrElse(() => fallback), or ${r}.fold(() => fallback, (value) => …).`,
       throw: (r) =>
         `If a host needs the throw, use ${r}.orThrow((e) => new YourError(e)); otherwise keep it in the chain with .flatMap or .fold.`,
       effect: (r, isAsync) =>
@@ -367,7 +367,7 @@ const rule: Rule.RuleModule = {
 
     /**
      * `if (e.isLeft()) return …` followed, in the same block, by reads of `e.value` / `e.orThrow()`.
-     * `orElse` and `fold` are never flagged: both are proper ways to leave the container.
+     * `getOrElse` and `fold` are never flagged: both are proper ways to leave the container.
      */
     function checkGuard(node: ASTNode): void {
       if (!checkGuards) return
@@ -443,19 +443,22 @@ const rule: Rule.RuleModule = {
       const failureText = sourceCode.getText(failureNode)
       const successText = sourceCode.getText(successNode)
 
-      // `a.isSome() ? a : b` keeps the container when present and falls back otherwise — that is `.or`,
-      // and a fold would only rebuild it with an unused parameter. `.or` takes a container, so a literal
-      // or `undefined` fallback gets no suggestion at all: neither `.or(5)` nor a fold mixing a container
-      // with a plain value would type-check.
+      // `a.isSome() ? a : b` keeps the container when present and falls back otherwise — that is
+      // `.orElse(() => b)`, and a fold would only rebuild it with an unused parameter. `.orElse` takes a
+      // thunk that returns a container, so a literal or `undefined` fallback gets no suggestion at all:
+      // neither `.orElse(() => 5)` nor a fold mixing a container with a plain value would type-check. An
+      // `await` or `yield` in the fallback can't move into the thunk, so that gets none either.
       if (compact(successText) === compact(obj)) {
         if (failureNode.type === "Literal" || failureNode.type === "TemplateLiteral" || isNullishLiteral(failureNode)) {
           return []
         }
+        if (containsAwait(failureNode) || containsYield(failureNode)) return []
+        const thunkBody = failureNode.type === "ObjectExpression" ? `(${failureText})` : failureText
         return [
           {
-            messageId: "suggestOr",
+            messageId: "suggestOrElse",
             data: { receiver: obj, alternative: failureText },
-            fix: (fixer) => fixer.replaceText(node, `${obj}.or(${failureText})`),
+            fix: (fixer) => fixer.replaceText(node, `${obj}.orElse(() => ${thunkBody})`),
           },
         ]
       }

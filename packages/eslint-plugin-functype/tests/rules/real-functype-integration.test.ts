@@ -34,7 +34,7 @@ describe("real-functype-integration", () => {
           code: `
             import { Option } from 'functype'
             const noValue = Option.none<string>()
-            const result = noValue.getOrElse("default")
+            const result = noValue.getOrElse(() => "default")
           `,
         },
         // Real functype chaining patterns
@@ -48,7 +48,7 @@ describe("real-functype-integration", () => {
             const userName = findUser("123")
               .map(user => user.name)
               .filter(name => name.length > 0)
-              .getOrElse("Unknown")
+              .getOrElse(() => "Unknown")
           `,
         },
       ],

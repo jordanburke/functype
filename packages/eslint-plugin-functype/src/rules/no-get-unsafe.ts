@@ -37,8 +37,8 @@ const rule: Rule.RuleModule = {
     ],
     messages: {
       noUnsafeGet:
-        "Avoid unsafe .{{method}}() call: it throws a generic error. Use .fold(), .map(), or .orElse() instead. If a host needs the throw, name the error: .orThrow((e) => new MyError(e))",
-      suggestOrElse: "Replace with .orElse(default) for a value fallback",
+        "Avoid unsafe .{{method}}() call: it throws a generic error. Use .fold(), .map(), or .getOrElse(() => default) instead. If a host needs the throw, name the error: .orThrow((e) => new MyError(e))",
+      suggestGetOrElse: "Replace with .getOrElse(() => default) for a value fallback",
       suggestFold: "Replace with .fold(onNone, onSome) for branch handling",
     },
   },
@@ -144,9 +144,12 @@ const rule: Rule.RuleModule = {
             data: { method: methodName },
             suggest: [
               {
-                messageId: "suggestOrElse",
+                messageId: "suggestGetOrElse",
                 fix(fixer) {
-                  return fixer.replaceText(node, `${objectText}.orElse(undefined /* TODO: default${wasSuffix} */)`)
+                  return fixer.replaceText(
+                    node,
+                    `${objectText}.getOrElse(() => undefined /* TODO: default${wasSuffix} */)`,
+                  )
                 },
               },
               {

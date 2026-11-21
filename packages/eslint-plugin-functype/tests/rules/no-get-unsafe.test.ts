@@ -13,10 +13,10 @@ import rule from "../../src/rules/no-get-unsafe"
  */
 const wasSuffix = (method: string, argsSource: string): string => (argsSource ? `; was ${method}(${argsSource})` : "")
 
-const orElseOutput = (source: string, receiver: string, method: string, argsSource: string): string =>
+const getOrElseOutput = (source: string, receiver: string, method: string, argsSource: string): string =>
   source.replace(
     `${receiver}.${method}(${argsSource})`,
-    `${receiver}.orElse(undefined /* TODO: default${wasSuffix(method, argsSource)} */)`,
+    `${receiver}.getOrElse(() => undefined /* TODO: default${wasSuffix(method, argsSource)} */)`,
   )
 
 const foldOutput = (source: string, receiver: string, method: string, argsSource: string): string =>
@@ -27,8 +27,8 @@ const foldOutput = (source: string, receiver: string, method: string, argsSource
 
 const suggestionsFor = (code: string, receiver: string, method: string, argsSource = "") => [
   {
-    messageId: "suggestOrElse" as const,
-    output: orElseOutput(code, receiver, method, argsSource),
+    messageId: "suggestGetOrElse" as const,
+    output: getOrElseOutput(code, receiver, method, argsSource),
   },
   {
     messageId: "suggestFold" as const,
@@ -48,10 +48,10 @@ describe("no-get-unsafe", () => {
           )
         `,
       },
-      // functype's actual extract method — no getOrElse alias exists.
+      // functype's extract method, with a lazy default.
       {
-        name: "Using orElse() is allowed",
-        code: 'const value = option.orElse("default")',
+        name: "Using getOrElse() is allowed",
+        code: 'const value = option.getOrElse(() => "default")',
       },
       {
         name: "Using map() is allowed",
@@ -224,8 +224,9 @@ describe("no-get-unsafe", () => {
             data: { method: "get" },
             suggestions: [
               {
-                messageId: "suggestOrElse",
-                output: 'const value = Some("test").map(x => x.toUpperCase()).orElse(undefined /* TODO: default */)',
+                messageId: "suggestGetOrElse",
+                output:
+                  'const value = Some("test").map(x => x.toUpperCase()).getOrElse(() => undefined /* TODO: default */)',
               },
               {
                 messageId: "suggestFold",
@@ -251,9 +252,9 @@ describe("no-get-unsafe", () => {
             data: { method: "get" },
             suggestions: [
               {
-                messageId: "suggestOrElse",
+                messageId: "suggestGetOrElse",
                 output: `
-          const value1 = option1.orElse(undefined /* TODO: default */)
+          const value1 = option1.getOrElse(() => undefined /* TODO: default */)
           const value2 = option2.getOrThrow()
           const value3 = result.unwrap()
         `,
@@ -273,10 +274,10 @@ describe("no-get-unsafe", () => {
             data: { method: "getOrThrow" },
             suggestions: [
               {
-                messageId: "suggestOrElse",
+                messageId: "suggestGetOrElse",
                 output: `
           const value1 = option1.get()
-          const value2 = option2.orElse(undefined /* TODO: default */)
+          const value2 = option2.getOrElse(() => undefined /* TODO: default */)
           const value3 = result.unwrap()
         `,
               },
@@ -295,11 +296,11 @@ describe("no-get-unsafe", () => {
             data: { method: "unwrap" },
             suggestions: [
               {
-                messageId: "suggestOrElse",
+                messageId: "suggestGetOrElse",
                 output: `
           const value1 = option1.get()
           const value2 = option2.getOrThrow()
-          const value3 = result.orElse(undefined /* TODO: default */)
+          const value3 = result.getOrElse(() => undefined /* TODO: default */)
         `,
               },
               {
