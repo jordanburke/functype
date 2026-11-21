@@ -61,6 +61,24 @@ Also note:
 - `deploy-docs.yml` deploys from `main` only. The site shows a 1.x release only after `release/1.x` is merged into `main`.
 - After that merge, run `pnpm turbo run validate` on the merge commit, and commit any regenerated `site/public/llms*.txt`, before pushing. CI's stale-artifact check fails otherwise.
 
+## Docs and the Claude plugin until 2.0
+
+`main` is 2.0-bound, but npm's `latest` is 1.x until 2.0 ships. Two things users read come from this repo, so both serve `release/1.x` until then:
+
+- **functype.org.** `deploy-docs.yml` deploys on pushes to `release/1.x`, on both branches, so a push to `main` deploys nothing. The `github-pages` environment allows `release/1.x` as a deployment branch.
+- **The `functype` Claude plugin.** Installed plugins read `.claude-plugin/marketplace.json` from the default branch, `main`. Its `functype` entry has `"source": { "source": "github", "repo": "jordanburke/functype", "ref": "release/1.x" }`, so its skills and its `.mcp.json` come from `release/1.x`. `functype-developer` stays on `main`, because contributors work there.
+
+While this holds:
+
+- **A 1.x skill change needs a version bump on `main`.** An installed plugin updates only when its version changes, and that version lives in `main`'s marketplace entry. After the 1.x change merges, raise the `functype` entry's version on `main`. `pnpm sync:plugin-lock` skips a plugin served from another branch, so it won't remind you.
+- **Skill edits on `main` reach no one yet.** They're the 2.0 skills, and ship at the 2.0 release.
+
+At the 2.0 release, undo both:
+
+1. Set `deploy-docs.yml`'s push filter back to `["main"]`, on `main`.
+2. Set the `functype` entry's `source` back to `"./"`, raise its version above every number used so far, and run `pnpm sync:plugin-lock`.
+3. Push to `main`, or run `deploy-docs.yml` by hand, so functype.org shows 2.0.
+
 ## Verify the release installs (`scripts/verify-published.ts`)
 
 "Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
