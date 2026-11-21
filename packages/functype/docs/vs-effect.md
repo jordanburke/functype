@@ -41,7 +41,9 @@ line is drawn deliberately. functype does **not** ship, and does not intend to s
   does define are `Logger` and `Tracer` — both type-only, both naming an existing concept
   rather than introducing a new abstraction. `Logger` exists because every production app
   already has one; `Tracer` is a one-method sink consumed by `TracedOption`. Neither ships
-  a runtime, a Tag, or a default implementation — those live in consumer packages.)
+  a runtime, a Tag, or a default implementation — those live in consumer packages.
+  `SpanTracer`, the contract behind `IO.withSpan`, does ship as a Tag, because the
+  interpreter looks it up. It still ships no implementation.)
 - **Persistent (structurally-shared) data structures** — functype's `List`/`Set`/`Map` are
   immutable and array-backed (copy-on-write), not HAMT/finger-tree persistent collections.
   See [performance notes](#performance) below.
@@ -56,12 +58,17 @@ For any of these, Effect is the better tool:
 - You need **structured concurrency**: racing, supervised fibers, safe interruption,
   resource scoping across concurrent work.
 - You're building around **streaming** (`Stream`) or want first-class **scheduling**.
-- You want an **integrated ecosystem** — Schema, platform/runtime, HTTP, config, tracing —
+- You want an **integrated ecosystem** — Schema, platform/runtime, HTTP, config —
   designed to compose as one system.
+- You want **tracing that comes with its exporter**. Effect's spans reach OpenTelemetry
+  through `@effect/opentelemetry`.
 - Your team is prepared to **adopt the Effect programming model wholesale** and wants the
   ecosystem mass, the community, and the long-term investment behind it.
 
-functype doesn't compete on any of these, and won't.
+functype doesn't compete on any of these, and won't. Tracing is the partial exception:
+`IO.withSpan` nests spans the way `Effect.withSpan` does, behind a type-only `SpanTracer`
+contract shaped like Effect's `Tracer`. functype ships no tracer and no exporter, so you write
+the short bridge to OpenTelemetry yourself (the IO docs have a sketch).
 
 ## Choose **functype** when…
 
