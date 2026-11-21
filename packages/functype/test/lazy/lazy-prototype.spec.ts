@@ -116,6 +116,56 @@ describe("Lazy keeps its evaluation semantics", () => {
     expect(thunk).toHaveBeenCalledTimes(1)
   })
 
+  // A frozen Lazy can't memoize, but every read must still get the right outcome.
+  describe("a frozen Lazy", () => {
+    it("returns its value, running the thunk once per read", () => {
+      const runs = { count: 0 }
+      const lazy = Object.freeze(
+        Lazy(() => {
+          runs.count++
+          return 42
+        }),
+      )
+      expect([lazy.orThrow(), lazy.getOrElse(() => 0), lazy.orNull(), lazy.size]).toEqual([42, 42, 42, 1])
+      expect(runs.count).toBe(4)
+      expect(lazy.isEvaluated).toBe(false)
+    })
+
+    it("maps, and the mapped Lazy memoizes as usual", () => {
+      const runs = { count: 0 }
+      const lazy = Object.freeze(
+        Lazy(() => {
+          runs.count++
+          return 1
+        }),
+      )
+      const mapped = lazy.map((x) => x + 1)
+      expect(mapped.getOrElse(() => 0)).toBe(2)
+      expect(mapped.getOrElse(() => 0)).toBe(2)
+      expect(runs.count).toBe(1)
+    })
+
+    it("still reports a failing thunk's own error", () => {
+      const error = new Error("boom")
+      const runs = { count: 0 }
+      const lazy = Object.freeze(
+        Lazy<number>(() => {
+          runs.count++
+          throw error
+        }),
+      )
+      expect(() => lazy.orThrow()).toThrow(error)
+      expect(
+        lazy.toEither().fold(
+          (e) => e,
+          () => undefined,
+        ),
+      ).toBe(error)
+      expect(lazy.getOrElse(() => 7)).toBe(7)
+      expect(runs.count).toBe(3)
+    })
+  })
+
   it("a thunk that throws undefined has still failed", () => {
     const lazy = Lazy<number>(() => {
       throw undefined

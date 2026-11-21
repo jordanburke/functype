@@ -214,25 +214,32 @@ interface LazyOf<out T extends Type> extends Lazy<T> {
 /** How a Lazy's thunk ended. */
 type Settled<T> = Exclude<LazyState<T>, { readonly _tag: "Pending" }>
 
-/* eslint-disable functional/immutable-data -- settle() memoizes into the Lazy, and the constructor fills in the one it just created */
+/* eslint-disable functional/immutable-data -- the constructor fills in the Lazy it just created */
 
 /**
  * Runs the thunk at most once, and says how it ended without throwing. A value or a thrown error is
  * kept and handed back on every later read. The state is written after the thunk returns, so a
  * thunk that reads its own Lazy runs again, as it always has. Reading `lazy.state` comes first and
  * outside the `try`, so a detached call throws a TypeError instead of reading as a failed thunk.
+ *
+ * Only the thunk runs inside the `try`. The write comes after, through `Reflect.set`, which returns
+ * false rather than throwing on a frozen Lazy. A frozen Lazy can't memoize, so its thunk runs once
+ * per read, but each read still gets the right outcome.
  */
 const settle = <T extends Type>(lazy: Mutable<LazyOf<T>>): Settled<T> => {
   const { state } = lazy
   if (state._tag !== "Pending") return state
+  const settled = run(state.thunk)
+  Reflect.set(lazy, "state", settled)
+  return settled
+}
+
+/** Runs a thunk once, and says how it ended without throwing. */
+const run = <T extends Type>(thunk: () => T): Settled<T> => {
   try {
-    const evaluated: Settled<T> = { _tag: "Evaluated", value: state.thunk() }
-    lazy.state = evaluated
-    return evaluated
+    return { _tag: "Evaluated", value: thunk() }
   } catch (error) {
-    const failed: Settled<T> = { _tag: "Failed", error }
-    lazy.state = failed
-    return failed
+    return { _tag: "Failed", error }
   }
 }
 
