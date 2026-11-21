@@ -263,6 +263,19 @@ export interface IOYieldable {
   readonly [Symbol.toStringTag]: string
 }
 
+/**
+ * The services an `IO.gen` body needs: the union of every yielded IO's `R`.
+ * It distributes over the union of yielded IOs, and is `never` when the body yields none.
+ * @internal
+ */
+export type IOGenRequirements<Y> = Y extends IO<infer R, infer _E, infer _A> ? R : never
+
+/**
+ * The errors an `IO.gen` body can fail with: the union of every yielded IO's `E`.
+ * @internal
+ */
+export type IOGenErrors<Y> = Y extends IO<infer _R, infer E, infer _A> ? E : never
+
 export interface IO<in out R extends Type, out E extends Type, out A extends Type> {
   readonly [Symbol.toStringTag]: string
   /**
@@ -527,7 +540,7 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * Provides a context to satisfy the requirements of this effect.
    * @param context - The context containing required services
    */
-  provideContext<R2 extends R>(context: Context<R2>): IO<Exclude<R, R2>, E, A>
+  provideContext<R2 extends Type>(context: Context<R2>): IO<Exclude<R, R2>, E, A>
 
   /**
    * Provides a single service to satisfy part of the requirements.
@@ -538,9 +551,12 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 
   /**
    * Provides services using a layer.
+   *
+   * The layer may provide services the effect's `R` doesn't name, such as a `SpanTracer` for
+   * the `withSpan` calls inside it, which read the tracer without requiring it.
    * @param layer - The layer that provides services
    */
-  provideLayer<RIn extends Type, E2 extends Type, ROut extends R>(
+  provideLayer<RIn extends Type, E2 extends Type, ROut extends Type>(
     layer: Layer<RIn, E2, ROut>,
   ): IO<RIn | Exclude<R, ROut>, E | E2, A>
 
@@ -704,10 +720,12 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    *   read the trace IDs, including after an `await` in an `IO.async` thunk.
    * - Every outcome closes it exactly once: success, typed failure, defect and interruption.
    *   A failure after the run was cancelled, such as a `race` loser's aborted `fetch`, closes it
-   *   as interrupted.
+   *   as interrupted. A loser that ignores the signal closes when it finishes, with its own
+   *   outcome, such as `Success`; one that never settles never closes its span.
    * - With no tracer provided, it does nothing: same result, nothing recorded.
-   * - Provide the tracer outside the spans: `io.withSpan("a").provideService(SpanTracer, t)`.
-   *   A span outside the `provideService` sees no tracer.
+   * - Provide the tracer outside the spans: `io.withSpan("a").provideService(SpanTracer, t)`,
+   *   or with a layer, `provideLayer(Layer.succeed(SpanTracer, t))`. A span outside the
+   *   provide sees no tracer.
    * - It works under `runSync` too, because a tracer's `run` is synchronous.
    * - Parallel children of `IO.all`, `race` and `timeout` each nest under the enclosing span and
    *   don't see each other's.
@@ -2315,9 +2333,24 @@ const IOCompanion = {
    *   return a + b
    * })
    * ```
+   *
+   * The result records what the body reads. Its `R` is the union of the services every
+   * yielded IO needs, and its `E` is the union of their errors:
+   *
+   * ```typescript
+   * const getUser = (id: string) =>
+   *   IO.gen(function* () {
+   *     const db = yield* IO.service(Database)
+   *     return yield* IO.tryPromise({ try: () => db.find(id), catch: (e) => new DbError(e) })
+   *   })
+   * // IO<Database, DbError, User>
+   * getUser("1").provideLayer(DatabaseLive)
+   * ```
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gen: <A extends Type>(f: () => Generator<IOYieldable, A, any>): IO<never, any, A> => {
+  gen: <Y extends IOYieldable, A extends Type>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    f: () => Generator<Y, A, any>,
+  ): IO<IOGenRequirements<Y>, IOGenErrors<Y>, A> => {
     return unsafeCoerce(
       IOCompanion.sync(() => {
         const iterator = f()
