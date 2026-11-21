@@ -810,6 +810,17 @@ describe("IO", () => {
     })
   })
 
+  describe("IO.any and IO.forEachPar are gone (2.0, #276 section 4)", () => {
+    it("has neither at runtime or in its type", () => {
+      expect("any" in IO).toBe(false)
+      expect("forEachPar" in IO).toBe(false)
+      // @ts-expect-error use IO.firstSuccessOf, the same sequential chain
+      expect(IO.any).toBeUndefined()
+      // @ts-expect-error use IO.forEach, which forEachPar was an alias of
+      expect(IO.forEachPar).toBeUndefined()
+    })
+  })
+
   describe("IO.firstSuccessOf", () => {
     it("should return first success", async () => {
       const io = IO.firstSuccessOf([IO.fail(new Error("first")), IO.succeed(42), IO.succeed(43)] as unknown as IO<
