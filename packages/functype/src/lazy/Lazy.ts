@@ -580,7 +580,7 @@ const LazyCompanion = {
  *   if (Math.random() > 0.5) throw new Error("Failed")
  *   return "Success"
  * })
- * const safe = risky.orElse("Default") // Returns "Success" or "Default"
+ * const safe = risky.getOrElse(() => "Default") // Returns "Success" or "Default"
  * const option = risky.toOption() // Some("Success") or None
  * const either = risky.toEither() // Right("Success") or Left(Error)
  *

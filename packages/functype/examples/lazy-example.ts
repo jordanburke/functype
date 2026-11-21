@@ -23,7 +23,7 @@ const risky = Lazy(() => {
 })
 
 console.log(
-  "  Safe access with orElse:",
+  "  Safe access with getOrElse:",
   risky.getOrElse(() => "Default"),
 )
 console.log("  Convert to Option:", risky.toOption())

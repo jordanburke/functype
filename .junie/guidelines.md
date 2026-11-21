@@ -144,7 +144,7 @@ describe("Option - Property-based tests", () => {
       fc.property(fc.string(), (value) => {
         const option = Option(value)
         const mapped = option.map((x) => x)
-        expect(mapped.orElse("default")).toBe(option.orElse("default"))
+        expect(mapped.getOrElse(() => "default")).toBe(option.getOrElse(() => "default"))
       }),
     )
   })

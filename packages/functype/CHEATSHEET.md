@@ -1,6 +1,6 @@
 # Functype Cheatsheet — for Scala / cats / fp-ts users
 
-You know functional programming. functype is Scala-inspired but TypeScript-idiomatic, with Rust-style naming on extraction methods. This page maps your existing muscle memory to functype 0.60.x.
+You know functional programming. functype is Scala-inspired but TypeScript-idiomatic, and since 2.0 its extraction methods use Scala's names with lazy arguments, as Effect and fp-ts do. This page maps your existing muscle memory to functype 2.x.
 
 For a JavaScript-first introduction, see [`docs/JAVASCRIPT_TO_FUNCTYPE_PATTERNS.md`](./docs/JAVASCRIPT_TO_FUNCTYPE_PATTERNS.md). For an exhaustive interface matrix, see [`docs/FUNCTYPE_FEATURE_MATRIX.md`](./docs/FUNCTYPE_FEATURE_MATRIX.md).
 
@@ -28,8 +28,8 @@ import { Option, Either, Try, List, IO } from "functype"
 | --------------------------- | ------------------------------- | --------------------------- |
 | `Some(x)` / `None`          | `O.some(x)` / `O.none`          | `Some(x)` / `None()`        |
 | `Option(x)` (null-aware)    | `O.fromNullable(x)`             | `Option(x)`                 |
-| `opt.getOrElse(d)`          | `O.getOrElse(() => d)(opt)`     | `opt.orElse(d)`             |
-| `opt.orElse(other)`         | `O.alt(() => other)(opt)`       | `opt.or(other)`             |
+| `opt.getOrElse(d)`          | `O.getOrElse(() => d)(opt)`     | `opt.getOrElse(() => d)`    |
+| `opt.orElse(other)`         | `O.alt(() => other)(opt)`       | `opt.orElse(() => other)`   |
 | `opt.map(f)` / `flatMap(f)` | `O.map(f)` / `O.chain(f)`       | `opt.map(f)` / `flatMap(f)` |
 | `opt.fold(zero, f)`         | `O.fold(() => zero, f)(opt)`    | `opt.fold(() => zero, f)`   |
 | `opt.getOrElse(throw err)`  | `O.getOrElseW(() => throw)`     | `opt.orThrow(err?)`         |
@@ -37,12 +37,12 @@ import { Option, Either, Try, List, IO } from "functype"
 | `Option.sequence(opts)`     | `A.sequence(O.Applicative)`     | `Option.sequence(opts)`     |
 | `opts.traverse(f)`          | `A.traverse(O.Applicative)(f)`  | `Option.traverse(opts, f)`  |
 
-**Naming gotcha:** functype renamed the extraction pair in 0.16.0:
+**Lazy fallbacks:** both methods take a function, which runs only when there is no value. This is Scala's by-name `default: => B`, written as a thunk the way Effect and fp-ts write it.
 
-- Scala `orElse(other: Option[T])` → functype `or(other)` — matches Rust's `or(other)`.
-- Scala `getOrElse(default)` → functype `orElse(default)` — internally-motivated drop of the `get` prefix; matches **neither** Rust (which uses `unwrap_or(default)`) nor Rust's `or_else(f)` (which takes a closure returning `Option<T>`, not a raw default).
+- `opt.getOrElse(() => 42)` returns `T | 42`.
+- `opt.orElse(() => Option(42))` returns `Option<T | 42>`.
 
-No `getOrElse` alias. If you're coming from Scala/cats/fp-ts/Effect and see `opt.orElse(42)`, note it returns `T | 42`, not `Option<T | 42>` — use `opt.or(Option(42))` for the wrapping form.
+A bare value fails to compile at the argument: `opt.getOrElse(42)` is a type error, and so is `opt.orElse(Option(42))`. functype 1.x used `orElse(default)` and `or(alternative)` for these; see the 2.0 notes in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ---
 
@@ -56,7 +56,7 @@ No `getOrElse` alias. If you're coming from Scala/cats/fp-ts/Effect and see `opt
 | `e.mapLeft(f)`            | `E.mapLeft(f)`              | `e.mapLeft(f)`             |
 | `e.swap`                  | `E.swap`                    | `e.swap()`                 |
 | `e.fold(l, r)`            | `E.fold(l, r)(e)`           | `e.fold(l, r)`             |
-| `e.getOrElse(d)`          | `E.getOrElse(() => d)(e)`   | `e.orElse(d)`              |
+| `e.getOrElse(d)`          | `E.getOrElse(() => d)(e)`   | `e.getOrElse(() => d)`     |
 | `e.toOption`              | `E.toOption`                | `e.toOption()`             |
 | `Either.sequence(arr)`    | `A.sequence(E.Applicative)` | `Either.sequence(arr)`     |
 | `arr.traverse(f)`         | `A.traverse(E.Applicative)` | `Either.traverse(arr, f)`  |

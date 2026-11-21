@@ -218,7 +218,7 @@ describe("Obj", () => {
   })
 
   describe("Extractable", () => {
-    it("should orElse return data (always has value)", () => {
+    it("should getOrElse return data (always has value)", () => {
       expect(user.getOrElse(() => ({ name: "X", age: 0, role: "X" }))).toEqual(user.value())
     })
 

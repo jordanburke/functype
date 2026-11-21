@@ -25,7 +25,7 @@ describe("validateCode", () => {
 const result = Option(42)
   .map(n => n + 1)
   .filter(n => n > 0)
-  .orElse(0)
+  .getOrElse(() => 0)
 `
       const result = validateCode(code)
       expect(result.success).toBe(true)

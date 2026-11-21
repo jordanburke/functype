@@ -20,8 +20,8 @@ success.isRight(); // true
 failure.isLeft(); // true
 
 // Extracting values
-success.orElse(0); // 42
-failure.orElse(0); // 0
+success.getOrElse(() => 0); // 42
+failure.getOrElse(() => 0); // 0
 success.orThrow(); // 42
 failure.orThrow(); // throws Error
 ```

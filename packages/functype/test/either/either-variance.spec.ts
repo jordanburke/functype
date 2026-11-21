@@ -132,16 +132,16 @@ describe("Either R covariance", () => {
     expectTypeOf(widenedSwap).toEqualTypeOf<Either<number, ConfigError>>()
   })
 
-  it("orElse accepts a wider default and widens R", () => {
+  it("getOrElse accepts a wider default and widens R", () => {
     const e: Either<string, UserV2> = Right({ name: "a", email: "b" })
     type Fallback = { readonly name: string; readonly guest: true }
     const fallback: Fallback = { name: "guest", guest: true }
     const result = e.getOrElse(() => fallback)
-    // orElse<R2>(defaultValue: R2): R | R2
+    // getOrElse<R2>(defaultValue: () => R2): R | R2
     expectTypeOf(result).toEqualTypeOf<UserV2 | Fallback>()
   })
 
-  it("orElse still works with exact R", () => {
+  it("getOrElse still works with exact R", () => {
     const e: Either<string, number> = Left("err")
     const result: number = e.getOrElse(() => 0)
     expectTypeOf(result).toEqualTypeOf<number>()
@@ -261,7 +261,7 @@ describe("Either variance — runtime behavior unchanged", () => {
     if (c.isRight()) expect(c.value).toBe(2)
   })
 
-  it("orElse returns default on Left", () => {
+  it("getOrElse returns default on Left", () => {
     const a: Either<string, number> = Left("err")
     expect(a.getOrElse(() => 99)).toBe(99)
   })

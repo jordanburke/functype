@@ -33,7 +33,7 @@ function typeTagOf(v: Option<unknown>): string {
  * TracedOption(user, tracer, "span-1")
  *   .map(u => u.name.trim(), "trim")
  *   .filter(n => n.length > 0, "non-empty")
- *   .orElse("anonymous", "fallback")
+ *   .getOrElse(() => "anonymous", "fallback")
  * ```
  */
 export type TracedOption<A> = {

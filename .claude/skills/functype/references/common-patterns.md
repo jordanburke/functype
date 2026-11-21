@@ -22,7 +22,7 @@ const theme = Option(user)
   .flatMap((u) => Option(u.profile))
   .flatMap((p) => Option(p.settings))
   .flatMap((s) => Option(s.theme))
-  .orElse("light")
+  .getOrElse(() => "light")
 ```
 
 ### Optional Function Calls
@@ -43,12 +43,12 @@ Option(callback).map((fn) => fn(arg1, arg2))
 import { Option } from "functype"
 
 // Instead of: const value = condition ? compute() : null
-const value = Option(condition ? compute() : null).orElse(defaultValue)
+const value = Option(condition ? compute() : null).getOrElse(() => defaultValue)
 
 // Or using filter
 const filtered = Option(compute())
   .filter(() => condition)
-  .orElse(defaultValue)
+  .getOrElse(() => defaultValue)
 ```
 
 ## Error Handling Patterns
@@ -184,10 +184,10 @@ import { List } from "functype"
 const list = List([1, 2, 3, 4, 5])
 
 // Safe head (first element). head, headOption, last, lastOption, tail and init are methods (2.0)
-const first = list.headOption().orElse(0) // 1
+const first = list.headOption().getOrElse(() => 0) // 1
 
 // Safe last element
-const end = list.lastOption().orElse(0) // 5
+const end = list.lastOption().getOrElse(() => 0) // 5
 
 // tail() and init() copy the rest of the list, so call them once rather than in a loop
 const restSum = list.tail().foldLeft(0)((sum, n) => sum + n)
@@ -344,7 +344,7 @@ import { Option } from "functype"
 
 const result = Try(() => JSON.parse(jsonString))
   .toOption() // Built-in conversion
-  .orElse(defaultObject)
+  .getOrElse(() => defaultObject)
 ```
 
 ## Performance Patterns
@@ -415,7 +415,7 @@ class QueryBuilder {
     const where = this._where.length > 0 ? ` WHERE ${this._where.join(" AND ")}` : ""
     const limit = Option(this._limit)
       .map((n) => ` LIMIT ${n}`)
-      .orElse("")
+      .getOrElse(() => "")
 
     return select + where + limit
   }
@@ -610,7 +610,7 @@ const userTheme = Do(function* () {
   const profile = yield* $(Option(user.profile))
   const settings = yield* $(Option(profile.settings))
   return settings.theme
-}).orElse("light")
+}).getOrElse(() => "light")
 
 // Either validation chain
 const validated = Do(function* () {

@@ -19,7 +19,7 @@ result.isSuccess(); // true if no exception
 result.isFailure(); // true if exception thrown
 
 // Extract values
-result.orElse({}); // value or default
+result.getOrElse(() => ({})); // value or default
 result.orThrow(); // value or re-throw
 result.toEither((error) => error); // Either<Error, T>; pass a value or a builder for the Left
 ```

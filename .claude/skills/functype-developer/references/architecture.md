@@ -486,7 +486,7 @@ const result = List(items) // Single conversion
 
 ```typescript
 // ✅ Use Option for nullable values
-Option(value).orElse(default)
+Option(value).getOrElse(() => default)
 
 // ✅ Use Either for errors with context
 validateEmail(email)

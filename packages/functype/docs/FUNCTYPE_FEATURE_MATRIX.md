@@ -242,8 +242,8 @@ Note: `fold` has different semantics per type category:
 
 ### Extractable (extends Unsafe)
 
-- `orElse(defaultValue: T): T`
-- `or(alternative: Extractable<T>): Extractable<T>`
+- `getOrElse(defaultValue: () => T): T`
+- `orElse(alternative: () => Extractable<T>): Extractable<T>`
 - `orNull(): T | null`
 - `orUndefined(): T | undefined`
 

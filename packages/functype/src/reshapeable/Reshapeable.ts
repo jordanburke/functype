@@ -35,7 +35,7 @@ import type { Type } from "@/types"
  *
  * // Convert to desired type for chaining
  * const asOption = result.toOption()
- * asOption.map(x => x * 2).orElse(0)
+ * asOption.map(x => x * 2).getOrElse(() => 0)
  */
 export interface Reshapeable<out T extends Type> {
   /**

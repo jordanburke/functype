@@ -205,7 +205,7 @@ describe("Type Inference", () => {
     const str: Option<string> = num.map((x) => x.toString())
 
     // TypeScript should not error
-    const _check: string = str.orElse("")
+    const _check: string = str.getOrElse(() => "")
   })
 })
 ```
