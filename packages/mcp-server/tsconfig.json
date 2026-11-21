@@ -2,8 +2,8 @@
   "extends": "ts-builds/tsconfig",
   "compilerOptions": {
     "types": ["node"],
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "test/**/*"]
 }
