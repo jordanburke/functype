@@ -109,7 +109,7 @@ export default function QuickStart() {
                       <span className="text-gray-100">))</span>
                       {"\n  "}
                       <span className="text-gray-100">.</span>
-                      <span className="text-blue-300">getOrElse</span>
+                      <span className="text-blue-300">orElse</span>
                       <span className="text-gray-100">(</span>
                       <span className="text-green-400">
                         "no-email@example.com"
@@ -134,7 +134,7 @@ export default function QuickStart() {
               View Full Documentation
             </a>
             <a
-              href="https://github.com/jordanburke/functype/tree/main/packages/functype/examples"
+              href="https://github.com/jordanburke/functype/tree/release/1.x/packages/functype/examples"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-6 py-3 bg-white text-blue-600 font-semibold rounded-lg border-2 border-blue-600 hover:bg-blue-50 transition-colors"

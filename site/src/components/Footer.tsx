@@ -132,7 +132,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li>
                 <a
-                  href="https://github.com/jordanburke/functype/blob/main/packages/functype/docs/quick-reference.md"
+                  href="https://github.com/jordanburke/functype/blob/release/1.x/packages/functype/docs/quick-reference.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
@@ -166,7 +166,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/jordanburke/functype/blob/main/packages/functype/docs/do-notation.md"
+                  href="https://github.com/jordanburke/functype/blob/release/1.x/packages/functype/docs/do-notation.md"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
@@ -176,7 +176,7 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="https://github.com/jordanburke/functype/blob/main/LICENSE"
+                  href="https://github.com/jordanburke/functype/blob/release/1.x/LICENSE"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:text-white transition-colors"
