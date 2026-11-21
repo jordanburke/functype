@@ -6,7 +6,7 @@ describe("Process", () => {
   describe("exec", () => {
     it("should execute command and return Ok with ExecResult", async () => {
       const result = await Process.exec("echo hello")
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       expect(result.value.stdout.trim()).toBe("hello")
       expect(result.value.exitCode).toBe(0)
     })
@@ -18,7 +18,7 @@ describe("Process", () => {
 
     it("should respect cwd option", async () => {
       const result = await Process.exec("pwd", { cwd: "/tmp" })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       expect(result.value.stdout.trim()).toMatch(/tmp/)
     })
   })
@@ -26,7 +26,7 @@ describe("Process", () => {
   describe("execSync", () => {
     it("should execute command and return Right with ExecResult", () => {
       const result = Process.execSync("echo hello")
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.stdout.trim()).toBe("hello")
       expect(result.value.exitCode).toBe(0)
     })
@@ -38,7 +38,7 @@ describe("Process", () => {
 
     it("should respect cwd option", () => {
       const result = Process.execSync("pwd", { cwd: "/tmp" })
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.stdout.trim()).toMatch(/tmp/)
     })
   })

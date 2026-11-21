@@ -32,6 +32,7 @@ The `$` function enables TypeScript type inference with generators:
 
 ```typescript
 import { Do, $ } from "functype/do";
+import { Option } from "functype/option";
 
 const result = Do(function* () {
   const x = yield* $(Option(42)); // x is number, not unknown

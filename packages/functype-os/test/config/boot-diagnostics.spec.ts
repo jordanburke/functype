@@ -52,11 +52,8 @@ describe("bootDiagnostics", () => {
       logger,
     })
 
-    expect(result.isLeft()).toBe(true)
-    const missing = result.fold(
-      (l) => l.toArray(),
-      () => [],
-    )
+    if (!result.isLeft()) throw new Error(`expected Left, got ${result.toString()}`)
+    const missing = result.value.toArray()
     expect(missing.map((m) => m.key).sort()).toEqual(["MISSING_1", "MISSING_2"])
     expect(missing.every((m) => m.required)).toBe(true)
     expect(entries.some((e) => e.level === "error" && stripAnsi(e.message).includes("Missing required keys"))).toBe(

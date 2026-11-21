@@ -4,6 +4,8 @@ import tsParser from "@typescript-eslint/parser"
 import { RuleTester } from "@typescript-eslint/rule-tester"
 import * as vitest from "vitest"
 
+import { forPluginRules } from "./rule-tester"
+
 RuleTester.afterAll = vitest.afterAll
 RuleTester.it = vitest.it
 RuleTester.itOnly = vitest.it.only
@@ -13,16 +15,18 @@ RuleTester.describe = vitest.describe
  * RuleTester with type information, for rules that consult the type checker. Test code is linted as
  * `tests/fixtures/typed/file.ts`, so `import … from "functype"` resolves to the workspace package.
  */
-export const typedRuleTester = new RuleTester({
-  languageOptions: {
-    parser: tsParser,
-    parserOptions: {
-      ecmaFeatures: { jsx: true },
-      projectService: true,
-      tsconfigRootDir: join(import.meta.dirname, "..", "fixtures", "typed"),
+export const typedRuleTester = forPluginRules(
+  new RuleTester({
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+        projectService: true,
+        tsconfigRootDir: join(import.meta.dirname, "..", "fixtures", "typed"),
+      },
     },
-  },
-})
+  }),
+)
 
 export const typedFilename = join(import.meta.dirname, "..", "fixtures", "typed", "file.ts")
 export const typedTsxFilename = join(import.meta.dirname, "..", "fixtures", "typed", "component.tsx")

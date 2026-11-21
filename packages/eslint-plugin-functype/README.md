@@ -83,7 +83,7 @@ A rule is **`error` in `recommended` once it is right on ~95–99% of real code*
 | A router's control flow: `throw redirect(…)` or `throw notFound()` in a loader or route guard                   | nothing: recognized by its import (below)                     |
 | Anything that can fail in normal operation                                                                      | return an `Either`                                            |
 
-```ts
+```ts ignore
 import { invariant } from "functype"
 
 function deriveRunId(workflowId: string, step: number): string {
@@ -119,7 +119,7 @@ TanStack Router redirects or shows Not found only when `beforeLoad` or `loader` 
 | `react-router`                                                                  | `redirect`, `redirectDocument`, `replace`, `data`         |
 | `react-router-dom` (React Router 6), `@remix-run/node`, `@remix-run/cloudflare` | `redirect`, `redirectDocument`, `replace`, `data`, `json` |
 
-```ts
+```ts ignore
 import { redirect } from "@tanstack/react-router"
 
 beforeLoad: ({ params }) => {
@@ -194,7 +194,7 @@ Reports changing an array in place:
 
 It catches the mutation wherever the array came from, including an inferred `const rows = load(); rows.push(x)`, which `prefer-list` can't see because there's no annotation or literal.
 
-```ts
+```ts ignore
 rows.push(row) // reported → [...rows, row], or build rows with map / flatMap
 xs.sort(byRank) // reported → xs.toSorted(byRank)
 xs[i] = v // reported → xs.with(i, v)
@@ -226,7 +226,7 @@ Reports an `IO` that is built and never run, so it does nothing:
 
 `no-floating-promises` and `await-thenable` miss both, because `IO` isn't thenable.
 
-```ts
+```ts ignore
 log.info("saved") // reported, when info returns an IO → yield* it, or .run() it
 save(user).tap(audit) // reported → return it, or run it
 const user = await loadUser(id) // reported: user is the IO → await loadUser(id).runOrThrow()
@@ -242,7 +242,7 @@ Measured (2026-10-16) on functype's own source and tests, functype-log, functype
 
 Reports a statement that computes a result that can carry a failure, such as an `Either` or `Try`, and drops it. A `Left` or `Failure` in it is silently ignored. `no-floating-promises` doesn't help: awaiting the promise satisfies it while the result inside is thrown away.
 
-```ts
+```ts ignore
 await userService.updateSubscription(id, plan) // reported: a failed write goes unnoticed
 parse(input) // reported, when parse returns an Either
 await save(user).run() // reported: run() returns an Either → check it, or use runOrThrow()
@@ -265,7 +265,7 @@ Measured (2026-10-30) on agent-todo's agent-gate-api, which kept a hand-written 
 
 Reports a functype container handed to a JSON sink, anywhere inside the value. An `Either`, `Option` or `List` serializes as its `{"@functype", _tag, value}` envelope, so a client reading `subscription.plan` gets `undefined`, and a body built around a `Left` answers 200. The compiler can't catch it, because `c.json()` and `JSON.stringify()` accept any value.
 
-```ts
+```ts ignore
 return c.json(await svc.getDetails(id)) // reported: sends the Either's envelope
 return c.json({ user, subscription: details }) // reported, at subscription
 return JSON.stringify({ success: true, checkout }) // reported, at checkout: an MCP tool reporting success on failure
@@ -310,7 +310,7 @@ Only the component's or hook's own body counts as render. An event handler, an e
 
 Reports a bare `.orThrow()` (or the older `.getOrThrow()`) in a component or hook body. When the value is missing it throws during render, and React unmounts the tree up to the nearest error boundary.
 
-```tsx
+```tsx ignore
 function Profile({ user }: { user: Option<User> }) {
   const u = user.orThrow() // reported → user.fold(() => <SignIn />, (u) => <Card user={u} />)
   return <Card user={u} />
@@ -342,7 +342,7 @@ Reports a component that chooses what it renders by asking an `Option`, `Either`
 - an **early return**: `if (user.isNone()) return <SignIn />` (or `return null`, `if (!user.isSome())`, `if (busy || user.isNone())`), with the other case rendered below it;
 - a **short-circuit**: `{user.isSome() && <Card />}`, which renders one case and silently drops the other.
 
-```tsx
+```tsx ignore
 function Profile({ user }: { user: Option<User> }) {
   if (user.isNone()) return <SignIn /> // reported
   return <Card user={user.orThrow()} />
@@ -395,7 +395,7 @@ Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite 
 
 **`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `orElse(default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
 
-```ts
+```ts ignore
 if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
 if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
 if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
@@ -432,7 +432,7 @@ A union nested in a union, such as `(string | null) | undefined`, is read as one
 
 On a type-literal or interface member, and on a parameter, `a?: T` and `a: T | undefined` both mean "may be absent", so both are skipped by default. The caller writes `<X b="v" />` or `f()`, and an `Option` there would make every caller wrap the value. Skipping only one spelling would teach people to rewrite `b: string | undefined` as `b?: string`, which makes a required key optional.
 
-```ts
+```ts ignore
 type Props = {
   a?: string // fine
   b: string | undefined // fine: the same "may be absent" as a?
@@ -454,7 +454,7 @@ Return types, variables, class fields and generic arguments (`Array<string | und
 
 It reports three shapes, each once, at the outermost step:
 
-```ts
+```ts ignore
 o.flatMap(f).flatMap(g).flatMap(h) // a flatMap chain 3 steps deep → Do notation
 Option(x)
   .flatMap((v) => Either.right(v))

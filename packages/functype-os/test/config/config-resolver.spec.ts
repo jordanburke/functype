@@ -25,7 +25,7 @@ describe("ConfigResolver", () => {
       const result = await ConfigResolver.resolve({
         candidates: ["/no/such/file.toml", configFile, "/also/missing.toml"],
       })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       const opt = result.value
       expect(opt.isSome()).toBe(true)
       expect(opt.orElse("")).toBe(configFile)
@@ -35,7 +35,7 @@ describe("ConfigResolver", () => {
       const result = await ConfigResolver.resolve({
         candidates: ["/no/such/a.toml", "/no/such/b.toml"],
       })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       expect(result.value.isNone()).toBe(true)
     })
 
@@ -43,7 +43,7 @@ describe("ConfigResolver", () => {
       const result = await ConfigResolver.resolve({
         candidates: ["$UNRESOLVED_VAR_XYZ/file.toml", configFile],
       })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       expect(result.value.isSome()).toBe(true)
       expect(result.value.orElse("")).toBe(configFile)
     })
@@ -55,7 +55,7 @@ describe("ConfigResolver", () => {
         const result = await ConfigResolver.resolve({
           candidates: ["~/.functype-os-test-config-unlikely"],
         })
-        expect(result.isOk()).toBe(true)
+        if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
         expect(result.value.isSome()).toBe(true)
       } finally {
         fs.unlinkSync(homeConfig)
@@ -88,7 +88,7 @@ describe("ConfigResolver", () => {
       const result = await ConfigResolver.resolveAll({
         candidates: [configFile, "/missing.toml", secondFile],
       })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       const found = result.value.toArray()
       expect(found).toHaveLength(2)
       expect(found).toContain(configFile)
@@ -99,7 +99,7 @@ describe("ConfigResolver", () => {
       const result = await ConfigResolver.resolveAll({
         candidates: ["/no/a.toml", "/no/b.toml"],
       })
-      expect(result.isOk()).toBe(true)
+      if (!result.isOk()) throw new Error(`expected Ok, got ${result.toString()}`)
       expect(result.value.isEmpty).toBe(true)
     })
   })

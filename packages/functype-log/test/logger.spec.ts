@@ -18,7 +18,7 @@ describe("Logger", () => {
       const { logger, entries } = createTestLogger()
       await logger.info("with meta", { userId: "123", action: "login" }).runOrThrow()
 
-      const entry = entries().head
+      const entry = entries().headOption.orThrow()
       expect(entry.metadata).toEqual({ userId: "123", action: "login" })
     })
 
@@ -26,7 +26,7 @@ describe("Logger", () => {
       const { logger, entries } = createTestLogger()
       await logger.info("no meta").runOrThrow()
 
-      const entry = entries().head
+      const entry = entries().headOption.orThrow()
       expect(entry.metadata).toBeUndefined()
     })
   })
@@ -37,7 +37,7 @@ describe("Logger", () => {
       const err = new Error("something broke")
       await logger.withError(err).error("operation failed").runOrThrow()
 
-      const entry = entries().head
+      const entry = entries().headOption.orThrow()
       expect(entry.error).toBe(err)
       expect(entry.level).toBe("error")
     })
@@ -62,7 +62,7 @@ describe("Logger", () => {
       const contextLogger = logger.withContext({ requestId: "req-1" })
       await contextLogger.info("merged", { action: "fetch" }).runOrThrow()
 
-      const entry = entries().head
+      const entry = entries().headOption.orThrow()
       expect(entry.metadata).toEqual({ requestId: "req-1", action: "fetch" })
     })
   })
@@ -74,7 +74,7 @@ describe("Logger", () => {
       const child = parent.child({ handler: "users" })
       await child.info("from child").runOrThrow()
 
-      const entry = entries().head
+      const entry = entries().headOption.orThrow()
       expect(entry.metadata).toEqual({ service: "api", handler: "users" })
     })
 
