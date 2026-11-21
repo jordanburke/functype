@@ -31,7 +31,7 @@ That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, 
 
 `.github/workflows/publish.yml` triggers on `push: tags: ['v*']`:
 
-1. **Validate** — same `pnpm validate` as local.
+1. **Validate** — `pnpm validate`, as run locally, plus functype's coverage floor. Coverage runs only when `CI=true`, which GitHub sets, so a release whose functype coverage falls below the thresholds in `packages/functype/vitest.config.ts` fails here and publishes nothing. Run `CI=true pnpm -F functype test` locally to check before tagging. The same floor applies on `release/1.x`, with its own thresholds.
 2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
 3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
 4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
