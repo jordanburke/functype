@@ -24,12 +24,13 @@ export interface OptionBase<out T extends Type>
    */
   isNone(): this is NoneOf<T>
   /**
-   * Returns the contained value or a default value if None. The default may be of a
-   * different type; the result widens to \`T | T2\` so Option stays covariant in T.
-   * @param defaultValue - The value to return if this Option is None
-   * @returns The contained value or defaultValue, typed as \`T | T2\`
+   * Returns the contained value, or calls \`defaultValue\` if None. The default is lazy: it runs
+   * only on None. It may be of a different type; the result widens to \`T | T2\` so Option stays
+   * covariant in T.
+   * @param defaultValue - A function that returns the value to use if this Option is None
+   * @returns The contained value or the default, typed as \`T | T2\`
    */
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional error to throw, or a builder that makes one (called only on None). If not
@@ -47,12 +48,13 @@ export interface OptionBase<out T extends Type>
    */
   expect(handler: () => never): T
   /**
-   * Returns this Option if it contains a value, otherwise returns the alternative container.
-   * The alternative may hold a different type; the result widens to \`Option<T | T2>\`.
-   * @param alternative - The alternative Option to return if this is None
+   * Returns this Option if it contains a value, otherwise calls \`alternative\` for another Option.
+   * The alternative is lazy: it runs only on None. It may hold a different type; the result
+   * widens to \`Option<T | T2>\`.
+   * @param alternative - A function that returns the Option to use if this is None
    * @returns This Option or the alternative, typed as \`Option<T | T2>\`
    */
-  or<T2 extends Type>(alternative: Option<T2>): Option<T | T2>
+  orElse<T2 extends Type>(alternative: () => Option<T2>): Option<T | T2>
   /**
    * Returns the contained value or null if None
    * @returns The contained value or null
@@ -200,7 +202,11 @@ export interface EitherBase<out L extends Type, out R extends Type>
   extends FunctypeSum<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
-  orElse<R2 extends Type>(defaultValue: R2): R | R2
+  /**
+   * Returns the Right value, or calls \`defaultValue\` on a Left. The default is lazy: it runs only
+   * on a Left. The result widens to \`R | R2\`.
+   */
+  getOrElse<R2 extends Type>(defaultValue: () => R2): R | R2
   /**
    * Returns the Right value, or throws on a Left. Pass an \`Error\` to throw it, or a builder to make one
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
@@ -215,7 +221,11 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * \`fail\` is an arrow function typed as \`(...): never\`.
    */
   expect(handler: (value: L) => never): R
-  or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
+  /**
+   * Returns this Either if it is a Right, otherwise calls \`alternative\` for another Either.
+   * The alternative is lazy: it runs only on a Left.
+   */
+  orElse<L2 extends Type, R2 extends Type>(alternative: () => Either<L2, R2>): Either<L | L2, R | R2>
   orNull(): R | null
   orUndefined(): R | undefined
   map<U extends Type>(f: (value: R) => U): Either<L, U>
@@ -308,7 +318,11 @@ export interface TryBase<out T>
   readonly error: Error | undefined
   isSuccess(): this is SuccessOf<T>
   isFailure(): this is FailureOf<T>
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  /**
+   * Returns the value, or calls \`defaultValue\` on a Failure. The default is lazy: it runs only on
+   * a Failure. The result widens to \`T | T2\`.
+   */
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an \`Error\` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
@@ -322,7 +336,11 @@ export interface TryBase<out T>
    * typed as \`(...): never\`.
    */
   expect(handler: (error: Error) => never): T
-  or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
+  /**
+   * Returns this Try if it is a Success, otherwise calls \`alternative\` for another Try.
+   * The alternative is lazy: it runs only on a Failure.
+   */
+  orElse<T2 extends Type>(alternative: () => Try<T2>): Try<T | T2>
   orNull(): T | null
   orUndefined(): T | undefined
   toOption(): Option<T>
@@ -597,8 +615,10 @@ export interface FailureOf<out T> extends TryBase<T> {
    * @returns A List of the map's values
    */
   values(): List<V>
-  getOrElse(key: K, defaultValue: V): V
-  orElse(key: K, alternative: Option<V>): Option<V>
+  /** Returns the value for \`key\`, or calls \`defaultValue\` if the key is absent. The default is lazy. */
+  getOrElse(key: K, defaultValue: () => V): V
+  /** Returns \`Some(value)\` for \`key\`, or calls \`alternative\` for an Option if the key is absent. */
+  orElse(key: K, alternative: () => Option<V>): Option<V>
   fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B
@@ -617,10 +637,11 @@ export interface FailureOf<out T> extends TryBase<T> {
   /** Whether the computation has been evaluated */
   readonly isEvaluated: boolean
   /**
-   * Returns the computed value or a default value if computation fails.
-   * Result widens to \`T | T2\` (Scala: \`getOrElse[B >: A](default: B): B\`).
+   * Returns the computed value, or calls \`defaultValue\` if the computation fails.
+   * The default is lazy: it runs only on failure. Result widens to \`T | T2\`
+   * (Scala: \`getOrElse[B >: A](default: => B): B\`).
    */
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
@@ -634,10 +655,10 @@ export interface FailureOf<out T> extends TryBase<T> {
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy.
-   * The alternative may carry a different type; result is \`Lazy<T | T2>\`.
+   * Returns this Lazy if computation succeeds, otherwise calls \`alternative\` for another Lazy.
+   * The alternative is lazy: it runs only on failure. It may carry a different type; result is \`Lazy<T | T2>\`.
    */
-  or<T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2>
+  orElse<T2 extends Type>(alternative: () => Lazy<T2>): Lazy<T | T2>
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function
@@ -907,9 +928,10 @@ export interface ExitBase<E extends Type, A extends Type> {
   orThrow(): A
 
   /**
-   * Returns the success value or a default
+   * Returns the success value, or calls \`defaultValue\` for any other outcome.
+   * The default is lazy: it runs only when the Exit is not a Success.
    */
-  orElse(defaultValue: A): A
+  getOrElse(defaultValue: () => A): A
 
   /**
    * Converts to Option (Some for Success, None otherwise)

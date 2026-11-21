@@ -25,9 +25,9 @@ This document provides a concise reference for AI models to understand the patte
 const some = Option(42) // Some(42)
 const none = Option(null) // None
 
-// Access: .get() or .orElse(default)
+// Access: .get() or .getOrElse(() => default)
 some.get() // 42
-none.orElse("default") // "default"
+none.getOrElse(() => "default") // "default"
 
 // Transform: .map(), .flatMap(), .filter()
 some.map((x) => x * 2) // Some(84)
@@ -112,9 +112,9 @@ list.foldLeft(0)((acc, x) => acc + x) // 15
 // Create: Map({key: value})
 const map = Map({ a: 1, b: 2, c: 3 })
 
-// Access: .get(key), .orElse(key, default)
+// Access: .get(key), .getOrElse(key, () => default)
 map.get("a") // Some(1)
-map.orElse("d", 0) // 0
+map.getOrElse("d", () => 0) // 0
 
 // Transform: .map(), .filter()
 map.map((v) => v * 2) // Map({a: 2, b: 4, c: 6})
@@ -229,7 +229,7 @@ parseResult.fold(
 const userCity = Option(user)
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .orElse("Unknown")
+  .getOrElse(() => "Unknown")
 
 // Either chain
 parseInput(input)
@@ -291,7 +291,7 @@ const result = pipe(
   (opt) => opt.filter((s) => s.length > 0),
   (opt) => opt.map((s) => parseInt(s, 10)),
   (opt) => opt.filter((n) => !isNaN(n)),
-  (opt) => opt.orElse(0),
+  (opt) => opt.getOrElse(() => 0),
 )
 
 // Converting between types
@@ -374,13 +374,13 @@ import { right, left } from "functype/either"
    // Bad
    const a = option.map((x) => x + 1)
    const b = a.filter((x) => x > 10)
-   const c = b.orElse(0)
+   const c = b.getOrElse(() => 0)
 
    // Good
    const result = option
      .map((x) => x + 1)
      .filter((x) => x > 10)
-     .orElse(0)
+     .getOrElse(() => 0)
    ```
 
 4. ❌ **Mixing Imperative and Functional Styles**:
@@ -398,7 +398,7 @@ import { right, left } from "functype/either"
    )
 
    // Good
-   const result = option.orElse(42)
+   const result = option.getOrElse(() => 42)
    ```
 
 
@@ -429,7 +429,7 @@ option.isEmpty // same as isNone(), as a property
 
 // Accessing
 option.orThrow() // Gets value or throws if None
-option.orElse(defaultValue) // Gets value or returns default
+option.getOrElse(() => defaultValue) // Gets value or returns default
 option.orThrow(new Error("No value")) // Gets value or throws custom error
 
 // Transforming
@@ -467,7 +467,7 @@ either.isLeft() // true if Left, false if Right
 
 // Accessing
 either.orThrow() // Gets Right value or throws if Left
-either.orElse(defaultValue) // Gets Right value or returns default
+either.getOrElse(() => defaultValue) // Gets Right value or returns default
 either.swap().orThrow() // Gets Left value or throws if Right
 
 // Transforming
@@ -513,7 +513,7 @@ tryVal.isFailure() // true if Failure, false if Success
 
 // Accessing
 tryVal.orThrow() // Gets value or throws original error
-tryVal.orElse(defaultValue) // Gets value or returns default
+tryVal.getOrElse(() => defaultValue) // Gets value or returns default
 tryVal.error // Gets error for Failure
 
 // Error handling
@@ -619,7 +619,7 @@ map.size // Number of entries
 map.has("a") // true if the key is present, even when its value is undefined
 map.get("a") // Some(value) or None
 map.getOrElse("a", 0) // Value or default
-map.orElse("a", Option(0)) // Option of the value, or the alternative Option
+map.orElse("a", () => Option(0)) // Option of the value, or the alternative Option
 map.keys() // List<K>, insertion order
 map.values() // List<V>, insertion order
 map.contains(Tuple(["a", 1])) // true if that exact entry is present (value compared with ===)
@@ -920,7 +920,7 @@ const result = Option("42")
   .map((s) => parseInt(s, 10))
   .filter((n) => !isNaN(n))
   .map((n) => n * 2)
-  .orElse(0) // 84
+  .getOrElse(() => 0) // 84
 
 // Cross-type transformations
 const mixed = Option("42")
@@ -1355,8 +1355,8 @@ Note: `fold` has different semantics per type category:
 
 ### Extractable (extends Unsafe)
 
-- `orElse(defaultValue: T): T`
-- `or(alternative: Extractable<T>): Extractable<T>`
+- `getOrElse(defaultValue: () => T): T`
+- `orElse(alternative: () => Extractable<T>): Extractable<T>`
 - `orNull(): T | null`
 - `orUndefined(): T | undefined`
 
@@ -1520,8 +1520,8 @@ some.isSome(); // true
 none.isNone(); // true
 
 // Extracting values
-some.orElse(0); // 42
-none.orElse(0); // 0
+some.getOrElse(() => 0); // 42
+none.getOrElse(() => 0); // 0
 some.orThrow(); // 42
 none.orThrow(); // throws Error
 some.orNull(); // 42
@@ -1650,8 +1650,8 @@ success.isRight(); // true
 failure.isLeft(); // true
 
 // Extracting values
-success.orElse(0); // 42
-failure.orElse(0); // 0
+success.getOrElse(() => 0); // 42
+failure.getOrElse(() => 0); // 0
 success.orThrow(); // 42
 failure.orThrow(); // throws Error
 ```
@@ -1806,7 +1806,7 @@ result.isSuccess(); // true if no exception
 result.isFailure(); // true if exception thrown
 
 // Extract values
-result.orElse({}); // value or default
+result.getOrElse(() => ({})); // value or default
 result.orThrow(); // value or re-throw
 result.toEither((error) => error); // Either<Error, T>; pass a value or a builder for the Left
 ```
@@ -4026,7 +4026,7 @@ Option<T> [Functor, Monad, Foldable, Extractable, Matchable, Serializable, Trave
 
 Create:    Option(v), Option.none(), Some(v), None()
 Transform: .map(f), .flatMap(f), .filter(p), .ap(ff)
-Extract:   .fold(n, s), .orElse(d), .orThrow(), .orNull(), .match({Some, None})
+Extract:   .fold(n, s), .getOrElse(() => d), .orThrow(), .orNull(), .match({Some, None})
 Check:     .isSome(), .isNone(), .isEmpty
 ```
 
@@ -4040,7 +4040,7 @@ Get the full interface hierarchy — Functor, Monad, Foldable, Extractable, Matc
 Functor<A>        .map<B>(f: A => B): Functor<B>
 Monad<A>          .flatMap<B>(f: A => Monad<B>): Monad<B>
 Foldable<A>       .fold<B>(empty: () => B, f: A => B): B
-Extractable<A>    .orElse(d: T): T
+Extractable<A>    .getOrElse(d: () => T): T
 Matchable<A>      .match<R>(patterns): R
 ```
 
@@ -4067,8 +4067,8 @@ const result = Option(42)
 const result = Option(42)
   .map((x) => x * 2)
   .getOrElse(0);
-// Validation FAILED — Line 3, Col 4: Property 'getOrElse' does not exist on type
-// 'Option<number>'. Did you mean 'orElse'? (TS2551)
+// Validation FAILED — Line 3, Col 14: Argument of type 'number' is not assignable
+// to parameter of type '() => unknown'. (TS2345)
 ```
 
 ### set_functype_version
@@ -4476,7 +4476,7 @@ Measured (2026-10-25) with both rules on functype-react's source and tests (type
 
 `.orThrow(error)` and `.orThrow((e) => error)` are not reported: the caller chose the error, which is the documented way to throw for a host that needs it (see the decision table above). A bare `.orThrow()` throws a generic error and is reported.
 
-The rule reports each match with two suggestions — `.orElse(default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` would silently lose its argument. Apply a suggestion explicitly in your editor when you know which one fits.
+The rule reports each match with two suggestions — `.getOrElse(() => default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` would silently lose its argument. Apply a suggestion explicitly in your editor when you know which one fits.
 
 ### `functype/prefer-fold`
 
@@ -4486,14 +4486,14 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
 | `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. Off while it rolls out: `prefer-fold` is `error` in `recommended`.   |
 
-Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.orElse(() => b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
 
-**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `orElse(default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
+**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `getOrElse(() => default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
 
 ```ts
 if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
 if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
-if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
+if (o.isNone()) return 0 // a fallback                 → o.map(…).getOrElse(() => 0), or o.fold(() => 0, …)
 if (r.isLeft()) return c.json({ error: r.value }, 500) // fallback reads the failure → r.fold(…), only
 if (a.isLeft()) return a
 if (b.isLeft()) return b // several in a row → Do(function* () { … })
@@ -4557,7 +4557,7 @@ Option(x)
 user && user.profile && user.profile.name // a guard on each step of a path → user?.profile?.name
 ```
 
-- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse([])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
+- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse(() => [])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
 - **Mixing is read along the chain**, from the monad each step's callback returns. A conversion such as `.toOption()` keeps the chain in one monad, and a monad built somewhere inside a callback isn't a step.
 - **A guard chain is read from the AST.** Each operand must be a property of the one before it, so `isAdmin && settings.theme && user.profile.name` isn't one.
 - **It has no autofix.** It reports only, so `eslint --fix` can't change code on its behalf.
@@ -4672,12 +4672,13 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 - `.flatMap(f)`
 - `.filter(p)`
 - `.ap(ff)`
+- `.orElse(() => alt)`
 
 **Extract**
 
 - `.fold(n, s)`
 - `.foldAsync(n, s)`
-- `.orElse(d)`
+- `.getOrElse(() => d)`
 - `.orThrow(err | () => Error)`
 - `.expect(() => never)`
 - `.orNull()`
@@ -4719,12 +4720,13 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mon
 - `.flatMap(f)`
 - `.mapLeft(f)`
 - `.swap()`
+- `.orElse(() => alt)`
 
 **Extract**
 
 - `.fold(l, r)`
 - `.foldAsync(l, r)`
-- `.orElse(d)`
+- `.getOrElse(() => d)`
 - `.orThrow(err | (left) => Error)`
 - `.expect((l) => never)`
 - `.match({Left, Right})`
@@ -4763,12 +4765,13 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mat
 - `.flatMap(f)`
 - `.recover(f)`
 - `.recoverWith(f)`
+- `.orElse(() => alt)`
 
 **Extract**
 
 - `.fold(f, s)`
 - `.foldAsync(f, s)`
-- `.orElse(d)`
+- `.getOrElse(() => d)`
 - `.orThrow(err | (error) => Error)`
 - `.expect((e) => never)`
 - `.toOption()`
@@ -4984,8 +4987,8 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 - `.get(k) // Option<V>`
 - `.keys() // List<K>`
 - `.values() // List<V>`
-- `.getOrElse(k, d)`
-- `.orElse(k, Option<V>)`
+- `.getOrElse(k, () => d)`
+- `.orElse(k, () => Option<V>)`
 - `.fold(z, f)`
 - `.foldLeft(z)(f)`
 - `.foldRight(z)(f)`
@@ -5200,7 +5203,7 @@ Outcome of running an IO effect — Success | Failure | Die | Interrupted, retur
 - `.fold(onFailure, onSuccess, onInterrupted?, onDie?)`
 - `.match({Success, Failure, Interrupted, Die?})`
 - `.orThrow()`
-- `.orElse(v)`
+- `.getOrElse(() => v)`
 - `.toOption()`
 - `.toEither()`
 - `.toValue()`
@@ -5355,7 +5358,7 @@ Implements: Applicative, AsyncMonad, Extractable, Foldable, Functor, Monad, Seri
 
 - `.fold(f)`
 - `.foldWith(onFailure, onSuccess)`
-- `.orElse(d)`
+- `.getOrElse(() => d)`
 - `.orNull()`
 - `.orThrow()`
 - `.toJSON()`
@@ -5512,7 +5515,7 @@ Opt-in Option wrapper that emits one TraceEvent per combinator to an injected Tr
 **Extract**
 
 - `.fold(onNone, onSome, label?)`
-- `.orElse(default, label?)`
+- `.getOrElse(() => default, label?)`
 - `.unwrap()  // back to Option`
 
 ## Validation
