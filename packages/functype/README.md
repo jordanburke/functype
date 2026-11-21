@@ -286,6 +286,31 @@ const controller = new AbortController()
 const exit = await loadUser("42").runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
 ```
 
+#### Tracing
+
+`withSpan(name, attributes?)` runs an effect in a span, and a `withSpan` inside it nests under it without being passed a parent. functype ships only the contract, `SpanTracer`: with no tracer provided, `withSpan` does nothing. A tracer has three methods. `start(name, attributes, parent)` opens a span, `run(span, fn)` runs the body with the span active, and `end(span, exit)` closes it once, for every outcome.
+
+```typescript
+import { context, type Span, SpanStatusCode, trace } from "@opentelemetry/api" // your dependency, not functype's
+import { SpanTracer } from "functype"
+
+const otel = trace.getTracer("my-app")
+const otelTracer: SpanTracer<Span> = {
+  start: (name, attributes, parent) =>
+    otel.startSpan(name, { attributes }, parent ? trace.setSpan(context.active(), parent) : context.active()),
+  run: (span, fn) => context.with(trace.setSpan(context.active(), span), fn), // makes the span active
+  end: (span, exit) => {
+    if (exit._tag === "Failure" || exit._tag === "Die") span.setStatus({ code: SpanStatusCode.ERROR })
+    span.end()
+  },
+}
+
+// Provide the tracer outside the spans
+await loadUser("42").withSpan("loadUser", { "user.id": "42" }).provideService(SpanTracer, otelTracer).run()
+```
+
+This bridge is a sketch, not a package: functype has no OpenTelemetry dependency. Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs with `trace.getActiveSpan()`. The [IO docs](https://functype.org/io) cover nesting, cancellation and `runSync`.
+
 ### Branded Types
 
 ```typescript

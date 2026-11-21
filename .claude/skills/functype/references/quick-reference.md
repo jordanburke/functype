@@ -379,6 +379,7 @@ const pairs = Do(function* () {
 | Cancel on abort | `effect.interruptOn(signal)` | `await poll.interruptOn(signal).run()` → `Left(InterruptedError)` |
 | Run with a cancel handle | `effect.runCancellable()` | `const { result, cancel } = io.runCancellable()` |
 | Run until a signal aborts | `effect.runExit({ signal })` | Exit is `Interrupted` on abort; `E` unchanged |
+| Trace in a span (2.0) | `effect.withSpan(name, attrs?)` | `effect.withSpan("load").provideService(SpanTracer, tracer)`; nests without a parent, no-op without a tracer |
 | Retry (any)    | `effect.retry(n)` / `retryWithDelay(n, ms)` | `effect.retry(3)` |
 | Retry (predicate, 1.3+) | `effect.retryWhile({n, while, delayMs?})` | `eff.retryWhile({n:3, while:e=>e.status>=500})` |
 | Retry (backoff, 1.3+) | `effect.retryWithBackoff({n, baseMs, maxMs?, factor?, jitter?, while?})` | `eff.retryWithBackoff({n:5, baseMs:250})` |

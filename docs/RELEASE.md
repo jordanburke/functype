@@ -58,8 +58,26 @@ Once `main` carries unreleased breaking changes, additive releases for the old m
 
 Also note:
 
-- `deploy-docs.yml` deploys from `main` only. The site shows a 1.x release only after `release/1.x` is merged into `main`.
+- `deploy-docs.yml` deploys from `release/1.x` until 2.0 ships, so a 1.x release reaches the site when `release/1.x` is pushed. See "Docs and the Claude plugin until 2.0" below.
 - After that merge, run `pnpm turbo run validate` on the merge commit, and commit any regenerated `site/public/llms*.txt`, before pushing. CI's stale-artifact check fails otherwise.
+
+## Docs and the Claude plugin until 2.0
+
+`main` is 2.0-bound, but npm's `latest` is 1.x until 2.0 ships. Two things users read come from this repo, so both serve `release/1.x` until then:
+
+- **functype.org.** `deploy-docs.yml` deploys on pushes to `release/1.x`, on both branches, so a push to `main` deploys nothing. The `github-pages` environment allows `release/1.x` as a deployment branch.
+- **The `functype` Claude plugin.** Installed plugins read `.claude-plugin/marketplace.json` from the default branch, `main`. Its `functype` entry has `"source": { "source": "github", "repo": "jordanburke/functype", "ref": "release/1.x" }`, so its skills and its `.mcp.json` come from `release/1.x`. `functype-developer` stays on `main`, because contributors work there.
+
+While this holds:
+
+- **A 1.x skill change needs a version bump on `main`.** An installed plugin updates only when its version changes, and that version lives in `main`'s marketplace entry. After the 1.x change merges, raise the `functype` entry's version on `main`. `pnpm sync:plugin-lock` skips a plugin served from another branch, so it won't remind you.
+- **Skill edits on `main` reach no one yet.** They're the 2.0 skills, and ship at the 2.0 release.
+
+At the 2.0 release, undo both:
+
+1. Set `deploy-docs.yml`'s push filter back to `["main"]` on both `main` and `release/1.x`. Otherwise the first 1.x patch after 2.0 redeploys the 1.x site over 2.0. Then remove `release/1.x` from the `github-pages` environment's deployment branches.
+2. Set the `functype` entry's `source` back to `"./"`, raise its version above every number used so far (and `metadata.version` with it), and run `pnpm sync:plugin-lock`.
+3. Push to `main`, or run `deploy-docs.yml` by hand, so functype.org shows 2.0.
 
 ## Verify the release installs (`scripts/verify-published.ts`)
 

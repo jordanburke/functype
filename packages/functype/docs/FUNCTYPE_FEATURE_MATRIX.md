@@ -364,6 +364,9 @@ Provides conversion to Promise for async interop:
      - Structured concurrency: bracket, race, timeout
      - Cancellation: `interruptOn(signal)` stops a running effect at its next step once the
        `AbortSignal` fires (cleanup still runs); `runCancellable()` returns `{ result, cancel }`
+     - Tracing: `withSpan(name, attributes?)` runs an effect in a span, and an inner `withSpan` nests
+       under it without a parent. Core ships only the type-only `SpanTracer` contract
+       (`start`, `run`, `end`), provided with `provideService(SpanTracer, tracer)`; with none, it's a no-op
      - Generator do-notation (`IO.gen`) and builder do-notation (`IO.Do`)
      - Error handling: catchTag, catchAll, retry, retryWithDelay, retryWhile, retryWithBackoff
      - Value-driven repetition: repeatUntil, repeatWhile, IO.iterate (bounded by RepeatExhausted)

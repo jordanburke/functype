@@ -390,6 +390,7 @@ export const TYPES: Record<string, TypeData> = {
         ".repeatWhile(cont, { max, delayMs? })",
         ".timeout(ms) // interrupts the effect at the deadline",
         ".interruptOn(signal) // stops at the next step once the AbortSignal fires; E gains InterruptedError",
+        ".withSpan(name, attributes?) // runs in a span via the provided SpanTracer; an inner withSpan nests under it",
         "IO.async((signal?) => fetch(url, { signal })) // thunk gets the run's AbortSignal inside a region",
         ".delay(ms)",
         ".zip(io)",
@@ -534,6 +535,22 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["const tracer: Tracer = { emit: (e: TraceEvent) => … }"],
       other: ["TraceEvent: { spanId, seq, op, tag, inTag, outTag?, label?, meta? }"],
+    },
+  },
+
+  SpanTracer: {
+    description:
+      "Span contract and Tag for IO.withSpan: start, run (body with the span active), end. None provided: withSpan is a no-op.",
+    interfaces: [],
+    methods: {
+      create: [
+        "const tracer: SpanTracer<MySpan> = { start, run, end }",
+        'io.withSpan("name", { key: "value" }).provideService(SpanTracer, tracer) // provide outside the spans',
+      ],
+      other: [
+        "OpenTelemetry: run = (span, fn) => context.with(trace.setSpan(context.active(), span), fn)",
+        "parent is the enclosing span in this run, or undefined; fall back to the ambient context then",
+      ],
     },
   },
 
@@ -816,5 +833,5 @@ export const CATEGORIES = {
   Utility: ["Lazy", "Cond", "Match", "Do", "Ref", "Brand", "ValidatedBrand", "Wire", "invariant", "TracedOption"],
   Validation: ["TypedError", "Validation"],
   Serialization: ["Serialization", "SerializedError"],
-  Service: ["Logger", "Tracer"],
+  Service: ["Logger", "Tracer", "SpanTracer"],
 }
