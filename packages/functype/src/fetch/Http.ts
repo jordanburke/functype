@@ -180,7 +180,6 @@ const parseResponse = async <T>(
   url: string,
   method: HttpMethod,
   decode: Decoder<T> | undefined,
-  validate: ((data: unknown) => T) | undefined,
 ): Promise<HttpResponse<T>> => {
   const mode = parseAs ?? detectParseMode(response.headers)
   let raw: unknown
@@ -219,14 +218,6 @@ const parseResponse = async <T>(
       throw HttpErrorCompanion.decodeError(url, method, body, result.value as unknown as DecoderError)
     }
     data = result.value as T
-  } else if (validate) {
-    // Back-compat for the 1.0.x `validate` field (deprecated; prefer decode).
-    try {
-      data = validate(raw)
-    } catch (cause) {
-      const body = rawText.value ?? (typeof raw === "string" ? raw : JSON.stringify(raw))
-      throw HttpErrorCompanion.decodeError(url, method, body, cause)
-    }
   } else {
     data = raw as T
   }
@@ -294,16 +285,9 @@ const doRequest = <T, TReq = unknown>(
               body,
             )
           }
-          // Response-side decoders (`decode` / `validate`) are taken from the
-          // original typed options — the request hook can't touch them.
-          return parseResponse<T>(
-            response,
-            request.parseAs,
-            request.url,
-            request.method,
-            options.decode,
-            options.validate,
-          )
+          // The response decoder is taken from the original typed options — the request hook
+          // can't touch it.
+          return parseResponse<T>(response, request.parseAs, request.url, request.method, options.decode)
         }),
       (error) => {
         if (typeof error === "object" && error !== null && "_tag" in error) {

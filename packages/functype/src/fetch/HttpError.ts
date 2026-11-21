@@ -21,10 +21,9 @@ export type HttpStatusError = {
 /**
  * Raised when a successful HTTP response could not be decoded into the
  * caller's expected shape — JSON parse failure, a `decode: Decoder<T>` that
- * returned `Left(DecoderError)`, a throwing `decodeUnsafe` / `validate`, etc.
- * In practice `cause` is a `DecoderError` (when produced by the `decode`
- * path) or an `Error` (otherwise) — but the field is typed `unknown` for
- * back-compat with the 1.0.x runtime.
+ * returned `Left(DecoderError)` (including a throw inside `Decoder.fromThrowing`).
+ * In practice `cause` is a `DecoderError` (when produced by `decode`) or the
+ * `JSON.parse` error (when the body isn't JSON), so the field is typed `unknown`.
  */
 export type DecodeError = {
   readonly _tag: "DecodeError"

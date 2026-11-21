@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { Decoder, type DecoderError } from "@/decoder"
 import { Left, Right } from "@/either/Either"
 import { Http } from "@/fetch/Http"
+import type { HttpMethodOptions, HttpRequestOptions } from "@/fetch/HttpRequest"
 import { IO } from "@/io"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -373,50 +374,32 @@ describe("Http", () => {
       expect(result.data.created).toBe(true)
     })
 
-    // Back-compat: the deprecated `validate` field still works for throw-pattern callers.
-    it("should still accept the deprecated `validate` field and map throws to HttpError.DecodeError", async () => {
-      const fetch = mockFetch({ status: 200, statusText: "OK", body: { wrong: "shape" } })
-      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
-      const result = await http
-        .get("https://api.test/users/1", {
-          // eslint-disable-next-line @typescript-eslint/no-deprecated
-          validate: (): { id: number } => {
-            throw new Error("validation failed")
-          },
-        })
-        .run()
-
-      expect(result.isLeft()).toBe(true)
-      result.fold(
-        (error) => {
-          expect(error._tag).toBe("DecodeError")
-          if (error._tag === "DecodeError") {
-            expect((error.cause as Error).message).toBe("validation failed")
-            expect(error.body).toBe('{"wrong":"shape"}')
-          }
-        },
-        () => {
-          throw new Error("Expected Left")
-        },
-      )
+    // 2.0 removed `validate` (#276 §4, §7). `decode: Decoder.fromThrowing(parse)` replaces it.
+    it("rejects `validate` at compile time on every options type", () => {
+      const parse = (raw: unknown): { id: number } => raw as { id: number }
+      const options: HttpRequestOptions<{ id: number }> = {
+        url: "https://api.test/users/1",
+        method: "GET",
+        // @ts-expect-error `validate` was removed in 2.0; use `decode: Decoder.fromThrowing(parse)`
+        validate: parse,
+      }
+      // @ts-expect-error `validate` was removed in 2.0
+      const methodOptions: HttpMethodOptions<{ id: number }> = { validate: parse }
+      expect([options.url, methodOptions]).toBeDefined()
     })
 
-    // Back-compat: validate works for non-throwing identity validators.
-    it("should still accept the deprecated `validate` field for successful validations", async () => {
-      const fetch = mockFetch({ status: 200, statusText: "OK", body: { id: 1, name: "Alice" } })
+    it("ignores a `validate` that slips past the compiler, so the response passes through unchecked", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { wrong: "shape" } })
       const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch })
-      const result = await http
-        .get("https://api.test/users/1", {
-          // eslint-disable-next-line @typescript-eslint/no-deprecated
-          validate: (data): { id: number; name: string } => {
-            const obj = data as Record<string, unknown>
-            return { id: obj.id as number, name: obj.name as string }
-          },
-        })
-        .runOrThrow()
+      const validate = vi.fn((): { id: number } => {
+        throw new Error("validation failed")
+      })
+      // A spread from a wider object is how a leftover `validate` reaches Http without an excess-property error.
+      const legacy: { validate: typeof validate } = { validate }
+      const result = await http.get<{ id: number }>("https://api.test/users/1", { ...legacy, headers: {} }).runOrThrow()
 
-      expect(result.data.id).toBe(1)
-      expect(result.data.name).toBe("Alice")
+      expect(validate).not.toHaveBeenCalled()
+      expect(result.data).toEqual({ wrong: "shape" })
     })
   })
 
