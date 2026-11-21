@@ -290,8 +290,10 @@ await program.provideService(SpanTracer, otelTracer).run();
 - Provide the tracer outside the spans. In `io.withSpan("a").provideService(SpanTracer, t).withSpan("b")`,
   only `a` is recorded.
 - It works under `runSync` too, because `run` is synchronous.
-- A nested run, such as the one `provideLayer` uses to build a layer, starts with no parent. The bridge
-  above falls back to the active OpenTelemetry context then.
+- Provide it with `provideService`. `provideLayer` can't carry it, because a layer may only provide
+  services the effect requires, and `withSpan` doesn't add `SpanTracer` to them.
+- A separate run, such as a `.run()` inside a request handler, starts with no parent. The bridge above
+  falls back to the active OpenTelemetry context then, so its spans still nest under the handler's.
 - A throw from the tracer itself becomes a `Die`.
 
 ## Outcomes: `Exit`
