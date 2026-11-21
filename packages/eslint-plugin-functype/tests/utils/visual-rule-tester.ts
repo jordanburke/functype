@@ -1,13 +1,13 @@
 import { RuleTester } from "@typescript-eslint/rule-tester"
 import type { Rule } from "eslint"
-import { ruleTester, type InvalidTestCase } from "./rule-tester"
+import { ruleTester, type InvalidTestCase, type ValidTestCase } from "./rule-tester"
 
 interface VisualTestCase extends InvalidTestCase {
   showTransformation?: boolean
 }
 
 interface VisualRuleTestCase {
-  valid: Array<{ name?: string; code: string }>
+  valid: ValidTestCase[]
   invalid: VisualTestCase[]
 }
 
@@ -94,6 +94,7 @@ export class VisualRuleTester {
         return {
           name: testCase.name,
           code: testCase.code,
+          ...(testCase.options === undefined ? {} : { options: testCase.options }),
           errors: testCase.errors,
           output: testCase.output,
         }
