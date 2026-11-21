@@ -4,9 +4,8 @@ import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
-import { hasYAMLValue } from "@/internal/yaml"
 import type { Reshapeable } from "@/reshapeable"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import type { Promisable, Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -509,7 +508,7 @@ export const None = <T extends Type>(): Option<T> => NONE as unknown as Option<T
 export const OptionConstructor = <T extends Type>(value: T | null | undefined): Option<T> =>
   value !== null && value !== undefined ? Some<T>(value) : None<T>()
 
-/** Rebuilds an Option from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds an Option from a parsed envelope. */
 const optionFromEnvelope = <T>(parsed: ParsedEnvelope, method: string): Option<T> => {
   expectMarker(parsed, "Option", method)
   return parsed._tag === "Some" ? Some<T>(parsed.value as T) : None<T>()
@@ -547,19 +546,6 @@ const OptionCompanion = {
    * @returns Option instance
    */
   fromJSON: <T>(json: string): Option<T> => optionFromEnvelope<T>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-  /**
-   * Creates an Option from YAML string
-   * @param yaml - The YAML string
-   * @returns Option instance
-   */
-  fromYAML: <T>(yaml: string): Option<T> =>
-    readYAML(yaml, (parsed) => {
-      expectMarker(parsed, "Option", "fromYAML")
-      if (typeof parsed._tag !== "string" || !hasYAMLValue(yaml, "value")) {
-        return None<T>()
-      }
-      return optionFromEnvelope<T>(parsed, "fromYAML")
-    }),
   /**
    * Creates an Option from binary string
    * @param binary - The binary string

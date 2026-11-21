@@ -6,7 +6,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { type A, define, type Mutable } from "@/internal/define"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -416,7 +416,7 @@ const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => wrap(new NativeSet
 // Singleton empty set - uses 'never' which is subtype of all types
 const EMPTY_SET: Set<never> = wrap<never>(new NativeSet<never>())
 
-/** Rebuilds a Set from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a Set from a parsed envelope. */
 const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
   expectMarker(parsed, "Set", method)
   return Set<A>((parsed.value ?? []) as A[])
@@ -443,13 +443,6 @@ const SetCompanion = {
    * @returns Set instance
    */
   fromJSON: <A>(json: string): Set<A> => setFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a Set from YAML string
-   * @param yaml - The YAML string
-   * @returns Set instance
-   */
-  fromYAML: <A>(yaml: string): Set<A> => readYAML(yaml, (parsed) => setFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a Set from binary string

@@ -3,7 +3,6 @@
  */
 export interface SerializationMethods<T> {
   toJSON(): string
-  toYAML(): string
   toBinary(): string
 }
 

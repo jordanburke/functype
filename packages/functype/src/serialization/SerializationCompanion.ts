@@ -1,6 +1,4 @@
 import { base64ToUtf8, utf8ToBase64 } from "@/internal/base64"
-import { safeStringify } from "@/internal/stringify"
-import { yamlLines } from "@/internal/yaml"
 
 /**
  * Serialization result containing methods for different formats
@@ -8,8 +6,6 @@ import { yamlLines } from "@/internal/yaml"
 export interface SerializationResult {
   /** Serializes to JSON string */
   toJSON: () => string
-  /** Serializes to YAML string */
-  toYAML: () => string
   /** Serializes to base64-encoded binary string */
   toBinary: () => string
 }
@@ -94,7 +90,6 @@ export function createSerializer(marker: string, tagOrValue: unknown, maybeValue
   const env = envelope(marker, tag, value)
   return {
     toJSON: () => JSON.stringify(env),
-    toYAML: () => `${FUNCTYPE_MARKER}: ${marker}\n_tag: ${tag}\nvalue: ${safeStringify(value)}`,
     toBinary: () => utf8ToBase64(JSON.stringify(env)),
   }
 }
@@ -117,34 +112,11 @@ export const createTaggedSerializer = (
   const env = taggedEnvelope(marker, tag, fields)
   return {
     toJSON: () => JSON.stringify(env),
-    toYAML: () => {
-      const entries = Object.entries(env)
-      return entries.map(([key, val]) => `${key}: ${safeStringify(val)}`).join("\n")
-    },
     toBinary: () => utf8ToBase64(JSON.stringify(env)),
   }
 }
 
-/**
- * @deprecated Use `createTaggedSerializer` instead. Retained for backwards
- *             compatibility with any external callers; will be removed in a
- *             future major. The single internal caller (`Try.Failure`) has
- *             been migrated to `createTaggedSerializer`.
- *
- * Creates a serializer for complex objects with custom serialization logic.
- * Note: this variant does NOT stamp the `@functype` marker — callers must
- * include it in `data` themselves if they want envelope dispatch to work.
- */
-export const createCustomSerializer = (data: Record<string, unknown>): SerializationResult => ({
-  toJSON: () => JSON.stringify(data),
-  toYAML: () => {
-    const entries = Object.entries(data)
-    return entries.map(([key, val]) => `${key}: ${safeStringify(val)}`).join("\n")
-  },
-  toBinary: () => utf8ToBase64(JSON.stringify(data)),
-})
-
-/** A parsed envelope, from JSON or YAML, before a companion rebuilds its type from it. */
+/** A parsed envelope, from JSON or binary, before a companion rebuilds its type from it. */
 export type ParsedEnvelope = { _tag?: string; [key: string]: unknown }
 
 /**
@@ -152,7 +124,7 @@ export type ParsedEnvelope = { _tag?: string; [key: string]: unknown }
  * passes, because envelopes written before 1.2.0 have none.
  * @param parsed - The parsed envelope
  * @param marker - The marker this companion reads, such as `"List"`
- * @param method - The calling method, named in the error, such as `"fromYAML"`
+ * @param method - The calling method, named in the error, such as `"fromJSON"`
  */
 export const expectMarker = (parsed: ParsedEnvelope, marker: string, method: string): void => {
   const found = parsed[FUNCTYPE_MARKER]
@@ -175,49 +147,6 @@ export const fromJSON = <T>(
 }
 
 /**
- * Generic deserializer from YAML, the `key: value` lines that `toYAML` writes. It reads each field
- * by its key, not its line number, so it reads YAML written before and after 1.2.0 added the
- * `@functype` line. A value of `undefined`, which `toYAML` writes for an undefined value, reads
- * back as `undefined`. It accepts `\r\n` line endings and indented keys.
- * @param yaml - The YAML string to parse
- * @param reconstructor - Function to reconstruct the type from parsed data
- * @returns Reconstructed instance
- */
-export const fromYAML = <T>(
-  yaml: string,
-  reconstructor: (parsed: { _tag?: string; [key: string]: unknown }) => T,
-): T => {
-  const parsed: Record<string, unknown> = {}
-
-  for (const line of yamlLines(yaml)) {
-    const colonIndex = line.indexOf(": ")
-    if (colonIndex === -1) continue
-
-    const key = line.substring(0, colonIndex).trim()
-    const valueStr = line.substring(colonIndex + 2)
-
-    if (!valueStr) {
-      parsed[key] = null
-      continue
-    }
-
-    if (valueStr === "undefined") {
-      parsed[key] = undefined
-      continue
-    }
-
-    // Try to parse as JSON, otherwise use as string
-    try {
-      parsed[key] = valueStr === "null" ? null : JSON.parse(valueStr)
-    } catch {
-      parsed[key] = valueStr
-    }
-  }
-
-  return reconstructor(parsed as { _tag?: string; [key: string]: unknown })
-}
-
-/**
  * Generic deserializer from binary (base64-encoded JSON)
  * @param binary - The base64-encoded binary string
  * @param reconstructor - Function to reconstruct the type from parsed data
@@ -234,12 +163,11 @@ export const fromBinary = <T>(
 /**
  * Creates companion serialization methods for a type
  * @param reconstructor - Function to reconstruct the type from parsed data
- * @returns Companion methods object with fromJSON, fromYAML, and fromBinary
+ * @returns Companion methods object with fromJSON and fromBinary
  */
 export const createSerializationCompanion = <T>(
   reconstructor: (parsed: { _tag?: string; [key: string]: unknown }) => T,
 ) => ({
   fromJSON: (json: string) => fromJSON(json, reconstructor),
-  fromYAML: (yaml: string) => fromYAML(yaml, reconstructor),
   fromBinary: (binary: string) => fromBinary(binary, reconstructor),
 })

@@ -7,7 +7,7 @@ import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import type { Traversable } from "@/traversable/Traversable"
 import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
@@ -242,7 +242,7 @@ const wrap = <A extends Type>(items: readonly A[]): Stack<A> => {
 /** Copies `values`, so a later change to the caller's array can't reach the Stack. */
 const StackConstructor = <A extends Type>(values: readonly A[] = []): Stack<A> => wrap([...values])
 
-/** Rebuilds a Stack from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a Stack from a parsed envelope. */
 const stackFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Stack<A> => {
   expectMarker(parsed, "Stack", method)
   return Stack<A>((parsed.value ?? []) as A[])
@@ -270,13 +270,6 @@ const StackCompanion = {
    * @returns Stack instance
    */
   fromJSON: <A>(json: string): Stack<A> => stackFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a Stack from YAML string
-   * @param yaml - The YAML string
-   * @returns Stack instance
-   */
-  fromYAML: <A>(yaml: string): Stack<A> => readYAML(yaml, (parsed) => stackFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a Stack from binary string

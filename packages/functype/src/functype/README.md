@@ -9,7 +9,7 @@ The functype library implements multiple functional programming interfaces that 
 - **AsyncMonad** - Functor, Applicative, Monad, and AsyncMonad operations
 - **Traversable** - Collection-like operations (size, isEmpty, contains, reduce)
 - **Extractable** - Safe value extraction methods
-- **Serializable** - JSON, YAML, and Binary serialization
+- **Serializable** - JSON and binary serialization
 - **Pipe** - Function composition
 - **Foldable** - Pattern matching and folding operations
 - **Matchable** - Tagged union pattern matching

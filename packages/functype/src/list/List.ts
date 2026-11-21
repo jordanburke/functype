@@ -8,7 +8,7 @@ import { type A, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import { Set } from "@/set/Set"
 import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
@@ -477,7 +477,7 @@ const ListConstructor = <A>(values?: Iterable<A>): List<A> => wrap(Array.from(va
 // Singleton empty list - uses 'never' which is subtype of all types
 const EMPTY_LIST: List<never> = wrap<never>([])
 
-/** Rebuilds a List from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a List from a parsed envelope. */
 const listFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): List<A> => {
   expectMarker(parsed, "List", method)
   return List<A>((parsed.value ?? []) as A[])
@@ -504,13 +504,6 @@ const ListCompanion = {
    * @returns List instance
    */
   fromJSON: <A>(json: string): List<A> => listFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a List from YAML string
-   * @param yaml - The YAML string
-   * @returns List instance
-   */
-  fromYAML: <A>(yaml: string): List<A> => readYAML(yaml, (parsed) => listFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a List from binary string

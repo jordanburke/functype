@@ -44,7 +44,6 @@ describe("CompanionTypes", () => {
         isSome: Option.isSome,
         isNone: Option.isNone,
         fromJSON: Option.fromJSON,
-        fromYAML: Option.fromYAML,
         fromBinary: Option.fromBinary,
       }
       // Type test - ensure it's assignable (even if not exact match)
