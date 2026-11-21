@@ -42,7 +42,7 @@ import { Option, Either, Try, List, IO } from "functype"
 - `opt.getOrElse(() => 42)` returns `T | 42`.
 - `opt.orElse(() => Option(42))` returns `Option<T | 42>`.
 
-A bare value fails to compile at the argument: `opt.getOrElse(42)` is a type error, and so is `opt.orElse(Option(42))`. functype 1.x used `orElse(default)` and `or(alternative)` for these; see the 2.0 notes in [`CHANGELOG.md`](./CHANGELOG.md).
+A bare value fails to compile at the argument: `getOrElse(42)` is a type error, and so is `orElse(Option(42))`. functype 1.x used `orElse(default)` and `or(alternative)` for these; see the 2.0 notes in [`CHANGELOG.md`](./CHANGELOG.md).
 
 ---
 

@@ -464,7 +464,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
-        name: "Choosing between two Options suggests .orElse(), not a fold",
+        name: "Choosing between two Options suggests .orElse(() => b), not a fold",
         code: "const pick = (a, b) => (a.isSome() ? a : b)",
         output: null,
         errors: [
@@ -482,7 +482,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
-        name: "Negated form of the Option choice also suggests .orElse()",
+        name: "Negated form of the Option choice also suggests .orElse(() => b)",
         code: "const pick = (a, b) => (a.isNone() ? b : a)",
         output: null,
         errors: [

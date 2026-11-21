@@ -9,7 +9,7 @@ import { type Either, Left, Right } from "@/either/Either"
  *
  * Invariance in either parameter breaks common idioms like returning
  * `Either<UnionError, T>` from a function that internally constructs
- * narrow-tagged Left values, or calling `.swap()` / `.orElse()` against
+ * narrow-tagged Left values, or calling `.swap()` / `orElse` against
  * Either values with differently-typed sides.
  *
  * History of regressions this file guards:

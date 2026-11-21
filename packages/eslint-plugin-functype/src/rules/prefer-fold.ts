@@ -246,7 +246,7 @@ function classifyGuardExit(
     return unchanged ? "passthrough" : "mappedFailure"
   }
   // A fallback built from the failure (`c.json({ error: r.value }, 500)`) can only be written as a fold:
-  // outside the guard the failure isn't narrowed, so `map(…).getOrElse(…)` couldn't read it.
+  // outside the guard the failure isn't narrowed, so `map(…).getOrElse(() => …)` couldn't read it.
   if (failureMember !== null && readsMember(argument, receiver, failureMember, sourceCode)) return "effect"
   return "default"
 }

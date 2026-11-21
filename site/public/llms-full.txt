@@ -618,7 +618,7 @@ map.size // Number of entries
 // Accessing
 map.has("a") // true if the key is present, even when its value is undefined
 map.get("a") // Some(value) or None
-map.getOrElse("a", 0) // Value or default
+map.getOrElse("a", () => 0) // Value or default
 map.orElse("a", () => Option(0)) // Option of the value, or the alternative Option
 map.keys() // List<K>, insertion order
 map.values() // List<V>, insertion order
