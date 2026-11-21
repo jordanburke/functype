@@ -34,9 +34,10 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isRight(): this is RightOf<L, R>
   /**
    * Returns the Right value, or calls `defaultValue` on a Left. The default is lazy: it runs only
-   * on a Left. The result widens to `R | R2`.
+   * on a Left. A default that fits `R` keeps `R`, so a literal union is not widened; a default of
+   * another type widens the result to `R | R2`.
    */
-  getOrElse<R2 extends Type>(defaultValue: () => R2): R | R2
+  getOrElse<R2 extends Type = never>(defaultValue: () => R | R2): R | R2
   /**
    * Returns the Right value, or throws on a Left. Pass an `Error` to throw it, or a builder to make one
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a

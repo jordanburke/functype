@@ -25,12 +25,13 @@ export interface OptionBase<out T extends Type>
   isNone(): this is NoneOf<T>
   /**
    * Returns the contained value, or calls \`defaultValue\` if None. The default is lazy: it runs
-   * only on None. It may be of a different type; the result widens to \`T | T2\` so Option stays
-   * covariant in T.
+   * only on None. The default is typed against \`T\` first, so \`() => "light"\` on an
+   * \`Option<"light" | "dark">\` stays \`"light" | "dark"\`. A default of another type widens the
+   * result to \`T | T2\`, which keeps Option covariant in T.
    * @param defaultValue - A function that returns the value to use if this Option is None
    * @returns The contained value or the default, typed as \`T | T2\`
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional error to throw, or a builder that makes one (called only on None). If not
@@ -204,9 +205,10 @@ export interface EitherBase<out L extends Type, out R extends Type>
   isRight(): this is RightOf<L, R>
   /**
    * Returns the Right value, or calls \`defaultValue\` on a Left. The default is lazy: it runs only
-   * on a Left. The result widens to \`R | R2\`.
+   * on a Left. A default that fits \`R\` keeps \`R\`, so a literal union is not widened; a default of
+   * another type widens the result to \`R | R2\`.
    */
-  getOrElse<R2 extends Type>(defaultValue: () => R2): R | R2
+  getOrElse<R2 extends Type = never>(defaultValue: () => R | R2): R | R2
   /**
    * Returns the Right value, or throws on a Left. Pass an \`Error\` to throw it, or a builder to make one
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
@@ -320,9 +322,10 @@ export interface TryBase<out T>
   isFailure(): this is FailureOf<T>
   /**
    * Returns the value, or calls \`defaultValue\` on a Failure. The default is lazy: it runs only on
-   * a Failure. The result widens to \`T | T2\`.
+   * a Failure. A default that fits \`T\` keeps \`T\`, so a literal union is not widened; a default of
+   * another type widens the result to \`T | T2\`.
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an \`Error\` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
@@ -638,10 +641,11 @@ export interface FailureOf<out T> extends TryBase<T> {
   readonly isEvaluated: boolean
   /**
    * Returns the computed value, or calls \`defaultValue\` if the computation fails.
-   * The default is lazy: it runs only on failure. Result widens to \`T | T2\`
+   * The default is lazy: it runs only on failure. A default that fits \`T\` keeps \`T\`, so a literal
+   * union is not widened; a default of another type widens the result to \`T | T2\`
    * (Scala: \`getOrElse[B >: A](default: => B): B\`).
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null

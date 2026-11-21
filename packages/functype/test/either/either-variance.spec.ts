@@ -137,7 +137,7 @@ describe("Either R covariance", () => {
     type Fallback = { readonly name: string; readonly guest: true }
     const fallback: Fallback = { name: "guest", guest: true }
     const result = e.getOrElse(() => fallback)
-    // getOrElse<R2>(defaultValue: () => R2): R | R2
+    // getOrElse<R2 = never>(defaultValue: () => R | R2): R | R2
     expectTypeOf(result).toEqualTypeOf<UserV2 | Fallback>()
   })
 

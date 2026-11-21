@@ -43,9 +43,10 @@ export interface TryBase<out T>
   isFailure(): this is FailureOf<T>
   /**
    * Returns the value, or calls `defaultValue` on a Failure. The default is lazy: it runs only on
-   * a Failure. The result widens to `T | T2`.
+   * a Failure. A default that fits `T` keeps `T`, so a literal union is not widened; a default of
+   * another type widens the result to `T | T2`.
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
