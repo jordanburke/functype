@@ -170,8 +170,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 **2.0 (additive): `IO.withSpan` traces an effect in a span.** From §11 of #276 (the 2.0 release plan).
 
 - `io.withSpan(name, attributes?)` runs the effect in a span. A `withSpan` inside it nests under it without being passed a parent, as `Effect.withSpan` does.
-- functype ships only the contract, `SpanTracer`, with three methods: `start(name, attributes, parent)`, `run(span, fn)`, which runs the body with the span active, and `end(span, exit)`. Provide one with `provideService(SpanTracer, tracer)`, outside the spans. With none provided, `withSpan` does nothing. It isn't `TracedOption`'s `Tracer`.
-- Every outcome closes the span exactly once: success, typed failure, `Die` and interruption. A `race` loser or a timed-out effect closes as `Interrupted` when it settles. A failure that arrives after the run was cancelled, such as an aborted `fetch`, closes as `Interrupted` too.
+- functype ships only the contract, `SpanTracer`, with three methods: `start(name, attributes, parent)`, `run(span, fn)`, which runs the body with the span active, and `end(span, exit)`. Provide one with `provideService(SpanTracer, tracer)` or `provideLayer(Layer.succeed(SpanTracer, tracer))`, outside the spans. With none provided, `withSpan` does nothing. It isn't `TracedOption`'s `Tracer`.
+- Every outcome closes the span exactly once: success, typed failure, `Die` and interruption. A `race` loser or a timed-out effect closes when it settles. A failure that arrives after the run was cancelled, such as an aborted `fetch`, closes as `Interrupted`. A loser that ignores the signal closes with its own outcome, such as `Success`, and one that never settles never closes its span.
 - Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs, also after an `await`. An OpenTelemetry bridge implements `run` with `context.with`; the IO docs and the README have a sketch. functype has no OpenTelemetry dependency.
 - The current span travels with the run, not in the shared services, so parallel children and concurrent runs never see each other's span. `withSpan` works under `runSync` too.
 - New public names: `SpanTracer` (the type and its Tag) and `SpanAttributes`.
@@ -212,6 +212,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **Removed: a Lazy's `typeable` field.** It held `"Lazy"`, wasn't on the type, and no other type had one. Read `_tag`.
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
+
+**2.0 (breaking): `IO.gen` records the services it reads and the errors it can fail with.** From #277 (the 2.0 tracking issue).
+
+- `IO.gen` was typed `IO<never, any, A>`, whatever its body did. Now its `R` is the union of the services every yielded IO needs, and its `E` is the union of their errors. A body that yields nothing, or only pure IOs, is `IO<never, never, A>`.
+- `provideLayer` now works on an `IO.gen`. Before, it had no requirement to satisfy, so the docs used `provideService` as a workaround.
+- `provideLayer` and `provideContext` accept services the effect doesn't name. They required the layer or context to provide only services in `R`, so neither could supply a `SpanTracer`, which `withSpan` reads without requiring it. `provideLayer(Layer.succeed(SpanTracer, tracer))` now compiles.
+- A body that yields `any`, or a generator annotated `Generator<any, A, any>` (an old workaround), is `IO<never, unknown, A>`: it still runs, and its error is `unknown`.
+- `Exclude` checks services by shape, as `provideService` always has. A layer for a `Database` therefore discharges a requirement for a wider `BigDb` that has every `Database` member, and the run then dies with "Service not found". Give each service a distinct shape, or a brand field, if two can overlap.
+- **Upgrade:** two kinds of code stop compiling. Running an `IO.gen` whose services aren't provided now fails, as it fails for any other IO: provide them with `provideLayer` or `provideService`. Code that leaned on the `any` error, such as passing the result where a narrower `E` is expected, now sees the real error type: handle it with `catchTag` or `mapError`, or widen the expected type. A `yield* IO.async(...)` declares `E = unknown`, which absorbs the rest of the union; map it with `IO.tryPromise`'s `catch` to keep the union.
 
 ## 1.27.1 - 2026-11-19
 

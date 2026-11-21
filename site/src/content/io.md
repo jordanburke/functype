@@ -279,9 +279,10 @@ export const otelTracer: SpanTracer<Span> = {
 await program.provideService(SpanTracer, otelTracer).run();
 ```
 
-- Every outcome closes the span once. A `race` loser or a timed-out effect closes as `Interrupted` when
-  it settles, which may be after `race` or `timeout` has returned. A failure that arrives after the run
-  was cancelled, such as an aborted `fetch`, also closes as `Interrupted`.
+- Every outcome closes the span once. A `race` loser or a timed-out effect closes when it settles, which
+  may be after `race` or `timeout` has returned. A failure that arrives after the run was cancelled, such
+  as an aborted `fetch`, closes as `Interrupted`. A loser that ignores the signal closes with its own
+  outcome, such as `Success`, and one that never settles never closes its span.
 - A span outside `interruptOn(signal)` sees its `InterruptedError` as a typed `Failure`, as the code
   after it does.
 - Parallel children of `IO.all` and `race` each nest under the enclosing span and see only their own.
@@ -290,8 +291,8 @@ await program.provideService(SpanTracer, otelTracer).run();
 - Provide the tracer outside the spans. In `io.withSpan("a").provideService(SpanTracer, t).withSpan("b")`,
   only `a` is recorded.
 - It works under `runSync` too, because `run` is synchronous.
-- Provide it with `provideService`. `provideLayer` can't carry it, because a layer may only provide
-  services the effect requires, and `withSpan` doesn't add `SpanTracer` to them.
+- Provide it with `provideService(SpanTracer, t)` or `provideLayer(Layer.succeed(SpanTracer, t))`.
+  `withSpan` reads the tracer without adding `SpanTracer` to the effect's requirements.
 - A separate run, such as a `.run()` inside a request handler, starts with no parent. The bridge above
   falls back to the active OpenTelemetry context then, so its spans still nest under the handler's.
 - A throw from the tracer itself becomes a `Die`.

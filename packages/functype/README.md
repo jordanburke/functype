@@ -309,7 +309,7 @@ const otelTracer: SpanTracer<Span> = {
 await loadUser("42").withSpan("loadUser", { "user.id": "42" }).provideService(SpanTracer, otelTracer).run()
 ```
 
-This bridge is a sketch, not a package: functype has no OpenTelemetry dependency. Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs with `trace.getActiveSpan()`. The [IO docs](https://functype.org/io) cover nesting, cancellation and `runSync`.
+This bridge is a sketch, not a package: functype has no OpenTelemetry dependency. Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs with `trace.getActiveSpan()`. That needs a registered OpenTelemetry context manager, which the Node SDK sets up; without one, `context.with` runs the body with no span active. The [IO docs](https://functype.org/io) cover nesting, cancellation and `runSync`.
 
 ### Branded Types
 

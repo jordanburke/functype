@@ -123,7 +123,7 @@ export interface Either<out L extends Type, out R extends Type> ...
 
 Useful for "requirements" channels — types representing dependencies/inputs where widening the requirement means accepting **more** contexts.
 
-**Example (planned):** `IO<in R, out E, out A>` — R is the environment a computation needs. Widening R means the computation runs in more environments, so R is contravariant. Currently `IO` is declared `<in out R, out E, out A>` — R invariant, E and A covariant. ZIO-style `<in R>` is a scoped follow-up because the union-based R encoding interacts with `provideContext<R2 extends R>` / `Exclude<R, R2>` in ways that need their own audit.
+**Example (planned):** `IO<in R, out E, out A>` — R is the environment a computation needs. Widening R means the computation runs in more environments, so R is contravariant. Currently `IO` is declared `<in out R, out E, out A>` — R invariant, E and A covariant. ZIO-style `<in R>` is a scoped follow-up because the union-based R encoding interacts with `provideContext<R2>` / `Exclude<R, R2>` in ways that need their own audit.
 
 Not widely used in functype; only IO currently warrants it.
 

@@ -28,10 +28,9 @@ export type SpanAttributes = Readonly<
 >
 
 /**
- * What `IO.withSpan` needs from a tracer. Provide one with `io.provideService(SpanTracer, tracer)`,
- * outside the spans. With no tracer provided, `withSpan` does nothing. `provideLayer` can't carry
- * it, because a layer may only provide services in the IO's requirements, and `withSpan` doesn't
- * add one.
+ * What `IO.withSpan` needs from a tracer. Provide one with `io.provideService(SpanTracer, tracer)`
+ * or `io.provideLayer(Layer.succeed(SpanTracer, tracer))`, outside the spans. With no tracer
+ * provided, `withSpan` does nothing.
  *
  * This is not the `Tracer` that `TracedOption` writes to. That one records steps through
  * `emit(event)` and has no spans.
@@ -73,7 +72,9 @@ export type SpanTracer<S = unknown> = {
   /**
    * Runs `fn` with `span` active, and returns what `fn` returns. The interpreter runs the whole
    * body of `withSpan` inside it, so code there, including a log sink, sees the span through
-   * the tracer's own API. An OpenTelemetry bridge implements it with `context.with`.
+   * the tracer's own API. An OpenTelemetry bridge implements it with `context.with`, which needs
+   * a registered context manager, such as the `AsyncLocalStorageContextManager` the Node SDK
+   * registers. Without one, `context.with` still runs `fn`, but no span is active inside it.
    *
    * `fn` returns a promise under `run()` and a plain value under `runSync()`. Return it as is.
    */
