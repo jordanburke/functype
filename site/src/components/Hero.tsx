@@ -76,15 +76,18 @@ export default function Hero() {
                 {"\n"}
                 <span className="text-purple-400">const</span>{" "}
                 <span className="text-blue-300">result</span> ={" "}
-                <span className="text-yellow-300">Either</span>
-                {"\n  ."}
-                <span className="text-blue-300">fromTry</span>(
+                <span className="text-yellow-300">Try</span>(
                 <span className="text-purple-400">()</span>{" "}
                 <span className="text-purple-400">=&gt;</span>{" "}
                 <span className="text-yellow-300">JSON</span>.
                 <span className="text-blue-300">parse</span>(
                 <span className="text-blue-300">data</span>))
                 {"\n  ."}
+                <span className="text-blue-300">toEither</span>(
+                <span className="text-orange-300">e</span>{" "}
+                <span className="text-purple-400">=&gt;</span>{" "}
+                <span className="text-orange-300">e</span>.
+                <span className="text-blue-300">message</span>){"\n  ."}
                 <span className="text-blue-300">map</span>(
                 <span className="text-orange-300">obj</span>{" "}
                 <span className="text-purple-400">=&gt;</span>{" "}
