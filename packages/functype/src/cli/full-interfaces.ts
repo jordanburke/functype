@@ -338,7 +338,7 @@ export interface TryBase<out T>
    *
    * Prefer the function form to thread the underlying Error's context into the Left:
    *
-   *   Try.fromYAML(text).toEither((e) => \`parse failed: \${e.message}\`)
+   *   Try(() => JSON.parse(text)).toEither((e) => \`parse failed: \${e.message}\`)
    */
   toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)): Either<E, T>
   toTry(): Try<T>

@@ -120,9 +120,9 @@ Map.empty<string, number>() // typed empty map
 
 ```typescript ignore
 // Http — fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default
-// Provide a validate function to get typed responses (BYOV: bring your own validator)
+// Provide a decoder to get typed responses (BYOV: bring your own validator)
 Http.get(url, opts?)          // GET → HttpResponse<unknown>
-Http.get(url, { validate })   // GET → HttpResponse<T> (T inferred from validate)
+Http.get(url, { decode })     // GET → HttpResponse<T> (T inferred from the Decoder<T>)
 Http.post(url, opts?)         // POST with auto JSON body serialization
 Http.put(url, opts?)          // PUT
 Http.patch(url, opts?)        // PATCH
@@ -130,9 +130,9 @@ Http.delete(url, opts?)       // DELETE
 Http.request(fullOpts)        // Full control
 Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch, beforeRequest (effectful request transformer)
 
-// Example with validator (works with Zod, TypeBox, Valibot, or manual validators)
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
-Http.post("/api/users", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
+// Decoder.fromThrowing adapts any throwing parser (Zod, TypeBox, Valibot, or manual validators)
+Http.get("/api/users", { decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)) })
+Http.post("/api/users", { body: { name: "Alice" }, decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
 
 // HttpError — three-variant ADT
 HttpError.networkError(url, method, cause)
@@ -184,7 +184,6 @@ Static type guards for narrowing types:
 All Serializable types provide static deserialization methods:
 
 - `fromJSON(json: string): T` - Deserialize from JSON
-- `fromYAML(yaml: string): T` - Deserialize from YAML
 - `fromBinary(binary: string): T` - Deserialize from base64-encoded binary
 
 **Note**: See `docs/companion-pattern.md` for complete guide on the Companion pattern.
@@ -227,7 +226,6 @@ Note: `fold` has different semantics per type category:
 
 - `serialize(): SerializationMethods<T>`
   - `toJSON(): string`
-  - `toYAML(): string`
   - `toBinary(): Uint8Array`
 
 ### Traversable (extends AsyncMonad)

@@ -494,17 +494,15 @@ if (Try.isFailure(tryVal)) {
 
 ## Serialization
 
-All Serializable types provide JSON, YAML, and binary serialization:
+All Serializable types provide JSON and binary serialization (2.0 removed YAML):
 
 ```typescript
 // Serialization methods
 option.serialize().toJSON()
-option.serialize().toYAML()
 option.serialize().toBinary() // Uint8Array
 
 // Deserialization
 Option.fromJSON<string>(jsonString)
-Option.fromYAML<string>(yamlString)
 Option.fromBinary<string>(binaryData)
 ```
 

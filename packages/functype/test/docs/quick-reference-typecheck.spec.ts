@@ -143,7 +143,6 @@ declare global {
   const option: Option<number>
   const either: Either<string, number>
   const tryVal: Try<number>
-  const yamlString: string
   const binaryData: string
   const fetchedUsers: ReadonlyArray<User>
   const existingSet: globalThis.Set<string>

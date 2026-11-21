@@ -334,7 +334,7 @@ export function List<T>(items: T[]): ListType<T> {
 
 ### Serializable
 
-JSON/YAML/binary serialization:
+JSON and binary serialization:
 
 ```typescript
 export interface Serializable {
@@ -343,7 +343,6 @@ export interface Serializable {
 
 export interface SerializationMethods<T> {
   toJSON(): string
-  toYAML(): string
   toBinary(): Uint8Array
 }
 

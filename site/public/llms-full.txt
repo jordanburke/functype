@@ -824,28 +824,32 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
+import { Decoder } from "functype/decoder"
 import { Http, HttpError } from "functype/fetch"
 import { IO } from "functype/io"
 
-// Without validator — data is unknown
+// Without a decoder — data is unknown
 const effect = Http.get("/api/users") // IO<never, HttpError, HttpResponse<unknown>>
 
-// With validator — T inferred from validate return type (BYOV: bring your own validator)
+// With a decoder — T inferred from it. Decoder.fromThrowing adapts a throwing parser (Zod's .parse)
 const users = Http.get("/api/users", {
-  validate: (data) => z.array(UserSchema).parse(data),
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
 }) // IO<never, HttpError, HttpResponse<User[]>>
 
 const created = Http.post("/api/users", {
   body: { name: "Alice" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }) // IO<never, HttpError, HttpResponse<User>>
+
+// Or compose one without a schema library; failures accumulate into a DecoderError tree
+const point = Http.get("/api/point", { decode: Decoder.object({ x: Decoder.number, y: Decoder.number }) })
 
 // Configured client
 const http = Http.client({
   baseUrl: "https://api.example.com",
   defaultHeaders: { Authorization: "Bearer token" },
 })
-const user = http.get("/users/1", { validate: (data) => UserSchema.parse(data) })
+const user = http.get("/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
 
 // Configured client with effectful request transformer (auth refresh, request IDs, logging)
 const api = Http.client({
@@ -863,18 +867,18 @@ const api = Http.client({
 })
 
 // Compose with IO
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+Http.get("/api/users", { decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)) })
   .map((res) => res.data.filter((u) => u.active))
   .retry(3)
   .timeout(5000)
 
 // Error handling
-Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
+Http.get("/api/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
   .catchTag("HttpStatusError", (e) => (e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e)))
   .catchTag("NetworkError", () => IO.succeed(cachedResponse))
 
 // Run
-await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).runOrThrow() // HttpResponse<User>
+await Http.get("/api/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) }).runOrThrow() // HttpResponse<User>
 await Http.get("/api/users/1").run() // Either<HttpError, HttpResponse<unknown>>
 ```
 
@@ -1009,7 +1013,7 @@ if (Try.isFailure(tryValue)) {
 
 ## Serialization
 
-All major types support JSON/YAML/Binary serialization:
+All major types support JSON and binary serialization:
 
 ```typescript
 import { Option, Either, List, Try } from "functype"
@@ -1018,14 +1022,12 @@ import { Option, Either, List, Try } from "functype"
 const option = Option(42)
 const serialized = option.serialize()
 
-const json = serialized.toJSON() // '{"_tag":"Some","value":42}'
-const yaml = serialized.toYAML() // '_tag: Some\nvalue: 42'
+const json = serialized.toJSON() // '{"@functype":"Option","_tag":"Some","value":42}'
 const binary = serialized.toBinary() // Base64 encoded
 
 // Deserialize from JSON
 const opt1 = Option.fromJSON<number>('{"_tag":"Some","value":42}')
-const opt2 = Option.fromYAML<number>("_tag: Some\nvalue: 42")
-const opt3 = Option.fromBinary<number>(binary)
+const opt2 = Option.fromBinary<number>(binary)
 
 // Works with all types
 const list = List([1, 2, 3])
@@ -1231,9 +1233,9 @@ Map.empty<string, number>() // typed empty map
 
 ```typescript ignore
 // Http — fetch wrapper returning IO<never, HttpError, HttpResponse<unknown>> by default
-// Provide a validate function to get typed responses (BYOV: bring your own validator)
+// Provide a decoder to get typed responses (BYOV: bring your own validator)
 Http.get(url, opts?)          // GET → HttpResponse<unknown>
-Http.get(url, { validate })   // GET → HttpResponse<T> (T inferred from validate)
+Http.get(url, { decode })     // GET → HttpResponse<T> (T inferred from the Decoder<T>)
 Http.post(url, opts?)         // POST with auto JSON body serialization
 Http.put(url, opts?)          // PUT
 Http.patch(url, opts?)        // PATCH
@@ -1241,9 +1243,9 @@ Http.delete(url, opts?)       // DELETE
 Http.request(fullOpts)        // Full control
 Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch, beforeRequest (effectful request transformer)
 
-// Example with validator (works with Zod, TypeBox, Valibot, or manual validators)
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
-Http.post("/api/users", { body: { name: "Alice" }, validate: (data) => UserSchema.parse(data) })
+// Decoder.fromThrowing adapts any throwing parser (Zod, TypeBox, Valibot, or manual validators)
+Http.get("/api/users", { decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)) })
+Http.post("/api/users", { body: { name: "Alice" }, decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
 
 // HttpError — three-variant ADT
 HttpError.networkError(url, method, cause)
@@ -1295,7 +1297,6 @@ Static type guards for narrowing types:
 All Serializable types provide static deserialization methods:
 
 - `fromJSON(json: string): T` - Deserialize from JSON
-- `fromYAML(yaml: string): T` - Deserialize from YAML
 - `fromBinary(binary: string): T` - Deserialize from base64-encoded binary
 
 **Note**: See `docs/companion-pattern.md` for complete guide on the Companion pattern.
@@ -1338,7 +1339,6 @@ Note: `fold` has different semantics per type category:
 
 - `serialize(): SerializationMethods<T>`
   - `toJSON(): string`
-  - `toYAML(): string`
   - `toBinary(): Uint8Array`
 
 ### Traversable (extends AsyncMonad)
@@ -2425,7 +2425,7 @@ IO.all([io1, io2, io3], { concurrency: 1 }); // One after another; stops at the 
 IO.forEach(items, (item) => save(item)); // One effect per item, in order
 IO.forEach(items, (item) => save(item), { concurrency: "unbounded" });
 IO.race([io1, io2]); // First to settle wins, success or failure; the others are interrupted
-IO.any([io1, io2, io3]); // First success wins, trying them in order
+IO.firstSuccessOf([io1, io2, io3]); // First success wins, trying them in order
 
 // Zip effects
 io1.zip(io2); // [A, B]
@@ -4968,7 +4968,6 @@ Implements: Collection, Foldable, Iterable, KVTraversable, Serializable
 - `Map.of([k, v], ...)`
 - `Map.empty()`
 - `Map.fromJSON(json)`
-- `Map.fromYAML(yaml)`
 - `Map.fromBinary(b)`
 
 **Transform**
@@ -5168,6 +5167,7 @@ Implements: Functor, Monad, Foldable, Matchable
 - `IO.all([...], { concurrency? }) // all at once by default; first failure interrupts the rest`
 - `IO.forEach(items, f, { concurrency? })`
 - `IO.race([...]) // first to settle wins; the rest are interrupted`
+- `IO.firstSuccessOf([...]) // tries each in order; the first success wins`
 - `IO.iterate(seed, step, done, { max? })`
 - `IO.bracket(acquire, use, release)`
 - `IO.gen(function*() {...})`
@@ -5224,7 +5224,7 @@ Outcome of running an IO effect — Success | Failure | Die | Interrupted, retur
 
 ### Http
 
-HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
+HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; wrap a throwing parser such as Zod's .parse in `Decoder.fromThrowing(parse)`. 2.0 removed the `validate` field. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.
 
 **Create**
 
@@ -5263,7 +5263,7 @@ HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode
 - `.catchAll(handler)`
 - `.recover(fallback)`
 - `decode: Decoder<T> (Either-returning, structural failures preserved)`
-- `validate: (data) => T (deprecated, throws — for back-compat / Zod .parse)`
+- `decode: Decoder.fromThrowing(parse) (a throwing parser such as Zod .parse; a throw becomes a DecoderError leaf)`
 - `flatten: boolean (default true; false preserves tagged emission)`
 - `encode: Encoder<TReq> = (value) => JSONValue (custom wire shape; overrides flatten)`
 - `params: HttpQueryParams (scalar | array; undefined/null dropped; percent-encoded)`
