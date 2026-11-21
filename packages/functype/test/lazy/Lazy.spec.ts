@@ -180,7 +180,8 @@ describe("Lazy", () => {
       const lazy = Lazy(() => 42).filter((x) => x < 40)
       const option = lazy.orThrow()
 
-      expect(option).toEqual(None)
+      expect(option).toEqual(None())
+      expect(option.isNone()).toBe(true)
     })
   })
 
@@ -226,7 +227,8 @@ describe("Lazy", () => {
         const lazy = Lazy(() => {
           throw new Error("boom")
         })
-        expect(lazy.toOption()).toEqual(None)
+        expect(lazy.toOption()).toEqual(None())
+        expect(lazy.toOption().isNone()).toBe(true)
       })
     })
 
@@ -286,7 +288,7 @@ describe("Lazy", () => {
     })
 
     it("should create Lazy from None Option", () => {
-      const option: Option<number> = None as unknown as Option<number>
+      const option: Option<number> = None<number>()
       const lazy = Lazy.fromOption(option, () => 0)
       expect(lazy.orThrow()).toBe(0)
     })
@@ -528,9 +530,10 @@ describe("Lazy", () => {
   })
 
   describe("typeable", () => {
-    it("should have typeable property", () => {
+    it("is tagged by _tag, and has no undeclared typeable field (2.0)", () => {
       const lazy = Lazy(() => 42)
-      expect((lazy as any).typeable).toBe("Lazy")
+      expect(lazy._tag).toBe("Lazy")
+      expect("typeable" in lazy).toBe(false)
     })
   })
 })
