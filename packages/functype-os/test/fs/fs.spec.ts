@@ -67,7 +67,7 @@ describe("Fs", () => {
   describe("readFileOpt", () => {
     it("should return Ok(Some) for existing file", async () => {
       const result = await Fs.readFileOpt(testFile).run()
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       const opt = result.value
       expect(opt.isSome()).toBe(true)
       expect(opt.getOrElse(() => "")).toBe(testContent)
@@ -75,7 +75,7 @@ describe("Fs", () => {
 
     it("should return Ok(None) for ENOENT", async () => {
       const result = await Fs.readFileOpt(path.join(tmpDir, "missing.txt")).run()
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.isNone()).toBe(true)
     })
   })
@@ -142,7 +142,7 @@ describe("Fs", () => {
   describe("readdir", () => {
     it("should return Ok with List of entries", async () => {
       const result = await Fs.readdir(tmpDir).run()
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       const entries = result.value.toArray()
       expect(entries).toContain("test.txt")
     })
@@ -179,14 +179,14 @@ describe("Fs", () => {
   describe("readFileOptSync", () => {
     it("should return Right(Some) for existing file", () => {
       const result = Fs.readFileOptSync(testFile)
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.isSome()).toBe(true)
       expect(result.value.getOrElse(() => "")).toBe(testContent)
     })
 
     it("should return Right(None) for ENOENT", () => {
       const result = Fs.readFileOptSync(path.join(tmpDir, "missing.txt"))
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.isNone()).toBe(true)
     })
   })
@@ -231,7 +231,7 @@ describe("Fs", () => {
   describe("readdirSync", () => {
     it("should return Right with List of entries", () => {
       const result = Fs.readdirSync(tmpDir)
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.toArray()).toContain("test.txt")
     })
 
@@ -414,7 +414,7 @@ describe("Fs", () => {
 
     it("should return matching files for *.ts pattern", async () => {
       const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.ts").run()
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       const files = result.value.toArray()
       expect(files).toContain("a.ts")
       expect(files).toContain(path.join("sub", "c.ts"))
@@ -423,7 +423,7 @@ describe("Fs", () => {
 
     it("should return empty list for no matches", async () => {
       const result = await Fs.glob(path.join(tmpDir, "glob-test"), "**/*.py").run()
-      expect(result.isRight()).toBe(true)
+      if (!result.isRight()) throw new Error(`expected Right, got ${result.toString()}`)
       expect(result.value.size).toBe(0)
     })
 
