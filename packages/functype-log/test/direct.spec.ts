@@ -18,7 +18,7 @@ describe("DirectLogger", () => {
       const { logger, entries } = createDirectTestLogger()
       logger.info("with meta", { userId: "123", action: "login" })
 
-      const entry = entries().head()
+      const entry = entries().headOption().orThrow()
       expect(entry.metadata).toEqual({ userId: "123", action: "login" })
     })
 
@@ -26,7 +26,7 @@ describe("DirectLogger", () => {
       const { logger, entries } = createDirectTestLogger()
       logger.info("no meta")
 
-      const entry = entries().head()
+      const entry = entries().headOption().orThrow()
       expect(entry.metadata).toBeUndefined()
     })
   })
@@ -37,7 +37,7 @@ describe("DirectLogger", () => {
       const err = new Error("something broke")
       logger.withError(err).error("operation failed")
 
-      const entry = entries().head()
+      const entry = entries().headOption().orThrow()
       expect(entry.error).toBe(err)
       expect(entry.level).toBe("error")
     })
@@ -62,7 +62,7 @@ describe("DirectLogger", () => {
       const contextLogger = logger.withContext({ requestId: "req-1" })
       contextLogger.info("merged", { action: "fetch" })
 
-      const entry = entries().head()
+      const entry = entries().headOption().orThrow()
       expect(entry.metadata).toEqual({ requestId: "req-1", action: "fetch" })
     })
   })
@@ -74,7 +74,7 @@ describe("DirectLogger", () => {
       const child = parent.child({ handler: "users" })
       child.info("from child")
 
-      const entry = entries().head()
+      const entry = entries().headOption().orThrow()
       expect(entry.metadata).toEqual({ service: "api", handler: "users" })
     })
 
