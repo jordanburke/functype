@@ -90,11 +90,16 @@ const ENTITIES: Readonly<Record<string, string>> = {
   nbsp: " ",
 };
 
-/** The text a visitor sees in a `<pre>`: tags and React's `<!-- -->` separators removed, entities decoded. */
+/**
+ * The text a visitor sees in a `<pre>`, entities decoded. The HTML is split into comments (React's
+ * `<!-- -->` separators), tags and text, and only the text is kept. The result is compiled, never
+ * rendered.
+ */
 const textOf = (html: string): string =>
-  html
-    .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<[^>]+>/g, "")
+  [...html.matchAll(/<!--[\s\S]*?-->|<[^>]*>|[^<]+|</g)]
+    .map(([token]) => token)
+    .filter((token) => token === "<" || !token.startsWith("<"))
+    .join("")
     .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (entity, name: string) =>
       name.startsWith("#x") || name.startsWith("#X")
         ? String.fromCodePoint(parseInt(name.slice(2), 16))
@@ -173,6 +178,12 @@ const main = (): number => {
     ...(checked.length === 0
       ? ["no TypeScript samples found in the built site"]
       : []),
+    ...checked
+      .filter((sample) => sample.code.trim() === "")
+      .map(
+        (sample) =>
+          `${label(sample)} has no text, so there is nothing to check.`,
+      ),
     ...pages
       .filter((page) => PAGE_PRELUDES[page] !== undefined)
       .flatMap((page) => {
