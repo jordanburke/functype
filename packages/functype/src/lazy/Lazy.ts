@@ -3,6 +3,7 @@ import type { Either } from "@/either"
 import { Left, Right } from "@/either"
 import type { Extractable } from "@/extractable"
 import type { FunctypeBase } from "@/functype"
+import { type A, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option"
 import { None, Some } from "@/option"
@@ -151,13 +152,13 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
    * @param z - Initial value
    * @returns Function that takes an operator and applies it
    */
-  foldLeft: <B>(z: B) => (op: (b: B, a: T) => B) => B
+  foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
   /**
    * Right fold operation
    * @param z - Initial value
    * @returns Function that takes an operator and applies it
    */
-  foldRight: <B>(z: B) => (op: (a: T, b: B) => B) => B
+  foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   /**
    * Pattern matching for the Lazy type
    * @param patterns - Object with handler for Lazy pattern
@@ -194,270 +195,325 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
 }
 
 /**
- * Internal constructor for creating Lazy instances
+ * Where a Lazy's evaluation stands. Each step replaces the record, so once the thunk has run the
+ * Lazy no longer holds it. @internal
  */
-const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
-  let evaluated = false
-  let value: T | undefined = undefined
-  let error: unknown | undefined = undefined
-  let hasError = false
+type LazyState<T> =
+  | { readonly _tag: "Pending"; readonly thunk: () => T }
+  | { readonly _tag: "Evaluated"; readonly value: T }
+  | { readonly _tag: "Failed"; readonly error: unknown }
 
-  const evaluate = (): T => {
-    if (!evaluated) {
-      try {
-        value = thunk()
-        evaluated = true
-      } catch (e) {
-        error = e
-        hasError = true
-        evaluated = true
-        throw e
-      }
-    }
-    if (hasError) {
-      throw error
-    }
-    return value as T
+/**
+ * A Lazy's own data: its tag and its state. The value isn't frozen, as Option, Either and Try
+ * aren't (#276 §14 Rules), so it can memoize by replacing `state`. @internal
+ */
+interface LazyOf<out T extends Type> extends Lazy<T> {
+  readonly state: LazyState<T>
+}
+
+/** How a Lazy's thunk ended. */
+type Settled<T> = Exclude<LazyState<T>, { readonly _tag: "Pending" }>
+
+/* eslint-disable functional/immutable-data -- the constructor fills in the Lazy it just created */
+
+/**
+ * Runs the thunk at most once, and says how it ended without throwing. A value or a thrown error is
+ * kept and handed back on every later read. The state is written after the thunk returns, so a
+ * thunk that reads its own Lazy runs again, as it always has. Reading `lazy.state` comes first and
+ * outside the `try`, so a detached call throws a TypeError instead of reading as a failed thunk.
+ *
+ * Only the thunk runs inside the `try`. The write comes after, through `Reflect.set`, which returns
+ * false rather than throwing on a frozen Lazy. A frozen Lazy can't memoize, so its thunk runs once
+ * per read, but each read still gets the right outcome.
+ */
+const settle = <T extends Type>(lazy: Mutable<LazyOf<T>>): Settled<T> => {
+  const { state } = lazy
+  if (state._tag !== "Pending") return state
+  const settled = run(state.thunk)
+  Reflect.set(lazy, "state", settled)
+  return settled
+}
+
+/** Runs a thunk once, and says how it ended without throwing. */
+const run = <T extends Type>(thunk: () => T): Settled<T> => {
+  try {
+    return { _tag: "Evaluated", value: thunk() }
+  } catch (error) {
+    return { _tag: "Failed", error }
   }
+}
 
-  const lazy: Lazy<T> = {
-    [Symbol.toStringTag]: "Lazy",
-    _tag: "Lazy",
-    get isEvaluated() {
-      return evaluated
-    },
-    getOrElse: <T2 extends Type>(defaultValue: () => T2): T | T2 => {
-      try {
-        return evaluate()
-      } catch {
-        return defaultValue()
-      }
-    },
-    orNull: (): T | null => {
-      try {
-        return evaluate()
-      } catch {
-        return null
-      }
-    },
-    orThrow: (err?: Error): T => {
-      try {
-        return evaluate()
-      } catch (e) {
-        throw err ?? e
-      }
-    },
-    orElse: <T2 extends Type>(alternative: () => Lazy<T2>): Lazy<T | T2> =>
-      Lazy<T | T2>(() => {
-        try {
-          return evaluate()
-        } catch {
-          return alternative().orThrow()
-        }
-      }),
-    orUndefined: (): T | undefined => {
-      try {
-        return evaluate()
-      } catch {
-        return undefined
-      }
-    },
-    map: <U extends Type>(f: (value: T) => U): Lazy<U> => Lazy(() => f(evaluate())),
-    ap: <U extends Type>(ff: Lazy<(value: T) => U>): Lazy<U> => Lazy(() => ff.orThrow()(evaluate())),
-    mapAsync: async <U extends Type>(f: (value: T) => Promise<U>): Promise<Lazy<U>> => {
-      const val = evaluate()
-      const result = await f(val)
-      return Lazy(() => result) as Lazy<U>
-    },
-    flatMap: <U extends Type>(f: (value: T) => Lazy<U>): Lazy<U> => Lazy(() => f(evaluate()).orThrow()),
-    flatMapAsync: async <U extends Type>(f: (value: T) => Promise<Lazy<U>>): Promise<Lazy<U>> => {
-      const val = evaluate()
-      const lazyResult = await f(val)
-      return Lazy(() => lazyResult.orThrow()) as Lazy<U>
-    },
-    filter: (predicate: (value: T) => boolean): Lazy<Option<T>> =>
-      Lazy(() => {
-        const val = evaluate()
-        return predicate(val) ? Some(val) : (None as unknown as Option<T>)
-      }),
-    recover: (f: (error: unknown) => T): Lazy<T> =>
-      Lazy(() => {
-        try {
-          return evaluate()
-        } catch (e) {
-          return f(e)
-        }
-      }),
-    recoverWith: (f: (error: unknown) => Lazy<T>): Lazy<T> =>
-      Lazy(() => {
-        try {
-          return evaluate()
-        } catch (e) {
-          return f(e).orThrow()
-        }
-      }),
-    toOption: (): Option<T> => {
-      try {
-        return Some(evaluate())
-      } catch {
-        return None as unknown as Option<T>
-      }
-    },
-    toEither: (): Either<unknown, T> => {
-      try {
-        return Right(evaluate())
-      } catch (e) {
-        return Left(e)
-      }
-    },
-    toEitherWith: <E>(mapError: (error: unknown) => E): Either<E, T> => {
-      try {
-        return Right(evaluate())
-      } catch (e) {
-        return Left(mapError(e))
-      }
-    },
-    toTry: (): Try<T> => Try(() => evaluate()),
-    tap: (f: (value: T) => void): Lazy<T> =>
-      Lazy(() => {
-        const val = evaluate()
-        f(val)
-        return val
-      }),
-    tapError: (f: (error: unknown) => void): Lazy<T> =>
-      Lazy(() => {
-        try {
-          return evaluate()
-        } catch (e) {
-          f(e)
-          throw e
-        }
-      }),
-    fold: <U>(f: (value: T) => U): U => f(evaluate()),
-    foldWith: <U>(onFailure: (error: unknown) => U, onSuccess: (value: T) => U): U => {
-      try {
-        return onSuccess(evaluate())
-      } catch (e) {
-        return onFailure(e)
-      }
-    },
-    foldLeft:
-      <B>(z: B) =>
-      (op: (b: B, a: T) => B) =>
-        op(z, evaluate()),
-    foldRight:
-      <B>(z: B) =>
-      (op: (a: T, b: B) => B) =>
-        op(evaluate(), z),
-    match: <R>(patterns: { Lazy: (value: T) => R }): R => patterns.Lazy(evaluate()),
-    toString: (): string => {
-      if (evaluated && !hasError) {
-        return `Lazy(${safeStringify(value)})`
-      } else if (evaluated && hasError) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        return `Lazy(<error: ${errorMessage}>)`
-      } else {
-        return `Lazy(<not evaluated>)`
-      }
-    },
-    toValue: (): { _tag: "Lazy"; value: T } | { _tag: "Lazy"; error: Error } => {
-      // Force the thunk. If it succeeds, project to value; if it throws,
-      // capture the failure as a real Error (with original prototype).
-      try {
-        return { _tag: "Lazy" as const, value: evaluate() }
-      } catch (e) {
-        return {
-          _tag: "Lazy" as const,
-          error: e instanceof Error ? e : new Error(String(e)),
-        }
-      }
-    },
-    // Traversable
-    get size() {
-      try {
-        evaluate()
-        return 1
-      } catch {
-        return 0
-      }
-    },
-    get isEmpty() {
-      try {
-        evaluate()
-        return false
-      } catch {
-        return true
-      }
-    },
-    contains: (v: unknown): boolean => {
-      try {
-        return evaluate() === v
-      } catch {
-        return false
-      }
-    },
-    reduce: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-      evaluate() as unknown as Widen<T, B>,
-    reduceRight: <B = T>(_op: (b: Widen<T, B>, a: Widen<T, B>) => Widen<T, B>): Widen<T, B> =>
-      evaluate() as unknown as Widen<T, B>,
-    count: (p: (x: T) => boolean): number => {
-      try {
-        return p(evaluate()) ? 1 : 0
-      } catch {
-        return 0
-      }
-    },
-    find: (p: (a: T) => boolean): Option<T> => {
-      try {
-        const val = evaluate()
-        return p(val) ? Some(val) : (None as unknown as Option<T>)
-      } catch {
-        return None as unknown as Option<T>
-      }
-    },
-    exists: (p: (a: T) => boolean): boolean => {
-      try {
-        return p(evaluate())
-      } catch {
-        return false
-      }
-    },
-    forEach: (f: (a: T) => void): void => {
-      try {
-        f(evaluate())
-      } catch {
-        // Ignore errors in forEach
-      }
-    },
-    // Pipe
-    pipe: <U>(f: (value: T) => U): U => f(evaluate()),
-    // Serializable. Forces the thunk before emitting — the envelope must
-    // carry the materialized value (or the captured failure), since a
-    // closure can't be serialized.
-    toJSON: () => {
-      try {
-        return { "@functype": "Lazy" as const, _tag: "Lazy" as const, value: evaluate() }
-      } catch (e) {
-        return {
-          "@functype": "Lazy" as const,
-          _tag: "Lazy" as const,
-          error: serializeError(e),
-        }
-      }
-    },
-    serialize: () => {
-      try {
-        return createSerializer("Lazy", evaluate())
-      } catch (e) {
-        return createTaggedSerializer("Lazy", "Lazy", { error: serializeError(e) })
-      }
-    },
-    // Typeable
-    typeable: "Lazy" as const,
-  } as Lazy<T>
+/** The Lazy's value, or its thunk's error, thrown. */
+const force = <T extends Type>(lazy: Mutable<LazyOf<T>>): T => {
+  const settled = settle(lazy)
+  if (settled._tag === "Failed") throw settled.error
+  return settled.value
+}
 
+/**
+ * Every Lazy shares these methods (#276 §14). Each used to be a fresh closure per value, and the
+ * three getters (`isEvaluated`, `size`, `isEmpty`) gave every Lazy its own hidden class, which is
+ * what made building one cost about 2 µs.
+ */
+const LazyProto = define<LazyOf<A>, "_tag" | "state">()("Lazy", {
+  [Symbol.toStringTag]: "Lazy",
+
+  get isEvaluated() {
+    return this.state._tag !== "Pending"
+  },
+
+  getOrElse(defaultValue) {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? settled.value : defaultValue()
+  },
+
+  orNull() {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? settled.value : null
+  },
+
+  orUndefined() {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? settled.value : undefined
+  },
+
+  orThrow(error) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") throw error ?? settled.error
+    return settled.value
+  },
+
+  // orElse, recover, recoverWith and tapError settle first, outside any `try`, so a detached call
+  // fails with its TypeError when read instead of being taken for a failed thunk.
+  orElse(alternative) {
+    return LazyConstructor(() => {
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : alternative().orThrow()
+    })
+  },
+
+  map(f) {
+    return LazyConstructor(() => f(force(this)))
+  },
+
+  ap(ff) {
+    return LazyConstructor(() => ff.orThrow()(force(this)))
+  },
+
+  async mapAsync(f) {
+    const result = await f(force(this))
+    return LazyConstructor(() => result)
+  },
+
+  flatMap(f) {
+    return LazyConstructor(() => f(force(this)).orThrow())
+  },
+
+  async flatMapAsync(f) {
+    const lazyResult = await f(force(this))
+    return LazyConstructor(() => lazyResult.orThrow())
+  },
+
+  filter(predicate) {
+    return LazyConstructor(() => {
+      const value = force(this)
+      return predicate(value) ? Some(value) : None()
+    })
+  },
+
+  recover(f) {
+    return LazyConstructor(() => {
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : f(settled.error)
+    })
+  },
+
+  recoverWith(f) {
+    return LazyConstructor(() => {
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : f(settled.error).orThrow()
+    })
+  },
+
+  toOption() {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? Some(settled.value) : None()
+  },
+
+  toEither() {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? Right(settled.value) : Left(settled.error)
+  },
+
+  toEitherWith(mapError) {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" ? Right(settled.value) : Left(mapError(settled.error))
+  },
+
+  toTry() {
+    return Try(() => force(this))
+  },
+
+  tap(f) {
+    return LazyConstructor(() => {
+      const value = force(this)
+      f(value)
+      return value
+    })
+  },
+
+  tapError(f) {
+    return LazyConstructor(() => {
+      const settled = settle(this)
+      if (settled._tag === "Evaluated") return settled.value
+      f(settled.error)
+      throw settled.error
+    })
+  },
+
+  fold(f) {
+    return f(force(this))
+  },
+
+  foldWith(onFailure, onSuccess) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") return onFailure(settled.error)
+    // onFailure also gets what onSuccess throws, as it always has.
+    try {
+      return onSuccess(settled.value)
+    } catch (e) {
+      return onFailure(e)
+    }
+  },
+
+  foldLeft(z) {
+    return (op) => op(z, force(this))
+  },
+
+  foldRight(z) {
+    return (op) => op(force(this), z)
+  },
+
+  match(patterns) {
+    return patterns.Lazy(force(this))
+  },
+
+  toString() {
+    const { state } = this
+    if (state._tag === "Evaluated") return `Lazy(${safeStringify(state.value)})`
+    if (state._tag === "Failed") {
+      const message = state.error instanceof Error ? state.error.message : String(state.error)
+      return `Lazy(<error: ${message}>)`
+    }
+    return "Lazy(<not evaluated>)"
+  },
+
+  toValue() {
+    // Forces the thunk. A failure is kept as a real Error, with its prototype.
+    const settled = settle(this)
+    if (settled._tag === "Evaluated") return { _tag: "Lazy" as const, value: settled.value }
+    const { error } = settled
+    return { _tag: "Lazy" as const, error: error instanceof Error ? error : new Error(String(error)) }
+  },
+
+  // Traversable. Both getters force the thunk, as they always have.
+  get size() {
+    return settle(this)._tag === "Evaluated" ? 1 : 0
+  },
+
+  get isEmpty() {
+    return settle(this)._tag === "Failed"
+  },
+
+  contains(value) {
+    const settled = settle(this)
+    return settled._tag === "Evaluated" && settled.value === value
+  },
+
+  reduce<B>() {
+    return force(this) as unknown as Widen<A, B>
+  },
+
+  reduceRight<B>() {
+    return force(this) as unknown as Widen<A, B>
+  },
+
+  // count, find, exists and forEach also swallow what their callback throws, as they always have.
+  count(p) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") return 0
+    try {
+      return p(settled.value) ? 1 : 0
+    } catch {
+      return 0
+    }
+  },
+
+  find(p) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") return None()
+    try {
+      return p(settled.value) ? Some(settled.value) : None()
+    } catch {
+      return None()
+    }
+  },
+
+  exists(p) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") return false
+    try {
+      return p(settled.value)
+    } catch {
+      return false
+    }
+  },
+
+  forEach(f) {
+    const settled = settle(this)
+    if (settled._tag === "Failed") return
+    try {
+      f(settled.value)
+    } catch {
+      // Ignored, as it always was.
+    }
+  },
+
+  pipe(f) {
+    return f(force(this))
+  },
+
+  // Serializable. Forces the thunk, because the envelope must carry the value or the failure: a
+  // closure can't be serialized.
+  toJSON() {
+    const settled = settle(this)
+    return settled._tag === "Evaluated"
+      ? { "@functype": "Lazy" as const, _tag: "Lazy" as const, value: settled.value }
+      : { "@functype": "Lazy" as const, _tag: "Lazy" as const, error: serializeError(settled.error) }
+  },
+
+  serialize() {
+    const settled = settle(this)
+    if (settled._tag === "Failed")
+      return createTaggedSerializer("Lazy", "Lazy", { error: serializeError(settled.error) })
+    try {
+      return createSerializer("Lazy", settled.value)
+    } catch (e) {
+      return createTaggedSerializer("Lazy", "Lazy", { error: serializeError(e) })
+    }
+  },
+})
+
+/** Builds a Lazy around `thunk`, which doesn't run until a value is read. */
+const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
+  // The one cast: a prototype checked at the opaque A works for every T.
+  const lazy = Object.create(LazyProto) as Mutable<LazyOf<T>>
+  lazy._tag = "Lazy"
+  lazy.state = { _tag: "Pending", thunk }
   return lazy
 }
+
+/* eslint-enable functional/immutable-data */
 
 /**
  * Companion object with static methods for Lazy
@@ -508,23 +564,19 @@ const LazyCompanion = {
    * @param promise - The Promise to convert
    * @returns A new Lazy instance that throws an error
    */
-  fromPromise: <T extends Type>(_promise: Promise<T>): Lazy<T> => {
-    const thunk = () => {
+  fromPromise: <T extends Type>(_promise: Promise<T>): Lazy<T> =>
+    LazyConstructor<T>(() => {
       throw new Error("Promise not yet resolved. Use await on the promise before creating Lazy.")
-    }
-    return LazyConstructor(thunk as () => T) as unknown as Lazy<T>
-  },
+    }),
   /**
    * Creates a failed Lazy that will throw when evaluated
    * @param error - The error to throw
    * @returns A new Lazy instance that throws the error
    */
-  fail: <T extends Type>(error: unknown): Lazy<T> => {
-    const thunk = () => {
+  fail: <T extends Type>(error: unknown): Lazy<T> =>
+    LazyConstructor<T>(() => {
       throw error
-    }
-    return LazyConstructor(thunk as () => T) as unknown as Lazy<T>
-  },
+    }),
   /**
    * Creates an already-evaluated Lazy. Used by `fromJSON` to reconstruct a
    * Lazy whose thunk was forced at serialize time — there is no original

@@ -9,11 +9,15 @@
  *   test/io/io-prototype.spec.ts holds their CI guard.
  * - Collections on shared prototypes: #276 §14, PR 3, with §13 (tail() is a method). These build and
  *   map each collection, and walk a List with tail(), which copies the rest of the List every step.
+ * - Tuple and Lazy on shared prototypes: #276 §14, PR 4. A Lazy used to cost about 2 µs to build,
+ *   because its three getter closures gave every Lazy its own hidden class. These build each, call
+ *   one method, and run a Lazy's thunk for the first time. test/tuple/tuple-prototype.spec.ts and
+ *   test/lazy/lazy-prototype.spec.ts hold their CI guards.
  * This file is for looking.
  */
 import { describe, test } from "vitest"
 
-import { Exit, IO, LazyList, Left, List, Map, Obj, Option, Right, Set, Some, Stack, Try } from "@/index"
+import { Exit, IO, Lazy, LazyList, Left, List, Map, Obj, Option, Right, Set, Some, Stack, Try, Tuple } from "@/index"
 
 const cases: ReadonlyArray<readonly [string, () => unknown]> = [
   ['List(["a", "b"])', () => List(["a", "b"])],
@@ -101,5 +105,37 @@ describe("collection construction", () => {
       let l = big
       while (!l.isEmpty) l = l.tail()
     }).run()
+  })
+})
+
+// Read each export once, as above.
+const [tuple, lazy] = [Tuple, Lazy] as const
+
+const tupleLazyCases: ReadonlyArray<readonly [string, (i: number) => unknown]> = [
+  ["plain { _tag, value }, for scale", (i) => ({ _tag: "Tuple", value: [i, 1] })],
+  ["Tuple([i, 1])", (i) => tuple([i, 1])],
+  ["Tuple([i, 1]).get(0)", (i) => tuple([i, 1]).get(0)],
+  ["Tuple.pair(i, 1).map", (i) => tuple.pair(i, 1).map(([a, b]) => [inc(a), b])],
+  ["Lazy(() => i)", (i) => lazy(() => i)],
+  ["Lazy(() => i).map", (i) => lazy(() => i).map(inc)],
+  ["Lazy(() => i).orThrow(), its first evaluation", (i) => lazy(() => i).orThrow()],
+  [
+    "Lazy(() => i).map(inc).orThrow()",
+    (i) =>
+      lazy(() => i)
+        .map(inc)
+        .orThrow(),
+  ],
+]
+
+describe("Tuple and Lazy construction", () => {
+  tupleLazyCases.forEach(([name, make]) => {
+    test(name, async ({ bench }) => {
+      // eslint-disable-next-line functional/no-let -- a fresh input each call, so V8 can't fold the work away
+      let i = 0
+      await bench(name, () => {
+        make(i++)
+      }).run()
+    })
   })
 })

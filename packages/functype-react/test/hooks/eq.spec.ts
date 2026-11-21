@@ -1,4 +1,4 @@
-import { Exit, IO, LazyList, Left, List, Map, None, Obj, Right, Set, Some, Stack, Try } from "functype"
+import { Exit, IO, Lazy, LazyList, Left, List, Map, None, Obj, Right, Set, Some, Stack, Try, Tuple } from "functype"
 import { describe, expect, it } from "vitest"
 
 import { referenceEq, structuralEq, tagEq } from "../../src/hooks/eq"
@@ -133,6 +133,32 @@ describe("structuralEq with functype values, whose methods live on a shared prot
     ).toBe(false)
     expect(structuralEq(List([1]), Set([1]))).toBe(false)
     expect(structuralEq(List([1]), Stack([1]))).toBe(false)
+  })
+
+  it("compares Tuples by their elements", () => {
+    expect(structuralEq(Tuple([1, { a: 2 }]), Tuple([1, { a: 2 }]))).toBe(true)
+    expect(structuralEq(Tuple([1, 2]), Tuple([1, 3]))).toBe(false)
+    expect(structuralEq(Tuple([1]), List([1]))).toBe(false)
+  })
+
+  it("compares Lazies by their state, without running a thunk", () => {
+    // A pending Lazy holds its thunk, so two are equal only when they share it.
+    const runs = { count: 0 }
+    const thunk = () => ++runs.count
+    const [x, y] = [Lazy(thunk), Lazy(thunk)]
+    expect(structuralEq(x, y)).toBe(true)
+    expect(
+      structuralEq(
+        x,
+        Lazy(() => 1),
+      ),
+    ).toBe(false)
+    expect([runs.count, x.isEvaluated]).toEqual([0, false])
+    // Once evaluated, a Lazy holds its value, and compares by it.
+    const [a, b, c] = [Lazy(() => ({ n: 1 })), Lazy(() => ({ n: 1 })), Lazy(() => ({ n: 2 }))]
+    ;[a, b, c].forEach((lazy) => lazy.orThrow())
+    expect(structuralEq(a, b)).toBe(true)
+    expect(structuralEq(a, c)).toBe(false)
   })
 
   it("never calls objects with different prototypes equal", () => {

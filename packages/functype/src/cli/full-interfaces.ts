@@ -758,13 +758,13 @@ export interface FailureOf<out T> extends TryBase<T> {
    * @param z - Initial value
    * @returns Function that takes an operator and applies it
    */
-  foldLeft: <B>(z: B) => (op: (b: B, a: T) => B) => B
+  foldLeft<B>(z: B): (op: (b: B, a: T) => B) => B
   /**
    * Right fold operation
    * @param z - Initial value
    * @returns Function that takes an operator and applies it
    */
-  foldRight: <B>(z: B) => (op: (a: T, b: B) => B) => B
+  foldRight<B>(z: B): (op: (a: T, b: B) => B) => B
   /**
    * Pattern matching for the Lazy type
    * @param patterns - Object with handler for Lazy pattern
@@ -996,7 +996,7 @@ export interface InterruptedExitOf<E extends Type, A extends Type> extends ExitB
 
   toArray(): T
 
-  length: number
+  readonly length: number
 
   [Symbol.iterator](): Iterator<T[number]>
 
