@@ -1,4 +1,5 @@
 import { Companion } from "@/companion/Companion"
+import { type A as Hole, define, type Mutable } from "@/internal/define"
 import type { Type } from "@/types"
 
 /**
@@ -20,8 +21,13 @@ import type { Type } from "@/types"
  * counter.get() // 5
  * counter.update(n => n + 1)
  * counter.get() // 6
+ *
+ * Its methods are shared, so call them on the Ref: `const { get } = ref` loses `this`, and the
+ * detached call throws a `TypeError`. Pass `() => ref.get()` instead.
  */
 export interface Ref<A> {
+  readonly _tag: "Ref"
+
   /**
    * Get the current value
    */
@@ -64,58 +70,77 @@ export interface Ref<A> {
 }
 
 /**
+ * A Ref's own data: its tag and its current value, which `set` and the updates replace. The Ref
+ * isn't frozen, since it changes in place. `value` isn't on {@link Ref}, so code outside reads it
+ * through `get`. @internal
+ */
+interface RefOf<A> extends Ref<A> {
+  value: A
+}
+
+/* eslint-disable functional/immutable-data -- a Ref is a mutable cell; its methods write its value */
+
+/**
+ * Every Ref shares these methods (#276 §14). They used to be closures over a `let`, so each Ref
+ * built eight functions, and test matchers saw any two Refs as equal.
+ */
+const RefProto = define<RefOf<Hole>, "_tag" | "value">()("Ref", {
+  get() {
+    return this.value
+  },
+
+  set(value) {
+    this.value = value
+  },
+
+  update(f) {
+    this.value = f(this.value)
+  },
+
+  getAndSet(value) {
+    const old = this.value
+    this.value = value
+    return old
+  },
+
+  updateAndGet(f) {
+    this.value = f(this.value)
+    return this.value
+  },
+
+  getAndUpdate(f) {
+    const old = this.value
+    this.value = f(this.value)
+    return old
+  },
+
+  compareAndSet(expected, newValue) {
+    if (this.value === expected) {
+      this.value = newValue
+      return true
+    }
+    return false
+  },
+
+  modify(f) {
+    const [newValue, result] = f(this.value)
+    this.value = newValue
+    return result
+  },
+})
+
+/**
  * Creates a new mutable reference containing the given value
  */
 const RefConstructor = <A extends Type>(initial: A): Ref<A> => {
-  let _value = initial
-
-  const ref: Ref<A> = {
-    get(): A {
-      return _value
-    },
-
-    set(value: A): void {
-      _value = value
-    },
-
-    update(f: (current: A) => A): void {
-      _value = f(_value)
-    },
-
-    getAndSet(value: A): A {
-      const old = _value
-      _value = value
-      return old
-    },
-
-    updateAndGet(f: (current: A) => A): A {
-      _value = f(_value)
-      return _value
-    },
-
-    getAndUpdate(f: (current: A) => A): A {
-      const old = _value
-      _value = f(_value)
-      return old
-    },
-
-    compareAndSet(expected: A, newValue: A): boolean {
-      if (_value === expected) {
-        _value = newValue
-        return true
-      }
-      return false
-    },
-
-    modify<B>(f: (current: A) => [A, B]): B {
-      const [newValue, result] = f(_value)
-      _value = newValue
-      return result
-    },
-  }
-
+  // The one cast: a prototype checked at the opaque Hole works for every A.
+  const ref = Object.create(RefProto) as Mutable<RefOf<A>>
+  ref._tag = "Ref"
+  ref.value = initial
   return ref
 }
+
+/* eslint-enable functional/immutable-data */
 
 const RefCompanion = {
   /**

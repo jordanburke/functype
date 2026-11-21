@@ -213,6 +213,16 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
 
+**2.0 (breaking): Identity, Tag, Context and Ref share their methods.** §14 of #276 (the 2.0 release plan), after #553 (Tuple and Lazy share their methods). Still to convert: TracedOption and Layer.
+
+- Each type now has one frozen prototype that holds its methods, and a value keeps only its data. An Identity keeps `_tag` and `id`, a Tag `_tag` and `id`, a Context `_tag` and `services`, and a Ref `_tag` and `value`.
+- **Ref compares by its value in test matchers.** Its methods were closures over a hidden variable, so a Ref had no data, and `expect(Ref(1)).toEqual(Ref(2))` passed. Its current value is now an own `value` field, which isn't on the `Ref` type; read it with `get()`. A Ref stays unfrozen, since it changes in place.
+- **Tag and Context are frozen**, like the collections. `SpanTracer` and `TestClockTag` are Tags, so they are too.
+- **Type changes:** `Identity` and `Ref` gain `_tag` (`"Identity"`, `"Ref"`), and Identity's `isSame` is no longer optional. An object literal typed as one of them, such as `{ id: 1 }`, no longer compiles. Build them with `Identity(v)` and `Ref(v)`.
+- On Node 24.20.0, medians against `main` before this change: `Context.make` 201 → 32 ns, and with `add` 689 → 111 ns. `Identity(v)` 134 → 3.5 ns. A Ref built, updated and read 18 → 2.7 ns. A Tag got slower, 5.3 → 20 ns, from freezing it; code builds one per service.
+- **A detached method call throws**, because `this` is undefined: `const { get, set } = Ref(0)`, or `IO.sync(ref.get)`. Call it on the value: `IO.sync(() => ref.get())`.
+- **Upgrade:** call Ref, Context and Tag methods on the value. Replace object literals typed as `Identity` or `Ref` with their constructors. Re-record snapshots of these types.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
