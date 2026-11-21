@@ -167,6 +167,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `Set.empty()` and `Map.empty()` build a new value on each call, because a native Set or Map can't be frozen. That costs about 25 ns per call against 3 ns for the shared value (Node 24.20.0, built package). `Set.empty() === Set.empty()` is now `false`.
 - `Base(type, body).doUnwrap()` treats an empty List or Set body as empty. Before, it called `isEmpty()`, but `isEmpty` is a getter, so an empty collection yielded `undefined` as a success. A body whose `head` isn't a method now passes through as itself, like any other value.
 
+**2.0 (additive): `IO.withSpan` traces an effect in a span.** From §11 of #276 (the 2.0 release plan).
+
+- `io.withSpan(name, attributes?)` runs the effect in a span. A `withSpan` inside it nests under it without being passed a parent, as `Effect.withSpan` does.
+- functype ships only the contract, `SpanTracer`, with three methods: `start(name, attributes, parent)`, `run(span, fn)`, which runs the body with the span active, and `end(span, exit)`. Provide one with `provideService(SpanTracer, tracer)`, outside the spans. With none provided, `withSpan` does nothing. It isn't `TracedOption`'s `Tracer`.
+- Every outcome closes the span exactly once: success, typed failure, `Die` and interruption. A `race` loser or a timed-out effect closes as `Interrupted` when it settles. A failure that arrives after the run was cancelled, such as an aborted `fetch`, closes as `Interrupted` too.
+- Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs, also after an `await`. An OpenTelemetry bridge implements `run` with `context.with`; the IO docs and the README have a sketch. functype has no OpenTelemetry dependency.
+- The current span travels with the run, not in the shared services, so parallel children and concurrent runs never see each other's span. `withSpan` works under `runSync` too.
+- New public names: `SpanTracer` (the type and its Tag) and `SpanAttributes`.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
