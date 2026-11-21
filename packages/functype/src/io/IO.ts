@@ -1942,6 +1942,16 @@ const IOCompanion = {
   /**
    * Runs IOs in sequence, returning the first success or last failure.
    * An empty array is a defect (`Die`), since no effect can succeed.
+   * To run them at once and take the first to finish, use `IO.race`.
+   *
+   * @example
+   * ```typescript
+   * const result = await IO.firstSuccessOf([
+   *   IO.fail("error1"),
+   *   IO.succeed("success"),
+   *   IO.fail("error2")
+   * ]).run() // Right("success")
+   * ```
    */
   firstSuccessOf: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
     if (effects.length === 0) {
@@ -2127,27 +2137,6 @@ const IOCompanion = {
     createIO({ _tag: "Race", effects }),
 
   /**
-   * Returns the first effect to succeed, or fails if all fail. It tries them in sequence.
-   * An empty array is a defect (`Die`), since no effect can succeed.
-   *
-   * @example
-   * ```typescript
-   * const result = await IO.any([
-   *   IO.fail("error1"),
-   *   IO.succeed("success"),
-   *   IO.fail("error2")
-   * ]).run() // "success"
-   * ```
-   */
-  any: <R extends Type, E extends Type, A extends Type>(effects: readonly IO<R, E, A>[]): IO<R, E, A> => {
-    if (effects.length === 0) {
-      return unsafeCoerce(IOCompanion.die(new Error("No effects provided")))
-    }
-    // Try each effect, return first success
-    return effects.reduce((acc, effect) => acc.recoverWith(() => effect))
-  },
-
-  /**
    * Executes an effect for each element in the array, collecting results in input order.
    *
    * Runs them one after another by default, unlike `IO.all`. `{ concurrency }` works as it does
@@ -2183,16 +2172,6 @@ const IOCompanion = {
       ),
     )
   },
-
-  /**
-   * @deprecated Runs sequentially: this is an alias for `IO.forEach`, not a parallel traversal.
-   * Use `IO.forEach` so the code says what it does, and `IO.forEach(items, f, { concurrency })`
-   * to run them in parallel.
-   */
-  forEachPar: <R extends Type, E extends Type, A extends Type, B extends Type>(
-    items: readonly A[],
-    f: (a: A) => IO<R, E, B>,
-  ): IO<R, E, readonly B[]> => IOCompanion.forEach(items, f),
 
   /**
    * Creates a timeout effect that fails with TimeoutError.

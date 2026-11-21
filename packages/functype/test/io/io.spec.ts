@@ -1681,26 +1681,6 @@ describe("Dependency Injection", () => {
     })
   })
 
-  describe("IO.any", () => {
-    it("should return first success", async () => {
-      const result = await IO.any([IO.fail("error1"), IO.succeed("success"), IO.fail("error2")] as unknown as IO<
-        never,
-        string,
-        string
-      >[]).runOrThrow()
-      expect(result).toBe("success")
-    })
-
-    it("should fail if all fail", async () => {
-      await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).runOrThrow()).rejects.toBe("error2")
-    })
-
-    it("should die on an empty array: no effect can succeed", async () => {
-      const exit = await IO.any<never, never, never>([]).runExit()
-      expect(exit.isDie()).toBe(true)
-    })
-  })
-
   describe("IO.forEach", () => {
     it("should execute effect for each element", async () => {
       const result = await IO.forEach([1, 2, 3], (n) => IO.sync(() => n * 2)).runOrThrow()

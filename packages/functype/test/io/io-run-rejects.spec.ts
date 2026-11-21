@@ -155,10 +155,6 @@ describe("values the interpreter put in E are defects", () => {
     expect(isDie(await IO.race<never, never, never>([]).runExit())).toBe(true)
   })
 
-  it("IO.any([])", async () => {
-    expect(isDie(await IO.any<never, never, never>([]).runExit())).toBe(true)
-  })
-
   it("IO.firstSuccessOf([])", async () => {
     expect(isDie(await IO.firstSuccessOf<never, never, never>([]).runExit())).toBe(true)
   })
