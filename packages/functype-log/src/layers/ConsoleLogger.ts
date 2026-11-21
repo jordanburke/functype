@@ -79,8 +79,9 @@ const resolveConsole = (options?: ConsoleLoggerOptions): ConsoleTarget => {
  * wins over a metadata key of the same name.
  */
 const consoleArgs = ({ message, metadata, error }: LogEntry): ReadonlyArray<unknown> => {
-  if (metadata === undefined && error === undefined) return [message]
-  return [{ ...metadata, ...(error === undefined ? {} : { err: error }) }, message]
+  // `== null`, so a null error from an untyped caller is skipped, as loglayer skipped it.
+  if (metadata === undefined && error == null) return [message]
+  return [{ ...metadata, ...(error == null ? {} : { err: error }) }, message]
 }
 
 /**

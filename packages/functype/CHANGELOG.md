@@ -139,7 +139,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 - `logLayerAdapter` and `LoggerLive.fromLogLayer` are deleted. functype-log has no runtime dependencies now; `loglayer` is gone from its `dependencies`.
 - `createConsoleLogger`, `LoggerLive.console` and `createDirectConsoleLogger` write to the console themselves. The arguments are the same as before: the message alone, or a data object then the message. The data object holds the context, the metadata and the `withError` error under `err`. `fatal` writes with `console.error`. A test that pins this passes unchanged.
-- Three cases differ, and the compiler can't see them. A `Promise` in metadata is written as it is, at once, where loglayer waited for it and wrote the result later. An empty `withContext({})` adds nothing, where loglayer wrote `{}` before the message. A `level` that isn't a level name, such as `"WARN"`, now lets every level through with the `sink` option too, as the console already did; before, the sink got nothing.
+- Three cases differ, and the compiler can't see them. A `Promise` in metadata is written as it is, at once, where loglayer waited for it and wrote the result later. An empty `withContext({})` adds nothing, where loglayer wrote `{}` before the message; `child({})` and `withContext({}).child()` also write nothing now, where loglayer wrote `{}`. A `level` that isn't a level name, such as `"WARN"`, now lets every level through with the `sink` option too, as the console already did; before, the sink got nothing.
 - **Upgrade:** a consumer that passed a LogLayer instance to `LoggerLive.fromLogLayer` writes a `sink` for the library behind it:
 
   ```typescript
