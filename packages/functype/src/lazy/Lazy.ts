@@ -276,13 +276,12 @@ const LazyProto = define<LazyOf<A>, "_tag" | "state">()("Lazy", {
     return settled.value
   },
 
+  // orElse, recover, recoverWith and tapError settle first, outside any `try`, so a detached call
+  // fails with its TypeError when read instead of being taken for a failed thunk.
   orElse(alternative) {
     return LazyConstructor(() => {
-      try {
-        return force(this)
-      } catch {
-        return alternative().orThrow()
-      }
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : alternative().orThrow()
     })
   },
 
@@ -317,21 +316,15 @@ const LazyProto = define<LazyOf<A>, "_tag" | "state">()("Lazy", {
 
   recover(f) {
     return LazyConstructor(() => {
-      try {
-        return force(this)
-      } catch (e) {
-        return f(e)
-      }
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : f(settled.error)
     })
   },
 
   recoverWith(f) {
     return LazyConstructor(() => {
-      try {
-        return force(this)
-      } catch (e) {
-        return f(e).orThrow()
-      }
+      const settled = settle(this)
+      return settled._tag === "Evaluated" ? settled.value : f(settled.error).orThrow()
     })
   },
 
@@ -364,12 +357,10 @@ const LazyProto = define<LazyOf<A>, "_tag" | "state">()("Lazy", {
 
   tapError(f) {
     return LazyConstructor(() => {
-      try {
-        return force(this)
-      } catch (e) {
-        f(e)
-        throw e
-      }
+      const settled = settle(this)
+      if (settled._tag === "Evaluated") return settled.value
+      f(settled.error)
+      throw settled.error
     })
   },
 

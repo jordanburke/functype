@@ -215,6 +215,32 @@ describe("Lazy's 2.0 breaks", () => {
     expect(() => mapped.orThrow()).toThrow(TypeError)
   })
 
+  it("a detached orElse, recover, recoverWith or tapError doesn't take the TypeError for a failed thunk", () => {
+    const { orElse, recover, recoverWith, tapError } = Lazy(() => 1)
+    expect(() => orElse(() => Lazy(() => 0)).orThrow()).toThrow(TypeError)
+    expect(() => recover(() => 0).orThrow()).toThrow(TypeError)
+    expect(() => recoverWith(() => Lazy(() => 0)).orThrow()).toThrow(TypeError)
+    const seen: unknown[] = []
+    expect(() => tapError((e) => seen.push(e)).orThrow()).toThrow(TypeError)
+    expect(seen).toEqual([])
+  })
+
+  it("orElse, recover, recoverWith and tapError still handle a failed thunk", () => {
+    const error = new Error("boom")
+    const failed = Lazy.fail<number>(error)
+    expect(failed.orElse(() => Lazy(() => 2)).orThrow()).toBe(2)
+    expect(failed.recover((e) => (e === error ? 3 : 0)).orThrow()).toBe(3)
+    expect(failed.recoverWith(() => Lazy(() => 4)).orThrow()).toBe(4)
+    const seen: unknown[] = []
+    expect(() => failed.tapError((e) => seen.push(e)).orThrow()).toThrow(error)
+    expect(seen).toEqual([error])
+    expect(
+      Lazy(() => 5)
+        .recover(() => 0)
+        .orThrow(),
+    ).toBe(5)
+  })
+
   it("a spread copies only the data, and has no methods", () => {
     const copy = { ...Lazy(() => 1) }
     expect(Reflect.ownKeys(copy)).toEqual(["_tag", "state"])
