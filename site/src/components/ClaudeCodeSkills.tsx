@@ -381,7 +381,7 @@ export default function ClaudeCodeSkills() {
           <p>
             Learn more about skills at{" "}
             <a
-              href="https://github.com/jordanburke/functype/tree/main/.claude/skills"
+              href="https://github.com/jordanburke/functype/tree/release/1.x/.claude/skills"
               className="text-blue-600 hover:text-blue-700 underline"
             >
               github.com/jordanburke/functype

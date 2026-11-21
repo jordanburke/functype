@@ -28,7 +28,7 @@ const rootDir = resolve(siteDir, "..");
 const functypeDir = resolve(rootDir, "packages/functype");
 
 const SITE = "https://functype.org";
-const REPO = "https://github.com/jordanburke/functype/blob/main";
+const REPO = "https://github.com/jordanburke/functype/blob/release/1.x";
 
 const pkg = JSON.parse(
   readFileSync(resolve(functypeDir, "package.json"), "utf-8"),
