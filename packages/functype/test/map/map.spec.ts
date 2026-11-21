@@ -12,15 +12,15 @@ describe("Map", () => {
 
     test("Map.of() creates map from varargs", () => {
       const map = Map.of<string, number>(["a", 1], ["b", 2], ["c", 3])
-      expect(map.get("a").orElse(0)).toBe(1)
-      expect(map.get("b").orElse(0)).toBe(2)
-      expect(map.get("c").orElse(0)).toBe(3)
+      expect(map.get("a").getOrElse(() => 0)).toBe(1)
+      expect(map.get("b").getOrElse(() => 0)).toBe(2)
+      expect(map.get("c").getOrElse(() => 0)).toBe(3)
     })
 
     test("Map.of() with single entry", () => {
       const map = Map.of<string, number>(["key", 42])
       expect(map.size).toBe(1)
-      expect(map.get("key").orElse(0)).toBe(42)
+      expect(map.get("key").getOrElse(() => 0)).toBe(42)
     })
 
     test("Map.of() with no arguments creates empty map", () => {
@@ -48,24 +48,24 @@ describe("Map", () => {
 
   test("map should transform values", () => {
     const newMap = map.add(Tuple(["d", 4]))
-    expect(newMap.get("a").orElse(0)).toBe(1)
-    expect(newMap.get("b").orElse(0)).toBe(2)
-    expect(newMap.get("c").orElse(0)).toBe(3)
-    expect(newMap.get("d").orElse(0)).toBe(4)
-    expect(newMap.get("e").orElse(0)).toBe(0)
+    expect(newMap.get("a").getOrElse(() => 0)).toBe(1)
+    expect(newMap.get("b").getOrElse(() => 0)).toBe(2)
+    expect(newMap.get("c").getOrElse(() => 0)).toBe(3)
+    expect(newMap.get("d").getOrElse(() => 0)).toBe(4)
+    expect(newMap.get("e").getOrElse(() => 0)).toBe(0)
   })
 
   test("map should transform values", () => {
     const newMap = map.map((value) => value * 2)
-    expect(newMap.get("a").orElse(0)).toBe(2)
-    expect(newMap.get("b").orElse(0)).toBe(4)
-    expect(newMap.get("c").orElse(0)).toBe(6)
-    expect(newMap.get("d").orElse(0)).toBe(0)
+    expect(newMap.get("a").getOrElse(() => 0)).toBe(2)
+    expect(newMap.get("b").getOrElse(() => 0)).toBe(4)
+    expect(newMap.get("c").getOrElse(() => 0)).toBe(6)
+    expect(newMap.get("d").getOrElse(() => 0)).toBe(0)
   })
 
   test("flatMap should transform values and flatten", () => {
     const newMap = map.flatMap((value) => List([["a", value.get(1) * 2]]))
-    expect(newMap.get("a").orElse(0)).toBe(6) // Last one overwrites: 3 * 2 = 6
+    expect(newMap.get("a").getOrElse(() => 0)).toBe(6) // Last one overwrites: 3 * 2 = 6
   })
 
   test("reduce should accumulate values", () => {
@@ -93,7 +93,7 @@ describe("Map", () => {
   })
 
   test("getOrElse should return default value if key does not exist", () => {
-    expect(map.orElse("z", Option(10)).orElse(0)).toBe(10)
+    expect(map.orElse("z", () => Option(10)).getOrElse(() => 0)).toBe(10)
   })
 
   test("isEmpty should return true for an empty map", () => {
@@ -106,6 +106,6 @@ describe("Map", () => {
   })
 
   test("orElse should return alternative option if key does not exist", () => {
-    expect(map.orElse("z", Some(10)).toValue()).toEqual(Some(10).toValue())
+    expect(map.orElse("z", () => Some(10)).toValue()).toEqual(Some(10).toValue())
   })
 })

@@ -32,6 +32,6 @@ describe("Do with no yield", () => {
       return x + 1
     })
     expectTypeOf(result).toEqualTypeOf<Option<number>>()
-    expect(result.orElse(0)).toBe(3)
+    expect(result.getOrElse(() => 0)).toBe(3)
   })
 })

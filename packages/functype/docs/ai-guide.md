@@ -11,9 +11,9 @@ This document provides a concise reference for AI models to understand the patte
 const some = Option(42) // Some(42)
 const none = Option(null) // None
 
-// Access: .get() or .orElse(default)
+// Access: .get() or .getOrElse(() => default)
 some.get() // 42
-none.orElse("default") // "default"
+none.getOrElse(() => "default") // "default"
 
 // Transform: .map(), .flatMap(), .filter()
 some.map((x) => x * 2) // Some(84)
@@ -98,9 +98,9 @@ list.foldLeft(0)((acc, x) => acc + x) // 15
 // Create: Map({key: value})
 const map = Map({ a: 1, b: 2, c: 3 })
 
-// Access: .get(key), .orElse(key, default)
+// Access: .get(key), .getOrElse(key, () => default)
 map.get("a") // Some(1)
-map.orElse("d", 0) // 0
+map.getOrElse("d", () => 0) // 0
 
 // Transform: .map(), .filter()
 map.map((v) => v * 2) // Map({a: 2, b: 4, c: 6})
@@ -215,7 +215,7 @@ parseResult.fold(
 const userCity = Option(user)
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .orElse("Unknown")
+  .getOrElse(() => "Unknown")
 
 // Either chain
 parseInput(input)
@@ -277,7 +277,7 @@ const result = pipe(
   (opt) => opt.filter((s) => s.length > 0),
   (opt) => opt.map((s) => parseInt(s, 10)),
   (opt) => opt.filter((n) => !isNaN(n)),
-  (opt) => opt.orElse(0),
+  (opt) => opt.getOrElse(() => 0),
 )
 
 // Converting between types
@@ -360,13 +360,13 @@ import { right, left } from "functype/either"
    // Bad
    const a = option.map((x) => x + 1)
    const b = a.filter((x) => x > 10)
-   const c = b.orElse(0)
+   const c = b.getOrElse(() => 0)
 
    // Good
    const result = option
      .map((x) => x + 1)
      .filter((x) => x > 10)
-     .orElse(0)
+     .getOrElse(() => 0)
    ```
 
 4. ❌ **Mixing Imperative and Functional Styles**:
@@ -384,5 +384,5 @@ import { right, left } from "functype/either"
    )
 
    // Good
-   const result = option.orElse(42)
+   const result = option.getOrElse(() => 42)
    ```

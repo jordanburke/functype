@@ -110,7 +110,8 @@ export default function QuickStart() {
                       {"\n  "}
                       <span className="text-gray-100">.</span>
                       <span className="text-blue-300">getOrElse</span>
-                      <span className="text-gray-100">(</span>
+                      <span className="text-gray-100">(() </span>
+                      <span className="text-purple-400">=&gt;</span>{" "}
                       <span className="text-green-400">
                         "no-email@example.com"
                       </span>

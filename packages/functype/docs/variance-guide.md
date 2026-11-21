@@ -87,8 +87,8 @@ reduce: <B = A>(op: (b: Widen<A, B>, a: Widen<A, B>) => Widen<A, B>): Widen<A, B
 Methods that "replace" the container's value with a fallback widen the result's type.
 
 ```ts
-orElse<T2 extends Type>(defaultValue: T2): T | T2
-or<T2 extends Type>(alternative: Extractable<T2>): Extractable<T | T2>
+getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+orElse<T2 extends Type>(alternative: () => Extractable<T2>): Extractable<T | T2>
 recover<U extends Type>(f: (error: Error) => U): Try<T | U>
 recoverWith<U extends Type>(f: (error: Error) => Try<U>): Try<T | U>
 ```

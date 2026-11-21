@@ -98,7 +98,7 @@ export const getOverviewData = (): {
 export const getType = (name: string): { name: string; data: TypeData } | undefined =>
   Option(TYPES[name])
     .map((data) => ({ name, data }))
-    .or(
+    .orElse(() =>
       List(Object.entries(TYPES))
         .find(([typeName]) => typeName.toLowerCase() === name.toLowerCase())
         .map(([typeName, typeData]) => ({ name: typeName, data: typeData })),

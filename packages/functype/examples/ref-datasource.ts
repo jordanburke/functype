@@ -260,7 +260,10 @@ export async function exampleRefUsage() {
   pool.addConnection({ id: "conn2", inUse: false })
 
   const conn1 = pool.acquire()
-  console.log("Acquired:", conn1.map((c) => c.id).orElse("none"))
+  console.log(
+    "Acquired:",
+    conn1.map((c) => c.id).getOrElse(() => "none"),
+  )
   console.log("Pool stats:", pool.getStats())
 
   if (!conn1.isEmpty) {
@@ -270,14 +273,20 @@ export async function exampleRefUsage() {
 
   // 3. Cache
   const cache = SimpleCache<string, number>()
-  console.log("Cache miss:", cache.get("key1").orElse(-1))
+  console.log(
+    "Cache miss:",
+    cache.get("key1").getOrElse(() => -1),
+  )
 
   const value = cache.getOrCompute("key1", () => {
     console.log("Computing value...")
     return 42
   })
   console.log("Computed:", value)
-  console.log("Cache hit:", cache.get("key1").orElse(-1))
+  console.log(
+    "Cache hit:",
+    cache.get("key1").getOrElse(() => -1),
+  )
   console.log("Cache stats:", cache.getStats())
 
   // 4. Rate limiter

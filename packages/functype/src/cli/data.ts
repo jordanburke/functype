@@ -40,11 +40,11 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Option"),
     methods: {
       create: ["Option(v)", "Option.none()", "Some(v)", "None()"],
-      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)"],
+      transform: [".map(f)", ".flatMap(f)", ".filter(p)", ".ap(ff)", ".orElse(() => alt)"],
       extract: [
         ".fold(n, s)",
         ".foldAsync(n, s)",
-        ".orElse(d)",
+        ".getOrElse(() => d)",
         ".orThrow(err | () => Error)",
         ".expect(() => never)",
         ".orNull()",
@@ -66,11 +66,11 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Either", "Traversable"),
     methods: {
       create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
-      transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()"],
+      transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()", ".orElse(() => alt)"],
       extract: [
         ".fold(l, r)",
         ".foldAsync(l, r)",
-        ".orElse(d)",
+        ".getOrElse(() => d)",
         ".orThrow(err | (left) => Error)",
         ".expect((l) => never)",
         ".match({Left, Right})",
@@ -96,11 +96,11 @@ export const TYPES: Record<string, TypeData> = {
         "Try.fromPromise(p)",
         "Try.async(() => Promise<T>)",
       ],
-      transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)"],
+      transform: [".map(f)", ".flatMap(f)", ".recover(f)", ".recoverWith(f)", ".orElse(() => alt)"],
       extract: [
         ".fold(f, s)",
         ".foldAsync(f, s)",
-        ".orElse(d)",
+        ".getOrElse(() => d)",
         ".orThrow(err | (error) => Error)",
         ".expect((e) => never)",
         ".toOption()",
@@ -230,8 +230,8 @@ export const TYPES: Record<string, TypeData> = {
         ".get(k) // Option<V>",
         ".keys() // List<K>",
         ".values() // List<V>",
-        ".getOrElse(k, d)",
-        ".orElse(k, Option<V>)",
+        ".getOrElse(k, () => d)",
+        ".orElse(k, () => Option<V>)",
         ".fold(z, f)",
         ".foldLeft(z)(f)",
         ".foldRight(z)(f)",
@@ -260,7 +260,7 @@ export const TYPES: Record<string, TypeData> = {
       extract: [
         ".fold(f)",
         ".foldWith(onFailure, onSuccess)",
-        ".orElse(d)",
+        ".getOrElse(() => d)",
         ".orNull()",
         ".orThrow()",
         ".toJSON()",
@@ -329,7 +329,7 @@ export const TYPES: Record<string, TypeData> = {
         ".fold(onFailure, onSuccess, onInterrupted?, onDie?)",
         ".match({Success, Failure, Interrupted, Die?})",
         ".orThrow()",
-        ".orElse(v)",
+        ".getOrElse(() => v)",
         ".toOption()",
         ".toEither()",
         ".toValue()",
@@ -524,7 +524,7 @@ export const TYPES: Record<string, TypeData> = {
     methods: {
       create: ["TracedOption(option, tracer, spanId, seq?)"],
       transform: [".map(f, label?)", ".flatMap(f, label?)", ".filter(p, label?)"],
-      extract: [".fold(onNone, onSome, label?)", ".orElse(default, label?)", ".unwrap()  // back to Option"],
+      extract: [".fold(onNone, onSome, label?)", ".getOrElse(() => default, label?)", ".unwrap()  // back to Option"],
     },
   },
 
@@ -797,7 +797,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
   Extractable: {
     description: "Get contained value with fallback",
     methods: [
-      ".orElse(d: T): T",
+      ".getOrElse(d: () => T): T",
       ".orThrow(e?: Error): T",
       ".expect(handler: (e?) => never): T",
       ".orNull(): T | null",

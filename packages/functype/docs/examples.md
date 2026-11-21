@@ -46,8 +46,8 @@ console.log(withValue.get()) // 42
 // console.log(withoutValue.get())     // Would throw error - use getOrElse instead
 
 // Default values
-console.log(withValue.orElse(0)) // 42
-console.log(withoutValue.orElse(0)) // 0
+console.log(withValue.getOrElse(() => 0)) // 42
+console.log(withoutValue.getOrElse(() => 0)) // 0
 
 // Optional chaining alternative
 const user = Option({ name: "John", address: { city: "New York" } })
@@ -57,11 +57,11 @@ const noUser = Option(null)
 const city1 = user
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .orElse("Unknown")
+  .getOrElse(() => "Unknown")
 const city2 = noUser
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .orElse("Unknown")
+  .getOrElse(() => "Unknown")
 
 console.log(city1) // "New York"
 console.log(city2) // "Unknown"
@@ -168,8 +168,8 @@ console.log(success.get()) // 42
 // console.log(failure.get())  // Would throw error - use getOrElse instead
 
 // Default values
-console.log(success.orElse(0)) // 42
-console.log(failure.orElse(0)) // 0
+console.log(success.getOrElse(() => 0)) // 42
+console.log(failure.getOrElse(() => 0)) // 0
 
 // Get the left value
 console.log(failure.getLeft()) // "error"
@@ -327,8 +327,8 @@ console.log(success.get()) // 42
 // console.log(failure.get())  // Would throw the original error
 
 // Default values
-console.log(success.orElse(0)) // 42
-console.log(failure.orElse(0)) // 0
+console.log(success.getOrElse(() => 0)) // 42
+console.log(failure.getOrElse(() => 0)) // 0
 
 // Access the error
 console.log(failure.error.message) // "Something went wrong"
@@ -566,7 +566,7 @@ const scores = Map({
 // Access elements
 console.log(scores.get("alice")) // Some(95)
 console.log(scores.get("dave")) // None
-console.log(scores.orElse("dave", 0)) // 0
+console.log(scores.getOrElse("dave", () => 0)) // 0
 
 // Check properties
 console.log(scores.isEmpty()) // false
@@ -1149,7 +1149,7 @@ const processedName = userInput
   .map((s) => s.trim())
   .filter((s) => s.length > 0)
   .map((s) => s.toUpperCase())
-  .orElse("ANONYMOUS")
+  .getOrElse(() => "ANONYMOUS")
 console.log(processedName) // "JOHN DOE"
 
 // Either chaining
@@ -1169,8 +1169,8 @@ const processAge = (input: string): Either<string, string> => {
     .map((age) => `Valid age: ${age}`)
 }
 
-console.log(processAge("35").orElse("Invalid age")) // "Valid age: 35"
-console.log(processAge("abc").orElse("Invalid age")) // "Invalid age"
+console.log(processAge("35").getOrElse(() => "Invalid age")) // "Valid age: 35"
+console.log(processAge("abc").getOrElse(() => "Invalid age")) // "Invalid age"
 
 // List chaining
 const numbers = List([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
@@ -1193,7 +1193,7 @@ const result1 = pipe(
   Option(5),
   (opt) => opt.map((n) => n * 2),
   (opt) => opt.filter((n) => n > 5),
-  (opt) => opt.orElse(0),
+  (opt) => opt.getOrElse(() => 0),
 )
 console.log(result1) // 10
 
@@ -1202,7 +1202,7 @@ const result2 = pipe(
   Either.right<string, number>(42),
   (either) => either.map((n) => n.toString()),
   (either) => either.mapLeft((e) => new Error(e)),
-  (either) => either.orElse("error"),
+  (either) => either.getOrElse(() => "error"),
 )
 console.log(result2) // "42"
 
@@ -1210,9 +1210,13 @@ console.log(result2) // "42"
 const result3 = pipe(
   List([1, 2, 3, 4]),
   (list) => list.map((n) => n * 2),
-  (list) => Option(list.head().orElse(0)),
+  (list) => Option(list.head().getOrElse(() => 0)),
   (opt) => opt.filter((n) => n > 5),
-  (opt) => Either.fromNullable(opt.orElse(null), "No valid value"),
+  (opt) =>
+    Either.fromNullable(
+      opt.getOrElse(() => null),
+      "No valid value",
+    ),
   (either) =>
     either.fold(
       (err) => `Error: ${err}`,
@@ -1240,13 +1244,13 @@ const userId = "user123"
 const user = findUserById(userId)
 
 // No need for null checks
-const greet = user.map((u) => `Hello, ${u.name}!`).orElse("User not found")
+const greet = user.map((u) => `Hello, ${u.name}!`).getOrElse(() => "User not found")
 
 // Method chaining without worrying about null
 const userCity = user
   .flatMap((u) => Option(u.address))
   .flatMap((a) => Option(a.city))
-  .orElse("Unknown location")
+  .getOrElse(() => "Unknown location")
 ```
 
 ### Either for Error Handling
@@ -1897,7 +1901,7 @@ userState.fold(
     console.log("User:", user.name, user.email)
     console.log("Cart items:", user.cart.size())
     console.log("Checkout history:", user.checkoutHistory.size(), "orders")
-    console.log("Latest order total:", user.checkoutHistory.head().orElse({ total: 0 }).total)
+    console.log("Latest order total:", user.checkoutHistory.head().getOrElse(() => ({ total: 0 })).total)
   },
 )
 ```

@@ -267,7 +267,7 @@ describe("Do-notation Performance", () => {
                 )
               }),
         )
-        result.orElse(0)
+        result.getOrElse(() => 0)
       }).run()
     })
 
@@ -279,7 +279,7 @@ describe("Do-notation Performance", () => {
           const bonus = yield* $(await fetchBonus(score))
           return score + bonus
         })) as Option<number>
-        result.toOption().orElse(0)
+        result.toOption().getOrElse(() => 0)
       }).run()
     })
   })
@@ -324,7 +324,7 @@ describe("Do-notation Performance", () => {
           .flatMap((x) => riskyOperation(x))
           .flatMap((x) => riskyOperation(x))
           .flatMap((x) => riskyOperation(x))
-        result.orElse(0)
+        result.getOrElse(() => 0)
       }).run()
     })
 
@@ -339,7 +339,7 @@ describe("Do-notation Performance", () => {
             return d
           }) as Try<number>
         ).toOption()
-        result.orElse(0)
+        result.getOrElse(() => 0)
       }).run()
     })
   })

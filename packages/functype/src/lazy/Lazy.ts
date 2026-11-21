@@ -30,10 +30,11 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
   /** Whether the computation has been evaluated */
   readonly isEvaluated: boolean
   /**
-   * Returns the computed value or a default value if computation fails.
-   * Result widens to `T | T2` (Scala: `getOrElse[B >: A](default: B): B`).
+   * Returns the computed value, or calls `defaultValue` if the computation fails.
+   * The default is lazy: it runs only on failure. Result widens to `T | T2`
+   * (Scala: `getOrElse[B >: A](default: => B): B`).
    */
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
@@ -47,10 +48,10 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
    */
   orThrow(error?: Error): T
   /**
-   * Returns this Lazy if computation succeeds, otherwise returns the alternative Lazy.
-   * The alternative may carry a different type; result is `Lazy<T | T2>`.
+   * Returns this Lazy if computation succeeds, otherwise calls `alternative` for another Lazy.
+   * The alternative is lazy: it runs only on failure. It may carry a different type; result is `Lazy<T | T2>`.
    */
-  or<T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2>
+  orElse<T2 extends Type>(alternative: () => Lazy<T2>): Lazy<T | T2>
   /**
    * Maps the value inside the Lazy using the provided function
    * @param f - The mapping function
@@ -225,11 +226,11 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
     get isEvaluated() {
       return evaluated
     },
-    orElse: <T2 extends Type>(defaultValue: T2): T | T2 => {
+    getOrElse: <T2 extends Type>(defaultValue: () => T2): T | T2 => {
       try {
         return evaluate()
       } catch {
-        return defaultValue
+        return defaultValue()
       }
     },
     orNull: (): T | null => {
@@ -246,12 +247,12 @@ const LazyConstructor = <T extends Type>(thunk: () => T): Lazy<T> => {
         throw err ?? e
       }
     },
-    or: <T2 extends Type>(alternative: Lazy<T2>): Lazy<T | T2> =>
+    orElse: <T2 extends Type>(alternative: () => Lazy<T2>): Lazy<T | T2> =>
       Lazy<T | T2>(() => {
         try {
           return evaluate()
         } catch {
-          return alternative.orThrow()
+          return alternative().orThrow()
         }
       }),
     orUndefined: (): T | undefined => {
@@ -579,7 +580,7 @@ const LazyCompanion = {
  *   if (Math.random() > 0.5) throw new Error("Failed")
  *   return "Success"
  * })
- * const safe = risky.orElse("Default") // Returns "Success" or "Default"
+ * const safe = risky.getOrElse(() => "Default") // Returns "Success" or "Default"
  * const option = risky.toOption() // Some("Success") or None
  * const either = risky.toEither() // Right("Success") or Left(Error)
  *

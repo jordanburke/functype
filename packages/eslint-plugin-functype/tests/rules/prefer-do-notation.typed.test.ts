@@ -33,7 +33,7 @@ describe("prefer-do-notation (type-aware)", () => {
       ),
       valid(
         "An Option unwrapped with getOrElse is an array from there on",
-        "export const w = items.getOrElse([]).flatMap((a) => a.split(' ')).flatMap((b) => b.split('-')).flatMap((c) => c.split('_'))",
+        "export const w = items.getOrElse(() => []).flatMap((a) => a.split(' ')).flatMap((b) => b.split('-')).flatMap((c) => c.split('_'))",
       ),
     ],
     invalid: [

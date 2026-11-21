@@ -194,7 +194,7 @@ const name = NonEmptyString.of("John") // Some(Brand<"NonEmptyString", string>)
 // Email validation
 const email = EmailAddress.from("user@example.com")
   .map((email) => sendWelcomeEmail(email))
-  .orElse("Invalid email address")
+  .getOrElse(() => "Invalid email address")
 
 // Bounded numbers
 const Percentage = BoundedNumber("Percentage", 0, 100)

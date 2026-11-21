@@ -42,12 +42,12 @@ describe("Try's shape", () => {
     expect(
       Try(() => 1)
         .map((x) => x + 1)
-        .orElse(0),
+        .getOrElse(() => 0),
     ).toBe(2)
     expect(
       Try(boom)
         .recover(() => 7)
-        .orElse(0),
+        .getOrElse(() => 0),
     ).toBe(7)
     expect(
       Try(() => 1)
@@ -59,7 +59,7 @@ describe("Try's shape", () => {
 
 describe("Try's 2.0 breaks", () => {
   it("a detached method call throws", () => {
-    const { orElse } = Try(() => 1)
-    expect(() => orElse(0)).toThrow(TypeError)
+    const { getOrElse } = Try(() => 1)
+    expect(() => getOrElse(() => 0)).toThrow(TypeError)
   })
 })

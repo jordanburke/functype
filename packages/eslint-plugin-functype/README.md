@@ -381,7 +381,7 @@ Measured (2026-10-25) with both rules on functype-react's source and tests (type
 
 `.orThrow(error)` and `.orThrow((e) => error)` are not reported: the caller chose the error, which is the documented way to throw for a host that needs it (see the decision table above). A bare `.orThrow()` throws a generic error and is reported.
 
-The rule reports each match with two suggestions — `.orElse(default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` would silently lose its argument. Apply a suggestion explicitly in your editor when you know which one fits.
+The rule reports each match with two suggestions — `.getOrElse(() => default)` for value fallback and `.fold(onNone, onSome)` for branch handling. There is no autofix: the correct replacement depends on human judgment about a default value, and `.expect(msg)` would silently lose its argument. Apply a suggestion explicitly in your editor when you know which one fits.
 
 ### `functype/prefer-fold`
 
@@ -391,14 +391,14 @@ The rule reports each match with two suggestions — `.orElse(default)` for valu
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
 | `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. Off while it rolls out: `prefer-fold` is `error` in `recommended`.   |
 
-Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.or(b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
+Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.orElse(() => b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
 
-**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `orElse(default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
+**`checkGuards`: guard, then unwrap.** Checking a container with an early exit and then pulling the value out is imperative branching. Getting a value out is fine: `getOrElse(() => default)` and `fold` are both proper exits and are never reported. What's reported is the shape below. The message picks its advice from what the guard does:
 
 ```ts
 if (e.isLeft()) return e // hands the failure back      → e.flatMap(…) / e.map(…)
 if (e.isLeft()) return Left({ kind: e.value.kind }) // a new failure → e.mapLeft(…).flatMap(…)
-if (o.isNone()) return 0 // a fallback                 → o.map(…).orElse(0), or o.fold(() => 0, …)
+if (o.isNone()) return 0 // a fallback                 → o.map(…).getOrElse(() => 0), or o.fold(() => 0, …)
 if (r.isLeft()) return c.json({ error: r.value }, 500) // fallback reads the failure → r.fold(…), only
 if (a.isLeft()) return a
 if (b.isLeft()) return b // several in a row → Do(function* () { … })
@@ -462,7 +462,7 @@ Option(x)
 user && user.profile && user.profile.name // a guard on each step of a path → user?.profile?.name
 ```
 
-- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse([])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
+- **Only chains on a monad count.** With type information the type of the value each step is called on decides, so an array's `.flatMap(…)` chain is never reported, and neither is one after `.getOrElse(() => [])` or `.fold(…)` has unwrapped the monad. Without it, the chain must start from a monad constructor, companion or conversion (`Option(x)`, `Either.right(x)`, `Try(f).toOption()`), an identifier annotated with a monad type, or one named like a monad (`option`, `result`, or a capitalized suffix such as `userOption`; `entry` and `registry` don't count).
 - **Mixing is read along the chain**, from the monad each step's callback returns. A conversion such as `.toOption()` keeps the chain in one monad, and a monad built somewhere inside a callback isn't a step.
 - **A guard chain is read from the AST.** Each operand must be a property of the one before it, so `isAdmin && settings.theme && user.profile.name` isn't one.
 - **It has no autofix.** It reports only, so `eslint --fix` can't change code on its behalf.

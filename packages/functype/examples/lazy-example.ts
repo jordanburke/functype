@@ -22,7 +22,10 @@ const risky = Lazy(() => {
   return "Success"
 })
 
-console.log("  Safe access with orElse:", risky.orElse("Default"))
+console.log(
+  "  Safe access with getOrElse:",
+  risky.getOrElse(() => "Default"),
+)
 console.log("  Convert to Option:", risky.toOption())
 console.log("  Convert to Either:", risky.toEither())
 
@@ -61,7 +64,7 @@ console.log("  User name:", userName.orThrow())
 console.log("\n5. Lazy filtering:")
 const filtered = Lazy(() => 42)
   .filter((x) => x > 40)
-  .map((opt) => opt.orElse(0))
+  .map((opt) => opt.getOrElse(() => 0))
 
 console.log("  Filtered value:", filtered.orThrow())
 

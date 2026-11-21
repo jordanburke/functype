@@ -23,13 +23,13 @@ describe("TracedOption + IO DI wiring", () => {
       TracedOption(Some(3), tracer, "io-span")
         .map((n) => n * 2, "double")
         .filter((n) => n < 5, "lt5")
-        .orElse(0, "default"),
+        .getOrElse(() => 0, "default"),
     )
 
     const result = await program.provideLayer(Layer.succeed(TracerTag, collecting(captured))).runOrThrow()
 
     expect(result).toBe(0)
-    expect(captured.map((e) => e.op)).toEqual(["map", "filter", "orElse"])
+    expect(captured.map((e) => e.op)).toEqual(["map", "filter", "getOrElse"])
     expect(captured.every((e) => e.spanId === "io-span")).toBe(true)
     expect(captured.map((e) => e.seq)).toEqual([0, 1, 2])
   })
@@ -38,7 +38,9 @@ describe("TracedOption + IO DI wiring", () => {
     // Same program, run twice against two sinks: the values must agree, and the
     // noop sink must leave the collecting sink's view of the world untouched.
     const captured: TraceEvent[] = []
-    const program = IO.service(TracerTag).map((tracer) => TracedOption(None<number>(), tracer, "io-span").orElse(42))
+    const program = IO.service(TracerTag).map((tracer) =>
+      TracedOption(None<number>(), tracer, "io-span").getOrElse(() => 42),
+    )
 
     const traced = await program.provideLayer(Layer.succeed(TracerTag, collecting(captured))).runOrThrow()
     const untraced = await program.provideLayer(Layer.succeed(TracerTag, noop)).runOrThrow()
@@ -46,6 +48,6 @@ describe("TracedOption + IO DI wiring", () => {
     expect(traced).toBe(untraced)
     expect(untraced).toBe(42)
     // exactly one event, from the collecting run — the noop run added none
-    expect(captured.map((e) => e.op)).toEqual(["orElse"])
+    expect(captured.map((e) => e.op)).toEqual(["getOrElse"])
   })
 })

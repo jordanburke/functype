@@ -54,8 +54,10 @@ export interface Map<K, out V>
    * @returns A List of the map's values
    */
   values(): List<V>
-  getOrElse(key: K, defaultValue: V): V
-  orElse(key: K, alternative: Option<V>): Option<V>
+  /** Returns the value for `key`, or calls `defaultValue` if the key is absent. The default is lazy. */
+  getOrElse(key: K, defaultValue: () => V): V
+  /** Returns `Some(value)` for `key`, or calls `alternative` for an Option if the key is absent. */
+  orElse(key: K, alternative: () => Option<V>): Option<V>
   fold<B>(initial: B, fn: (acc: B, a: Tuple<[K, V]>) => B): B
   foldLeft<B>(z: B): (op: (b: B, a: Tuple<[K, V]>) => B) => B
   foldRight<B>(z: B): (op: (a: Tuple<[K, V]>, b: B) => B) => B
@@ -192,11 +194,11 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
   },
 
   getOrElse(key, defaultValue) {
-    return Option(this.value.get(key)).orElse(defaultValue)
+    return Option(this.value.get(key)).getOrElse(defaultValue)
   },
 
   orElse(key, alternative) {
-    return Option(this.value.get(key)).or(alternative)
+    return Option(this.value.get(key)).orElse(alternative)
   },
 
   toList() {

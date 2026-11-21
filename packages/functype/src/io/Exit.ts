@@ -99,9 +99,10 @@ export interface ExitBase<E extends Type, A extends Type> {
   orThrow(): A
 
   /**
-   * Returns the success value or a default
+   * Returns the success value, or calls `defaultValue` for any other outcome.
+   * The default is lazy: it runs only when the Exit is not a Success.
    */
-  orElse(defaultValue: A): A
+  getOrElse(defaultValue: () => A): A
 
   /**
    * Converts to Option (Some for Success, None otherwise)
@@ -229,7 +230,7 @@ const SuccessProto = define<SuccessExitOf<AnyE, AnyA>>()("Success", {
   orThrow() {
     return this.value
   },
-  orElse() {
+  getOrElse() {
     return this.value
   },
   toOption() {
@@ -285,8 +286,8 @@ const FailureProto = define<FailureExitOf<AnyE, AnyA>, "_tag" | "error">()("Fail
   orThrow() {
     throw this.error
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   toOption() {
     return None()
@@ -352,8 +353,8 @@ const DieProto = define<DieExitOf<AnyE, AnyA>, "_tag" | "defect">()("Die", {
   orThrow() {
     throw this.defect
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   toOption() {
     return None()
@@ -409,8 +410,8 @@ const InterruptedProto = define<InterruptedExitOf<AnyE, AnyA>, "_tag" | "fiberId
   orThrow() {
     throw interruptedError(this.fiberId)
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   toOption() {
     return None()

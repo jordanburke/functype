@@ -5,7 +5,7 @@ import { ruleTester } from "../utils/rule-tester"
 
 /**
  * `checkGuards`: an early-exit guard followed by unwrapping (`if (e.isLeft()) return …; use(e.value)`)
- * is imperative branching. `orElse(default)` and `fold` are both proper ways to leave the container and
+ * is imperative branching. `getOrElse(() => default)` and `fold` are both proper ways to leave the container and
  * are never flagged. In a private app monorepo, 7 of 15 type-aware no-get-unsafe hits were `.orThrow()` right after a guard.
  */
 const options = [{ checkGuards: true }]
@@ -24,8 +24,8 @@ describe("prefer-fold checkGuards", () => {
         code: "function f(e) { if (e.isLeft()) return e; return e.value + 1 }",
       },
       {
-        name: "orElse after the guard is a proper exit, not flagged",
-        code: "function f(o) { if (o.isNone()) return 0; return o.orElse(0) }",
+        name: "getOrElse after the guard is a proper exit, not flagged",
+        code: "function f(o) { if (o.isNone()) return 0; return o.getOrElse(() => 0) }",
         options,
       },
       {
@@ -140,7 +140,7 @@ describe("prefer-fold checkGuards", () => {
       guard(
         "function f(o) { if (o.isNone()) return 0; return o.value * 2 }",
         "o",
-        "Use o.map(…).orElse(fallback), or o.fold(() => fallback, (value) => …).",
+        "Use o.map(…).getOrElse(() => fallback), or o.fold(() => fallback, (value) => …).",
       ),
       guard(
         'function f(e) { if (e.isLeft()) throw new Error("bad"); return e.value }',

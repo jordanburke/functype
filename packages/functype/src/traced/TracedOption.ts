@@ -20,7 +20,7 @@ function typeTagOf(v: Option<unknown>): string {
  * injected `Tracer` on every combinator call.
  *
  * Structure-preserving ops return `TracedOption<B>`, carrying the same spanId
- * and incrementing seq. Terminal ops (`fold`, `orElse`) emit and return the
+ * and incrementing seq. Terminal ops (`fold`, `getOrElse`) emit and return the
  * raw value, exiting the wrapper. `unwrap()` emits a terminal event too, so a
  * span never ends without one.
  *
@@ -33,7 +33,7 @@ function typeTagOf(v: Option<unknown>): string {
  * TracedOption(user, tracer, "span-1")
  *   .map(u => u.name.trim(), "trim")
  *   .filter(n => n.length > 0, "non-empty")
- *   .orElse("anonymous", "fallback")
+ *   .getOrElse(() => "anonymous", "fallback")
  * ```
  */
 export type TracedOption<A> = {
@@ -41,7 +41,7 @@ export type TracedOption<A> = {
   flatMap<B>(f: (a: A) => Option<B>, label?: string): TracedOption<B>
   filter(predicate: (a: A) => boolean, label?: string): TracedOption<A>
   fold<B>(onNone: () => B, onSome: (a: A) => B, label?: string): B
-  orElse<B>(defaultValue: B, label?: string): A | B
+  getOrElse<B>(defaultValue: () => B, label?: string): A | B
   unwrap(): Option<A>
 }
 
@@ -103,10 +103,10 @@ export function TracedOption<A>(inner: Option<A>, tracer: Tracer, spanId: string
       return inner.fold(onNone, onSome)
     },
 
-    orElse<B>(defaultValue: B, label?: string): A | B {
+    getOrElse<B>(defaultValue: () => B, label?: string): A | B {
       const usedDefault = variantOf(inner) === "None"
-      emit("orElse", undefined, label, { usedDefault })
-      return inner.orElse(defaultValue)
+      emit("getOrElse", undefined, label, { usedDefault })
+      return inner.getOrElse(defaultValue)
     },
 
     unwrap(): Option<A> {

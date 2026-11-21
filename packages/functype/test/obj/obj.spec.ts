@@ -26,7 +26,7 @@ describe("Obj", () => {
 
   describe("get", () => {
     it("should return Some for existing key", () => {
-      expect(user.get("name").orElse("")).toBe("John")
+      expect(user.get("name").getOrElse(() => "")).toBe("John")
     })
 
     it("should return None for missing value", () => {
@@ -38,9 +38,9 @@ describe("Obj", () => {
   describe("set", () => {
     it("should return new Obj with updated key", () => {
       const updated = user.set("age", 31)
-      expect(updated.get("age").orElse(0)).toBe(31)
+      expect(updated.get("age").getOrElse(() => 0)).toBe(31)
       // Original unchanged
-      expect(user.get("age").orElse(0)).toBe(30)
+      expect(user.get("age").getOrElse(() => 0)).toBe(30)
     })
   })
 
@@ -52,7 +52,7 @@ describe("Obj", () => {
 
     it("should not modify original", () => {
       user.assign({ name: "Jane" })
-      expect(user.get("name").orElse("")).toBe("John")
+      expect(user.get("name").getOrElse(() => "")).toBe("John")
     })
   })
 
@@ -66,17 +66,17 @@ describe("Obj", () => {
   describe("when", () => {
     it("should merge when condition is true", () => {
       const obj = Obj({ a: 1 }).when(true, { a: 2 })
-      expect(obj.get("a").orElse(0)).toBe(2)
+      expect(obj.get("a").getOrElse(() => 0)).toBe(2)
     })
 
     it("should not merge when condition is false", () => {
       const obj = Obj({ a: 1 }).when(false, { a: 2 })
-      expect(obj.get("a").orElse(0)).toBe(1)
+      expect(obj.get("a").getOrElse(() => 0)).toBe(1)
     })
 
     it("should accept predicate function", () => {
       const obj = Obj({ a: 1 }).when(() => true, { a: 2 })
-      expect(obj.get("a").orElse(0)).toBe(2)
+      expect(obj.get("a").getOrElse(() => 0)).toBe(2)
     })
 
     it("should work in fluent chains for HTTP headers", () => {
@@ -218,8 +218,8 @@ describe("Obj", () => {
   })
 
   describe("Extractable", () => {
-    it("should orElse return data (always has value)", () => {
-      expect(user.orElse({ name: "X", age: 0, role: "X" })).toEqual(user.value())
+    it("should getOrElse return data (always has value)", () => {
+      expect(user.getOrElse(() => ({ name: "X", age: 0, role: "X" }))).toEqual(user.value())
     })
 
     it("should orThrow return data", () => {
@@ -234,7 +234,7 @@ describe("Obj", () => {
   describe("Reshapeable", () => {
     it("should convert to Option", () => {
       const opt = Obj({ x: 1 }).toOption()
-      expect(opt.orElse({ x: 0 })).toEqual({ x: 1 })
+      expect(opt.getOrElse(() => ({ x: 0 }))).toEqual({ x: 1 })
     })
 
     it("should convert to Either", () => {

@@ -72,9 +72,9 @@ describe("Cross data structure pipe tests", () => {
       return Map(users.map((user) => [user.id, user.name] as [number, string]))
     })
 
-    expect(userMapFromSet.get(1).orElse("")).toBe("Alice")
-    expect(userMapFromSet.get(2).orElse("")).toBe("Bob")
-    expect(userMapFromSet.get(3).orElse("")).toBe("Charlie")
+    expect(userMapFromSet.get(1).getOrElse(() => "")).toBe("Alice")
+    expect(userMapFromSet.get(2).getOrElse(() => "")).toBe("Bob")
+    expect(userMapFromSet.get(3).getOrElse(() => "")).toBe("Charlie")
 
     // Map -> Set
     const scoreMap = Map([

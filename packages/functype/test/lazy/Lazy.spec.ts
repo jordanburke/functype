@@ -79,14 +79,14 @@ describe("Lazy", () => {
   describe("safe access methods", () => {
     it("should return value with getOrElse when successful", () => {
       const lazy = Lazy(() => 42)
-      expect(lazy.orElse(0)).toBe(42)
+      expect(lazy.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return default with getOrElse when computation fails", () => {
       const lazy = Lazy<number>(() => {
         throw new Error("boom")
       })
-      expect(lazy.orElse(0)).toBe(0)
+      expect(lazy.getOrElse(() => 0)).toBe(0)
     })
 
     it("should return value with orNull when successful", () => {

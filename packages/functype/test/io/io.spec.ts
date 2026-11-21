@@ -345,7 +345,7 @@ describe("IO", () => {
       const io = IO.sync(() => 42)
       const result = io.runSync()
       expect(result.isRight()).toBe(true)
-      expect(result.orElse(0)).toBe(42)
+      expect(result.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return Left on failure", () => {
@@ -366,7 +366,7 @@ describe("IO", () => {
       const io = IO.succeed(42)
       const result = await io.run()
       expect(result.isRight()).toBe(true)
-      expect(result.orElse(0)).toBe(42)
+      expect(result.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return Left on failure", async () => {
@@ -510,7 +510,7 @@ describe("IO", () => {
       const io = IO.fromResult(result)
       const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
-      expect(option.orElse(0)).toBe(42)
+      expect(option.getOrElse(() => 0)).toBe(42)
     })
 
     it("should create IO with None for null data with no error", async () => {
@@ -591,7 +591,7 @@ describe("IO", () => {
       )
       const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
-      expect(option.orElse(0)).toBe(42)
+      expect(option.getOrElse(() => 0)).toBe(42)
     })
 
     it("should handle result with null data (no error)", async () => {
@@ -627,7 +627,7 @@ describe("IO", () => {
       )
       const option = await io.runOrThrow()
       expect(option.isSome()).toBe(true)
-      expect(option.orElse(0)).toBe(42)
+      expect(option.getOrElse(() => 0)).toBe(42)
     })
 
     it("should handle custom field names with error", async () => {
@@ -659,7 +659,7 @@ describe("IO", () => {
         (e) => new Error(String(e)),
       )
         .map((opt) => opt.map((n) => n * 2))
-        .map((opt) => opt.orElse(0))
+        .map((opt) => opt.getOrElse(() => 0))
 
       const result = await io.runOrThrow()
       expect(result).toBe(42)
@@ -1149,7 +1149,7 @@ describe("Exit", () => {
     it("should return Some for success", () => {
       const option = Exit.succeed(42).toOption()
       expect(option.isSome()).toBe(true)
-      expect(option.orElse(0)).toBe(42)
+      expect(option.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return None for failure", () => {
@@ -1876,7 +1876,7 @@ describe("Dependency Injection", () => {
     it("should return Some for success", async () => {
       const option = await IO.succeed(42).runOption()
       expect(option.isSome()).toBe(true)
-      expect(option.orElse(0)).toBe(42)
+      expect(option.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return None for failure", async () => {
@@ -1889,7 +1889,7 @@ describe("Dependency Injection", () => {
     it("should return Success for success", async () => {
       const t = await IO.succeed(42).runTry()
       expect(t.isSuccess()).toBe(true)
-      expect(t.orElse(0)).toBe(42)
+      expect(t.getOrElse(() => 0)).toBe(42)
     })
 
     it("should return Failure for failure", async () => {

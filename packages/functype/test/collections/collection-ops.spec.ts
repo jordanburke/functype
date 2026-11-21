@@ -40,7 +40,12 @@ describe("CollectionOps return types", () => {
   })
 
   it("keeps List-only methods reachable after drop", () => {
-    expectTypeOf(List([1, 2, 3]).drop(1).get(0).orElse(0)).toEqualTypeOf<number>()
+    expectTypeOf(
+      List([1, 2, 3])
+        .drop(1)
+        .get(0)
+        .getOrElse(() => 0),
+    ).toEqualTypeOf<number>()
   })
 
   it("still lets a List or Set stand in for the base collection type", () => {
@@ -200,6 +205,6 @@ describe("flatten at runtime", () => {
   it("returns a real List", () => {
     const flat = List([[1], [2]]).flatten()
     expect(flat._tag).toBe("List")
-    expect(flat.get(1).orElse(0)).toBe(2)
+    expect(flat.get(1).getOrElse(() => 0)).toBe(2)
   })
 })

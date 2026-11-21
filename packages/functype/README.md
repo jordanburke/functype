@@ -378,7 +378,7 @@ const tracer: Tracer = { emit: (e) => void events.push(e) }
 
 TracedOption(user, tracer, "span-1")
   .map((u) => u.name.trim(), "trim")
-  .orElse("anonymous", "fallback")
+  .getOrElse(() => "anonymous", "fallback")
 ```
 
 ## Conditional Programming
@@ -838,7 +838,7 @@ Work that shipped but wasn't captured in the planned roadmap above:
   - ✓ `<out T>` / `<out K, out V>` across Option, Either, Try, List, Set, Map, Lazy, LazyList, Tuple, Identity
   - ✓ `FunctypeSum` hierarchy separating sum types (Either, Try) from iterables
   - ✓ `Widen<A, B>` conditional-type helper enforcing Scala's `[B >: A]` lower-bound semantics in `reduce` / `reduceRight`
-  - ✓ Method-level widening patterns (`or`, `orElse`, `recover`, `add`, `concat`, etc.)
+  - ✓ Method-level widening patterns (`orElse`, `getOrElse`, `recover`, `add`, `concat`, etc.)
   - ✓ Contributor guide at [`docs/variance-guide.md`](docs/variance-guide.md)
   - Deferred: ZIO-style `<in R, out E, out A>` for IO
 - [x] **Do-notation with generator comprehensions** (`src/do/`)

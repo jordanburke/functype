@@ -32,7 +32,11 @@ export interface EitherBase<out L extends Type, out R extends Type>
   extends FunctypeSum<R, "Left" | "Right">, Promisable<R>, Doable<R>, Reshapeable<R>, Extractable<R> {
   isLeft(): this is LeftOf<L, R>
   isRight(): this is RightOf<L, R>
-  orElse<R2 extends Type>(defaultValue: R2): R | R2
+  /**
+   * Returns the Right value, or calls `defaultValue` on a Left. The default is lazy: it runs only
+   * on a Left. The result widens to `R | R2`.
+   */
+  getOrElse<R2 extends Type>(defaultValue: () => R2): R | R2
   /**
    * Returns the Right value, or throws on a Left. Pass an `Error` to throw it, or a builder to make one
    * from the Left value — for code that must throw for a host (a retrying step runner, an MCP tool, a
@@ -47,7 +51,11 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * `fail` is an arrow function typed as `(...): never`.
    */
   expect(handler: (value: L) => never): R
-  or<L2 extends Type, R2 extends Type>(alternative: Either<L2, R2>): Either<L | L2, R | R2>
+  /**
+   * Returns this Either if it is a Right, otherwise calls `alternative` for another Either.
+   * The alternative is lazy: it runs only on a Left.
+   */
+  orElse<L2 extends Type, R2 extends Type>(alternative: () => Either<L2, R2>): Either<L | L2, R | R2>
   orNull(): R | null
   orUndefined(): R | undefined
   map<U extends Type>(f: (value: R) => U): Either<L, U>
@@ -157,7 +165,7 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   isRight(): this is RightOf<B, A> {
     return true
   },
-  orElse() {
+  getOrElse() {
     return this.value
   },
   orThrow() {
@@ -166,7 +174,7 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   expect() {
     return this.value
   },
-  or() {
+  orElse() {
     return this
   },
   orNull() {
@@ -296,8 +304,8 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   isRight(): this is RightOf<B, A> {
     return false
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   orThrow(error) {
     throw error === undefined ? this.value : typeof error === "function" ? error(this.value) : error
@@ -305,8 +313,8 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   expect(handler) {
     return handler(this.value)
   },
-  or(alternative) {
-    return alternative
+  orElse(alternative) {
+    return alternative()
   },
   orNull() {
     return null

@@ -35,15 +35,19 @@ describe("Either's shape", () => {
   it("still iterates, merges into a tuple, and swaps", () => {
     expect([...Right(2)]).toEqual([2])
     expect([...Left("e")]).toEqual([])
-    expect(Right<string, number>(2).merge(Right<string, string>("b")).orElse([0, ""])).toEqual([2, "b"])
+    expect(
+      Right<string, number>(2)
+        .merge(Right<string, string>("b"))
+        .getOrElse(() => [0, ""]),
+    ).toEqual([2, "b"])
     expect(Right<string, number>(2).swap().isLeft()).toBe(true)
   })
 })
 
 describe("Either's 2.0 breaks", () => {
   it("a detached method call throws", () => {
-    const { orElse } = Right<string, number>(1)
-    expect(() => orElse(0)).toThrow(TypeError)
+    const { getOrElse } = Right<string, number>(1)
+    expect(() => getOrElse(() => 0)).toThrow(TypeError)
   })
 
   it("a spread copies only the data", () => {

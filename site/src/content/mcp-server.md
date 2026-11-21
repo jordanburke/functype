@@ -57,7 +57,7 @@ Option<T> [Functor, Monad, Foldable, Extractable, Matchable, Serializable, Trave
 
 Create:    Option(v), Option.none(), Some(v), None()
 Transform: .map(f), .flatMap(f), .filter(p), .ap(ff)
-Extract:   .fold(n, s), .orElse(d), .orThrow(), .orNull(), .match({Some, None})
+Extract:   .fold(n, s), .getOrElse(() => d), .orThrow(), .orNull(), .match({Some, None})
 Check:     .isSome(), .isNone(), .isEmpty
 ```
 
@@ -71,7 +71,7 @@ Get the full interface hierarchy — Functor, Monad, Foldable, Extractable, Matc
 Functor<A>        .map<B>(f: A => B): Functor<B>
 Monad<A>          .flatMap<B>(f: A => Monad<B>): Monad<B>
 Foldable<A>       .fold<B>(empty: () => B, f: A => B): B
-Extractable<A>    .orElse(d: T): T
+Extractable<A>    .getOrElse(d: () => T): T
 Matchable<A>      .match<R>(patterns): R
 ```
 
@@ -98,8 +98,8 @@ const result = Option(42)
 const result = Option(42)
   .map((x) => x * 2)
   .getOrElse(0);
-// Validation FAILED — Line 3, Col 4: Property 'getOrElse' does not exist on type
-// 'Option<number>'. Did you mean 'orElse'? (TS2551)
+// Validation FAILED — Line 3, Col 14: Argument of type 'number' is not assignable
+// to parameter of type '() => unknown'. (TS2345)
 ```
 
 ### set_functype_version

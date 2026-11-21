@@ -70,22 +70,22 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 
 | Operation           | Method                        | Example                                                    | Returns          |
 | ------------------- | ----------------------------- | ---------------------------------------------------------- | ---------------- |
-| With default        | `orElse(default)`             | `option.orElse("N/A")`                                     | `T`              |
-| With alternative    | `or(alternative)`             | `option.or(Option("alt"))`                                 | `Option<T>`      |
+| With default        | `getOrElse(() => default)`    | `option.getOrElse(() => "N/A")`                            | `T`              |
+| With alternative    | `orElse(() => alternative)`   | `option.orElse(() => Option("alt"))`                       | `Option<T>`      |
 | Or throw            | `orThrow(error?)`             | `option.orThrow()`                                         | `T` or throws    |
 | Or null             | `orNull()`                    | `option.orNull()`                                          | `T \| null`      |
 | Or undefined        | `orUndefined()`               | `option.orUndefined()`                                     | `T \| undefined` |
 | Pattern match       | `fold(onEmpty, onValue)`      | `option.fold(() => 0, x => x)`                             | `R`              |
 | Async pattern match | `foldAsync(onEmpty, onValue)` | `await either.foldAsync(e => msg(e), async v => fetch(v))` | `Promise<R>`     |
 
-> **Coming from Scala / cats / fp-ts?** functype follows **Rust** convention here, not Scala. Translation table:
+> **Coming from Scala / cats / fp-ts / Effect?** Since 2.0 the names match yours, and both take a thunk:
 >
-> | Scala / cats / fp-ts  | functype          | Purpose                              |
-> | --------------------- | ----------------- | ------------------------------------ |
-> | `getOrElse(default)`  | `orElse(default)` | Extract value with default           |
-> | `orElse(alternative)` | `or(alternative)` | Return this or alternative container |
+> | Scala / cats / fp-ts  | functype                    | Purpose                              |
+> | --------------------- | --------------------------- | ------------------------------------ |
+> | `getOrElse(default)`  | `getOrElse(() => default)`  | Extract value with default           |
+> | `orElse(alternative)` | `orElse(() => alternative)` | Return this or alternative container |
 >
-> This was an intentional rename in 0.16.0 — see `MIGRATION_EXTRACTABLE_API.md`. There is no `getOrElse` alias; the TS error "Did you mean 'orElse'?" is the rescue.
+> The thunk runs only when there is no value. A bare value (`getOrElse(42)`, `orElse(someOpt)`) fails to compile at the argument. functype 1.x called these `orElse(default)` and `or(alternative)`.
 
 ## Predicates
 
@@ -175,7 +175,7 @@ After:
 ```typescript
 const name = Option(user)
   .map((u) => u.name)
-  .orElse("Unknown")
+  .getOrElse(() => "Unknown")
 ```
 
 ### Error Handling
@@ -195,7 +195,7 @@ function load(): number {
 After:
 
 ```typescript
-const load = (): number => Try(() => riskyOperation()).orElse(defaultValue)
+const load = (): number => Try(() => riskyOperation()).getOrElse(() => defaultValue)
 ```
 
 ### Validation
@@ -285,7 +285,7 @@ Option(user)
   .flatMap((p) => Option(p.settings))
   .map((s) => s.theme)
   .filter((theme) => validThemes.includes(theme))
-  .orElse("default")
+  .getOrElse(() => "default")
 ```
 
 ### Either Pipeline
@@ -471,7 +471,7 @@ const tracer: Tracer = { emit: (e) => void events.push(e) };
 TracedOption(Option(user), tracer, "span-1") // wraps an Option; spanId groups one chain's events
   .map((u) => u.name.trim(), "trim")         // optional label per step
   .filter((n) => n.length > 0, "non-empty")
-  .orElse("anonymous", "fallback");           // fold / orElse / unwrap() are terminal
+  .getOrElse(() => "anonymous", "fallback"); // fold / getOrElse / unwrap() are terminal
 ```
 
 ## Identity, Ref, Do
@@ -560,8 +560,8 @@ const value: Option<string> = Option("hello")
 
 if (value.isSome()) {
   // TypeScript still treats value as Option<string>
-  // Use orElse or fold to extract
-  const str = value.orElse("")
+  // Use getOrElse or fold to extract
+  const str = value.getOrElse(() => "")
 }
 ```
 
@@ -587,13 +587,13 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 
 ## Common Mistakes
 
-| ❌ Wrong                                       | ✅ Correct                                   |
-| ---------------------------------------------- | -------------------------------------------- |
-| `Option(value).map(...)` without extraction    | `Option(value).map(...).orElse(default)`     |
-| `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))` |
-| `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).orElse(fallback)`              |
-| `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                   |
-| Using `any` type                               | Use proper type parameters: `Option<T>`      |
+| ❌ Wrong                                       | ✅ Correct                                        |
+| ---------------------------------------------- | ------------------------------------------------- |
+| `Option(value).map(...)` without extraction    | `Option(value).map(...).getOrElse(() => default)` |
+| `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))`      |
+| `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).getOrElse(() => fallback)`          |
+| `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                        |
+| Using `any` type                               | Use proper type parameters: `Option<T>`           |
 
 ## Performance Tips
 
@@ -601,7 +601,7 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 
    ```typescript
    const expensive = Lazy(() => heavyComputation())
-   expensive.orThrow() // computed on the first read (orThrow, orElse, fold, ...), then cached
+   expensive.orThrow() // computed on the first read (orThrow, getOrElse, fold, ...), then cached
    ```
 
 2. **Use LazyList for large datasets**
@@ -635,6 +635,6 @@ function double(e: Either<Error, number>): number {
 
 After an `isLeft()` early return, `e.value` is already `R`: don't call `.orThrow()` to get it.
 
-To choose between two Options, use `a.or(b)`, not an `if`. `orElse` takes a plain value; `or` takes another Option.
+To choose between two Options, use `a.orElse(() => b)`, not an `if`. `getOrElse` takes a function that returns a plain value; `orElse` takes one that returns another Option.
 
 If you need to reference a specific variant, import `LeftOf` / `RightOf` from `functype/either`.

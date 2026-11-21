@@ -63,7 +63,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
       // Using getOrElse (already using proper pattern)
       {
         name: "getOrElse is a valid alternative to fold",
-        code: `const result = option.getOrElse("default")`,
+        code: `const result = option.getOrElse(() => "default")`,
       },
       // If/else with regular boolean condition (not monadic)
       {
@@ -464,7 +464,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
-        name: "Choosing between two Options suggests .or(), not a fold",
+        name: "Choosing between two Options suggests .orElse(() => b), not a fold",
         code: "const pick = (a, b) => (a.isSome() ? a : b)",
         output: null,
         errors: [
@@ -473,16 +473,16 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
             data: { type: "Option" },
             suggestions: [
               {
-                messageId: "suggestOr",
+                messageId: "suggestOrElse",
                 data: { receiver: "a", alternative: "b" },
-                output: "const pick = (a, b) => (a.or(b))",
+                output: "const pick = (a, b) => (a.orElse(() => b))",
               },
             ],
           },
         ],
       },
       {
-        name: "Negated form of the Option choice also suggests .or()",
+        name: "Negated form of the Option choice also suggests .orElse(() => b)",
         code: "const pick = (a, b) => (a.isNone() ? b : a)",
         output: null,
         errors: [
@@ -491,13 +491,79 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
             data: { type: "Option" },
             suggestions: [
               {
-                messageId: "suggestOr",
+                messageId: "suggestOrElse",
                 data: { receiver: "a", alternative: "b" },
-                output: "const pick = (a, b) => (a.or(b))",
+                output: "const pick = (a, b) => (a.orElse(() => b))",
               },
             ],
           },
         ],
+      },
+      {
+        name: "An object-literal alternative is wrapped in parentheses inside the thunk",
+        code: "const pick = (a) => (a.isSome() ? a : { _tag: 'None' })",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestOrElse",
+                data: { receiver: "a", alternative: "{ _tag: 'None' }" },
+                output: "const pick = (a) => (a.orElse(() => ({ _tag: 'None' })))",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "An alternative that starts with `{` is parenthesized, so the thunk body isn't a block",
+        code: "const pick = (a) => (a.isSome() ? a : {}.x)",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestOrElse",
+                data: { receiver: "a", alternative: "{}.x" },
+                output: "const pick = (a) => (a.orElse(() => ({}.x)))",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A sequence alternative is parenthesized, so its comma doesn't split the arguments",
+        code: "const pick = (a, b, c) => (a.isSome() ? a : (b, c))",
+        output: null,
+        errors: [
+          {
+            messageId: "preferFoldTernary",
+            data: { type: "Option" },
+            suggestions: [
+              {
+                messageId: "suggestOrElse",
+                data: { receiver: "a", alternative: "b, c" },
+                output: "const pick = (a, b, c) => (a.orElse(() => (b, c)))",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A yielded alternative can't move into a thunk, so it gets no suggestion",
+        code: "function* pick(a, b) { return a.isSome() ? a : yield b }",
+        output: null,
+        errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
+      },
+      {
+        name: "An awaited alternative can't move into a thunk, so it gets no suggestion",
+        code: "const pick = async (a, b) => (a.isSome() ? a : await b())",
+        output: null,
+        errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
       },
       {
         name: "If/else of returns keeps the return",
@@ -610,7 +676,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
-        name: "A receiver-plus-literal choice gets no suggestion (.or takes a container, not a value)",
+        name: "A receiver-plus-literal choice gets no suggestion (.orElse takes a container thunk, not a value)",
         code: "const x = a.isSome() ? a : 5",
         output: null,
         errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],

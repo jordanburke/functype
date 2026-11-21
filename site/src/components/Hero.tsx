@@ -67,7 +67,8 @@ export default function Hero() {
                 <span className="text-purple-400">=&gt;</span>{" "}
                 <span className="text-orange-300">u</span>.
                 <span className="text-blue-300">name</span>){"\n  ."}
-                <span className="text-blue-300">getOrElse</span>(
+                <span className="text-blue-300">getOrElse</span>((){" "}
+                <span className="text-purple-400">=&gt;</span>{" "}
                 <span className="text-green-400">"Guest"</span>){"\n\n"}
                 <span className="text-gray-500">
                   // Elegant error handling with Either

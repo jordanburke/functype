@@ -107,7 +107,7 @@ function shout(name: string | null | undefined): string {
 const shout = (name: string | null | undefined): string =>
   Option(name)
     .map((v) => v.toUpperCase())
-    .orElse("")
+    .getOrElse(() => "")
 ```
 
 ### Optional Chaining → Option Chain
@@ -125,7 +125,7 @@ const url = Option(user)
   .flatMap((u) => Option(u.profile))
   .flatMap((p) => Option(p.avatar))
   .map((a) => a.url)
-  .orElse("/default-avatar.png")
+  .getOrElse(() => "/default-avatar.png")
 ```
 
 ### Try-Catch → Try or Either
@@ -147,7 +147,7 @@ function parse(str: string): unknown {
 ```typescript
 Try(() => JSON.parse(str))
   .toOption()
-  .orElse(null)
+  .getOrElse(() => null)
 ```
 
 **After (with Either):**
@@ -275,7 +275,7 @@ function getUserEmail(userId: string): Option<string> {
     .filter((email) => email.includes("@"))
 }
 
-const email = getUserEmail("123").orElse("no-reply@example.com")
+const email = getUserEmail("123").getOrElse(() => "no-reply@example.com")
 ```
 
 ### Error Recovery with Try
@@ -552,13 +552,13 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 **Option<T>**
 
 - `map`, `flatMap`, `filter`, `fold`
-- `orElse`, `or`, `orNull`, `orUndefined`, `orThrow`
+- `getOrElse`, `orElse`, `orNull`, `orUndefined`, `orThrow`
 - `isSome`, `isNone`, `contains`
 
 **Either<L, R>**
 
 - `map`, `flatMap`, `fold`
-- `orElse`, `or`, `swap`
+- `getOrElse`, `orElse`, `swap`
 - `isLeft`, `isRight`
 
 **Try<T>**
@@ -610,7 +610,7 @@ For pattern conversion help, examples, and API reference:
    // Correct - returns string
    const name = Option(user)
      .map((u) => u.name)
-     .orElse("Unknown")
+     .getOrElse(() => "Unknown")
    ```
 
 2. **Using map instead of flatMap**

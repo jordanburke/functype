@@ -235,7 +235,7 @@ test should include an Either task to see whether agents start guessing `Result`
 
 - **Sibling peer floors.** On `main`, functype-os, functype-react and functype-log accept old cores
   (`>=1.13.0`, `>=1.14.0`, `>=0.60.0`), and functype-os and functype-react call the methods #276 §2
-  renames (`.or(…)`, `.orElse(…)`). Raise every peer floor to
+  renames and makes lazy (`getOrElse`, `orElse`): a 1.x core lacks the first and gives the second another meaning. Raise every peer floor to
   `>=2.0.0` at the cut, and consider a `check-publish-safety` check that peer floors match the
   family's major.
 - **One Node floor.** The packages disagree: none, `>=18.17.0` and `>=20.20.0`. `AbortSignal.any`

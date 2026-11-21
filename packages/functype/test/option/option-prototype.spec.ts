@@ -41,8 +41,8 @@ describe("Option's shape", () => {
 
 describe("Option's 2.0 breaks", () => {
   it("a detached method call throws", () => {
-    const { orElse } = Some(1)
-    expect(() => orElse(0)).toThrow(TypeError)
+    const { getOrElse } = Some(1)
+    expect(() => getOrElse(() => 0)).toThrow(TypeError)
     expect(() => [2].filter(Some(2).contains)).toThrow(TypeError)
   })
 

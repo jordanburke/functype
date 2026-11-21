@@ -6,8 +6,8 @@ describe("StaticSource", () => {
   it("returns Some for known keys, None for unknown", () => {
     const src = StaticSource({ ENV: "local", PORT: "3000" }, "defaults")
     expect(src.name).toBe("defaults")
-    expect(src.get("ENV").orElse("")).toBe("local")
-    expect(src.get("PORT").orElse("")).toBe("3000")
+    expect(src.get("ENV").getOrElse(() => "")).toBe("local")
+    expect(src.get("PORT").getOrElse(() => "")).toBe("3000")
     expect(src.get("MISSING").isEmpty).toBe(true)
   })
 
@@ -30,7 +30,7 @@ describe("ProcessEnvSource", () => {
     process.env.FUNCTYPE_OS_TEST_KEY = "from-env"
     const src = ProcessEnvSource()
     expect(src.name).toBe("process.env")
-    expect(src.get("FUNCTYPE_OS_TEST_KEY").orElse("")).toBe("from-env")
+    expect(src.get("FUNCTYPE_OS_TEST_KEY").getOrElse(() => "")).toBe("from-env")
   })
 
   it("returns None for missing env vars", () => {
@@ -47,9 +47,9 @@ describe("Layered", () => {
     const composed = Layered([primary, secondary])
 
     // A is in both; primary wins
-    expect(composed.get("A").orElse("")).toBe("primary-A")
+    expect(composed.get("A").getOrElse(() => "")).toBe("primary-A")
     // B only in secondary; falls through
-    expect(composed.get("B").orElse("")).toBe("secondary-B")
+    expect(composed.get("B").getOrElse(() => "")).toBe("secondary-B")
     // neither: None
     expect(composed.get("MISSING").isEmpty).toBe(true)
   })
@@ -73,8 +73,8 @@ describe("Layered", () => {
       ProcessEnvSource(),
       StaticSource({ LAYERED_TEST_OVERRIDE: "from-static", FALLBACK_ONLY: "static-only" }, "fallback"),
     ])
-    expect(config.get("LAYERED_TEST_OVERRIDE").orElse("")).toBe("from-env")
-    expect(config.get("FALLBACK_ONLY").orElse("")).toBe("static-only")
+    expect(config.get("LAYERED_TEST_OVERRIDE").getOrElse(() => "")).toBe("from-env")
+    expect(config.get("FALLBACK_ONLY").getOrElse(() => "")).toBe("static-only")
     delete process.env.LAYERED_TEST_OVERRIDE
   })
 })

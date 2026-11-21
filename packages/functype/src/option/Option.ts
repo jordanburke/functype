@@ -40,12 +40,13 @@ export interface OptionBase<out T extends Type>
    */
   isNone(): this is NoneOf<T>
   /**
-   * Returns the contained value or a default value if None. The default may be of a
-   * different type; the result widens to `T | T2` so Option stays covariant in T.
-   * @param defaultValue - The value to return if this Option is None
-   * @returns The contained value or defaultValue, typed as `T | T2`
+   * Returns the contained value, or calls `defaultValue` if None. The default is lazy: it runs
+   * only on None. It may be of a different type; the result widens to `T | T2` so Option stays
+   * covariant in T.
+   * @param defaultValue - A function that returns the value to use if this Option is None
+   * @returns The contained value or the default, typed as `T | T2`
    */
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional error to throw, or a builder that makes one (called only on None). If not
@@ -63,12 +64,13 @@ export interface OptionBase<out T extends Type>
    */
   expect(handler: () => never): T
   /**
-   * Returns this Option if it contains a value, otherwise returns the alternative container.
-   * The alternative may hold a different type; the result widens to `Option<T | T2>`.
-   * @param alternative - The alternative Option to return if this is None
+   * Returns this Option if it contains a value, otherwise calls `alternative` for another Option.
+   * The alternative is lazy: it runs only on None. It may hold a different type; the result
+   * widens to `Option<T | T2>`.
+   * @param alternative - A function that returns the Option to use if this is None
    * @returns This Option or the alternative, typed as `Option<T | T2>`
    */
-  or<T2 extends Type>(alternative: Option<T2>): Option<T | T2>
+  orElse<T2 extends Type>(alternative: () => Option<T2>): Option<T | T2>
   /**
    * Returns the contained value or null if None
    * @returns The contained value or null
@@ -233,7 +235,7 @@ const SomeProto = define<SomeOf<A>>()("Some", {
   isNone(): this is NoneOf<A> {
     return false
   },
-  orElse() {
+  getOrElse() {
     return this.value
   },
   orThrow() {
@@ -242,7 +244,7 @@ const SomeProto = define<SomeOf<A>>()("Some", {
   expect() {
     return this.value
   },
-  or() {
+  orElse() {
     return this
   },
   orNull() {
@@ -354,8 +356,8 @@ const NoneProto = define<NoneOf<A>>()("None", {
   isNone(): this is NoneOf<A> {
     return true
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   orThrow(error) {
     throw error === undefined
@@ -367,8 +369,8 @@ const NoneProto = define<NoneOf<A>>()("None", {
   expect(handler) {
     return handler()
   },
-  or(alternative) {
-    return alternative
+  orElse(alternative) {
+    return alternative()
   },
   orNull() {
     return null

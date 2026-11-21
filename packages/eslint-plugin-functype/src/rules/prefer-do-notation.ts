@@ -155,7 +155,7 @@ function monadOfValue(node: ASTNode): ReadonlySet<string> {
 /**
  * The receiver a method chain starts from: `Option(x)` in `Option(x).map(f).flatMap(g)`, `o` in
  * `o.flatMap(f)`. Walks back only through steps that keep the monad (`flatMap`, `map`, `filter`), so
- * in `Option(xs).getOrElse([]).flatMap(f)` or after a `.fold(…)` the root is the unwrapped value, not
+ * in `Option(xs).getOrElse(() => []).flatMap(f)` or after a `.fold(…)` the root is the unwrapped value, not
  * `Option(xs)`. A monad constructor or companion
  * call is a root of its own.
  */
@@ -215,7 +215,7 @@ const rule: Rule.RuleModule = {
 
     /**
      * Is `step` a step on a functype monad? With type information, the type of the value it's called on
-     * decides, so a `string[]`, or an Option already unwrapped with `.getOrElse([])`, never counts, and
+     * decides, so a `string[]`, or an Option already unwrapped with `.getOrElse(() => [])`, never counts, and
      * `service.getUser(1)` returning an Option does. Without it, the chain's root must be a monad
      * constructor, companion or conversion, an identifier annotated with a monad type, or one named
      * like a monad.

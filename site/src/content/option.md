@@ -21,8 +21,8 @@ some.isSome(); // true
 none.isNone(); // true
 
 // Extracting values
-some.orElse(0); // 42
-none.orElse(0); // 0
+some.getOrElse(() => 0); // 42
+none.getOrElse(() => 0); // 0
 some.orThrow(); // 42
 none.orThrow(); // throws Error
 some.orNull(); // 42

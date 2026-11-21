@@ -21,7 +21,7 @@ option.isEmpty // same as isNone(), as a property
 
 // Accessing
 option.orThrow() // Gets value or throws if None
-option.orElse(defaultValue) // Gets value or returns default
+option.getOrElse(() => defaultValue) // Gets value or returns default
 option.orThrow(new Error("No value")) // Gets value or throws custom error
 
 // Transforming
@@ -59,7 +59,7 @@ either.isLeft() // true if Left, false if Right
 
 // Accessing
 either.orThrow() // Gets Right value or throws if Left
-either.orElse(defaultValue) // Gets Right value or returns default
+either.getOrElse(() => defaultValue) // Gets Right value or returns default
 either.swap().orThrow() // Gets Left value or throws if Right
 
 // Transforming
@@ -105,7 +105,7 @@ tryVal.isFailure() // true if Failure, false if Success
 
 // Accessing
 tryVal.orThrow() // Gets value or throws original error
-tryVal.orElse(defaultValue) // Gets value or returns default
+tryVal.getOrElse(() => defaultValue) // Gets value or returns default
 tryVal.error // Gets error for Failure
 
 // Error handling
@@ -210,8 +210,8 @@ map.size // Number of entries
 // Accessing
 map.has("a") // true if the key is present, even when its value is undefined
 map.get("a") // Some(value) or None
-map.getOrElse("a", 0) // Value or default
-map.orElse("a", Option(0)) // Option of the value, or the alternative Option
+map.getOrElse("a", () => 0) // Value or default
+map.orElse("a", () => Option(0)) // Option of the value, or the alternative Option
 map.keys() // List<K>, insertion order
 map.values() // List<V>, insertion order
 map.contains(Tuple(["a", 1])) // true if that exact entry is present (value compared with ===)
@@ -512,7 +512,7 @@ const result = Option("42")
   .map((s) => parseInt(s, 10))
   .filter((n) => !isNaN(n))
   .map((n) => n * 2)
-  .orElse(0) // 84
+  .getOrElse(() => 0) // 84
 
 // Cross-type transformations
 const mixed = Option("42")

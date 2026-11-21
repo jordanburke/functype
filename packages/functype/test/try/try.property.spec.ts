@@ -101,12 +101,12 @@ describe("Try - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), fc.string(), (value, defaultValue) => {
           const success = Try(() => value)
-          expect(success.orElse(defaultValue)).toBe(value)
+          expect(success.getOrElse(() => defaultValue)).toBe(value)
 
           const failure = Try<string>(() => {
             throw new Error("Test error")
           })
-          expect(failure.orElse(defaultValue)).toBe(defaultValue)
+          expect(failure.getOrElse(() => defaultValue)).toBe(defaultValue)
         }),
       )
     })
@@ -171,12 +171,12 @@ describe("Try - Property-based tests", () => {
         fc.property(fc.string(), fc.integer(), (errorMsg, fallbackValue) => {
           const success = Try(() => 42)
           const alternative = Try(() => fallbackValue)
-          expect(success.or(alternative).orThrow()).toBe(42)
+          expect(success.orElse(() => alternative).orThrow()).toBe(42)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
-          expect(failure.or(alternative).orThrow()).toBe(fallbackValue)
+          expect(failure.orElse(() => alternative).orThrow()).toBe(fallbackValue)
         }),
       )
     })
@@ -204,14 +204,14 @@ describe("Try - Property-based tests", () => {
           const success = Try(() => value)
           const successEither = success.toEither("error")
           expect(successEither.isRight()).toBe(true)
-          expect(successEither.orElse(0)).toBe(value)
+          expect(successEither.getOrElse(() => 0)).toBe(value)
 
           const failure = Try<number>(() => {
             throw new Error(errorMsg)
           })
           const failureEither = failure.toEither("error")
           expect(failureEither.isLeft()).toBe(true)
-          expect(failureEither.orElse(0)).toBe(0)
+          expect(failureEither.getOrElse(() => 0)).toBe(0)
         }),
       )
     })

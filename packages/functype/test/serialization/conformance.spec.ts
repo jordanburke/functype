@@ -44,15 +44,15 @@ describe("Serialization conformance — round-trip across all 11 Serializable ty
       const original = Some(42)
       const round = Serialization.deserialize(Serialization.serialize(original)).orThrow() as Option<number>
       expect(round.isEmpty).toBe(false)
-      expect(round.orElse(0)).toBe(42)
-      expect(round.map((x) => x * 2).orElse(0)).toBe(84)
+      expect(round.getOrElse(() => 0)).toBe(42)
+      expect(round.map((x) => x * 2).getOrElse(() => 0)).toBe(84)
     })
 
     it("None round-trips", () => {
       const original = None<number>()
       const round = Serialization.deserialize(Serialization.serialize(original)).orThrow() as Option<number>
       expect(round.isEmpty).toBe(true)
-      expect(round.orElse(99)).toBe(99)
+      expect(round.getOrElse(() => 99)).toBe(99)
     })
   })
 
@@ -155,8 +155,8 @@ describe("Serialization conformance — round-trip across all 11 Serializable ty
         string,
         number
       >
-      expect(round.get("a").orElse(0)).toBe(1)
-      expect(round.get("b").orElse(0)).toBe(2)
+      expect(round.get("a").getOrElse(() => 0)).toBe(1)
+      expect(round.get("b").getOrElse(() => 0)).toBe(2)
       expect(round.get("missing").isEmpty).toBe(true)
     })
   })
@@ -269,7 +269,7 @@ describe("Serialization — nested envelopes", () => {
       (v: Option<List<number>>) => v,
     )
     expect(option.isEmpty).toBe(false)
-    const list = option.orElse(List<number>([]))
+    const list = option.getOrElse(() => List<number>([]))
     expect(list.toArray()).toEqual([1, 2, 3])
   })
 
@@ -286,7 +286,7 @@ describe("Serialization — nested envelopes", () => {
     )
     expect(tryValue.isSuccess()).toBe(true)
     const opt = tryValue.orThrow()
-    expect(opt.orElse(-1)).toBe(7)
+    expect(opt.getOrElse(() => -1)).toBe(7)
   })
 
   it("rebuilds functype values embedded in a plain object", () => {
@@ -311,8 +311,8 @@ describe("Serialization — nested envelopes", () => {
     const original = [Some(1), Some(2), None<number>()]
     const json = Serialization.serialize(original)
     const round = Serialization.deserialize(json).orThrow() as Option<number>[]
-    expect(round[0]?.orElse(0)).toBe(1)
-    expect(round[1]?.orElse(0)).toBe(2)
+    expect(round[0]?.getOrElse(() => 0)).toBe(1)
+    expect(round[1]?.getOrElse(() => 0)).toBe(2)
     expect(round[2]?.isEmpty).toBe(true)
   })
 })
@@ -468,7 +468,7 @@ describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nes
     const env = { "@functype": "Option", _tag: "Some", value: 42 }
     const round = Serialization.fromEnvelope(env).orThrow() as Option<number>
     expect(round.isEmpty).toBe(false)
-    expect(round.orElse(0)).toBe(42)
+    expect(round.getOrElse(() => 0)).toBe(42)
   })
 
   it("fromEnvelope rebuilds nested envelopes end-to-end", () => {
@@ -481,7 +481,7 @@ describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nes
       (v: Option<List<number>>) => v,
     )
     expect(opt.isEmpty).toBe(false)
-    expect(opt.orElse(List<number>([])).toArray()).toEqual([1, 2, 3])
+    expect(opt.getOrElse(() => List<number>([])).toArray()).toEqual([1, 2, 3])
   })
 
   it("fromEnvelope passes through plain JSON values (matches deserialize)", () => {
@@ -591,7 +591,7 @@ describe("Serialization — toEnvelope / fromEnvelope (structured-serializer nes
       ),
     ).toBe(99)
     expect(round.tags.toArray()).toEqual(["a", "b"])
-    expect(round.nested.result.orElse(0)).toBe(7)
+    expect(round.nested.result.getOrElse(() => 0)).toBe(7)
     expect(
       round.nested.retries.fold(
         (_l: string) => -1,
@@ -605,7 +605,7 @@ describe("Serialization — deserializeStrict", () => {
   it("succeeds on a marked envelope", () => {
     const json = Serialization.serialize(Some(42))
     const round = Serialization.deserializeStrict(json).orThrow() as Option<number>
-    expect(round.orElse(0)).toBe(42)
+    expect(round.getOrElse(() => 0)).toBe(42)
   })
 
   it("fails on a marker-less envelope (Effect/fp-ts collision shape)", () => {

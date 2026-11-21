@@ -40,7 +40,7 @@ describe("prefer-flatmap (type-aware)", () => {
          declare const changed: Option<ReadonlySet<string>>
          export const findings = tracked
            .flatMap((t) => changed.map((c) => capped.filter((f) => t.has(f.file) && !c.has(f.file))))
-           .orElse([])`,
+           .getOrElse(() => [])`,
       ),
       ok(
         "An Option inferred from a function's return, with no annotation",

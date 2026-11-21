@@ -22,8 +22,8 @@ const reported = (code: string, receiver: string, method: string) => ({
       data: { method },
       suggestions: [
         {
-          messageId: "suggestOrElse" as const,
-          output: code.replace(`${receiver}.${method}()`, `${receiver}.orElse(undefined /* TODO: default */)`),
+          messageId: "suggestGetOrElse" as const,
+          output: code.replace(`${receiver}.${method}()`, `${receiver}.getOrElse(() => undefined /* TODO: default */)`),
         },
         {
           messageId: "suggestFold" as const,

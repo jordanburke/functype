@@ -30,7 +30,7 @@ describe("PathExpander", () => {
       process.env["TEST_PATH_VAR"] = "/tmp/test"
       const result = expandVars("$TEST_PATH_VAR/file.txt")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe("/tmp/test/file.txt")
+      expect(result.getOrElse(() => "")).toBe("/tmp/test/file.txt")
       delete process.env["TEST_PATH_VAR"]
     })
 
@@ -38,7 +38,7 @@ describe("PathExpander", () => {
       process.env["TEST_BRACED_VAR"] = "/opt"
       const result = expandVars("${TEST_BRACED_VAR}/bin")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe("/opt/bin")
+      expect(result.getOrElse(() => "")).toBe("/opt/bin")
       delete process.env["TEST_BRACED_VAR"]
     })
 
@@ -56,7 +56,7 @@ describe("PathExpander", () => {
       process.env["TEST_B"] = "bbb"
       const result = expandVars("$TEST_A/$TEST_B")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe("aaa/bbb")
+      expect(result.getOrElse(() => "")).toBe("aaa/bbb")
       delete process.env["TEST_A"]
       delete process.env["TEST_B"]
     })
@@ -64,7 +64,7 @@ describe("PathExpander", () => {
     it("should pass through strings without variables", () => {
       const result = expandVars("/plain/path")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe("/plain/path")
+      expect(result.getOrElse(() => "")).toBe("/plain/path")
     })
   })
 
@@ -72,7 +72,7 @@ describe("PathExpander", () => {
     it("should expand tilde and resolve to absolute", () => {
       const result = expandPath("~/test")
       expect(result.isRight()).toBe(true)
-      const expanded = result.orElse("")
+      const expanded = result.getOrElse(() => "")
       expect(path.isAbsolute(expanded)).toBe(true)
       expect(expanded).toBe(path.resolve(path.join(os.homedir(), "test")))
     })
@@ -81,7 +81,7 @@ describe("PathExpander", () => {
       process.env["TEST_EXPAND"] = "/tmp"
       const result = expandPath("$TEST_EXPAND/sub")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe(path.resolve("/tmp/sub"))
+      expect(result.getOrElse(() => "")).toBe(path.resolve("/tmp/sub"))
       delete process.env["TEST_EXPAND"]
     })
 

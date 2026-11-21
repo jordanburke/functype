@@ -94,7 +94,7 @@ const rule: Rule.RuleModule = {
     ],
     messages: {
       throwInRender:
-        "{{receiver}}.{{method}}() throws during render when the value is missing, and a throw in render unmounts the tree up to the nearest error boundary. Render both cases with .fold(…) or <MatchOption> / <MatchEither> / <MatchTry>, or read a fallback with .orElse(…). To reach an error boundary on purpose, name the error: .orThrow((e) => new MyError(e))",
+        "{{receiver}}.{{method}}() throws during render when the value is missing, and a throw in render unmounts the tree up to the nearest error boundary. Render both cases with .fold(…) or <MatchOption> / <MatchEither> / <MatchTry>, or read a fallback with .getOrElse(() => …). To reach an error boundary on purpose, name the error: .orThrow((e) => new MyError(e))",
     },
   },
 

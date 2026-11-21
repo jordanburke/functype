@@ -53,7 +53,7 @@ const parseArgs = (
 
 /** Get full interface definition for a type (case-insensitive) */
 const getFullInterface = (typeName: string): Option<string> =>
-  Option(FULL_INTERFACES[typeName]).or(
+  Option(FULL_INTERFACES[typeName]).orElse(() =>
     List(Object.entries(FULL_INTERFACES))
       .find(([name]) => name.toLowerCase() === typeName.toLowerCase())
       .map(([, def]) => def),

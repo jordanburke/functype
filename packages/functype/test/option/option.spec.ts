@@ -11,21 +11,21 @@ describe("Option", () => {
   const nothing: Option<string> = Option<string>(undefined)
 
   it("parse valid number", () => {
-    expect(something.orElse("world")).toBe("hello")
+    expect(something.getOrElse(() => "world")).toBe("hello")
   })
 
   it("map on Some", () => {
     //#region option-map-example
     const option = Option("hello")
     const length = option.map((s) => s.length)
-    expect(length.orElse(0)).toBe(5)
+    expect(length.getOrElse(() => 0)).toBe(5)
     //#endregion option-map-example
 
-    expect(something.map((s) => s.length).orElse(0)).toBe(5)
+    expect(something.map((s) => s.length).getOrElse(() => 0)).toBe(5)
   })
 
   it("parse invalid number", () => {
-    expect(nothing.orElse("world")).toBe("world")
+    expect(nothing.getOrElse(() => "world")).toBe("world")
   })
 
   it("map on None", () => {
@@ -36,10 +36,10 @@ describe("Option", () => {
     //#region option-filter-example
     const option = Option("hello")
     const filtered = option.filter((s) => s.length > 3)
-    expect(filtered.orElse("")).toBe("hello")
+    expect(filtered.getOrElse(() => "")).toBe("hello")
     //#endregion option-filter-example
 
-    expect(something.filter((s) => s.length === 5).orElse("nope")).toBe("hello")
+    expect(something.filter((s) => s.length === 5).getOrElse(() => "nope")).toBe("hello")
   })
 
   it("filter on Some with predicate returning false", () => {
@@ -110,7 +110,7 @@ describe("Option", () => {
       }
 
       const result = await something.flatMapAsync(asyncFunction)
-      expect(result.orElse("default")).toBe("hello world")
+      expect(result.getOrElse(() => "default")).toBe("hello world")
     })
 
     it("should handle None with async function", async () => {
@@ -137,7 +137,7 @@ describe("Option", () => {
       }
 
       const result = await something.flatMapAsync(delayedAsyncFunction)
-      expect(result.orElse("default")).toBe("hello delayed")
+      expect(result.getOrElse(() => "default")).toBe("hello delayed")
     })
 
     it("should preserve the original state when using None", async () => {

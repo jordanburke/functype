@@ -320,7 +320,7 @@ const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
 
   // --- Extractable ---
 
-  orElse() {
+  getOrElse() {
     return this.data
   },
 
@@ -328,7 +328,7 @@ const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
     return this.data
   },
 
-  or<T2 extends Type>(_alternative: Extractable<T2>): Extractable<A | T2> {
+  orElse<T2 extends Type>(_alternative: () => Extractable<T2>): Extractable<A | T2> {
     return wrap(this.data)
   },
 

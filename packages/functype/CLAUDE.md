@@ -237,16 +237,15 @@ map.keys() / map.values()    // List<K> / List<V>, insertion order (1.18)
 // Option - nullable handling
 Option(value)                // wrap value (None if null/undefined)
 Option.none()                // explicit None
-option.map(fn).orElse(default)
-option.or(otherOption)       // fallback to another Option
+option.map(fn).getOrElse(() => fallback) // lazy default, runs only on None
+option.orElse(() => otherOption) // lazy fallback to another Option
 Option.sequence(opts)        // Option<T>[] → Option<T[]> (None if any None)
 Option.traverse(arr, f)      // T[] → (T => Option<U>) → Option<U[]>
-// Scala/cats/fp-ts/Effect users — extraction pair was renamed in 0.16.0:
-//   Scala orElse(other: Option[T])    → functype or(other)         ← matches Rust's or(other)
-//   Scala getOrElse(default)          → functype orElse(default)   ← drops the `get` prefix; matches neither Rust nor Scala
-// Rust's actual API: unwrap_or(default) / unwrap_or_else(f) for the unwrap pair, or(other) / or_else(f) for stay-in-monad.
-// functype's `or(other)` aligns with Rust; functype's `orElse(default)` is an internal naming choice. No getOrElse alias.
-// See MIGRATION_EXTRACTABLE_API.md.
+// Since 2.0 the names match Scala, cats, fp-ts and Effect, and both take a thunk (Scala's by-name, as a function):
+//   getOrElse(() => default)   extract the value, or the default
+//   orElse(() => alternative)  keep this container, or the alternative container
+// A bare value (`getOrElse(42)`, `orElse(someOpt)`) fails to compile at the argument.
+// 1.x called these orElse(default) and or(alternative); see the 2.0 notes in CHANGELOG.md.
 
 // Either - error handling
 Right(value)                 // success

@@ -120,19 +120,19 @@ describe("TracedOption", () => {
     expect(events[0]).toMatchObject({ op: "fold", inTag: "None" })
   })
 
-  // ── terminal: orElse ───────────────────────────────────────────────────────
+  // ── terminal: getOrElse ────────────────────────────────────────────────────
 
-  it("orElse on Some returns the contained value with usedDefault=false", () => {
-    const result = TracedOption(Some(42), tracer, "s").orElse(0, "fallback")
+  it("getOrElse on Some returns the contained value with usedDefault=false", () => {
+    const result = TracedOption(Some(42), tracer, "s").getOrElse(() => 0, "fallback")
     expect(result).toBe(42)
-    expect(events[0]).toMatchObject({ op: "orElse", inTag: "Some", meta: { usedDefault: false }, label: "fallback" })
+    expect(events[0]).toMatchObject({ op: "getOrElse", inTag: "Some", meta: { usedDefault: false }, label: "fallback" })
     expect(events[0]).not.toHaveProperty("outTag")
   })
 
-  it("orElse on None returns the default with usedDefault=true", () => {
-    const result = TracedOption(None<number>(), tracer, "s").orElse(99, "fallback")
+  it("getOrElse on None returns the default with usedDefault=true", () => {
+    const result = TracedOption(None<number>(), tracer, "s").getOrElse(() => 99, "fallback")
     expect(result).toBe(99)
-    expect(events[0]).toMatchObject({ op: "orElse", inTag: "None", meta: { usedDefault: true } })
+    expect(events[0]).toMatchObject({ op: "getOrElse", inTag: "None", meta: { usedDefault: true } })
   })
 
   // ── unwrap ─────────────────────────────────────────────────────────────────
@@ -162,10 +162,10 @@ describe("TracedOption", () => {
     TracedOption(Some(3), tracer, "full")
       .map((n) => n * 2, "double") // Some(3) → Some(6)
       .filter((n) => n < 5, "lt5") // Some(6) → None  (6 < 5 is false)
-      .orElse(0, "default") // None → 0
+      .getOrElse(() => 0, "default") // None → 0
 
     expect(events).toHaveLength(3)
-    expect(events.map((e) => e.op)).toEqual(["map", "filter", "orElse"])
+    expect(events.map((e) => e.op)).toEqual(["map", "filter", "getOrElse"])
     expect(events.map((e) => e.inTag)).toEqual(["Some", "Some", "None"])
     expect(events[0]?.outTag).toBe("Some")
     expect(events[1]?.outTag).toBe("None")

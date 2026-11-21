@@ -19,8 +19,8 @@ export const expandVars = (p: string): Either<PathError, string> => {
   // js/polynomial-redos).
   const result = p.replace(/\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g, (_match: string, ...captures: unknown[]) => {
     const varName = Option(captures[0] as string | undefined)
-      .or(Option(captures[1] as string | undefined))
-      .orElse("")
+      .orElse(() => Option(captures[1] as string | undefined))
+      .getOrElse(() => "")
     const value = process.env[varName]
     if (value === undefined) {
       unresolvedVars.push(varName)
