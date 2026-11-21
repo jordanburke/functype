@@ -24,7 +24,7 @@ const findFirstExisting = (candidates: List<string>): IO<never, never, Option<st
 
 // Expand each candidate; drop entries whose env variables didn't resolve.
 const presentPaths = (candidates: readonly string[]): List<string> =>
-  List<string>(candidates.flatMap((c) => tryExpandPath(c).toArray() as string[]))
+  List<string>(candidates.flatMap((c) => tryExpandPath(c).toArray()))
 
 export const ConfigResolver = {
   // Async methods — return a lazy IO; nothing touches the filesystem until `.run()`

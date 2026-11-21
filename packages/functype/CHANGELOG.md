@@ -213,6 +213,20 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
 
+**2.0 (breaking): eslint-plugin-functype's presets get stricter.** From §5b of #276 (the 2.0 release plan). A new `error` fails a build, so these waited for a major.
+
+- **`recommended`:** `no-array-mutation` and `prefer-list` are now `error` (both were `off`). `no-array-mutation` found 91 hits across five consumers, every one a real in-place change. `prefer-list` was about 96% precise (#362, prefer-list flags only mutable or mutated arrays), and it skips Supabase's generated types (any file whose top level exports both `Json` and `Database`), its main false positive.
+- **`strict`:** `prefer-fold` also checks guards (`checkGuards: true`, from #363, the prefer-fold guard check): `if (e.isLeft()) return …` followed by `e.value` or `e.orThrow()` is reported. `prefer-list` is `error` here too (was `warn`). `recommended` leaves the guard check off.
+- **`agent`:** inherits both. `prefer-list` is `error` (was `off`), so `agent` no longer turns off a rule that `recommended` errors on.
+- An array that is declared and then pushed to is reported twice: by `prefer-list` at the declaration, and by `no-array-mutation` at the `push`. One fix clears both.
+- `no-array-mutation` is type-aware. Without `parserOptions.projectService` it reports nothing, so a config without type information sees only the `prefer-list` part of this change.
+- `no-floating-io`, `no-floating-result` and `no-serialize-container` are unchanged in every preset.
+- **Upgrade:** run `eslint` after upgrading and fix what it reports:
+  - A mutable type (`string[]`, `Array<T>`) becomes `ReadonlyArray<T>`, or `List<T>` for a collection you transform.
+  - An in-place change (`push`, `sort`, `xs[i] = v`, `xs.length = 0`) becomes a new array (`[...xs, x]`, `toSorted`, `with`) or a fold. A shared buffer, such as a test logger's store, can hold a `List` in a field and replace it on each write.
+  - A host that needs a mutable array: mark the function `@interop <reason>`, or wrap the type in `Wire<…>`.
+  - To keep 1.x levels for now, set `"functype/no-array-mutation": "off"` and `"functype/prefer-list": "off"` after `functype.configs.recommended`. For `strict` without the guard check, set `"functype/prefer-fold": ["error", { "checkGuards": false }]` after `functype.configs.strict`. A bare `"error"` keeps the preset's options, so the check stays on.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
