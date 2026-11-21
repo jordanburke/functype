@@ -70,8 +70,8 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 
 | Operation           | Method                        | Example                                                    | Returns          |
 | ------------------- | ----------------------------- | ---------------------------------------------------------- | ---------------- |
-| With default        | `getOrElse(() => default)`             | `option.getOrElse(() => "N/A")`                                     | `T`              |
-| With alternative    | `or(alternative)`             | `option.or(Option("alt"))`                                 | `Option<T>`      |
+| With default        | `getOrElse(() => default)`    | `option.getOrElse(() => "N/A")`                            | `T`              |
+| With alternative    | `orElse(() => alternative)`   | `option.orElse(() => Option("alt"))`                       | `Option<T>`      |
 | Or throw            | `orThrow(error?)`             | `option.orThrow()`                                         | `T` or throws    |
 | Or null             | `orNull()`                    | `option.orNull()`                                          | `T \| null`      |
 | Or undefined        | `orUndefined()`               | `option.orUndefined()`                                     | `T \| undefined` |
@@ -586,13 +586,13 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 
 ## Common Mistakes
 
-| ❌ Wrong                                       | ✅ Correct                                   |
-| ---------------------------------------------- | -------------------------------------------- |
-| `Option(value).map(...)` without extraction    | `Option(value).map(...).getOrElse(() => default)`     |
-| `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))` |
-| `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).getOrElse(() => fallback)`              |
-| `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                   |
-| Using `any` type                               | Use proper type parameters: `Option<T>`      |
+| ❌ Wrong                                       | ✅ Correct                                        |
+| ---------------------------------------------- | ------------------------------------------------- |
+| `Option(value).map(...)` without extraction    | `Option(value).map(...).getOrElse(() => default)` |
+| `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))`      |
+| `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).getOrElse(() => fallback)`          |
+| `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                        |
+| Using `any` type                               | Use proper type parameters: `Option<T>`           |
 
 ## Performance Tips
 
@@ -634,6 +634,6 @@ function double(e: Either<Error, number>): number {
 
 After an `isLeft()` early return, `e.value` is already `R`: don't call `.orThrow()` to get it.
 
-To choose between two Options, use `a.or(b)`, not an `if`. `getOrElse` takes a function that returns a plain value; `or` takes another Option.
+To choose between two Options, use `a.orElse(() => b)`, not an `if`. `getOrElse` takes a function that returns a plain value; `orElse` takes one that returns another Option.
 
 If you need to reference a specific variant, import `LeftOf` / `RightOf` from `functype/either`.

@@ -545,13 +545,13 @@ The matrix shows which interfaces (Functor, Monad, Foldable, etc.) each type imp
 **Option<T>**
 
 - `map`, `flatMap`, `filter`, `fold`
-- `getOrElse`, `or`, `orNull`, `orUndefined`, `orThrow`
+- `getOrElse`, `orElse`, `orNull`, `orUndefined`, `orThrow`
 - `isSome`, `isNone`, `contains`
 
 **Either<L, R>**
 
 - `map`, `flatMap`, `fold`
-- `getOrElse`, `or`, `swap`
+- `getOrElse`, `orElse`, `swap`
 - `isLeft`, `isRight`
 
 **Try<T>**

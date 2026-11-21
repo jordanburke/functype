@@ -561,7 +561,7 @@ new method, follow these four rules and the variance declaration will hold:
    ```
    `Widen<A, B> = A extends B ? B : never`. Blocks `list.reduce<UnrelatedType>(...)`
    at compile time.
-4. **Recovery / fallback** (`or`, `getOrElse`, `recover`) → widen via
+4. **Recovery / fallback** (`orElse`, `getOrElse`, `recover`) → widen via
    `<T2>(...): T | T2` or `C<T | T2>`.
 
 **When to stay invariant:** mutable cells (`Ref<A>`), record types with

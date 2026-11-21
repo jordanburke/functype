@@ -33,7 +33,7 @@ describe("Try", () => {
     })
   })
 
-  describe("or()", () => {
+  describe("orElse()", () => {
     it("should return itself if successful", () => {
       const myTry = Try(() => 1 + 1)
       const alternative = Try(() => 2 + 2)

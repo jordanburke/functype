@@ -9,7 +9,7 @@ import { type Either, Left, Right } from "@/either/Either"
  *
  * Invariance in either parameter breaks common idioms like returning
  * `Either<UnionError, T>` from a function that internally constructs
- * narrow-tagged Left values, or calling `.swap()` / `.or()` against
+ * narrow-tagged Left values, or calling `.swap()` / `.orElse()` against
  * Either values with differently-typed sides.
  *
  * History of regressions this file guards:
@@ -247,14 +247,14 @@ describe("Either variance — runtime behavior unchanged", () => {
     if (result.isRight()) expect(result.value).toBe(6)
   })
 
-  it("or returns first Right", () => {
+  it("orElse returns first Right", () => {
     const a: Either<string, number> = Right(1)
     const b: Either<string, number> = Right(2)
     const c = a.orElse(() => b)
     if (c.isRight()) expect(c.value).toBe(1)
   })
 
-  it("or returns alternative when first is Left", () => {
+  it("orElse returns alternative when first is Left", () => {
     const a: Either<string, number> = Left("err")
     const b: Either<string, number> = Right(2)
     const c = a.orElse(() => b)

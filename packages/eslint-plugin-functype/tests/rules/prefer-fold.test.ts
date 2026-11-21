@@ -634,7 +634,7 @@ const toHost = (o) => (o.isSome() ? o.orThrow() : undefined)`,
         ],
       },
       {
-        name: "A receiver-plus-literal choice gets no suggestion (.or takes a container, not a value)",
+        name: "A receiver-plus-literal choice gets no suggestion (.orElse takes a container thunk, not a value)",
         code: "const x = a.isSome() ? a : 5",
         output: null,
         errors: [{ messageId: "preferFoldTernary", data: { type: "Option" }, suggestions: [] }],
