@@ -53,7 +53,7 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 
 - **Constructor `List([...])`**: Use for existing arrays/iterables
 - **`.of(...)`**: Use for inline literal values (cleaner syntax)
-- **`.empty()`**: Use for typed empty collections (returns singleton - efficient for repeated calls)
+- **`.empty()`**: Use for typed empty collections. `List.empty()` returns one shared value; `Set.empty()` and `Map.empty()` build a new one each call, because a native Set or Map can't be frozen
 
 ## Transformation
 
