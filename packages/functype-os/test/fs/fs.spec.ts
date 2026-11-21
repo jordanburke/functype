@@ -70,7 +70,7 @@ describe("Fs", () => {
       expect(result.isRight()).toBe(true)
       const opt = result.value
       expect(opt.isSome()).toBe(true)
-      expect(opt.orElse("")).toBe(testContent)
+      expect(opt.getOrElse(() => "")).toBe(testContent)
     })
 
     it("should return Ok(None) for ENOENT", async () => {
@@ -181,7 +181,7 @@ describe("Fs", () => {
       const result = Fs.readFileOptSync(testFile)
       expect(result.isRight()).toBe(true)
       expect(result.value.isSome()).toBe(true)
-      expect(result.value.orElse("")).toBe(testContent)
+      expect(result.value.getOrElse(() => "")).toBe(testContent)
     })
 
     it("should return Right(None) for ENOENT", () => {

@@ -79,10 +79,6 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._value
   }
 
-  getOrElse(defaultValue: T): T {
-    return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue
-  }
-
   getOrThrow(error: Error): T {
     if (this._tag === "Empty" || this._value === undefined) {
       throw error
@@ -97,12 +93,12 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._value
   }
 
-  orElse<T2 extends Type>(defaultValue: T2): T | T2 {
-    return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2 {
+    return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue()
   }
 
-  or<T2 extends Type>(alternative: Extractable<T2>): Extractable<T | T2> {
-    return this._tag === "Full" ? (this as unknown as Extractable<T | T2>) : alternative
+  orElse<T2 extends Type>(alternative: () => Extractable<T2>): Extractable<T | T2> {
+    return this._tag === "Full" ? (this as unknown as Extractable<T | T2>) : alternative()
   }
 
   orNull(): T | null {

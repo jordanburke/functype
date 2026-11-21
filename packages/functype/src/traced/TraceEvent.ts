@@ -2,7 +2,7 @@
  * Identifies which combinator emitted this event.
  * String union is open so callers can extend with custom ops.
  */
-export type TraceOp = "map" | "flatMap" | "filter" | "fold" | "orElse" | "unwrap" | (string & {})
+export type TraceOp = "map" | "flatMap" | "filter" | "fold" | "getOrElse" | "unwrap" | (string & {})
 
 /**
  * One observation emitted by a TracedOption combinator.

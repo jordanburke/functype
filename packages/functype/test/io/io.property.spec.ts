@@ -292,7 +292,7 @@ describe("IO Property Tests", () => {
         fc.asyncProperty(fc.integer(), async (n) => {
           const either = await IO.succeed(n).run()
           expect(either.isRight()).toBe(true)
-          expect(either.orElse(0)).toBe(n)
+          expect(either.getOrElse(() => 0)).toBe(n)
         }),
       )
     })
@@ -330,7 +330,7 @@ describe("IO Property Tests", () => {
         fc.asyncProperty(fc.integer(), async (n) => {
           const option = await IO.succeed(n).runOption()
           expect(option.isSome()).toBe(true)
-          expect(option.orElse(0)).toBe(n)
+          expect(option.getOrElse(() => 0)).toBe(n)
         }),
       )
     })

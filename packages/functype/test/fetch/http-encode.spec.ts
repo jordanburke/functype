@@ -45,7 +45,7 @@ describe("Http encode", () => {
   it("ignores flatten when encode is set", async () => {
     const fetch = okFetch()
     const http = Http.client({ fetch })
-    const encode: Encoder<{ readonly tag: Option<number> }> = (b) => ({ tag: b.tag.orElse(0) + 1 })
+    const encode: Encoder<{ readonly tag: Option<number> }> = (b) => ({ tag: b.tag.getOrElse(() => 0) + 1 })
     await http.put("https://api.test/x", { body: { tag: Option(1) }, encode, flatten: false }).runOrThrow()
 
     expect(sentBody(fetch)).toBe(JSON.stringify({ tag: 2 }))

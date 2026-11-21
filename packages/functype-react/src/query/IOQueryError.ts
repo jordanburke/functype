@@ -65,7 +65,7 @@ export const formatIOError = (error: unknown): string => {
   // `String({})` is "[object Object]", which tells a reader nothing. Prefer a JSON
   // rendering for plain objects, falling back to String() for cycles and symbols.
   if (typeof error === "object" && error !== null) {
-    return Try(() => JSON.stringify(error)).orElse(String(error))
+    return Try(() => JSON.stringify(error)).getOrElse(() => String(error))
   }
 
   return String(error)

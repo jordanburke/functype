@@ -8,7 +8,7 @@ describe("Env", () => {
       process.env["TEST_ENV_VAR"] = "hello"
       const result = Env("TEST_ENV_VAR")
       expect(result.isSome()).toBe(true)
-      expect(result.orElse("")).toBe("hello")
+      expect(result.getOrElse(() => "")).toBe("hello")
       delete process.env["TEST_ENV_VAR"]
     })
 
@@ -23,7 +23,7 @@ describe("Env", () => {
       process.env["TEST_GET_VAR"] = "world"
       const result = Env.get("TEST_GET_VAR")
       expect(result.isSome()).toBe(true)
-      expect(result.orElse("")).toBe("world")
+      expect(result.getOrElse(() => "")).toBe("world")
       delete process.env["TEST_GET_VAR"]
     })
 
@@ -38,7 +38,7 @@ describe("Env", () => {
       process.env["TEST_REQ_VAR"] = "value"
       const result = Env.getRequired("TEST_REQ_VAR")
       expect(result.isRight()).toBe(true)
-      expect(result.orElse("")).toBe("value")
+      expect(result.getOrElse(() => "")).toBe("value")
       delete process.env["TEST_REQ_VAR"]
     })
 

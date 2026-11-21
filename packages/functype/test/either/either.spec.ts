@@ -30,12 +30,12 @@ describe("Either", () => {
   it("should contain all items in list on Right", () => {
     const list = List([1, 2, 3, 4])
     const result = Right(list)
-    expect(result.orElse(List()).toArray()).toEqual([1, 2, 3, 4])
+    expect(result.getOrElse(() => List()).toArray()).toEqual([1, 2, 3, 4])
   })
 
   it("map over Right containing a list", () => {
     const result = Right(List([1, 2, 3, 4])).map((list) => list.map((x) => x * 2))
-    expect(result.orElse(List()).toArray()).toEqual([2, 4, 6, 8])
+    expect(result.getOrElse(() => List()).toArray()).toEqual([2, 4, 6, 8])
   })
 
   it("merge two Rights", () => {
@@ -64,12 +64,12 @@ describe("Either", () => {
 
   it("getOrElse on Right", () => {
     const right = Right<string, number>(5)
-    expect(right.orElse(10)).toBe(5)
+    expect(right.getOrElse(() => 10)).toBe(5)
   })
 
   it("getOrElse on Left", () => {
     const left = Left<string, number>("error")
-    expect(left.orElse(10)).toBe(10)
+    expect(left.getOrElse(() => 10)).toBe(10)
   })
 
   it("getOrThrow on Right", () => {
@@ -119,7 +119,7 @@ describe("Either", () => {
     const right = Right<string, number>(5)
     const option = right.toOption()
     expect(option.isSome()).toBe(true)
-    expect(option.orElse(0)).toBe(5)
+    expect(option.getOrElse(() => 0)).toBe(5)
   })
 
   it("toOption on Left", () => {

@@ -60,9 +60,9 @@ describe("Exit's shape", () => {
 
 describe("Exit's 2.0 breaks", () => {
   it("a detached method call throws", () => {
-    const { orElse } = Exit.succeed<string, number>(1)
-    expect(() => orElse(0)).toThrow(TypeError)
-    expect(() => [0].map(Exit.succeed(2).orElse)).toThrow(TypeError)
+    const { getOrElse } = Exit.succeed<string, number>(1)
+    expect(() => getOrElse(() => 0)).toThrow(TypeError)
+    expect(() => [() => 0].map(Exit.succeed(2).getOrElse)).toThrow(TypeError)
   })
 
   it("a spread copies only the data", () => {

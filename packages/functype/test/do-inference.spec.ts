@@ -18,7 +18,7 @@ describe("Do result types", () => {
       return x + y
     })
     expectTypeOf(result).toEqualTypeOf<Option<number>>()
-    expect(result.orElse(0)).toBe(15)
+    expect(result.getOrElse(() => 0)).toBe(15)
   })
 
   it("a Try-only comprehension is a Try", () => {
@@ -27,7 +27,7 @@ describe("Do result types", () => {
       return x * 3
     })
     expectTypeOf(result).toEqualTypeOf<Try<number>>()
-    expect(result.orElse(0)).toBe(6)
+    expect(result.getOrElse(() => 0)).toBe(6)
   })
 
   it("an Option chain over optional fields keeps its types", () => {
@@ -38,7 +38,7 @@ describe("Do result types", () => {
       const profile = yield* $(Option(u.profile))
       const settings = yield* $(Option(profile.settings))
       return settings.theme
-    }).orElse("light")
+    }).getOrElse(() => "light")
     expectTypeOf(theme).toEqualTypeOf<string>()
     expect(theme).toBe("dark")
   })
@@ -65,7 +65,7 @@ describe("Do result types", () => {
       return x + y
     })
     expectTypeOf(mixed).toEqualTypeOf<unknown>()
-    expect((mixed as Option<number>).orElse(0)).toBe(15)
+    expect((mixed as Option<number>).getOrElse(() => 0)).toBe(15)
     expectTypeOf(
       Do(function* () {
         const x = yield* $(Either.right<string, number>(1))
@@ -99,7 +99,7 @@ describe("DoAsync result types", () => {
       return x + y
     })
     expectTypeOf(option).toEqualTypeOf<Promise<Option<number>>>()
-    expect((await option).orElse(0)).toBe(3)
+    expect((await option).getOrElse(() => 0)).toBe(3)
 
     const attempt = DoAsync(async function* () {
       const x = yield* $(Try(() => 5))

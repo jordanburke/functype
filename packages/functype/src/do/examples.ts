@@ -201,7 +201,7 @@ export function errorRecoveryExample() {
         // This might fail if None - we'll handle it outside IIFE
         const temp = Option(null as number | null)
         // Use getOrElse to safely extract value
-        return temp.orElse(0)
+        return temp.getOrElse(() => 0)
       } catch {
         return 0
       }
@@ -212,7 +212,7 @@ export function errorRecoveryExample() {
     return multiplied
   }) as Option<number>
 
-  return result.orElse(0) // Returns 0 (recovered from None)
+  return result.getOrElse(() => 0) // Returns 0 (recovered from None)
 }
 
 /**
@@ -343,13 +343,13 @@ export function nestedDoExample() {
         const z = yield* $(Option(15))
         return y + z
       }) as Option<number>
-    ).orElse(0) // Get single value from inner Do
+    ).getOrElse(() => 0) // Get single value from inner Do
 
     const innerResult = yield* $(Option(inner))
     return x + innerResult
   }) as Option<number>
 
-  return outer.orElse(0) // Returns 30
+  return outer.getOrElse(() => 0) // Returns 30
 }
 
 /**

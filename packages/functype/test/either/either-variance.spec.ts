@@ -101,7 +101,7 @@ describe("Either L covariance", () => {
   it("widens through or", () => {
     const a: Either<ConfigError, number> = Left({ _tag: "FileNotFound", path: "x" } as const)
     const b: Either<FnoxError, number> = Right(1)
-    const result = a.or(b)
+    const result = a.orElse(() => b)
     expectTypeOf(result).toEqualTypeOf<Either<ConfigError | FnoxError, number>>()
   })
 
@@ -136,14 +136,14 @@ describe("Either R covariance", () => {
     const e: Either<string, UserV2> = Right({ name: "a", email: "b" })
     type Fallback = { readonly name: string; readonly guest: true }
     const fallback: Fallback = { name: "guest", guest: true }
-    const result = e.orElse(fallback)
+    const result = e.getOrElse(() => fallback)
     // orElse<R2>(defaultValue: R2): R | R2
     expectTypeOf(result).toEqualTypeOf<UserV2 | Fallback>()
   })
 
   it("orElse still works with exact R", () => {
     const e: Either<string, number> = Left("err")
-    const result: number = e.orElse(0)
+    const result: number = e.getOrElse(() => 0)
     expectTypeOf(result).toEqualTypeOf<number>()
   })
 })
@@ -250,20 +250,20 @@ describe("Either variance — runtime behavior unchanged", () => {
   it("or returns first Right", () => {
     const a: Either<string, number> = Right(1)
     const b: Either<string, number> = Right(2)
-    const c = a.or(b)
+    const c = a.orElse(() => b)
     if (c.isRight()) expect(c.value).toBe(1)
   })
 
   it("or returns alternative when first is Left", () => {
     const a: Either<string, number> = Left("err")
     const b: Either<string, number> = Right(2)
-    const c = a.or(b)
+    const c = a.orElse(() => b)
     if (c.isRight()) expect(c.value).toBe(2)
   })
 
   it("orElse returns default on Left", () => {
     const a: Either<string, number> = Left("err")
-    expect(a.orElse(99)).toBe(99)
+    expect(a.getOrElse(() => 99)).toBe(99)
   })
 
   it("swap flips sides", () => {

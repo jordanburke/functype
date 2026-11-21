@@ -15,7 +15,7 @@ describe("Option - Property-based tests", () => {
         fc.property(fc.string(), (value) => {
           const option = createOption(value)
           expect(option.isEmpty).toBe(false)
-          expect(option.orElse("default")).toBe(value)
+          expect(option.getOrElse(() => "default")).toBe(value)
         }),
       )
     })
@@ -25,7 +25,7 @@ describe("Option - Property-based tests", () => {
         fc.property(fc.constant(null), (value) => {
           const option = createOption(value)
           expect(option.isEmpty).toBe(true)
-          expect(option.orElse(null)).toBe(null)
+          expect(option.getOrElse(() => null)).toBe(null)
         }),
       )
     })
@@ -40,7 +40,7 @@ describe("Option - Property-based tests", () => {
           const mapped = option.map((x) => x)
 
           // Check that the mapped option has the same value
-          expect(mapped.orElse("default")).toBe(option.orElse("default"))
+          expect(mapped.getOrElse(() => "default")).toBe(option.getOrElse(() => "default"))
           expect(mapped.isEmpty).toBe(option.isEmpty)
         }),
       )
@@ -61,7 +61,7 @@ describe("Option - Property-based tests", () => {
           // Second approach: map(x => g(f(x)))
           const result2 = option.map((x) => g(f(x)))
 
-          expect(result1.orElse(0)).toBe(result2.orElse(0))
+          expect(result1.getOrElse(() => 0)).toBe(result2.getOrElse(() => 0))
         }),
       )
     })
@@ -82,7 +82,7 @@ describe("Option - Property-based tests", () => {
           // Second approach: flatMap(x => f(x).flatMap(g))
           const result2 = option.flatMap((x) => f(x).flatMap(g))
 
-          expect(result1.orElse(0)).toBe(result2.orElse(0))
+          expect(result1.getOrElse(() => 0)).toBe(result2.getOrElse(() => 0))
         }),
       )
     })
@@ -94,10 +94,10 @@ describe("Option - Property-based tests", () => {
       fc.assert(
         fc.property(fc.string(), fc.string(), (value, defaultValue) => {
           const someOption = createOption(value)
-          expect(someOption.orElse(defaultValue)).toBe(value)
+          expect(someOption.getOrElse(() => defaultValue)).toBe(value)
 
           const noneOption = createOption<string>(null)
-          expect(noneOption.orElse(defaultValue)).toBe(defaultValue)
+          expect(noneOption.getOrElse(() => defaultValue)).toBe(defaultValue)
         }),
       )
     })

@@ -28,7 +28,7 @@ describe("ConfigResolver", () => {
       expect(result.isRight()).toBe(true)
       const opt = result.value
       expect(opt.isSome()).toBe(true)
-      expect(opt.orElse("")).toBe(configFile)
+      expect(opt.getOrElse(() => "")).toBe(configFile)
     })
 
     it("should return None when no candidates exist", async () => {
@@ -45,7 +45,7 @@ describe("ConfigResolver", () => {
       }).run()
       expect(result.isRight()).toBe(true)
       expect(result.value.isSome()).toBe(true)
-      expect(result.value.orElse("")).toBe(configFile)
+      expect(result.value.getOrElse(() => "")).toBe(configFile)
     })
 
     it("should expand tilde in candidates", async () => {
@@ -110,7 +110,7 @@ describe("ConfigResolver", () => {
         candidates: ["/no/such/file.toml", configFile, "/also/missing.toml"],
       })
       expect(result.isSome()).toBe(true)
-      expect(result.orElse("")).toBe(configFile)
+      expect(result.getOrElse(() => "")).toBe(configFile)
     })
 
     it("should return None when no candidates exist", () => {
@@ -125,7 +125,7 @@ describe("ConfigResolver", () => {
         candidates: ["$UNRESOLVED_VAR_XYZ/file.toml", configFile],
       })
       expect(result.isSome()).toBe(true)
-      expect(result.orElse("")).toBe(configFile)
+      expect(result.getOrElse(() => "")).toBe(configFile)
     })
 
     it("should expand tilde in candidates", () => {

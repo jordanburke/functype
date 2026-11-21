@@ -283,7 +283,7 @@ describe("defects are distinguishable from typed failures", () => {
 
     it("extracts like a Failure", () => {
       expect(() => die.orThrow()).toThrow("boom")
-      expect(die.orElse(9)).toBe(9)
+      expect(die.getOrElse(() => 9)).toBe(9)
       expect(die.toOption().isEmpty).toBe(true)
       expect(die.toEither().isLeft()).toBe(true)
     })

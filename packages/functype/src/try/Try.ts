@@ -41,7 +41,11 @@ export interface TryBase<out T>
   readonly error: Error | undefined
   isSuccess(): this is SuccessOf<T>
   isFailure(): this is FailureOf<T>
-  orElse<T2 extends Type>(defaultValue: T2): T | T2
+  /**
+   * Returns the value, or calls `defaultValue` on a Failure. The default is lazy: it runs only on
+   * a Failure. The result widens to `T | T2`.
+   */
+  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
   /**
    * Returns the value, or throws on a Failure. Pass an `Error` to throw it, or a builder to make one from
    * the failure's error. With no argument, rethrows the original error.
@@ -55,7 +59,11 @@ export interface TryBase<out T>
    * typed as `(...): never`.
    */
   expect(handler: (error: Error) => never): T
-  or<T2 extends Type>(alternative: Try<T2>): Try<T | T2>
+  /**
+   * Returns this Try if it is a Success, otherwise calls `alternative` for another Try.
+   * The alternative is lazy: it runs only on a Failure.
+   */
+  orElse<T2 extends Type>(alternative: () => Try<T2>): Try<T | T2>
   orNull(): T | null
   orUndefined(): T | undefined
   toOption(): Option<T>
@@ -164,7 +172,7 @@ const SuccessProto = define<SuccessOf<A>>()("Success", {
   isFailure(): this is FailureOf<A> {
     return false
   },
-  orElse() {
+  getOrElse() {
     return this.value
   },
   orThrow() {
@@ -173,7 +181,7 @@ const SuccessProto = define<SuccessOf<A>>()("Success", {
   expect() {
     return this.value
   },
-  or() {
+  orElse() {
     return this
   },
   orNull() {
@@ -281,8 +289,8 @@ const FailureProto = define<FailureOf<A>>()("Failure", {
   isFailure(): this is FailureOf<A> {
     return true
   },
-  orElse(defaultValue) {
-    return defaultValue
+  getOrElse(defaultValue) {
+    return defaultValue()
   },
   orThrow(e) {
     throw e === undefined ? this.error : typeof e === "function" ? e(this.error) : e
@@ -290,8 +298,8 @@ const FailureProto = define<FailureOf<A>>()("Failure", {
   expect(handler) {
     return handler(this.error)
   },
-  or(alternative) {
-    return alternative
+  orElse(alternative) {
+    return alternative()
   },
   orNull() {
     return null

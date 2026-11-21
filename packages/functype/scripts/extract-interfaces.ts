@@ -135,7 +135,7 @@ const processLine = (
 
   // Check for definition start
   const startsDefinition = matchesDefinition(trimmed, keyword, name) && !state.inDefinition
-  const definitionStart = startsDefinition ? jsDocStart.or(Some(index)) : state.definitionStart
+  const definitionStart = startsDefinition ? jsDocStart.orElse(() => Some(index)) : state.definitionStart
   const inDefinition = state.inDefinition || startsDefinition
 
   // If in definition, accumulate result
@@ -209,7 +209,7 @@ const extractDefinition = (sourceText: string, name: string, isType: boolean = f
         return result.toArray().join("\n")
       }),
     )
-    .or(Some(result.toArray().join("\n")))
+    .orElse(() => Some(result.toArray().join("\n")))
 }
 
 /**

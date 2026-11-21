@@ -107,7 +107,7 @@ const resolveViaCmdExe = (usersDir: string, fallback: string): Option<string> =>
   const parsed = Try(() => execSync("cmd.exe /c echo %USERPROFILE%", { timeout: 3000, encoding: "utf8" }).trim())
     .toOption()
     .flatMap(parseCmdOutput)
-    .orElse(fallback)
+    .getOrElse(() => fallback)
   return Option(parsed)
 }
 

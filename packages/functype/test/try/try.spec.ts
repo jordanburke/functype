@@ -22,14 +22,14 @@ describe("Try", () => {
   describe("getOrElse()", () => {
     it("should return the value on success", () => {
       const myTry = Try(() => 1 + 1)
-      expect(myTry.orElse(0)).toBe(2)
+      expect(myTry.getOrElse(() => 0)).toBe(2)
     })
 
     it("should return the default value on failure", () => {
       const myTry = Try<number>(() => {
         throw new Error("Something went wrong")
       })
-      expect(myTry.orElse(0)).toBe(0)
+      expect(myTry.getOrElse(() => 0)).toBe(0)
     })
   })
 
@@ -37,7 +37,7 @@ describe("Try", () => {
     it("should return itself if successful", () => {
       const myTry = Try(() => 1 + 1)
       const alternative = Try(() => 2 + 2)
-      expect(myTry.or(alternative).orElse(0)).toBe(2)
+      expect(myTry.orElse(() => alternative).getOrElse(() => 0)).toBe(2)
     })
 
     it("should return the alternative if failed", () => {
@@ -45,7 +45,7 @@ describe("Try", () => {
         throw new Error("Something went wrong")
       })
       const alternative = Try(() => 2 + 2)
-      expect(myTry.or(alternative).orElse(0)).toBe(4)
+      expect(myTry.orElse(() => alternative).getOrElse(() => 0)).toBe(4)
     })
   })
 
@@ -144,12 +144,12 @@ describe("Try", () => {
     it("should create a Success directly", () => {
       const result = Try.success(42)
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(0)).toBe(42)
+      expect(result.getOrElse(() => 0)).toBe(42)
     })
 
     it("should preserve the type parameter", () => {
       const result = Try.success<string>("hello")
-      expect(result.orElse("default")).toBe("hello")
+      expect(result.getOrElse(() => "default")).toBe("hello")
     })
   })
 
@@ -157,7 +157,7 @@ describe("Try", () => {
     it("should create a Failure from an Error", () => {
       const result = Try.failure<number>(new Error("boom"))
       expect(result.isFailure()).toBe(true)
-      expect(result.orElse(0)).toBe(0)
+      expect(result.getOrElse(() => 0)).toBe(0)
     })
 
     it("should create a Failure from a string", () => {
@@ -171,7 +171,7 @@ describe("Try", () => {
     it("should allow typed Failure without throw workaround", () => {
       const result: Try<string> = Try.failure("something went wrong")
       expect(result.isFailure()).toBe(true)
-      expect(result.orElse("fallback")).toBe("fallback")
+      expect(result.getOrElse(() => "fallback")).toBe("fallback")
     })
   })
 
@@ -179,13 +179,13 @@ describe("Try", () => {
     it("should create Success from resolved promise", async () => {
       const result = await Try.fromPromise(Promise.resolve(42))
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(0)).toBe(42)
+      expect(result.getOrElse(() => 0)).toBe(42)
     })
 
     it("should create Failure from rejected promise", async () => {
       const result = await Try.fromPromise<number>(Promise.reject(new Error("async error")))
       expect(result.isFailure()).toBe(true)
-      expect(result.orElse(0)).toBe(0)
+      expect(result.getOrElse(() => 0)).toBe(0)
     })
 
     it("should wrap non-Error rejections", async () => {
@@ -224,7 +224,7 @@ describe("Try", () => {
     it("returns Success on resolved promise", async () => {
       const result = await Try.async(() => Promise.resolve(99))
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(0)).toBe(99)
+      expect(result.getOrElse(() => 0)).toBe(99)
     })
 
     it("returns Failure on rejected promise", async () => {
@@ -257,13 +257,13 @@ describe("Try", () => {
   describe("recover()", () => {
     it("should not change a Success", () => {
       const result = Try.success(42).recover(() => 0)
-      expect(result.orElse(-1)).toBe(42)
+      expect(result.getOrElse(() => -1)).toBe(42)
     })
 
     it("should recover a Failure with a value", () => {
       const result = Try.failure<number>("boom").recover((err) => err.message.length)
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(-1)).toBe(4)
+      expect(result.getOrElse(() => -1)).toBe(4)
     })
 
     it("should produce Failure if recovery function throws", () => {
@@ -277,13 +277,13 @@ describe("Try", () => {
   describe("recoverWith()", () => {
     it("should not change a Success", () => {
       const result = Try.success(42).recoverWith(() => Try.success(0))
-      expect(result.orElse(-1)).toBe(42)
+      expect(result.getOrElse(() => -1)).toBe(42)
     })
 
     it("should recover a Failure with another Try", () => {
       const result = Try.failure<number>("boom").recoverWith(() => Try.success(99))
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(-1)).toBe(99)
+      expect(result.getOrElse(() => -1)).toBe(99)
     })
 
     it("should allow recovery to Failure", () => {
@@ -309,7 +309,7 @@ describe("Try", () => {
         () => new Error("non-positive"),
       )
       expect(result.isSuccess()).toBe(true)
-      expect(result.orElse(-1)).toBe(42)
+      expect(result.getOrElse(() => -1)).toBe(42)
     })
 
     it("becomes a Failure carrying the constructed Error when the predicate fails", () => {

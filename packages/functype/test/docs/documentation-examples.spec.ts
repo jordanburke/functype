@@ -49,7 +49,7 @@ describe("Documentation Examples", () => {
       const result = value
         .map((s) => s.length)
         .filter((len) => len > 3)
-        .orElse(0) // 5
+        .getOrElse(() => 0) // 5
 
       // Pattern matching
       const message = value.fold(
@@ -60,7 +60,7 @@ describe("Documentation Examples", () => {
 
       expect(value.isSome()).toBe(true)
       expect(empty.isNone()).toBe(true)
-      expect(upper.orElse("")).toBe("HELLO")
+      expect(upper.getOrElse(() => "")).toBe("HELLO")
       expect(_nothing.isNone()).toBe(true)
       expect(result).toBe(5)
       expect(message).toBe("Value: hello")
@@ -94,10 +94,10 @@ describe("Documentation Examples", () => {
 
       expect(success.isRight()).toBe(true)
       expect(failure.isLeft()).toBe(true)
-      expect(doubled.orElse(0)).toBe(84)
+      expect(doubled.getOrElse(() => 0)).toBe(84)
       expect(_failed.isLeft()).toBe(true)
       expect(result).toBe("Success: 42")
-      expect(calculation.orElse(0)).toBe(1)
+      expect(calculation.getOrElse(() => 0)).toBe(1)
     })
 
     it("should demonstrate List basic usage", () => {
@@ -156,7 +156,7 @@ describe("Documentation Examples", () => {
 
       expect(result.isSuccess()).toBe(true)
       expect(failed.isFailure()).toBe(true)
-      expect(processed.orElse("")).toBe("Hello, JOHN!")
+      expect(processed.getOrElse(() => "")).toBe("Hello, JOHN!")
       expect(message).toBe("Result: JOHN")
     })
 
@@ -211,7 +211,7 @@ describe("Documentation Examples", () => {
       }) // asyncResult
       //#endregion readme-do-notation
 
-      expect((result as Option<number>).orElse(0)).toBe(17)
+      expect((result as Option<number>).getOrElse(() => 0)).toBe(17)
       expect((validation as Either<string, { name: string; age: number }>).isRight()).toBe(true)
       // Note: _asyncResult is a Promise, would need await to test
     })
@@ -332,16 +332,16 @@ describe("Documentation Examples", () => {
       const mapped = some.map((s) => s.toUpperCase())
       const filtered = some.filter((s) => s.length > 3)
       const chained = some.flatMap((s) => Option(s.repeat(2)))
-      const value = some.orElse("default")
+      const value = some.getOrElse(() => "default")
       const folded = some.fold(
         () => "empty",
         (s) => `has: ${s}`,
       )
       //#endregion quick-option-patterns
 
-      expect(mapped.orElse("")).toBe("VALUE")
-      expect(filtered.orElse("")).toBe("value")
-      expect(chained.orElse("")).toBe("valuevalue")
+      expect(mapped.getOrElse(() => "")).toBe("VALUE")
+      expect(filtered.getOrElse(() => "")).toBe("value")
+      expect(chained.getOrElse(() => "")).toBe("valuevalue")
       expect(value).toBe("value")
       expect(folded).toBe("has: value")
     })
@@ -354,7 +354,7 @@ describe("Documentation Examples", () => {
 
       // Operations
       const mapped = success.map((n) => n * 2)
-      const recovered = failure.orElse(0)
+      const recovered = failure.getOrElse(() => 0)
       const swapped = success.swap()
       const folded = success.fold(
         (_err) => 0,
@@ -362,7 +362,7 @@ describe("Documentation Examples", () => {
       )
       //#endregion quick-either-patterns
 
-      expect(mapped.orElse(0)).toBe(84)
+      expect(mapped.getOrElse(() => 0)).toBe(84)
       expect(recovered).toBe(0)
       expect(swapped.isLeft()).toBe(true)
       expect(folded).toBe(42)
@@ -407,7 +407,7 @@ describe("Documentation Examples", () => {
       const doubled = Option(5)
         .map((x) => x * 2) // Some(10)
         .filter((x) => x > 5) // Some(10)
-        .orElse(0) // 10
+        .getOrElse(() => 0) // 10
       //#endregion site-option-transform
 
       expect(doubled).toBe(10)
@@ -442,7 +442,7 @@ describe("Documentation Examples", () => {
 
       expect(success.isRight()).toBe(true)
       expect(failure.isLeft()).toBe(true)
-      expect(doubled.orElse(0)).toBe(84)
+      expect(doubled.getOrElse(() => 0)).toBe(84)
       expect(unchanged.isLeft()).toBe(true)
     })
 
@@ -525,7 +525,7 @@ describe("Documentation Examples", () => {
       }) as Option<number> // Option(15)
       //#endregion site-do-option
 
-      expect(result.orElse(0)).toBe(15)
+      expect(result.getOrElse(() => 0)).toBe(15)
     })
 
     it("should demonstrate Do List comprehension patterns", () => {
