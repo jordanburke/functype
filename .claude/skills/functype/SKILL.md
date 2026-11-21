@@ -20,6 +20,7 @@ Trigger this skill when users:
 - Work with immutable collections
 - Compose side effects, async operations, or dependency injection with IO
 - Run async operations with cancellation (IO's `runCancellable`, `interruptOn`)
+- Trace effects with nested spans (IO's `withSpan`, behind a type-only `SpanTracer`)
 - Debug functype code or understand error messages
 
 ## Quick Start
@@ -348,6 +349,12 @@ await effect.run() // Returns Promise<Either<E, A>>; the Left is always an E. A 
 await effect.runOrThrow() // Returns Promise<A>; rejects with the error
 effect.runSync() // Returns Either<E, A>; throws a defect, an interruption, or an async/timeout/race/sleep effect
 await effect.runExit() // Returns Promise<Exit<E, A>>
+
+// Tracing (2.0): withSpan runs an effect in a span; an inner withSpan nests under it without a
+// parent. functype ships only the SpanTracer contract and no tracer, so with none provided withSpan
+// does nothing. Provide yours (an OpenTelemetry bridge is a few lines) outside the spans.
+const tracer: SpanTracer<string> = { start: (name) => name, run: (_span, fn) => fn(), end: () => undefined }
+await effect.withSpan("load", { "user.id": id }).provideService(SpanTracer, tracer).run()
 
 // run() vs runExit(): Either has two branches, Exit has four. Use run() when the Left is
 // all you handle; use runExit() to tell a typed failure from a *defect* (a value that is
