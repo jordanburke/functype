@@ -1,9 +1,12 @@
 name: Deploy Docs
 
 on:
-  # Runs on pushes targeting the default branch
+  # Deploys from release/1.x until 2.0 ships, so functype.org documents the version npm serves.
+  # This filter is the same on main and release/1.x: a push to main deploys nothing. At the 2.0
+  # release, set it back to "main" on both branches (see docs/RELEASE.md on main, "Docs and the
+  # Claude plugin until 2.0").
   push:
-    branches: ["main"]
+    branches: ["release/1.x"]
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:

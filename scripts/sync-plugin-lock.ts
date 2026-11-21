@@ -30,7 +30,13 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 const MANIFEST = ".claude-plugin/marketplace.json"
 const LOCK = "scripts/plugin-skills.lock.json"
 
-type Plugin = { name: string; version: string; skills?: readonly string[] }
+/** A plugin entry. `source` is "./" for skills in this checkout, or an object for another branch or repo. */
+type Plugin = {
+  name: string
+  version: string
+  source: string | object
+  skills?: readonly string[]
+}
 type Lock = Record<string, { version: string; sha256: string }>
 
 const checkMode = process.argv.includes("--check")
@@ -62,7 +68,15 @@ const hashSkills = (skills: readonly string[]): string => {
   return hash.digest("hex")
 }
 
-const plugins = readJson<{ plugins: readonly Plugin[] }>(MANIFEST).plugins
+const allPlugins = readJson<{ plugins: readonly Plugin[] }>(MANIFEST).plugins
+
+// A plugin served from another branch, such as the 1.x skills on release/1.x until 2.0 ships, has
+// no skills in this checkout to hash. Bump its version here by hand whenever that branch's skills
+// change; docs/RELEASE.md, "Docs and the Claude plugin until 2.0", has the steps.
+const remote = allPlugins.filter((plugin) => typeof plugin.source !== "string")
+const plugins = allPlugins.filter((plugin) => typeof plugin.source === "string")
+const remoteNote =
+  remote.length > 0 ? `; served from elsewhere: ${remote.map((p) => `${p.name}@${p.version}`).join(", ")}` : ""
 const lock = readJson<Lock>(LOCK)
 const current: Lock = Object.fromEntries(
   plugins.map((plugin) => [plugin.name, { version: plugin.version, sha256: hashSkills(plugin.skills ?? []) }]),
@@ -90,7 +104,7 @@ if (checkMode) {
     console.error(`✗ ${LOCK} is out of date with ${MANIFEST}. Run \`pnpm sync:plugin-lock\`.`)
     process.exit(1)
   }
-  console.log(`✓ plugin skills lock in sync (${plugins.map((p) => `${p.name}@${p.version}`).join(", ")})`)
+  console.log(`✓ plugin skills lock in sync (${plugins.map((p) => `${p.name}@${p.version}`).join(", ")}${remoteNote})`)
 } else {
   writeFileSync(join(repoRoot, LOCK), JSON.stringify(current, null, 2) + "\n")
   console.log(`✓ ${stale ? "Wrote" : "Already in sync:"} ${LOCK}`)
