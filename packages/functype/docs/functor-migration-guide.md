@@ -1,5 +1,7 @@
 # Functor Type Class Migration Guide
 
+> **Historical.** The extraction methods shown below use pre-2.0 names. Since 2.0 they are `getOrElse(() => default)` and `orElse(() => alternative)`; see the 2.0 notes in [`CHANGELOG.md`](../CHANGELOG.md).
+
 ## Overview
 
 functype has refactored its type class hierarchy to better align with functional programming principles. This guide explains the changes and how to migrate your code.

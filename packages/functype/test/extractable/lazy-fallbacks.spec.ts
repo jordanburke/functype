@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { Left, Right } from "@/either"
 import { Exit } from "@/io"
@@ -108,6 +108,21 @@ describe("orElse is lazy", () => {
   it("widens the result to the alternative's type", () => {
     const widened: Option<number | string> = None<number>().orElse(() => Some("x"))
     expect(widened.getOrElse(() => 0)).toBe("x")
+  })
+})
+
+describe("literal defaults", () => {
+  type Theme = "light" | "dark"
+  const theme = Option<Theme>(undefined)
+
+  it("widen without a contextual type, unlike 1.x's eager orElse", () => {
+    expectTypeOf(theme.getOrElse(() => "light")).toEqualTypeOf<string>()
+  })
+
+  it("keep the union with `as const` or an annotated target", () => {
+    expectTypeOf(theme.getOrElse(() => "light" as const)).toEqualTypeOf<Theme>()
+    const annotated: Theme = theme.getOrElse(() => "light")
+    expect(annotated).toBe("light")
   })
 })
 
