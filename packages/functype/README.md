@@ -828,7 +828,7 @@ Work that shipped but wasn't captured in the planned roadmap above:
 - [x] **MCP server for functype documentation** (`mcp-server/`)
 - [x] **CLI — `npx functype`** (`src/cli/`)
 - [x] **Claude Code skills** — `functype` (user guide) and `functype-developer` (contributor guide)
-- [x] **Serialization infrastructure** — JSON / YAML / binary (`src/serialization/`)
+- [x] **Serialization infrastructure** — JSON / binary (`src/serialization/`)
 
 ## Claude Code Skills
 

@@ -28,10 +28,11 @@ describe("Map", () => {
       expect(map.isEmpty).toBe(true)
     })
 
-    test("Map.empty() returns singleton instance", () => {
+    test("Map.empty() builds a new instance each call", () => {
       const a = Map.empty<string, number>()
       const b = Map.empty<number, string>()
-      expect(a).toBe(b) // Same instance regardless of type parameters
+      expect(a).not.toBe(b) // a native Map can't be frozen, so empties aren't shared (empty-singletons.spec.ts)
+      expect([a.size, b.size]).toEqual([0, 0])
     })
   })
 

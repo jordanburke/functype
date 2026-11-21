@@ -158,7 +158,7 @@ Every container type should implement these when applicable:
 - `Monad` - flatMap for sequencing
 - `Foldable` - extract via pattern matching
 - `Traversable` - collection operations
-- `Serializable` - JSON/YAML/binary serialization
+- `Serializable` - JSON and binary serialization
 
 **Reference the Feature Matrix:**
 Check `docs/FUNCTYPE_FEATURE_MATRIX.md` to see which interfaces each type implements and what methods are required.

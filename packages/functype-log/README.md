@@ -176,7 +176,7 @@ Wraps any IO with start/complete logging at debug level:
 ```typescript
 import { withLogging } from "functype-log"
 
-const fetchUsers = Http.get("/api/users", { validate: UserSchema })
+const fetchUsers = Http.get("/api/users", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
 const logged = withLogging("fetchUsers", fetchUsers)
 // Logs: "fetchUsers: starting" then "fetchUsers: completed"
 ```

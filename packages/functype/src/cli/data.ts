@@ -224,14 +224,7 @@ export const TYPES: Record<string, TypeData> = {
     description: "Immutable key-value store",
     interfaces: mergeInterfaces("Map"),
     methods: {
-      create: [
-        "Map([[k, v], ...])",
-        "Map.of([k, v], ...)",
-        "Map.empty()",
-        "Map.fromJSON(json)",
-        "Map.fromYAML(yaml)",
-        "Map.fromBinary(b)",
-      ],
+      create: ["Map([[k, v], ...])", "Map.of([k, v], ...)", "Map.empty()", "Map.fromJSON(json)", "Map.fromBinary(b)"],
       transform: [".add(Tuple([k, v]))", ".remove(k)", ".map(f)", ".flatMap(f)", ".ap(ff)", ".flatMapAsync(f)"],
       extract: [
         ".get(k) // Option<V>",
@@ -404,6 +397,7 @@ export const TYPES: Record<string, TypeData> = {
         "IO.all([...], { concurrency? }) // all at once by default; first failure interrupts the rest",
         "IO.forEach(items, f, { concurrency? })",
         "IO.race([...]) // first to settle wins; the rest are interrupted",
+        "IO.firstSuccessOf([...]) // tries each in order; the first success wins",
         "IO.iterate(seed, step, done, { max? })",
         "IO.bracket(acquire, use, release)",
         "IO.gen(function*() {...})",
@@ -556,7 +550,7 @@ export const TYPES: Record<string, TypeData> = {
 
   Http: {
     description:
-      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; the deprecated `validate: (data) => T` field is still accepted for throw-pattern back-compat. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.",
+      "HTTP fetch wrapper returning IO<never, HttpError, HttpResponse<T>>. Pass `decode: Decoder<T>` (Either-returning) for typed responses; wrap a throwing parser such as Zod's .parse in `Decoder.fromThrowing(parse)`. 2.0 removed the `validate` field. Request bodies auto-flatten functype ADTs to primitives; `flatten: false` preserves tagged emission for functype-to-functype services. Per-call `params` (HttpQueryParams) appends query strings with proper encoding. Http.client accepts `beforeRequest` and `afterResponse` (both effectful IO transformers). `afterResponse` runs on the success path only — error handling belongs in .catchTag. Composes via .tap/.map/.flatMap/.catchTag/.retry/.retryWhile/.retryWithBackoff/.timeout.",
     interfaces: [],
     methods: {
       create: [
@@ -586,7 +580,7 @@ export const TYPES: Record<string, TypeData> = {
         ".catchAll(handler)",
         ".recover(fallback)",
         "decode: Decoder<T> (Either-returning, structural failures preserved)",
-        "validate: (data) => T (deprecated, throws — for back-compat / Zod .parse)",
+        "decode: Decoder.fromThrowing(parse) (a throwing parser such as Zod .parse; a throw becomes a DecoderError leaf)",
         "flatten: boolean (default true; false preserves tagged emission)",
         "encode: Encoder<TReq> = (value) => JSONValue (custom wire shape; overrides flatten)",
         "params: HttpQueryParams (scalar | array; undefined/null dropped; percent-encoded)",
@@ -811,7 +805,7 @@ export const INTERFACES: Record<string, InterfaceData> = {
 
   Serializable: {
     description: "Convert to string formats",
-    methods: [".serialize().toJSON(): string", ".serialize().toYAML(): string"],
+    methods: [".serialize().toJSON(): string", ".serialize().toBinary(): string"],
   },
 }
 

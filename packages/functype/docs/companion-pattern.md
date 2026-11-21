@@ -108,7 +108,6 @@ const list = List([1, 2, 3])
 
 // Companion methods
 const fromJSON = List.fromJSON<number>('{"_tag":"List","value":[1,2,3]}')
-const fromYAML = List.fromYAML<number>("_tag: List\nvalue: [1,2,3]")
 
 // Instance methods
 list.map((x) => x * 2) // List([2, 4, 6])
@@ -219,11 +218,6 @@ const MyTypeCompanion = {
     return MyTypeConstructor(parsed.value)
   },
 
-  fromYAML: <T>(yaml: string): MyType<T> => {
-    // Parse YAML and reconstruct
-    // ...
-  },
-
   fromBinary: <T>(binary: string): MyType<T> => {
     const json = Buffer.from(binary, "base64").toString()
     return MyTypeCompanion.fromJSON(json)
@@ -289,7 +283,6 @@ Here are standard methods to consider for your Companion objects:
 ### Serialization
 
 - `fromJSON(json)` - Deserialize from JSON
-- `fromYAML(yaml)` - Deserialize from YAML
 - `fromBinary(binary)` - Deserialize from base64
 
 ### Conversions

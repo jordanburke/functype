@@ -82,7 +82,7 @@ IO.all([io1, io2, io3], { concurrency: 1 }); // One after another; stops at the 
 IO.forEach(items, (item) => save(item)); // One effect per item, in order
 IO.forEach(items, (item) => save(item), { concurrency: "unbounded" });
 IO.race([io1, io2]); // First to settle wins, success or failure; the others are interrupted
-IO.any([io1, io2, io3]); // First success wins, trying them in order
+IO.firstSuccessOf([io1, io2, io3]); // First success wins, trying them in order
 
 // Zip effects
 io1.zip(io2); // [A, B]

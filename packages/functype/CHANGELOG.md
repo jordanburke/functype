@@ -139,7 +139,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 - `logLayerAdapter` and `LoggerLive.fromLogLayer` are deleted. functype-log has no runtime dependencies now; `loglayer` is gone from its `dependencies`.
 - `createConsoleLogger`, `LoggerLive.console` and `createDirectConsoleLogger` write to the console themselves. The arguments are the same as before: the message alone, or a data object then the message. The data object holds the context, the metadata and the `withError` error under `err`. `fatal` writes with `console.error`. A test that pins this passes unchanged.
-- Three cases differ, and the compiler can't see them. A `Promise` in metadata is written as it is, at once, where loglayer waited for it and wrote the result later. An empty `withContext({})` adds nothing, where loglayer wrote `{}` before the message. A `level` that isn't a level name, such as `"WARN"`, now lets every level through with the `sink` option too, as the console already did; before, the sink got nothing.
+- Three cases differ, and the compiler can't see them. A `Promise` in metadata is written as it is, at once, where loglayer waited for it and wrote the result later. An empty `withContext({})` adds nothing, where loglayer wrote `{}` before the message; `child({})` and `withContext({}).child()` also write nothing now, where loglayer wrote `{}`. A `level` that isn't a level name, such as `"WARN"`, now lets every level through with the `sink` option too, as the console already did; before, the sink got nothing.
 - **Upgrade:** a consumer that passed a LogLayer instance to `LoggerLive.fromLogLayer` writes a `sink` for the library behind it:
 
   ```typescript
@@ -150,6 +150,22 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   ```
 
   For trace IDs in logs, read OpenTelemetry's active span in the sink instead of using `@loglayer/plugin-opentelemetry`. functype-log's README shows how, with the same `trace_id`, `span_id` and `trace_flags` field names.
+
+**2.0 (breaking): deprecated and duplicate API is removed, and so is YAML serialization.** From §4 and §7 of #276 (the 2.0 release plan), and #514 (`fromYAML` can't read what `toYAML` writes).
+
+- **`validate` is gone from `Http`'s options** (`HttpRequestOptions` and `HttpMethodOptions`). Use `decode`. For a parser that throws, such as Zod's `.parse`: `validate: X` → `decode: Decoder.fromThrowing(X)`. A throw now reaches `HttpError.DecodeError` as a `DecoderError` leaf, whose `message` is the error's message and whose `cause` is the thrown value; before, `cause` was the thrown value itself.
+- **`IO.forEachPar` is gone.** It was an alias of `IO.forEach`, so it ran in sequence: `IO.forEachPar(xs, f)` → `IO.forEach(xs, f)`. To run in parallel, pass `IO.forEach(xs, f, { concurrency })`.
+- **`IO.any` is gone.** It was the same sequential chain as `IO.firstSuccessOf`: `IO.any(xs)` → `IO.firstSuccessOf(xs)`. `IO.race` is the one that runs them at once.
+- **`createCustomSerializer` is gone.** Use `createTaggedSerializer(marker, tag, fields)`, which also stamps the `@functype` marker.
+- **YAML is gone.** `toYAML` leaves `serialize()`'s result and `createSerializer` / `createTaggedSerializer`. `fromYAML` leaves List, Set, Stack, Map, Option, Either and Try, the shared `fromYAML` helper and `createSerializationCompanion`'s result. `SerializationMethods` loses `toYAML` too, so a custom `Serializable` that only adds `toYAML` drops it. Use `toJSON` / `fromJSON`, or `toBinary` / `fromBinary`, which carry the same data. There is no drop-in replacement: stored YAML won't read back, so convert it to JSON with 1.27.0 or later, whose `fromYAML` reads what `toYAML` writes, before upgrading. The output was never YAML a YAML parser could read, because its first line starts with `@`.
+- **No type error:** `validate` carried into `Http`'s options through a spread compiles and is ignored, so the response passes through unchecked. Search for `validate` near `Http` calls.
+- **Upgrade:** the compiler flags each removed name, and each `validate` written in an options literal as an excess property.
+
+**2.0: empty collections can't be changed through a cast.** A follow-up to the review of #544 (collections share their methods).
+
+- `List.empty()` is still one shared value, and its backing array is now frozen. Before, `(List.empty() as any).value.push(9)` left every later `List.empty()` at size 1 for the rest of the process.
+- `Set.empty()` and `Map.empty()` build a new value on each call, because a native Set or Map can't be frozen. That costs about 25 ns per call against 3 ns for the shared value (Node 24.20.0, built package). `Set.empty() === Set.empty()` is now `false`.
+- `Base(type, body).doUnwrap()` treats an empty List or Set body as empty. Before, it called `isEmpty()`, but `isEmpty` is a getter, so an empty collection yielded `undefined` as a success. A body whose `head` isn't a method now passes through as itself, like any other value.
 
 ## 1.27.1 - 2026-11-19
 

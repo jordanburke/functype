@@ -59,9 +59,10 @@ describe("construction cost", () => {
       (i: number) => ({ _tag: "List", value: Array.from([i, 1, 2]) }).value.map(inc),
     ],
     [
+      // Measured 0.7x to 0.8x over seven runs of this file alone (median 0.7x).
       "Set",
       5,
-      "11x -> 1.3x",
+      "11x -> 0.7x",
       (i: number) => set([i, 1, 2]).map(inc),
       (i: number) => new NativeSet(Array.from({ _tag: "Set", value: new NativeSet([i, 1, 2]) }.value, inc)),
     ],

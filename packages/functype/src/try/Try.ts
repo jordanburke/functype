@@ -7,7 +7,6 @@ import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
-import { hasYAMLValue } from "@/internal/yaml"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -18,7 +17,6 @@ import {
   createTaggedSerializer,
   deserializeError,
   expectMarker,
-  fromYAML as readYAML,
   type ParsedEnvelope,
   serializeError,
 } from "@/serialization"
@@ -73,7 +71,7 @@ export interface TryBase<out T>
    *
    * Prefer the function form to thread the underlying Error's context into the Left:
    *
-   *   Try.fromYAML(text).toEither((e) => `parse failed: ${e.message}`)
+   *   Try(() => JSON.parse(text)).toEither((e) => `parse failed: ${e.message}`)
    */
   toEither<E extends Type>(leftOrBuilder: E | ((err: Error) => E)): Either<E, T>
   toTry(): Try<T>
@@ -418,7 +416,7 @@ const TryConstructor = <T>(f: () => T): Try<T> => {
   }
 }
 
-/** Rebuilds a Try from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a Try from a parsed envelope. */
 const tryFromEnvelope = <T>(parsed: ParsedEnvelope, method: string): Try<T> => {
   expectMarker(parsed, "Try", method)
   if (parsed._tag === "Success") {
@@ -504,26 +502,6 @@ const TryCompanion = {
    * @returns Try instance
    */
   fromJSON: <T>(json: string): Try<T> => tryFromEnvelope<T>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a Try from YAML string
-   * @param yaml - The YAML string
-   * @returns Try instance
-   */
-  fromYAML: <T>(yaml: string): Try<T> =>
-    readYAML(yaml, (parsed) => {
-      expectMarker(parsed, "Try", "fromYAML")
-      if (typeof parsed._tag !== "string") {
-        return Failure<T>(new Error("Invalid YAML format for Try"))
-      }
-      if (parsed._tag === "Success" && !hasYAMLValue(yaml, "value")) {
-        return Failure<T>(new Error("Invalid YAML format for Try Success"))
-      }
-      if (parsed._tag !== "Success" && !hasYAMLValue(yaml, "error")) {
-        return Failure<T>(new Error("Invalid YAML format for Try Failure"))
-      }
-      return tryFromEnvelope<T>(parsed, "fromYAML")
-    }),
 
   /**
    * Creates a Try from binary string

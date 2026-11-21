@@ -7,7 +7,7 @@ import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import { Set } from "@/set/Set"
 import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
@@ -245,10 +245,7 @@ const wrap = <K, V>(values: ReadonlyMap<K, V>): Map<K, V> => {
 const MapConstructor = <K, V>(entries?: readonly (readonly [K, V])[] | IterableIterator<[K, V]> | null): Map<K, V> =>
   wrap(new ESMap<K, V>(entries))
 
-// Singleton empty map - uses 'never' which is subtype of all types
-const EMPTY_MAP: Map<never, never> = wrap(new ESMap<never, never>())
-
-/** Rebuilds a Map from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a Map from a parsed envelope. */
 const mapFromEnvelope = <K, V>(parsed: ParsedEnvelope, method: string): Map<K, V> => {
   expectMarker(parsed, "Map", method)
   return Map<K, V>((parsed.value ?? []) as Array<[K, V]>)
@@ -257,10 +254,11 @@ const mapFromEnvelope = <K, V>(parsed: ParsedEnvelope, method: string): Map<K, V
 const MapCompanion = {
   /**
    * Creates an empty Map
-   * Returns a singleton instance for efficiency
+   * Builds a new one each call: a native Map can't be frozen, so a shared empty Map could be
+   * changed for every caller through a cast. It costs about 20 ns more than a shared one.
    * @returns An empty Map instance
    */
-  empty: <K, V>(): Map<K, V> => EMPTY_MAP as unknown as Map<K, V>,
+  empty: <K, V>(): Map<K, V> => wrap(new ESMap<K, V>()),
 
   /**
    * Creates a Map from variadic key-value pair arguments
@@ -275,13 +273,6 @@ const MapCompanion = {
    * @returns Map instance
    */
   fromJSON: <K, V>(json: string): Map<K, V> => mapFromEnvelope<K, V>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a Map from YAML string
-   * @param yaml - The YAML string
-   * @returns Map instance
-   */
-  fromYAML: <K, V>(yaml: string): Map<K, V> => readYAML(yaml, (parsed) => mapFromEnvelope<K, V>(parsed, "fromYAML")),
 
   /**
    * Creates a Map from binary string

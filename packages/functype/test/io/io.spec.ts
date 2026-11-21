@@ -810,6 +810,17 @@ describe("IO", () => {
     })
   })
 
+  describe("IO.any and IO.forEachPar are gone (2.0, #276 section 4)", () => {
+    it("has neither at runtime or in its type", () => {
+      expect("any" in IO).toBe(false)
+      expect("forEachPar" in IO).toBe(false)
+      // @ts-expect-error use IO.firstSuccessOf, the same sequential chain
+      expect(IO.any).toBeUndefined()
+      // @ts-expect-error use IO.forEach, which forEachPar was an alias of
+      expect(IO.forEachPar).toBeUndefined()
+    })
+  })
+
   describe("IO.firstSuccessOf", () => {
     it("should return first success", async () => {
       const io = IO.firstSuccessOf([IO.fail(new Error("first")), IO.succeed(42), IO.succeed(43)] as unknown as IO<
@@ -1678,26 +1689,6 @@ describe("Dependency Injection", () => {
     it("should work with immediate values", async () => {
       const result = await IO.race([IO.succeed("first"), IO.succeed("second")]).runOrThrow()
       expect(result).toBe("first")
-    })
-  })
-
-  describe("IO.any", () => {
-    it("should return first success", async () => {
-      const result = await IO.any([IO.fail("error1"), IO.succeed("success"), IO.fail("error2")] as unknown as IO<
-        never,
-        string,
-        string
-      >[]).runOrThrow()
-      expect(result).toBe("success")
-    })
-
-    it("should fail if all fail", async () => {
-      await expect(IO.any([IO.fail("error1"), IO.fail("error2")]).runOrThrow()).rejects.toBe("error2")
-    })
-
-    it("should die on an empty array: no effect can succeed", async () => {
-      const exit = await IO.any<never, never, never>([]).runExit()
-      expect(exit.isDie()).toBe(true)
     })
   })
 

@@ -47,13 +47,13 @@ byId.contains(Tuple(["a", 1])) // whole entry, value compared with ===
 | Tuple    | `Tuple(...values)`                                              | `Tuple(42, "hello")`, `Tuple(1, 2, 3)`                                                     |
 | Stack    | `Stack.of()`, `Stack.empty()`                                   | `Stack.of(1, 2, 3)`, `Stack.empty<number>()`                                               |
 | LazyList | `LazyList(array)`, `.of()`, `.empty()`                          | `LazyList([1, 2])`, `LazyList.of(1, 2, 3)`                                                 |
-| Http     | `Http.get(url, { validate }?)`, `.post()`, `.client(config)`    | `Http.get("/api/users", { validate: (d) => schema.parse(d) })`, `Http.client({ baseUrl })` |
+| Http     | `Http.get(url, { decode }?)`, `.post()`, `.client(config)`      | `Http.get("/api/users", { decode: Decoder.fromThrowing((d) => schema.parse(d)) })`, `Http.client({ baseUrl })` |
 
 **Note**: Collections support multiple creation styles:
 
 - **Constructor `List([...])`**: Use for existing arrays/iterables
 - **`.of(...)`**: Use for inline literal values (cleaner syntax)
-- **`.empty()`**: Use for typed empty collections (returns singleton - efficient for repeated calls)
+- **`.empty()`**: Use for typed empty collections. `List.empty()` returns one shared value; `Set.empty()` and `Map.empty()` build a new one each call, because a native Set or Map can't be frozen
 
 ## Transformation
 
@@ -273,7 +273,7 @@ IO.forEach(rows, (row) => IO.fromPromiseEither(() => saveRow(row)))
 IO.forEach(urls, fetchPage, { concurrency: 4 })      // up to 4 at once; first failure interrupts the rest
 ```
 
-`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.mapAsync`, `Set.flatMapAsync`, `Either.traverseAsync`, and `IO.forEach` run one at a time; `IO.all` (since 2.0) and `List.flatMapAsync` start every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. `IO.forEachPar` is an alias of `IO.forEach` and runs in order; use `IO.forEach(items, f, { concurrency })`.
+`concurrency` is a positive integer or `"unbounded"`. Defaults: `List.mapAsync`, `Set.mapAsync`, `Set.flatMapAsync`, `Either.traverseAsync`, and `IO.forEach` run one at a time; `IO.all` (since 2.0) and `List.flatMapAsync` start every call at once. Use `flatMapAsync` only when `f` returns several values: it needs an iterable, and a function returning a string type-checks and yields its characters. Results keep input order either way. To run `IO.forEach` in parallel, pass `{ concurrency }`; 2.0 removed the sequential `IO.forEachPar` alias.
 
 ## Pipeline Composition
 

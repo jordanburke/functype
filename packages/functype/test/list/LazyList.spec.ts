@@ -313,12 +313,6 @@ describe("LazyList", () => {
       expect(json).toBe('{"@functype":"LazyList","_tag":"LazyList","value":[1,2,3]}')
     })
 
-    it("should serialize to YAML with the @functype marker", () => {
-      const list = LazyList(["a", "b", "c"])
-      const yaml = list.serialize().toYAML()
-      expect(yaml).toBe('@functype: LazyList\n_tag: LazyList\nvalue: ["a","b","c"]')
-    })
-
     it("should serialize to binary", () => {
       const list = LazyList([1, 2])
       const binary = list.serialize().toBinary()

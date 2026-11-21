@@ -416,28 +416,32 @@ isPositive(42) ?? isZero(42) ?? isNegative(42) ?? defaultCase(42) // "Positive: 
 ## Http
 
 ```typescript
+import { Decoder } from "functype/decoder"
 import { Http, HttpError } from "functype/fetch"
 import { IO } from "functype/io"
 
-// Without validator — data is unknown
+// Without a decoder — data is unknown
 const effect = Http.get("/api/users") // IO<never, HttpError, HttpResponse<unknown>>
 
-// With validator — T inferred from validate return type (BYOV: bring your own validator)
+// With a decoder — T inferred from it. Decoder.fromThrowing adapts a throwing parser (Zod's .parse)
 const users = Http.get("/api/users", {
-  validate: (data) => z.array(UserSchema).parse(data),
+  decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)),
 }) // IO<never, HttpError, HttpResponse<User[]>>
 
 const created = Http.post("/api/users", {
   body: { name: "Alice" },
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 }) // IO<never, HttpError, HttpResponse<User>>
+
+// Or compose one without a schema library; failures accumulate into a DecoderError tree
+const point = Http.get("/api/point", { decode: Decoder.object({ x: Decoder.number, y: Decoder.number }) })
 
 // Configured client
 const http = Http.client({
   baseUrl: "https://api.example.com",
   defaultHeaders: { Authorization: "Bearer token" },
 })
-const user = http.get("/users/1", { validate: (data) => UserSchema.parse(data) })
+const user = http.get("/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
 
 // Configured client with effectful request transformer (auth refresh, request IDs, logging)
 const api = Http.client({
@@ -455,18 +459,18 @@ const api = Http.client({
 })
 
 // Compose with IO
-Http.get("/api/users", { validate: (data) => z.array(UserSchema).parse(data) })
+Http.get("/api/users", { decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)) })
   .map((res) => res.data.filter((u) => u.active))
   .retry(3)
   .timeout(5000)
 
 // Error handling
-Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) })
+Http.get("/api/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
   .catchTag("HttpStatusError", (e) => (e.status === 404 ? IO.succeed(defaultResponse) : IO.fail(e)))
   .catchTag("NetworkError", () => IO.succeed(cachedResponse))
 
 // Run
-await Http.get("/api/users/1", { validate: (data) => UserSchema.parse(data) }).runOrThrow() // HttpResponse<User>
+await Http.get("/api/users/1", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) }).runOrThrow() // HttpResponse<User>
 await Http.get("/api/users/1").run() // Either<HttpError, HttpResponse<unknown>>
 ```
 
@@ -601,7 +605,7 @@ if (Try.isFailure(tryValue)) {
 
 ## Serialization
 
-All major types support JSON/YAML/Binary serialization:
+All major types support JSON and binary serialization:
 
 ```typescript
 import { Option, Either, List, Try } from "functype"
@@ -610,14 +614,12 @@ import { Option, Either, List, Try } from "functype"
 const option = Option(42)
 const serialized = option.serialize()
 
-const json = serialized.toJSON() // '{"_tag":"Some","value":42}'
-const yaml = serialized.toYAML() // '_tag: Some\nvalue: 42'
+const json = serialized.toJSON() // '{"@functype":"Option","_tag":"Some","value":42}'
 const binary = serialized.toBinary() // Base64 encoded
 
 // Deserialize from JSON
 const opt1 = Option.fromJSON<number>('{"_tag":"Some","value":42}')
-const opt2 = Option.fromYAML<number>("_tag: Some\nvalue: 42")
-const opt3 = Option.fromBinary<number>(binary)
+const opt2 = Option.fromBinary<number>(binary)
 
 // Works with all types
 const list = List([1, 2, 3])

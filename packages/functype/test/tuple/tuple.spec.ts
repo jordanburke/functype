@@ -138,12 +138,6 @@ describe("Tuple", () => {
       expect(json).toBe('{"@functype":"Tuple","_tag":"Tuple","value":[1,"hello",true]}')
     })
 
-    it("should serialize to YAML with the @functype marker", () => {
-      const tuple = Tuple(["a", "b", "c"])
-      const yaml = tuple.serialize().toYAML()
-      expect(yaml).toBe('@functype: Tuple\n_tag: Tuple\nvalue: ["a","b","c"]')
-    })
-
     it("should serialize to binary", () => {
       const tuple = Tuple([1, 2])
       const binary = tuple.serialize().toBinary()

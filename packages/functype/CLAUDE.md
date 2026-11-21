@@ -402,9 +402,8 @@ const userDecoder = Decoder.object({
 })
 // For Zod / TypeBox / Valibot / hand-rolled: any (raw) => Either<DecoderError, T> IS a Decoder.
 
-// Deprecated but still supported for back-compat:
-// validate: (data) => T — throw-pattern field from 1.0.x. Prefer `decode` with a Decoder,
-//   or use an adapter package like functype-zod for Zod's schema.parse.
+// A throwing parser (Zod's schema.parse, a hand-rolled check): Decoder.fromThrowing(parse).
+//   A throw becomes a DecoderError leaf. 2.0 removed the old `validate: (data) => T` field.
 
 // Request body flatten (new in 1.1.0):
 // - Default `flatten: true` strips functype ADTs to primitives (Option→nullable, List→array,

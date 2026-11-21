@@ -1,5 +1,7 @@
 # HTTP wire-format: Decoder/Encoder interface + remove `validate` (2.0.0)
 
+> **Outcome (2.0):** `validate` is removed and `decode` is the only response hook. `decodeUnsafe` was **not** added: #276 §7 (the 2.0 release plan) rejected a second decode field as the "two fields, one concept" shape this proposal itself rejects. A throwing parser goes through `decode: Decoder.fromThrowing(parse)` (shipped in 1.16). `Encoder<A>` and the per-call `encode` shipped in 1.17. Read the `decodeUnsafe` passages below as history.
+
 > **Scope note (updated):** The request-side wire-flatten work that originally lived in this proposal already shipped in **1.3.0** as a non-breaking default change (`HttpRequestOptions.flatten?: boolean` default `true`, plus a `normalizeBody` walker). 1.3 was a defensible vehicle for that work because the new default is opt-out-able (`flatten: false` preserves the prior tagged emission). What remains for 2.0 is the truly-breaking surface: removing the deprecated `validate` field in favor of `Decoder<T>` / `decodeUnsafe`, plus the matching minimum `Encoder<A>` type alias.
 
 ## Context

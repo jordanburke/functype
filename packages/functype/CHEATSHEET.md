@@ -130,13 +130,13 @@ Unlike Scala, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are 
 
 ## HTTP
 
-`Http` is a typed `fetch` wrapper with bring-your-own-validator (Zod, TypeBox, Valibot, manual). Returns `IO<never, HttpError, HttpResponse<T>>`:
+`Http` is a typed `fetch` wrapper. Pass `decode: Decoder<T>` to check the response: compose one from `Decoder.object` and friends, or wrap a throwing parser (Zod, TypeBox, Valibot, manual) in `Decoder.fromThrowing`. Returns `IO<never, HttpError, HttpResponse<T>>`:
 
 ```ts
-import { Http } from "functype"
+import { Decoder, Http } from "functype"
 
 const user = await Http.get(`/api/users/${id}`, {
-  validate: (data) => UserSchema.parse(data),
+  decode: Decoder.fromThrowing((data) => UserSchema.parse(data)),
 })
   .map((r) => r.data)
   .retry(3)

@@ -139,7 +139,6 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     const data = this.toJSON()
     return {
       toJSON: () => JSON.stringify(data),
-      toYAML: () => `@functype: Box\n_tag: ${this._tag}\nvalue: ${JSON.stringify(this._value)}`,
       toBinary: () => utf8ToBase64(JSON.stringify(data)),
     }
   }

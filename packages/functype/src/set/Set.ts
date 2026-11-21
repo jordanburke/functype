@@ -6,7 +6,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { type A, define, type Mutable } from "@/internal/define"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
-import { createSerializer, expectMarker, fromYAML as readYAML, type ParsedEnvelope } from "@/serialization"
+import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
 import type { Type } from "@/types"
 
@@ -413,10 +413,7 @@ const wrap = <A>(values: ReadonlySet<A>): Set<A> => {
 
 const SetConstructor = <A>(iterable?: Iterable<A>): Set<A> => wrap(new NativeSet<A>(iterable))
 
-// Singleton empty set - uses 'never' which is subtype of all types
-const EMPTY_SET: Set<never> = wrap<never>(new NativeSet<never>())
-
-/** Rebuilds a Set from a parsed envelope. Shared by `fromJSON` and `fromYAML`. */
+/** Rebuilds a Set from a parsed envelope. */
 const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
   expectMarker(parsed, "Set", method)
   return Set<A>((parsed.value ?? []) as A[])
@@ -425,10 +422,11 @@ const setFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): Set<A> => {
 const SetCompanion = {
   /**
    * Creates an empty Set
-   * Returns a singleton instance for efficiency
+   * Builds a new one each call: a native Set can't be frozen, so a shared empty Set could be
+   * changed for every caller through a cast. It costs about 20 ns more than a shared one.
    * @returns An empty Set instance
    */
-  empty: <A extends Type>(): Set<A> => EMPTY_SET as unknown as Set<A>,
+  empty: <A extends Type>(): Set<A> => wrap(new NativeSet<A>()),
 
   /**
    * Creates a Set from variadic arguments
@@ -443,13 +441,6 @@ const SetCompanion = {
    * @returns Set instance
    */
   fromJSON: <A>(json: string): Set<A> => setFromEnvelope<A>(JSON.parse(json) as ParsedEnvelope, "fromJSON"),
-
-  /**
-   * Creates a Set from YAML string
-   * @param yaml - The YAML string
-   * @returns Set instance
-   */
-  fromYAML: <A>(yaml: string): Set<A> => readYAML(yaml, (parsed) => setFromEnvelope<A>(parsed, "fromYAML")),
 
   /**
    * Creates a Set from binary string

@@ -55,6 +55,14 @@ describe("ConsoleLogger: output edges", () => {
     ])
   })
 
+  it("skips a null error from an untyped caller, as loglayer did, instead of writing err: null", () => {
+    const nullError = null as unknown as Error
+    expect(written((log) => log.withError(nullError).error("m").runSyncOrThrow())).toEqual([["error", "m"]])
+    expect(written((log) => log.withError(nullError).error("m", { a: 1 }).runSyncOrThrow())).toEqual([
+      ["error", { a: 1 }, "m"],
+    ])
+  })
+
   it("puts no prefix on the message when the prefix is empty", () => {
     expect(written((log) => log.info("m").runSyncOrThrow(), { prefix: "" })).toEqual([["info", "m"]])
   })
