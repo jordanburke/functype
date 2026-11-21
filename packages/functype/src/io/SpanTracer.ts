@@ -11,24 +11,27 @@ import { Tag } from "./Tag"
  */
 
 /**
- * The value of one span attribute. It matches OpenTelemetry's `AttributeValue`, so a bridge
- * passes attributes through unchanged. The arrays are mutable for that reason: a readonly array
- * doesn't fit OpenTelemetry's `Array`.
+ * The attributes given to {@link IO.withSpan}. Each value matches OpenTelemetry's
+ * `AttributeValue`, so a bridge passes them through unchanged. The arrays are mutable for that
+ * reason: a readonly array doesn't fit OpenTelemetry's `Array`.
  */
-export type SpanAttributeValue =
-  | string
-  | number
-  | boolean
-  | Array<string | null | undefined>
-  | Array<number | null | undefined>
-  | Array<boolean | null | undefined>
-
-/** The attributes given to {@link IO.withSpan}. */
-export type SpanAttributes = Readonly<Record<string, SpanAttributeValue>>
+export type SpanAttributes = Readonly<
+  Record<
+    string,
+    | string
+    | number
+    | boolean
+    | Array<string | null | undefined>
+    | Array<number | null | undefined>
+    | Array<boolean | null | undefined>
+  >
+>
 
 /**
  * What `IO.withSpan` needs from a tracer. Provide one with `io.provideService(SpanTracer, tracer)`,
- * outside the spans. With no tracer provided, `withSpan` does nothing.
+ * outside the spans. With no tracer provided, `withSpan` does nothing. `provideLayer` can't carry
+ * it, because a layer may only provide services in the IO's requirements, and `withSpan` doesn't
+ * add one.
  *
  * This is not the `Tracer` that `TracedOption` writes to. That one records steps through
  * `emit(event)` and has no spans.
@@ -62,8 +65,8 @@ export type SpanTracer<S = unknown> = {
    * @param name - The name given to `withSpan`
    * @param attributes - The attributes given to `withSpan`, or `{}`
    * @param parent - The span of the enclosing `withSpan` in this run, or `undefined` at the top.
-   *   Fall back to the tracer's ambient context when it's `undefined`: a nested run, such as the
-   *   one that builds a `Layer`, starts with no parent.
+   *   Fall back to the tracer's ambient context when it's `undefined`, so a run started inside
+   *   another span, such as a request handler's, nests under it.
    */
   start(name: string, attributes: SpanAttributes, parent: S | undefined): S
 

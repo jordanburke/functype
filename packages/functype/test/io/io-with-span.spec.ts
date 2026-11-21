@@ -125,6 +125,26 @@ describe("withSpan: nesting", () => {
     expect(named("outer").parent).toBeUndefined()
   })
 
+  it("nests through IO.gen, retry and bracket", async () => {
+    const { tracer, named, active } = fakeTracer()
+    const attempts = { n: 0 }
+    const flaky = IO.sync(() => ++attempts.n)
+      .flatMap((n) => (n < 2 ? IO.fail("again") : IO.succeed(n)))
+      .withSpan("attempt")
+    const program = IO.gen(function* () {
+      const n = yield* flaky.retry(3)
+      const used = yield* IO.bracket(
+        IO.sync(active),
+        (acquiredIn) => IO.sync(() => [acquiredIn, active()]).withSpan("use"),
+        () => IO.sync(() => undefined),
+      )
+      return [n, used]
+    }).withSpan("gen")
+    expect(await program.provideService(SpanTracer, tracer).runOrThrow()).toEqual([2, ["gen", "use"]])
+    expect(named("attempt").parent).toBe(named("gen"))
+    expect(named("use").parent).toBe(named("gen"))
+  })
+
   it("a finished span doesn't leak into the next step", async () => {
     const { tracer, named, active } = fakeTracer()
     const program = IO.sync(() => 1)
@@ -226,6 +246,26 @@ describe("withSpan: every outcome closes the span exactly once", () => {
       exit: "Failure",
       ends: ["Failure"],
     })
+  })
+
+  it("a throwing start or end becomes a Die", async () => {
+    const { tracer, named } = fakeTracer()
+    const badStart: SpanTracer<FakeSpan> = {
+      ...tracer,
+      start: () => {
+        throw new Error("tracer bug")
+      },
+    }
+    expect((await IO.succeed(1).withSpan("s").provideService(SpanTracer, badStart).runExit())._tag).toBe("Die")
+    const badEnd: SpanTracer<FakeSpan> = {
+      ...tracer,
+      end: () => {
+        throw new Error("tracer bug")
+      },
+    }
+    expect((await IO.succeed(1).withSpan("e").provideService(SpanTracer, badEnd).runExit())._tag).toBe("Die")
+    expect(named("e").ends).toEqual([])
+    expect(() => IO.succeed(1).withSpan("sync").provideService(SpanTracer, badEnd).runSync()).toThrow("tracer bug")
   })
 
   it("a throwing tracer run still ends the span once, and the run reports a Die", async () => {
