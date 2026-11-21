@@ -6,7 +6,7 @@ import { Exit } from "@/io"
 import { Lazy } from "@/lazy"
 import { Map } from "@/map"
 import { Obj } from "@/obj"
-import { None, Some } from "@/option"
+import { None, type Option, Some } from "@/option"
 import { TracedOption } from "@/traced"
 import { Try } from "@/try"
 
@@ -140,8 +140,17 @@ describe("getOrElse(() => []) stays a mutable array", () => {
     const fromTry: string[] = Try<string[]>(fail).getOrElse(() => [])
     const fromLazy: string[] = Lazy<string[]>(fail).getOrElse(() => [])
     const fromTraced: string[] = TracedOption(None<string[]>(), tracer, "s").getOrElse(() => [])
+    const extractable: Extractable<string[]> = None<string[]>()
+    const fromExtractable: string[] = extractable.getOrElse(() => [])
     fromOption.push("a")
-    expect([fromOption, fromEither, fromTry, fromLazy, fromTraced]).toEqual([["a"], [], [], [], []])
+    expect([fromOption, fromEither, fromTry, fromLazy, fromTraced, fromExtractable]).toEqual([
+      ["a"],
+      [],
+      [],
+      [],
+      [],
+      [],
+    ])
   })
 })
 
@@ -158,7 +167,25 @@ describe("getOrElse rejects a bare value", () => {
       Lazy<number>(fail).getOrElse(42),
       // @ts-expect-error — the default must be a thunk
       TracedOption(None<number>(), tracer, "s").getOrElse(42),
+      // @ts-expect-error — the default must be a thunk
+      (None<number>() as Extractable<number>).getOrElse(42),
+      // @ts-expect-error — the default must be a thunk
+      Obj({ a: 1 }).getOrElse({ a: 2 }),
     ]
     expect(typeof calls).toBe("function")
+  })
+})
+
+describe("orElse is unchanged", () => {
+  // orElse keeps `() => Container<T2>`. The `T | T2` shape fixes the literal case on the concrete types, but on the
+  // Extractable interface it infers `Extractable<T | null | undefined>` for an Option alternative, and the concrete
+  // types must stay compatible with Extractable. Until then a literal alternative widens; an explicit type keeps it.
+  it("widens a literal alternative, and keeps an explicitly typed one", () => {
+    const theme = None<Theme>()
+    expectTypeOf(theme.orElse(() => Some("light"))).toEqualTypeOf<Option<string>>()
+    expectTypeOf(theme.orElse(() => Some<Theme>("light"))).toEqualTypeOf<Option<Theme>>()
+    const extractable: Extractable<Theme> = theme
+    expectTypeOf(extractable.orElse(() => Some<Theme>("light"))).toEqualTypeOf<Extractable<Theme>>()
+    expect(theme.orElse(() => Some<Theme>("light")).getOrElse(() => "dark")).toBe("light")
   })
 })
