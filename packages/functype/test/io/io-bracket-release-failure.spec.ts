@@ -74,3 +74,35 @@ describe("bracketExit whose use callback throws", () => {
     expect(seen).toEqual(["Die"])
   })
 })
+
+describe("a failed release in a cancelled region", () => {
+  it("reports the release's defect, not the cancellation", async () => {
+    // The region is cancelled while the use step runs; the release still runs, masked, and dies.
+    const controller = new AbortController()
+    const exit = await IO.bracket(
+      IO.succeed("resource"),
+      () => IO.sync(() => controller.abort()).map(() => "used"),
+      () => releaseFails(),
+    )
+      .interruptOn(controller.signal)
+      .runExit()
+    expect(exit._tag).toBe("Die")
+  })
+})
+
+describe("the release runs exactly once", () => {
+  it.each([
+    ["use succeeds", () => IO.succeed("used")],
+    ["use fails", () => IO.fail("use-failed")],
+    [
+      "use throws",
+      (): IO<never, string, string> => {
+        throw new Error("use threw")
+      },
+    ],
+  ] as const)("when %s", async (_, use) => {
+    const runs: string[] = []
+    await IO.bracket(IO.succeed("resource"), use, () => IO.sync(() => void runs.push("release"))).runExit()
+    expect(runs).toEqual(["release"])
+  })
+})
