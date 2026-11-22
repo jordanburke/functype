@@ -314,6 +314,18 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - The same messages appear under TypeScript 7.0.2.
 - **Upgrade:** provide an IO's services before running it, as before; only the message changed. Replace `yield io` with `yield* io`. A generator annotated `Generator<any, A, any>` still compiles.
 
+**2.0: `IO.gen` runs about 20% faster.** It was the one benchmark where Effect 4.1.5 led, at about 0.8×.
+
+- `IO.gen` is now its own step. The interpreter loops drive the generator, one `next` per yielded IO, instead of building a `flatMap` step and a closure for every yield.
+- An IO's `[Symbol.iterator]`, which `yield*` reads, is a small hand-written iterator instead of a generator object.
+- On Node 24.20.0, medians of the built package against `main`: 1 yield about 410 → 370 ns, 10 yields about 900 → 710 ns, and 100 yields about 5,600 → 4,000 ns. Effect's 10-yield `Effect.gen` measured 725 to 754 ns on the same machine.
+- Behavior is unchanged:
+  - each run starts a fresh generator;
+  - a failure short-circuits without resuming it;
+  - a throw in the body is a `Die`;
+  - a cancelled region stops before resuming it.
+- **Upgrade:** an IO's `[Symbol.iterator]()` is now typed `Iterator<IO<R, E, A>, A, unknown>` rather than `Generator<…>`, so it has no `return` or `throw` method. `yield*` needs neither. A value that isn't an IO but was yielded through an `any`, such as an Option, now ends the run as a `Die`, where it used to run through its own `flatMap`.
+
 ## 1.27.2 - 2026-11-21
 
 - **Fixed: a `bracket` whose release fails no longer reports success under `run()`.** The async interpreter ran the release and dropped its outcome, so a release that died, such as a failed commit or close, left the run reporting the use step's result. `runSync()` already reported the failure. Now the failed release replaces the outcome under `run()`, `runOrThrow()` and `runExit()` too, as a throwing `finally` does. The same holds for `bracketExit`.
