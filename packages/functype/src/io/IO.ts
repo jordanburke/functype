@@ -271,14 +271,17 @@ export type CatchableTag<E> = [E] extends [never]
 type TagOf<E> = E extends { readonly _tag: string } ? E["_tag"] : never
 
 /**
- * What `IO.gen` accepts from a `yield`: an IO. It names only an IO's own data key, not
- * `IO<any, any, any>`, which failed deep structural variance checks on yields such as
- * `IO<never, never, void>`. Anything else, such as an Option or a Promise, fails to compile at the
- * `yield`; before, any value with a `Symbol.toStringTag` passed, and died at run time.
+ * What `IO.gen` accepts from a `yield`: an IO. It names an IO's own data key and its
+ * `Symbol.toStringTag`, not `IO<any, any, any>`, which failed deep structural variance checks on
+ * yields such as `IO<never, never, void>`. Anything else, such as an Option, a Promise or a plain
+ * `{ effect }` object, fails to compile: the error is reported on the generator passed to `IO.gen`,
+ * and names the yielded type. Before, any value with a `Symbol.toStringTag` passed, and died at
+ * run time.
  * @internal
  */
 export interface IOYieldable {
   readonly [IOEffectKey]: unknown
+  readonly [Symbol.toStringTag]: string
 }
 
 /**
