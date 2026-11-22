@@ -93,7 +93,7 @@ class Box<T extends Type> implements Functype<T, BoxTag> {
     return this._value
   }
 
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2 {
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2 {
     return this._tag === "Full" && this._value !== undefined ? this._value : defaultValue()
   }
 

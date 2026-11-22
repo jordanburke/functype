@@ -115,8 +115,8 @@ describe("literal defaults", () => {
   type Theme = "light" | "dark"
   const theme = Option<Theme>(undefined)
 
-  it("widen without a contextual type, unlike 1.x's eager orElse", () => {
-    expectTypeOf(theme.getOrElse(() => "light")).toEqualTypeOf<string>()
+  it("keep the union without a contextual type, because the default is typed against T first", () => {
+    expectTypeOf(theme.getOrElse(() => "light")).toEqualTypeOf<Theme>()
   })
 
   it("keep the union with `as const` or an annotated target", () => {

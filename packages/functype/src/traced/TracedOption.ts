@@ -41,7 +41,7 @@ export type TracedOption<A> = {
   flatMap<B>(f: (a: A) => Option<B>, label?: string): TracedOption<B>
   filter(predicate: (a: A) => boolean, label?: string): TracedOption<A>
   fold<B>(onNone: () => B, onSome: (a: A) => B, label?: string): B
-  getOrElse<B>(defaultValue: () => B, label?: string): A | B
+  getOrElse<B = never>(defaultValue: () => A | B, label?: string): A | B
   unwrap(): Option<A>
 }
 
@@ -103,7 +103,7 @@ export function TracedOption<A>(inner: Option<A>, tracer: Tracer, spanId: string
       return inner.fold(onNone, onSome)
     },
 
-    getOrElse<B>(defaultValue: () => B, label?: string): A | B {
+    getOrElse<B = never>(defaultValue: () => A | B, label?: string): A | B {
       const usedDefault = variantOf(inner) === "None"
       emit("getOrElse", undefined, label, { usedDefault })
       return inner.getOrElse(defaultValue)

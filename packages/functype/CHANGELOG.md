@@ -6,6 +6,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (breaking, types only): `getOrElse` keeps a literal union.**
+
+- `getOrElse` now takes `() => T | T2` instead of `() => T2`, with `T2` defaulting to `never`. The default is checked against the container's own type first, so `Option<"light" | "dark">.getOrElse(() => "light")` is `"light" | "dark"`. Before, it was `string`.
+- A default of another type still widens: `Option<number>.getOrElse(() => "x")` is `number | string`. A bare value, `getOrElse(42)`, still fails to compile.
+- Applies to `Option`, `Either`, `Try`, `Lazy`, `TracedOption`, and the `Extractable` interface (so `Obj` too). `Exit` and `Map` already took `() => A` / `() => V`, so they never widened.
+- **Upgrade:** nothing to change unless code relied on the wider type, such as `let theme = o.getOrElse(() => "light")` later reassigned to any string. Annotate the variable, e.g. `let theme: string = ...`.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -170,8 +177,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 **2.0 (additive): `IO.withSpan` traces an effect in a span.** From §11 of #276 (the 2.0 release plan).
 
 - `io.withSpan(name, attributes?)` runs the effect in a span. A `withSpan` inside it nests under it without being passed a parent, as `Effect.withSpan` does.
-- functype ships only the contract, `SpanTracer`, with three methods: `start(name, attributes, parent)`, `run(span, fn)`, which runs the body with the span active, and `end(span, exit)`. Provide one with `provideService(SpanTracer, tracer)`, outside the spans. With none provided, `withSpan` does nothing. It isn't `TracedOption`'s `Tracer`.
-- Every outcome closes the span exactly once: success, typed failure, `Die` and interruption. A `race` loser or a timed-out effect closes as `Interrupted` when it settles. A failure that arrives after the run was cancelled, such as an aborted `fetch`, closes as `Interrupted` too.
+- functype ships only the contract, `SpanTracer`, with three methods: `start(name, attributes, parent)`, `run(span, fn)`, which runs the body with the span active, and `end(span, exit)`. Provide one with `provideService(SpanTracer, tracer)` or `provideLayer(Layer.succeed(SpanTracer, tracer))`, outside the spans. With none provided, `withSpan` does nothing. It isn't `TracedOption`'s `Tracer`.
+- Every outcome closes the span exactly once: success, typed failure, `Die` and interruption. A `race` loser or a timed-out effect closes when it settles. A failure that arrives after the run was cancelled, such as an aborted `fetch`, closes as `Interrupted`. A loser that ignores the signal closes with its own outcome, such as `Success`, and one that never settles never closes its span.
 - Because `run` makes the span active, a log sink inside `withSpan` reads the trace IDs, also after an `await`. An OpenTelemetry bridge implements `run` with `context.with`; the IO docs and the README have a sketch. functype has no OpenTelemetry dependency.
 - The current span travels with the run, not in the shared services, so parallel children and concurrent runs never see each other's span. `withSpan` works under `runSync` too.
 - New public names: `SpanTracer` (the type and its Tag) and `SpanAttributes`.
@@ -191,7 +198,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - A default that is itself a function. In 1.x, `opt.orElse(fn)` returned `fn`. Now `opt.getOrElse(fn)` calls it, so write `opt.getOrElse(() => fn)` to get the function back.
   - Side effects in the default. `opt.orElse(compute())` ran `compute()` every time. `opt.getOrElse(() => compute())` runs it only on None, so a log line or a counter in it no longer runs when the value is present.
   - `orElse(() => alt)` written against 1.x, where `orElse` took a plain value. It returned the function itself on a None. In 2.0 the same text means the container fallback and returns `alt`.
-- **A literal default widens when nothing gives it a type.** For `theme: Option<"light" | "dark">`, `const t = theme.getOrElse(() => "light")` is a `string`, where 1.x's `theme.orElse("light")` kept `"light" | "dark"`. The arrow's return widens before the result is built. Annotate the target (`const t: Theme = …`) or write `() => "light" as const`. A wrong annotation downstream then fails to compile, so this one shows up as a type error.
+- **A literal default keeps its union in `getOrElse`, but not yet in `orElse`.** For `theme: Option<"light" | "dark">`, `theme.getOrElse(() => "light")` is `"light" | "dark"`, as 1.x's `theme.orElse("light")` was (see the `getOrElse` entry above). The container fallback still widens: `theme.orElse(() => Some("light"))` is an `Option<string>`. Write `Some<Theme>("light")`, or annotate the target. A wrong annotation downstream then fails to compile, so this one shows up as a type error.
 - eslint-plugin-functype follows. `no-get-unsafe` suggests `.getOrElse(() => undefined /* TODO: default */)`, under the messageId `suggestGetOrElse` (was `suggestOrElse`). `prefer-fold` suggests `a.orElse(() => b)` for `a.isSome() ? a : b`, under `suggestOrElse` (was `suggestOr`), and offers nothing when `b` contains `await` or `yield`.
 - **Upgrade:** the upgrade tool (§6 of #276, the 2.0 release plan) will rewrite these with type information. Don't text-replace `.or(` or `.orElse(`: `.or(` is also zod's, and `orElse` is reused with a new meaning, so run the `orElse` → `getOrElse` change before the `or` → `orElse` one, never the other way round.
 
@@ -226,6 +233,27 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - An in-place change (`push`, `sort`, `xs[i] = v`, `xs.length = 0`) becomes a new array (`[...xs, x]`, `toSorted`, `with`) or a fold. A shared buffer, such as a test logger's store, can hold a `List` in a field and replace it on each write.
   - A host that needs a mutable array: mark the function `@interop <reason>`, or wrap the type in `Wire<…>`.
   - To keep 1.x levels for now, set `"functype/no-array-mutation": "off"` and `"functype/prefer-list": "off"` after `functype.configs.recommended`. For `strict` without the guard check, set `"functype/prefer-fold": ["error", { "checkGuards": false }]` after `functype.configs.strict`. A bare `"error"` keeps the preset's options, so the check stays on.
+
+**2.0 (breaking): Identity, Tag, Context and Ref share their methods.** §14 of #276 (the 2.0 release plan), after #553 (Tuple and Lazy share their methods). Still to convert: TracedOption and Layer.
+
+- Each type now has one frozen prototype that holds its methods, and a value keeps only its data. An Identity keeps `_tag` and `id`, a Tag `_tag` and `id`, a Context `_tag` and `services`, and a Ref `_tag` and `value`.
+- **Ref compares by its value in test matchers.** Its methods were closures over a hidden variable, so a Ref had no data, and `expect(Ref(1)).toEqual(Ref(2))` passed. Its current value is now an own `value` field, which isn't on the `Ref` type; read it with `get()`. A Ref stays unfrozen, since it changes in place.
+- **Tag and Context are frozen**, like the collections. `SpanTracer` and `TestClockTag` are Tags, so they are too.
+- **Type changes:** `Identity` and `Ref` gain `_tag` (`"Identity"`, `"Ref"`), and Identity's `isSame` is no longer optional. An object literal typed as one of them, such as `{ id: 1 }`, no longer compiles. Build them with `Identity(v)` and `Ref(v)`.
+- On Node 24.20.0, medians of the built package against `main` before this change: `Context.make` 200 → 31 ns, and with `add` about 490 → 110 ns. A Ref built, updated and read about 19 → 2 ns. `Identity(v)` about 5 → 3.5 ns. A Tag got slower, about 5 → 20 ns, from freezing it; code builds one per service.
+- functype-react's `structuralEq` now calls two Identities, Tags, Contexts or Refs with the same contents equal. Before, any two were unequal. Two different Refs holding the same value now compare equal, so a `useStable*` hook may keep the first; use `referenceEq` where a Ref's identity matters.
+- **Serialized forms change.** `JSON.stringify(Ref(1))` was `{}` and is now `{"_tag":"Ref","value":1}`, so a Ref's value shows in logs and `structuredClone`. An Identity gains `_tag`, and a Tag's keys come out as `_tag`, then `id`.
+- **A detached method call throws**, because `this` is undefined: `const { get, set } = Ref(0)`, or `IO.sync(ref.get)`. Call it on the value: `IO.sync(() => ref.get())`.
+- **Upgrade:** call Ref, Context and Tag methods on the value. Replace object literals typed as `Identity` or `Ref` with their constructors. Re-record snapshots of these types.
+
+**2.0 (breaking): `IO.gen` records the services it reads and the errors it can fail with.** From #277 (the 2.0 tracking issue).
+
+- `IO.gen` was typed `IO<never, any, A>`, whatever its body did. Now its `R` is the union of the services every yielded IO needs, and its `E` is the union of their errors. A body that yields nothing, or only pure IOs, is `IO<never, never, A>`.
+- `provideLayer` now works on an `IO.gen`. Before, it had no requirement to satisfy, so the docs used `provideService` as a workaround.
+- `provideLayer` and `provideContext` accept services the effect doesn't name. They required the layer or context to provide only services in `R`, so neither could supply a `SpanTracer`, which `withSpan` reads without requiring it. `provideLayer(Layer.succeed(SpanTracer, tracer))` now compiles.
+- A body that yields `any`, or a generator annotated `Generator<any, A, any>` (an old workaround), is `IO<never, unknown, A>`: it still runs, and its error is `unknown`.
+- `Exclude` checks services by shape, as `provideService` always has. A layer for a `Database` therefore discharges a requirement for a wider `BigDb` that has every `Database` member, and the run then dies with "Service not found". Give each service a distinct shape, or a brand field, if two can overlap.
+- **Upgrade:** two kinds of code stop compiling. Running an `IO.gen` whose services aren't provided now fails, as it fails for any other IO: provide them with `provideLayer` or `provideService`. Code that leaned on the `any` error, such as passing the result where a narrower `E` is expected, now sees the real error type: handle it with `catchTag` or `mapError`, or widen the expected type. A `yield* IO.async(...)` declares `E = unknown`, which absorbs the rest of the union; map it with `IO.tryPromise`'s `catch` to keep the union.
 
 ## 1.27.1 - 2026-11-19
 

@@ -449,7 +449,7 @@ const email = Email.from("test@example.com").fold(
 ### Basic Effect Composition
 
 ```typescript
-import { IO, Tag } from "functype"
+import { IO, Layer, Tag } from "functype"
 
 // Define a service
 interface UserService {
@@ -469,8 +469,8 @@ const getUser = (id: string) =>
     return user
   })
 
-// Provide implementation. IO.gen doesn't infer the services it reads (its type is IO<never, any, A>),
-// so provide them with provideService; provideLayer needs an effect whose R names the service.
+// getUser(id) is IO<UserService, UserNotFoundError, User | null>: IO.gen records the services
+// it reads and the errors it can fail with, so it won't run until UserService is provided.
 const live: UserService = {
   findUser: async (id) => db.findUser(id),
   saveUser: async (user) => {
@@ -479,7 +479,7 @@ const live: UserService = {
 }
 
 // Run the program
-const user = await getUser("123").provideService(UserService, live).run() // Either: Left on failure
+const user = await getUser("123").provideLayer(Layer.succeed(UserService, live)).run() // Either: Left on failure
 ```
 
 ### Error Handling with IO

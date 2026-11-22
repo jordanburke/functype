@@ -33,11 +33,12 @@ export interface Unsafe<out T extends Type> {
 export interface Extractable<out T extends Type> extends Unsafe<T> {
   /**
    * Returns the contained value, or calls `defaultValue` if there is none. The default is
-   * lazy, and may be of a different type; the result widens to `T | T2`.
+   * lazy. It is typed against `T` first, so a default that fits `T` keeps `T` and a literal
+   * union is not widened to `string`. A default of another type widens the result to `T | T2`.
    * @param defaultValue - A function that returns the value to use if extraction fails
    * @returns The contained value or the default
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
 
   /**
    * Returns this container if it has a value, otherwise calls `alternative` for another container.
