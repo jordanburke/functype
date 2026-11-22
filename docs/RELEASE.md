@@ -1,6 +1,6 @@
 # Releasing from the monorepo
 
-The functype family (6 packages) ships together on the `1.x` line; the eslint pair (2 packages) ships together on the `2.100.x` line, version-mirrored from functype. All 8 publishable packages release in lockstep from a single git tag.
+The functype family (6 packages) ships together on one version line, `2.x` from `main`; the eslint pair (2 packages) ships together on the mirrored `2.200.x` line (see Eslint mirror encoding). All 8 publishable packages release in lockstep from a single git tag.
 
 ## TL;DR
 
@@ -41,7 +41,7 @@ OIDC trusted publishing produces npm provenance attestations for `functype`, `fu
 
 ## Release branches (`release/<major>.x`)
 
-Once `main` carries unreleased breaking changes, additive releases for the old major ship from a `release/<major>.x` branch instead. `release/1.x` was cut from `v1.15.0` on 2026-10-11, because `main` is 2.0-bound. Decided in #276 (the 2.0 release plan).
+Once `main` carries unreleased breaking changes, additive releases for the old major ship from a `release/<major>.x` branch instead. `release/1.x` was cut from `v1.15.0` on 2026-10-11, while `main` carried 2.0, and keeps shipping 1.x fixes now that 2.0 is out. Decided in #276 (the 2.0 release plan).
 
 - `pnpm release` and `ci.yml` accept `main` or `release/<major>.x`.
 - Feature PRs for the old major target the release branch, and write their notes under `## Unreleased` there.
