@@ -17,7 +17,7 @@
     "lint:check": "turbo run lint:check",
     "format": "turbo run format",
     "format:check": "turbo run format:check",
-    "validate": "pnpm sync:eslint-mirror:test && turbo run validate",
+    "validate": "pnpm sync:eslint-mirror:test && pnpm test:scripts && turbo run validate",
     "compile": "turbo run compile",
     "typecheck": "turbo run typecheck",
     "dev": "turbo run dev",
@@ -29,7 +29,8 @@
     "sync:plugin-lock:check": "tsx scripts/sync-plugin-lock.ts --check",
     "check-publish-safety": "tsx scripts/check-publish-safety.ts",
     "release": "tsx scripts/release.ts",
-    "verify-published": "tsx scripts/verify-published.ts"
+    "verify-published": "tsx scripts/verify-published.ts",
+    "test:scripts": "tsx --test scripts/*.test.ts"
   },
   "packageManager": "pnpm@12.21.0+sha512.66fd8278ee28935ce951792d34367ff3af5c432a2756445823029533835b8da529bbe0be5130afd56ed0713fb8789e47bad82d93bd5ae2fe54b15562d6276ef0",
   "engines": {

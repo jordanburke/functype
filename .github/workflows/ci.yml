@@ -50,6 +50,9 @@ jobs:
       - name: Run turbo validate
         run: pnpm turbo run validate
 
+      - name: Test the release scripts
+        run: pnpm test:scripts
+
       # `validate` runs formatters and generators in WRITE mode, so a stale
       # checked-in artifact is silently rewritten and the job still passes.
       # That is how site/public/llms-full.txt sat at v1.8.0 on main after the
