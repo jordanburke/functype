@@ -287,4 +287,9 @@ const MapCompanion = {
   },
 }
 
-export const Map = Companion(MapConstructor, MapCompanion)
+export const Map: MapCompanion = Companion(MapConstructor, MapCompanion)
+
+/** The type of `Map`: its constructor and its statics, named so that errors and hovers print `MapCompanion`. */
+export interface MapCompanion extends MapConstructorType, MapStaticsType {}
+type MapConstructorType = typeof MapConstructor
+type MapStaticsType = typeof MapCompanion

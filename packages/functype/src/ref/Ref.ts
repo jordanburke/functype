@@ -151,4 +151,9 @@ const RefCompanion = {
   of: <A extends Type>(initial: A) => RefConstructor(initial),
 }
 
-export const Ref = Companion(RefConstructor, RefCompanion)
+export const Ref: RefCompanion = Companion(RefConstructor, RefCompanion)
+
+/** The type of `Ref`: its constructor and its statics, named so that errors and hovers print `RefCompanion`. */
+export interface RefCompanion extends RefConstructorType, RefStaticsType {}
+type RefConstructorType = typeof RefConstructor
+type RefStaticsType = typeof RefCompanion

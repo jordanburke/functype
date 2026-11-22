@@ -485,4 +485,9 @@ const ObjCompanion = {
  * user.get("name")                   // Some("John")
  * ```
  */
-export const Obj = Companion(ObjConstructor, ObjCompanion)
+export const Obj: ObjCompanion = Companion(ObjConstructor, ObjCompanion)
+
+/** The type of `Obj`: its constructor and its statics, named so that errors and hovers print `ObjCompanion`. */
+export interface ObjCompanion extends ObjConstructorType, ObjStaticsType {}
+type ObjConstructorType = typeof ObjConstructor
+type ObjStaticsType = typeof ObjCompanion

@@ -659,4 +659,9 @@ const EitherCompanion = {
   },
 }
 
-export const Either = Companion(EitherConstructor, EitherCompanion)
+export const Either: EitherCompanion = Companion(EitherConstructor, EitherCompanion)
+
+/** The type of `Either`: its constructor and its statics, named so that errors and hovers print `EitherCompanion`. */
+export interface EitherCompanion extends EitherConstructorType, EitherStaticsType {}
+type EitherConstructorType = typeof EitherConstructor
+type EitherStaticsType = typeof EitherCompanion

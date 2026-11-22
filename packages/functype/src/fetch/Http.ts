@@ -396,4 +396,10 @@ const HttpCompanion = {
   client,
 }
 
-export const Http = Companion({ _tag: "Http" } as const, HttpCompanion)
+export const Http: HttpCompanion = Companion({ _tag: "Http" } as const, HttpCompanion)
+
+/** The type of `Http`: its tag and its statics, named so that errors and hovers print `HttpCompanion`. */
+export interface HttpCompanion extends HttpStaticsType {
+  readonly _tag: "Http"
+}
+type HttpStaticsType = typeof HttpCompanion

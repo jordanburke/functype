@@ -575,4 +575,9 @@ const ExitConstructor = <E extends Type, A extends Type>(value: A): Exit<E, A> =
  * )
  * ```
  */
-export const Exit = Companion(ExitConstructor, ExitCompanion)
+export const Exit: ExitCompanion = Companion(ExitConstructor, ExitCompanion)
+
+/** The type of `Exit`: its constructor and its statics, named so that errors and hovers print `ExitCompanion`. */
+export interface ExitCompanion extends ExitConstructorType, ExitStaticsType {}
+type ExitConstructorType = typeof ExitConstructor
+type ExitStaticsType = typeof ExitCompanion

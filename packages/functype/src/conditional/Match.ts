@@ -646,4 +646,9 @@ const MatchCompanion = {
  *   .case("error", "Failed!")
  *   .exhaustive()
  */
-export const Match = Companion(MatchConstructor, MatchCompanion)
+export const Match: MatchCompanion = Companion(MatchConstructor, MatchCompanion)
+
+/** The type of `Match`: its constructor and its statics, named so that errors and hovers print `MatchCompanion`. */
+export interface MatchCompanion extends MatchConstructorType, MatchStaticsType {}
+type MatchConstructorType = typeof MatchConstructor
+type MatchStaticsType = typeof MatchCompanion

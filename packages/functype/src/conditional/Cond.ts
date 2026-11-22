@@ -236,4 +236,9 @@ const CondCompanion = {
  *   .when(() => checkCondition2(), () => "Result 2")
  *   .else(() => "Default")
  */
-export const Cond = Companion(CondConstructor, CondCompanion)
+export const Cond: CondCompanion = Companion(CondConstructor, CondCompanion)
+
+/** The type of `Cond`: its constructor and its statics, named so that errors and hovers print `CondCompanion`. */
+export interface CondCompanion extends CondConstructorType, CondStaticsType {}
+type CondConstructorType = typeof CondConstructor
+type CondStaticsType = typeof CondCompanion

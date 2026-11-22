@@ -198,4 +198,9 @@ const TupleCompanion = {
  *   .map(arr => arr.map(x => x * 2))
  *   .toArray() // [2, 4, 6]
  */
-export const Tuple = Companion(TupleConstructor, TupleCompanion)
+export const Tuple: TupleCompanion = Companion(TupleConstructor, TupleCompanion)
+
+/** The type of `Tuple`: its constructor and its statics, named so that errors and hovers print `TupleCompanion`. */
+export interface TupleCompanion extends TupleConstructorType, TupleStaticsType {}
+type TupleConstructorType = typeof TupleConstructor
+type TupleStaticsType = typeof TupleCompanion

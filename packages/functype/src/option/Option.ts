@@ -587,4 +587,9 @@ const OptionCompanion = {
     ),
 }
 
-export const Option = Companion(OptionConstructor, OptionCompanion)
+export const Option: OptionCompanion = Companion(OptionConstructor, OptionCompanion)
+
+/** The type of `Option`: its constructor and its statics, named so that errors and hovers print `OptionCompanion`. */
+export interface OptionCompanion extends OptionConstructorType, OptionStaticsType {}
+type OptionConstructorType = typeof OptionConstructor
+type OptionStaticsType = typeof OptionCompanion

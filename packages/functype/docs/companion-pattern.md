@@ -40,9 +40,16 @@ const MyTypeCompanion = {
   fromArray: <T>(arr: T[]) => MyTypeConstructor(arr[0]),
 }
 
-// 4. Combine using Companion utility
-export const MyType = Companion(MyTypeConstructor, MyTypeCompanion)
+// 4. Combine using Companion utility, typed by a named interface
+export const MyType: MyTypeCompanion = Companion(MyTypeConstructor, MyTypeCompanion)
+
+// 5. Name the combined type, so errors and hovers print `MyTypeCompanion`
+export interface MyTypeCompanion extends MyTypeConstructorType, MyTypeStaticsType {}
+type MyTypeConstructorType = typeof MyTypeConstructor
+type MyTypeStaticsType = typeof MyTypeCompanion
 ```
+
+Without step 5, a call to a name the companion doesn't have prints the whole type, every signature included. With it, `MyType.missing()` fails with `Property 'missing' does not exist on type 'MyTypeCompanion'`. The interface and the local `MyTypeCompanion` object share a name: TypeScript keeps types and values apart, so `typeof MyTypeCompanion` is the object, and `MyTypeCompanion` as a type is the interface.
 
 ### Usage
 
@@ -256,7 +263,7 @@ if (isCompanion(Option)) {
 
 1. **Naming**: Use PascalCase for the exported Companion (e.g., `Option`, `Either`, `List`)
 2. **Constructor Naming**: Use `XConstructor` internally (e.g., `OptionConstructor`)
-3. **Companion Naming**: Use `XCompanion` for the companion object (e.g., `OptionCompanion`)
+3. **Companion Naming**: Use `XCompanion` for the companion object (e.g., `OptionCompanion`), and export an interface of the same name as the type of `X` (see step 5)
 4. **Consistency**: Always follow the same pattern across your codebase
 5. **Documentation**: Add JSDoc to both constructor and companion methods
 6. **Type Guards**: Add static type guards to companion objects where useful

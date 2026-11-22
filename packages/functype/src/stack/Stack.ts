@@ -282,4 +282,9 @@ const StackCompanion = {
   },
 }
 
-export const Stack = Companion(StackConstructor, StackCompanion)
+export const Stack: StackCompanion = Companion(StackConstructor, StackCompanion)
+
+/** The type of `Stack`: its constructor and its statics, named so that errors and hovers print `StackCompanion`. */
+export interface StackCompanion extends StackConstructorType, StackStaticsType {}
+type StackConstructorType = typeof StackConstructor
+type StackStaticsType = typeof StackCompanion

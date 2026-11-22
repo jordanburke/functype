@@ -112,4 +112,10 @@ const DecoderErrorCompanion = {
   format,
 }
 
-export const DecoderError = Companion({ _tag: "DecoderError" } as const, DecoderErrorCompanion)
+export const DecoderError: DecoderErrorCompanion = Companion({ _tag: "DecoderError" } as const, DecoderErrorCompanion)
+
+/** The type of `DecoderError`: its tag and its statics, named so that errors and hovers print `DecoderErrorCompanion`. */
+export interface DecoderErrorCompanion extends DecoderErrorStaticsType {
+  readonly _tag: "DecoderError"
+}
+type DecoderErrorStaticsType = typeof DecoderErrorCompanion

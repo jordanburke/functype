@@ -539,4 +539,9 @@ const TryCompanion = {
     Try(() => arr.map((item, i) => f(item, i).orThrow())),
 }
 
-export const Try = Companion(TryConstructor, TryCompanion)
+export const Try: TryCompanion = Companion(TryConstructor, TryCompanion)
+
+/** The type of `Try`: its constructor and its statics, named so that errors and hovers print `TryCompanion`. */
+export interface TryCompanion extends TryConstructorType, TryStaticsType {}
+type TryConstructorType = typeof TryConstructor
+type TryStaticsType = typeof TryCompanion

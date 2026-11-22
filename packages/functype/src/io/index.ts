@@ -44,13 +44,14 @@ export type { ContextServices, Context as ContextType, HasService } from "./Cont
 export type {
   DieExitOf,
   ExitBase,
+  ExitCompanion,
   ExitTag,
   Exit as ExitType,
   FailureExitOf,
   InterruptedExitOf,
   SuccessExitOf,
 } from "./Exit"
-export type { Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
+export type { IOCompanion, Task as IOTask, IO as IOType, RIO, UIO } from "./IO"
 export type { LayerError, LayerInput, LayerOutput, Layer as LayerType } from "./Layer"
 export type { SpanAttributes } from "./SpanTracer"
 export type { TagService, Tag as TagType } from "./Tag"

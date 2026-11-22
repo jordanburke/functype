@@ -517,4 +517,9 @@ const ListCompanion = {
   },
 }
 
-export const List = Companion(ListConstructor, ListCompanion)
+export const List: ListCompanion = Companion(ListConstructor, ListCompanion)
+
+/** The type of `List`: its constructor and its statics, named so that errors and hovers print `ListCompanion`. */
+export interface ListCompanion extends ListConstructorType, ListStaticsType {}
+type ListConstructorType = typeof ListConstructor
+type ListStaticsType = typeof ListCompanion

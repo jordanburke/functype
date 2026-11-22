@@ -652,4 +652,9 @@ const LazyCompanion = {
  *   .map(user => user.name)
  *   .orThrow() // "Alice"
  */
-export const Lazy = Companion(LazyConstructor, LazyCompanion)
+export const Lazy: LazyCompanion = Companion(LazyConstructor, LazyCompanion)
+
+/** The type of `Lazy`: its constructor and its statics, named so that errors and hovers print `LazyCompanion`. */
+export interface LazyCompanion extends LazyConstructorType, LazyStaticsType {}
+type LazyConstructorType = typeof LazyConstructor
+type LazyStaticsType = typeof LazyCompanion

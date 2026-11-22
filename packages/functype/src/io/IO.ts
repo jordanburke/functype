@@ -2773,7 +2773,12 @@ const IOConstructor = <A extends Type>(f: () => A | Promise<A>): IO<never, unkno
  * ]) // IO<never, never, [1, 2, 3]>
  * ```
  */
-export const IO = Companion(IOConstructor, IOCompanion)
+export const IO: IOCompanion = Companion(IOConstructor, IOCompanion)
+
+/** The type of `IO`: its constructor and its statics, named so that errors and hovers print `IOCompanion`. */
+export interface IOCompanion extends IOConstructorType, IOStaticsType {}
+type IOConstructorType = typeof IOConstructor
+type IOStaticsType = typeof IOCompanion
 
 // ============================================
 // Type Aliases for Common Cases

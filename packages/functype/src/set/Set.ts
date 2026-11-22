@@ -453,4 +453,9 @@ const SetCompanion = {
   },
 }
 
-export const Set = Companion(SetConstructor, SetCompanion)
+export const Set: SetCompanion = Companion(SetConstructor, SetCompanion)
+
+/** The type of `Set`: its constructor and its statics, named so that errors and hovers print `SetCompanion`. */
+export interface SetCompanion extends SetConstructorType, SetStaticsType {}
+type SetConstructorType = typeof SetConstructor
+type SetStaticsType = typeof SetCompanion

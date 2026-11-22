@@ -107,4 +107,10 @@ const HttpErrorCompanion = {
   match,
 }
 
-export const HttpError = Companion({ _tag: "HttpError" } as const, HttpErrorCompanion)
+export const HttpError: HttpErrorCompanion = Companion({ _tag: "HttpError" } as const, HttpErrorCompanion)
+
+/** The type of `HttpError`: its tag and its statics, named so that errors and hovers print `HttpErrorCompanion`. */
+export interface HttpErrorCompanion extends HttpErrorStaticsType {
+  readonly _tag: "HttpError"
+}
+type HttpErrorStaticsType = typeof HttpErrorCompanion

@@ -634,4 +634,9 @@ const LazyListCompanion = {
  *   .take(5)
  *   .toArray() // [1, 5, 9, 13, 17]
  */
-export const LazyList = Companion(LazyListConstructor, LazyListCompanion)
+export const LazyList: LazyListCompanion = Companion(LazyListConstructor, LazyListCompanion)
+
+/** The type of `LazyList`: its constructor and its statics, named so that errors and hovers print `LazyListCompanion`. */
+export interface LazyListCompanion extends LazyListConstructorType, LazyListStaticsType {}
+type LazyListConstructorType = typeof LazyListConstructor
+type LazyListStaticsType = typeof LazyListCompanion
