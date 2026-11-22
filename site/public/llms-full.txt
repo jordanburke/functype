@@ -4508,8 +4508,9 @@ results.head.bind(results) // fine: the function on purpose
 results.size // fine: a property
 ```
 
-- **What counts:** a member that functype declares as a method, on a value with `_tag` and `fold`. Getters such as `size` and `isEmpty`, and function-valued data such as `Some(fn).value` or a `Ref` holding a callback, are never reported.
-- **Deliberate uses:** a call (`?.()` included), `.bind` / `.call` / `.apply`, `typeof`, an assignment target, and `delete`.
+- **What counts:** a member declared as a method in functype's own files, read on a value with `_tag` and `fold`. A type of your own with that shape, or an interface extending `List` with methods of its own, isn't reported for those methods. Getters such as `size` and `isEmpty`, and function-valued data such as `Some(fn).value` or a `Ref` holding a callback, are never reported.
+- **Deliberate uses:** a call (`?.()`, `new` and a tagged template included, also through `as`, `!` or `satisfies`), `.bind` / `.call` / `.apply`, `typeof`, an assignment target, and `delete`.
+- **Not covered yet:** destructuring in parameters, nested patterns and `for…of`, and computed reads with a variable key (`results[key]`).
 - **Why a lint rule:** the upgrade tool rewrites these reads once, in your own code. The rule keeps them from coming back, and runs in libraries that never run the upgrade tool.
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.

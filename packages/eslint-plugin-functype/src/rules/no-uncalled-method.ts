@@ -6,10 +6,19 @@ import { functypeMethodByType } from "../utils/type-aware"
 /** `fn.bind(x)`, `fn.call(x, …)`, `fn.apply(x, …)`: the function is used on purpose, with a receiver. */
 const RECEIVER_METHODS: ReadonlySet<string> = new Set(["bind", "call", "apply"])
 
-/** The expression a member read evaluates into, looking through `a?.b` and `x!`. */
+/** Wrappers that pass a value through unchanged: `a?.b`, `x!`, `x as F`, `x satisfies F`, `<F>x`. */
+const PASS_THROUGH: ReadonlySet<string> = new Set([
+  "ChainExpression",
+  "TSNonNullExpression",
+  "TSAsExpression",
+  "TSSatisfiesExpression",
+  "TSTypeAssertion",
+])
+
+/** The expression a member read evaluates into, looking through the pass-through wrappers. */
 const outermost = (node: ASTNode): ASTNode => {
   const parent = node.parent as ASTNode | undefined
-  return parent?.type === "ChainExpression" || parent?.type === "TSNonNullExpression" ? outermost(parent) : node
+  return parent !== undefined && PASS_THROUGH.has(parent.type) ? outermost(parent) : node
 }
 
 /**
@@ -83,6 +92,17 @@ const rule: Rule.RuleModule = {
       context.report({ node, messageId: "uncalledMethod", data: { name, owner } })
     }
 
+    /** `const { head } = list`, `({ head } = list)`, `const { "head": h } = list`. */
+    const destructured = (pattern: ASTNode, source: ASTNode): void => {
+      if (pattern.type !== "ObjectPattern") return
+      for (const property of pattern.properties as ReadonlyArray<ASTNode>) {
+        if (property.type !== "Property" || property.computed) continue
+        const key = property.key as ASTNode
+        const name = key.type === "Identifier" ? key.name : typeof key.value === "string" ? key.value : undefined
+        if (name !== undefined) report(property, source, name)
+      }
+    }
+
     return {
       MemberExpression(node: ASTNode) {
         const name = memberName(node)
@@ -90,12 +110,10 @@ const rule: Rule.RuleModule = {
         report(node, node.object as ASTNode, name)
       },
       VariableDeclarator(node: ASTNode) {
-        const pattern = node.id as ASTNode
-        if (pattern.type !== "ObjectPattern" || node.init == null) return
-        for (const property of pattern.properties as ReadonlyArray<ASTNode>) {
-          if (property.type !== "Property" || property.computed || property.key.type !== "Identifier") continue
-          report(property, node.init as ASTNode, property.key.name)
-        }
+        if (node.init != null) destructured(node.id as ASTNode, node.init as ASTNode)
+      },
+      AssignmentExpression(node: ASTNode) {
+        if (node.operator === "=") destructured(node.left as ASTNode, node.right as ASTNode)
       },
     }
   },

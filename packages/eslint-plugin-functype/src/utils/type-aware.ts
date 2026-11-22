@@ -222,11 +222,25 @@ export const containerInsideByType = (node: ASTNode, context: Rule.RuleContext):
   return find(checker.getTypeAtLocation(tsNode), "", 0)
 }
 
-type MemberSymbol = { getDeclarations?: () => ReadonlyArray<{ readonly parameters?: unknown }> | undefined }
+type MemberDeclaration = {
+  readonly parameters?: unknown
+  getSourceFile(): { readonly fileName: string }
+}
+type MemberSymbol = { getDeclarations?: () => ReadonlyArray<MemberDeclaration> | undefined }
+
+/**
+ * Declared by functype itself: its published `dist` (`node_modules/functype/dist/…`, pnpm's
+ * `.pnpm/functype@x/node_modules/functype/dist/…`) or, inside this repo, `packages/functype/{src,dist}`.
+ */
+const FUNCTYPE_FILE = /(?:^|[\\/])functype[\\/](?:dist|src)[\\/]/
+const isDeclaredByFunctype = (declaration: MemberDeclaration): boolean =>
+  FUNCTYPE_FILE.test(declaration.getSourceFile().fileName)
 
 /**
  * If `object` is a functype container and `name` is one of its methods, the container's name
- * (`List`, `Option`, `Either`); otherwise `undefined`. A container has `_tag` and `fold`. A method is a
+ * (`List`, `Option`, `Either`); otherwise `undefined`. A container has `_tag` and `fold`. A method is
+ * declared in functype's own files, so a user type with the same shape (a union with `_tag` and a
+ * `fold`, or an interface extending `List` with methods of its own) never counts for those methods. It is a
  * callable member whose declaration has parameters (`head(): A | undefined`, `fold<B>(…)`), so neither
  * function-valued data (`readonly value: R` on a `Right` holding a callback) nor a getter (`size`) is one. A type parameter is read
  * through its constraint.
@@ -249,7 +263,10 @@ export const functypeMethodByType = (object: ASTNode, name: string, context: Rul
   // A getter (`get size(): number`) has parameters too, but reading it gives its value, not a function.
   const isCallable = (): boolean =>
     ((checker.getTypeOfSymbolAtLocation(member, tsNode) as TypeShape).getCallSignatures?.() ?? []).length > 0
-  const isMethod = declarations.length > 0 && declarations.every((d) => Array.isArray(d.parameters)) && isCallable()
+  const isMethod =
+    declarations.length > 0 &&
+    declarations.every((d) => Array.isArray(d.parameters) && isDeclaredByFunctype(d)) &&
+    isCallable()
   return isMethod ? containerName(type as TypeShape) : undefined
 }
 

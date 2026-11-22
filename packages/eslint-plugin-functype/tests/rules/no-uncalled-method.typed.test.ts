@@ -24,6 +24,10 @@ const decls = [
   "declare const plain: { readonly head: () => Row; run(): void }",
   "declare function expect(value: unknown): void",
   "declare function use<T>(value: T): T",
+  'type Shape = { readonly _tag: "Circle"; fold<B>(f: (s: Shape) => B): B; area(): number }',
+  "declare const shape: Shape",
+  "interface MyList extends List<Row> { extra(): void }",
+  "declare const mine: MyList",
   "",
 ].join("; ")
 
@@ -53,6 +57,13 @@ describe("no-uncalled-method (type-aware)", () => {
       valid("Destructuring data", "export const { size } = results"),
       valid("A companion's static", "export const a = [1, 2].map(Some)"),
       valid("A constructor passed as a callback", "export const a = [1].map(Right)"),
+      valid(
+        "A user object with _tag and fold",
+        'const o = { _tag: "X" as const, fold(f: () => number) { return f() }, m() { return 1 } }; export const a = [1].map(o.m)',
+      ),
+      valid("A user union with _tag and fold", "export const a = [shape].map(shape.area)"),
+      valid("A user method on an interface extending List", "export const a = mine.extra"),
+      valid("Called through a cast", "export const a = (results.head as () => Row | undefined)()"),
     ],
     invalid: [
       read("export function f() { const checkout = results.head; if (!checkout) return 0; return 1 }", "head", "List"),
@@ -70,6 +81,9 @@ describe("no-uncalled-method (type-aware)", () => {
       read('export const a = results["head"]', "head", "List"),
       read("export const { head } = results", "head", "List"),
       read("export function f<L extends List<Row>>(xs: L) { return xs.head ? 1 : 0 }", "head", "List"),
+      read("export const a = mine.head", "head", "MyList"),
+      read("export function f() { let head: unknown; ({ head } = results); return head }", "head", "List"),
+      read('export const { "last": l } = results', "last", "List"),
     ],
   })
 })
