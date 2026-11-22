@@ -77,6 +77,12 @@ export default function Navigation() {
           {/* Desktop External Links */}
           <div className="hidden md:flex items-center space-x-4">
             <a
+              href="/upgrading-to-2"
+              className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+            >
+              Upgrade to 2.0
+            </a>
+            <a
               href="/api-docs"
               className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
@@ -153,6 +159,12 @@ export default function Navigation() {
               </a>
             ))}
             <div className="pt-4 space-y-2 border-t border-gray-200">
+              <a
+                href="/upgrading-to-2"
+                className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md"
+              >
+                Upgrade to 2.0
+              </a>
               <a
                 href="/api-docs"
                 className="block px-3 py-2 text-base font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-md"

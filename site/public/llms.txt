@@ -74,7 +74,7 @@ Install with `npm install functype`. Every type listed below is also available f
 
 ## Tooling
 
-- [Upgrading to 2.0](https://functype.org/upgrading-to-2): Moving a codebase from functype 1.x to 2.0: compiler-reported changes, silent ones, and each package's
+- [Upgrading to 2.0](https://functype.org/upgrading-to-2): Moving a codebase from functype 1.x to 2.0: what the compiler reports, what it can't see, and per-package changes
 - [ESLint Plugin](https://functype.org/eslint): Rules, severity policy, Wire / @interop boundaries, and invariant() bug checks
 - [MCP Server](https://functype.org/mcp-server): Live type docs and compile-time code validation for AI agents
 - [CLI](https://github.com/jordanburke/functype/blob/main/packages/functype#cli-documentation): `npx functype` prints the LLM-optimized API reference; `npx functype <Type>` for one type

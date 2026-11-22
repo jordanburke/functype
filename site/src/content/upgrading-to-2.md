@@ -27,6 +27,7 @@ Run `tsc`. Most of 2.0's changes fail to compile, and each message points at the
 | `opt.orElse(0)`         | `opt.getOrElse(() => 0)`      |
 | `opt.or(backup)`        | `opt.orElse(() => backup)`    |
 | `map.getOrElse(key, 0)` | `map.getOrElse(key, () => 0)` |
+| `map.orElse(key, alt)`  | `map.orElse(key, () => alt)`  |
 | `exit.orElse(0)`        | `exit.getOrElse(() => 0)`     |
 
 ```ts
@@ -34,12 +35,12 @@ declare const port: Option<number>;
 declare const fallback: Option<number>;
 
 const value: number = port.getOrElse(() => 8080);
-const either: Option<number> = port.orElse(() => fallback);
+const orBackup: Option<number> = port.orElse(() => fallback);
 ```
 
 This covers Option, Either, Try, Lazy, Obj, Exit, Map and TracedOption.
 
-**Order matters:** change `orElse` to `getOrElse` first, then `or` to `orElse`. Don't text-replace `.or(` or `.orElse(`, because `orElse` now means something else and `.or(` is also zod's.
+**Order matters:** change `orElse` to `getOrElse` first, then `or` to `orElse`. Map is the exception: its `getOrElse` and `orElse` keep their names, and only their last argument becomes a function. Don't text-replace `.or(` or `.orElse(`, because `orElse` now means something else and `.or(` is also zod's.
 
 ### `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are methods
 
@@ -110,12 +111,13 @@ These compile and behave differently. Search for each one.
 
 ### Detached method calls throw
 
-Every value type now shares its methods through a prototype, so a method called without its value has no `this`:
+Every value type now shares its methods through a prototype, so a method called without its value has no `this`. Passed to an IO step, such as `IO.sync` or `map`, it ends the run in a `Die`:
 
 ```ts ignore
 const { getOrElse } = opt; // throws when called
 xs.filter(set.has); // throws
-IO.sync(ref.get); // throws when run
+IO.sync(ref.get); // dies when run
+IO.succeed(1).map(ref.set); // dies when run
 ```
 
 Call the method on the value, or wrap it:
@@ -129,13 +131,15 @@ const kept = ys.filter((y) => set.has(y));
 const read = IO.sync(() => ref.get());
 ```
 
-ts-builds' functype preset warns on these through `@typescript-eslint/unbound-method`, from ts-builds 4.8.0.
+ts-builds' functype preset warns on these through `@typescript-eslint/unbound-method`, from ts-builds 4.8.0. It sees methods declared with method syntax, which covers every functype value type in 2.0.
 
 ### `run()` rejects on a defect
 
-- **`run()`'s `Left` holds only typed errors.** A defect, such as a throw in `IO.sync` or a `map` callback, rejects the promise. An interruption rejects with an `InterruptedError`.
+- **`run()`'s `Left` holds only typed errors.** A defect, such as a throw in `IO.sync` or a `map` callback, rejects the promise. An interruption rejects with an `InterruptedError`, except inside an `interruptOn(signal)` region or `runCancellable()`, which still resolve to `Left(InterruptedError)`.
 - **`runSync()`** throws a defect instead of returning it in a `Left`.
 - **A `throw` inside `IO.gen` is a defect.** Use `yield* IO.fail(e)` for a typed failure.
+- **More defects:** `IO.race([])`, `IO.firstSuccessOf([])` and an `IO.service` whose service was never provided are now defects, so they reject `run()`.
+- **`runCancellable().result` rejects on a defect.** A caller that keeps only `cancel` gets an unhandled rejection; attach a handler to `result`.
 - **Fix:** attach a rejection handler to each `run()`, or use `runExit()`, which never rejects and reports all four outcomes.
 
 ```ts
@@ -155,6 +159,7 @@ const report = async (): Promise<string> => {
 ### Concurrency and cancellation
 
 - **`IO.all` runs its effects at once.** It is fail-fast and interrupts the rest. Pass `{ concurrency: 1 }` where order matters, or where later effects must not start after a failure.
+- **`IO.async` and `IO.tryPromise` thunks get an `AbortSignal` as their first argument** inside `IO.all`, `race` and `timeout`, even when the run has none. A thunk whose first parameter means something else, such as `(page = 1) => load(page)`, gets the signal there: wrap it, `IO.async(() => load())`.
 - **`race` and `timeout` stop the losers.** Work that must finish belongs outside the race.
 - **`IO.sleep`, `IO.never` and `.delay` wake on interruption.** Under `runSync` they throw `UnsupportedSyncOperationError`.
 - **An effect's synchronous steps run without a break** under `run()`. Add `IO.sleep(0)` to yield between them.
@@ -176,6 +181,10 @@ const inOrder = IO.all(steps, { concurrency: 1 });
 - **Own keys are the data:** `Object.keys`, spreads and snapshots see `_tag` and the data, not methods. Re-record snapshots. `toEqual` now compares functype values by their data.
 - **Some methods return the same value** instead of a copy when nothing changed, so an `===` check can turn `true`.
 - **`Set.empty()` and `Map.empty()`** build a new value per call, so `Set.empty() === Set.empty()` is `false`.
+- **Lazy's `filter`, `find` and `toOption` return a real `None`,** so a `=== None` check is now `false`: use `isNone()`. A Lazy's `typeable` field is gone: read `_tag`.
+- **`Layer.build` rejects** where a throwing `sync` or `fromService` factory used to throw synchronously.
+- **`Http` decode errors:** with `Decoder.fromThrowing`, `DecodeError`'s `cause` is a `DecoderError` leaf wrapping the thrown value, so a `cause instanceof ZodError` check needs to look one level deeper.
+- **Serialized forms change:** `JSON.stringify(Ref(1))` is `{"_tag":"Ref","value":1}`, not `{}`. A TracedOption's trace event `op` is `"getOrElse"`, not `"orElse"`.
 
 ## Step 3: lint with the one preset
 
@@ -215,13 +224,17 @@ The type-aware rules need `parserOptions.projectService`. Without it they report
 | `<TaskBoundary>`              | `<AsyncBoundary>`                           |
 | `TaskState` / `UseTaskResult` | `AsyncState` / `UseIOResult`                |
 
-An effect is cancelled on unmount or on a `deps` change.
+- **An effect is cancelled** on unmount or on a `deps` change.
+- **`useIO`'s `Failure` carries the effect's typed `E`.** A defect is rethrown during render to the nearest error boundary, so an app with no error boundary now crashes where 1.x showed a failure state. Add an error boundary around components that run effects.
 
 ### functype-log
 
 - **`loglayer` is gone.** So are `logLayerAdapter` and `LoggerLive.fromLogLayer`.
 - **Use a `sink`:** pass `LoggerLive.console({ sink })` a function that writes to the library you used.
-- **The console loggers keep their output.**
+- **The console loggers keep their output,** with three exceptions:
+  - a `Promise` in metadata is written as it is, at once, not awaited;
+  - an empty `withContext({})`, `child({})` or `withContext({}).child()` writes nothing, where loglayer wrote `{}`;
+  - a `level` that isn't a level name, such as `"WARN"`, now lets every level through with a `sink`, as the console already did.
 
 ### functype-mcp-server
 
