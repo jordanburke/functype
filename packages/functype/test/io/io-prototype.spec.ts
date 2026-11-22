@@ -131,30 +131,40 @@ describe("IO's construction cost", () => {
     return elapsed / N
   }
 
-  /** Median over interleaved runs of (build) / (build a plain object of the same shape). */
+  /** The fastest build over the fastest plain-object build, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ effect: { _tag: "Map", effect: { _tag: "Succeed", value: i }, f: inc } })
     for (let i = 0; i < 5_000; i++) {
       make(i)
       plain(i)
     }
-    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
-    return ratios[Math.floor(RUNS / 2)]!
+    // The fastest run of each, interleaved: load only adds time to a run, so each minimum is that
+    // side's least-disturbed run. A ratio of one run's pair would drop whenever its plain half was
+    // the slow one, and let a regression through.
+    const makes: number[] = []
+    const plains: number[] = []
+    Array.from({ length: RUNS }).forEach(() => {
+      makes.push(timePerCall(make))
+      plains.push(timePerCall(plain))
+    })
+    return Math.min(...makes) / Math.min(...plains)
   }
 
   const { succeed } = IO
 
   // Measured locally on Node 24.20.0 with this loop: 79x to 82x before the change, 1.2x to 1.5x after.
-  // The bound sits far below the old cost, with room for a slow or instrumented runner.
-  it("IO.succeed(i).map costs at most 15 times a plain object", () => {
+  // The bound sits far below the old cost, with room for a slow or instrumented runner. A timing test
+  // retries, so a burst of load has to repeat to fail it.
+  it("IO.succeed(i).map costs at most 15 times a plain object", { retry: 2 }, () => {
     const ratio = ratioToPlain((i) => succeed(i).map(inc))
     console.info(`IO.succeed(i).map: ${ratio.toFixed(1)}x a plain object (bound 15x)`)
     expect(ratio).toBeLessThan(15)
   })
 
-  // Measured the same way: 136x to 137x before this PR, 4.6x to 4.7x after. Most of the old cost was a new
-  // empty Context per run, about 190 ns.
-  it("building and running a one-step IO costs at most 25 times a plain object", () => {
+  // Measured with a median before #542 (IO and Exit share their methods): 136x to 137x, and 4.6x to
+  // 4.7x after; per-value closures and a new empty Context per run made the old cost. With the
+  // loop interpreter (#562) it measures about 6x quiet, up to about 16x under coverage.
+  it("building and running a one-step IO costs at most 25 times a plain object", { retry: 2 }, () => {
     const ratio = ratioToPlain((i) => succeed(i).map(inc).runSyncOrThrow())
     console.info(`IO.succeed(i).map(inc).runSyncOrThrow(): ${ratio.toFixed(1)}x a plain object (bound 25x)`)
     expect(ratio).toBeLessThan(25)
