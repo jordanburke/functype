@@ -218,16 +218,20 @@ pre {
   letter-spacing: -0.02em;
 }
 .logo .mark {
-  font: 500 14px/1 var(--mono);
-  color: var(--ink-2);
+  display: block;
+  height: 16px;
+  width: auto;
+  color: var(--ink);
+  /* The flex baseline of an SVG is its bottom edge, and the mark's letters sit 0.5 units above it. */
+  position: relative;
+  top: 0.5px;
 }
-.logo .mark b {
-  font-weight: 500;
-  color: var(--type);
+/* The colon carries the colours: the value dot in blue, the type dot in violet. */
+.logo .dot-value {
+  fill: var(--value);
 }
-.logo .mark i {
-  font-style: normal;
-  color: var(--value);
+.logo .dot-type {
+  fill: var(--type);
 }
 .nav ul {
   display: flex;

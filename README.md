@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="site/public/logo-dark.svg">
+    <img src="site/public/logo.svg" alt="functype" height="72">
+  </picture>
+</p>
+
 # functype monorepo
 
 This repository hosts the functype family of TypeScript functional programming libraries.
