@@ -80,6 +80,12 @@ export interface Layer<RIn extends Type, E extends Type, ROut extends Type> {
    * String representation
    */
   toString(): string
+
+  /**
+   * The layer's kind, for logs: `{ _tag: "Layer", recipe: "Succeed" }`. It leaves out the
+   * services, as an IO's `toJSON` leaves out its values, so a logged layer can't print a secret.
+   */
+  toJSON(): { readonly _tag: "Layer"; readonly recipe: string }
 }
 
 /**
@@ -186,6 +192,10 @@ const LayerProto = define<LayerOf<A, B, C>, "_tag" | "recipe" | "_RIn" | "_E" | 
 
   toString() {
     return `Layer(${recipeName(this.recipe)})`
+  },
+
+  toJSON() {
+    return { _tag: "Layer", recipe: this.recipe._tag }
   },
 })
 

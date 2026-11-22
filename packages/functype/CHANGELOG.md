@@ -259,11 +259,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 - A layer used to be an object literal holding its `build` closure and four more closures. Now one frozen prototype holds `build`, `merge`, `provideToAndMerge`, `map` and `toString`. A layer keeps only `_tag` and a recipe: plain data, such as `{ _tag: "Succeed", tag, service }` or `{ _tag: "Merge", layers }`, which `build` runs. That is how an IO keeps its effect. Layers are frozen, like Tag and Context.
 - **Test matchers compare layers by their recipe.** `Layer.succeed(Config, c)` equals another `Layer.succeed(Config, c)`. Before, any two layers were unequal, because each held its own closures.
-- **`build` is a method, and always returns a promise.** Before, a `Layer.sync` or `Layer.fromService` whose factory threw made `build` throw synchronously. Now `build` rejects. `provideLayer` already turned either into a failed run, so code that only provides layers sees no change.
+- **`build` is a method, and always returns a promise.** Before, a `Layer.sync` or `Layer.fromService` whose factory threw made `build` throw synchronously. Now `build` rejects. Through `provideLayer` the run fails the same way. One difference: in a `merge` or `mergeAll`, the other layers' factories now run even when an earlier `sync` or `fromService` factory throws, as they always did for async factories.
+- **`Layer` is covariant in its requirements.** A layer that needs fewer services now assigns where one needing more is expected, so `Layer.mergeAll(Layer.succeed(A, a), …)` and `succeed(…).provideToAndMerge(fromService(…))` compile without a cast. Narrowing the requirements is still a type error.
+- **`toJSON` gives the layer's kind, not its services:** `JSON.stringify(Layer.succeed(Config, c))` is `{"_tag":"Layer","recipe":"Succeed"}`, as an IO's `toJSON` gives its effect's kind. A logged layer can't print a secret.
 - **A detached method call fails:** `const { build } = layer` throws a `TypeError`. A detached `merge`, `provideToAndMerge` or `map` returns a layer that rejects when built.
 - **Upgrade:** call Layer methods on the value. Code that called `layer.build(ctx)` and caught a synchronous throw should catch the rejection instead.
 
-**2.0 (breaking): TracedOption shares its methods.** §14 of #276 (the 2.0 release plan). Layer is the last value type still to convert.
+**2.0 (breaking): TracedOption shares its methods.** §14 of #276 (the 2.0 release plan).
 
 - A TracedOption used to build six closures per value, and a traced chain builds one value per step. Now one frozen prototype holds the methods, and a value keeps only its data: `_tag`, the wrapped Option (`inner`), `tracer`, `spanId` and `seq`. Only `_tag` is on the `TracedOption` type.
 - **Test matchers compare TracedOptions by their data.** Before, any two were equal, because a value held only functions.

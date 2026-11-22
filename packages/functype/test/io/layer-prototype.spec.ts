@@ -27,6 +27,26 @@ describe("Layer", () => {
     expect(Layer.succeed(Config, config)).not.toEqual(Layer.succeed(Config, { url: "other" }))
   })
 
+  it("serializes its kind, not its services", () => {
+    expect(JSON.stringify(Layer.succeed(Config, { url: "secret" }))).toBe('{"_tag":"Layer","recipe":"Succeed"}')
+    expect(Layer.empty().merge(Layer.empty()).toJSON()).toEqual({ _tag: "Layer", recipe: "Merge" })
+  })
+
+  it("runs every merged factory, even after one throws", async () => {
+    // eslint-disable-next-line functional/no-let -- counts the sibling's builds
+    let ran = 0
+    const boom = Layer.sync(Config, (): Config => {
+      throw new Error("boom")
+    })
+    const sibling = Layer.sync(Db, () => {
+      ran += 1
+      return dbFrom(config)
+    })
+    const exit = await IO.service(Db).provideLayer(boom.merge(sibling)).runExit()
+    expect(exit.isSuccess()).toBe(false)
+    expect(ran).toBe(1)
+  })
+
   it("names itself after its service", () => {
     expect(Layer.succeed(Config, config).toString()).toBe("Layer(Config)")
     expect(Layer.sync(Config, () => config).toString()).toBe("Layer(Config)")

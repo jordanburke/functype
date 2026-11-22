@@ -1372,7 +1372,7 @@ describe("Dependency Injection", () => {
       const program = IO.service(Logger).flatMap((svc) => IO.sync(() => svc.log("Hello")))
 
       // Need to provide both layers
-      const fullLayer = ConfigLive.provideToAndMerge(LoggerLive) as unknown as Layer<never, never, Logger>
+      const fullLayer = ConfigLive.provideToAndMerge(LoggerLive)
       const result = await program.provideLayer(fullLayer).runOrThrow()
       expect(result).toBe("[localhost:8080] Hello")
     })
