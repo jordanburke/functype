@@ -1,22 +1,778 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Navigation from '../components/Navigation';
-import Hero from '../components/Hero';
-import Features from '../components/Features';
-import QuickStart from '../components/QuickStart';
-import CoreTypes from '../components/CoreTypes';
-import ClaudeCodeSkills from '../components/ClaudeCodeSkills';
-import Footer from '../components/Footer';
+import Layout from "../layouts/Layout.astro";
+
+// The hero's Option chain: each line, its inferred type, and its value for each PORT.
+const lines = [
+  { code: [["kw", "const "], ["id", "port"], ["pun", " = "], ["fn", "Option"], ["pun", "("], ["id", "env.PORT"], ["pun", ")"]], type: "Option<string>" },
+  { code: [["pun", "  ."], ["fn", "map"], ["pun", "("], ["id", "Number"], ["pun", ")"]], type: "Option<number>" },
+  { code: [["pun", "  ."], ["fn", "filter"], ["pun", "((n) => n > "], ["num", "0"], ["pun", ")"]], type: "Option<number>" },
+  { code: [["pun", "  ."], ["fn", "getOrElse"], ["pun", "(() => "], ["num", "3000"], ["pun", ")"]], type: "number" },
+] as const;
+const runs = {
+  ok: { vals: [['Some("8080")', "v"], ["Some(8080)", "v"], ["Some(8080)", "v"], ["8080", "plain"]], caption: '<strong>PORT="8080"</strong> stays a value the whole way down.' },
+  zero: { vals: [['Some("0")', "v"], ["Some(0)", "v"], ["None", "none"], ["3000", "plain"]], caption: '<strong>PORT="0"</strong> fails the filter, so getOrElse supplies 3000.' },
+  unset: { vals: [["None", "none"], ["None", "none"], ["None", "none"], ["3000", "plain"]], caption: "<strong>PORT unset</strong> is None from the start. map and filter never run." },
+} as const;
+const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "none" ? "v none" : "v plain");
 ---
 
-<Layout title="Functype - Scala-Inspired Functional Programming for TypeScript">
-  <Navigation client:load />
-  <div class="pt-16">
-    <Hero client:load />
-    <Features client:load />
-    <CoreTypes client:load />
-    <QuickStart client:load />
-    <ClaudeCodeSkills client:load />
-    <Footer client:load />
-  </div>
+<Layout title="functype: Option, Either, Try and IO for TypeScript">
+  <main>
+    <section class="hero wrap">
+      <a class="tag" href="/upgrading-to-2/"><b>2.0</b> is out. See what changed</a>
+      <h1>Put what can go wrong in the type.</h1>
+      <p class="lede">
+        Option, Either, Try, List and IO for TypeScript. Missing values, errors and effects become types your compiler
+        checks, and so does the agent writing your code.
+      </p>
+      <div class="actions">
+        <a class="btn btn-solid" href="/option/">Read the docs</a>
+        <button class="btn btn-ghost install" type="button" id="copy">npm i functype <span class="copy">Copy</span></button>
+      </div>
+
+      <div class="shot">
+        <figure class="editor" aria-label="An Option chain with its types and values shown inline">
+          <div class="bar">
+            <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <span class="file">config.ts</span>
+            <div class="inputs" role="group" aria-label="Value of PORT">
+              <button type="button" data-in="ok" aria-pressed="true">PORT="8080"</button>
+              <button type="button" data-in="zero" aria-pressed="false">PORT="0"</button>
+              <button type="button" data-in="unset" aria-pressed="false">unset</button>
+            </div>
+          </div>
+          <div class="body">
+            <div class="code intro" id="code">
+              {
+                lines.map((l, i) => (
+                  <div class="line">
+                    <span class="ln">{i + 1}</span>
+                    <span>
+                      {l.code.map(([k, t]) => (
+                        <span class={k}>{t}</span>
+                      ))}
+                    </span>
+                    <span class="hint" style={`--i:${i}`}>
+                      <span class="t">{l.type}</span>
+                      <span class={valueClass(runs.ok.vals[i][1])} data-v>
+                        {runs.ok.vals[i][0]}
+                      </span>
+                    </span>
+                  </div>
+                ))
+              }
+            </div>
+            <figcaption class="result">
+              <span class="label"><code>port</code> is a plain number</span>
+              <span class="big" id="big">8080</span>
+              <span class="why" id="caption" set:html={runs.ok.caption} />
+            </figcaption>
+          </div>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section wrap" id="types">
+      <div class="head">
+        <h2>Four types for the four ways code goes wrong.</h2>
+        <p>Each has a shape for the value and a shape for what happened instead. You handle the problem once, where it makes sense.</p>
+      </div>
+      <div class="grid">
+        <a class="panel span-3" href="/option/"
+          ><div class="t-name">Option<span>&lt;A&gt;</span></div><p class="t-say">The value may not be there.</p><div class="shapes"><span class="pill val">Some(a)</span><span class="pill gone">None</span></div></a
+        >
+        <a class="panel span-3" href="/either/"
+          ><div class="t-name">Either<span>&lt;E, A&gt;</span></div><p class="t-say">It failed, and E says how.</p><div class="shapes"><span class="pill val">Right(a)</span><span class="pill err">Left(e)</span></div></a
+        >
+        <a class="panel span-2" href="/try/"
+          ><div class="t-name">Try<span>&lt;A&gt;</span></div><p class="t-say">The code it ran may throw.</p><div class="shapes"><span class="pill val">Success(a)</span><span class="pill err">Failure(e)</span></div></a
+        >
+        <a class="panel span-4" href="/io/"
+          ><div class="t-name">IO<span>&lt;R, E, A&gt;</span></div><p class="t-say">An effect. It needs services R, can fail with E, and runs only when you run it.</p><div class="shapes"><span class="pill val">A</span><span class="pill err">E</span><span class="pill gone">Die</span><span class="pill gone">Interrupted</span></div></a
+        >
+        <div class="panel span-6 feature">
+          <div class="lazy">
+            <div>
+              <h3>Building an IO runs nothing.</h3>
+              <p>
+                <code>greet(id)</code> returns a plan. Build it as often as you like and the lookup count stays at zero. It runs
+                when you run it.
+              </p>
+              <div class="counters">
+                <div class="counter"><b id="built">0</b><span>programs built</span></div>
+                <div class="counter hot"><b id="calls">0</b><span>lookups run</span></div>
+              </div>
+              <div class="row">
+                <button class="btn btn-dark" type="button" id="build42">Build greet("42")</button>
+                <button class="btn btn-dark" type="button" id="build7">Build greet("7")</button>
+                <button class="btn btn-light" type="button" id="run">Run</button>
+              </div>
+              <div class="out" id="out" aria-live="polite">Nothing built yet.</div>
+            </div>
+            <pre data-language="ts"><span class="k">import</span> {"{"} IO, Option, Tag {"}"} <span class="k">from</span> <span class="s">"functype"</span>
+
+<span class="k">type</span> User = {"{"} readonly id: string; readonly name: string {"}"}
+<span class="k">class</span> NotFound {"{"} readonly _tag = <span class="s">"NotFound"</span> {"}"}
+<span class="k">const</span> Users = Tag&lt;{"{"}
+  readonly find: (id: string) =&gt; User | undefined
+{"}"}&gt;(<span class="s">"Users"</span>)
+
+<span class="k">const</span> greet = (id: string) =&gt;
+  IO.<span class="f">service</span>(Users)
+    .<span class="f">flatMap</span>((users) =&gt;
+      IO.<span class="f">fromOptionOrFail</span>(Option(users.find(id)), () =&gt; <span class="k">new</span> NotFound()))
+    .<span class="f">map</span>((u) =&gt; <span class="s">`Hello, {"${u.name}"}`</span>)
+    .<span class="f">catchTag</span>(<span class="s">"NotFound"</span>, () =&gt; IO.<span class="f">succeed</span>(<span class="s">"Hello, guest"</span>))</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section wrap">
+      <div class="head">
+        <h2>Small and fast, measured.</h2>
+        <p>Against Effect 4.1.5 on Node 24, using the published packages.</p>
+      </div>
+      <div class="grid">
+        <div class="panel span-2 stat">
+          <div class="k">Option-only app, gzipped</div>
+          <div class="n">5.7<small>KB</small></div>
+          <div class="vs">
+            <div class="track us"><span>functype</span><i style="width:81%"></i><span>5.7 KB</span></div>
+            <div class="track"><span>Effect</span><i style="width:100%"></i><span>7.0 KB</span></div>
+          </div>
+        </div>
+        <div class="panel span-2 stat">
+          <div class="k">App with IO, Either, Option, List</div>
+          <div class="n">11.5<small>KB</small></div>
+          <div class="vs">
+            <div class="track us"><span>functype</span><i style="width:31%"></i><span>11.5 KB</span></div>
+            <div class="track"><span>Effect</span><i style="width:100%"></i><span>37.3 KB</span></div>
+          </div>
+        </div>
+        <div class="panel span-2 stat">
+          <div class="k">Build, map and run an effect</div>
+          <div class="n">32<small>ns</small></div>
+          <div class="vs">
+            <div class="track us"><span>functype</span><i style="width:18%"></i><span>32 ns</span></div>
+            <div class="track"><span>Effect</span><i style="width:100%"></i><span>182 ns</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="foot-note">A million chained steps run without a stack overflow, and there are no runtime dependencies.</p>
+    </section>
+
+    <section class="section wrap" id="agents">
+      <div class="head">
+        <h2>Your coding agent reads the same docs.</h2>
+        <p>It can search them, check its own code against the compiler and the linter, and load everything as plain text.</p>
+      </div>
+      <div class="grid">
+        <a class="panel span-3 agent" href="/mcp-server/"
+          ><h3>MCP server</h3><p>validate_code type-checks and lints a snippet before you see it.</p><code class="cmd">npx -y functype-mcp-server</code></a
+        >
+        <div class="panel span-3 agent">
+          <h3>Claude Code plugin</h3><p>The skills and the MCP server in one install.</p><code class="cmd">/plugin marketplace add jordanburke/functype</code><code class="cmd">/plugin install functype</code>
+        </div>
+        <a class="panel span-3 agent" href="/eslint/"
+          ><h3>ESLint plugin</h3><p>One preset, and every message names the fix.</p><code class="cmd">npm i -D eslint-plugin-functype</code></a
+        >
+        <a class="panel span-3 agent" href="/llms-full.txt"
+          ><h3>Docs as text</h3><p>The whole library, for any model that can fetch a URL.</p><code class="cmd">functype.org/llms-full.txt</code></a
+        >
+      </div>
+    </section>
+  </main>
 </Layout>
+
+<script type="application/json" id="runs" set:html={JSON.stringify(runs)} />
+
+<script>
+  type Run = { readonly vals: readonly (readonly [string, string])[]; readonly caption: string };
+  const runs = JSON.parse(document.getElementById("runs")?.textContent ?? "{}") as Record<string, Run>;
+  const code = document.getElementById("code") as HTMLElement;
+  const render = (key: string): void => {
+    const run = runs[key];
+    code.querySelectorAll("[data-v]").forEach((el, i) => {
+      const [v, kind] = run.vals[i] ?? ["", "v"];
+      el.textContent = v;
+      el.className = kind === "v" ? "v" : kind === "none" ? "v none" : "v plain";
+    });
+    (document.getElementById("caption") as HTMLElement).innerHTML = run.caption;
+    (document.getElementById("big") as HTMLElement).textContent = run.vals[run.vals.length - 1]?.[0] ?? "";
+  };
+  document.querySelectorAll(".inputs button").forEach((b) =>
+    b.addEventListener("click", () => {
+      document.querySelectorAll(".inputs button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      code.classList.remove("intro");
+      render((b as HTMLElement).dataset.in ?? "ok");
+    }),
+  );
+
+  let built = 0;
+  let calls = 0;
+  let pending: string | null = null;
+  const set = (id: string, v: string | number): void => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = String(v);
+  };
+  const build = (id: string): void => {
+    built += 1;
+    pending = id;
+    set("built", built);
+    set("out", `greet("${id}") is built. Nothing has run.`);
+  };
+  document.getElementById("build42")?.addEventListener("click", () => build("42"));
+  document.getElementById("build7")?.addEventListener("click", () => build("7"));
+  document.getElementById("run")?.addEventListener("click", () => {
+    if (!pending) {
+      set("out", "Build a program first.");
+      return;
+    }
+    calls += 1;
+    set("calls", calls);
+    set("out", pending === "42" ? 'Result: "Hello, Ada"' : 'Result: "Hello, guest". NotFound was caught by its tag.');
+  });
+  document.getElementById("copy")?.addEventListener("click", (e) => {
+    navigator.clipboard?.writeText("npm i functype").catch(() => {});
+    const label = (e.currentTarget as HTMLElement).querySelector(".copy");
+    if (label) label.textContent = "Copied";
+  });
+</script>
+
+<style>
+  .hero {
+    text-align: center;
+    padding-block: 88px 0;
+  }
+  .tag {
+    display: inline-flex;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-2);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 6px 14px;
+    box-shadow: 0 0 0 1px var(--rule);
+  }
+  .tag b {
+    color: var(--type);
+    font-weight: 500;
+  }
+  h1 {
+    margin: 22px auto 0;
+    font-size: clamp(38px, 5.4vw, 60px);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    max-width: 13em;
+    text-wrap: balance;
+  }
+  .lede {
+    margin: 18px auto 0;
+    max-width: 36em;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+  .actions {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 30px;
+  }
+  .install {
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  .install .copy {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .shot {
+    position: relative;
+    margin: 64px auto 0;
+    max-width: 940px;
+  }
+  .shot::before {
+    content: "";
+    position: absolute;
+    inset: 12% 6% -6%;
+    background:
+      radial-gradient(closest-side, var(--glow-a), transparent),
+      radial-gradient(closest-side at 70% 60%, var(--glow-b), transparent);
+    filter: blur(40px);
+  }
+  .editor {
+    position: relative;
+    margin: 0;
+    background: var(--surface);
+    border-radius: 22px;
+    box-shadow:
+      0 0 0 1px var(--edge),
+      0 30px 60px -30px var(--shadow);
+    overflow: hidden;
+    text-align: left;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .dots {
+    display: flex;
+    gap: 7px;
+  }
+  .dots span {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--dots);
+  }
+  .file {
+    font: 400 12px/1 var(--mono);
+    color: var(--ink-2);
+  }
+  .inputs {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+    background: var(--panel);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .inputs button {
+    font: 400 12px/1 var(--mono);
+    color: var(--ink-2);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  .inputs button[aria-pressed="true"] {
+    background: var(--chip-on);
+    color: var(--ink);
+    box-shadow: 0 1px 3px var(--chip-shadow);
+  }
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 250px;
+  }
+  .code {
+    padding: 24px 0 26px;
+    font: 400 14.5px/2.2 var(--mono);
+  }
+  .code,
+  .code :global(*) {
+    font-variant-ligatures: none;
+    font-feature-settings: "calt" 0, "liga" 0;
+  }
+  .line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 10px;
+    padding-right: 20px;
+    white-space: pre;
+  }
+  .ln {
+    width: 46px;
+    text-align: right;
+    color: var(--ink-3);
+    flex: none;
+  }
+  .kw {
+    color: var(--kw);
+  }
+  .fn {
+    color: var(--value);
+  }
+  .num {
+    color: var(--num);
+  }
+  .pun {
+    color: var(--pun);
+  }
+  .hint {
+    display: inline-flex;
+    gap: 6px;
+    margin-left: 8px;
+    font-size: 12px;
+    line-height: 1;
+  }
+  .hint .t {
+    color: var(--type);
+    background: var(--type-tint);
+    border-radius: 6px;
+    padding: 4px 7px;
+  }
+  .hint :global(.v) {
+    color: var(--value);
+    background: var(--value-tint);
+    border-radius: 6px;
+    padding: 4px 7px;
+  }
+  .hint :global(.v.none) {
+    color: var(--ink-2);
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--outline);
+  }
+  .hint :global(.v.plain) {
+    color: var(--solid-ink);
+    background: var(--solid);
+  }
+  .result {
+    border-left: 1px solid var(--rule);
+    background: var(--surface-2);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .result .label {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .result .label code {
+    color: var(--ink);
+  }
+  .result .big {
+    font-size: 52px;
+    line-height: 1.05;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .result .why {
+    margin-top: auto;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .result .why :global(strong) {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .code.intro .hint {
+      animation: hint-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+      animation-delay: calc(500ms + var(--i) * 160ms);
+    }
+    @keyframes hint-in {
+      from {
+        opacity: 0;
+        transform: translateY(3px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+  }
+
+  .section {
+    padding-block: 128px 0;
+  }
+  .head {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto 48px;
+  }
+  .head h2 {
+    margin: 0;
+    font-size: clamp(30px, 3.8vw, 44px);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  .head p {
+    margin: 14px 0 0;
+    font-size: 18px;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .panel {
+    display: block;
+    background: var(--panel);
+    border-radius: 28px;
+    padding: 32px;
+    min-width: 0;
+  }
+  a.panel {
+    transition: background-color 0.15s;
+  }
+  a.panel:hover {
+    background: color-mix(in srgb, var(--panel) 85%, var(--ink) 4%);
+  }
+  .span-2 {
+    grid-column: span 2;
+  }
+  .span-3 {
+    grid-column: span 3;
+  }
+  .span-4 {
+    grid-column: span 4;
+  }
+  .span-6 {
+    grid-column: span 6;
+  }
+  .t-name {
+    font: 500 22px/1.2 var(--mono);
+    letter-spacing: -0.03em;
+  }
+  .t-name span {
+    color: var(--type);
+  }
+  .t-say {
+    margin: 8px 0 22px;
+    color: var(--ink-2);
+    font-size: 16px;
+  }
+  .shapes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font: 400 13px/1 var(--mono);
+  }
+  .pill {
+    border-radius: 999px;
+    padding: 8px 12px;
+  }
+  .pill.val {
+    background: var(--value-tint);
+    color: var(--value);
+  }
+  .pill.err {
+    background: var(--type-tint);
+    color: var(--type);
+  }
+  .pill.gone {
+    color: var(--ink-2);
+    box-shadow: inset 0 0 0 1px var(--outline);
+  }
+
+  /* The feature panel stays dark in both themes; in dark mode an edge sets it off. */
+  .feature {
+    background: var(--feature);
+    color: #f2f2f5;
+    box-shadow: 0 0 0 1px var(--feature-edge);
+  }
+  .lazy {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 40px;
+    align-items: center;
+  }
+  .lazy h3 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .lazy p {
+    margin: 12px 0 0;
+    color: #a8a8b3;
+    font-size: 16px;
+  }
+  .lazy p code {
+    color: #f2f2f5;
+  }
+  .lazy pre {
+    margin: 0;
+    font: 400 12.5px/1.85 var(--mono);
+    color: #d9d9e0;
+    overflow-x: auto;
+  }
+  .lazy pre .f {
+    color: #8ab4ff;
+  }
+  .lazy pre .s {
+    color: #b8a6ff;
+  }
+  .lazy pre .k {
+    color: #f28cc4;
+  }
+  .counters {
+    display: flex;
+    gap: 36px;
+    margin: 26px 0 22px;
+  }
+  .counter b {
+    display: block;
+    font-size: 44px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .counter span {
+    font-size: 13px;
+    color: #a8a8b3;
+  }
+  .counter.hot b {
+    color: #8ab4ff;
+  }
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .btn-dark {
+    background: #2a2a32;
+    color: #f2f2f5;
+    font-size: 14px;
+    height: 38px;
+  }
+  .btn-dark:hover {
+    background: #34343d;
+  }
+  .btn-light {
+    background: #f2f2f5;
+    color: #16161b;
+    font-size: 14px;
+    height: 38px;
+  }
+  .out {
+    margin-top: 16px;
+    min-height: 24px;
+    font: 400 14px/1.6 var(--mono);
+    color: #b8a6ff;
+  }
+
+  .stat .k {
+    font-size: 15px;
+    color: var(--ink-2);
+  }
+  .stat .n {
+    margin-top: 6px;
+    font-size: 56px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .n small {
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    margin-left: 4px;
+  }
+  .stat .vs {
+    margin-top: 18px;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .stat .track {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 10px;
+  }
+  .stat .track i {
+    display: block;
+    height: 6px;
+    border-radius: 99px;
+    background: var(--bar-them);
+  }
+  .stat .track.us i {
+    background: var(--value);
+  }
+  .stat .track span:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .foot-note {
+    text-align: center;
+    margin: 28px auto 0;
+    font-size: 14px;
+    color: var(--ink-2);
+    max-width: 46em;
+    text-wrap: balance;
+  }
+
+  .agent h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .agent p {
+    margin: 6px 0 18px;
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .cmd {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    font-size: 13px;
+    line-height: 1.5;
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 9px 13px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .cmd + .cmd {
+    margin-top: 6px;
+  }
+
+  @media (max-width: 820px) {
+    .hero {
+      padding-top: 56px;
+    }
+    .lede {
+      font-size: 17px;
+    }
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .result {
+      border-left: 0;
+      border-top: 1px solid var(--rule);
+    }
+    .bar {
+      flex-wrap: wrap;
+    }
+    .inputs {
+      margin-left: 0;
+    }
+    .hint {
+      margin-left: 56px;
+      margin-bottom: 4px;
+    }
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .span-2,
+    .span-3,
+    .span-4,
+    .span-6 {
+      grid-column: auto;
+    }
+    .lazy {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .panel {
+      padding: 26px;
+      border-radius: 24px;
+    }
+    .section {
+      padding-top: 96px;
+    }
+  }
+</style>

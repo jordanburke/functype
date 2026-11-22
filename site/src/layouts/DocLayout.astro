@@ -1,0 +1,111 @@
+---
+import Layout from "./Layout.astro";
+
+interface Link {
+  readonly href: string;
+  readonly label: string;
+}
+
+interface Props {
+  /** The browser tab's title. */
+  title: string;
+  /** The page's heading. */
+  heading: string;
+  /** One line on what this page covers: the meta description. The visible lede is the markdown's first paragraph. */
+  tagline: string;
+  links?: readonly Link[];
+}
+
+const { title, heading, tagline, links = [] } = Astro.props;
+const path = Astro.url.pathname;
+
+const groups: readonly { readonly name: string; readonly pages: readonly Link[] }[] = [
+  {
+    name: "Start",
+    pages: [
+      { href: "/upgrading-to-2/", label: "Upgrading to 2.0" },
+      { href: "/feature-matrix/", label: "Feature matrix" },
+    ],
+  },
+  {
+    name: "Values",
+    pages: [
+      { href: "/option/", label: "Option" },
+      { href: "/either/", label: "Either" },
+      { href: "/try/", label: "Try" },
+      { href: "/list/", label: "List" },
+      { href: "/set/", label: "Set" },
+      { href: "/obj/", label: "Obj" },
+      { href: "/wire/", label: "Wire" },
+    ],
+  },
+  {
+    name: "Effects",
+    pages: [
+      { href: "/io/", label: "IO" },
+      { href: "/do-notation/", label: "Do-notation" },
+      { href: "/match/", label: "Match and Cond" },
+      { href: "/http/", label: "Http" },
+      { href: "/logger/", label: "Logger" },
+    ],
+  },
+  {
+    name: "Tooling",
+    pages: [
+      { href: "/eslint/", label: "ESLint plugin" },
+      { href: "/mcp-server/", label: "MCP server" },
+    ],
+  },
+];
+---
+
+<Layout title={title} description={tagline}>
+  <main class="wrap docs">
+    <nav class="sidebar" aria-label="Docs">
+      {
+        groups.map((g) => (
+          <div>
+            <h2>{g.name}</h2>
+            <ul>
+              {g.pages.map((p) => (
+                <li>
+                  <a href={p.href} aria-current={path === p.href ? "page" : undefined}>
+                    {p.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+    <article>
+      <header class="doc-head">
+        <h1>{heading}</h1>
+        {
+          links.length > 0 && (
+            <div class="links">
+              {links.map((l, i) => (
+                <a class={i === 0 ? "btn btn-solid" : "btn btn-ghost"} href={l.href}>
+                  {l.label}
+                </a>
+              ))}
+            </div>
+          )
+        }
+      </header>
+      <div class="prose">
+        <slot />
+      </div>
+    </article>
+  </main>
+</Layout>
+
+<script>
+  // On a phone the sidebar scrolls sideways; bring the current page's link into view without moving the page.
+  const bar = document.querySelector<HTMLElement>(".sidebar");
+  const current = bar?.querySelector<HTMLElement>('[aria-current="page"]');
+  if (bar && current && bar.scrollWidth > bar.clientWidth) {
+    bar.scrollLeft = current.offsetLeft - (bar.clientWidth - current.offsetWidth) / 2;
+  }
+</script>
