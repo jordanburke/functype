@@ -247,20 +247,38 @@ type IOEffect<R, E, A> =
     }
 
 /**
- * IO<R, E, A> represents a lazy, composable effect.
- *
- * @typeParam R - Requirements (environment/dependencies needed to run)
- * @typeParam E - Error type (typed failures)
- * @typeParam A - Success type (value produced on success)
+ * The `this` an IO's run methods accept. An IO whose services are all provided (`R = never`) runs
+ * as itself. Any other IO gets a type whose one key says what to do, so calling `run()` on it fails
+ * with that sentence and the services it still needs, rather than with `IO<never, E, A>`.
+ * @internal
  */
+export type Runnable<R, E extends Type, A extends Type> = [R] extends [never]
+  ? IO<never, E, A>
+  : { readonly "Provide these services first, with provideLayer or provideService": R }
+
 /**
- * Minimal marker interface for IO-like values that can be yielded in IO.gen.
- * Using this instead of IO<any, any, any> avoids deep structural variance
- * failures when yielding IO<never, never, void> in generators.
+ * The tags `catchTag` accepts: the `_tag` of each error in `E` that has one. When there is none to
+ * catch, it is a sentence saying why, which is what a call then fails with: `E` is `never`, so the
+ * IO can't fail, or no error in `E` has a `_tag`, such as a plain `Error` or `unknown`.
+ * @internal
+ */
+export type CatchableTag<E> = [E] extends [never]
+  ? "This IO can't fail (its error type is never), so there is nothing to catch"
+  : [TagOf<E>] extends [never]
+    ? "catchTag needs errors with a _tag field: use catchAll or recoverWith for this error type"
+    : TagOf<E>
+
+type TagOf<E> = E extends { readonly _tag: string } ? E["_tag"] : never
+
+/**
+ * What `IO.gen` accepts from a `yield`: an IO. It names only an IO's own data key, not
+ * `IO<any, any, any>`, which failed deep structural variance checks on yields such as
+ * `IO<never, never, void>`. Anything else, such as an Option or a Promise, fails to compile at the
+ * `yield`; before, any value with a `Symbol.toStringTag` passed, and died at run time.
  * @internal
  */
 export interface IOYieldable {
-  readonly [Symbol.toStringTag]: string
+  readonly [IOEffectKey]: unknown
 }
 
 /**
@@ -278,6 +296,13 @@ export type IOGenRequirements<Y> = 0 extends 1 & Y ? never : Y extends IO<infer 
  */
 export type IOGenErrors<Y> = 0 extends 1 & Y ? unknown : Y extends IO<infer _R, infer E, infer _A> ? E : never
 
+/**
+ * IO<R, E, A> represents a lazy, composable effect.
+ *
+ * @typeParam R - Requirements (environment/dependencies needed to run)
+ * @typeParam E - Error type (typed failures)
+ * @typeParam A - Success type (value produced on success)
+ */
 export interface IO<in out R extends Type, out E extends Type, out A extends Type> {
   readonly [Symbol.toStringTag]: string
   /**
@@ -377,12 +402,7 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * @param tag - The error tag to catch
    * @param handler - Handler for the caught error
    */
-  catchTag<
-    K extends (E extends { _tag: string } ? E["_tag"] : never),
-    R2 extends Type,
-    E2 extends Type,
-    B extends Type,
-  >(
+  catchTag<K extends CatchableTag<E>, R2 extends Type, E2 extends Type, B extends Type>(
     tag: K,
     handler: (e: Extract<E, { _tag: K }>) => IO<R2, E2, B>,
   ): IO<R | R2, Exclude<E, { _tag: K }> | E2, A | B>
@@ -576,14 +596,14 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * so that one resolves as a `Left`.
    * Requires R = never.
    */
-  run(this: IO<never, E, A>): Promise<Either<E, A>>
+  run(this: Runnable<R, E, A>): Promise<Either<E, A>>
 
   /**
    * Runs the effect and returns a Promise of the value.
    * Throws on any error (typed E, defect, or interrupt).
    * Requires R = never.
    */
-  runOrThrow(this: IO<never, E, A>): Promise<A>
+  runOrThrow(this: Runnable<R, E, A>): Promise<A>
 
   /**
    * Runs a sync effect and returns an Either of its typed error or its value.
@@ -594,14 +614,14 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * {@link UnsupportedSyncOperationError}.
    * Requires R = never.
    */
-  runSync(this: IO<never, E, A>): Either<E, A>
+  runSync(this: Runnable<R, E, A>): Either<E, A>
 
   /**
    * Runs a sync effect and returns the value.
    * Throws on any error or if the effect is async.
    * Requires R = never.
    */
-  runSyncOrThrow(this: IO<never, E, A>): A
+  runSyncOrThrow(this: Runnable<R, E, A>): A
 
   /**
    * Runs the effect and returns an Exit.
@@ -613,19 +633,19 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * a typed `InterruptedError`. This suits runners (React hooks, query adapters) that
    * discard a cancelled result rather than handle it.
    */
-  runExit(this: IO<never, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>>
+  runExit(this: Runnable<R, E, A>, options?: { readonly signal?: AbortSignal }): Promise<ExitType<E, A>>
 
   /**
    * Runs the effect and returns an Option.
    * Some(value) on success, None on failure.
    */
-  runOption(this: IO<never, E, A>): Promise<Option<A>>
+  runOption(this: Runnable<R, E, A>): Promise<Option<A>>
 
   /**
    * Runs the effect and returns a Try.
    * Success(value) on success, Failure(error) on failure.
    */
-  runTry(this: IO<never, E, A>): Promise<ReturnType<typeof Try<A>>>
+  runTry(this: Runnable<R, E, A>): Promise<ReturnType<typeof Try<A>>>
 
   /**
    * Starts the effect and returns a handle that cancels it, with {@link IO.interruptOn}
@@ -641,7 +661,7 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * const report = await result
    * ```
    */
-  runCancellable(this: IO<never, E, A>): {
+  runCancellable(this: Runnable<R, E, A>): {
     readonly result: Promise<Either<E | InterruptedError, A>>
     readonly cancel: () => void
   }
@@ -767,6 +787,9 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 /** @internal Extract the effect from an IO (avoids scattering [IOEffectKey] through the interpreter) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _fx = <R, E, A>(io: IO<R, E, A>): IOEffect<R, E, A> => (io as any)[IOEffectKey]
+
+/** The IO a run method was called on. The type system checked `R = never` at the call. */
+const runnable = (io: unknown): IO<never, AnyE, AnyA> => unsafeCoerce(io)
 
 /**
  * Every IO shares these methods (#276 §14). An IO's own data is its effect, under `effect`
@@ -936,39 +959,40 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
     return unsafeCoerce(buildIO.flatMap(provideFn))
   },
 
-  // Execution
+  // Execution. Each run method's `this` is `Runnable<R, E, A>`, which at the prototype's opaque
+  // `R` is the "provide these services" type, so `runnable` reads it back as the IO it is.
   async run() {
-    return toEither(await runEffect(_fx(this), noServices, undefined, undefined))
+    return toEither(await runEffect(_fx(runnable(this)), noServices, undefined, undefined))
   },
 
   async runOrThrow() {
-    return valueOrThrow(await runEffect(_fx(this), noServices, undefined, undefined))
+    return valueOrThrow(await runEffect(_fx(runnable(this)), noServices, undefined, undefined))
   },
 
   runSync() {
-    return toEither(runEffectSync(_fx(this), noServices, undefined))
+    return toEither(runEffectSync(_fx(runnable(this)), noServices, undefined))
   },
 
   runSyncOrThrow() {
-    return valueOrThrow(runEffectSync(_fx(this), noServices, undefined))
+    return valueOrThrow(runEffectSync(_fx(runnable(this)), noServices, undefined))
   },
 
   async runExit(options) {
     const signal = options?.signal
-    if (!signal) return runEffect(_fx(this), noServices, undefined, undefined)
+    if (!signal) return runEffect(_fx(runnable(this)), noServices, undefined, undefined)
     // A failure after the abort is reported as the cancellation, as at an interruptOn
     // boundary; a defect stays a defect.
-    const exit = await runEffect(_fx(this), noServices, signal, undefined)
+    const exit = await runEffect(_fx(runnable(this)), noServices, signal, undefined)
     return signal.aborted && exit.isFailure() ? Exit.interrupted() : exit
   },
 
   async runOption() {
-    const exit = await runEffect(_fx(this), noServices, undefined, undefined)
+    const exit = await runEffect(_fx(runnable(this)), noServices, undefined, undefined)
     return exit.isSuccess() ? Some(exit.value) : None()
   },
 
   async runTry() {
-    const exit = await runEffect(_fx(this), noServices, undefined, undefined)
+    const exit = await runEffect(_fx(runnable(this)), noServices, undefined, undefined)
     if (exit.isSuccess()) {
       return unsafeCoerce(Try(() => exit.value))
     }
@@ -983,7 +1007,7 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
 
   runCancellable() {
     const controller = new AbortController()
-    return { result: this.interruptOn(controller.signal).run(), cancel: () => controller.abort() }
+    return { result: runnable(this).interruptOn(controller.signal).run(), cancel: () => controller.abort() }
   },
 
   // Utilities
@@ -2552,8 +2576,8 @@ const IOCompanion = {
    * ```
    */
   gen: <Y extends IOYieldable, A extends Type>(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    f: () => Generator<Y, A, any>,
+    // `unknown` for what a bare `yield` gives back: use `yield*`, which gives the IO's value.
+    f: () => Generator<Y, A, unknown>,
   ): IO<IOGenRequirements<Y>, IOGenErrors<Y>, A> => {
     return unsafeCoerce(
       IOCompanion.sync(() => {
