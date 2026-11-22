@@ -521,6 +521,48 @@ const rule: Rule.RuleModule = {
       })
     }
 
+    /**
+     * `Readonly<T[]>` / `Readonly<Array<T>>`: the utility type makes the array read-only, as
+     * `ReadonlyArray<T>` does. Returns the `Readonly<…>` node when `node` is its only type argument.
+     */
+    function readonlyUtilityWrapper(node: ASTNode): ASTNode | undefined {
+      const instantiation = node.parent as ASTNode | undefined
+      if (instantiation?.type !== "TSTypeParameterInstantiation") return undefined
+      const params = (instantiation as { params?: readonly ASTNode[] }).params
+      if (params?.length !== 1 || params[0] !== node) return undefined
+      const wrapper = instantiation.parent as ASTNode | undefined
+      if (wrapper?.type !== "TSTypeReference") return undefined
+      const name = (wrapper as { typeName?: { type?: string; name?: string } }).typeName
+      return name?.type === "Identifier" && name.name === "Readonly" ? wrapper : undefined
+    }
+
+    /** Reports a read-only array type, which `allowReadonlyArrays: false` asks to be a List. */
+    function reportReadonly(reportNode: ASTNode, elementType: string, fullType: string): void {
+      const sourceCode = context.sourceCode
+      const suggest: Rule.SuggestionReportDescriptor[] = [
+        {
+          messageId: "suggestListType",
+          data: { type: elementType },
+          fix(fixer: Rule.RuleFixer) {
+            return fixer.replaceText(reportNode, `List<${elementType}>`)
+          },
+        },
+      ]
+      if (!hasFunctypeSymbol(sourceCode, "List")) {
+        suggest.push({
+          messageId: "suggestAddImport",
+          data: { symbol: "List" },
+          fix: createImportFixer(sourceCode, "List"),
+        })
+      }
+      context.report({
+        node: reportNode,
+        messageId: "preferList",
+        data: { type: elementType, arrayType: fullType },
+        suggest,
+      })
+    }
+
     return {
       TSArrayType(node: ASTNode) {
         if (isInsideWireType(node, wireTypes)) return
@@ -539,48 +581,25 @@ const rule: Rule.RuleModule = {
         // `(...args: string[])`: a rest parameter is a fresh array on every call, owned by the callee.
         if (parent?.type === "TSTypeAnnotation" && parent.parent?.type === "RestElement") return
 
-        const isReadonly =
+        const utility = readonlyUtilityWrapper(node)
+        const operator =
           parent?.type === "TSTypeOperator" && (parent as { operator?: string }).operator === "readonly"
+            ? (parent as ASTNode)
+            : undefined
+        const readonlyNode = operator ?? utility
 
-        if (isReadonly && allowReadonlyArrays) return
+        if (readonlyNode && allowReadonlyArrays) return
 
         const sourceCode = context.sourceCode
         const elementType = sourceCode.getText(node.elementType)
-        const reportNode = isReadonly ? (parent as ASTNode) : node
+        const reportNode = readonlyNode ?? node
         const fullType = sourceCode.getText(reportNode)
 
-        if (!isReadonly) {
+        if (!readonlyNode) {
           checkMutable(reportNode, elementType, fullType)
           return
         }
-
-        const suggest: Rule.SuggestionReportDescriptor[] = [
-          {
-            messageId: "suggestListType",
-            data: { type: elementType },
-            fix(fixer: Rule.RuleFixer) {
-              return fixer.replaceText(reportNode, `List<${elementType}>`)
-            },
-          },
-        ]
-
-        if (!hasFunctypeSymbol(sourceCode, "List")) {
-          suggest.push({
-            messageId: "suggestAddImport",
-            data: { symbol: "List" },
-            fix: createImportFixer(sourceCode, "List"),
-          })
-        }
-
-        context.report({
-          node: reportNode,
-          messageId: "preferList",
-          data: {
-            type: elementType,
-            arrayType: fullType,
-          },
-          suggest,
-        })
+        reportReadonly(reportNode, elementType, fullType)
       },
 
       TSTypeReference(node: ASTNode) {
@@ -594,48 +613,23 @@ const rule: Rule.RuleModule = {
 
         const typeName = node.typeName.type === "Identifier" ? node.typeName.name : sourceCode.getText(node.typeName)
 
-        // Handle Array<T> syntax: mutable, same as T[]
+        // Handle Array<T> syntax: mutable, same as T[], unless `Readonly<…>` wraps it.
         if (typeName === "Array") {
-          const typeParam = findTypeParameter(node, sourceCode)
-          checkMutable(node, typeParam || "T", sourceCode.getText(node))
+          const typeParam = findTypeParameter(node, sourceCode) || "T"
+          const utility = readonlyUtilityWrapper(node)
+          if (!utility) {
+            checkMutable(node, typeParam, sourceCode.getText(node))
+            return
+          }
+          if (allowReadonlyArrays) return
+          reportReadonly(utility, typeParam, sourceCode.getText(utility))
           return
         }
 
         // Handle ReadonlyArray<T> — gated on allowReadonlyArrays (parity with `readonly T[]`).
         if (typeName === "ReadonlyArray") {
           if (allowReadonlyArrays) return
-
-          const typeParam = findTypeParameter(node, sourceCode)
-          const fullType = sourceCode.getText(node)
-          const resolvedType = typeParam || "T"
-
-          const suggest: Rule.SuggestionReportDescriptor[] = [
-            {
-              messageId: "suggestListType",
-              data: { type: resolvedType },
-              fix(fixer: Rule.RuleFixer) {
-                return fixer.replaceText(node, `List<${resolvedType}>`)
-              },
-            },
-          ]
-
-          if (!hasFunctypeSymbol(sourceCode, "List")) {
-            suggest.push({
-              messageId: "suggestAddImport",
-              data: { symbol: "List" },
-              fix: createImportFixer(sourceCode, "List"),
-            })
-          }
-
-          context.report({
-            node,
-            messageId: "preferList",
-            data: {
-              type: resolvedType,
-              arrayType: fullType,
-            },
-            suggest,
-          })
+          reportReadonly(node, findTypeParameter(node, sourceCode) || "T", sourceCode.getText(node))
         }
       },
 
