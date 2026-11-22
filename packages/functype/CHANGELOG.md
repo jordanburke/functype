@@ -319,6 +319,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - After the snippet type-checks, `validate_code` lints it with eslint-plugin-functype's `recommended` preset. That is the preset a project's build runs, with every rule `error` or `off`.
 - The type-aware rules run too, such as `no-floating-result` on a dropped `Either` and `no-array-mutation` on a `push`. The linter reuses the TypeScript program the type check built, so it adds no measurable time per call: about 71 ms with or without lint, on Node 24.20.0.
 - A snippet now passes only with no type errors and no lint errors. The result gains a `lint` field with each finding's line, column, message and rule. The tool's text lists type errors and lint errors under their own headings.
+- A snippet also fails when lint itself can't run: a parse failure, a file ESLint has no config for, or a rule that throws. So does an unused `eslint-disable` comment, which a project build only warns about by default.
 - **Upgrade:** a snippet that passed before can now fail on a lint rule. Pass `lint: false` to check types alone. functype-mcp-server now depends on `eslint`, `@typescript-eslint/parser` and eslint-plugin-functype.
 
 ## 1.27.2 - 2026-11-21
