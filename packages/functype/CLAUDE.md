@@ -76,7 +76,7 @@ that uses per-file overrides to declare false zero.
 - `pnpm docs:sync` - Sync feature matrix and validate docs
 - `pnpm docs:validate` - Run all documentation validation checks
 - `pnpm bench` - Run performance benchmarks
-- `pnpm analyze:size` - Analyze production bundle size
+- `pnpm size:check` - Bundle three small programs against `dist` and fail if one passes its gzipped ceiling
 
 ### MCP Server (`mcp-server/`)
 

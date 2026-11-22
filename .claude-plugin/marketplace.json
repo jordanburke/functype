@@ -25,7 +25,7 @@
     {
       "name": "functype-developer",
       "description": "Assist contributors developing the functype library - architecture patterns, creating new types, testing strategies",
-      "version": "1.0.7",
+      "version": "1.0.8",
       "author": {
         "name": "Jordan Burke",
         "email": "jordan.burke@gmail.com"

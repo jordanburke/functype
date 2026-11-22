@@ -1,73 +1,29 @@
-# Bundle Size Optimization Guide
+# Bundle Size
 
-## Overview
+`dist` holds one file per source module, and `package.json` declares `"sideEffects": false`. A bundler keeps only the modules your code reaches.
 
-Functype is designed with tree-shaking in mind, allowing you to optimize your application's bundle size by only including the specific modules you need.
+## What an app ships
 
-## Import Strategies
+Each program below is bundled with esbuild, minified for the browser, then compressed with `gzip -9`. 1 KB is 1,000 bytes. `pnpm validate` runs the same check (`scripts/check-bundle-size.ts`) and fails when a program goes over its ceiling.
 
-### Strategy 1: Selective Module Imports (Recommended)
+| Program                                                                 | Minified | Gzipped | Ceiling (gzipped) |
+| ----------------------------------------------------------------------- | -------: | ------: | ----------------: |
+| Option only, from `functype/option`                                     |  22.8 KB |  5.7 KB |            6.5 KB |
+| Option only, from `functype`                                            |  22.8 KB |  5.6 KB |            6.5 KB |
+| `IO.gen`, `catchTag` and `runSyncOrThrow`, plus Either, Option and List |  44.5 KB | 11.5 KB |           13.5 KB |
 
-Import only the specific modules you need to reduce bundle size significantly.
+## Why Option-only is 5.7 KB
 
-```typescript
-import { Option } from "functype/option"
-import { Either } from "functype/either"
+Option's methods convert to the other core types: `toEither`, `toList`, `toTry` and the like. So an Option reaches Either, List, Set and Try, and those modules ship with it. That is the cost of methods on values, and it is a fixed floor: adding the other core types to your program adds little, because they are already in.
 
-// Usage
-const option = Option.some(42)
-const either = Either.right("value")
-```
+## Import style
 
-### Strategy 2: Direct Constructor Imports (Smallest Bundle)
-
-For the most aggressive tree-shaking, import only the specific constructors and functions you need.
+The root import and the subpath imports bundle the same, so use whichever reads better:
 
 ```typescript
-import { some, none } from "functype/option"
-import { right } from "functype/either"
-
-// Usage
-const option = some(42)
-const none_value = none()
-const either = right("value")
+import { Option } from "functype/option" // bundles the same as importing from "functype"
 ```
 
-## Bundle Size Comparison
+## Checking your own bundle
 
-| Import Strategy | Approximate Bundle Size  | Best For                   |
-| --------------- | ------------------------ | -------------------------- |
-| Selective       | 200-500 bytes per module | Most applications          |
-| Direct          | <200 bytes per feature   | Size-critical applications |
-
-## Common Module Sizes
-
-| Module | Approximate Size (minified) | Gzipped Size |
-| ------ | --------------------------- | ------------ |
-| Option | ~200 bytes                  | ~140 bytes   |
-| Either | ~290 bytes                  | ~190 bytes   |
-| List   | ~170 bytes                  | ~125 bytes   |
-| Try    | ~170 bytes                  | ~125 bytes   |
-| Tuple  | ~120 bytes                  | ~100 bytes   |
-
-## Additional Tips
-
-1. **Import Analysis**: Use tools like [webpack-bundle-analyzer](https://github.com/webpack-contrib/webpack-bundle-analyzer) or [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer) to analyze your bundle and identify opportunities for optimization.
-
-2. **Dynamic Imports**: Consider using dynamic imports for rarely used functionality:
-
-   ```typescript
-   // Only load when needed
-   const useRareFeature = async () => {
-     const { someLargeUtility } = await import("functype/some-large-module")
-     return someLargeUtility()
-   }
-   ```
-
-3. **Development vs Production**: During development, you might prefer the convenience of importing everything. In production builds, switch to selective imports.
-
-4. **Peer Dependencies**: Functype has minimal dependencies, and the only external dependency (`safe-stable-stringify`) is quite small.
-
-## Need Help?
-
-If you need assistance with optimizing your bundle size further, please open an issue on our GitHub repository.
+Use your bundler's analyzer, such as [rollup-plugin-visualizer](https://github.com/btd/rollup-plugin-visualizer), or esbuild's `--metafile` with its [analyzer](https://esbuild.github.io/analyze/). functype has no runtime dependencies.

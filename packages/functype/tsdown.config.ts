@@ -50,6 +50,10 @@ export default defineConfig({
   outDir: "dist",
   platform: "neutral",
   treeshake: true,
+  // One output file per source module. With every type in one shared chunk, an app's bundler
+  // couldn't drop the types it doesn't use, so an Option-only program shipped 23 KB gzipped;
+  // per-module files bring it to about 5.7 KB. scripts/check-bundle-size.ts holds that line.
+  unbundle: true,
   outExtensions: () => ({
     js: ".js",
     dts: ".d.ts",
