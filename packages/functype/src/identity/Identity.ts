@@ -1,4 +1,5 @@
 import { Companion } from "@/companion/Companion"
+import { type A, define, type Mutable } from "@/internal/define"
 
 /**
  * Identity — a trivial container carrying a single tagged value.
@@ -8,18 +9,27 @@ import { Companion } from "@/companion/Companion"
  * List/Set/Map.
  */
 export type Identity<out T> = {
+  readonly _tag: "Identity"
   readonly id: T
-  isSame?: (other: Identity<unknown>) => boolean
+  /** True when `other` holds the same value, compared with `===`. */
+  isSame(other: Identity<unknown>): boolean
 }
 
+/** Every Identity shares this method (#276 §14); a value keeps only `_tag` and `id`. */
+const IdentityProto = define<Identity<A>, "_tag" | "id">()("Identity", {
+  isSame(other) {
+    return other.id === this.id
+  },
+})
+
 const IdentityConstructor = <T>(value: T): Identity<T> => {
-  const isSame = (other: Identity<unknown>): boolean => {
-    return other.id === value
-  }
-  return {
-    id: value,
-    isSame,
-  }
+  // The one cast: a prototype checked at the opaque A works for every T.
+  const identity = Object.create(IdentityProto) as Mutable<Identity<T>>
+  // eslint-disable-next-line functional/immutable-data -- filling in the value just created
+  identity._tag = "Identity"
+  // eslint-disable-next-line functional/immutable-data -- filling in the value just created
+  identity.id = value
+  return identity
 }
 
 const IdentityCompanion = {
