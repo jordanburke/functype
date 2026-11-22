@@ -7,7 +7,11 @@
  *
  *   1. Major version bump (e.g. 0.60.7 → 1.0.0) — set
  *      `ALLOW_MAJOR=<pkg>,<pkg>` env var to authorize specific packages.
- *   2. Downgrade (local < npm) — never auto-authorized. Will not publish.
+ *   2. Downgrade — never auto-authorized. Will not publish. A version is compared with the
+ *      highest npm version on its own functype line, not with `latest`, so a 1.x fix after
+ *      2.0.0 is a patch, and a 1.x version at or below the 1.x line's highest is refused.
+ *      The eslint pair's line is encoded in its minor (`2.127.x` is line 1). See
+ *      `scripts/publish-line.ts`.
  *   3. Alignment-group drift: each lockstep group must publish at the same
  *      version. Two groups today:
  *        - Functype family (6 packages): functype, functype-os, functype-log,
@@ -42,6 +46,7 @@ import { fileURLToPath } from "node:url"
 import { spawnSync } from "node:child_process"
 
 import { ESLINT_PACKAGE_DIRS, FAMILY_PACKAGE_DIRS, PACKAGE_DIRS, unlistedPublicPackageDirs } from "./packages.ts"
+import { type BumpKind, planBump } from "./publish-line.ts"
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -70,8 +75,6 @@ const allowMajor = new Set(
     .filter(Boolean),
 )
 
-type BumpKind = "patch" | "minor" | "major" | "downgrade" | "same" | "new"
-
 interface Plan {
   dir: string
   name: string
@@ -85,28 +88,37 @@ const readPkg = (dir: string): { name: string; version: string } => {
   return JSON.parse(raw) as { name: string; version: string }
 }
 
-const getNpmVersion = (name: string): string | null => {
-  const result = spawnSync("npm", ["view", name, "version"], {
+/**
+ * `npm view <name> <field> --json`, or undefined when npm has never seen the package. Any other
+ * failure, such as the registry being down, stops the gate: reading it as a new package would
+ * skip every check.
+ */
+const npmView = (name: string, field: string): unknown => {
+  const result = spawnSync("npm", ["view", name, field, "--json"], {
     encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   })
-  if (result.status !== 0) return null
+  if (result.status !== 0) {
+    if (/E404|404 Not Found/.test(result.stderr) || /E404/.test(result.stdout)) return undefined
+    console.error(`\n✗ check-publish-safety: \`npm view ${name} ${field}\` failed:\n${result.stderr || result.stdout}`)
+    process.exit(1)
+  }
   const out = result.stdout.trim()
-  return out.length > 0 ? out : null
+  return out.length > 0 ? (JSON.parse(out) as unknown) : undefined
 }
 
-const classify = (local: string, npm: string | null): BumpKind => {
-  if (!npm) return "new"
-  if (local === npm) return "same"
-  const [lMaj = 0, lMin = 0, lPat = 0] = local.split(".").map(Number)
-  const [nMaj = 0, nMin = 0, nPat = 0] = npm.split(".").map(Number)
-  if (lMaj > nMaj) return "major"
-  if (lMaj < nMaj) return "downgrade"
-  if (lMin > nMin) return "minor"
-  if (lMin < nMin) return "downgrade"
-  if (lPat > nPat) return "patch"
-  return "downgrade"
+const publishedVersions = (name: string): ReadonlyArray<string> => {
+  const versions = npmView(name, "versions")
+  if (Array.isArray(versions)) return versions.filter((v): v is string => typeof v === "string")
+  return typeof versions === "string" ? [versions] : []
 }
+
+const latestVersion = (name: string): string | null => {
+  const latest = npmView(name, "version")
+  return typeof latest === "string" ? latest : null
+}
+
+const mirrorDirs = new Set<string>(ESLINT_PACKAGE_DIRS)
 
 const unlisted = unlistedPublicPackageDirs(repoRoot)
 if (unlisted.length > 0) {
@@ -119,11 +131,16 @@ if (unlisted.length > 0) {
 
 const plans: Plan[] = PACKAGE_DIRS.map((dir) => {
   const { name, version } = readPkg(dir)
-  const npm = getNpmVersion(name)
-  return { dir, name, local: version, npm, bump: classify(version, npm) }
+  const { npm, bump } = planBump({
+    local: version,
+    published: publishedVersions(name),
+    latest: latestVersion(name),
+    mirror: mirrorDirs.has(dir),
+  })
+  return { dir, name, local: version, npm, bump }
 })
 
-console.log("\nPublish plan (local → npm):")
+console.log("\nPublish plan (npm, highest on the same line → local):")
 const colName = Math.max(...plans.map((p) => p.name.length))
 for (const p of plans) {
   const npmStr = p.npm ?? "(new)"
@@ -140,7 +157,7 @@ if (allowedMajors.length > 0) {
 }
 
 if (downgrades.length > 0) {
-  console.error(`\n✗ check-publish-safety: ${downgrades.length} downgrade(s) detected (local < npm)`)
+  console.error(`\n✗ check-publish-safety: ${downgrades.length} downgrade(s) detected (local < npm on its line)`)
   for (const p of downgrades) {
     console.error(`    ${p.name}: ${p.local} < ${p.npm}`)
   }
@@ -180,9 +197,7 @@ if (driftedGroups.length > 0) {
       console.error(`    ${p.name.padEnd(colName)}  ${p.local}`)
     }
   }
-  console.error(
-    `\n  Aligned groups must publish at the same version. Restore alignment by re-running`,
-  )
+  console.error(`\n  Aligned groups must publish at the same version. Restore alignment by re-running`)
   console.error(`  \`pnpm release <patch|minor|major>\` (which bumps the whole family together), or by`)
   console.error(`  hand-correcting the package.json versions to match, then commit.`)
   console.error(`  See docs/RELEASE.md "Independent cadence" rule (1) for the family-cadence policy.`)
