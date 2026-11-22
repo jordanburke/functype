@@ -5,9 +5,10 @@
     "extract:interfaces": "tsx scripts/extract-interfaces.ts",
     "docs": "pnpm docs:preprocess && typedoc",
     "docs:validate": "tsx scripts/validate-docs.ts && tsx scripts/sync-docs.ts",
-    "build": "tsx scripts/extract-interfaces.ts && NODE_ENV=production tsdown"
+    "build": "tsx scripts/extract-interfaces.ts && NODE_ENV=production tsdown",
+    "size:check": "tsx scripts/check-bundle-size.ts"
   },
   "chains": {
-    "validate": ["format", "lint", "compile", "test", "build", "format:check"]
+    "validate": ["format", "lint", "compile", "test", "build", "size:check", "format:check"]
   }
 }
