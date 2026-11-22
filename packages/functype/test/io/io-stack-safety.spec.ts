@@ -184,3 +184,51 @@ describe("a step that isn't an IO is a defect, not a crash", () => {
     expect(runs).toEqual(["s"])
   })
 })
+
+describe("a nested step in a region cancelled just before it starts doesn't run", () => {
+  // The step before the nested one queues a microtask that aborts the region. It lands after the
+  // loop's check and before the nested step starts, on its fresh stack.
+  const tracer = (events: string[]): SpanTracer<string> => ({
+    start: (name) => {
+      events.push(`start:${name}`)
+      return name
+    },
+    run: (_span, fn) => fn(),
+    end: (span, exit) => {
+      events.push(`end:${span}:${exit._tag}`)
+    },
+  })
+
+  it.each([
+    [
+      "bracket",
+      (events: string[]) =>
+        IO.bracket(
+          IO.sync(() => events.push("acquire")),
+          () => IO.sync(() => events.push("use")),
+          () => IO.sync(() => void events.push("release")),
+        ),
+    ],
+    [
+      "bracketExit",
+      (events: string[]) =>
+        IO.bracketExit(
+          IO.sync(() => events.push("acquire")),
+          () => IO.sync(() => events.push("use")),
+          () => IO.sync(() => void events.push("release")),
+        ),
+    ],
+    ["withSpan", (events: string[]) => IO.sync(() => events.push("body")).withSpan("s")],
+  ] as const)("%s", async (_, make) => {
+    const controller = new AbortController()
+    const events: string[] = []
+    const abortSoon = IO.sync(() => queueMicrotask(() => controller.abort()))
+    const exit = await abortSoon
+      .flatMap(() => make(events))
+      .interruptOn(controller.signal)
+      .provideService(SpanTracer, tracer(events))
+      .runExit()
+    expect(exit._tag).toBe("Failure")
+    expect(events).toEqual([])
+  })
+})
