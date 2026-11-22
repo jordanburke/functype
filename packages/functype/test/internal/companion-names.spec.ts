@@ -129,10 +129,23 @@ const companionsInSource = (): ReadonlyArray<{ name: string; annotation: string;
     .flatMap((file) =>
       [
         ...readFileSync(join(src, file), "utf8").matchAll(
-          /export const (\w+)(?:: (\w+))? = Companion\(\s*(?:[^,]+|\{[^}]*\}(?: as const)?),\s*(\w+)\s*\)/g,
+          /export const (\w+)(?:: (\w+))? = Companion\(\s*(?:[^,]+|\{[^}]*\}(?: as const)?),\s*(\w+)\s*,?\s*\)/g,
         ),
       ].map((m) => ({ name: m[1] ?? "", annotation: m[2] ?? "", statics: m[3] ?? "", file })),
     )
+}
+
+/**
+ * How many times src calls `Companion`, however the call is written: wrapped by Prettier, with
+ * inline statics, type arguments or an inline annotation. A call the pattern above can't read
+ * makes the counts differ, so the guard can't skip it silently.
+ */
+const companionCallsInSource = (): number => {
+  const src = join(import.meta.dirname, "..", "..", "src")
+  return readdirSync(src, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts"))
+    .flatMap((file) => [...readFileSync(join(src, file), "utf8").matchAll(/(?<!function )\bCompanion(?:<[^(]*>)?\(/g)])
+    .length
 }
 
 describe("every companion in src follows the pattern", () => {
@@ -140,6 +153,12 @@ describe("every companion in src follows the pattern", () => {
 
   it("finds the companions", () => {
     expect(found.length).toBeGreaterThanOrEqual(Object.keys(wrongCalls).length)
+  })
+
+  // A new companion written in a shape the pattern can't read fails here: give it the usual
+  // `export const X: XCompanion = Companion(XConstructor, XStatics)` form.
+  it("reads every Companion call in src", () => {
+    expect(found.length).toBe(companionCallsInSource())
   })
 
   it.each(found)("$name ($file) is typed by its named companion interface", ({ name, annotation }) => {
