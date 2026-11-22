@@ -1,3 +1,4 @@
+import { type A, define, type Mutable } from "@/internal/define"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
 import type { Type } from "@/types"
@@ -98,37 +99,35 @@ export interface Context<R extends Type> {
 }
 
 /**
- * Creates a Context from a services map
+ * Every Context shares these methods (#276 §14). A context keeps only `_tag` and `services`, and
+ * is frozen, as collections are.
  */
-const createContext = <R extends Type>(services: ReadonlyMap<string, Type>): Context<R> => ({
-  _tag: "Context",
-  services,
-
-  get<S extends Type>(tag: Tag<S>): Option<S> {
-    const service = services.get(tag.id)
-    return service !== undefined ? Some(service as S) : None()
+const ContextProto = define<Context<A>, "_tag" | "services" | "_R">()("Context", {
+  get(tag) {
+    const service = this.services.get(tag.id)
+    return service !== undefined ? Some(unsafeCoerce(service)) : None()
   },
 
-  unsafeGet<S extends Type>(tag: Tag<S>): S {
-    const service = services.get(tag.id)
+  unsafeGet(tag) {
+    const service = this.services.get(tag.id)
     if (service === undefined) {
       throw new Error(`Service not found: ${tag.id}`)
     }
-    return service as S
+    return unsafeCoerce(service)
   },
 
-  has<S extends Type>(tag: Tag<S>): boolean {
-    return services.has(tag.id)
+  has(tag) {
+    return this.services.has(tag.id)
   },
 
-  add<S extends Type>(tag: Tag<S>, service: S): Context<R & S> {
-    const newServices = new Map(services)
+  add(tag, service) {
+    const newServices = new Map(this.services)
     newServices.set(tag.id, service)
     return createContext(newServices)
   },
 
-  merge<R2 extends Type>(other: Context<R2>): Context<R & R2> {
-    const newServices = new Map(services)
+  merge(other) {
+    const newServices = new Map(this.services)
     for (const [key, value] of other.services) {
       newServices.set(key, value)
     }
@@ -136,14 +135,28 @@ const createContext = <R extends Type>(services: ReadonlyMap<string, Type>): Con
   },
 
   get size() {
-    return services.size
+    return this.services.size
   },
 
   toString() {
-    const keys = Array.from(services.keys()).join(", ")
+    const keys = Array.from(this.services.keys()).join(", ")
     return `Context(${keys})`
   },
 })
+
+/** The one cast a service lookup needs: the map holds each service under its tag's id. */
+const unsafeCoerce = <T>(value: unknown): T => value as T
+
+/** Creates a Context from a services map. */
+const createContext = <R extends Type>(services: ReadonlyMap<string, Type>): Context<R> => {
+  // The one cast: a prototype checked at the opaque A works for every R.
+  const context = Object.create(ContextProto) as Mutable<Context<R>>
+  /* eslint-disable functional/immutable-data -- filling in the context just created, then freezing it */
+  context._tag = "Context"
+  context.services = services
+  /* eslint-enable functional/immutable-data */
+  return Object.freeze(context)
+}
 
 /**
  * Context companion object with utility methods
