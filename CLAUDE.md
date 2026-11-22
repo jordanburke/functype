@@ -16,7 +16,7 @@ This file provides guidance to Claude Code when working in this monorepo. Per-pa
 
 ## Tooling
 
-- **Package manager:** pnpm 10.x with workspaces (`packages/*` + `site`).
+- **Package manager:** pnpm 12 (pinned in `packageManager`) with workspaces (`packages/*` + `site`).
 - **Task runner:** Turborepo (`turbo.json`) — pipelines: `build`, `test`, `lint`, `lint:check`, `format`, `format:check`, `typecheck`, `compile`, `validate`, `dev`. `build`/`test`/`validate` declare `^build` deps so workspace consumers wait for producers.
 - **Build:** Each package builds via `ts-builds` (calls `tsdown` under the hood) — uniform across the workspace.
 - **Versioning + publish:** **tag-driven release flow** (`scripts/release.ts` + `.github/workflows/publish.yml` on tag push). The 6 functype-* packages bump together: `2.x` from `main`, `1.x` from `release/1.x`. The eslint pair bumps together, **mirroring functype** per the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` — so `functype@1.20.1` ↔ `eslint@2.120.1`, `functype@2.0.0` ↔ `eslint@2.200.0`. Run `pnpm release patch|minor|major` locally; it bumps all 8 packages, syncs the mirror, syncs `mcp-server/server.json`, cuts the `## Unreleased` section of `packages/functype/CHANGELOG.md`, commits, and tags. `git push --follow-tags` triggers CI publish. See [`docs/RELEASE.md`](./docs/RELEASE.md) for the full runbook including npm trusted-publisher setup.

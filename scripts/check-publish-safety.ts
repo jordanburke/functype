@@ -15,9 +15,11 @@
  *   3. Alignment-group drift: each lockstep group must publish at the same
  *      version. Two groups today:
  *        - Functype family (6 packages): functype, functype-os, functype-log,
- *          functype-react, functype-eval, functype-mcp-server — all on the `1.x` line.
+ *          functype-react, functype-eval, functype-mcp-server — one functype line
+ *          (`2.x` from `main`, `1.x` from `release/1.x`).
  *        - Eslint pair: eslint-config-functype, eslint-plugin-functype —
- *          both on the `2.100.x` line (intentional offset from functype).
+ *          mirroring functype's version as `2.{major*100 + minor}.{patch}`, so
+ *          `2.200.x` for functype 2.0 (intentional offset from functype).
  *      Drift here means something bypassed the `scripts/release.ts` family
  *      bump (manual edit, conflict resolution, dependabot, etc.).
  *   4. Eslint mirror drift: the eslint pair's version must be the encoded
@@ -54,9 +56,9 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
  * Packages that must publish in lockstep — every member of a group must have
  * the same version at publish time.
  *
- * - Functype family: 6 packages on the `1.x` line, bumped together by
+ * - Functype family: 6 packages on one functype line, bumped together by
  *   `scripts/release.ts`.
- * - Eslint pair: config + plugin on the `2.100.x` line, derived from the
+ * - Eslint pair: config + plugin on the mirrored `2.{major*100 + minor}.x` line, derived from the
  *   functype family version via `scripts/sync-eslint-mirror.ts` (intentional
  *   version-line offset).
  *
