@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 1.27.2 - 2026-11-21
+
 - **Fixed: a `bracket` whose release fails no longer reports success under `run()`.** The async interpreter ran the release and dropped its outcome, so a release that died, such as a failed commit or close, left the run reporting the use step's result. `runSync()` already reported the failure. Now the failed release replaces the outcome under `run()`, `runOrThrow()` and `runExit()` too, as a throwing `finally` does. The same holds for `bracketExit`.
 - **Fixed: a `bracketExit` whose `use` callback throws runs its release.** Before, the throw skipped the release, so the resource leaked. The release now runs, and under `run()` it receives a `Die` exit. `bracket` already ran its release in that case.
 - **Behavior change:** under `run()`, `runOrThrow()` and `runExit()`, a release that fails, dies or is interrupted now decides the outcome. A run that reported success now fails. A run that already failed, or was cancelled, now reports the release's error instead of the use step's error or the cancellation. A `bracketExit` release now also runs when `use` throws. Code whose release succeeds is otherwise unchanged.
