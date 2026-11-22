@@ -8,6 +8,7 @@ import noGetOrThrowInRender from "./no-getOrThrow-in-render"
 import noImperativeLoops from "./no-imperative-loops"
 import noLet from "./no-let"
 import noSerializeContainer from "./no-serialize-container"
+import noUncalledMethod from "./no-uncalled-method"
 import preferDoNotation from "./prefer-do-notation"
 import preferEither from "./prefer-either"
 import preferFlatmap from "./prefer-flatmap"
@@ -30,6 +31,7 @@ export {
   noImperativeLoops,
   noLet,
   noSerializeContainer,
+  noUncalledMethod,
   preferDoNotation,
   preferEither,
   preferFlatmap,
@@ -61,6 +63,7 @@ export default {
   "no-floating-io": noFloatingIo,
   "no-floating-result": noFloatingResult,
   "no-serialize-container": noSerializeContainer,
+  "no-uncalled-method": noUncalledMethod,
   "no-getOrThrow-in-render": noGetOrThrowInRender,
   "must-fold-on-component-return": mustFoldOnComponentReturn,
 }

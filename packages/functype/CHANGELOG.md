@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype: `no-uncalled-method`**, `error` in `recommended`. It reports a functype method read as a value instead of called: `list.head` without `()`, `if (opt.isSome)`, `Option(list.head)`, `expect(list.head)`, `const { head } = list`. Each compiles on 2.0 and yields the function itself. Getters and function-valued data are never reported. Type-aware only (#603).
+
 ## 2.0.0 - 2026-11-22
 
 **Upgrading from 1.x:** [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) collects what to change: what the compiler reports, what it can't see, and each package's changes. The entries below have the details.
