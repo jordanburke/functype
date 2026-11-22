@@ -491,7 +491,7 @@ if (Either.isLeft(either)) {
 
 // Try type guards
 if (Try.isSuccess(tryVal)) {
-  tryVal.orThrow() // safe here: it succeeded (Try has no .value until 2.0)
+  tryVal.value // TypeScript knows it's the success value
   tryVal.error // TypeScript knows: undefined
 }
 if (Try.isFailure(tryVal)) {
