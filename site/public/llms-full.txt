@@ -4954,7 +4954,7 @@ The identity monad: wraps a value with no extra effect. Useful as a neutral cont
 
 Immutable array with functional operations
 
-Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable, Serializable, Traversable
+Implements: Applicative, Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable, Serializable, Traversable
 
 **Create**
 
@@ -5017,7 +5017,7 @@ Implements: Collection, Doable, Foldable, Functor, Iterable, Monad, Reshapeable,
 
 Immutable set of unique values
 
-Implements: Collection, Foldable, Functor, Iterable, Serializable, Traversable
+Implements: Applicative, Collection, Foldable, Functor, Iterable, Serializable, Traversable
 
 **Create**
 

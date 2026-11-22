@@ -1,7 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import { type Doable, type DoResult } from "@/do/protocol"
 import type { Extractable } from "@/extractable/Extractable"
-import type { Functype } from "@/functype"
+import type { FunctypeValue } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
@@ -46,11 +46,7 @@ import { type Either, List, Right, Try } from "../index"
 // contravariant. Widening T would lose key-type fidelity. Users get
 // narrower Obj types that are NOT assignable to wider ones.
 export interface Obj<T extends Record<string, Type>>
-  extends
-    Omit<Functype<T, "Obj">, "map" | "flatMap" | "flatMapAsync" | "ap">,
-    Promisable<T>,
-    Doable<T>,
-    Reshapeable<T> {
+  extends FunctypeValue<T, "Obj">, Promisable<T>, Doable<T>, Reshapeable<T> {
   /** The contained object value */
   readonly data: T
 

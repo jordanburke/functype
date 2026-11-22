@@ -14,7 +14,15 @@ import type { Type } from "@/types"
  * Implementers that previously overrode these methods with the widened shape
  * (List, Set) can inherit from this base without a per-type override.
  */
-export interface Traversable<out A extends Type> extends AsyncMonad<A> {
+export interface Traversable<out A extends Type> extends AsyncMonad<A>, Reducible<A> {}
+
+/**
+ * Traversable's members without the monad's: size, membership and reduction. Key-value containers
+ * and collections, whose `map` and `flatMap` take tighter shapes, extend this rather than
+ * `Omit<Traversable<A>, …>`: a member reached through a mapped type has no declaration, so
+ * `@typescript-eslint/unbound-method` can't see it.
+ */
+export interface Reducible<out A extends Type> {
   get size(): number
 
   get isEmpty(): boolean
