@@ -6,6 +6,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (breaking, types only): `getOrElse` keeps a literal union.**
+
+- `getOrElse` now takes `() => T | T2` instead of `() => T2`, with `T2` defaulting to `never`. The default is checked against the container's own type first, so `Option<"light" | "dark">.getOrElse(() => "light")` is `"light" | "dark"`. Before, it was `string`.
+- A default of another type still widens: `Option<number>.getOrElse(() => "x")` is `number | string`. A bare value, `getOrElse(42)`, still fails to compile.
+- Applies to `Option`, `Either`, `Try`, `Lazy`, `TracedOption`, and the `Extractable` interface (so `Obj` too). `Exit` and `Map` already took `() => A` / `() => V`, so they never widened.
+- **Upgrade:** nothing to change unless code relied on the wider type, such as `let theme = o.getOrElse(() => "light")` later reassigned to any string. Annotate the variable, e.g. `let theme: string = ...`.
+
 **2.0 (breaking): functype-os's async methods return a lazy `IO` instead of `TaskResult`.** Part of removing `Task` from functype.
 
 - `Fs.exists` / `readFile` / `readFileOpt` / `stat` / `copyFile` / `rename` / `readdir` / `glob` / `writeFile` / `appendFile` / `mkdir` / `unlink`, `Process.exec` and `ConfigResolver.resolve` / `resolveRequired` / `resolveAll` now return `IO<never, E, T>`. Nothing runs until `.run()`, and the result is `Either<E, T>`.
@@ -191,7 +198,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - A default that is itself a function. In 1.x, `opt.orElse(fn)` returned `fn`. Now `opt.getOrElse(fn)` calls it, so write `opt.getOrElse(() => fn)` to get the function back.
   - Side effects in the default. `opt.orElse(compute())` ran `compute()` every time. `opt.getOrElse(() => compute())` runs it only on None, so a log line or a counter in it no longer runs when the value is present.
   - `orElse(() => alt)` written against 1.x, where `orElse` took a plain value. It returned the function itself on a None. In 2.0 the same text means the container fallback and returns `alt`.
-- **A literal default widens when nothing gives it a type.** For `theme: Option<"light" | "dark">`, `const t = theme.getOrElse(() => "light")` is a `string`, where 1.x's `theme.orElse("light")` kept `"light" | "dark"`. The arrow's return widens before the result is built. Annotate the target (`const t: Theme = …`) or write `() => "light" as const`. A wrong annotation downstream then fails to compile, so this one shows up as a type error.
+- **A literal default keeps its union in `getOrElse`, but not yet in `orElse`.** For `theme: Option<"light" | "dark">`, `theme.getOrElse(() => "light")` is `"light" | "dark"`, as 1.x's `theme.orElse("light")` was (see the `getOrElse` entry above). The container fallback still widens: `theme.orElse(() => Some("light"))` is an `Option<string>`. Write `Some<Theme>("light")`, or annotate the target. A wrong annotation downstream then fails to compile, so this one shows up as a type error.
 - eslint-plugin-functype follows. `no-get-unsafe` suggests `.getOrElse(() => undefined /* TODO: default */)`, under the messageId `suggestGetOrElse` (was `suggestOrElse`). `prefer-fold` suggests `a.orElse(() => b)` for `a.isSome() ? a : b`, under `suggestOrElse` (was `suggestOr`), and offers nothing when `b` contains `await` or `yield`.
 - **Upgrade:** the upgrade tool (§6 of #276, the 2.0 release plan) will rewrite these with type information. Don't text-replace `.or(` or `.orElse(`: `.or(` is also zod's, and `orElse` is reused with a new meaning, so run the `orElse` → `getOrElse` change before the `or` → `orElse` one, never the other way round.
 

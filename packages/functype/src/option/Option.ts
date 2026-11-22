@@ -41,12 +41,13 @@ export interface OptionBase<out T extends Type>
   isNone(): this is NoneOf<T>
   /**
    * Returns the contained value, or calls `defaultValue` if None. The default is lazy: it runs
-   * only on None. It may be of a different type; the result widens to `T | T2` so Option stays
-   * covariant in T.
+   * only on None. The default is typed against `T` first, so `() => "light"` on an
+   * `Option<"light" | "dark">` stays `"light" | "dark"`. A default of another type widens the
+   * result to `T | T2`, which keeps Option covariant in T.
    * @param defaultValue - A function that returns the value to use if this Option is None
    * @returns The contained value or the default, typed as `T | T2`
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the contained value or throws an error if None
    * @param error - Optional error to throw, or a builder that makes one (called only on None). If not

@@ -32,10 +32,11 @@ export interface Lazy<out T extends Type> extends FunctypeBase<T, "Lazy">, Extra
   readonly isEvaluated: boolean
   /**
    * Returns the computed value, or calls `defaultValue` if the computation fails.
-   * The default is lazy: it runs only on failure. Result widens to `T | T2`
+   * The default is lazy: it runs only on failure. A default that fits `T` keeps `T`, so a literal
+   * union is not widened; a default of another type widens the result to `T | T2`
    * (Scala: `getOrElse[B >: A](default: => B): B`).
    */
-  getOrElse<T2 extends Type>(defaultValue: () => T2): T | T2
+  getOrElse<T2 extends Type = never>(defaultValue: () => T | T2): T | T2
   /**
    * Returns the computed value or null if computation fails
    * @returns The computed value or null
