@@ -307,6 +307,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - Plain callbacks, such as `(x) => ref.set(x)`, behave as before, and the cost is unchanged: a 50-step `map` chain under `run()` measured about 850 ns before and after (Node 24.20.0, built package).
 - **Upgrade:** wrap the method: `IO.sync(() => ref.get())`, `.map((x) => ref.set(x))`. Code that passed a detached method used to get `undefined` silently, so any such call was already a bug.
 
+**2.0 (types only): `@typescript-eslint/unbound-method` sees every method of List, Set, Map and Obj.**
+
+- They inherited 45 members through `Omit<FunctypeBase, …>`, `Omit<Functype, …>` and `KVTraversable = Omit<Traversable, …>`, such as `list.forEach`, `list.contains`, `set.serialize`, `map.reduce` and `obj.getOrElse`. A member reached through a mapped type has no declaration, so the rule skipped it, and a detached call to it throws on the shared prototypes.
+- The bases are split instead. `Reducible` holds Traversable's `size`, `isEmpty`, `contains`, `reduce` and `reduceRight`, and `Traversable` is `AsyncMonad` plus `Reducible`. `FunctypeCore` is FunctypeBase without the monad's members, and `FunctypeValue` is Functype without them. The collections extend `FunctypeCore` and `Applicative`, and Obj extends `FunctypeValue`. `KVTraversable` is now `Reducible`. Each type's members are unchanged.
+- A probe detaching 14 of those members is reported 14 times, against none before. `test/internal/no-mapped-bases.spec.ts` fails if an interface in src extends a mapped type again.
+- New exported types: `Reducible`, `FunctypeCore` and `FunctypeValue`.
+- The generated interface data behind `npx functype` and the MCP server now lists what the `Omit` hid. What they show changes only for List and Set, which gain `Applicative`: the rest was already added by hand. The parser also reads Option and Try again, through `OptionBase` and `TryBase`, since they became unions.
+- `KVTraversable<A>` is now covariant in `A`, like `Traversable`. Before, the `Omit` alias was compared by structure, so a `KVTraversable<Animal>` assigned to a `KVTraversable<Dog>`.
+
 **2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
 
 - Both interpreters were recursive, one call per step. 10,000 chained `flatMap`s threw a `RangeError` under `runSync()` and `run()`. Under `runSync()`, so did a recursive loop, an `IO.gen` with 10,000 yields and a `repeatUntil` run 10,000 times. Now each interpreter is a loop over a stack of the steps waiting on their inner effects, so all of these run to 1,000,000 steps.

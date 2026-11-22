@@ -1,8 +1,10 @@
-import type { Traversable } from "./Traversable"
+import type { Type } from "@/types"
+
+import type { Reducible } from "./Traversable"
 
 /**
- * A traversable interface for key-value containers that excludes map, flatMap,
- * flatMapAsync, and ap operations.
+ * A traversable interface for key-value containers: Traversable without map, flatMap,
+ * flatMapAsync and ap, which is `Reducible`.
  *
  * Key-value containers (Map, Obj) cannot satisfy Functor's unconstrained
  * `map<B extends Type>` because their type parameter is constrained
@@ -11,4 +13,4 @@ import type { Traversable } from "./Traversable"
  *
  * @typeParam A - The element type of the traversable
  */
-export type KVTraversable<A> = Omit<Traversable<A>, "map" | "flatMap" | "flatMapAsync" | "ap">
+export type KVTraversable<A extends Type> = Reducible<A>

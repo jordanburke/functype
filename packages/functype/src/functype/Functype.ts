@@ -5,9 +5,9 @@ import type { ConcurrencyOptions } from "@/internal/concurrency"
 import type { Matchable } from "@/matchable"
 import type { Pipe } from "@/pipe"
 import type { Serializable } from "@/serializable/Serializable"
-import type { Traversable } from "@/traversable/Traversable"
+import type { Reducible, Traversable } from "@/traversable/Traversable"
 import type { Typeable } from "@/typeable"
-import type { AsyncMonad, CollectionOps, ContainerOps } from "@/typeclass"
+import type { Applicative, AsyncMonad, CollectionOps, ContainerOps } from "@/typeclass"
 import type { Type } from "@/types"
 
 /**
@@ -26,7 +26,16 @@ import type { Type } from "@/types"
  * ```
  */
 export interface FunctypeBase<A, Tag extends string = string>
-  extends AsyncMonad<A>, Traversable<A>, Serializable<A>, Foldable<A>, Typeable<Tag>, ContainerOps<A> {
+  extends FunctypeCore<A, Tag>, AsyncMonad<A>, Traversable<A> {}
+
+/**
+ * FunctypeBase without the monad's members (`map`, `ap`, `flatMap`, `flatMapAsync`). Types whose
+ * `map` or `flatMap` take another shape, such as the collections and Obj, extend this rather than
+ * `Omit<FunctypeBase, …>`: a member reached through a mapped type has no declaration, so
+ * `@typescript-eslint/unbound-method` can't see a detached call to it.
+ */
+export interface FunctypeCore<A, Tag extends string = string>
+  extends Reducible<A>, Serializable<A>, Foldable<A>, Typeable<Tag>, ContainerOps<A> {
   readonly _tag: Tag
   readonly [Symbol.toStringTag]: string
 }
@@ -38,8 +47,14 @@ export interface FunctypeBase<A, Tag extends string = string>
  * @typeParam A - The type of value contained
  * @typeParam Tag - The type tag for pattern matching
  */
-export interface Functype<A, Tag extends string = string>
-  extends FunctypeBase<A, Tag>, Extractable<A>, Pipe<A>, Matchable<A, Tag> {
+export interface Functype<A, Tag extends string = string> extends FunctypeBase<A, Tag>, FunctypeValue<A, Tag> {}
+
+/**
+ * Functype without the monad's members, for a single-value type whose `map` takes another shape,
+ * such as Obj. See `FunctypeCore`.
+ */
+export interface FunctypeValue<A, Tag extends string = string>
+  extends FunctypeCore<A, Tag>, Extractable<A>, Pipe<A>, Matchable<A, Tag> {
   toValue(): { _tag: Tag; value: A }
 }
 
@@ -52,7 +67,8 @@ export interface Functype<A, Tag extends string = string>
  */
 export interface FunctypeCollection<A, Tag extends string = string>
   extends
-    Omit<FunctypeBase<A, Tag>, "flatMapAsync" | "flatMap">,
+    FunctypeCore<A, Tag>,
+    Applicative<A>,
     Iterable<A>,
     Pipe<A[]>,
     Collection<A>,

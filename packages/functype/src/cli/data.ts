@@ -200,8 +200,8 @@ export const TYPES: Record<string, TypeData> = {
 
   Obj: {
     description: "Immutable object wrapper with fluent operations",
-    // Obj uses `Omit<Functype, "map" | "flatMap" | ...>` so the Functype tower
-    // doesn't appear in extends, but the methods are re-declared inline.
+    // Obj extends FunctypeValue (Functype without map / flatMap / ap), so the monad tower
+    // doesn't appear in extends; Obj declares its own map and flatMap inline.
     interfaces: mergeInterfaces("Obj", "KVTraversable", "Foldable", "Matchable", "Extractable", "Serializable"),
     methods: {
       create: ["Obj({...})", "Obj.of({...})", "Obj.empty()"],
