@@ -1,3 +1,4 @@
+import { type A, define, type Mutable } from "@/internal/define"
 import type { Type } from "@/types"
 
 /**
@@ -54,6 +55,13 @@ export interface Tag<S extends Type> {
   toString(): string
 }
 
+/** Every Tag shares this method (#276 §14); a tag keeps only `_tag` and `id`, and is frozen. */
+const TagProto = define<Tag<A>, "_tag" | "id" | "_S">()("Tag", {
+  toString() {
+    return `Tag(${this.id})`
+  },
+})
+
 /**
  * Creates a Tag for identifying a service type.
  *
@@ -74,13 +82,15 @@ export interface Tag<S extends Type> {
  * )
  * ```
  */
-export const Tag = <S extends Type>(id: string): Tag<S> => ({
-  id,
-  _tag: "Tag",
-  toString() {
-    return `Tag(${id})`
-  },
-})
+export const Tag = <S extends Type>(id: string): Tag<S> => {
+  // The one cast: a prototype checked at the opaque A works for every S.
+  const tag = Object.create(TagProto) as Mutable<Tag<S>>
+  /* eslint-disable functional/immutable-data -- filling in the tag just created, then freezing it */
+  tag._tag = "Tag"
+  tag.id = id
+  /* eslint-enable functional/immutable-data */
+  return Object.freeze(tag)
+}
 
 /**
  * Type helper to extract the service type from a Tag

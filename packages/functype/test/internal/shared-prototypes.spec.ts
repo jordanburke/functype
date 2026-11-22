@@ -36,10 +36,8 @@ import {
   Right,
   Set,
   Some,
-  SpanTracer,
   Stack,
   Tag,
-  TestClockTag,
   TracedOption,
   Try,
   Tuple,
@@ -124,20 +122,22 @@ const VALUE_TYPES: Readonly<Record<string, ValueType>> = {
     exports: ["Layer"],
     variants: [["Layer", () => Layer.succeed(layerTag, 1), () => Layer.succeed(layerTag, 2)]],
   },
+  Identity: { exports: ["Identity"], variants: [["Identity", () => Identity(1), () => Identity(2)]] },
+  // SpanTracer and TestClockTag are Tags.
+  Tag: { exports: ["Tag", "SpanTracer", "TestClockTag"], variants: [["Tag", () => Tag("x"), () => Tag("y")]] },
+  Context: {
+    exports: ["Context"],
+    variants: [["Context", () => Context.make(Tag("x"), 1), () => Context.make(Tag("x"), 2)]],
+  },
+  Ref: { exports: ["Ref"], variants: [["Ref", () => Ref(1), () => Ref(2)]] },
 }
 
 /** Value types that don't meet the rules yet: each still builds its methods per value. */
 const NOT_YET: Readonly<Record<string, { readonly reason: string; readonly sample: () => object }>> = {
-  Identity: { reason: "builds isSame per value", sample: () => Identity(1) },
   TracedOption: {
     reason: "builds map, flatMap and the rest per value",
     sample: () => TracedOption(Some(1), { emit: () => undefined }, "span"),
   },
-  Context: { reason: "builds get, has, add and the rest per value", sample: () => Context.empty() },
-  Tag: { reason: "builds toString per value", sample: () => Tag("x") },
-  SpanTracer: { reason: "a Tag, which builds toString per value", sample: () => SpanTracer },
-  TestClockTag: { reason: "a Tag, which builds toString per value", sample: () => TestClockTag },
-  Ref: { reason: "a mutable cell whose methods close over its current value", sample: () => Ref(1) },
 }
 
 const FUNCTIONS = "a function or a module of functions; any value it returns is checked under its own type"

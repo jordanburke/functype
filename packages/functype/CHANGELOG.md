@@ -220,6 +220,18 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
 
+**2.0 (breaking): Identity, Tag, Context and Ref share their methods.** §14 of #276 (the 2.0 release plan), after #553 (Tuple and Lazy share their methods). Still to convert: TracedOption and Layer.
+
+- Each type now has one frozen prototype that holds its methods, and a value keeps only its data. An Identity keeps `_tag` and `id`, a Tag `_tag` and `id`, a Context `_tag` and `services`, and a Ref `_tag` and `value`.
+- **Ref compares by its value in test matchers.** Its methods were closures over a hidden variable, so a Ref had no data, and `expect(Ref(1)).toEqual(Ref(2))` passed. Its current value is now an own `value` field, which isn't on the `Ref` type; read it with `get()`. A Ref stays unfrozen, since it changes in place.
+- **Tag and Context are frozen**, like the collections. `SpanTracer` and `TestClockTag` are Tags, so they are too.
+- **Type changes:** `Identity` and `Ref` gain `_tag` (`"Identity"`, `"Ref"`), and Identity's `isSame` is no longer optional. An object literal typed as one of them, such as `{ id: 1 }`, no longer compiles. Build them with `Identity(v)` and `Ref(v)`.
+- On Node 24.20.0, medians of the built package against `main` before this change: `Context.make` 200 → 31 ns, and with `add` about 490 → 110 ns. A Ref built, updated and read about 19 → 2 ns. `Identity(v)` about 5 → 3.5 ns. A Tag got slower, about 5 → 20 ns, from freezing it; code builds one per service.
+- functype-react's `structuralEq` now calls two Identities, Tags, Contexts or Refs with the same contents equal. Before, any two were unequal. Two different Refs holding the same value now compare equal, so a `useStable*` hook may keep the first; use `referenceEq` where a Ref's identity matters.
+- **Serialized forms change.** `JSON.stringify(Ref(1))` was `{}` and is now `{"_tag":"Ref","value":1}`, so a Ref's value shows in logs and `structuredClone`. An Identity gains `_tag`, and a Tag's keys come out as `_tag`, then `id`.
+- **A detached method call throws**, because `this` is undefined: `const { get, set } = Ref(0)`, or `IO.sync(ref.get)`. Call it on the value: `IO.sync(() => ref.get())`.
+- **Upgrade:** call Ref, Context and Tag methods on the value. Replace object literals typed as `Identity` or `Ref` with their constructors. Re-record snapshots of these types.
+
 **2.0 (breaking): `IO.gen` records the services it reads and the errors it can fail with.** From #277 (the 2.0 tracking issue).
 
 - `IO.gen` was typed `IO<never, any, A>`, whatever its body did. Now its `R` is the union of the services every yielded IO needs, and its `E` is the union of their errors. A body that yields nothing, or only pure IOs, is `IO<never, never, A>`.
