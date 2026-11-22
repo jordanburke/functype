@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
+import { callAlone0, callAlone1, callAlone2 } from "@/internal/call-alone"
 import { type Concurrency, type ConcurrencyOptions, workerCount } from "@/internal/concurrency"
 import { type A as AnyR, type B as AnyE, type C as AnyA, define, type Mutable } from "@/internal/define"
 import { anySignal } from "@/internal/signal"
@@ -1252,7 +1253,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
             fx = _fx(fx.effect)
             continue
           case "Gen": {
-            const iterator = fx.start()
+            const iterator = callAlone0(fx.start)
             const first = iterator.next(undefined)
             if (first.done === true) {
               exit = Exit.succeed(first.value)
@@ -1279,18 +1280,18 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
     try {
       switch (wrapper._tag) {
         case "Map":
-          if (exit._tag === "Success") exit = Exit.succeed(wrapper.f(exit.value))
+          if (exit._tag === "Success") exit = Exit.succeed(callAlone1(wrapper.f, exit.value))
           break
         case "FlatMap":
           if (exit._tag === "Success") {
-            fx = _fx(wrapper.f(exit.value))
+            fx = _fx(callAlone1(wrapper.f, exit.value))
             ctx = wrapperContext
             exit = undefined
           }
           break
         case "MapError": {
           const channel = syncErrorChannel(exit)
-          if (channel) exit = Exit.fail(wrapper.f(channel.value))
+          if (channel) exit = Exit.fail(callAlone1(wrapper.f, channel.value))
           break
         }
         case "Recover":
@@ -1299,7 +1300,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         case "RecoverWith": {
           const channel = syncErrorChannel(exit)
           if (channel) {
-            fx = _fx(wrapper.f(channel.value))
+            fx = _fx(callAlone1(wrapper.f, channel.value))
             ctx = wrapperContext
             exit = undefined
           }
@@ -1307,8 +1308,8 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
         }
         case "Fold": {
           const channel = syncErrorChannel(exit)
-          if (channel) exit = Exit.succeed(wrapper.onFailure(channel.value))
-          else if (exit._tag === "Success") exit = Exit.succeed(wrapper.onSuccess(exit.value))
+          if (channel) exit = Exit.succeed(callAlone1(wrapper.onFailure, channel.value))
+          else if (exit._tag === "Success") exit = Exit.succeed(callAlone1(wrapper.onSuccess, exit.value))
           break
         }
         case "GenNext":
@@ -1343,7 +1344,7 @@ const runLeafSync = (effect: AnyEffect, context: Context<Type>, span: unknown): 
       case "Die":
         return Exit.die(effect.defect)
       case "Sync":
-        return Exit.succeed(effect.thunk())
+        return Exit.succeed(callAlone0(effect.thunk))
       case "Async":
         return Exit.die(cannotRunAsync())
       case "Auto":
@@ -1358,8 +1359,8 @@ const runLeafSync = (effect: AnyEffect, context: Context<Type>, span: unknown): 
         const acquireExit = runEffectSync(_fx(effect.acquire), context, span)
         if (!acquireExit.isSuccess()) return acquireExit
         const resource = acquireExit.value
-        const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context, span))
-        const releaseExit = runEffectSync(_fx(effect.release(resource)), context, span)
+        const useExit = attemptSync(() => runEffectSync(_fx(callAlone1(effect.use, resource)), context, span))
+        const releaseExit = runEffectSync(_fx(callAlone1(effect.release, resource)), context, span)
         // A failed release replaces the outcome, as a throwing `finally` would.
         return releaseExit.isSuccess() ? useExit : releaseExit
       }
@@ -1367,8 +1368,8 @@ const runLeafSync = (effect: AnyEffect, context: Context<Type>, span: unknown): 
         const acquireExit = runEffectSync(_fx(effect.acquire), context, span)
         if (!acquireExit.isSuccess()) return acquireExit
         const resource = acquireExit.value
-        const useExit = attemptSync(() => runEffectSync(_fx(effect.use(resource)), context, span))
-        const releaseExit = runEffectSync(_fx(effect.release(resource, useExit)), context, span)
+        const useExit = attemptSync(() => runEffectSync(_fx(callAlone1(effect.use, resource)), context, span))
+        const releaseExit = runEffectSync(_fx(callAlone2(effect.release, resource, useExit)), context, span)
         return releaseExit.isSuccess() ? useExit : releaseExit
       }
       case "All":
@@ -1529,7 +1530,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
             fx = _fx(fx.effect)
             continue
           case "Gen": {
-            const iterator = fx.start()
+            const iterator = callAlone0(fx.start)
             const first = iterator.next(undefined)
             if (first.done === true) {
               // A body that aborts its own region before returning ends interrupted, as a
@@ -1560,14 +1561,15 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
     try {
       switch (wrapper._tag) {
         case "Map":
-          if (exit._tag === "Success") exit = cancelled() ? Exit.interrupted() : Exit.succeed(wrapper.f(exit.value))
+          if (exit._tag === "Success")
+            exit = cancelled() ? Exit.interrupted() : Exit.succeed(callAlone1(wrapper.f, exit.value))
           break
         case "FlatMap":
           if (exit._tag === "Success") {
             if (cancelled()) {
               exit = Exit.interrupted()
             } else {
-              fx = _fx(wrapper.f(exit.value))
+              fx = _fx(callAlone1(wrapper.f, exit.value))
               ctx = wrapperContext
               exit = undefined
             }
@@ -1577,7 +1579,8 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           const channel = errorChannel(exit)
           // A mapped defect becomes a `Failure`: the caller's mapper returns a genuine `E`,
           // so the outcome really is a typed failure from here on.
-          if (channel) exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.fail(wrapper.f(channel.value))
+          if (channel)
+            exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.fail(callAlone1(wrapper.f, channel.value))
           break
         }
         case "Recover":
@@ -1593,7 +1596,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
             if (skipped) {
               exit = skipped
             } else {
-              fx = _fx(wrapper.f(channel.value))
+              fx = _fx(callAlone1(wrapper.f, channel.value))
               ctx = wrapperContext
               exit = undefined
             }
@@ -1603,9 +1606,10 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         case "Fold": {
           const channel = errorChannel(exit)
           if (channel) {
-            exit = skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.succeed(wrapper.onFailure(channel.value))
+            exit =
+              skipHandlerWhenCancelled(exit, cancelled()) ?? Exit.succeed(callAlone1(wrapper.onFailure, channel.value))
           } else if (exit._tag === "Success") {
-            exit = cancelled() ? Exit.interrupted() : Exit.succeed(wrapper.onSuccess(exit.value))
+            exit = cancelled() ? Exit.interrupted() : Exit.succeed(callAlone1(wrapper.onSuccess, exit.value))
           }
           break
         }
@@ -1671,13 +1675,13 @@ const runLeaf = (
       case "Sync":
         // `IO.sync` is `IO<never, never, A>` — a throw here cannot be an `E`, so it falls
         // to the outer catch and becomes a defect.
-        return Exit.succeed(effect.thunk())
+        return Exit.succeed(callAlone0(effect.thunk))
       case "Async":
         return runAsyncThunk(effect.thunk, interruption)
       case "Auto": {
         // Same reasoning as `Async` — the `IO(...)` constructor also declares `E = unknown`.
         try {
-          const result = effect.thunk()
+          const result = callAlone0(effect.thunk)
           return result instanceof Promise
             ? result.then(
                 (value: unknown) => Exit.succeed(value),
@@ -1772,10 +1776,10 @@ const runBracket = async (
     const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
     if (!acquireExit.isSuccess()) return acquireExit
     const resource = acquireExit.value
-    const useExit = await runUse(() => effect.use(resource), context, interruption, span)
+    const useExit = await runUse(() => callAlone1(effect.use, resource), context, interruption, span)
     // Release always runs, even if use fails or the region was cancelled. A failed release
     // replaces the outcome, as a throwing `finally` would, and as under `runSync`.
-    const releaseExit = await runEffect(_fx(effect.release(resource)), context, undefined, span)
+    const releaseExit = await runEffect(_fx(callAlone1(effect.release, resource)), context, undefined, span)
     return releaseExit.isSuccess() ? useExit : releaseExit
   } catch (e) {
     return Exit.die(e)
@@ -1793,10 +1797,10 @@ const runBracketExit = async (
     const acquireExit = await runEffect(_fx(effect.acquire), context, undefined, span)
     if (!acquireExit.isSuccess()) return acquireExit
     const resource = acquireExit.value
-    const useExit = await runUse(() => effect.use(resource), context, interruption, span)
+    const useExit = await runUse(() => callAlone1(effect.use, resource), context, interruption, span)
     // Release always runs (masked, like acquire) and receives the use-step's Exit. A failed
     // release replaces the outcome, as in `bracket`.
-    const releaseExit = await runEffect(_fx(effect.release(resource, useExit)), context, undefined, span)
+    const releaseExit = await runEffect(_fx(callAlone2(effect.release, resource, useExit)), context, undefined, span)
     return releaseExit.isSuccess() ? useExit : releaseExit
   } catch (e) {
     return Exit.die(e)
