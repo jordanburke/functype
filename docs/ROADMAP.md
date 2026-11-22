@@ -285,16 +285,29 @@ editor-only warning never reaches an agent, and a lint error reaches it only if 
   so the plugin's type-aware rules don't run on TypeScript 7 today. functype builds with 6.0.3. Effect
   answered this with a separate TypeScript-Go build, which suggests a classic language service plugin
   doesn't carry over (inferred, not verified).
+- **7e's path, measured 2026-11-22.** The plugin README's "TypeScript 7" section has both setups.
+  - **Side by side (works today, all rules):** `typescript` aliased to `@typescript/typescript6` and
+    TypeScript 7 as `@typescript/native`, the setup typescript-eslint's own TS 7 error points to. With
+    typescript-eslint 8.73.0 and plugin 2.127.2 the type-aware rules reported, and `tsc` 7.0.2 checked the
+    same project.
+  - **Oxlint (works today, no type information):** Oxlint 1.94.0 loads the plugin as a JS plugin unchanged.
+    The 16 rules that need no types work, six of them less precisely, since they use type information when
+    it's there; the 4 type-aware ones report nothing until Oxlint passes type information to JS plugins.
+  - **If typescript-eslint is slow to adopt 7.1's API:** TypeScript 7.0.2 already ships a synchronous checker
+    client (`typescript/unstable/sync`). The plugin calls the checker from only two files
+    (`src/utils/type-aware.ts`, `src/utils/array-mutation.ts`), 14 methods, and 12 exist on that client;
+    `getIndexInfoOfType` and `getAwaitedType` don't. An adapter there is feasible, but parsing would still
+    need a TS-free parser, so it waits for 7.1.
 
 ### The layers, cheapest first
 
-| #   | Layer                                  | What it means for functype                                                                                                                                                                                                                                  | Status                                                       |
-| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| 7a  | Types that reject the wrong call       | Where a common wrong guess can get a signature that fails with a readable message, do that. It needs no tooling and works in every editor and in `tsc`. This is workstream 6's "fail to compile" principle applied on purpose                               | 2.0                                                          |
-| 7b  | An agent lint preset                   | `functype.configs.agent`: every rule is `error` or `off`, so nothing is a warning an agent can pass over. Workstream 6's did-you-mean rule joins it once that rule exists. The aim stays that each message names the fix, not just the problem              | shipped in 1.22; in 2.0 it is `recommended`, the only preset |
-| 7c  | `validate_code` reports the lint rules | The MCP tool runs the preset as well as `tsc`, so an agent checking a snippet sees the same errors its build would. To stay additive, lint results go in their own field or behind an option, so today's `success` result doesn't change for the same input | 1.x additive                                                 |
-| 7d  | Diagnostics inside `tsc`               | Effect's approach: a plugin plus a `tsc` patch, or a TypeScript-Go build. A large build with a moving target, so decide after 7a–7c show what lint can't reach                                                                                              | decide for 2.0                                               |
-| 7e  | Lint that runs on TypeScript 7         | Either wait for typescript-eslint to support TypeScript 7, or port the type-aware rules to Oxlint with `oxlint-tsgolint`, which `@effect/tsgo` already targets                                                                                              | gate for 2.0                                                 |
+| #   | Layer                                  | What it means for functype                                                                                                                                                                                                                                  | Status                                                                                                     |
+| --- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| 7a  | Types that reject the wrong call       | Where a common wrong guess can get a signature that fails with a readable message, do that. It needs no tooling and works in every editor and in `tsc`. This is workstream 6's "fail to compile" principle applied on purpose                               | 2.0                                                                                                        |
+| 7b  | An agent lint preset                   | `functype.configs.agent`: every rule is `error` or `off`, so nothing is a warning an agent can pass over. Workstream 6's did-you-mean rule joins it once that rule exists. The aim stays that each message names the fix, not just the problem              | shipped in 1.22; in 2.0 it is `recommended`, the only preset                                               |
+| 7c  | `validate_code` reports the lint rules | The MCP tool runs the preset as well as `tsc`, so an agent checking a snippet sees the same errors its build would. To stay additive, lint results go in their own field or behind an option, so today's `success` result doesn't change for the same input | 1.x additive                                                                                               |
+| 7d  | Diagnostics inside `tsc`               | Effect's approach: a plugin plus a `tsc` patch, or a TypeScript-Go build. A large build with a moving target, so decide after 7a–7c show what lint can't reach                                                                                              | decide for 2.0                                                                                             |
+| 7e  | Lint that runs on TypeScript 7         | Either wait for typescript-eslint to support TypeScript 7, or port the type-aware rules to Oxlint with `oxlint-tsgolint`, which `@effect/tsgo` already targets                                                                                              | path documented 2026-11-22: side by side with 6.0 today; adopt 7.1 support when typescript-eslint ships it |
 
 Diagnostics to consider, with Effect's equivalent: a floating `IO` (`no-floating-io` exists); `any` or
 `unknown` in an `Either` or `IO` error type (`anyUnknownInErrorContext`; `unknown` also swallows a union of
