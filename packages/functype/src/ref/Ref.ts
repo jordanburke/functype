@@ -14,6 +14,9 @@ import type { Type } from "@/types"
  * mutable state: you can't safely treat a `Ref[Narrow]` as a `Ref[Wide]`
  * because someone could `set` a Wide value that isn't a Narrow.
  *
+ * Its methods are shared, so call them on the Ref: `const { get } = ref` loses `this`, and the
+ * detached call throws a `TypeError`. Pass `() => ref.get()` instead.
+ *
  * @example
  * const counter = Ref(0)
  * counter.get() // 0
@@ -21,9 +24,6 @@ import type { Type } from "@/types"
  * counter.get() // 5
  * counter.update(n => n + 1)
  * counter.get() // 6
- *
- * Its methods are shared, so call them on the Ref: `const { get } = ref` loses `this`, and the
- * detached call throws a `TypeError`. Pass `() => ref.get()` instead.
  */
 export interface Ref<A> {
   readonly _tag: "Ref"

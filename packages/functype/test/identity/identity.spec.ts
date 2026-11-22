@@ -20,26 +20,26 @@ describe("Identity", () => {
     it("should return true for identical primitive values", () => {
       const id1 = createIdentity(42)
       const id2 = createIdentity(42)
-      expect(id1.isSame?.(id2)).toBe(true)
+      expect(id1.isSame(id2)).toBe(true)
     })
 
     it("should return false for different primitive values", () => {
       const id1 = createIdentity(42)
       const id2 = createIdentity(43)
-      expect(id1.isSame?.(id2)).toBe(false)
+      expect(id1.isSame(id2)).toBe(false)
     })
 
     it("should return true for identical object references", () => {
       const obj = { name: "test" }
       const id1 = createIdentity(obj)
       const id2 = createIdentity(obj)
-      expect(id1.isSame?.(id2)).toBe(true)
+      expect(id1.isSame(id2)).toBe(true)
     })
 
     it("should return false for different object references with same content", () => {
       const id1 = createIdentity({ name: "test" })
       const id2 = createIdentity({ name: "test" })
-      expect(id1.isSame?.(id2)).toBe(false)
+      expect(id1.isSame(id2)).toBe(false)
     })
   })
 })
