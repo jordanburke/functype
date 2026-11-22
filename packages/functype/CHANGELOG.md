@@ -8,6 +8,12 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 **Upgrading from 1.x:** [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) collects what to change: what the compiler reports, what it can't see, and each package's changes. The entries below have the details.
 
+**2.0: apps ship a quarter of the functype code they did.** An Option-only program bundles to 5.7 KB gzipped instead of 23.0 KB, and a small program using `IO.gen`, Either, Option and List to 11.5 KB instead of 23.1 KB. Effect 4.1.5's figures for the same two programs are 7.0 KB and 37.3 KB.
+
+- `dist` now holds one file per source module. Before, every core type sat in one shared, minified chunk, so an app's bundler couldn't drop the types it didn't use. The source graph was never the problem: Option reaches Either, List, Set and Try, and those modules come to 5.7 KB.
+- Every public import path and export is unchanged. Only the internal chunk files, such as `dist/src-<hash>.js`, are gone; no `exports` entry pointed at them.
+- `pnpm validate` now bundles three small programs against `dist` and fails when one goes over its gzipped ceiling (`scripts/check-bundle-size.ts`). The CI bundle-size comment shows the same table.
+
 **2.0: functype-os and functype-react need functype 2.0.** Their peer range on `functype` was `>=1.13.0` and `>=1.14.0`, but their code now calls 2.0 methods, such as `getOrElse`, so it fails against 1.x. Both peer ranges are now `>=2.0.0`. functype-log's code still compiles against 1.27.2, so its range is unchanged.
 
 **2.0 (types only): companions have names, so a wrong call prints a short message.**

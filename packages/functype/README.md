@@ -74,20 +74,15 @@ pnpm add functype
 bun add functype
 ```
 
-### Bundle Size Optimization
+### Bundle Size
 
-Functype is optimized for tree-shaking and offers multiple import strategies to minimize bundle size:
+`dist` has one file per module, so a bundler keeps only what you use. An Option-only program ships 5.7 KB gzipped; one using `IO.gen`, Either, Option and List ships 11.5 KB. Root and subpath imports bundle the same:
 
 ```typescript
-// Selective module imports (recommended for production)
-import { Option } from "functype/option"
-import { Either } from "functype/either"
-
-// Direct constructor imports (smallest bundle)
-import { some, none } from "functype/option"
+import { Option } from "functype/option" // bundles the same as importing from "functype"
 ```
 
-For detailed optimization strategies, see the [Bundle Optimization Guide](docs/BUNDLE_OPTIMIZATION.md).
+For the measured sizes and how they are checked, see the [Bundle Size guide](docs/BUNDLE_OPTIMIZATION.md).
 
 ## Usage Examples
 

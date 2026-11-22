@@ -303,6 +303,9 @@ importers:
       '@types/node':
         specifier: ~24.19.2
         version: 24.19.2
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
       eslint-config-functype:
         specifier: workspace:*
         version: link:../eslint-config-functype

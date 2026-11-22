@@ -93,34 +93,10 @@ jobs:
       - name: Build functype
         run: pnpm --filter functype build
 
-      - name: Calculate bundle sizes
-        run: |
-          REPORT=packages/functype/bundle-size-report.md
-          {
-            echo "# Bundle Size Report (packages/functype)"
-            echo ""
-            echo "## Current Build"
-            echo ""
-            echo "| File | Size |"
-            echo "|------|------|"
-          } > "$REPORT"
-          for file in packages/functype/dist/*.js; do
-            size=$(du -h "$file" | cut -f1)
-            printf "| %s | %s |\n" "$(basename "$file")" "$size" >> "$REPORT"
-          done
-          {
-            echo ""
-            echo "## Gzipped Size (production)"
-            echo ""
-            echo "| File | Size |"
-            echo "|------|------|"
-          } >> "$REPORT"
-          for file in packages/functype/dist/*.js; do
-            gzip -c "$file" > "$file.gz"
-            size=$(du -h "$file.gz" | cut -f1)
-            printf "| %s | %s |\n" "$(basename "$file")" "$size" >> "$REPORT"
-            rm "$file.gz"
-          done
+      # Bundles small consumer programs against dist and fails when one outgrows its ceiling
+      # (scripts/check-bundle-size.ts). validate runs the same check; this job posts the table.
+      - name: Measure bundle sizes
+        run: pnpm --filter functype exec tsx scripts/check-bundle-size.ts --report bundle-size-report.md
 
       - name: Upload bundle size report
         uses: actions/upload-artifact@v4
