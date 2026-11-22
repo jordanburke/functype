@@ -1526,7 +1526,10 @@ const orDie = (outcome: Promise<AnyExit>): Promise<AnyExit> => outcome.catch((e:
  * each nested level would add to the stack, and a few hundred levels of `withSpan` or `race`
  * would overflow it.
  */
-const onFreshStack = (start: () => Promise<AnyExit>): Promise<AnyExit> => orDie(Promise.resolve().then(start))
+const onFreshStack = (start: () => Promise<AnyExit>, interruption: AbortSignal | undefined): Promise<AnyExit> =>
+  // The region may be cancelled in that microtask; check again, so a cancelled region starts no
+  // new work, as the loop's own check before every step promises.
+  orDie(Promise.resolve().then(() => (interruption?.aborted ? Exit.interrupted() : start())))
 
 /**
  * Runs a step of {@link runEffect} that isn't a wrapper. A step that has to wait returns a promise
@@ -1575,20 +1578,20 @@ const runLeaf = (
       case "Sleep":
         return sleep(effect.duration, interruption)
       case "Bracket":
-        return onFreshStack(() => runBracket(effect, context, interruption, span))
+        return onFreshStack(() => runBracket(effect, context, interruption, span), interruption)
       case "BracketExit":
-        return onFreshStack(() => runBracketExit(effect, context, interruption, span))
+        return onFreshStack(() => runBracketExit(effect, context, interruption, span), interruption)
       case "Race":
         if (effect.effects.length === 0) return Exit.die(new Error("No effects to race"))
-        return onFreshStack(() => runRace(effect.effects, context, interruption, span))
+        return onFreshStack(() => runRace(effect.effects, context, interruption, span), interruption)
       case "Timeout":
-        return onFreshStack(() => runTimeout(effect.effect, effect.duration, context, interruption, span))
+        return onFreshStack(() => runTimeout(effect.effect, effect.duration, context, interruption, span), interruption)
       case "InterruptWhen":
-        return onFreshStack(() => runRegion(effect, context, interruption, span))
+        return onFreshStack(() => runRegion(effect, context, interruption, span), interruption)
       case "WithSpan":
-        return onFreshStack(() => runWithSpan(effect, context, interruption, span))
+        return onFreshStack(() => runWithSpan(effect, context, interruption, span), interruption)
       case "All":
-        return onFreshStack(() => runAll(effect.effects, effect.concurrency, context, interruption, span))
+        return onFreshStack(() => runAll(effect.effects, effect.concurrency, context, interruption, span), interruption)
       default:
         // The loop handles the wrappers and `ProvideContext` itself.
         return Exit.die(new Error(`Unexpected step: ${effect._tag}`))
