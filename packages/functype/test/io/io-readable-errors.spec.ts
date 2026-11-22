@@ -70,6 +70,11 @@ IO.gen(function* (): Generator<any, number, any> {
   const a: number = yield* IO.succeed(1)
   return a
 })`,
+  genYieldEffectObject: `import { IO } from "functype"
+IO.gen(function* () {
+  yield { effect: 1 }
+  return 1
+})`,
   genYieldStar: `import { IO } from "functype"
 const io: IO<never, "e", number> = IO.gen(function* () {
   const a = yield* IO.succeed(1)
@@ -107,6 +112,7 @@ describe("IO's wrong calls say what to do", () => {
   it("IO.gen rejects a yield that isn't an IO", () => {
     expect(results.genYieldOption).toContain("IOYieldable")
     expect(results.genYieldPromise).toContain("IOYieldable")
+    expect(results.genYieldEffectObject).toContain("IOYieldable")
     expect(results.genYieldStar).toBe("")
     expect(results.genAnnotatedAny).toBe("")
   })
