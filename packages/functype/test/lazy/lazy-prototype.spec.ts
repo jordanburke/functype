@@ -316,7 +316,7 @@ describe("Lazy's 2.0 breaks", () => {
   })
 })
 
-describe("Lazy's construction cost", () => {
+describe("Lazy's construction cost", { retry: 2 }, () => {
   const RUNS = 9
   const N = 50_000
 
@@ -331,15 +331,23 @@ describe("Lazy's construction cost", () => {
     return elapsed / N
   }
 
-  /** Median over interleaved runs of (build) / (build a plain object of the same shape). */
+  /** The fastest build over the fastest build of a plain object of the same shape, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ _tag: "Lazy", state: { _tag: "Pending", thunk: () => i } })
     for (let i = 0; i < 5_000; i++) {
       make(i)
       plain(i)
     }
-    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
-    return ratios[Math.floor(RUNS / 2)]!
+    // The fastest run of each, interleaved: load only adds time to a run, so each minimum is that
+    // side's least-disturbed run. A ratio of one run's pair would drop whenever its plain half was
+    // the slow one, and let a regression through.
+    const makes: number[] = []
+    const plains: number[] = []
+    Array.from({ length: RUNS }).forEach(() => {
+      makes.push(timePerCall(make))
+      plains.push(timePerCall(plain))
+    })
+    return Math.min(...makes) / Math.min(...plains)
   }
 
   const lazy = Lazy

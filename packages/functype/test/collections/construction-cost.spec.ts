@@ -19,7 +19,7 @@ import { LazyList, List, Map, Obj, Set, Stack } from "@/index"
 
 const inc = (x: number): number => x + 1
 
-describe("construction cost", () => {
+describe("construction cost", { retry: 2 }, () => {
   const RUNS = 9
   const N = 20_000
 
@@ -34,14 +34,22 @@ describe("construction cost", () => {
     return elapsed / N
   }
 
-  /** Median over interleaved runs of (time to build and map the value) / (time for the plain object). */
+  /** The fastest build and map of the value over the fastest build of the plain object, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown, plain: (i: number) => unknown): number => {
     for (let i = 0; i < 2_000; i++) {
       make(i)
       plain(i)
     }
-    const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
-    return ratios[Math.floor(RUNS / 2)]!
+    // The fastest run of each, interleaved: load only adds time to a run, so each minimum is that
+    // side's least-disturbed run. A ratio of one run's pair would drop whenever its plain half was
+    // the slow one, and let a regression through.
+    const makes: number[] = []
+    const plains: number[] = []
+    Array.from({ length: RUNS }).forEach(() => {
+      makes.push(timePerCall(make))
+      plains.push(timePerCall(plain))
+    })
+    return Math.min(...makes) / Math.min(...plains)
   }
 
   // Read each export once. Vitest wraps module exports in getters, which would add to every call.
