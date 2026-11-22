@@ -52,11 +52,13 @@ const parseProject = (
   tsconfigPath: string,
 ): { options: ts.CompilerOptions; fileNames: ReadonlyArray<string> } | undefined => {
   const host: ts.ParseConfigFileHost = {
-    fileExists: ts.sys.fileExists,
-    readFile: ts.sys.readFile,
-    readDirectory: ts.sys.readDirectory,
+    // Called on ts.sys, not passed detached, so each keeps its receiver (@typescript-eslint/unbound-method).
+    fileExists: (path) => ts.sys.fileExists(path),
+    readFile: (path) => ts.sys.readFile(path),
+    readDirectory: (rootDir, extensions, excludes, includes, depth) =>
+      ts.sys.readDirectory(rootDir, extensions, excludes, includes, depth),
     useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
-    getCurrentDirectory: ts.sys.getCurrentDirectory,
+    getCurrentDirectory: () => ts.sys.getCurrentDirectory(),
     onUnRecoverableConfigFileDiagnostic: () => undefined,
   }
   const parsed = ts.getParsedCommandLineOfConfigFile(tsconfigPath, undefined, host)
