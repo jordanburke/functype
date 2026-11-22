@@ -218,6 +218,13 @@ describe("prefer-list (type-aware)", () => {
     ],
     invalid: [
       {
+        name: "An intersection-typed local array is still reported: no-array-mutation skips it",
+        filename: typedFilename,
+        options,
+        code: 'export function tagged(): ReadonlyArray<string> { const acc: string[] & { tag?: string } = ["x"]; acc.push("t"); return acc }',
+        errors: [{ messageId: "mutatedArray" as const, data: { name: "acc", how: "push" } }],
+      },
+      {
         name: "A mutated field is still reported: fields are matched by name, which can't tell two types apart",
         filename: typedFilename,
         options,

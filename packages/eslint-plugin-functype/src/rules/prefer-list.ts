@@ -1,6 +1,7 @@
 import type { Rule } from "eslint"
 
 import type { ASTNode } from "../types/ast"
+import { isMutableArrayExpression } from "../utils/array-mutation"
 import { descendants } from "../utils/ast-walk"
 import { getFunctypeImportsLegacy, isFunctypeCall } from "../utils/functype-detection"
 import { createImportFixer, hasFunctypeSymbol } from "../utils/import-fixer"
@@ -429,8 +430,10 @@ const rule: Rule.RuleModule = {
      * declaration gets the advice. Fields stay reported here: they are matched by name across the file,
      * which can't tell which declaration a mutation belongs to.
      */
-    function leftToArrayMutation(): boolean {
-      return hasTypeInformation(context)
+    function leftToArrayMutation(binding: ASTNode): boolean {
+      // no-array-mutation sees only a plain mutable array: an intersection such as
+      // `string[] & { tag?: string }` it skips, so this rule must still report that one.
+      return hasTypeInformation(context) && isMutableArrayExpression(binding, context)
     }
 
     /**
@@ -493,7 +496,7 @@ const rule: Rule.RuleModule = {
         if (feedsMutableSlot(binding)) return
         const how = mutationOf(binding)
         if (how) {
-          if (!leftToArrayMutation()) {
+          if (!leftToArrayMutation(binding)) {
             context.report({ node: reportNode, messageId: "mutatedArray", data: { name: binding.name, how } })
           }
           return
@@ -697,7 +700,7 @@ const rule: Rule.RuleModule = {
         if (targetParent?.type === "VariableDeclarator" && targetParent.id?.type === "Identifier") {
           const how = mutationOf(targetParent.id as ASTNode)
           if (how) {
-            if (!leftToArrayMutation()) {
+            if (!leftToArrayMutation(targetParent.id as ASTNode)) {
               context.report({ node, messageId: "mutatedArray", data: { name: targetParent.id.name, how } })
             }
             return
