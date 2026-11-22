@@ -1239,6 +1239,24 @@ const regionOutcome = <E, A>(
 }
 
 /**
+ * A `bracket`'s use step: interrupted at once in a cancelled region, and a `Die` when `use` itself
+ * throws, so the release still runs.
+ */
+const runUse = async <R extends Type, E extends Type, A extends Type>(
+  use: () => IO<R, E, A>,
+  context: Context<R>,
+  interruption: AbortSignal | undefined,
+  cancelled: () => boolean,
+): Promise<ExitType<E, A>> => {
+  if (cancelled()) return Exit.interrupted()
+  try {
+    return await runEffect(_fx(use()), context, interruption)
+  } catch (e) {
+    return Exit.die(e)
+  }
+}
+
+/**
  * Interprets and runs an effect asynchronously.
  *
  * `interruption` is the abort signal of the enclosing `interruptOn` region(s). It is checked
@@ -1377,13 +1395,11 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return acquireExit as ExitType<E, A>
         }
         const resource = acquireExit.orThrow()
-        try {
-          if (cancelled()) return Exit.interrupted()
-          return await runEffect(_fx(effect.use(resource)), context, interruption)
-        } finally {
-          // Release always runs, even if use fails or the region was cancelled
-          await runEffect(_fx(effect.release(resource)), context)
-        }
+        // Release always runs, even if use fails, throws, or the region was cancelled. A failed
+        // release replaces the outcome, as a throwing `finally` does, and as under `runSync`.
+        const useExit = await runUse(() => effect.use(resource), context, interruption, cancelled)
+        const releaseExit = await runEffect(_fx(effect.release(resource)), context)
+        return releaseExit.isSuccess() ? useExit : unsafeCoerce<ExitType<never, void>, ExitType<E, A>>(releaseExit)
       }
       case "BracketExit": {
         const acquireExit = await runEffect(_fx(effect.acquire), context)
@@ -1391,12 +1407,11 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           return acquireExit as ExitType<E, A>
         }
         const resource = acquireExit.orThrow()
-        const useExit: ExitType<E, A> = cancelled()
-          ? Exit.interrupted()
-          : await runEffect(_fx(effect.use(resource)), context, interruption)
-        // Release always runs (masked, like acquire) and receives the use-step's Exit
-        await runEffect(_fx(effect.release(resource, useExit)), context)
-        return useExit
+        const useExit = await runUse(() => effect.use(resource), context, interruption, cancelled)
+        // Release always runs (masked, like acquire) and receives the use-step's Exit. A failed
+        // release replaces the outcome, as in `bracket`.
+        const releaseExit = await runEffect(_fx(effect.release(resource, useExit)), context)
+        return releaseExit.isSuccess() ? useExit : unsafeCoerce<ExitType<never, void>, ExitType<E, A>>(releaseExit)
       }
       case "Race": {
         if (effect.effects.length === 0) {

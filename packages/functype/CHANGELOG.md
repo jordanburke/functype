@@ -6,6 +6,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **Fixed: a `bracket` whose release fails no longer reports success under `run()`.** The async interpreter ran the release and dropped its outcome, so a release that died, such as a failed commit or close, left the run reporting the use step's result. `runSync()` already reported the failure. Now the failed release replaces the outcome under `run()`, `runOrThrow()` and `runExit()` too, as a throwing `finally` does. The same holds for `bracketExit`.
+- **Fixed: a `bracketExit` whose `use` callback throws runs its release.** Before, the throw skipped the release, so the resource leaked. The release now runs and receives a `Die` exit. `bracket` already ran its release in that case.
+- **Behavior change:** only code whose release step fails sees a difference: a run that reported success now fails. That code had a hidden failure.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
