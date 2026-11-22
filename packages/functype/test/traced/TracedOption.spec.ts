@@ -173,3 +173,23 @@ describe("TracedOption", () => {
     expect(events.map((e) => e.seq)).toEqual([0, 1, 2])
   })
 })
+
+describe("TracedOption shares its methods", () => {
+  const tracer = { emit: (): void => undefined }
+
+  it("keeps only its data as own properties", () => {
+    const traced = TracedOption(Some(1), tracer, "span")
+    expect(Object.keys(traced)).toEqual(["_tag", "inner", "tracer", "spanId", "seq"])
+    expect(Object.getPrototypeOf(traced)).toBe(Object.getPrototypeOf(TracedOption(None(), tracer, "other")))
+  })
+
+  it("compares by its Option and position in test matchers", () => {
+    expect(TracedOption(Some(1), tracer, "span")).toEqual(TracedOption(Some(1), tracer, "span"))
+    expect(TracedOption(Some(1), tracer, "span")).not.toEqual(TracedOption(Some(1), tracer, "span", 1))
+  })
+
+  it("throws on a detached call", () => {
+    const { map } = TracedOption(Some(1), tracer, "span")
+    expect(() => map((x: number) => x + 1)).toThrow(TypeError)
+  })
+})

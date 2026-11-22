@@ -18,9 +18,12 @@
  * collection-naming is a convention, not a heuristic — functype's Map/Set imported under their own names,
  * the built-in spelled globalThis.Map — so it has no false-positive class and starts at error.
  *
- * no-array-mutation is off here only because turning a new error on in a 1.x minor would fail consumers'
- * builds on upgrade (91 hits across five consumers, every one a real in-place mutation). It's `error` in
- * strict, and planned for `error` here in 2.0. It is type-aware: without type information it reports nothing.
+ * Promoted in 2.0, which a 1.x minor couldn't do without failing consumers' builds on upgrade:
+ * - no-array-mutation: 91 hits across five consumers, every one a real in-place mutation. Type-aware:
+ *   without type information it reports nothing.
+ * - prefer-list: about 96% precise on five consumers (#362). Its main false positive, Supabase's generated
+ *   types, is skipped by shape. It reports a mutated array where it is declared and no-array-mutation where
+ *   it changes, so one `push` can show up under both.
  *
  * no-floating-io (1.17) is off here and `warn` in strict while it is measured: 0 false positives across
  * ~1,340 IO-typed calls in five codebases, but no real hits yet either. 2.0 decides `recommended` after
@@ -48,14 +51,14 @@ const recommendedRules = {
   "functype/prefer-map": "error",
   "functype/prefer-fold": "error",
   "functype/collection-naming": "error",
+  "functype/prefer-list": "error",
+  "functype/no-array-mutation": "error",
   "functype/prefer-option": "warn",
   "functype/prefer-either": "warn",
   "functype/prefer-try": "warn",
   "functype/prefer-flatmap": "warn",
   "functype/prefer-do-notation": "warn",
   "functype/no-get-unsafe": "off",
-  "functype/prefer-list": "off",
-  "functype/no-array-mutation": "off",
   "functype/no-floating-io": "off",
   "functype/no-floating-result": "off",
   "functype/no-serialize-container": "off",

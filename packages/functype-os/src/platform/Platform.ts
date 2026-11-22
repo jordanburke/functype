@@ -141,9 +141,9 @@ const detectCloudProvider = (name: string): Option<CloudDetection> => {
 const scanDirectChildren = (home: string): readonly CloudStorageDir[] =>
   Try(() => fs.readdirSync(home))
     .map((entries) =>
-      entries.flatMap((name): CloudStorageDir[] => {
+      entries.flatMap((name): ReadonlyArray<CloudStorageDir> => {
         const fullPath = path.join(home, name)
-        return detectCloudProvider(name).fold<CloudStorageDir[]>(
+        return detectCloudProvider(name).fold<ReadonlyArray<CloudStorageDir>>(
           () => [],
           (detection) =>
             isDirectory(fullPath) ? [{ provider: detection.provider, path: fullPath, label: detection.label }] : [],
@@ -159,7 +159,7 @@ const scanMacCloudStorage = (home: string): readonly CloudStorageDir[] => {
   const cloudStoragePath = path.join(home, "Library", "CloudStorage")
   return Try(() => fs.readdirSync(cloudStoragePath))
     .map((entries) =>
-      entries.flatMap((name): CloudStorageDir[] => {
+      entries.flatMap((name): ReadonlyArray<CloudStorageDir> => {
         const fullPath = path.join(cloudStoragePath, name)
         if (!isDirectory(fullPath)) return []
         if (name.startsWith("OneDrive")) return [{ provider: "onedrive", path: fullPath, label: name }]

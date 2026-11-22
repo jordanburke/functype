@@ -220,6 +220,20 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
 
+**2.0 (breaking): eslint-plugin-functype's presets get stricter.** From §5b of #276 (the 2.0 release plan). A new `error` fails a build, so these waited for a major.
+
+- **`recommended`:** `no-array-mutation` and `prefer-list` are now `error` (both were `off`). `no-array-mutation` found 91 hits across five consumers, every one a real in-place change. `prefer-list` was about 96% precise (#362, prefer-list flags only mutable or mutated arrays), and it skips Supabase's generated types (any file whose top level exports both `Json` and `Database`), its main false positive.
+- **`strict`:** `prefer-fold` also checks guards (`checkGuards: true`, from #363, the prefer-fold guard check): `if (e.isLeft()) return …` followed by `e.value` or `e.orThrow()` is reported. `prefer-list` is `error` here too (was `warn`). `recommended` leaves the guard check off.
+- **`agent`:** inherits both. `prefer-list` is `error` (was `off`), so `agent` no longer turns off a rule that `recommended` errors on.
+- An array that is declared and then pushed to is reported twice: by `prefer-list` at the declaration, and by `no-array-mutation` at the `push`. One fix clears both.
+- `no-array-mutation` is type-aware. Without `parserOptions.projectService` it reports nothing, so a config without type information sees only the `prefer-list` part of this change.
+- `no-floating-io`, `no-floating-result` and `no-serialize-container` are unchanged in every preset.
+- **Upgrade:** run `eslint` after upgrading and fix what it reports:
+  - A mutable type (`string[]`, `Array<T>`) becomes `ReadonlyArray<T>`, or `List<T>` for a collection you transform.
+  - An in-place change (`push`, `sort`, `xs[i] = v`, `xs.length = 0`) becomes a new array (`[...xs, x]`, `toSorted`, `with`) or a fold. A shared buffer, such as a test logger's store, can hold a `List` in a field and replace it on each write.
+  - A host that needs a mutable array: mark the function `@interop <reason>`, or wrap the type in `Wire<…>`.
+  - To keep 1.x levels for now, set `"functype/no-array-mutation": "off"` and `"functype/prefer-list": "off"` after `functype.configs.recommended`. For `strict` without the guard check, set `"functype/prefer-fold": ["error", { "checkGuards": false }]` after `functype.configs.strict`. A bare `"error"` keeps the preset's options, so the check stays on.
+
 **2.0 (breaking): Identity, Tag, Context and Ref share their methods.** §14 of #276 (the 2.0 release plan), after #553 (Tuple and Lazy share their methods). Still to convert: TracedOption and Layer.
 
 - Each type now has one frozen prototype that holds its methods, and a value keeps only its data. An Identity keeps `_tag` and `id`, a Tag `_tag` and `id`, a Context `_tag` and `services`, and a Ref `_tag` and `value`.
@@ -248,6 +262,22 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **`build` is a method, and always returns a promise.** Before, a `Layer.sync` or `Layer.fromService` whose factory threw made `build` throw synchronously. Now `build` rejects. `provideLayer` already turned either into a failed run, so code that only provides layers sees no change.
 - **A detached method call fails:** `const { build } = layer` throws a `TypeError`. A detached `merge`, `provideToAndMerge` or `map` returns a layer that rejects when built.
 - **Upgrade:** call Layer methods on the value. Code that called `layer.build(ctx)` and caught a synchronous throw should catch the rejection instead.
+
+**2.0 (breaking): TracedOption shares its methods.** §14 of #276 (the 2.0 release plan). Layer is the last value type still to convert.
+
+- A TracedOption used to build six closures per value, and a traced chain builds one value per step. Now one frozen prototype holds the methods, and a value keeps only its data: `_tag`, the wrapped Option (`inner`), `tracer`, `spanId` and `seq`. Only `_tag` is on the `TracedOption` type.
+- **Test matchers compare TracedOptions by their data.** Before, any two were equal, because a value held only functions.
+- **A detached method call throws**, because `this` is undefined: `const { map } = traced`.
+- **Upgrade:** call TracedOption methods on the value. A `TracedOption` object literal no longer type-checks without `_tag`; build one with `TracedOption(option, tracer, spanId)`.
+
+**2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
+
+- Both interpreters were recursive, one call per step. 10,000 chained `flatMap`s threw a `RangeError` under `runSync()` and `run()`. Under `runSync()`, so did a recursive loop, an `IO.gen` with 10,000 yields and a `repeatUntil` run 10,000 times. Now each interpreter is a loop over a stack of the steps waiting on their inner effects, so all of these run to 1,000,000 steps.
+- `bracket`, `all`, `withSpan`, `interruptOn`, `race` and `timeout` run their inner effects in a nested loop. Under `run()` each starts on a fresh call stack, so nesting them is unbounded too: 30,000 nested levels of each pass. Under `runSync()` there is no fresh stack to start on, so nesting them, a `withSpan` inside a `withSpan` and so on, overflows after a few thousand levels.
+- `run()` now awaits only a step that returns a promise, and runs synchronous steps back to back. On Node 24.20.0, a 50-step chain under `run()` went from about 5,300 to 1,600 ns. Under `runSync()` it is about the same. A one-step `runSync()` costs a few nanoseconds more.
+- **Behavior change: an effect's synchronous steps run without a break.** Under `run()`, every step used to wait a microtask, so other queued work could run between two steps. Now a run of synchronous steps finishes first. In an `IO.race` of all-synchronous effects, the first one listed now wins. In an `IO.all` where one synchronous child fails, a synchronous sibling runs to its end, or to its first asynchronous step, before the abort lands. An `IO.async` or `IO.sleep` step still yields, as before.
+- **Behavior change: a `bracket` or `bracketExit` whose release fails reports the failure under `run()`.** It replaces the use step's outcome, as a throwing `finally` does, and as `runSync()` already did. Before, `run()` dropped it and returned the use step's outcome. A `bracketExit` whose `use` callback throws now runs its release, as `bracket` does. A release callback that returns something other than an IO is a `Die`; it used to be ignored.
+- **Upgrade:** nothing to change, unless code relied on `run()` ignoring a failed release, or on other work running between two synchronous steps of an effect. To yield between steps, add an `IO.sleep(0)`.
 
 ## 1.27.1 - 2026-11-19
 
