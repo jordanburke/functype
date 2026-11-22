@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest"
 
 import { IO } from "@/io"
+import { Some } from "@/option"
 
 describe("IO.gen at run time", () => {
   it("starts a fresh generator on every run", async () => {
@@ -94,5 +95,51 @@ describe("an IO's iterator", () => {
       return a + b
     })
     expect(program.runSyncOrThrow()).toBe(2)
+  })
+})
+
+describe("IO.gen and a region cancelled inside the body", () => {
+  it("ends interrupted when the body aborts after its last yield", async () => {
+    const controller = new AbortController()
+    const program = IO.gen(function* () {
+      const a = yield* IO.succeed(1)
+      controller.abort()
+      return a
+    }).interruptOn(controller.signal)
+    const exit = await program.runExit()
+    expect(exit._tag).toBe("Failure")
+  })
+
+  it("ends interrupted when a body with no yield aborts", async () => {
+    const controller = new AbortController()
+    const program = IO.gen(function* (): Generator<never, number, unknown> {
+      controller.abort()
+      return 1
+    }).interruptOn(controller.signal)
+    expect((await program.runExit())._tag).toBe("Failure")
+  })
+
+  it("ends interrupted when the run's own signal aborts after the last yield", async () => {
+    const controller = new AbortController()
+    const program = IO.gen(function* () {
+      const a = yield* IO.async(() => Promise.resolve(1))
+      controller.abort()
+      return a
+    })
+    expect((await program.runExit({ signal: controller.signal }))._tag).toBe("Interrupted")
+  })
+})
+
+describe("IO.gen yielded a value that isn't an IO", () => {
+  it("dies with a message that names IO.gen and the fix", async () => {
+    const program = IO.gen(function* () {
+      // The types reject this; only a cast gets an Option here.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const a = (yield Some(1) as any) as number
+      return a
+    })
+    const exit = await program.runExit()
+    expect(exit._tag).toBe("Die")
+    expect(String(exit._tag === "Die" ? exit.defect : "")).toContain("IO.gen was yielded a value that isn't an IO")
   })
 })

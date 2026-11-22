@@ -5,7 +5,8 @@
 import ts from "typescript"
 
 import { compilerOptions, createCompilerHost, VIRTUAL_FILENAME } from "./compiler-host"
-import type { ValidateOptions, ValidationDiagnostic, ValidationResult } from "./types"
+import { lintCode } from "./lint"
+import type { LintDiagnostic, ValidateOptions, ValidationDiagnostic, ValidationResult } from "./types"
 
 const DEFAULT_IMPORTS = `import { Option, Some, None, Either, Right, Left, Try, List, Set, Map, Lazy, LazyList, IO, Cond, Match, Brand, ValidatedBrand, Tuple, Stack, Identity, Ref, TracedOption, invariant, type Wire, type Tracer, type TraceEvent } from "functype"\n`
 
@@ -40,9 +41,21 @@ export const validateCode = (code: string, options: ValidateOptions = {}): Valid
     .filter((d) => !shouldPrepend || d.originalLine >= importLineCount)
     .map(({ originalLine: _, ...rest }) => rest)
 
+  const typeErrors = userDiagnostics.filter((d) => d.severity === "error").length
+  // Lint only code that type-checks: the type-aware rules read types an erroring snippet may lack.
+  const lint: LintDiagnostic[] | undefined =
+    (options.lint ?? true) && typeErrors === 0
+      ? lintCode(fullCode, VIRTUAL_FILENAME, program)
+          // Drop findings on the prepended import line; a line-0 message is a config problem, kept.
+          .filter((d) => d.line === 0 || d.line > importLineCount)
+          .map((d) => (d.line === 0 ? d : { ...d, line: d.line - importLineCount }))
+      : undefined
+  const lintErrors = lint?.filter((d) => d.severity === "error").length ?? 0
+
   return {
-    success: userDiagnostics.filter((d) => d.severity === "error").length === 0,
+    success: typeErrors === 0 && lintErrors === 0,
     diagnostics: userDiagnostics,
+    ...(lint === undefined ? {} : { lint }),
     importsPrepended: shouldPrepend,
   }
 }

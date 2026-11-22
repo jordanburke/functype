@@ -323,8 +323,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - each run starts a fresh generator;
   - a failure short-circuits without resuming it;
   - a throw in the body is a `Die`;
-  - a cancelled region stops before resuming it.
-- **Upgrade:** an IO's `[Symbol.iterator]()` is now typed `Iterator<IO<R, E, A>, A, unknown>` rather than `Generator<…>`, so it has no `return` or `throw` method. `yield*` needs neither. A value that isn't an IO but was yielded through an `any`, such as an Option, now ends the run as a `Die`, where it used to run through its own `flatMap`.
+  - a cancelled region stops before resuming it, and a body that aborts its own region before returning ends interrupted.
+- **Upgrade:** an IO's `[Symbol.iterator]()` is now typed `Iterator<IO<R, E, A>, A, unknown>` rather than `Generator<…>`, so it has no `return` or `throw` method. `yield*` needs neither. A value that isn't an IO but was yielded through an `any`, such as an Option, now ends the run as a `Die` whose message names `IO.gen` and the fix, where it used to run through its own `flatMap`.
+
+**2.0: functype-mcp-server's `validate_code` lints too.** Roadmap 7c: an agent checking a snippet sees the errors its build would show, not only type errors.
+
+- After the snippet type-checks, `validate_code` lints it with eslint-plugin-functype's `recommended` preset. That is the preset a project's build runs, with every rule `error` or `off`.
+- The type-aware rules run too, such as `no-floating-result` on a dropped `Either` and `no-array-mutation` on a `push`. The linter reuses the TypeScript program the type check built, so it adds no measurable time per call: about 71 ms with or without lint, on Node 24.20.0.
+- A snippet now passes only with no type errors and no lint errors. The result gains a `lint` field with each finding's line, column, message and rule. The tool's text lists type errors and lint errors under their own headings.
+- **Upgrade:** a snippet that passed before can now fail on a lint rule. Pass `lint: false` to check types alone. functype-mcp-server now depends on `eslint`, `@typescript-eslint/parser` and eslint-plugin-functype.
 
 ## 1.27.2 - 2026-11-21
 

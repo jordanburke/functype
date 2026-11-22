@@ -1189,7 +1189,17 @@ type GenFrame = { readonly _tag: "GenNext"; readonly iterator: Iterator<unknown,
 type WrapperStack = (Wrapper | GenFrame | Context<Type>)[]
 
 /** The effect of a value a generator yielded. `IO.gen`'s types allow only an IO there. */
-const yieldedEffect = (value: unknown): AnyEffect => _fx(unsafeCoerce<unknown, IO<Type, Type, Type>>(value))
+const yieldedEffect = (value: unknown): AnyEffect => {
+  const effect: unknown =
+    typeof value === "object" && value !== null ? (value as Readonly<Record<string, unknown>>)[IOEffectKey] : undefined
+  if (typeof effect === "object" && effect !== null && typeof (effect as { _tag?: unknown })._tag === "string") {
+    return unsafeCoerce(effect)
+  }
+  // Only a cast can get here; it becomes a `Die` naming the fix.
+  throw new TypeError(
+    "IO.gen was yielded a value that isn't an IO. Use `yield*` on an IO; convert an Option, Either or Try first with IO.fromOption, IO.fromEither or IO.fromTry, and wrap a plain value with IO.succeed.",
+  )
+}
 
 /**
  * The outcome of a step that returned nothing, which only a `SpanTracer` whose `run` doesn't
@@ -1522,7 +1532,9 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
             const iterator = fx.start()
             const first = iterator.next(undefined)
             if (first.done === true) {
-              exit = Exit.succeed(first.value)
+              // A body that aborts its own region before returning ends interrupted, as a
+              // `flatMap` continuation's result would.
+              exit = cancelled() ? Exit.interrupted() : Exit.succeed(first.value)
               continue
             }
             stack.push({ _tag: "GenNext", iterator }, ctx)
@@ -1604,7 +1616,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
             } else {
               const step = wrapper.iterator.next(exit.value)
               if (step.done === true) {
-                exit = Exit.succeed(step.value)
+                exit = cancelled() ? Exit.interrupted() : Exit.succeed(step.value)
               } else {
                 stack.push(wrapper, wrapperContext)
                 fx = yieldedEffect(step.value)
