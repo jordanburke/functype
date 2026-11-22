@@ -6,8 +6,13 @@ import testOverrides from "../../eslint-config-functype/src/configs/test-overrid
 import plugin from "../src/index"
 import ruleRegistry from "../src/rules"
 
-type Preset = { readonly rules: Readonly<Record<string, string>> }
+type Level = "off" | "warn" | "error"
+type RuleEntry = Level | readonly [Level, Readonly<Record<string, unknown>>]
+type Preset = { readonly rules: Readonly<Record<string, RuleEntry>> }
 const configs = plugin.configs as Readonly<Record<string, Preset>>
+
+/** A rule's level, whether it is set alone (`"error"`) or with options (`["error", { … }]`). */
+const levelOf = (entry: RuleEntry | undefined): Level | undefined => (typeof entry === "string" ? entry : entry?.[0])
 
 /**
  * Severity policy (#325): a rule is `error` in `recommended` once it is right on ~95–99% of real code
@@ -25,6 +30,8 @@ describe("recommended preset", () => {
     "functype/prefer-map",
     "functype/prefer-fold",
     "functype/collection-naming",
+    "functype/prefer-list",
+    "functype/no-array-mutation",
   ])("%s is an error", (rule) => {
     expect(rules[rule]).toBe("error")
   })
@@ -38,11 +45,19 @@ describe("recommended preset", () => {
   ])("%s stays a warning until its boundary cases are closed", (rule) => {
     expect(rules[rule]).toBe("warn")
   })
+
+  it("leaves prefer-fold's guard check off", () => {
+    expect(rules["functype/prefer-fold"]).toBe("error")
+  })
 })
 
 describe("strict preset", () => {
   it("errors on in-place array mutation", () => {
     expect(configs.strict!.rules["functype/no-array-mutation"]).toBe("error")
+  })
+
+  it("turns on prefer-fold's guard check", () => {
+    expect(configs.strict!.rules["functype/prefer-fold"]).toEqual(["error", { checkGuards: true }])
   })
 
   it("warns on an IO that is never run, while it is measured", () => {
@@ -74,8 +89,8 @@ describe("strict preset", () => {
     const rank = { off: 0, warn: 1, error: 2 } as const
     const recommended = configs.recommended!.rules
     const strict = configs.strict!.rules
-    Object.entries(recommended).forEach(([rule, level]) => {
-      expect(rank[strict[rule] as keyof typeof rank]).toBeGreaterThanOrEqual(rank[level as keyof typeof rank])
+    Object.entries(recommended).forEach(([rule, entry]) => {
+      expect(rank[levelOf(strict[rule])!], rule).toBeGreaterThanOrEqual(rank[levelOf(entry)!])
     })
   })
 })
@@ -93,13 +108,13 @@ describe("agent preset", () => {
         .map((name) => `functype/${name}`)
         .sort(),
     )
-    expect(Object.entries(agent).filter(([, level]) => level === "warn")).toEqual([])
+    expect(Object.entries(agent).filter(([, entry]) => levelOf(entry) === "warn")).toEqual([])
   })
 
   it("errors on everything strict errors on", () => {
     Object.entries(configs.strict!.rules)
-      .filter(([, level]) => level === "error")
-      .forEach(([rule]) => expect(agent[rule], rule).toBe("error"))
+      .filter(([, entry]) => levelOf(entry) === "error")
+      .forEach(([rule, entry]) => expect(agent[rule], rule).toEqual(entry))
   })
 
   it.each(["functype/no-floating-io", "functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
@@ -116,9 +131,11 @@ describe("agent preset", () => {
     },
   )
 
-  it("leaves prefer-list off, since no-array-mutation errors on its in-place-change case", () => {
-    expect(agent["functype/prefer-list"]).toBe("off")
-    expect(agent["functype/no-array-mutation"]).toBe("error")
+  it("errors on everything recommended errors on, prefer-list included", () => {
+    Object.entries(configs.recommended!.rules)
+      .filter(([, entry]) => levelOf(entry) === "error")
+      .forEach(([rule]) => expect(levelOf(agent[rule]), rule).toBe("error"))
+    expect(agent["functype/prefer-list"]).toBe("error")
   })
 })
 

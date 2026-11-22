@@ -12,28 +12,33 @@ export const expandTilde = (p: string): string => {
   return p
 }
 
+// Factor out the leading `$` and forbid `$` inside `${...}` so the engine
+// can't backtrack catastrophically on inputs like `${{${{${{...` (CodeQL
+// js/polynomial-redos).
+const VAR_PATTERN = /\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g
+
+/** `NAME` from `${NAME}` (first capture) or `$NAME` (second). */
+const varNameOf = (braced: string | undefined, bare: string | undefined): string =>
+  Option(braced)
+    .orElse(() => Option(bare))
+    .getOrElse(() => "")
+
 export const expandVars = (p: string): Either<PathError, string> => {
-  const unresolvedVars: string[] = []
-  // Factor out the leading `$` and forbid `$` inside `${...}` so the engine
-  // can't backtrack catastrophically on inputs like `${{${{${{...` (CodeQL
-  // js/polynomial-redos).
-  const result = p.replace(/\$(?:\{([^}$]+)\}|([A-Za-z_][A-Za-z0-9_]*))/g, (_match: string, ...captures: unknown[]) => {
-    const varName = Option(captures[0] as string | undefined)
-      .orElse(() => Option(captures[1] as string | undefined))
-      .getOrElse(() => "")
-    const value = process.env[varName]
-    if (value === undefined) {
-      unresolvedVars.push(varName)
-      return _match
-    }
-    return value
-  })
+  const unresolvedVars = Array.from(p.matchAll(VAR_PATTERN), (match) => varNameOf(match[1], match[2])).filter(
+    (varName) => process.env[varName] === undefined,
+  )
 
   if (unresolvedVars.length > 0) {
     return Left(PathError(p, "unresolved_variable", `Unresolved variables: ${unresolvedVars.join(", ")}`))
   }
 
-  return Right(result)
+  return Right(
+    p.replace(
+      VAR_PATTERN,
+      (match: string, braced: string | undefined, bare: string | undefined) =>
+        process.env[varNameOf(braced, bare)] ?? match,
+    ),
+  )
 }
 
 export const expandPath = (p: string): Either<PathError, string> => {

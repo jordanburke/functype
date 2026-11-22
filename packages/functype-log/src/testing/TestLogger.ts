@@ -11,18 +11,19 @@ export type TestLoggerHandle = {
 }
 
 export const createTestLogger = (): TestLoggerHandle => {
-  const store: LogEntry[] = []
+  // What the logger has written: an immutable List, replaced on each write, so `entries()` is a snapshot.
+  const recorded = { entries: List.empty<LogEntry>() }
 
   return {
     logger: createSinkLogger((entry) => {
-      store.push(entry)
+      recorded.entries = recorded.entries.add(entry)
     }),
-    entries: () => List(store),
+    entries: () => recorded.entries,
     clear: () => {
-      store.length = 0
+      recorded.entries = List.empty<LogEntry>()
     },
     hasEntry: (level: LogLevel, messagePattern: string | RegExp) =>
-      store.some(
+      recorded.entries.exists(
         (e) =>
           e.level === level &&
           (typeof messagePattern === "string" ? e.message.includes(messagePattern) : messagePattern.test(e.message)),
