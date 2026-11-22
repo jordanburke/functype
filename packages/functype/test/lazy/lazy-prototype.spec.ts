@@ -331,7 +331,7 @@ describe("Lazy's construction cost", { retry: 2 }, () => {
     return elapsed / N
   }
 
-  /** The fastest ((build) / (build a plain object of the same shape)) over the fastest plain-object build, across interleaved runs. */
+  /** The fastest build over the fastest build of a plain object of the same shape, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ _tag: "Lazy", state: { _tag: "Pending", thunk: () => i } })
     for (let i = 0; i < 5_000; i++) {
