@@ -76,8 +76,7 @@ jobs:
           # ALLOW_MAJOR env set on the workflow run (workflow_dispatch
           # in the Actions UI lets you override env vars), OR add it
           # here temporarily in a release-prep PR and remove afterwards.
-          # 2.0.0: the six family packages. Set back to "" in a follow-up PR after the release.
-          ALLOW_MAJOR: "functype,functype-os,functype-log,functype-react,functype-eval,functype-mcp-server"
+          ALLOW_MAJOR: ""
 
       - name: Publish to npm
         run: pnpm -r publish --no-git-checks --access public --tag "${{ steps.line.outputs.tag }}"

@@ -98,7 +98,7 @@ if (dirty) {
   process.exit(1);
 }
 // `main` carries the next major; `release/<major>.x` branches carry additive releases
-// of an older line (e.g. `release/1.x` while `main` is 2.0-bound).
+// of an older line (e.g. `release/1.x` while `main` carries 2.x).
 const branch = capture("git", ["rev-parse", "--abbrev-ref", "HEAD"]);
 if (branch !== "main" && !/^release\/\d+\.x$/.test(branch)) {
   console.error(
