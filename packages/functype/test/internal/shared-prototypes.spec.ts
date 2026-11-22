@@ -53,6 +53,9 @@ type ValueType = {
   readonly tagOnPrototype?: string
 }
 
+/** One tag for every Layer sample, so matchers compare the services. */
+const layerTag = Tag<number>("x")
+
 /** One tracer for every TracedOption sample, so matchers compare their Options, not two tracers. */
 const quietTracer = { emit: (): void => undefined }
 
@@ -118,6 +121,10 @@ const VALUE_TYPES: Readonly<Record<string, ValueType>> = {
   Obj: { exports: ["Obj"], variants: [["Obj", () => Obj({ a: 1 }), () => Obj({ a: 2 })]] },
   Tuple: { exports: ["Tuple"], variants: [["Tuple", () => Tuple([1, "a"]), () => Tuple([1, "b"])]] },
   Lazy: { exports: ["Lazy"], variants: [["Lazy", () => evaluated(1), () => evaluated(2)]] },
+  Layer: {
+    exports: ["Layer"],
+    variants: [["Layer", () => Layer.succeed(layerTag, 1), () => Layer.succeed(layerTag, 2)]],
+  },
   TracedOption: {
     exports: ["TracedOption"],
     variants: [
@@ -138,10 +145,11 @@ const VALUE_TYPES: Readonly<Record<string, ValueType>> = {
   Ref: { exports: ["Ref"], variants: [["Ref", () => Ref(1), () => Ref(2)]] },
 }
 
-/** Value types that don't meet the rules yet: each still builds its methods per value. */
-const NOT_YET: Readonly<Record<string, { readonly reason: string; readonly sample: () => object }>> = {
-  Layer: { reason: "builds build, merge, map and toString per value", sample: () => Layer.succeed(Tag("x"), 1) },
-}
+/**
+ * Value types that don't meet the rules yet: each still builds its methods per value. Empty since
+ * Layer converted; a new value type that can't meet the rules at once goes here with its reason.
+ */
+const NOT_YET: Readonly<Record<string, { readonly reason: string; readonly sample: () => object }>> = {}
 
 const FUNCTIONS = "a function or a module of functions; any value it returns is checked under its own type"
 const BRANDS = "a brand or a brand builder; branded values are primitives at run time"
@@ -300,6 +308,11 @@ describe("every value type shares its methods", () => {
 })
 
 describe("value types that don't meet the rules yet", () => {
+  // Runs even when NOT_YET is empty, as it is now, so the suite always has a test.
+  it("gives each one a reason", () => {
+    expect(Object.values(NOT_YET).filter((entry) => entry.reason.trim() === "")).toEqual([])
+  })
+
   it.each(Object.entries(NOT_YET))(
     "%s still breaks a rule (%s): move it to VALUE_TYPES once it doesn't",
     (_, entry) => {
