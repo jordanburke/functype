@@ -282,6 +282,15 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **Behavior change: a `bracket` or `bracketExit` whose release fails reports the failure under `run()`.** It replaces the use step's outcome, as a throwing `finally` does, and as `runSync()` already did. Before, `run()` dropped it and returned the use step's outcome. A `bracketExit` whose `use` callback throws now runs its release, as `bracket` does. A release callback that returns something other than an IO is a `Die`; it used to be ignored.
 - **Upgrade:** nothing to change, unless code relied on `run()` ignoring a failed release, or on other work running between two synchronous steps of an effect. To yield between steps, add an `IO.sleep(0)`.
 
+**2.0 (breaking): IO's common wrong calls fail with a message that says what to do.** Roadmap 7a ("types that reject the wrong call"). The cases come from the wrong calls the doc type-checks found, and from this release's reviews.
+
+- **`run()` on an IO whose services aren't provided** names them and the fix. Before: "The 'this' context of type 'IO<Db, never, string>' is not assignable to method's 'this' of type 'IO<never, never, string>'". Now the expected `this` is `{ "Provide these services first, with provideLayer or provideService": Db }`. This covers `run`, `runOrThrow`, `runSync`, `runSyncOrThrow`, `runExit`, `runOption`, `runTry` and `runCancellable`.
+- **`catchTag` where nothing has a `_tag`** says to use `catchAll` or `recoverWith`. Before, it said `'"Boom"' is not assignable to parameter of type 'never'`. On an IO that can't fail (`E = never`), it says there is nothing to catch.
+- **`IO.gen` accepts only IOs in a `yield`.** Before, anything with a `Symbol.toStringTag` passed, so `yield Promise.resolve(1)` compiled and died at run time, and `yield Option(5)` compiled. Both now fail at the `yield`.
+- **A bare `yield` in `IO.gen` gives `unknown`, not `any`.** `const x = yield IO.succeed(1)` used to make `x` an `any`, which hid every later mistake. Write `yield*`, which gives the IO's value.
+- The same messages appear under TypeScript 7.0.2.
+- **Upgrade:** provide an IO's services before running it, as before; only the message changed. Replace `yield io` with `yield* io`. A generator annotated `Generator<any, A, any>` still compiles.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:
