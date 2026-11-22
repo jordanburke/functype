@@ -402,7 +402,7 @@ const HttpStatics = HttpCompanion
 export const Http: HttpCompanion = Companion({ _tag: "Http" } as const, HttpStatics)
 
 /** The type of `Http`: its tag and its statics, named so that errors and hovers print `HttpCompanion`. */
-export interface HttpCompanion extends HttpStaticsType {
-  readonly _tag: "Http"
-}
+// A type alias, not an interface: an object type keeps the implicit index signature the old
+// intersection had, so `Record<string, unknown>` and `Object.entries` still accept it.
+export type HttpCompanion = { readonly _tag: "Http" } & HttpStaticsType
 type HttpStaticsType = typeof HttpStatics

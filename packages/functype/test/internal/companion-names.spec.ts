@@ -72,6 +72,21 @@ const b: Option<number> = ofNumber(1)
 type Pair = ReturnType<typeof Tuple<[number, string]>>
 const c: Pair = Tuple<[number, string]>([1, "a"])
 export const all = [a, b, c]`,
+  // A companion passed as a callback keeps its generic: Option<number>[], not Option<unknown>[]
+  asCallback: `import { List, Option, Some, Try } from "functype"
+const a: Option<number>[] = [1, null, 3].map(Option)
+const b: Promise<List<number>> = Promise.resolve([1]).then(List)
+const c: Option<number> = Some(1).flatMap(Option)
+const d: Try<number>[] = [() => 1].map(Try)
+export const all = [a, b, c, d]`,
+  // The { _tag } companions keep the implicit index signature of an object type
+  tagObjects: `import { Decoder, DecoderError, Http, HttpError } from "functype"
+const a: Record<string, unknown> = Http
+const b: Record<string, unknown> = HttpError
+const c: Record<string, unknown> = Decoder
+const d: { readonly [key: string]: unknown } = DecoderError
+const entries: [string, unknown][] = Object.entries(Http)
+export const all = [a, b, c, d, entries]`,
   typeofCompanion: `import { List, Option } from "functype"
 const companion: typeof Option = Option
 const ofList: typeof List.of = List.of

@@ -113,7 +113,7 @@ const HttpErrorStatics = HttpErrorCompanion
 export const HttpError: HttpErrorCompanion = Companion({ _tag: "HttpError" } as const, HttpErrorStatics)
 
 /** The type of `HttpError`: its tag and its statics, named so that errors and hovers print `HttpErrorCompanion`. */
-export interface HttpErrorCompanion extends HttpErrorStaticsType {
-  readonly _tag: "HttpError"
-}
+// A type alias, not an interface: an object type keeps the implicit index signature the old
+// intersection had, so `Record<string, unknown>` and `Object.entries` still accept it.
+export type HttpErrorCompanion = { readonly _tag: "HttpError" } & HttpErrorStaticsType
 type HttpErrorStaticsType = typeof HttpErrorStatics

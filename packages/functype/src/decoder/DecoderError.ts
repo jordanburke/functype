@@ -118,7 +118,7 @@ const DecoderErrorStatics = DecoderErrorCompanion
 export const DecoderError: DecoderErrorCompanion = Companion({ _tag: "DecoderError" } as const, DecoderErrorStatics)
 
 /** The type of `DecoderError`: its tag and its statics, named so that errors and hovers print `DecoderErrorCompanion`. */
-export interface DecoderErrorCompanion extends DecoderErrorStaticsType {
-  readonly _tag: "DecoderError"
-}
+// A type alias, not an interface: an object type keeps the implicit index signature the old
+// intersection had, so `Record<string, unknown>` and `Object.entries` still accept it.
+export type DecoderErrorCompanion = { readonly _tag: "DecoderError" } & DecoderErrorStaticsType
 type DecoderErrorStaticsType = typeof DecoderErrorStatics
