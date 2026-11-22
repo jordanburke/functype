@@ -313,7 +313,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - The bases are split instead. `Reducible` holds Traversable's `size`, `isEmpty`, `contains`, `reduce` and `reduceRight`, and `Traversable` is `AsyncMonad` plus `Reducible`. `FunctypeCore` is FunctypeBase without the monad's members, and `FunctypeValue` is Functype without them. The collections extend `FunctypeCore` and `Applicative`, and Obj extends `FunctypeValue`. `KVTraversable` is now `Reducible`. Each type's members are unchanged.
 - A probe detaching 14 of those members is reported 14 times, against none before. `test/internal/no-mapped-bases.spec.ts` fails if an interface in src extends a mapped type again.
 - New exported types: `Reducible`, `FunctypeCore` and `FunctypeValue`.
-- The interface data behind `npx functype` and the MCP server's `get_interfaces` lists what the `Omit` hid: List and Set gain `Applicative`, `Functor`, `Foldable` and `Serializable`, and Obj gains `Extractable`, `Foldable`, `Matchable` and `Serializable`. Its parser also reads Option and Try again, through `OptionBase` and `TryBase`, since they became unions.
+- The generated interface data behind `npx functype` and the MCP server now lists what the `Omit` hid. What they show changes only for List and Set, which gain `Applicative`: the rest was already added by hand. The parser also reads Option and Try again, through `OptionBase` and `TryBase`, since they became unions.
+- `KVTraversable<A>` is now covariant in `A`, like `Traversable`. Before, the `Omit` alias was compared by structure, so a `KVTraversable<Animal>` assigned to a `KVTraversable<Dog>`.
 
 **2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
 
