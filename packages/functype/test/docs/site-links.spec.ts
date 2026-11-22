@@ -141,8 +141,8 @@ const aliasFirstIndexes = (): ReadonlyArray<string> =>
     })
 
 describe("docs site links", () => {
-  // It builds a TypeScript program of functype's src, about 2.5 s alone, so the 5 s default timed out
-  // under load.
+  // It builds a TypeScript program of functype's src, a few hundred ms alone, and timed out at the 5 s
+  // default while other test suites ran on the machine.
   it("every API reference link names a real export in the folder TypeDoc writes it to", { timeout: 60_000 }, () => {
     const folders = typedocFolders()
     const broken = linksMatching(/api-docs\/[A-Za-z_]+\/[A-Za-z0-9_$]+\.html/g).flatMap(({ file, url }) => {
