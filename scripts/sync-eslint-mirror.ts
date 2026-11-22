@@ -3,7 +3,7 @@
  * Sync the eslint pair version to mirror the functype family version per
  * the encoding rule:
  *
- *   eslint.major = 2 (fixed offset from functype's 1.x line)
+ *   eslint.major = 2 (fixed; functype's major goes into the minor)
  *   eslint.minor = functype.major * 100 + functype.minor
  *   eslint.patch = functype.patch
  *

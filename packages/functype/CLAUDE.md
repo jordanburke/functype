@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Quick Start
 
-- **Prerequisites**: Node.js ≥ 18.0.0, pnpm 10.x
+- **Prerequisites**: Node.js ≥ 18.0.0, pnpm 12
 - **Install**: `pnpm install`
 - **Development**: `pnpm dev` (build with watch mode)
 - **Before commit**: `pnpm validate` (format + lint + test + build)
