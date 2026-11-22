@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://functype.org/logo-dark.svg">
+    <img src="https://functype.org/logo.svg" alt="functype" height="72">
+  </picture>
+</p>
+
 # Functype
 
 [![NPM Version](https://img.shields.io/npm/v/functype)](https://www.npmjs.com/package/functype)
