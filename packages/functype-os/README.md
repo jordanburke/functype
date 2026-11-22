@@ -136,7 +136,7 @@ const handleError = (error: OsError) => {
 ## Requirements
 
 - Node.js >= 18
-- `functype` >= 0.49.0 (peer dependency)
+- `functype` >= 2.0.0 (peer dependency)
 
 ## Development
 

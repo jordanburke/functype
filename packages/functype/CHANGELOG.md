@@ -6,6 +6,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**Upgrading from 1.x:** [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) collects what to change: what the compiler reports, what it can't see, and each package's changes. The entries below have the details.
+
+**2.0: functype-os and functype-react need functype 2.0.** Their peer range on `functype` was `>=1.13.0` and `>=1.14.0`, but their code now calls 2.0 methods, such as `getOrElse`, so it fails against 1.x. Both peer ranges are now `>=2.0.0`. functype-log's code still compiles against 1.27.2, so its range is unchanged.
+
 **2.0 (types only): companions have names, so a wrong call prints a short message.**
 
 - Each companion's type is now a named, exported interface: `OptionCompanion`, `ListCompanion`, `IOCompanion`, and so on for all 21 (`Cond`, `Match`, `Decoder`, `DecoderError`, `Either`, `Http`, `HttpError`, `Identity`, `Exit`, `IO`, `Lazy`, `LazyList`, `List`, `Map`, `Obj`, `Option`, `Ref`, `Set`, `Stack`, `Try`, `Tuple`). Errors and hovers print that name instead of the whole type.
@@ -34,7 +38,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - The error type is the real one (`FsError`, `ProcessError`, `ConfigError`) rather than a wrapped `Throwable`. `Fs.exists`, `ConfigResolver.resolve` and `resolveAll` can't fail, so their `E` is `never`.
 - **Upgrade:** `await Fs.readFile(p)` becomes `await Fs.readFile(p).run()`. On the result, `isOk()` → `isRight()`, `isErr()` → `isLeft()`, `.error` → `.value`. A forgotten `.run()` compiles and does nothing; `@typescript-eslint/await-thenable` (on in ts-builds' functype preset) flags it.
 - `ConfigResolver.resolveAll` now checks candidates one at a time rather than all at once. Results are the same, in candidate order.
-- The `*Sync` methods are unchanged. functype-os's `functype` peer range is now `>=1.13.0` (it uses `IO.fromPromiseEither`).
+- The `*Sync` methods are unchanged. functype-os's `functype` peer range is now `>=2.0.0` (see the peer-range entry above).
 
 **2.0 (breaking): functype-react's async hooks run `IO` instead of `Task`.** Part of removing `Task` from functype.
 
@@ -42,7 +46,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `useIO`'s `Failure` carries the effect's typed `E` instead of a `Throwable`. A defect is rethrown during render to the nearest error boundary. On unmount or a `deps` change the effect is cancelled and stops at its next step.
 - `useIOPromise` resolves to an `Exit<E, A>`, so success, failure and defect stay apart. `useIOValue` throws the typed error, the defect, or an `InterruptedError`.
 - `ioQueryFn` / `useIOQuery` now run the effect with React Query's `signal`: a cancelled, unmounted or superseded query stops instead of running on with its result discarded. The query hooks' `TaskState` projections now return `AsyncState` (same shape).
-- functype-react's `functype` peer range is now `>=1.14.0` (it uses `runExit({ signal })`).
+- functype-react's `functype` peer range is now `>=2.0.0` (see the peer-range entry above).
 
 **2.0 (breaking): `IO.sleep`, `IO.never` and `.delay` wake when the run is interrupted.**
 
@@ -84,7 +88,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 **2.0 (breaking): Option, Either and Try share their methods instead of copying them onto every value.** From #539 (every method copied onto every value); the design is §14 of #276 (the 2.0 release plan).
 
 - Each value used to be an object literal of about 40 closures. `Some`, `None`, `Right`, `Left`, `Success` and `Failure` now each have one frozen prototype that holds the methods, and a value keeps only its data. Building a value and calling `map` once costs about the same as a plain object: 26–28 ns against 27 ns, down from 219 ns for `Some` and 440 ns for `Right`, in the repo's benchmark on Node 24.20.0. A `Some` uses about 65 bytes instead of 2.5 KB.
-- **A detached method call throws.** `const { getOrElse } = opt`, `xs.filter(opt.contains)` and `xs.map(either.getOrElse)` call the method without its value, so `this` is undefined. Call it on the value, or wrap it: `xs.map((x) => opt.getOrElse(() => x))`. ts-builds' functype preset is adding a warning for these, `@typescript-eslint/unbound-method`. It only sees members declared with method syntax.
+- **A detached method call throws.** `const { getOrElse } = opt`, `xs.filter(opt.contains)` and `xs.map(either.getOrElse)` call the method without its value, so `this` is undefined. Call it on the value, or wrap it: `xs.map((x) => opt.getOrElse(() => x))`. ts-builds' functype preset warns on these from ts-builds 4.8.0, through `@typescript-eslint/unbound-method`. It only sees members declared with method syntax.
 - **Own keys are only the data.** `Object.keys`, spread and `for…in` see `_tag` and `value` (plus `error` on a Try). A spread copy has no methods. Snapshots of a value need re-recording.
 - **A Success keeps its value as data.** It was reachable only through methods; `Object.keys(Try(() => 1))` is now `["_tag", "value", "error"]`.
 - Assigning over a method on a value throws in strict mode, because the prototype is frozen. `structuredClone(opt)` returns a copy with the data and no methods, where it threw `DataCloneError` before. A plain-object check such as `Object.getPrototypeOf(v) === Object.prototype` is now false.
@@ -141,7 +145,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - Call them: `list.tail()`, `set.head()`, `lazy.lastOption()`. `size`, `length` and `isEmpty` stay properties, and so do Obj's `size` and `isEmpty`.
 - The getters hid real work. `tail` and `init` copy the rest of a List or Set, so `while (!l.isEmpty) l = l.tail()` still copies on every step. And a spread, a deep-equality check or a logger that walked a collection's keys ran them: `{ ...lazyList }` read a 1,000,000-item source three times, and never returned on an infinite one.
 - **Compile errors:** most reads without the call fail to compile, such as `list.tail.map(f)` or `const x: number = list.head`.
-- **No type error:** a read of `head` or `last` without the call in a truthiness check (`if (list.head)`), before `??` (`list.head ?? 0`), in a template string, or passed to something that takes `unknown`, such as `expect(list.head).toBe(1)`, compiles and gets the method itself, which is always truthy. Search for these: the upgrade tool (§6) will rewrite every such read on a List, Set or LazyList. A plain text replace is unsafe, because `Http.head` and other libraries' `.head` are already methods.
+- **No type error:** a read of `head` or `last` without the call in a truthiness check (`if (list.head)`), before `??` (`list.head ?? 0`), in a template string, or passed to something that takes `unknown`, such as `expect(list.head).toBe(1)`, compiles and gets the method itself, which is always truthy. Search for these: the upgrade tool (§6), planned for after 2.0.0, will rewrite every such read on a List, Set or LazyList. A plain text replace is unsafe, because `Http.head` and other libraries' `.head` are already methods.
 - **Upgrade:** add `()` at every read of the six accessors on a List, Set or LazyList.
 
 **2.0 (breaking): List, Set, Map, Stack, LazyList and Obj share their methods instead of copying them onto every value.** §14 of #276 (the 2.0 release plan), PR 3, after #540 (Option, Either and Try share their methods) and #542 (IO and Exit share their methods). None of this is a type error.
@@ -215,7 +219,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - `orElse(() => alt)` written against 1.x, where `orElse` took a plain value. It returned the function itself on a None. In 2.0 the same text means the container fallback and returns `alt`.
 - **A literal default keeps its union in `getOrElse`, but not yet in `orElse`.** For `theme: Option<"light" | "dark">`, `theme.getOrElse(() => "light")` is `"light" | "dark"`, as 1.x's `theme.orElse("light")` was (see the `getOrElse` entry above). The container fallback still widens: `theme.orElse(() => Some("light"))` is an `Option<string>`. Write `Some<Theme>("light")`, or annotate the target. A wrong annotation downstream then fails to compile, so this one shows up as a type error.
 - eslint-plugin-functype follows. `no-get-unsafe` suggests `.getOrElse(() => undefined /* TODO: default */)`, under the messageId `suggestGetOrElse` (was `suggestOrElse`). `prefer-fold` suggests `a.orElse(() => b)` for `a.isSome() ? a : b`, under `suggestOrElse` (was `suggestOr`), and offers nothing when `b` contains `await` or `yield`.
-- **Upgrade:** the upgrade tool (§6 of #276, the 2.0 release plan) will rewrite these with type information. Don't text-replace `.or(` or `.orElse(`: `.or(` is also zod's, and `orElse` is reused with a new meaning, so run the `orElse` → `getOrElse` change before the `or` → `orElse` one, never the other way round.
+- **Upgrade:** fix each call the compiler reports, then search for the cases above. The upgrade tool (§6 of #276, the 2.0 release plan), planned for after 2.0.0, will rewrite these with type information. Don't text-replace `.or(` or `.orElse(`: `.or(` is also zod's, and `orElse` is reused with a new meaning, so run the `orElse` → `getOrElse` change before the `or` → `orElse` one, never the other way round.
 
 **2.0 (breaking): Tuple and Lazy share their methods instead of copying them onto every value.** §14 of #276 (the 2.0 release plan), PR 4, after #540 (Option, Either and Try share their methods), #542 (IO and Exit share their methods) and #544 (collections share their methods). Only one change is a type error: a Tuple's `length` is now `readonly`.
 
@@ -295,6 +299,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **Test matchers compare TracedOptions by their data.** Before, any two were equal, because a value held only functions.
 - **A detached method call throws**, because `this` is undefined: `const { map } = traced`.
 - **Upgrade:** call TracedOption methods on the value. A `TracedOption` object literal no longer type-checks without `_tag`; build one with `TracedOption(option, tracer, spanId)`.
+
+**2.0 (breaking): a detached method passed to an IO step or a Layer dies, instead of reading the step.**
+
+- The interpreters called a step's callbacks as methods of the step: the thunk of `IO.sync` and of the `IO(...)` constructor, the functions given to `map`, `flatMap`, `mapError`, `recoverWith`, `catchAll`, `fold` and `match`, the `use` and `release` of `bracket`, `bracketExit` and `acquireRelease`, and `IO.gen`'s generator. Layer did the same with the factories of `sync`, `effect`, `fromService` and `fromServiceEffect`, and with `map`'s function. So a detached method got the step as `this`. `IO.sync(ref.get)` succeeded with `undefined`, `IO.sync(Some(1).orThrow)` did too, and `.map(ref.set)` changed nothing and succeeded.
+- Each callback is now called without a receiver. A detached method throws, as it does outside an IO, and the run ends in a `Die`; under the `IO(...)` constructor, which declares `E = unknown`, it is a typed `Failure`. A `Layer.sync` or `Layer.fromService` whose factory is a detached method fails to build. That makes the "a detached method call throws" notes above true inside an IO too.
+- Plain callbacks, such as `(x) => ref.set(x)`, behave as before, and the cost is unchanged: a 50-step `map` chain under `run()` measured about 850 ns before and after (Node 24.20.0, built package).
+- **Upgrade:** wrap the method: `IO.sync(() => ref.get())`, `.map((x) => ref.set(x))`. Code that passed a detached method used to get `undefined` silently, so any such call was already a bug.
 
 **2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
 

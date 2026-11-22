@@ -14,7 +14,7 @@ pnpm release patch        # or: minor, major
 git push --follow-tags    # → triggers CI publish
 ```
 
-That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version differs from npm `latest`.
+That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version npm doesn't have yet.
 
 ## What `pnpm release` does
 
@@ -33,7 +33,7 @@ That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, 
 
 1. **Validate** — `pnpm validate`, as run locally, plus functype's coverage floor. Coverage runs only when `CI=true`, which GitHub sets, so a release whose functype coverage falls below the thresholds in `packages/functype/vitest.config.ts` fails here and publishes nothing. Run `CI=true pnpm -F functype test` locally to check before tagging. The same floor applies on `release/1.x`, with its own thresholds.
 2. **Check publish safety** — independent re-run of `pnpm check-publish-safety` in the clean CI environment.
-3. **Publish** — `pnpm -r publish --no-git-checks --access public` walks every workspace package and publishes any whose local version differs from npm `latest`.
+3. **Publish** — `pnpm -r publish --no-git-checks --access public --tag <tag>`, with the dist-tag `scripts/publish-tag.ts` picks (`latest`, or `latest-<major>` for an older line), walks every workspace package and publishes any whose local version npm doesn't have yet.
 4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
 5. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
@@ -47,14 +47,12 @@ Once `main` carries unreleased breaking changes, additive releases for the old m
 - Feature PRs for the old major target the release branch, and write their notes under `## Unreleased` there.
 - After each release from the branch, merge it into `main` (merge, never rebase) and keep both CHANGELOG sections. That is how the additive work reaches the next major.
 
-**Before the first 1.x publish after 2.0.0 is `latest`,** the publish path must change. Without these changes a 1.x patch would either take over `latest` or be refused:
+**An old line publishes beside `latest`, not over it.** These shipped in #581 (publish an older line under latest-<major>) and #585 (its review follow-ups), on `release/1.x`, before 2.0.0:
 
-1. **Pick the dist-tag at run time in `publish.yml`.** The workflow runs on a tag push and doesn't know the branch. Publish with `--tag latest-1` only when the local functype major is below npm `latest`'s major. Don't hard-code it: a hard-coded tag landing on `release/1.x` before 2.0.0 ships would leave 1.15.0 as `latest`.
-   - The tag can't be `v1` or `1.x`. npm rejects any tag name that parses as a semver range (`Tag name must not be a valid SemVer range`).
-2. **Fix the downgrade check in `check-publish-safety`.** Invariant 2 refuses any version below `latest`. That covers the eslint pair too: after 2.0 it is at `2.200.x`, and the 1.x line produces `2.116.x`, which classifies as a same-major downgrade. So key the check off the functype line (`floor(eslintMinor / 100)` for the pair), not each package's own major.
-   - Compare against the highest published version on the same line (`npm view <pkg> versions --json`, filtered), not against `npm view <pkg>@latest-1`. That tag won't exist at the first post-2.0 publish, so a tag lookup would come back empty and skip the gate.
-3. **Pass `make_latest: false` and `previous_tag` to the GitHub release step.** Otherwise a `v1.16.1` release becomes the repo's "Latest release", and its notes compare against `v2.0.0`.
-4. **Pass the same dist-tag to `verify-published`** (`NPM_DIST_TAG=latest-1`). It checks `latest` by default, so after a `latest-1` publish it would wait 30 minutes for a tag that never moves, then fail.
+1. **The dist-tag is picked at run time.** `scripts/publish-tag.ts` publishes under `latest`, unless functype's local major is below npm `latest`'s; then under `latest-<major>`, such as `latest-1`. The workflow runs on a tag push and doesn't know its branch, so the choice can't be written into a branch. The tag can't be `v1` or `1.x`: npm rejects a tag that parses as a semver range.
+2. **The downgrade check is keyed by line.** `check-publish-safety` compares each version with the highest npm version on its own functype line, not with `latest`. The eslint pair's line is `floor(minor / 100)`. The logic is in `scripts/publish-line.ts`, tested by `pnpm test:scripts`.
+3. **The GitHub release** is created with `gh release create --latest=<bool>` and `--notes-start-tag` the previous tag on the same major, so a 1.x release after 2.0.0 isn't the repo's "Latest release", and its notes start from the last 1.x tag.
+4. **`verify-published`** checks the dist-tag the publish used.
 
 Also note:
 
@@ -74,16 +72,16 @@ From 2.0-prep until 2.0.0 shipped, both served `release/1.x` instead, so users r
 
 `pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 8 install.
 
-- **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`.
+- **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`. For a release on an older line than npm `latest`, such as a 1.x fix after 2.0.0, add `--latest=false --notes-start-tag <the previous tag on that major>`; `pnpm exec tsx scripts/publish-tag.ts vX.Y.Z` prints both.
 - **Check one version:** `pnpm verify-published functype@1.16.1`.
-- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS` (at least 1), and `NPM_DIST_TAG` (default `latest`). The publish step passes no `--tag`, so CI always checks `latest`. `NPM_DIST_TAG` is for checking another tag by hand.
+- **Knobs:** `VERIFY_TIMEOUT_SECONDS`, `VERIFY_INTERVAL_SECONDS` (at least 1), and `NPM_DIST_TAG` (default `latest`). CI passes the dist-tag it published to, `latest` or `latest-<major>` (see `scripts/publish-tag.ts`). Set `NPM_DIST_TAG` to check a tag by hand.
 
 ## Safety invariants (`scripts/check-publish-safety.ts`)
 
 The publish gate refuses to proceed if any of these holds:
 
 1. **Unauthorized major.** Any package bumping its major version requires `ALLOW_MAJOR=<pkg>[,<pkg>]` env on the publish step. Per-release authorization, no "always allow" mode.
-2. **Downgrade.** Local version < npm `latest`. Never auto-authorized.
+2. **Downgrade.** Local version below the highest npm version on its own functype line, so a 1.x fix after 2.0.0 is compared with 1.x, not with `latest`. The eslint pair's line is its minor divided by 100. Never auto-authorized. See `scripts/publish-line.ts`.
 3. **Family alignment drift.** The 6 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.

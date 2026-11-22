@@ -58,6 +58,8 @@ functype deliberately is **not** a framework — no fiber runtime, no structured
 
 ## Installation
 
+Upgrading from 1.x? [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) lists what to change.
+
 ```bash
 # NPM
 npm install functype
@@ -669,7 +671,7 @@ list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 
 ## ESLint Plugin
 
-[`eslint-plugin-functype`](https://functype.org/eslint) enforces these patterns. `recommended` fails the build on the rules that are reliably right (loops, `let`, native `Map`/`Set` you only read, `isSome()` branching) and warns on the rest. Declare boundaries with `Wire<T>` and `@interop`, and write bug checks as `invariant(cond, msg)`, instead of `eslint-disable`.
+[`eslint-plugin-functype`](https://functype.org/eslint) enforces these patterns. Its one preset, `recommended`, sets every rule to `error` or `off`, so a finding fails the build rather than sit as a warning. Declare boundaries with `Wire<T>` and `@interop`, and write bug checks as `invariant(cond, msg)`, instead of `eslint-disable`.
 
 ## Feature Matrix
 

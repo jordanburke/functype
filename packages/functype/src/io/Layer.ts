@@ -1,3 +1,4 @@
+import { callAlone0, callAlone1 } from "@/internal/call-alone"
 import { type A, type B, type C, define, type Mutable } from "@/internal/define"
 import type { Type } from "@/types"
 
@@ -128,13 +129,13 @@ const buildRecipe = async (recipe: LayerRecipe, input: Context<Type>): Promise<C
     case "Succeed":
       return ContextCompanion.make(recipe.tag, recipe.service)
     case "Sync":
-      return ContextCompanion.make(recipe.tag, recipe.make())
+      return ContextCompanion.make(recipe.tag, callAlone0(recipe.make))
     case "Effect":
-      return ContextCompanion.make(recipe.tag, await recipe.make())
+      return ContextCompanion.make(recipe.tag, await callAlone0(recipe.make))
     case "FromService":
-      return ContextCompanion.make(recipe.tag, recipe.make(input.unsafeGet(recipe.dep)))
+      return ContextCompanion.make(recipe.tag, callAlone1(recipe.make, input.unsafeGet(recipe.dep)))
     case "FromServiceEffect":
-      return ContextCompanion.make(recipe.tag, await recipe.make(input.unsafeGet(recipe.dep)))
+      return ContextCompanion.make(recipe.tag, await callAlone1(recipe.make, input.unsafeGet(recipe.dep)))
     case "FromContext":
       return recipe.context
     case "Empty":
@@ -149,7 +150,7 @@ const buildRecipe = async (recipe: LayerRecipe, input: Context<Type>): Promise<C
       return firstOutput.merge(secondOutput)
     }
     case "Map":
-      return recipe.f(await recipe.layer.build(input))
+      return callAlone1(recipe.f, await recipe.layer.build(input))
   }
 }
 
