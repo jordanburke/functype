@@ -71,11 +71,10 @@ jobs:
       - name: Check publish safety
         run: pnpm check-publish-safety
         env:
-          # Major bumps require explicit per-release authorization.
-          # When you intentionally do a major, push the tag with the
-          # ALLOW_MAJOR env set on the workflow run (workflow_dispatch
-          # in the Actions UI lets you override env vars), OR add it
-          # here temporarily in a release-prep PR and remove afterwards.
+          # Major bumps require explicit per-release authorization. This
+          # workflow runs only on a tag push, so for an intentional major,
+          # set the packages here in a release-prep PR (as 2.0.0 did in
+          # #582) and set it back to "" in a follow-up PR after the release.
           ALLOW_MAJOR: ""
 
       - name: Publish to npm

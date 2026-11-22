@@ -8,7 +8,7 @@ functype-os is a standalone npm package that wraps Node.js OS operations using f
 
 ## Quick Start
 
-- **Prerequisites**: Node.js >= 18.17, pnpm 10.x
+- **Prerequisites**: Node.js >= 18.17, pnpm 12
 - **Install**: `pnpm install`
 - **Development**: `pnpm dev`
 - **Before commit**: `pnpm validate` (format + lint + typecheck + test + build)
