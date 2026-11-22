@@ -4,7 +4,7 @@
  *
  * The markdown under src/content is also checked as markdown, by packages/functype's
  * test/docs/quick-reference-typecheck.spec.ts. This check reads the built HTML instead, so it also covers
- * the samples written into .tsx and .astro components (the landing page) and the markdown pages pull in
+ * the samples written into .astro pages (the landing page) and the markdown pages pull in
  * from elsewhere (the eslint page renders eslint-plugin-functype's README). Three landing-page samples
  * once failed to compile and nothing noticed.
  *
@@ -33,14 +33,8 @@ import {
 
 const DIST = join(REPO_ROOT, "dist-site");
 
-/** Placeholders of the landing page's samples (src/components/Hero.tsx, QuickStart.tsx). */
-const LANDING_PRELUDE = `
-declare global {
-  const maybeUser: User | null
-  const user: User | undefined
-  const data: string
-}
-`;
+/** Placeholders of the landing page's samples (src/pages/index.astro). Its one sample declares what it uses. */
+const LANDING_PRELUDE = "";
 
 /** Placeholders of the eslint page's samples (packages/eslint-plugin-functype/README.md). */
 const ESLINT_PRELUDE = `

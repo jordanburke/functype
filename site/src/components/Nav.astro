@@ -1,0 +1,71 @@
+---
+const path = Astro.url.pathname;
+const links = [
+  { href: "/option/", label: "Docs", match: (p: string) => p !== "/" && !p.startsWith("/upgrading-to-2") && !p.startsWith("/mcp-server") },
+  { href: "/#types", label: "Types", match: () => false },
+  { href: "/mcp-server/", label: "Agents", match: (p: string) => p.startsWith("/mcp-server") },
+  { href: "/upgrading-to-2/", label: "Upgrade to 2.0", match: (p: string) => p.startsWith("/upgrading-to-2") },
+];
+---
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="logo" href="/" aria-label="functype home"
+      ><span class="mark" aria-hidden="true"><b>(</b><i>f</i>: <b>t)</b></span>functype</a
+    >
+    <ul>
+      {
+        links.map((l) => (
+          <li class={l.label === "Docs" ? undefined : "hide-sm"}>
+            <a href={l.href} aria-current={l.match(path) ? "page" : undefined}>
+              {l.label}
+            </a>
+          </li>
+        ))
+      }
+      <li><a href="https://github.com/jordanburke/functype">GitHub</a></li>
+      <li>
+        <button class="theme" type="button" id="theme-toggle" aria-label="Theme: Auto. Switch to Dark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
+            ><circle cx="12" cy="12" r="8"></circle><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"></path></svg
+          >
+          <span id="theme-label">Auto</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</header>
+
+<script>
+  // The theme follows the system until you pick one: Auto, then Dark, then Light.
+  const ORDER = ["auto", "dark", "light"] as const;
+  type Mode = (typeof ORDER)[number];
+  const LABEL: Record<Mode, string> = { auto: "Auto", dark: "Dark", light: "Light" };
+  const button = document.getElementById("theme-toggle");
+  const label = document.getElementById("theme-label");
+  const read = (): Mode => {
+    try {
+      const saved = localStorage.getItem("ft-theme");
+      return saved === "dark" || saved === "light" ? saved : "auto";
+    } catch {
+      return "auto";
+    }
+  };
+  let mode: Mode = read();
+  const apply = (): void => {
+    if (mode === "auto") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = mode;
+    const next = ORDER[(ORDER.indexOf(mode) + 1) % ORDER.length];
+    if (label) label.textContent = LABEL[mode];
+    button?.setAttribute("aria-label", `Theme: ${LABEL[mode]}. Switch to ${LABEL[next]}`);
+  };
+  apply();
+  button?.addEventListener("click", () => {
+    mode = ORDER[(ORDER.indexOf(mode) + 1) % ORDER.length];
+    try {
+      if (mode === "auto") localStorage.removeItem("ft-theme");
+      else localStorage.setItem("ft-theme", mode);
+    } catch {}
+    apply();
+  });
+</script>

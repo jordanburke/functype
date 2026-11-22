@@ -1,8 +1,5 @@
 import { defineConfig } from "astro/config";
 
-import tailwindcss from "@tailwindcss/vite";
-
-import react from "@astrojs/react";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
 
@@ -16,12 +13,11 @@ export default defineConfig({
     assets: "assets",
   },
 
-  vite: {
-    plugins: [tailwindcss()],
-  },
-
   markdown: {
     shikiConfig: {
+      // Both themes go into CSS variables; src/styles/global.css picks one with the page's theme rule.
+      themes: { light: "github-light", dark: "github-dark" },
+      defaultColor: false,
       transformers: [
         {
           // A ```ts ignore fence opts its sample out of scripts/check-examples.ts. Carry that to the HTML,
@@ -37,5 +33,5 @@ export default defineConfig({
     },
   },
 
-  integrations: [react(), mdx(), sitemap()],
+  integrations: [mdx(), sitemap()],
 });
