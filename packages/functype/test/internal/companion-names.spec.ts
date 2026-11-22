@@ -4,6 +4,9 @@
  * `OptionCompanion`, so `Option.map(...)` fails with "does not exist on type 'OptionCompanion'" instead of
  * printing every signature. The correct calls below must still compile.
  */
+import { readdirSync, readFileSync } from "node:fs"
+import { join } from "node:path"
+
 import { describe, expect, it } from "vitest"
 
 import { typeCheck } from "../docs/snippet-typecheck"
@@ -115,5 +118,41 @@ describe("companions name their type in errors", () => {
 
   it.each(Object.keys(rightCalls))("%s: correct calls still compile", (name) => {
     expect(results[`right:${name}`]).toBe("")
+  })
+})
+
+/** Every `export const X = Companion(...)` in src, with its type annotation and its statics argument. */
+const companionsInSource = (): ReadonlyArray<{ name: string; annotation: string; statics: string; file: string }> => {
+  const src = join(import.meta.dirname, "..", "..", "src")
+  return readdirSync(src, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts"))
+    .flatMap((file) =>
+      [
+        ...readFileSync(join(src, file), "utf8").matchAll(
+          /export const (\w+)(?:: (\w+))? = Companion\(\s*(?:[^,]+|\{[^}]*\}(?: as const)?),\s*(\w+)\s*\)/g,
+        ),
+      ].map((m) => ({ name: m[1] ?? "", annotation: m[2] ?? "", statics: m[3] ?? "", file })),
+    )
+}
+
+describe("every companion in src follows the pattern", () => {
+  const found = companionsInSource()
+
+  it("finds the companions", () => {
+    expect(found.length).toBeGreaterThanOrEqual(Object.keys(wrongCalls).length)
+  })
+
+  it.each(found)("$name ($file) is typed by its named companion interface", ({ name, annotation }) => {
+    expect(annotation).toBe(`${name}Companion`)
+  })
+
+  // Passing a value named like the interface makes the bundled .d.ts declare and export a value
+  // `XCompanion` that doesn't exist at run time. The statics go through a second name, `XStatics`.
+  it.each(found)("$name passes its statics under a name other than its interface's", ({ name, statics }) => {
+    expect(statics).not.toBe(`${name}Companion`)
+  })
+
+  it("lists every companion in this spec's wrong-call checks, so a new one gets the message test", () => {
+    expect(found.map(({ name }) => name).filter((name) => !(name in wrongCalls))).toEqual([])
   })
 })
