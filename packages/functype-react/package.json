@@ -40,7 +40,7 @@
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5.0.0",
-    "functype": ">=1.14.0",
+    "functype": ">=2.0.0",
     "react": ">=18.0.0 <20.0.0",
     "react-dom": ">=18.0.0 <20.0.0"
   },

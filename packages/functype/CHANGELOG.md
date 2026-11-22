@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0: functype-os and functype-react need functype 2.0.** Their peer range on `functype` was `>=1.13.0` and `>=1.14.0`, but their code now calls 2.0 methods, such as `getOrElse`, so it fails against 1.x. Both peer ranges are now `>=2.0.0`. functype-log's code still compiles against 1.27.2, so its range is unchanged.
+
 **2.0 (types only): companions have names, so a wrong call prints a short message.**
 
 - Each companion's type is now a named, exported interface: `OptionCompanion`, `ListCompanion`, `IOCompanion`, and so on for all 21 (`Cond`, `Match`, `Decoder`, `DecoderError`, `Either`, `Http`, `HttpError`, `Identity`, `Exit`, `IO`, `Lazy`, `LazyList`, `List`, `Map`, `Obj`, `Option`, `Ref`, `Set`, `Stack`, `Try`, `Tuple`). Errors and hovers print that name instead of the whole type.
