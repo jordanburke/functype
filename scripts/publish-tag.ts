@@ -46,7 +46,12 @@ if (view.status !== 0) {
   console.error(`publish-tag: \`npm view functype version\` failed:\n${view.stderr}`)
   process.exit(1)
 }
-const latest = view.stdout.trim() || null
+const latest = view.stdout.trim()
+if (latest === "") {
+  // An empty answer is as unknown as a failed one; treating it as "no latest" would pick `latest`.
+  console.error("publish-tag: `npm view functype version` printed nothing")
+  process.exit(1)
+}
 
 const tags = spawnSync("git", ["tag", "--list", "v*"], { cwd: repoRoot, encoding: "utf8" })
 if (tags.status !== 0) {
@@ -61,7 +66,7 @@ const outputs = {
   previous: previousTagFor(gitTag, tags.stdout.split("\n").filter(Boolean)) ?? "",
 }
 
-console.log(`functype ${local} (npm latest ${latest ?? "none"}):`)
+console.log(`functype ${local} (npm latest ${latest}):`)
 for (const [key, value] of Object.entries(outputs)) console.log(`  ${key}=${value}`)
 
 const githubOutput = process.env.GITHUB_OUTPUT

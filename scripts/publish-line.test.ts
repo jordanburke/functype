@@ -69,6 +69,16 @@ describe("planBump after 2.0.0 is latest", () => {
       bump: "patch",
     })
   })
+  it("is a patch for 2.0.1 on the new line", () => {
+    assert.deepEqual(planBump({ local: "2.0.1", published: family, latest: "2.0.0", mirror: false }), {
+      npm: "2.0.0",
+      bump: "patch",
+    })
+    assert.deepEqual(planBump({ local: "2.200.1", published: pair, latest: "2.200.0", mirror: true }), {
+      npm: "2.200.0",
+      bump: "patch",
+    })
+  })
   it("still refuses a 1.x version below the line's highest", () => {
     assert.equal(planBump({ local: "1.27.1", published: family, latest: "2.0.0", mirror: false }).bump, "downgrade")
     assert.equal(planBump({ local: "2.127.1", published: pair, latest: "2.200.0", mirror: true }).bump, "downgrade")

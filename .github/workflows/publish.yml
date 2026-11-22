@@ -7,7 +7,7 @@ name: Publish
 # The workflow re-validates everything (independent of local validate), runs
 # `check-publish-safety` as the final gate (6 invariants — see header of
 # scripts/check-publish-safety.ts), then `pnpm -r publish` walks the workspace
-# and publishes any package whose local version differs from npm `latest`.
+# and publishes any package whose version npm doesn't have yet, under the dist-tag `scripts/publish-tag.ts` picked.
 # `verify-published` then waits until every package actually installs: npm can
 # serve a just-published version as 404 for minutes after "Published" (1.16.1,
 # 1.17.0). See the header of scripts/verify-published.ts.
