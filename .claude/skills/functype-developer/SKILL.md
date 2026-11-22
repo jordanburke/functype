@@ -540,7 +540,7 @@ pnpm clean && pnpm build
 pnpm compile
 
 # Analyze bundle size
-pnpm analyze:size
+pnpm size:check
 ```
 
 ## Variance (covariance — `<out T>`)
