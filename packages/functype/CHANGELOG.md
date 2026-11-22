@@ -298,6 +298,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **A detached method call throws**, because `this` is undefined: `const { map } = traced`.
 - **Upgrade:** call TracedOption methods on the value. A `TracedOption` object literal no longer type-checks without `_tag`; build one with `TracedOption(option, tracer, spanId)`.
 
+**2.0 (breaking): a detached method passed to an IO step or a Layer dies, instead of reading the step.**
+
+- The interpreters called a step's callbacks as methods of the step: the thunk of `IO.sync` and of the `IO(...)` constructor, the functions given to `map`, `flatMap`, `mapError`, `recoverWith`, `catchAll`, `fold` and `match`, the `use` and `release` of `bracket`, `bracketExit` and `acquireRelease`, and `IO.gen`'s generator. Layer did the same with the factories of `sync`, `effect`, `fromService` and `fromServiceEffect`, and with `map`'s function. So a detached method got the step as `this`. `IO.sync(ref.get)` succeeded with `undefined`, `IO.sync(Some(1).orThrow)` did too, and `.map(ref.set)` changed nothing and succeeded.
+- Each callback is now called without a receiver. A detached method throws, as it does outside an IO, and the run ends in a `Die`; under the `IO(...)` constructor, which declares `E = unknown`, it is a typed `Failure`. A `Layer.sync` or `Layer.fromService` whose factory is a detached method fails to build. That makes the "a detached method call throws" notes above true inside an IO too.
+- Plain callbacks, such as `(x) => ref.set(x)`, behave as before, and the cost is unchanged: a 50-step `map` chain under `run()` measured about 850 ns before and after (Node 24.20.0, built package).
+- **Upgrade:** wrap the method: `IO.sync(() => ref.get())`, `.map((x) => ref.set(x))`. Code that passed a detached method used to get `undefined` silently, so any such call was already a bug.
+
 **2.0: IO runs chains of any length, and `run()` is faster over synchronous steps.** Fixes #560 (IO overflows the stack on chains of 10,000 steps).
 
 - Both interpreters were recursive, one call per step. 10,000 chained `flatMap`s threw a `RangeError` under `runSync()` and `run()`. Under `runSync()`, so did a recursive loop, an `IO.gen` with 10,000 yields and a `repeatUntil` run 10,000 times. Now each interpreter is a loop over a stack of the steps waiting on their inner effects, so all of these run to 1,000,000 steps.
