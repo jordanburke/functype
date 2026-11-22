@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest"
 
-import { IO } from "@/io"
+import { IO, SpanTracer, Tag } from "@/io"
 
 const N = 100_000
 
@@ -54,25 +54,28 @@ describe("long chains don't overflow the stack", () => {
     expect(await make().runOrThrow()).toBe(N)
   })
 
-  it("recovers at the end of a long chain of error handlers", async () => {
-    const make = (): IO<never, never, string> => {
+  it("hands the original error through a long chain of error handlers", async () => {
+    // On main this chain overflowed, and the handler at the end saw a RangeError, not "boom".
+    const make = (): IO<never, never, unknown> => {
       // eslint-disable-next-line functional/no-let -- building the chain step by step
       let io: IO<never, string, string> = IO.fail("boom")
       for (let k = 0; k < N; k++) io = io.mapError((e) => e)
-      return io.recover("recovered")
+      return io.catchAll((e) => IO.succeed(e))
     }
-    expect(make().runSyncOrThrow()).toBe("recovered")
-    expect(await make().runOrThrow()).toBe("recovered")
+    expect(make().runSyncOrThrow()).toBe("boom")
+    expect(await make().runOrThrow()).toBe("boom")
   })
 
   it("keeps a provided service through a long chain", async () => {
+    const Step = Tag<number>("Step")
     const make = (): IO<never, never, number> => {
       // eslint-disable-next-line functional/no-let -- building the chain step by step
-      let io: IO<never, never, number> = IO.succeed(0)
-      for (let k = 0; k < 10_000; k++) io = io.flatMap((x) => IO.sync(() => x + 1))
-      return io
+      let io: IO<number, never, number> = IO.service(Step).map(() => 0)
+      for (let k = 0; k < N; k++) io = io.flatMap((x) => IO.service(Step).map((step) => x + step))
+      return io.provideService(Step, 1)
     }
-    expect(await make().runOrThrow()).toBe(10_000)
+    expect(make().runSyncOrThrow()).toBe(N)
+    expect(await make().runOrThrow()).toBe(N)
   })
 })
 
@@ -99,5 +102,85 @@ describe("a failed bracket release replaces the outcome", () => {
     )
     const exit = await io.runExit()
     expect(exit._tag).toBe("Die")
+  })
+})
+
+describe("nested steps don't overflow the stack under run()", () => {
+  const DEPTH = 5_000
+  const tracer: SpanTracer<string> = { start: (name) => name, run: (_span, fn) => fn(), end: () => undefined }
+
+  type Wrap = (io: IO<never, unknown, number>) => IO<never, unknown, number>
+  const wraps: ReadonlyArray<readonly [string, Wrap]> = [
+    ["withSpan", (io: IO<never, unknown, number>) => io.withSpan("level")],
+    ["interruptOn", (io: IO<never, unknown, number>) => io.interruptOn(new AbortController().signal)],
+    ["timeout", (io: IO<never, unknown, number>) => io.timeout(60_000)],
+    ["race", (io: IO<never, unknown, number>) => IO.race([io])],
+    ["all", (io: IO<never, unknown, number>) => IO.all([io, IO.succeed(0)]).map(([n]) => n ?? -1)],
+    [
+      "bracket acquire",
+      (io: IO<never, unknown, number>) =>
+        IO.bracket(
+          io,
+          (n) => IO.succeed(n),
+          () => IO.succeed(undefined),
+        ),
+    ],
+  ]
+
+  it.each(wraps)("%s", async (_, wrap) => {
+    const go = (n: number): IO<never, unknown, number> =>
+      n === 0 ? IO.succeed(0) : wrap(IO.succeed(n).flatMap(() => go(n - 1)))
+    expect(await go(DEPTH).provideService(SpanTracer, tracer).runOrThrow()).toBe(0)
+  })
+})
+
+describe("a step that isn't an IO is a defect, not a crash", () => {
+  const notAnIO = (): IO<never, never, number> => IO.succeed(1).flatMap(() => 5 as unknown as IO<never, never, number>)
+
+  it("reaches a recover under runSync and run", async () => {
+    expect(notAnIO().recover(0).runSyncOrThrow()).toBe(0)
+    expect(await notAnIO().recover(0).runOrThrow()).toBe(0)
+    expect(
+      IO.fail("x")
+        .recoverWith(() => 5 as unknown as IO<never, never, number>)
+        .recover(0)
+        .runSyncOrThrow(),
+    ).toBe(0)
+  })
+
+  it.each([
+    ["all", () => IO.all([notAnIO(), IO.succeed(2)])],
+    ["race", () => IO.race([notAnIO()])],
+    ["timeout", () => notAnIO().timeout(60_000)],
+  ] as const)("settles %s as Die, with no unhandled rejection", async (_, make) => {
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason)
+    }
+    process.on("unhandledRejection", onUnhandled)
+    try {
+      const io: IO<never, unknown, unknown> = make()
+      const exit = await io.runExit()
+      expect(exit._tag).toBe("Die")
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off("unhandledRejection", onUnhandled)
+    }
+  })
+
+  it("fails a span whose tracer's run returns nothing, once, under runSync", () => {
+    const runs: string[] = []
+    const silent: SpanTracer<string> = {
+      start: (name) => name,
+      run: (span) => {
+        runs.push(span)
+        return undefined as never
+      },
+      end: () => undefined,
+    }
+    const exit = () => IO.succeed(1).withSpan("s").provideService(SpanTracer, silent).runSyncOrThrow()
+    expect(exit).toThrow(TypeError)
+    expect(runs).toEqual(["s"])
   })
 })

@@ -1137,6 +1137,13 @@ type Wrapper = Extract<
 type WrapperStack = (Wrapper | Context<Type>)[]
 
 /**
+ * The outcome of a step that returned nothing, which only a `SpanTracer` whose `run` doesn't
+ * return what its `fn` returns can cause. Without it the loop would run the step again.
+ */
+const noOutcome = (): AnyExit =>
+  Exit.die(new TypeError("A step produced no outcome: a SpanTracer's run must return what its fn returns"))
+
+/**
  * Interprets and runs an effect synchronously, and returns its Exit.
  *
  * It classifies outcomes as the async interpreter does, so `runSync()` can tell a typed failure
@@ -1164,23 +1171,30 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
   /* eslint-enable functional/no-let */
   for (;;) {
     if (exit === undefined) {
-      switch (fx._tag) {
-        case "Map":
-        case "FlatMap":
-        case "MapError":
-        case "Recover":
-        case "RecoverWith":
-        case "Fold":
-          stack.push(fx, ctx)
-          fx = _fx(fx.effect)
-          continue
-        case "ProvideContext":
-          ctx = ctx.merge(fx.context)
-          fx = _fx(fx.effect)
-          continue
-        default:
-          exit = runLeafSync(fx, ctx, span)
-          continue
+      try {
+        switch (fx._tag) {
+          case "Map":
+          case "FlatMap":
+          case "MapError":
+          case "Recover":
+          case "RecoverWith":
+          case "Fold":
+            stack.push(fx, ctx)
+            fx = _fx(fx.effect)
+            continue
+          case "ProvideContext":
+            ctx = ctx.merge(fx.context)
+            fx = _fx(fx.effect)
+            continue
+          default:
+            exit = runLeafSync(fx, ctx, span) ?? noOutcome()
+            continue
+        }
+      } catch (e) {
+        // A step that isn't an IO, such as a `flatMap` callback returning a plain value: reading
+        // it throws. It becomes a `Die`, so the `recover` and `fold` steps waiting on it see it.
+        exit = Exit.die(e)
+        continue
       }
     }
     if (stack.length === 0) return unsafeCoerce(exit)
@@ -1410,25 +1424,32 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
         exit = Exit.interrupted()
         continue
       }
-      switch (fx._tag) {
-        case "Map":
-        case "FlatMap":
-        case "MapError":
-        case "Recover":
-        case "RecoverWith":
-        case "Fold":
-          stack.push(fx, ctx)
-          fx = _fx(fx.effect)
-          continue
-        case "ProvideContext":
-          ctx = ctx.merge(fx.context)
-          fx = _fx(fx.effect)
-          continue
-        default: {
-          const out = runLeaf(fx, ctx, interruption, span)
-          exit = out instanceof Promise ? await out : out
-          continue
+      try {
+        switch (fx._tag) {
+          case "Map":
+          case "FlatMap":
+          case "MapError":
+          case "Recover":
+          case "RecoverWith":
+          case "Fold":
+            stack.push(fx, ctx)
+            fx = _fx(fx.effect)
+            continue
+          case "ProvideContext":
+            ctx = ctx.merge(fx.context)
+            fx = _fx(fx.effect)
+            continue
+          default: {
+            const out = runLeaf(fx, ctx, interruption, span)
+            exit = (out instanceof Promise ? await out : out) ?? noOutcome()
+            continue
+          }
         }
+      } catch (e) {
+        // As in runEffectSync: a step that isn't an IO becomes a `Die`. This also keeps the
+        // promise from rejecting, which `race`, `timeout` and `all` rely on.
+        exit = Exit.die(e)
+        continue
       }
     }
     if (stack.length === 0) return unsafeCoerce(exit)
@@ -1499,6 +1520,15 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
 const orDie = (outcome: Promise<AnyExit>): Promise<AnyExit> => outcome.catch((e: unknown) => Exit.die(e))
 
 /**
+ * Starts a step that runs its inner effect in a nested loop (`bracket`, `race`, `timeout`,
+ * `interruptOn`, `withSpan`, `all`) on a fresh call stack, one microtask later, and turns a
+ * rejection into a `Die`. The loop awaits nothing else between synchronous steps, so without this
+ * each nested level would add to the stack, and a few hundred levels of `withSpan` or `race`
+ * would overflow it.
+ */
+const onFreshStack = (start: () => Promise<AnyExit>): Promise<AnyExit> => orDie(Promise.resolve().then(start))
+
+/**
  * Runs a step of {@link runEffect} that isn't a wrapper. A step that has to wait returns a promise
  * of its outcome, which never rejects; any other step returns its outcome.
  */
@@ -1545,20 +1575,20 @@ const runLeaf = (
       case "Sleep":
         return sleep(effect.duration, interruption)
       case "Bracket":
-        return orDie(runBracket(effect, context, interruption, span))
+        return onFreshStack(() => runBracket(effect, context, interruption, span))
       case "BracketExit":
-        return orDie(runBracketExit(effect, context, interruption, span))
+        return onFreshStack(() => runBracketExit(effect, context, interruption, span))
       case "Race":
         if (effect.effects.length === 0) return Exit.die(new Error("No effects to race"))
-        return orDie(runRace(effect.effects, context, interruption, span))
+        return onFreshStack(() => runRace(effect.effects, context, interruption, span))
       case "Timeout":
-        return orDie(runTimeout(effect.effect, effect.duration, context, interruption, span))
+        return onFreshStack(() => runTimeout(effect.effect, effect.duration, context, interruption, span))
       case "InterruptWhen":
-        return orDie(runRegion(effect, context, interruption, span))
+        return onFreshStack(() => runRegion(effect, context, interruption, span))
       case "WithSpan":
-        return orDie(runWithSpan(effect, context, interruption, span))
+        return onFreshStack(() => runWithSpan(effect, context, interruption, span))
       case "All":
-        return orDie(runAll(effect.effects, effect.concurrency, context, interruption, span))
+        return onFreshStack(() => runAll(effect.effects, effect.concurrency, context, interruption, span))
       default:
         // The loop handles the wrappers and `ProvideContext` itself.
         return Exit.die(new Error(`Unexpected step: ${effect._tag}`))
