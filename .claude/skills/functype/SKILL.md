@@ -22,6 +22,7 @@ Trigger this skill when users:
 - Run async operations with cancellation (IO's `runCancellable`, `interruptOn`)
 - Trace effects with nested spans (IO's `withSpan`, behind a type-only `SpanTracer`)
 - Debug functype code or understand error messages
+- Upgrade code from functype 1.x to 2.0: [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) lists what to change
 
 ## Quick Start
 

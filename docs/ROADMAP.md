@@ -233,11 +233,11 @@ test should include an Either task to see whether agents start guessing `Result`
 
 ### Raised in the 2.0 review, undecided
 
-- **Sibling peer floors.** On `main`, functype-os, functype-react and functype-log accept old cores
-  (`>=1.13.0`, `>=1.14.0`, `>=0.60.0`), and functype-os and functype-react call the methods #276 §2
-  renames and makes lazy (`getOrElse`, `orElse`): a 1.x core lacks the first and gives the second another meaning. Raise every peer floor to
-  `>=2.0.0` at the cut, and consider a `check-publish-safety` check that peer floors match the
-  family's major.
+- **Sibling peer floors.** Decided 2026-11-22 in #580 (2.0 peer floors): functype-os and
+  functype-react need `>=2.0.0`, because their src fails to compile against 1.27.2. functype-log keeps
+  `>=0.60.0`: its src compiles against 1.27.2 and 0.60.0, and its built package runs on 1.27.2. Still
+  open: a `check-publish-safety` check that a sibling's peer floor admits only cores its src compiles
+  against.
 - **One Node floor.** The packages disagree: none, `>=18.17.0` and `>=20.20.0`. `AbortSignal.any`
   exists from Node 18.17.0 and 20.3.0, so every floor the packages declare already covers it.
   `src/internal/signal.ts` (its stand-in) can go once functype, which declares none, sets one.
