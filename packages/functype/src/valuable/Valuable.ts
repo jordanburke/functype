@@ -20,5 +20,7 @@ export function Valuable<Tag extends string, V, T = object>(params: ValuablePara
 }
 
 export type Valuable<Tag extends string, V, T = object> = Typeable<Tag, T> & {
-  toValue: () => { _tag: Tag; value: V }
+  // Method syntax, so `@typescript-eslint/unbound-method` sees a detached `stack.toValue`:
+  // on the shared prototypes it reads `this`, and throws when called alone.
+  toValue(): { _tag: Tag; value: V }
 }
