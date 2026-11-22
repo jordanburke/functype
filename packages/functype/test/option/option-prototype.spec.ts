@@ -78,7 +78,7 @@ describe("Option's construction cost", { retry: 2 }, () => {
     return elapsed / N
   }
 
-  /** The fastest ((build + map) / (build a plain object of the same data)) over the fastest plain-object build, across interleaved runs. */
+  /** The fastest build + map over the fastest build of a plain object of the same data, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ _tag: "Some", value: inc(i) })
     for (let i = 0; i < 5_000; i++) {

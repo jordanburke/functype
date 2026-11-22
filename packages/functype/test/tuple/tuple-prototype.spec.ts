@@ -131,7 +131,7 @@ describe("Tuple's construction cost", { retry: 2 }, () => {
     return elapsed / N
   }
 
-  /** The fastest ((build) / (build a plain object of the same data)) over the fastest plain-object build, across interleaved runs. */
+  /** The fastest build over the fastest build of a plain object of the same data, across interleaved runs. */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ _tag: "Tuple", value: [i, 1] })
     for (let i = 0; i < 5_000; i++) {
