@@ -207,6 +207,8 @@ pre {
 }
 .logo {
   display: flex;
+  flex: none;
+  white-space: nowrap;
   align-items: baseline;
   gap: 8px;
   font-weight: 600;
@@ -487,6 +489,10 @@ pre {
   .nav ul li.hide-sm {
     display: none;
   }
+  .nav-inner,
+  .nav ul {
+    gap: 18px;
+  }
   .docs {
     grid-template-columns: minmax(0, 1fr);
     gap: 32px;
@@ -524,5 +530,16 @@ pre {
   }
   .footer {
     margin-top: 96px;
+  }
+}
+
+/* The narrowest phones: the theme toggle keeps its icon; its aria-label still names the theme. */
+@media (max-width: 380px) {
+  .nav-inner,
+  .nav ul {
+    gap: 14px;
+  }
+  .theme #theme-label {
+    display: none;
   }
 }
