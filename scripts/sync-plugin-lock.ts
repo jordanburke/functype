@@ -70,9 +70,9 @@ const hashSkills = (skills: readonly string[]): string => {
 
 const allPlugins = readJson<{ plugins: readonly Plugin[] }>(MANIFEST).plugins
 
-// A plugin served from another branch, such as the 1.x skills on release/1.x until 2.0 ships, has
-// no skills in this checkout to hash. Bump its version here by hand whenever that branch's skills
-// change; docs/RELEASE.md, "Docs and the Claude plugin until 2.0", has the steps.
+// A plugin served from another branch, as the 1.x skills were from release/1.x before 2.0, has no
+// skills in this checkout to hash. Bump its version here by hand whenever that branch's skills
+// change; docs/RELEASE.md, "Docs and the Claude plugin", has the background.
 const remote = allPlugins.filter((plugin) => typeof plugin.source !== "string")
 const plugins = allPlugins.filter((plugin) => typeof plugin.source === "string")
 const remoteNote =
