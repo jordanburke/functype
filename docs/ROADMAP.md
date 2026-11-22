@@ -291,11 +291,11 @@ editor-only warning never reaches an agent, and a lint error reaches it only if 
     typescript-eslint 8.73.0 and plugin 2.127.2 the type-aware rules reported, and `tsc` 7.0.2 checked the
     same project.
   - **Oxlint (works today, no type information):** Oxlint 1.94.0 loads the plugin as a JS plugin unchanged.
-    The 16 rules that need no types work; the 4 type-aware ones report nothing until Oxlint passes type
-    information to JS plugins.
+    The 16 rules that need no types work, six of them less precisely, since they use type information when
+    it's there; the 4 type-aware ones report nothing until Oxlint passes type information to JS plugins.
   - **If typescript-eslint is slow to adopt 7.1's API:** TypeScript 7.0.2 already ships a synchronous checker
     client (`typescript/unstable/sync`). The plugin calls the checker from only two files
-    (`src/utils/type-aware.ts`, `src/utils/array-mutation.ts`), 13 methods, and 11 exist on that client;
+    (`src/utils/type-aware.ts`, `src/utils/array-mutation.ts`), 14 methods, and 12 exist on that client;
     `getIndexInfoOfType` and `getAwaitedType` don't. An adapter there is feasible, but parsing would still
     need a TS-free parser, so it waits for 7.1.
 

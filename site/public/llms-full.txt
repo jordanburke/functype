@@ -4220,7 +4220,7 @@ In 1.x the plugin had three presets: `recommended` and `strict`, which warned on
 
 typescript-eslint, which this plugin runs on, doesn't support TypeScript 7 yet: it loads the TypeScript 6 compiler API, and TypeScript 7.0 ships none. With `typescript@7` as a project's only `typescript`, `npm install` fails on typescript-eslint's peer range, and a forced install fails at lint time with "typescript-eslint does not support TS 7.0". Two paths work today.
 
-**Run TypeScript 7 side by side with 6.0, which is the setup Microsoft and typescript-eslint point to.** Alias `typescript` to the 6.0 package, so lint loads the 6.0 API, and install TypeScript 7 under another name:
+**Run TypeScript 7 side by side with 6.0, which is the setup Microsoft and typescript-eslint point to.** Alias `typescript` to the 6.0 package, so lint loads the 6.0 API, and install TypeScript 7 as `@typescript/native`:
 
 ```json
 {
@@ -4231,9 +4231,9 @@ typescript-eslint, which this plugin runs on, doesn't support TypeScript 7 yet: 
 }
 ```
 
-`tsc` is then TypeScript 7 and `tsc6` is 6.0. ESLint, typescript-eslint and every rule here, the type-aware ones included, run unchanged. Checked on 2026-11-22 with typescript-eslint 8.73.0, ESLint 10.14.0 and this plugin's 2.127.2: `no-floating-result` and `no-array-mutation` reported, and `tsc` 7.0.2 type-checked the same project.
+`tsc` is then TypeScript 7 and `tsc6` is 6.0. Keep the name `@typescript/native`: under npm, the name decides which package's `tsc` gets linked, and with another alias name `tsc` ran 6.0. typescript-eslint 8.73.0 also declares an optional peer `@typescript/native` for TypeScript 7.1 builds, so a package manager may warn that 7.0.2 misses its range, or install a 7.1 nightly beside it; lint results are the same either way. ESLint, typescript-eslint and every rule here, the type-aware ones included, run unchanged. Checked on 2026-11-22 with typescript-eslint 8.73.0, ESLint 10.14.0 and this plugin's 2.127.2: `no-floating-result` and `no-array-mutation` reported, and `tsc` 7.0.2 type-checked the same project.
 
-**Or run the plugin in Oxlint, without type information.** Oxlint loads it as a JS plugin, unchanged, on a project with only TypeScript 7:
+**Or run the plugin in Oxlint, without type information.** Oxlint loads it as a JS plugin, unchanged, on a project with only TypeScript 7. In `.oxlintrc.json`:
 
 ```json
 {
@@ -4244,7 +4244,7 @@ typescript-eslint, which this plugin runs on, doesn't support TypeScript 7 yet: 
 
 Every rule that works without type information works there. The four type-aware rules, `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container`, report nothing, because Oxlint doesn't pass type information to JS plugins yet. Checked on 2026-11-22 with Oxlint 1.94.0.
 
-When typescript-eslint supports TypeScript 7.1's new compiler API, the aliases can go and nothing here changes. Until then, prefer the side-by-side setup, which keeps the type-aware rules.
+When typescript-eslint supports TypeScript 7.1's new compiler API, the 6.0 alias can go and nothing in this plugin changes; its `@typescript/native` peer suggests that name stays. Until then, prefer the side-by-side setup, which keeps the type-aware rules.
 
 ## Rules
 
