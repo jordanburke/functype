@@ -1,5 +1,8 @@
+import ts from "typescript"
 import { describe, expect, it } from "vitest"
 
+import { compilerOptions, createCompilerHost, VIRTUAL_FILENAME } from "../src/lib/validator/compiler-host"
+import { lintCode } from "../src/lib/validator/lint"
 import { validateCode } from "../src/lib/validator/validate"
 
 describe("validateCode", () => {
@@ -134,5 +137,16 @@ export function run(s: string): void {
     const result = validateCode(`export function f(): number {\n  let n = 1\n  return n\n}`, { lint: false })
     expect(result.lint).toBeUndefined()
     expect(result.success).toBe(true)
+  })
+})
+
+describe("lintCode never passes a snippet it couldn't lint", () => {
+  it("reports ESLint's own failure as an error, such as a file missing from the program", () => {
+    const code = "export const x = 1\n"
+    const program = ts.createProgram([VIRTUAL_FILENAME], compilerOptions, createCompilerHost(code))
+    const findings = lintCode(code, "/not-in-the-program.ts", program)
+    expect(findings.length).toBeGreaterThan(0)
+    // An error with a line number, so validate's line filter keeps it: a fatal message has none.
+    expect(findings.every((d) => d.severity === "error" && Number.isInteger(d.line))).toBe(true)
   })
 })

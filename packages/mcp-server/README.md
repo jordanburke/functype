@@ -12,7 +12,7 @@ This package is part of the [functype monorepo](https://github.com/jordanburke/f
 - **`validate_code`** — Type-check functype code snippets using the TypeScript Compiler API, then lint them with eslint-plugin-functype's `recommended` preset
 - **`set_functype_version`** — Switch functype version at runtime (installs + reloads docs and types)
 
-The `validate_code` tool is the killer feature: an LLM writes functype code, calls the tool, gets back type errors and lint errors, and fixes them before showing the user. The lint errors are the ones a project's build reports, so a snippet that passes here passes there.
+The `validate_code` tool is the killer feature: an LLM writes functype code, calls the tool, gets back type errors and lint errors, and fixes them before showing the user. The lint errors are the ones a project's build reports with the same preset. A snippet can still pass here and fail there: an inline `eslint-disable` comment is honored here, as in a build; `.tsx` isn't parsed; and code that doesn't type-check, such as React code without React's types, isn't linted.
 
 ## Installation
 

@@ -31,13 +31,33 @@ const config = (program: ts.Program): LinterType.Config[] => [
   },
 ]
 
+/**
+ * An error when the rule says so, and always for ESLint's own messages: a fatal parse failure, or
+ * "No matching configuration found", which ESLint reports as a warning. Either means no rule ran,
+ * so a warning would pass a snippet that was never linted.
+ */
+const severityOf = (message: LinterType.LintMessage): "error" | "warning" =>
+  message.severity === 2 || message.fatal === true || message.ruleId === null ? "error" : "warning"
+
+const toDiagnostic = (message: LinterType.LintMessage): LintDiagnostic => ({
+  // A message about the whole file, such as a parse failure, has no position.
+  line: message.line ?? 0,
+  column: message.column ?? 0,
+  message: message.message,
+  rule: message.ruleId ?? (message.fatal === true ? "parse" : "eslint"),
+  severity: severityOf(message),
+})
+
 /** The preset's findings on `code`, which must be the text of `fileName` in `program`. */
-export const lintCode = (code: string, fileName: string, program: ts.Program): ReadonlyArray<LintDiagnostic> =>
-  // `cwd: "/"`, so the virtual file's absolute path is inside the directory ESLint matches against.
-  new Linter({ configType: "flat", cwd: "/" }).verify(code, config(program), { filename: fileName }).map((message) => ({
-    line: message.line,
-    column: message.column,
-    message: message.message,
-    rule: message.ruleId ?? "parse",
-    severity: message.severity === 2 ? ("error" as const) : ("warning" as const),
-  }))
+export const lintCode = (code: string, fileName: string, program: ts.Program): ReadonlyArray<LintDiagnostic> => {
+  try {
+    // `cwd: "/"`, so the virtual file's absolute path is inside the directory ESLint matches against.
+    return new Linter({ configType: "flat", cwd: "/" })
+      .verify(code, config(program), { filename: fileName })
+      .map(toDiagnostic)
+  } catch (e) {
+    // A rule that throws: report it, rather than crash the tool or pass the snippet unlinted.
+    const reason = e instanceof Error ? e.message : String(e)
+    return [{ line: 0, column: 0, message: `Lint failed: ${reason}`, rule: "eslint", severity: "error" }]
+  }
+}

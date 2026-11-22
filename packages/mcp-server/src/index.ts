@@ -161,7 +161,10 @@ Use validate_code to verify your functype code type-checks and passes the lint p
       ]
       const lintNote = !linted && args.lint ? "\n\nLint runs once the code type-checks." : ""
 
-      return `Validation FAILED — ${typeLines.length} type error(s), ${lintLines.length} lint finding(s):\n\n${sections.join("\n\n")}${importNote}${lintNote}`
+      const counts = linted
+        ? `${typeLines.length} type error(s), ${lintLines.length} lint finding(s)`
+        : `${typeLines.length} type error(s)`
+      return `Validation FAILED — ${counts}:\n\n${sections.join("\n\n")}${importNote}${lintNote}`
     },
   })
 
