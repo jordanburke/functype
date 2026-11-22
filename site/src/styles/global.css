@@ -36,6 +36,8 @@
   --feature: #16161b;
   --feature-edge: transparent;
   --sans: "Inter", system-ui, -apple-system, sans-serif;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --quick: 160ms;
   --mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
@@ -541,5 +543,55 @@ pre {
   }
   .theme #theme-label {
     display: none;
+  }
+}
+
+/* Motion. Small and responsive: controls ease their colours, buttons press, a theme switch
+   crossfades, and pages crossfade into each other. All of it is off under reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button,
+  .btn,
+  .sidebar a,
+  .nav ul a,
+  .theme {
+    transition:
+      color var(--quick) var(--ease),
+      background-color var(--quick) var(--ease),
+      box-shadow var(--quick) var(--ease);
+  }
+  .btn {
+    transition:
+      color var(--quick) var(--ease),
+      background-color var(--quick) var(--ease),
+      box-shadow var(--quick) var(--ease),
+      transform var(--quick) var(--ease);
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Set by the theme toggle for one switch only, so first paint never animates. */
+  html.theme-fade,
+  html.theme-fade *,
+  html.theme-fade *::before {
+    transition:
+      background-color 260ms var(--ease),
+      color 260ms var(--ease),
+      border-color 260ms var(--ease),
+      box-shadow 260ms var(--ease) !important;
+  }
+
+  /* Pages crossfade; the nav holds still across the change. */
+  @view-transition {
+    navigation: auto;
+  }
+  .nav {
+    view-transition-name: site-nav;
+  }
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 200ms;
+    animation-timing-function: var(--ease);
   }
 }
