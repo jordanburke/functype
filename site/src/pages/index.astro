@@ -203,7 +203,7 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
     code.querySelectorAll<HTMLElement>("[data-v]").forEach((el, i) => {
       const [v, kind] = run.vals[i] ?? ["", "v"];
       const cls = kind === "v" ? "v" : kind === "none" ? "v none" : "v plain";
-      if (el.textContent === v && el.className.startsWith(cls)) return;
+      if (el.textContent === v && el.className.replace(/\s*swap$/, "") === cls) return;
       el.textContent = v;
       el.className = cls;
       flash(el, "swap", i * 40);
@@ -588,8 +588,10 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
     padding: 32px;
     min-width: 0;
   }
-  a.panel {
-    transition: background-color 0.15s;
+  @media (prefers-reduced-motion: no-preference) {
+    a.panel {
+      transition: background-color 0.15s;
+    }
   }
   a.panel:hover {
     background: color-mix(in srgb, var(--panel) 85%, var(--ink) 4%);

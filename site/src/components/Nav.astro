@@ -52,6 +52,7 @@ const links = [
     }
   };
   let mode: Mode = read();
+  let fadeTimer: number | undefined;
   const apply = (): void => {
     if (mode === "auto") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = mode;
@@ -64,7 +65,8 @@ const links = [
     mode = ORDER[(ORDER.indexOf(mode) + 1) % ORDER.length];
     const root = document.documentElement;
     root.classList.add("theme-fade");
-    window.setTimeout(() => root.classList.remove("theme-fade"), 320);
+    window.clearTimeout(fadeTimer);
+    fadeTimer = window.setTimeout(() => root.classList.remove("theme-fade"), 320);
     try {
       if (mode === "auto") localStorage.removeItem("ft-theme");
       else localStorage.setItem("ft-theme", mode);
