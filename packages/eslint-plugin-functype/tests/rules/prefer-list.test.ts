@@ -17,6 +17,14 @@ describe("prefer-list", () => {
       // #325 B — Wire<T> wraps any boundary shape; everything inside its type argument is the wire
       // shape by declaration, so the rule skips it even at allowReadonlyArrays: false.
       {
+        name: "Readonly<Array<T>> is read-only, like ReadonlyArray<T>",
+        code: "export type Names = Readonly<Array<string>>",
+      },
+      {
+        name: "Readonly<T[]> is read-only, like readonly T[]",
+        code: "function f(names: Readonly<string[]>) { return names.length }",
+      },
+      {
         name: "A ReadonlyArray inside Wire<…> is a declared boundary",
         code: "type Rows = Wire<ReadonlyArray<Row>>",
         options: [{ allowReadonlyArrays: false }],
@@ -263,6 +271,29 @@ describe("prefer-list", () => {
                 messageId: "suggestAddImport",
                 data: { symbol: "List" },
                 output: 'import { List } from "functype"\nconst items: readonly string[] = ["a", "b", "c"]',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Readonly<Array<T>> is flagged as a whole when allowReadonlyArrays: false",
+        code: "type Names = Readonly<Array<string>>",
+        options: [{ allowReadonlyArrays: false }],
+        errors: [
+          {
+            messageId: "preferList",
+            data: { type: "string", arrayType: "Readonly<Array<string>>" },
+            suggestions: [
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: "type Names = List<string>",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype Names = Readonly<Array<string>>',
               },
             ],
           },

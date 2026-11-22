@@ -227,6 +227,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - **`agent`:** inherits both. `prefer-list` is `error` (was `off`), so `agent` no longer turns off a rule that `recommended` errors on.
 - An array that is declared and then pushed to is reported twice: by `prefer-list` at the declaration, and by `no-array-mutation` at the `push`. One fix clears both.
 - `no-array-mutation` is type-aware. Without `parserOptions.projectService` it reports nothing, so a config without type information sees only the `prefer-list` part of this change.
+- `prefer-list` treats `Readonly<T[]>` and `Readonly<Array<T>>` as read-only, as it treats `ReadonlyArray<T>` and `readonly T[]`. It reported them as mutable arrays.
 - `no-floating-io`, `no-floating-result` and `no-serialize-container` are unchanged in every preset.
 - **Upgrade:** run `eslint` after upgrading and fix what it reports:
   - A mutable type (`string[]`, `Array<T>`) becomes `ReadonlyArray<T>`, or `List<T>` for a collection you transform.
