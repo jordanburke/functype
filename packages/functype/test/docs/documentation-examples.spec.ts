@@ -21,12 +21,9 @@ describe("Documentation Examples", () => {
       //#region readme-imports
       // Note: Imports shown here are examples for documentation
       // Actual imports are at the top of this file
-      // Selective module imports (recommended for production):
+      // Subpath imports, which bundle the same as the root import:
       // import { Option } from "functype/option"
       // import { Either } from "functype/either"
-
-      // Direct constructor imports (smallest bundle):
-      // import { some, none } from "functype/option"
       //#endregion readme-imports
 
       // Test that imports work
