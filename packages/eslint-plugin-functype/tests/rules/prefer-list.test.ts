@@ -14,8 +14,6 @@ describe("prefer-list", () => {
         code: 'type Rows = import("functype").Wire<ReadonlyArray<Row>>',
         options: [{ allowReadonlyArrays: false }],
       },
-      // #325 B — Wire<T> wraps any boundary shape; everything inside its type argument is the wire
-      // shape by declaration, so the rule skips it even at allowReadonlyArrays: false.
       {
         name: "Readonly<Array<T>> is read-only, like ReadonlyArray<T>",
         code: "export type Names = Readonly<Array<string>>",
@@ -24,6 +22,8 @@ describe("prefer-list", () => {
         name: "Readonly<T[]> is read-only, like readonly T[]",
         code: "function f(names: Readonly<string[]>) { return names.length }",
       },
+      // #325 B — Wire<T> wraps any boundary shape; everything inside its type argument is the wire
+      // shape by declaration, so the rule skips it even at allowReadonlyArrays: false.
       {
         name: "A ReadonlyArray inside Wire<…> is a declared boundary",
         code: "type Rows = Wire<ReadonlyArray<Row>>",
@@ -294,6 +294,144 @@ describe("prefer-list", () => {
                 messageId: "suggestAddImport",
                 data: { symbol: "List" },
                 output: 'import { List } from "functype"\ntype Names = Readonly<Array<string>>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Partial<T[]> stays mutable: only Readonly<…> makes the array read-only",
+        code: "type A = Partial<string[]>",
+        errors: [
+          {
+            messageId: "preferReadonlyOrList",
+            data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "type A = Partial<ReadonlyArray<string>>",
+              },
+              { messageId: "suggestListType", data: { type: "string" }, output: "type A = Partial<List<string>>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = Partial<string[]>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Readonly<…> with a second type argument isn't the utility type",
+        code: "type A = Readonly<Array<string>, X>",
+        errors: [
+          {
+            messageId: "preferReadonlyOrList",
+            data: { type: "string", arrayType: "Array<string>" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "type A = Readonly<ReadonlyArray<string>, X>",
+              },
+              { messageId: "suggestListType", data: { type: "string" }, output: "type A = Readonly<List<string>, X>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = Readonly<Array<string>, X>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "A qualified NS.Readonly isn't the utility type",
+        code: "type A = NS.Readonly<string[]>",
+        errors: [
+          {
+            messageId: "preferReadonlyOrList",
+            data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "type A = NS.Readonly<ReadonlyArray<string>>",
+              },
+              { messageId: "suggestListType", data: { type: "string" }, output: "type A = NS.Readonly<List<string>>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = NS.Readonly<string[]>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Readonly<{ xs: T[] }> leaves the property's array mutable",
+        code: "type A = Readonly<{ xs: string[] }>",
+        errors: [
+          {
+            messageId: "preferReadonlyOrList",
+            data: { type: "string", arrayType: "string[]" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "type A = Readonly<{ xs: ReadonlyArray<string> }>",
+              },
+              {
+                messageId: "suggestListType",
+                data: { type: "string" },
+                output: "type A = Readonly<{ xs: List<string> }>",
+              },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = Readonly<{ xs: string[] }>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Readonly<Array<T>[]> leaves the inner arrays mutable",
+        code: "type A = Readonly<Array<string>[]>",
+        errors: [
+          {
+            messageId: "preferReadonlyOrList",
+            data: { type: "string", arrayType: "Array<string>" },
+            suggestions: [
+              {
+                messageId: "suggestReadonlyArray",
+                data: { type: "string" },
+                output: "type A = Readonly<ReadonlyArray<string>[]>",
+              },
+              { messageId: "suggestListType", data: { type: "string" }, output: "type A = Readonly<List<string>[]>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = Readonly<Array<string>[]>',
+              },
+            ],
+          },
+        ],
+      },
+      {
+        name: "Readonly<T[]> is flagged as a whole when allowReadonlyArrays: false",
+        code: "type A = Readonly<string[]>",
+        options: [{ allowReadonlyArrays: false }],
+        errors: [
+          {
+            messageId: "preferList",
+            data: { type: "string", arrayType: "Readonly<string[]>" },
+            suggestions: [
+              { messageId: "suggestListType", data: { type: "string" }, output: "type A = List<string>" },
+              {
+                messageId: "suggestAddImport",
+                data: { symbol: "List" },
+                output: 'import { List } from "functype"\ntype A = Readonly<string[]>',
               },
             ],
           },
