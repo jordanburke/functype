@@ -15,12 +15,21 @@ const configs = plugin.configs as Readonly<Record<string, Preset>>
 const levelOf = (entry: RuleEntry | undefined): Level | undefined => (typeof entry === "string" ? entry : entry?.[0])
 
 /**
- * Severity policy (#325): a rule is `error` in `recommended` once it is right on ~95–99% of real code
- * and its known false-positive classes are closed; it stays `warn` only while those classes are open.
- * These tests pin which rules have graduated, so a demotion is a deliberate, reviewed change.
+ * The one preset: every rule is `error` or `off`, because the code is written by coding agents, which
+ * act on what fails their build and pass over a warning. These tests pin each rule's level, so a
+ * change is a deliberate, reviewed one.
  */
 describe("recommended preset", () => {
   const rules = configs.recommended!.rules
+
+  it("sets every rule, and none to warn", () => {
+    expect(Object.keys(rules).sort()).toEqual(
+      Object.keys(ruleRegistry)
+        .map((name) => `functype/${name}`)
+        .sort(),
+    )
+    expect(Object.entries(rules).filter(([, entry]) => levelOf(entry) === "warn")).toEqual([])
+  })
 
   it.each([
     "functype/no-let",
@@ -28,114 +37,35 @@ describe("recommended preset", () => {
     "functype/prefer-functype-map",
     "functype/prefer-functype-set",
     "functype/prefer-map",
-    "functype/prefer-fold",
     "functype/collection-naming",
     "functype/prefer-list",
     "functype/no-array-mutation",
+    "functype/prefer-option",
+    "functype/prefer-either",
+    "functype/prefer-try",
+    "functype/no-get-unsafe",
+    "functype/no-floating-io",
+    "functype/no-floating-result",
+    "functype/no-serialize-container",
+    "functype/no-getOrThrow-in-render",
+    "functype/must-fold-on-component-return",
   ])("%s is an error", (rule) => {
     expect(rules[rule]).toBe("error")
   })
 
-  it.each([
-    "functype/prefer-option",
-    "functype/prefer-either",
-    "functype/prefer-try",
-    "functype/prefer-flatmap",
-    "functype/prefer-do-notation",
-  ])("%s stays a warning until its boundary cases are closed", (rule) => {
-    expect(rules[rule]).toBe("warn")
-  })
-
-  it("leaves prefer-fold's guard check off", () => {
-    expect(rules["functype/prefer-fold"]).toBe("error")
-  })
-})
-
-describe("strict preset", () => {
-  it("errors on in-place array mutation", () => {
-    expect(configs.strict!.rules["functype/no-array-mutation"]).toBe("error")
-  })
-
   it("turns on prefer-fold's guard check", () => {
-    expect(configs.strict!.rules["functype/prefer-fold"]).toEqual(["error", { checkGuards: true }])
+    expect(rules["functype/prefer-fold"]).toEqual(["error", { checkGuards: true }])
   })
-
-  it("warns on an IO that is never run, while it is measured", () => {
-    expect(configs.strict!.rules["functype/no-floating-io"]).toBe("warn")
-    expect(configs.recommended!.rules["functype/no-floating-io"]).toBe("off")
-  })
-
-  it("errors on a container sent to a JSON sink, which recommended leaves off until 2.0", () => {
-    expect(configs.strict!.rules["functype/no-serialize-container"]).toBe("error")
-    expect(configs.recommended!.rules["functype/no-serialize-container"]).toBe("off")
-    expect(configs.agent!.rules["functype/no-serialize-container"]).toBe("error")
-  })
-
-  it("errors on a dropped Either or Try, which recommended leaves off until 2.0", () => {
-    expect(configs.strict!.rules["functype/no-floating-result"]).toBe("error")
-    expect(configs.recommended!.rules["functype/no-floating-result"]).toBe("off")
-    expect(configs.agent!.rules["functype/no-floating-result"]).toBe("error")
-  })
-
-  it.each(["functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
-    "warns on the React rule %s, while it is measured",
-    (rule) => {
-      expect(configs.strict!.rules[rule]).toBe("warn")
-      expect(configs.recommended!.rules[rule]).toBe("off")
-    },
-  )
-
-  it("is never looser than recommended", () => {
-    const rank = { off: 0, warn: 1, error: 2 } as const
-    const recommended = configs.recommended!.rules
-    const strict = configs.strict!.rules
-    Object.entries(recommended).forEach(([rule, entry]) => {
-      expect(rank[levelOf(strict[rule])!], rule).toBeGreaterThanOrEqual(rank[levelOf(entry)!])
-    })
-  })
-})
-
-/**
- * The agent preset has no warnings: an agent acts on what fails its build and passes over the rest, so
- * each rule is a decision, `error` or `off`.
- */
-describe("agent preset", () => {
-  const agent = configs.agent!.rules
-
-  it("sets every rule, and none to warn", () => {
-    expect(Object.keys(agent).sort()).toEqual(
-      Object.keys(ruleRegistry)
-        .map((name) => `functype/${name}`)
-        .sort(),
-    )
-    expect(Object.entries(agent).filter(([, entry]) => levelOf(entry) === "warn")).toEqual([])
-  })
-
-  it("errors on everything strict errors on", () => {
-    Object.entries(configs.strict!.rules)
-      .filter(([, entry]) => levelOf(entry) === "error")
-      .forEach(([rule, entry]) => expect(agent[rule], rule).toEqual(entry))
-  })
-
-  it.each(["functype/no-floating-io", "functype/no-getOrThrow-in-render", "functype/must-fold-on-component-return"])(
-    "errors on %s, which strict still warns on",
-    (rule) => {
-      expect(agent[rule]).toBe("error")
-    },
-  )
 
   it.each(["functype/prefer-flatmap", "functype/prefer-do-notation"])(
     "turns off %s until its precision is measured",
     (rule) => {
-      expect(agent[rule]).toBe("off")
+      expect(rules[rule]).toBe("off")
     },
   )
 
-  it("errors on everything recommended errors on, prefer-list included", () => {
-    Object.entries(configs.recommended!.rules)
-      .filter(([, entry]) => levelOf(entry) === "error")
-      .forEach(([rule]) => expect(levelOf(agent[rule]), rule).toBe("error"))
-    expect(agent["functype/prefer-list"]).toBe("error")
+  it("is the only preset besides the test-file override", () => {
+    expect(Object.keys(configs).sort()).toEqual(["recommended", "tests"])
   })
 })
 
@@ -183,6 +113,8 @@ describe("the test-file configs", () => {
     "functype/prefer-option",
     "functype/prefer-either",
     "functype/prefer-try",
+    "functype/no-floating-result",
+    "functype/no-serialize-container",
   ]
   const OFF = 0
   /** A rule no config mentions comes back undefined, so "not off" alone would pass for a rule that's gone. */

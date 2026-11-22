@@ -269,23 +269,7 @@ Both the hooks and the primitives are generic over any `IO<never, E, A>` — not
 - `functype/no-getOrThrow-in-render` reports a bare `.orThrow()` in a component or hook body, where a missing value would throw during render and unmount the tree.
 - `functype/must-fold-on-component-return` reports a component that picks what it renders with an `isSome()` / `isLeft()` early return or `&&`, instead of `fold` or a `Match` component.
 
-Both are on (`warn`) in `functype.configs.strict`. With `recommended`, turn them on yourself:
-
-```js
-// eslint.config.mjs
-import functype from "eslint-plugin-functype"
-
-export default [
-  functype.configs.recommended,
-  {
-    files: ["**/*.tsx", "**/*.jsx"],
-    rules: {
-      "functype/no-getOrThrow-in-render": "error",
-      "functype/must-fold-on-component-return": "warn",
-    },
-  },
-]
-```
+Both are `error` in `functype.configs.recommended`, the plugin's one preset.
 
 They work without type information and are more precise with it (`parserOptions.projectService`). See the [plugin README](../eslint-plugin-functype/README.md#react-rules) for what each one reports.
 

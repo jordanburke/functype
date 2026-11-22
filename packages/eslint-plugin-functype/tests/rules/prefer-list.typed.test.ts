@@ -36,6 +36,18 @@ describe("prefer-list (type-aware)", () => {
   typedRuleTester.run("prefer-list", rule, {
     valid: [
       {
+        name: "A mutable array changed in place is left to no-array-mutation, which reports the push itself",
+        filename: typedFilename,
+        options,
+        code: 'export function collect(): ReadonlyArray<string> { const acc: string[] = []; acc.push("a"); return acc }',
+      },
+      {
+        name: "A literal accumulator changed in place is left to no-array-mutation",
+        filename: typedFilename,
+        options,
+        code: 'export function collect(): ReadonlyArray<string> { const acc = ["z"]; acc.push("a"); return acc }',
+      },
+      {
         name: "A literal passed to an array-typed parameter",
         filename: typedFilename,
         options,
@@ -205,6 +217,23 @@ describe("prefer-list (type-aware)", () => {
       },
     ],
     invalid: [
+      {
+        name: "An intersection-typed local array is still reported: no-array-mutation skips it",
+        filename: typedFilename,
+        options,
+        code: 'export function tagged(): ReadonlyArray<string> { const acc: string[] & { tag?: string } = ["x"]; acc.push("t"); return acc }',
+        errors: [{ messageId: "mutatedArray" as const, data: { name: "acc", how: "push" } }],
+      },
+      {
+        name: "A mutated field is still reported: fields are matched by name, which can't tell two types apart",
+        filename: typedFilename,
+        options,
+        code: 'export type Cart = { items: string[] }\nexport type Order = { items: string[] }\nexport const add = (c: Cart) => c.items.push("a")',
+        errors: [
+          { messageId: "mutatedArray" as const, data: { name: "items", how: "push" } },
+          { messageId: "mutatedArray" as const, data: { name: "items", how: "push" } },
+        ],
+      },
       // A literal passed to your own array-typed parameter is fine; the mutable parameter type is what's reported.
       {
         name: "Your own mutable parameter type is reported, the literal passed to it is not",
@@ -243,13 +272,6 @@ describe("prefer-list (type-aware)", () => {
       // React's real useState signature: `S | (() => S)`, a union containing the type parameter.
       literal("export const [ids, setIds] = hostReactState([1, 2])", "1, 2"),
       literal("export const ids = hostLoad([1, 2])", "1, 2"),
-      {
-        name: "A mutable array changed in place gets advice, not a ReadonlyArray suggestion that wouldn't compile",
-        filename: typedFilename,
-        options,
-        code: 'export function collect(): ReadonlyArray<string> { const acc: string[] = []; acc.push("a"); return acc }',
-        errors: [{ messageId: "mutatedArray" as const, data: { name: "acc", how: "push" } }],
-      },
       {
         name: "A cast after Array.isArray narrowing (any[]) is decoding too",
         filename: typedFilename,

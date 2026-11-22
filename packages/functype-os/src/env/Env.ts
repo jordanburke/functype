@@ -21,19 +21,20 @@ const EnvCompanion = {
     return List(pairs)
   },
 
-  parse: <T>(name: string, parser: (value: string) => T): Either<EnvError, T> => {
-    const valueOpt = Option(process.env[name])
-    if (valueOpt.isEmpty) return Left(EnvError(name))
-    const value = valueOpt.orThrow()
-    const parsed = Try(() => parser(value)).toEither((error) =>
-      EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`),
-    )
-    return parsed.flatMap((p) =>
-      typeof p === "number" && isNaN(p)
-        ? Left(EnvError(name, `Cannot parse '${value}' as number for '${name}'`))
-        : Right(p),
-    )
-  },
+  parse: <T>(name: string, parser: (value: string) => T): Either<EnvError, T> =>
+    Option(process.env[name]).fold<Either<EnvError, T>>(
+      () => Left(EnvError(name)),
+      (value) =>
+        Try(() => parser(value))
+          .toEither((error) =>
+            EnvError(name, `Failed to parse '${name}': ${error instanceof Error ? error.message : String(error)}`),
+          )
+          .flatMap((p) =>
+            typeof p === "number" && isNaN(p)
+              ? Left(EnvError(name, `Cannot parse '${value}' as number for '${name}'`))
+              : Right(p),
+          ),
+    ),
 }
 
 export const Env: typeof EnvConstructor & typeof EnvCompanion = Object.assign(EnvConstructor, EnvCompanion)

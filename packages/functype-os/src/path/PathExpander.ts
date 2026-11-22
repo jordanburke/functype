@@ -41,12 +41,8 @@ export const expandVars = (p: string): Either<PathError, string> => {
   )
 }
 
-export const expandPath = (p: string): Either<PathError, string> => {
-  const tildeExpanded = expandTilde(p)
-  const varsResult = expandVars(tildeExpanded)
-  if (varsResult.isLeft()) return varsResult
-  return Right(nodePath.resolve(varsResult.orThrow()))
-}
+export const expandPath = (p: string): Either<PathError, string> =>
+  expandVars(expandTilde(p)).map((expanded) => nodePath.resolve(expanded))
 
 export const Path = {
   expand: expandPath,
