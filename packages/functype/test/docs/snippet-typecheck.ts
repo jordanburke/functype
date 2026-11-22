@@ -242,6 +242,7 @@ export const SITE_PAGES = [
   "option",
   "set",
   "try",
+  "upgrading-to-2",
   "wire",
 ] as const
 

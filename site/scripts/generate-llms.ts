@@ -121,6 +121,11 @@ const GUIDES: ReadonlyArray<Link> = [
 
 const TOOLING: ReadonlyArray<Link> = [
   sitePage(
+    "Upgrading to 2.0",
+    "upgrading-to-2",
+    "Moving a codebase from functype 1.x to 2.0: what the compiler reports, what it can't see, and per-package changes",
+  ),
+  sitePage(
     "ESLint Plugin",
     "eslint",
     "Rules, severity policy, Wire / @interop boundaries, and invariant() bug checks",
