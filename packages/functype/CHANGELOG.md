@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 2.0.0 - 2026-11-22
+
 **Upgrading from 1.x:** [functype.org/upgrading-to-2](https://functype.org/upgrading-to-2) collects what to change: what the compiler reports, what it can't see, and each package's changes. The entries below have the details.
 
 **2.0: apps ship a quarter of the functype code they did.** An Option-only program bundles to 5.7 KB gzipped instead of 23.0 KB, and a small program using `IO.gen`, Either, Option and List to 11.5 KB instead of 23.1 KB. Effect 4.1.5's figures for the same two programs are 7.0 KB and 37.3 KB.
