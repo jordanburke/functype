@@ -14,6 +14,11 @@ How to move a codebase from functype 1.x to 2.0: what the compiler finds for you
 - **Convert stored data first, on 1.x.** 2.0 can't read two formats that 1.x wrote:
   - **YAML** from `toYAML`. Convert it to JSON with 1.27.0 or later, whose `fromYAML` reads what `toYAML` writes.
   - **Serialized `Task` values**, envelopes with `"@functype": "Task"`. `Serialization.deserialize` returns a `Failure` for them in 2.0.
+- **Check the libraries that depend on functype, not only your own code.** A library built on 1.x with an open peer range, such as `"functype": ">=1.4.1"`, installs against 2.0 without a warning. Its types still compile in your project, but its built code can call 1.x APIs at run time, and your tests may not notice. In one real case a library read `list.head` as a value inside its `first()`, so `first()` returned a function to every caller while all 1,200 of the consumer's tests passed.
+  - List them with `pnpm why functype` (or `npm ls functype`).
+  - Check each one has a 2.x release. A library whose peer range is `^1` refuses 2.0, which is what you want until it does.
+  - Add a test that runs each library's main calls against the functype you install.
+- **Run command-line tools built on functype 1 with `npx`, or outside the workspace.** pnpm 12 applies a workspace's `overrides` inside `pnpm dlx`, so a workspace that overrides `functype` to 2.0 makes every tool run through `pnpm dlx` load functype 2. A tool built on 1.x then crashes on import, for example `SyntaxError: The requested module 'functype' does not provide an export named 'Ok'`. In CI that can look like a step failing in one second with no output. `npx` doesn't read pnpm's overrides.
 - **There is no codemod yet.** A type-aware upgrade tool is planned for after 2.0. Until then, the compiler and the lists below are the guide.
 
 ## Step 1: fix what the compiler reports
@@ -173,7 +178,7 @@ const inOrder = IO.all(steps, { concurrency: 1 });
 
 ### Other changes the compiler can't see
 
-- **Accessor reads without `()`** in a truthiness check, before `??`, in a template string, or passed as `unknown` (`expect(list.head)`) get the method itself.
+- **Accessor reads without `()`** in a truthiness check, before `??`, in a template string, or passed as `unknown` (`expect(list.head)`, `Option(list.head)`) get the method itself. That includes the built code of a library you depend on: see [Before you start](#before-you-start).
 - **A default that is a function:** `opt.getOrElse(fn)` calls `fn`. Write `opt.getOrElse(() => fn)` to get the function back.
 - **Side effects in a default** now run only when the value is missing.
 - **Code typed `any`** passes the compiler with a 1.x call, such as `opt.orElse(42)`, and fails at run time.
