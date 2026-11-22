@@ -131,7 +131,7 @@ const kept = ys.filter((y) => set.has(y));
 const read = IO.sync(() => ref.get());
 ```
 
-ts-builds' functype preset warns on these through `@typescript-eslint/unbound-method`, from ts-builds 4.8.0. It sees methods declared with method syntax, which covers every functype value type in 2.0.
+ts-builds' functype preset reports these through `@typescript-eslint/unbound-method`. From ts-builds 5.0.0, the release for functype 2.0, they are errors; in 4.8.x they are warnings. The rule sees methods declared with method syntax, which covers every functype value type in 2.0.
 
 ### `run()` rejects on a defect
 
