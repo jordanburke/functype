@@ -1,8 +1,8 @@
 name: Deploy Docs
 
 on:
-  # Deploys from main, the line npm `latest` serves. main has the same filter, so a 1.x
-  # release doesn't redeploy the 1.x site over 2.0.
+  # Deploys from main, the line npm `latest` serves. This filter is the same on main and
+  # release/1.x, so a 1.x release doesn't redeploy the 1.x site over 2.0.
   push:
     branches: ["main"]
 
