@@ -48,7 +48,7 @@ function createServer() {
     "- search_docs: Search functype documentation by keyword or type name",
     "- get_type_api: Get detailed API reference for a specific type",
     "- get_interfaces: Get the interface hierarchy (Functor, Monad, Foldable, etc.)",
-    "- validate_code: Type-check functype code snippets at compile time",
+    "- validate_code: Type-check functype code snippets, then lint them with eslint-plugin-functype's recommended preset",
     ...(exposeSetVersion
       ? ["- set_functype_version: Switch the functype version at runtime (installs + reloads)"]
       : []),
@@ -66,7 +66,7 @@ function createServer() {
 Available tools:
 ${toolList}
 
-Use validate_code to verify your functype code is type-correct before presenting it to the user.`,
+Use validate_code to verify your functype code type-checks and passes the lint preset before presenting it to the user.`,
   })
 
   server.addTool({
@@ -123,7 +123,7 @@ Use validate_code to verify your functype code is type-correct before presenting
   server.addTool({
     name: "validate_code",
     description:
-      "Type-check a functype code snippet using the TypeScript compiler. Returns PASSED or a list of type errors with line/column/message. Use this to verify functype code is type-correct before presenting to users.",
+      "Type-check a functype code snippet with the TypeScript compiler, then lint it with eslint-plugin-functype's recommended preset, the rules a project's build runs. Returns PASSED, or each type error and lint error with line/column/message. Use this to verify functype code before presenting it to users.",
     parameters: z.object({
       code: z.string().describe("TypeScript code snippet using functype to type-check"),
       auto_import: z
@@ -131,19 +131,37 @@ Use validate_code to verify your functype code is type-correct before presenting
         .optional()
         .default(true)
         .describe("Automatically import all functype types if no import statement is present. Default: true"),
+      lint: z
+        .boolean()
+        .optional()
+        .default(true)
+        .describe(
+          "Also lint with eslint-plugin-functype's recommended preset, type-aware rules included, after the code type-checks. Default: true",
+        ),
     }),
     execute: async (args) => {
-      const result = validateCode(args.code, { autoImport: args.auto_import })
+      const result = validateCode(args.code, { autoImport: args.auto_import, lint: args.lint })
+      const linted = result.lint !== undefined
 
       if (result.success) {
         const importNote = result.importsPrepended ? " (functype imports auto-added)" : ""
-        return `Validation PASSED${importNote}\n\nThe code is type-correct.`
+        const lintWarnings = (result.lint ?? []).map(
+          (d) => `- Line ${d.line}, Col ${d.column}: ${d.message} (${d.rule})`,
+        )
+        const warnings = lintWarnings.length > 0 ? `\n\nLint warnings:\n${lintWarnings.join("\n")}` : ""
+        return `Validation PASSED${importNote}\n\nThe code is type-correct${linted ? " and passes the lint preset" : ""}.${warnings}`
       }
 
-      const errorLines = result.diagnostics.map((d) => `- Line ${d.line}, Col ${d.column}: ${d.message} (TS${d.code})`)
+      const typeLines = result.diagnostics.map((d) => `- Line ${d.line}, Col ${d.column}: ${d.message} (TS${d.code})`)
+      const lintLines = (result.lint ?? []).map((d) => `- Line ${d.line}, Col ${d.column}: ${d.message} (${d.rule})`)
       const importNote = result.importsPrepended ? "\n\nNote: functype imports were auto-added." : ""
+      const sections = [
+        ...(typeLines.length > 0 ? [`Type errors:\n${typeLines.join("\n")}`] : []),
+        ...(lintLines.length > 0 ? [`Lint errors (eslint-plugin-functype recommended):\n${lintLines.join("\n")}`] : []),
+      ]
+      const lintNote = !linted && args.lint ? "\n\nLint runs once the code type-checks." : ""
 
-      return `Validation FAILED — ${result.diagnostics.length} error(s):\n\n${errorLines.join("\n")}${importNote}`
+      return `Validation FAILED — ${typeLines.length} type error(s), ${lintLines.length} lint finding(s):\n\n${sections.join("\n\n")}${importNote}${lintNote}`
     },
   })
 

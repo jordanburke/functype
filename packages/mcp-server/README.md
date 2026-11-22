@@ -9,10 +9,10 @@ This package is part of the [functype monorepo](https://github.com/jordanburke/f
 - **`search_docs`** — Search functype documentation by keyword or type name
 - **`get_type_api`** — Detailed API reference for any type (Option, Either, List, IO, etc.)
 - **`get_interfaces`** — Interface hierarchy (Functor, Monad, Foldable, Extractable, etc.)
-- **`validate_code`** — Type-check functype code snippets using the TypeScript Compiler API
+- **`validate_code`** — Type-check functype code snippets using the TypeScript Compiler API, then lint them with eslint-plugin-functype's `recommended` preset
 - **`set_functype_version`** — Switch functype version at runtime (installs + reloads docs and types)
 
-The `validate_code` tool is the killer feature: an LLM writes functype code, calls the tool, gets back type errors, and fixes them before showing the user.
+The `validate_code` tool is the killer feature: an LLM writes functype code, calls the tool, gets back type errors and lint errors, and fixes them before showing the user. The lint errors are the ones a project's build reports, so a snippet that passes here passes there.
 
 ## Installation
 
@@ -84,14 +84,19 @@ No parameters.
 
 ### `validate_code`
 
-Type-check a functype code snippet using the TypeScript compiler.
+Type-check a functype code snippet using the TypeScript compiler, then lint it with eslint-plugin-functype's `recommended` preset.
 
 ```
 code: string          — TypeScript code to validate
 auto_import?: bool    — Auto-import functype types if no import present (default: true)
+lint?: bool           — Also run the lint preset once the code type-checks (default: true)
 ```
 
-Returns `Validation PASSED` or a list of errors with line, column, message, and TS error code.
+Returns `Validation PASSED`, or the type errors (line, column, message, TS error code) and the lint errors (line, column, message, rule).
+
+- **The lint preset is the one a project's build runs,** every rule `error` or `off`. The type-aware rules run too, such as `no-floating-result` on a dropped `Either` and `no-array-mutation` on a `push`: the linter reuses the program the type check built.
+- **Lint runs only once the code type-checks,** because the type-aware rules need the types.
+- **A snippet passes** only with no type errors and no lint errors. Pass `lint: false` to check types alone.
 
 ### `set_functype_version`
 

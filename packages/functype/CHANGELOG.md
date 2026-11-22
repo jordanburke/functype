@@ -314,6 +314,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - The same messages appear under TypeScript 7.0.2.
 - **Upgrade:** provide an IO's services before running it, as before; only the message changed. Replace `yield io` with `yield* io`. A generator annotated `Generator<any, A, any>` still compiles.
 
+**2.0: functype-mcp-server's `validate_code` lints too.** Roadmap 7c: an agent checking a snippet sees the errors its build would show, not only type errors.
+
+- After the snippet type-checks, `validate_code` lints it with eslint-plugin-functype's `recommended` preset. That is the preset a project's build runs, with every rule `error` or `off`.
+- The type-aware rules run too, such as `no-floating-result` on a dropped `Either` and `no-array-mutation` on a `push`. The linter reuses the TypeScript program the type check built, so it adds no measurable time per call: about 71 ms with or without lint, on Node 24.20.0.
+- A snippet now passes only with no type errors and no lint errors. The result gains a `lint` field with each finding's line, column, message and rule. The tool's text lists type errors and lint errors under their own headings.
+- **Upgrade:** a snippet that passed before can now fail on a lint rule. Pass `lint: false` to check types alone. functype-mcp-server now depends on `eslint`, `@typescript-eslint/parser` and eslint-plugin-functype.
+
 ## 1.27.2 - 2026-11-21
 
 - **Fixed: a `bracket` whose release fails no longer reports success under `run()`.** The async interpreter ran the release and dropped its outcome, so a release that died, such as a failed commit or close, left the run reporting the use step's result. `runSync()` already reported the failure. Now the failed release replaces the outcome under `run()`, `runOrThrow()` and `runExit()` too, as a throwing `finally` does. The same holds for `bracketExit`.
