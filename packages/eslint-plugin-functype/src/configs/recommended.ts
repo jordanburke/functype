@@ -20,7 +20,8 @@
  * - collection-naming is a convention, not a heuristic, so it has no false-positive class.
  * - no-array-mutation: 91 hits across five consumers, every one a real in-place mutation.
  * - prefer-list: about 96% precise on five consumers (#362). Supabase's generated types are skipped
- *   by shape. A `push` onto a mutable array is reported once, by no-array-mutation.
+ *   by shape. A local array changed by a method or an index write is reported once, by
+ *   no-array-mutation; a mutated field is still reported by both.
  * - prefer-option / prefer-either / prefer-try: at a real boundary the code marks it instead
  *   (`@interop <reason>` or `invariant()` for a throw, `Wire<T>` for a data shape).
  * - no-floating-io: 0 false positives across ~1,340 IO-typed calls in five codebases.

@@ -381,7 +381,8 @@ const rule: Rule.RuleModule = {
           const parent = identifier.parent as ASTNode | undefined
           if (parent?.type !== "MemberExpression" || parent.object !== identifier) return null
           const grand = parent.parent as ASTNode | undefined
-          if (grand?.type === "AssignmentExpression" && grand.left === parent) return "[index] ="
+          if (grand?.type === "AssignmentExpression" && grand.left === parent)
+            return parent.computed ? "[index] =" : null
           const name = parent.property?.type === "Identifier" && !parent.computed ? parent.property.name : null
           return name && MUTATING_METHODS.has(name) && grand?.type === "CallExpression" && grand.callee === parent
             ? name
@@ -418,6 +419,18 @@ const rule: Rule.RuleModule = {
     /** Is `binding` handed to a slot that requires a mutable array (pg `query` values, ReactFlow `nodes`)? */
     function feedsMutableSlot(binding: ASTNode): boolean {
       return usesOf(binding).some(({ identifier }) => flowsIntoMutableArraySlot(identifier, context) === true)
+    }
+
+    /**
+     * A local array changed in place by a method (`acc.push(x)`) or an index write (`acc[i] = x`) is one
+     * mistake, building it by mutation, with two sites. With type information, no-array-mutation reports
+     * the change itself, which is where the fix goes, so this rule leaves the declaration to it rather
+     * than report it twice. Without type information no-array-mutation reports nothing, so the
+     * declaration gets the advice. Fields stay reported here: they are matched by name across the file,
+     * which can't tell which declaration a mutation belongs to.
+     */
+    function leftToArrayMutation(): boolean {
+      return hasTypeInformation(context)
     }
 
     /**
@@ -466,20 +479,13 @@ const rule: Rule.RuleModule = {
           )
         })
       if (feedsFromCall) return
-      // An array that is changed in place is one mistake, building it by mutation, with two sites. With
-      // type information, no-array-mutation reports the change itself (`push`, `sort`, `x[i] = …`), which
-      // is where the fix goes, so this rule stays quiet about the declaration rather than report it twice.
-      // Without type information no-array-mutation reports nothing, so the declaration gets the advice.
-      const typed = hasTypeInformation(context)
       // A field mutated somewhere in the file (`result.errors.push(e)`, `this.events.push(e)`): a
       // ReadonlyArray suggestion wouldn't compile, so give the mutation advice. Matched by name, which only
       // picks the message, never whether to report.
       const field = annotatedFieldName(reportNode)
       const fieldMutation = field === null ? null : fieldMutationIn(field)
       if (field !== null && fieldMutation !== null) {
-        if (!typed) {
-          context.report({ node: reportNode, messageId: "mutatedArray", data: { name: field, how: fieldMutation } })
-        }
+        context.report({ node: reportNode, messageId: "mutatedArray", data: { name: field, how: fieldMutation } })
         return
       }
       const binding = annotatedBinding(reportNode)
@@ -487,7 +493,7 @@ const rule: Rule.RuleModule = {
         if (feedsMutableSlot(binding)) return
         const how = mutationOf(binding)
         if (how) {
-          if (!typed) {
+          if (!leftToArrayMutation()) {
             context.report({ node: reportNode, messageId: "mutatedArray", data: { name: binding.name, how } })
           }
           return
@@ -691,7 +697,9 @@ const rule: Rule.RuleModule = {
         if (targetParent?.type === "VariableDeclarator" && targetParent.id?.type === "Identifier") {
           const how = mutationOf(targetParent.id as ASTNode)
           if (how) {
-            context.report({ node, messageId: "mutatedArray", data: { name: targetParent.id.name, how } })
+            if (!leftToArrayMutation()) {
+              context.report({ node, messageId: "mutatedArray", data: { name: targetParent.id.name, how } })
+            }
             return
           }
         }

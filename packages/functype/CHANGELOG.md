@@ -222,7 +222,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 **2.0 (breaking): eslint-plugin-functype has one preset, `recommended`, where every rule is `error` or `off`.** From §5b of #276 (the 2.0 release plan). Code here is written by coding agents, which act on what fails their build and pass over a warning, so a preset with warnings mostly taught them to ignore findings. A new `error` fails a build, so this waited for a major.
 
-- **`recommended` is 1.x's `agent` preset.** `strict` and `agent` are gone, and a config that names one fails to load with "config not found". `tests` stays, and relaxes `recommended` for test files.
+- **`recommended` is 1.x's `agent` preset.** `strict` and `agent` are gone, and a config that names one fails to load: ESLint reports an `Unexpected undefined config`. `tests` stays, and relaxes `recommended` for test files.
 - **Now `error` in `recommended`:**
   - `no-array-mutation` (was `off`): 91 hits across five consumers, every one a real in-place change.
   - `prefer-list` (was `off`): about 96% precise (#362, prefer-list flags only mutable or mutated arrays). It skips Supabase's generated types (any file whose top level exports both `Json` and `Database`), its main false positive.
@@ -233,7 +233,7 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
   - `prefer-fold` also checks guards (`checkGuards: true`, from #363, the prefer-fold guard check): `if (e.isLeft()) return …` followed by `e.value` or `e.orThrow()` is reported.
 - **Now `off`:** `prefer-flatmap` and `prefer-do-notation` (were `warn`), whose precision is unmeasured. Each moves to `error` once it's measured.
 - **`tests`** also turns off `no-floating-result` and `no-serialize-container`, because tests drop results on purpose (`await io.run()` for its side effect) and assert on a container's `JSON.stringify` envelope.
-- **An array that is declared and then pushed to is reported once,** by `no-array-mutation` at the `push`, which is where the fix goes. With type information, `prefer-list` leaves the declaration to it. Without type information `no-array-mutation` reports nothing, so `prefer-list` reports the declaration instead.
+- **A local array that is declared and then changed by a method or an index write is reported once,** by `no-array-mutation` at the change, which is where the fix goes. With type information, `prefer-list` leaves the declaration to it. Without type information `no-array-mutation` reports nothing, so `prefer-list` reports the declaration instead. A mutated field is still reported by both, because `prefer-list` matches fields by name across the file. The dedupe assumes `no-array-mutation` is on, as it is in `recommended`.
 - `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container` are type-aware. Without `parserOptions.projectService` they report nothing.
 - `prefer-list` treats `Readonly<T[]>` and `Readonly<Array<T>>` as read-only, as it treats `ReadonlyArray<T>` and `readonly T[]`. It reported them as mutable arrays.
 - **Upgrade:** replace `functype.configs.strict` or `functype.configs.agent` with `functype.configs.recommended`, add `functype.configs.tests`, then run `eslint` and fix what it reports:

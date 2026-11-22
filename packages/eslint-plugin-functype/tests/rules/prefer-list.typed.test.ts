@@ -42,10 +42,10 @@ describe("prefer-list (type-aware)", () => {
         code: 'export function collect(): ReadonlyArray<string> { const acc: string[] = []; acc.push("a"); return acc }',
       },
       {
-        name: "A field changed in place is left to no-array-mutation too",
+        name: "A literal accumulator changed in place is left to no-array-mutation",
         filename: typedFilename,
         options,
-        code: 'export type Result = { errors: string[] }\nexport const add = (r: Result) => r.errors.push("e")',
+        code: 'export function collect(): ReadonlyArray<string> { const acc = ["z"]; acc.push("a"); return acc }',
       },
       {
         name: "A literal passed to an array-typed parameter",
@@ -217,6 +217,16 @@ describe("prefer-list (type-aware)", () => {
       },
     ],
     invalid: [
+      {
+        name: "A mutated field is still reported: fields are matched by name, which can't tell two types apart",
+        filename: typedFilename,
+        options,
+        code: 'export type Cart = { items: string[] }\nexport type Order = { items: string[] }\nexport const add = (c: Cart) => c.items.push("a")',
+        errors: [
+          { messageId: "mutatedArray" as const, data: { name: "items", how: "push" } },
+          { messageId: "mutatedArray" as const, data: { name: "items", how: "push" } },
+        ],
+      },
       // A literal passed to your own array-typed parameter is fine; the mutable parameter type is what's reported.
       {
         name: "Your own mutable parameter type is reported, the literal passed to it is not",

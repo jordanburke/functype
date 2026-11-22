@@ -279,7 +279,7 @@ editor-only warning never reaches an agent, and a lint error reaches it only if 
 
 - **eslint-plugin-functype has 20 rules**, and seven are `error` in `recommended`. The ones that catch
   agent mistakes are not: `no-floating-io` (a forgotten `.run()`), `no-floating-result`,
-  `no-serialize-container` and `no-get-unsafe` are `off` there. The `agent` preset turns all four on at `error`.
+  `no-serialize-container` and `no-get-unsafe` are `off` there. The `agent` preset turns all four on at `error`. (In 2.0, `recommended` is that `agent` preset; see 7b below.)
 - **The MCP server's `validate_code` runs `tsc` only**, so it can't report a lint rule.
 - **TypeScript 7 is `latest` on npm (7.0.2).** typescript-eslint 8.72.1 peers on `typescript >=4.8.4 <6.1.0`,
   so the plugin's type-aware rules don't run on TypeScript 7 today. functype builds with 6.0.3. Effect

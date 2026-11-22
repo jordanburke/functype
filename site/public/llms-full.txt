@@ -4214,7 +4214,7 @@ There is one preset. The code it checks is written by coding agents, and an agen
 - **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
 - **Make sure the agent runs lint.** An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
 
-In 1.x the plugin had three presets: `recommended` and `strict`, which warned on rules still being measured, and `agent`, which didn't. 2.0's `recommended` is 1.x's `agent`, and `strict` and `agent` are gone: a config that names one fails to load, so update it to `recommended`.
+In 1.x the plugin had three presets: `recommended` and `strict`, which warned on rules still being measured, and `agent`, which didn't. 2.0's `recommended` is 1.x's `agent`, and `strict` and `agent` are gone: a config that names one fails to load (ESLint reports an `Unexpected undefined config`), so update it to `recommended`.
 
 ## Rules
 
@@ -4395,7 +4395,7 @@ For a host that has to mutate, such as a charting library that takes the array i
 
 Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `error` in every preset since 2.0. In 1.x it was `off` in `recommended`, to avoid failing builds on a minor upgrade.
 
-An array that is declared and then pushed to is reported once, here at the `push`: with type information, `prefer-list` leaves its declaration to this rule. Without type information this rule reports nothing, so `prefer-list` reports the declaration instead.
+A local array that is declared and then changed by a method or an index write (`acc.push(x)`, `acc[i] = x`) is reported once, here at the change: with type information, `prefer-list` leaves its declaration to this rule. Without type information this rule reports nothing, so `prefer-list` reports the declaration instead. A field, a change through an alias, `acc[i]++` and `delete acc[i]` can still be reported by both. The dedupe assumes this rule is on, as it is in `recommended`.
 
 ### `functype/no-floating-io`
 
@@ -4526,7 +4526,7 @@ const header = <h1>{user.isSome() && <Badge />}</h1> // reported → {user.fold(
 
 The message names the `Match` component that fits: `<MatchOption>` for `isSome`/`isNone`, `<MatchEither>` for `isLeft`/`isRight`, `<MatchTry>` for `isSuccess`/`isFailure`.
 
-A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this rule leaves it alone rather than report it twice. If you turn on `prefer-fold`'s `checkGuards`, an early return followed by an unwrap is reported by both rules. Only a predicate _call_ counts: `state.isPending` on a `useIO` result and `items.isEmpty` are properties, and are never reported. A guard that does other work before it returns, or returns something other than JSX or `null`, is not reported either. The rule reports only; there are no suggestions, because the rewrite moves code between branches.
+A ternary or an if/else on a predicate is `prefer-fold`'s, everywhere, so this rule leaves it alone rather than report it twice. `prefer-fold`'s `checkGuards` is on in `recommended`, so an early return followed by an unwrap is reported by both rules. Only a predicate _call_ counts: `state.isPending` on a `useIO` result and `items.isEmpty` are properties, and are never reported. A guard that does other work before it returns, or returns something other than JSX or `null`, is not reported either. The rule reports only; there are no suggestions, because the rewrite moves code between branches.
 
 | Option               | Default | Description                                                |
 | -------------------- | :-----: | ---------------------------------------------------------- |
@@ -4706,7 +4706,7 @@ import functype from "eslint-plugin-functype"
 export default [recommended, functype.configs.recommended, testOverrides, functype.configs.tests]
 ```
 
-`functype.configs.tests` turns off `prefer-option`, `prefer-either` and `prefer-try` for the same test files as `test-overrides`: tests call plain `T | undefined` APIs and assert on thrown errors. It changes no other rule. `no-let` and `no-imperative-loops` already skip test files themselves, unless you set their `allowInTests: false`. Put both after the recommended configs, so they win.
+`functype.configs.tests` turns off `prefer-option`, `prefer-either`, `prefer-try`, `no-floating-result` and `no-serialize-container` for the same test files as `test-overrides`: tests call plain `T | undefined` APIs, assert on thrown errors, drop results on purpose and assert on `JSON.stringify` envelopes. It changes no other rule. `no-let` and `no-imperative-loops` already skip test files themselves, unless you set their `allowInTests: false`. Put both after the recommended configs, so they win.
 
 ## License
 
