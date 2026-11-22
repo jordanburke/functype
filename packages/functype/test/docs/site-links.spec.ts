@@ -141,7 +141,9 @@ const aliasFirstIndexes = (): ReadonlyArray<string> =>
     })
 
 describe("docs site links", () => {
-  it("every API reference link names a real export in the folder TypeDoc writes it to", () => {
+  // It builds a TypeScript program of functype's src, about 2.5 s alone, so the 5 s default timed out
+  // under load.
+  it("every API reference link names a real export in the folder TypeDoc writes it to", { timeout: 60_000 }, () => {
     const folders = typedocFolders()
     const broken = linksMatching(/api-docs\/[A-Za-z_]+\/[A-Za-z0-9_$]+\.html/g).flatMap(({ file, url }) => {
       const [, folder = "", name = ""] = /api-docs\/([A-Za-z_]+)\/([A-Za-z0-9_$]+)\.html/.exec(url) ?? []

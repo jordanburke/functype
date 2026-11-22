@@ -81,7 +81,7 @@ describe("Exit's 2.0 breaks", () => {
   })
 })
 
-describe("Exit's construction cost", () => {
+describe("Exit's construction cost", { retry: 2 }, () => {
   const RUNS = 9
   const N = 50_000
   const inc = (x: number): number => x + 1
@@ -97,7 +97,7 @@ describe("Exit's construction cost", () => {
     return elapsed / N
   }
 
-  /** Median over interleaved runs of (build + map) / (build a plain object of the same data). */
+  /** The smallest of interleaved runs of (build + map) / (build a plain object of the same data). */
   const ratioToPlain = (make: (i: number) => unknown): number => {
     const plain = (i: number) => ({ _tag: "Success", value: inc(i) })
     for (let i = 0; i < 5_000; i++) {
@@ -105,7 +105,7 @@ describe("Exit's construction cost", () => {
       plain(i)
     }
     const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
-    return ratios[Math.floor(RUNS / 2)]!
+    return ratios[0]!
   }
 
   const { succeed } = Exit

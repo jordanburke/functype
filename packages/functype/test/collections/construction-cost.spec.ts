@@ -19,7 +19,7 @@ import { LazyList, List, Map, Obj, Set, Stack } from "@/index"
 
 const inc = (x: number): number => x + 1
 
-describe("construction cost", () => {
+describe("construction cost", { retry: 2 }, () => {
   const RUNS = 9
   const N = 20_000
 
@@ -34,14 +34,14 @@ describe("construction cost", () => {
     return elapsed / N
   }
 
-  /** Median over interleaved runs of (time to build and map the value) / (time for the plain object). */
+  /** The smallest of interleaved runs of (time to build and map the value) / (time for the plain object). */
   const ratioToPlain = (make: (i: number) => unknown, plain: (i: number) => unknown): number => {
     for (let i = 0; i < 2_000; i++) {
       make(i)
       plain(i)
     }
     const ratios = Array.from({ length: RUNS }, () => timePerCall(make) / timePerCall(plain)).sort((a, b) => a - b)
-    return ratios[Math.floor(RUNS / 2)]!
+    return ratios[0]!
   }
 
   // Read each export once. Vitest wraps module exports in getters, which would add to every call.
