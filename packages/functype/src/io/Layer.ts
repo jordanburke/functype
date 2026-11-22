@@ -1,3 +1,4 @@
+import { type A, type B, type C, define, type Mutable } from "@/internal/define"
 import type { Type } from "@/types"
 
 import type { Context } from "./Context"
@@ -47,10 +48,10 @@ export interface Layer<RIn extends Type, E extends Type, ROut extends Type> {
   readonly _ROut?: ROut
 
   /**
-   * The build function that creates the context
+   * Builds the services, given the ones this layer needs.
    * @internal
    */
-  readonly build: (input: Context<RIn>) => Promise<Context<ROut>>
+  build(input: Context<RIn>): Promise<Context<ROut>>
 
   /**
    * Composes this layer with another, running them in sequence.
@@ -82,49 +83,125 @@ export interface Layer<RIn extends Type, E extends Type, ROut extends Type> {
 }
 
 /**
- * Creates a Layer from a build function
+ * How a layer builds its services: plain data, which the shared `build` method runs. Keeping the
+ * recipe as data, as an IO keeps its effect, lets test matchers compare two layers built from the
+ * same parts.
  */
-const createLayer = <RIn extends Type, E extends Type, ROut extends Type>(
-  build: (input: Context<RIn>) => Promise<Context<ROut>>,
-  name?: string,
-): Layer<RIn, E, ROut> => ({
-  _tag: "Layer",
-  build,
+type LayerRecipe =
+  | { readonly _tag: "Succeed"; readonly tag: Tag<Type>; readonly service: Type }
+  | { readonly _tag: "Sync"; readonly tag: Tag<Type>; readonly make: () => Type }
+  | { readonly _tag: "Effect"; readonly tag: Tag<Type>; readonly make: () => Promise<Type> }
+  | {
+      readonly _tag: "FromService"
+      readonly tag: Tag<Type>
+      readonly dep: Tag<Type>
+      readonly make: (dep: Type) => Type
+    }
+  | {
+      readonly _tag: "FromServiceEffect"
+      readonly tag: Tag<Type>
+      readonly dep: Tag<Type>
+      readonly make: (dep: Type) => Promise<Type>
+    }
+  | { readonly _tag: "FromContext"; readonly context: Context<Type> }
+  | { readonly _tag: "Empty" }
+  | { readonly _tag: "Merge"; readonly layers: readonly AnyLayer[] }
+  | { readonly _tag: "ProvideToAndMerge"; readonly first: AnyLayer; readonly second: AnyLayer }
+  | { readonly _tag: "Map"; readonly layer: AnyLayer; readonly f: (ctx: Context<Type>) => Context<Type> }
 
-  provideToAndMerge<RIn2 extends Type, E2 extends Type, ROut2 extends Type>(
-    that: Layer<RIn2 | ROut, E2, ROut2>,
-  ): Layer<RIn | Exclude<RIn2, ROut>, E | E2, ROut | ROut2> {
-    return createLayer(async (input: Context<RIn | Exclude<RIn2, ROut>>) => {
-      const thisOutput = await build(input as Context<RIn>)
-      const mergedInput = (input as Context<Exclude<RIn2, ROut>>).merge(thisOutput)
-      const thatOutput = await that.build(mergedInput as unknown as Context<RIn2 | ROut>)
-      return thisOutput.merge(thatOutput) as Context<ROut | ROut2>
-    })
+type AnyLayer = Layer<Type, Type, Type>
+
+/** A Layer's own data: its tag and its recipe, which isn't on {@link Layer}. @internal */
+interface LayerOf<RIn extends Type, E extends Type, ROut extends Type> extends Layer<RIn, E, ROut> {
+  readonly recipe: LayerRecipe
+}
+
+/** Runs a recipe. Every layer's `build` comes here, so a layer's services are built only on demand. */
+const buildRecipe = async (recipe: LayerRecipe, input: Context<Type>): Promise<Context<Type>> => {
+  switch (recipe._tag) {
+    case "Succeed":
+      return ContextCompanion.make(recipe.tag, recipe.service)
+    case "Sync":
+      return ContextCompanion.make(recipe.tag, recipe.make())
+    case "Effect":
+      return ContextCompanion.make(recipe.tag, await recipe.make())
+    case "FromService":
+      return ContextCompanion.make(recipe.tag, recipe.make(input.unsafeGet(recipe.dep)))
+    case "FromServiceEffect":
+      return ContextCompanion.make(recipe.tag, await recipe.make(input.unsafeGet(recipe.dep)))
+    case "FromContext":
+      return recipe.context
+    case "Empty":
+      return ContextCompanion.empty()
+    case "Merge": {
+      const outputs = await Promise.all(recipe.layers.map((layer) => layer.build(input)))
+      return outputs.reduce<Context<Type>>((acc, ctx) => acc.merge(ctx), ContextCompanion.empty())
+    }
+    case "ProvideToAndMerge": {
+      const firstOutput = await recipe.first.build(input)
+      const secondOutput = await recipe.second.build(input.merge(firstOutput))
+      return firstOutput.merge(secondOutput)
+    }
+    case "Map":
+      return recipe.f(await recipe.layer.build(input))
+  }
+}
+
+/** The name `toString` shows: the service's tag for a single-service layer. */
+const recipeName = (recipe: LayerRecipe): string => {
+  switch (recipe._tag) {
+    case "Succeed":
+    case "Sync":
+    case "Effect":
+    case "FromService":
+    case "FromServiceEffect":
+      return recipe.tag.id
+    case "Empty":
+      return "empty"
+    default:
+      return "anonymous"
+  }
+}
+
+/**
+ * Every Layer shares these methods (#276 §14). A layer keeps only `_tag` and its recipe, and is
+ * frozen, as Tag and Context are.
+ */
+const LayerProto = define<LayerOf<A, B, C>, "_tag" | "recipe" | "_RIn" | "_E" | "_ROut">()("Layer", {
+  build(input) {
+    return unsafeCoerce(buildRecipe(this.recipe, unsafeCoerce(input)))
   },
 
-  merge<RIn2 extends Type, E2 extends Type, ROut2 extends Type>(
-    that: Layer<RIn2, E2, ROut2>,
-  ): Layer<RIn | RIn2, E | E2, ROut | ROut2> {
-    return createLayer(async (input: Context<RIn | RIn2>) => {
-      const [thisOutput, thatOutput] = await Promise.all([
-        build(input as Context<RIn>),
-        that.build(input as Context<RIn2>),
-      ])
-      return thisOutput.merge(thatOutput) as Context<ROut | ROut2>
-    })
+  provideToAndMerge(that) {
+    return createLayer({ _tag: "ProvideToAndMerge", first: unsafeCoerce(this), second: unsafeCoerce(that) })
   },
 
-  map<ROut2 extends Type>(f: (ctx: Context<ROut>) => Context<ROut2>): Layer<RIn, E, ROut2> {
-    return createLayer(async (input: Context<RIn>) => {
-      const output = await build(input)
-      return f(output)
-    })
+  merge(that) {
+    return createLayer({ _tag: "Merge", layers: [unsafeCoerce(this), unsafeCoerce(that)] })
+  },
+
+  map(f) {
+    return createLayer({ _tag: "Map", layer: unsafeCoerce(this), f: unsafeCoerce(f) })
   },
 
   toString() {
-    return `Layer(${name ?? "anonymous"})`
+    return `Layer(${recipeName(this.recipe)})`
   },
 })
+
+/** The casts the recipes need: a recipe stores its parts at `Type`, whatever the layer's types. */
+const unsafeCoerce = <T>(value: unknown): T => value as T
+
+/** Creates a Layer from its recipe. */
+const createLayer = <RIn extends Type, E extends Type, ROut extends Type>(recipe: LayerRecipe): Layer<RIn, E, ROut> => {
+  // The one cast: a prototype checked at the opaque A, B and C works for every RIn, E and ROut.
+  const layer = Object.create(LayerProto) as Mutable<LayerOf<RIn, E, ROut>>
+  /* eslint-disable functional/immutable-data -- filling in the layer just created, then freezing it */
+  layer._tag = "Layer"
+  layer.recipe = recipe
+  /* eslint-enable functional/immutable-data */
+  return Object.freeze(layer)
+}
 
 /**
  * Layer companion object with construction methods
@@ -136,7 +213,7 @@ export const Layer = {
    * @param service - The service implementation
    */
   succeed: <S extends Type>(tag: Tag<S>, service: S): Layer<never, never, S> =>
-    createLayer(() => Promise.resolve(ContextCompanion.make(tag, service)), tag.id),
+    createLayer({ _tag: "Succeed", tag: unsafeCoerce(tag), service }),
 
   /**
    * Creates a layer from an async function.
@@ -144,10 +221,7 @@ export const Layer = {
    * @param f - Async function to create the service
    */
   effect: <S extends Type, E extends Type>(tag: Tag<S>, f: () => Promise<S>): Layer<never, E, S> =>
-    createLayer(async () => {
-      const service = await f()
-      return ContextCompanion.make(tag, service)
-    }, tag.id),
+    createLayer({ _tag: "Effect", tag: unsafeCoerce(tag), make: f }),
 
   /**
    * Creates a layer from a sync function.
@@ -155,7 +229,7 @@ export const Layer = {
    * @param f - Function to create the service
    */
   sync: <S extends Type>(tag: Tag<S>, f: () => S): Layer<never, never, S> =>
-    createLayer(() => Promise.resolve(ContextCompanion.make(tag, f())), tag.id),
+    createLayer({ _tag: "Sync", tag: unsafeCoerce(tag), make: f }),
 
   /**
    * Creates a layer that depends on another service.
@@ -168,10 +242,7 @@ export const Layer = {
     depTag: Tag<Dep>,
     f: (dep: Dep) => S,
   ): Layer<Dep, never, S> =>
-    createLayer((input: Context<Dep>) => {
-      const dep = input.unsafeGet(depTag)
-      return Promise.resolve(ContextCompanion.make(tag, f(dep)))
-    }, tag.id),
+    createLayer({ _tag: "FromService", tag: unsafeCoerce(tag), dep: unsafeCoerce(depTag), make: unsafeCoerce(f) }),
 
   /**
    * Creates a layer that depends on another service (async).
@@ -184,23 +255,24 @@ export const Layer = {
     depTag: Tag<Dep>,
     f: (dep: Dep) => Promise<S>,
   ): Layer<Dep, E, S> =>
-    createLayer(async (input: Context<Dep>) => {
-      const dep = input.unsafeGet(depTag)
-      const service = await f(dep)
-      return ContextCompanion.make(tag, service)
-    }, tag.id),
+    createLayer({
+      _tag: "FromServiceEffect",
+      tag: unsafeCoerce(tag),
+      dep: unsafeCoerce(depTag),
+      make: unsafeCoerce(f),
+    }),
 
   /**
    * Creates a layer from a context.
    * @param context - The context to use
    */
   fromContext: <R extends Type>(context: Context<R>): Layer<never, never, R> =>
-    createLayer(() => Promise.resolve(context)),
+    createLayer({ _tag: "FromContext", context: unsafeCoerce(context) }),
 
   /**
    * Creates an empty layer that provides nothing.
    */
-  empty: (): Layer<never, never, never> => createLayer(() => Promise.resolve(ContextCompanion.empty()), "empty"),
+  empty: (): Layer<never, never, never> => createLayer({ _tag: "Empty" }),
 
   /**
    * Merges multiple layers into one.
@@ -212,15 +284,7 @@ export const Layer = {
     Layers[number] extends Layer<infer RIn, Type, Type> ? RIn : never,
     Layers[number] extends Layer<Type, infer E, Type> ? E : never,
     Layers[number] extends Layer<Type, Type, infer ROut> ? ROut : never
-  > =>
-    createLayer(async (input) => {
-      const outputs = await Promise.all(layers.map((l) => l.build(input as Context<Type>)))
-      return outputs.reduce((acc, ctx) => acc.merge(ctx), ContextCompanion.empty()) as Context<Type>
-    }) as Layer<
-      Layers[number] extends Layer<infer RIn, Type, Type> ? RIn : never,
-      Layers[number] extends Layer<Type, infer E, Type> ? E : never,
-      Layers[number] extends Layer<Type, Type, infer ROut> ? ROut : never
-    >,
+  > => createLayer({ _tag: "Merge", layers }),
 }
 
 /**

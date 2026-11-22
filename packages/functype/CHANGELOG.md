@@ -229,6 +229,14 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - `Exclude` checks services by shape, as `provideService` always has. A layer for a `Database` therefore discharges a requirement for a wider `BigDb` that has every `Database` member, and the run then dies with "Service not found". Give each service a distinct shape, or a brand field, if two can overlap.
 - **Upgrade:** two kinds of code stop compiling. Running an `IO.gen` whose services aren't provided now fails, as it fails for any other IO: provide them with `provideLayer` or `provideService`. Code that leaned on the `any` error, such as passing the result where a narrower `E` is expected, now sees the real error type: handle it with `catchTag` or `mapError`, or widen the expected type. A `yield* IO.async(...)` declares `E = unknown`, which absorbs the rest of the union; map it with `IO.tryPromise`'s `catch` to keep the union.
 
+**2.0 (breaking): Layer shares its methods, and keeps its recipe as data.** §14 of #276 (the 2.0 release plan). With it, every value type functype exports follows §14.
+
+- A layer used to be an object literal holding its `build` closure and four more closures. Now one frozen prototype holds `build`, `merge`, `provideToAndMerge`, `map` and `toString`. A layer keeps only `_tag` and a recipe: plain data, such as `{ _tag: "Succeed", tag, service }` or `{ _tag: "Merge", layers }`, which `build` runs. That is how an IO keeps its effect. Layers are frozen, like Tag and Context.
+- **Test matchers compare layers by their recipe.** `Layer.succeed(Config, c)` equals another `Layer.succeed(Config, c)`. Before, any two layers were unequal, because each held its own closures.
+- **`build` is a method, and always returns a promise.** Before, a `Layer.sync` or `Layer.fromService` whose factory threw made `build` throw synchronously. Now `build` rejects. `provideLayer` already turned either into a failed run, so code that only provides layers sees no change.
+- **A detached method call fails:** `const { build } = layer` throws a `TypeError`. A detached `merge`, `provideToAndMerge` or `map` returns a layer that rejects when built.
+- **Upgrade:** call Layer methods on the value. Code that called `layer.build(ctx)` and caught a synchronous throw should catch the rejection instead.
+
 ## 1.27.1 - 2026-11-19
 
 - **functype-mcp-server runs on SomaMCP instead of FastMCP.** The tools, their arguments, defaults and replies, and stdio work as before. `TRANSPORT_TYPE=httpStream` still serves `/mcp` on loopback by default, with `set_functype_version` left off. HTTP clients see four changes:

@@ -55,6 +55,9 @@ type ValueType = {
   readonly tagOnPrototype?: string
 }
 
+/** One tag for every Layer sample, so matchers compare the services. */
+const layerTag = Tag<number>("x")
+
 /** A Lazy that has run, so matchers compare its value rather than its thunk's identity. */
 const evaluated = <T>(value: T): Lazy<T> => {
   const lazy = Lazy(() => value)
@@ -117,6 +120,10 @@ const VALUE_TYPES: Readonly<Record<string, ValueType>> = {
   Obj: { exports: ["Obj"], variants: [["Obj", () => Obj({ a: 1 }), () => Obj({ a: 2 })]] },
   Tuple: { exports: ["Tuple"], variants: [["Tuple", () => Tuple([1, "a"]), () => Tuple([1, "b"])]] },
   Lazy: { exports: ["Lazy"], variants: [["Lazy", () => evaluated(1), () => evaluated(2)]] },
+  Layer: {
+    exports: ["Layer"],
+    variants: [["Layer", () => Layer.succeed(layerTag, 1), () => Layer.succeed(layerTag, 2)]],
+  },
 }
 
 /** Value types that don't meet the rules yet: each still builds its methods per value. */
@@ -127,7 +134,6 @@ const NOT_YET: Readonly<Record<string, { readonly reason: string; readonly sampl
     sample: () => TracedOption(Some(1), { emit: () => undefined }, "span"),
   },
   Context: { reason: "builds get, has, add and the rest per value", sample: () => Context.empty() },
-  Layer: { reason: "builds build, merge, map and toString per value", sample: () => Layer.succeed(Tag("x"), 1) },
   Tag: { reason: "builds toString per value", sample: () => Tag("x") },
   SpanTracer: { reason: "a Tag, which builds toString per value", sample: () => SpanTracer },
   TestClockTag: { reason: "a Tag, which builds toString per value", sample: () => TestClockTag },
