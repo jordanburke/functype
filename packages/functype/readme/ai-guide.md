@@ -304,14 +304,10 @@ const tryAsEither = FoldableUtils.toEither(tryVal, "Default error")
 // Full package import (not recommended for production)
 import { Option, Either, Try, List } from "functype"
 
-// Optimized imports for tree-shaking
+// Subpath imports work too, and bundle the same as the root import
 import { Option } from "functype/option"
 import { Either } from "functype/either"
 import { List } from "functype/list"
-
-// Individual constructor imports
-import { some, none } from "functype/option"
-import { right, left } from "functype/either"
 ```
 
 ## Type Class Hierarchy
