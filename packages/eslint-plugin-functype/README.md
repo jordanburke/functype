@@ -25,6 +25,8 @@ import functype from "eslint-plugin-functype"
 export default [functype.configs.strict]
 ```
 
+`strict` is `recommended` plus the rules that still fire on some correct code, at `error`. It also turns on `prefer-fold`'s guard check ([`checkGuards`](#functypeprefer-fold)).
+
 ### Agent mode
 
 For code a coding agent writes. An agent acts on what fails its build and passes over a warning, so `agent` has no warnings: every rule is `error` or `off`.
@@ -36,35 +38,37 @@ export default [functype.configs.agent]
 ```
 
 - **`error`:** everything `strict` errors on, plus `no-floating-io` and the two React rules, which `strict` still warns on while they're measured. A forgotten `.run()` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
-- **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured. `prefer-list` is off too: with type-aware linting, `no-array-mutation`, at `error`, covers its in-place-change case, and the rest asks for `ReadonlyArray<T>` types, a typing choice `strict` keeps at `warn`.
+- **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured.
 - `prefer-option`, `prefer-either` and `prefer-try` are `error`, as in `strict`. At a real boundary the agent marks it instead: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
 - `no-array-mutation` and `no-floating-io` need type-aware linting (typescript-eslint's parser with `parserOptions.projectService`). Without it they report nothing.
 - Make sure the agent runs lint. An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
 
 ## Rules
 
-| Rule                                     | Recommended | Strict | Agent | Description                                                                                  |
-| ---------------------------------------- | :---------: | :----: | :---: | -------------------------------------------------------------------------------------------- |
-| `functype/no-let`                        |    error    | error  | error | Use `const`; no reassignment                                                                 |
-| `functype/no-imperative-loops`           |    error    | error  | error | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
-| `functype/prefer-functype-map`           |    error    | error  | error | Use functype `Map` instead of a native `Map` you only read                                   |
-| `functype/prefer-functype-set`           |    error    | error  | error | Use functype `Set` instead of a native `Set` you only read                                   |
-| `functype/collection-naming`             |    error    | error  | error | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
-| `functype/prefer-map`                    |    error    | error  | error | Use `map` instead of pushing inside `forEach`                                                |
-| `functype/prefer-fold`                   |    error    | error  | error | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
-| `functype/prefer-option`                 |    warn     | error  | error | Use `Option` instead of `null`/`undefined`                                                   |
-| `functype/prefer-either`                 |    warn     | error  | error | Use `Either` for typed domain errors instead of `throw`                                      |
-| `functype/prefer-try`                    |    warn     | error  | error | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
-| `functype/prefer-flatmap`                |    warn     |  warn  |  off  | Use `flatMap` instead of `map().flat()`                                                      |
-| `functype/prefer-do-notation`            |    warn     |  warn  |  off  | Use `Do` notation for chained operations                                                     |
-| `functype/no-get-unsafe`                 |     off     | error  | error | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
-| `functype/prefer-list`                   |     off     |  warn  |  off  | Use `List` instead of native arrays                                                          |
-| `functype/no-array-mutation`             |     off     | error  | error | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
-| `functype/no-floating-io`                |     off     |  warn  | error | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
-| `functype/no-floating-result`            |     off     | error  | error | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
-| `functype/no-serialize-container`        |     off     | error  | error | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
-| `functype/no-getOrThrow-in-render`       |     off     |  warn  | error | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
-| `functype/must-fold-on-component-return` |     off     |  warn  | error | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
+| Rule                                     | Recommended | Strict | Agent  | Description                                                                                  |
+| ---------------------------------------- | :---------: | :----: | :----: | -------------------------------------------------------------------------------------------- |
+| `functype/no-let`                        |    error    | error  | error  | Use `const`; no reassignment                                                                 |
+| `functype/no-imperative-loops`           |    error    | error  | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
+| `functype/prefer-functype-map`           |    error    | error  | error  | Use functype `Map` instead of a native `Map` you only read                                   |
+| `functype/prefer-functype-set`           |    error    | error  | error  | Use functype `Set` instead of a native `Set` you only read                                   |
+| `functype/collection-naming`             |    error    | error  | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
+| `functype/prefer-map`                    |    error    | error  | error  | Use `map` instead of pushing inside `forEach`                                                |
+| `functype/prefer-fold`                   |    error    | error¹ | error¹ | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
+| `functype/prefer-option`                 |    warn     | error  | error  | Use `Option` instead of `null`/`undefined`                                                   |
+| `functype/prefer-either`                 |    warn     | error  | error  | Use `Either` for typed domain errors instead of `throw`                                      |
+| `functype/prefer-try`                    |    warn     | error  | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
+| `functype/prefer-flatmap`                |    warn     |  warn  |  off   | Use `flatMap` instead of `map().flat()`                                                      |
+| `functype/prefer-do-notation`            |    warn     |  warn  |  off   | Use `Do` notation for chained operations                                                     |
+| `functype/no-get-unsafe`                 |     off     | error  | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
+| `functype/prefer-list`                   |    error    | error  | error  | Use `List` instead of native arrays                                                          |
+| `functype/no-array-mutation`             |    error    | error  | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
+| `functype/no-floating-io`                |     off     |  warn  | error  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
+| `functype/no-floating-result`            |     off     | error  | error  | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
+| `functype/no-serialize-container`        |     off     | error  | error  | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
+| `functype/no-getOrThrow-in-render`       |     off     |  warn  | error  | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
+| `functype/must-fold-on-component-return` |     off     |  warn  | error  | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
+
+¹ With `checkGuards: true`: a guard followed by an unwrap is reported too.
 
 ### Severity policy
 
@@ -161,7 +165,7 @@ Prefer either tool to `eslint-disable`. A disable covers a whole file or line an
 
 **Without type information, array literals aren't reported at all.** The rule can't tell a literal handed to a library from one of your own, so it reports neither rather than guess. Type positions and in-place mutation are still reported. Turn on type-aware linting to get literal checks.
 
-Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Generators with no marker, such as Supabase's types, need an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
+Also skipped: `as const` and other tuple assertions, tuple rest elements (`[string, ...string[]]`), rest parameters (`...args: T[]`), literals passed straight into `List(…)` / `Set(…)`, and files marked generated (`@generated`, "auto-generated", "DO NOT EDIT"). Supabase's generated types carry no marker, so a file whose top level exports both `Json` and `Database` is skipped too. Any other generator with no marker needs an `ignores` entry. Anything still reported that is a deliberate host shape gets `Wire<…>`.
 
 Measured on five consumers (2026-10-10), with type-aware linting: **2,000 hits under 2.114, 696 after.** By repo, before → after: a private app monorepo 821 → 215, agent-todo 843 → 328, dokploy-mcp-server 170 → 68, ts-builds 111 → 43, supabase-typed-query 55 → 42. Known false positives left: 25 hits in agent-todo's unmarked Supabase types (an `ignores` entry), one nested ReactFlow return type (`Wire`), one AWS SES request built in an untyped object. Linting all of that monorepo with the rule on takes about 18 seconds.
 
@@ -215,7 +219,9 @@ For a host that has to mutate, such as a charting library that takes the array i
 | `allowInTests`       | `true`  | Silence the rule inside test files.                        |
 | `allowInteropMarker` | `true`  | Skip code inside a declaration tagged `@interop <reason>`. |
 
-Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `off` in `recommended` until 2.0, to avoid failing builds on a 1.x upgrade.
+Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `error` in every preset since 2.0. In 1.x it was `off` in `recommended`, to avoid failing builds on a minor upgrade.
+
+With `prefer-list` also on, an array that is declared and then pushed to is reported twice: `prefer-list` at the declaration, and this rule at the `push`. Both go away with the same fix.
 
 ### `functype/no-floating-io`
 
@@ -389,7 +395,7 @@ The rule reports each match with two suggestions — `.getOrElse(() => default)`
 | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
-| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. Off while it rolls out: `prefer-fold` is `error` in `recommended`.   |
+| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. On in `strict` and `agent`; off in `recommended`.                    |
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.orElse(() => b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
 
@@ -411,7 +417,7 @@ if (t.isFailure()) {
 
 `orThrow(error)` / `orThrow((e) => …)` after a guard isn't counted as an unwrap, matching `no-get-unsafe`, which treats a named error as a deliberate host throw. A receiver reassigned after the guard isn't reported. Only the negative predicates (`isLeft` / `isNone` / `isFailure`) are matched; `if (!e.isRight())` isn't yet.
 
-Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why this is planned for `strict`, not `recommended`, in 2.0.
+Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why it is on in `strict` and `agent`, and off in `recommended`. To turn it on with `recommended`, set `"functype/prefer-fold": ["error", { "checkGuards": true }]`.
 
 When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On a private app monorepo it finds 75 guards, all of this shape.
 
