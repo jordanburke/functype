@@ -245,6 +245,8 @@ type IOEffect<R, E, A> =
       readonly name: string
       readonly attributes: SpanAttributes
     }
+  // `IO.gen`: the loops drive the generator `start` returns, one `next` per yielded IO.
+  | { readonly _tag: "Gen"; readonly start: () => Iterator<unknown, A, unknown> }
 
 /**
  * The `this` an IO's run methods accept. An IO whose services are all provided (`R = never`) runs
@@ -780,7 +782,7 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * Makes IO iterable for generator do-notation (yield* syntax).
    * Yields the IO itself, allowing IO.gen to extract the value.
    */
-  [Symbol.iterator](): Generator<IO<R, E, A>, A, unknown>
+  [Symbol.iterator](): Iterator<IO<R, E, A>, A, unknown>
 }
 
 // ============================================
@@ -790,6 +792,22 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 /** @internal Extract the effect from an IO (avoids scattering [IOEffectKey] through the interpreter) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const _fx = <R, E, A>(io: IO<R, E, A>): IOEffect<R, E, A> => (io as any)[IOEffectKey]
+
+/**
+ * The iterator `yield*` reads from an IO: it yields the IO once, then returns the value the
+ * generator was resumed with. Written by hand, it costs less than a generator object per `yield*`.
+ */
+const yieldOnce = <I, A>(io: I): Iterator<I, A, unknown> => {
+  // eslint-disable-next-line functional/no-let -- the iterator's one bit of state
+  let yielded = false
+  return {
+    next: (value?: unknown): IteratorResult<I, A> => {
+      if (yielded) return { done: true, value: value as A }
+      yielded = true
+      return { done: false, value: io }
+    },
+  }
+}
 
 /** The IO a run method was called on. The type system checked `R = never` at the call. */
 const runnable = (io: unknown): IO<never, AnyE, AnyA> => unsafeCoerce(io)
@@ -1046,8 +1064,8 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
     return { _tag: "IO", effect: this[IOEffectKey]._tag }
   },
 
-  *[Symbol.iterator](): Generator<IO<AnyR, AnyE, AnyA>, AnyA, unknown> {
-    return (yield this) as AnyA
+  [Symbol.iterator]() {
+    return yieldOnce(this)
   },
 })
 
@@ -1158,10 +1176,30 @@ type Wrapper = Extract<
 >
 
 /**
+ * A running `IO.gen` body, waiting on the IO it yielded. When that IO succeeds, its value goes back
+ * into the generator, which yields the next IO or returns. A failure passes it by, unresumed, as a
+ * `flatMap` chain would.
+ */
+type GenFrame = { readonly _tag: "GenNext"; readonly iterator: Iterator<unknown, unknown, unknown> }
+
+/**
  * The wrappers waiting on their inner effects, each followed by the context it runs in. Two slots
  * a wrapper, in one array, so a step allocates nothing.
  */
-type WrapperStack = (Wrapper | Context<Type>)[]
+type WrapperStack = (Wrapper | GenFrame | Context<Type>)[]
+
+/** The effect of a value a generator yielded. `IO.gen`'s types allow only an IO there. */
+const yieldedEffect = (value: unknown): AnyEffect => {
+  const effect: unknown =
+    typeof value === "object" && value !== null ? (value as Readonly<Record<string, unknown>>)[IOEffectKey] : undefined
+  if (typeof effect === "object" && effect !== null && typeof (effect as { _tag?: unknown })._tag === "string") {
+    return unsafeCoerce(effect)
+  }
+  // Only a cast can get here; it becomes a `Die` naming the fix.
+  throw new TypeError(
+    "IO.gen was yielded a value that isn't an IO. Use `yield*` on an IO; convert an Option, Either or Try first with IO.fromOption, IO.fromEither or IO.fromTry, and wrap a plain value with IO.succeed.",
+  )
+}
 
 /**
  * The outcome of a step that returned nothing, which only a `SpanTracer` whose `run` doesn't
@@ -1213,6 +1251,17 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
             ctx = ctx.merge(fx.context)
             fx = _fx(fx.effect)
             continue
+          case "Gen": {
+            const iterator = fx.start()
+            const first = iterator.next(undefined)
+            if (first.done === true) {
+              exit = Exit.succeed(first.value)
+              continue
+            }
+            stack.push({ _tag: "GenNext", iterator }, ctx)
+            fx = yieldedEffect(first.value)
+            continue
+          }
           default:
             exit = runLeafSync(fx, ctx, span) ?? noOutcome()
             continue
@@ -1226,7 +1275,7 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
     }
     if (stack.length === 0) return unsafeCoerce(exit)
     const wrapperContext = stack.pop() as Context<Type>
-    const wrapper = stack.pop() as Wrapper
+    const wrapper = stack.pop() as Wrapper | GenFrame
     try {
       switch (wrapper._tag) {
         case "Map":
@@ -1262,6 +1311,19 @@ const runEffectSync = <R extends Type, E extends Type, A extends Type>(
           else if (exit._tag === "Success") exit = Exit.succeed(wrapper.onSuccess(exit.value))
           break
         }
+        case "GenNext":
+          if (exit._tag === "Success") {
+            const step = wrapper.iterator.next(exit.value)
+            if (step.done === true) {
+              exit = Exit.succeed(step.value)
+            } else {
+              stack.push(wrapper, wrapperContext)
+              fx = yieldedEffect(step.value)
+              ctx = wrapperContext
+              exit = undefined
+            }
+          }
+          break
       }
     } catch (e) {
       // A throw out of a callback the type system said could not produce an `E`.
@@ -1466,6 +1528,19 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
             ctx = ctx.merge(fx.context)
             fx = _fx(fx.effect)
             continue
+          case "Gen": {
+            const iterator = fx.start()
+            const first = iterator.next(undefined)
+            if (first.done === true) {
+              // A body that aborts its own region before returning ends interrupted, as a
+              // `flatMap` continuation's result would.
+              exit = cancelled() ? Exit.interrupted() : Exit.succeed(first.value)
+              continue
+            }
+            stack.push({ _tag: "GenNext", iterator }, ctx)
+            fx = yieldedEffect(first.value)
+            continue
+          }
           default: {
             const out = runLeaf(fx, ctx, interruption, span)
             exit = (out instanceof Promise ? await out : out) ?? noOutcome()
@@ -1481,7 +1556,7 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
     }
     if (stack.length === 0) return unsafeCoerce(exit)
     const wrapperContext = stack.pop() as Context<Type>
-    const wrapper = stack.pop() as Wrapper
+    const wrapper = stack.pop() as Wrapper | GenFrame
     try {
       switch (wrapper._tag) {
         case "Map":
@@ -1534,6 +1609,23 @@ const runEffect = async <R extends Type, E extends Type, A extends Type>(
           }
           break
         }
+        case "GenNext":
+          if (exit._tag === "Success") {
+            if (cancelled()) {
+              exit = Exit.interrupted()
+            } else {
+              const step = wrapper.iterator.next(exit.value)
+              if (step.done === true) {
+                exit = cancelled() ? Exit.interrupted() : Exit.succeed(step.value)
+              } else {
+                stack.push(wrapper, wrapperContext)
+                fx = yieldedEffect(step.value)
+                ctx = wrapperContext
+                exit = undefined
+              }
+            }
+          }
+          break
       }
     } catch (e) {
       // A throw out of a `map` / `flatMap` / `mapError` function or a `Fold` handler, which the
@@ -2581,23 +2673,9 @@ const IOCompanion = {
   gen: <Y extends IOYieldable, A extends Type>(
     // `unknown` for what a bare `yield` gives back: use `yield*`, which gives the IO's value.
     f: () => Generator<Y, A, unknown>,
-  ): IO<IOGenRequirements<Y>, IOGenErrors<Y>, A> => {
-    return unsafeCoerce(
-      IOCompanion.sync(() => {
-        const iterator = f()
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const runGenerator = (input: unknown): IO<never, any, A> => {
-          const result = iterator.next(input)
-          if (result.done) {
-            return unsafeCoerce(IOCompanion.succeed(result.value))
-          }
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          return unsafeCoerce((result.value as any).flatMap((value: unknown) => runGenerator(value)))
-        }
-        return runGenerator(undefined)
-      }).flatMap((io) => io),
-    )
-  },
+  ): IO<IOGenRequirements<Y>, IOGenErrors<Y>, A> =>
+    // Each run calls `f` for a fresh generator; the interpreter loops step it, one `next` per yield.
+    createIO(unsafeCoerce({ _tag: "Gen", start: f })),
 
   // ============================================
   // Do-Builder Pattern
