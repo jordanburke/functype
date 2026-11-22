@@ -176,6 +176,9 @@ const TupleCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called TupleCompanion beside the interface
+const TupleStatics = TupleCompanion
+
 /**
  * Tuple provides a type-safe, fixed-length array with functional operations.
  *
@@ -198,4 +201,9 @@ const TupleCompanion = {
  *   .map(arr => arr.map(x => x * 2))
  *   .toArray() // [2, 4, 6]
  */
-export const Tuple = Companion(TupleConstructor, TupleCompanion)
+export const Tuple: TupleCompanion = Companion(TupleConstructor, TupleStatics)
+
+/** The type of `Tuple`: its constructor and its statics, named so that errors and hovers print `TupleCompanion`. */
+export interface TupleCompanion extends TupleConstructorType, TupleStaticsType {}
+type TupleConstructorType = typeof TupleConstructor
+type TupleStaticsType = typeof TupleStatics

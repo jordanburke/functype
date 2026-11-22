@@ -539,4 +539,12 @@ const TryCompanion = {
     Try(() => arr.map((item, i) => f(item, i).orThrow())),
 }
 
-export const Try = Companion(TryConstructor, TryCompanion)
+// The statics under a second name: the .d.ts then declares no value called TryCompanion beside the interface
+const TryStatics = TryCompanion
+
+export const Try: TryCompanion = Companion(TryConstructor, TryStatics)
+
+/** The type of `Try`: its constructor and its statics, named so that errors and hovers print `TryCompanion`. */
+export interface TryCompanion extends TryConstructorType, TryStaticsType {}
+type TryConstructorType = typeof TryConstructor
+type TryStaticsType = typeof TryStatics

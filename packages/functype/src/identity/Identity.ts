@@ -48,4 +48,12 @@ const IdentityCompanion = {
   pure: <T>(value: T) => IdentityConstructor(value),
 }
 
-export const Identity = Companion(IdentityConstructor, IdentityCompanion)
+// The statics under a second name: the .d.ts then declares no value called IdentityCompanion beside the interface
+const IdentityStatics = IdentityCompanion
+
+export const Identity: IdentityCompanion = Companion(IdentityConstructor, IdentityStatics)
+
+/** The type of `Identity`: its constructor and its statics, named so that errors and hovers print `IdentityCompanion`. */
+export interface IdentityCompanion extends IdentityConstructorType, IdentityStaticsType {}
+type IdentityConstructorType = typeof IdentityConstructor
+type IdentityStaticsType = typeof IdentityStatics

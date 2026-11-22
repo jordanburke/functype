@@ -463,6 +463,9 @@ const ObjCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called ObjCompanion beside the interface
+const ObjStatics = ObjCompanion
+
 /**
  * Obj - Immutable object wrapper with fluent operations.
  *
@@ -485,4 +488,9 @@ const ObjCompanion = {
  * user.get("name")                   // Some("John")
  * ```
  */
-export const Obj = Companion(ObjConstructor, ObjCompanion)
+export const Obj: ObjCompanion = Companion(ObjConstructor, ObjStatics)
+
+/** The type of `Obj`: its constructor and its statics, named so that errors and hovers print `ObjCompanion`. */
+export interface ObjCompanion extends ObjConstructorType, ObjStaticsType {}
+type ObjConstructorType = typeof ObjConstructor
+type ObjStaticsType = typeof ObjStatics

@@ -112,4 +112,13 @@ const DecoderErrorCompanion = {
   format,
 }
 
-export const DecoderError = Companion({ _tag: "DecoderError" } as const, DecoderErrorCompanion)
+// The statics under a second name: the .d.ts then declares no value called DecoderErrorCompanion beside the interface
+const DecoderErrorStatics = DecoderErrorCompanion
+
+export const DecoderError: DecoderErrorCompanion = Companion({ _tag: "DecoderError" } as const, DecoderErrorStatics)
+
+/** The type of `DecoderError`: its tag and its statics, named so that errors and hovers print `DecoderErrorCompanion`. */
+// A type alias, not an interface: an object type keeps the implicit index signature the old
+// intersection had, so `Record<string, unknown>` and `Object.entries` still accept it.
+export type DecoderErrorCompanion = { readonly _tag: "DecoderError" } & DecoderErrorStaticsType
+type DecoderErrorStaticsType = typeof DecoderErrorStatics

@@ -587,4 +587,12 @@ const OptionCompanion = {
     ),
 }
 
-export const Option = Companion(OptionConstructor, OptionCompanion)
+// The statics under a second name: the .d.ts then declares no value called OptionCompanion beside the interface
+const OptionStatics = OptionCompanion
+
+export const Option: OptionCompanion = Companion(OptionConstructor, OptionStatics)
+
+/** The type of `Option`: its constructor and its statics, named so that errors and hovers print `OptionCompanion`. */
+export interface OptionCompanion extends OptionConstructorType, OptionStaticsType {}
+type OptionConstructorType = typeof OptionConstructor
+type OptionStaticsType = typeof OptionStatics

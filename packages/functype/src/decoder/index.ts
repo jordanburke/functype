@@ -1,11 +1,11 @@
 import { Companion } from "@/companion/Companion"
 import type { Either } from "@/either/Either"
 
-import { DecoderCompanion } from "./DecoderCompanion"
+import { DecoderCompanion as DecoderCombinators } from "./DecoderCompanion"
 import type { DecoderError } from "./DecoderError"
 import { tagged } from "./tagged"
 
-export type { DecoderErrorComposite, DecoderErrorLeaf } from "./DecoderError"
+export type { DecoderErrorCompanion, DecoderErrorComposite, DecoderErrorLeaf } from "./DecoderError"
 export { DecoderError } from "./DecoderError"
 export type { Encoder } from "./Encoder"
 
@@ -23,6 +23,14 @@ export type { Encoder } from "./Encoder"
  */
 export type Decoder<A> = (raw: unknown) => Either<DecoderError, A>
 
+const DecoderCompanion = {
+  ...DecoderCombinators,
+  tagged,
+}
+
+// The statics under a second name: the .d.ts then declares no value called DecoderCompanion beside the interface
+const DecoderStatics = DecoderCompanion
+
 /**
  * Decoder namespace: combinators for converting `unknown` into typed values.
  *
@@ -34,7 +42,10 @@ export type Decoder<A> = (raw: unknown) => Either<DecoderError, A>
  * - `Decoder.tagged.option/either/try/list/map/obj(inner?)` — round-trip the `{_tag, value}` shape
  *   used by functype's built-in `.toJSON()` (for functype-to-functype services)
  */
-export const Decoder = Companion({ _tag: "Decoder" } as const, {
-  ...DecoderCompanion,
-  tagged,
-})
+export const Decoder: DecoderCompanion = Companion({ _tag: "Decoder" } as const, DecoderStatics)
+
+/** The type of `Decoder`: its tag and its statics, named so that errors and hovers print `DecoderCompanion`. */
+// A type alias, not an interface: an object type keeps the implicit index signature the old
+// intersection had, so `Record<string, unknown>` and `Object.entries` still accept it.
+export type DecoderCompanion = { readonly _tag: "Decoder" } & DecoderStaticsType
+type DecoderStaticsType = typeof DecoderStatics

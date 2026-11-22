@@ -659,4 +659,12 @@ const EitherCompanion = {
   },
 }
 
-export const Either = Companion(EitherConstructor, EitherCompanion)
+// The statics under a second name: the .d.ts then declares no value called EitherCompanion beside the interface
+const EitherStatics = EitherCompanion
+
+export const Either: EitherCompanion = Companion(EitherConstructor, EitherStatics)
+
+/** The type of `Either`: its constructor and its statics, named so that errors and hovers print `EitherCompanion`. */
+export interface EitherCompanion extends EitherConstructorType, EitherStaticsType {}
+type EitherConstructorType = typeof EitherConstructor
+type EitherStaticsType = typeof EitherStatics

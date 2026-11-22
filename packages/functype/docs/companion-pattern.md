@@ -40,9 +40,21 @@ const MyTypeCompanion = {
   fromArray: <T>(arr: T[]) => MyTypeConstructor(arr[0]),
 }
 
-// 4. Combine using Companion utility
-export const MyType = Companion(MyTypeConstructor, MyTypeCompanion)
+// 4. Combine using Companion utility, typed by a named interface
+const MyTypeStatics = MyTypeCompanion
+export const MyType: MyTypeCompanion = Companion(MyTypeConstructor, MyTypeStatics)
+
+// 5. Name the combined type, so errors and hovers print `MyTypeCompanion`
+export interface MyTypeCompanion extends MyTypeConstructorType, MyTypeStaticsType {}
+type MyTypeConstructorType = typeof MyTypeConstructor
+type MyTypeStaticsType = typeof MyTypeStatics
 ```
+
+Without step 5, a call to a name the companion doesn't have prints the whole type, every signature included. With it, `MyType.missing()` fails with `Property 'missing' does not exist on type 'MyTypeCompanion'`.
+
+A companion that is a `{ _tag }` object rather than a function, such as `Http` or `Decoder`, is named with a type alias instead, `type HttpCompanion = { readonly _tag: "Http" } & HttpStaticsType`: an interface has no implicit index signature, so `Record<string, unknown>` and `Object.entries` would stop accepting it.
+
+The interface and the local `MyTypeCompanion` object share a name, which TypeScript allows because types and values live apart. Read the object's type through a second name, `MyTypeStatics`, as above. With `typeof MyTypeCompanion`, the `.d.ts` would declare a value called `MyTypeCompanion` next to the interface, and the bundled types would then export it as a value that doesn't exist at runtime.
 
 ### Usage
 
@@ -256,7 +268,7 @@ if (isCompanion(Option)) {
 
 1. **Naming**: Use PascalCase for the exported Companion (e.g., `Option`, `Either`, `List`)
 2. **Constructor Naming**: Use `XConstructor` internally (e.g., `OptionConstructor`)
-3. **Companion Naming**: Use `XCompanion` for the companion object (e.g., `OptionCompanion`)
+3. **Companion Naming**: Use `XCompanion` for the companion object (e.g., `OptionCompanion`), and export an interface of the same name as the type of `X` (see step 5)
 4. **Consistency**: Always follow the same pattern across your codebase
 5. **Documentation**: Add JSDoc to both constructor and companion methods
 6. **Type Guards**: Add static type guards to companion objects where useful

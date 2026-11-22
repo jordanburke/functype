@@ -2745,6 +2745,9 @@ const createDoBuilder = <R extends Type, E extends Type, Ctx extends Record<stri
 const IOConstructor = <A extends Type>(f: () => A | Promise<A>): IO<never, unknown, A> =>
   createIO(unsafeCoerce({ _tag: "Auto", thunk: f }))
 
+// The statics under a second name: the .d.ts then declares no value called IOCompanion beside the interface
+const IOStatics = IOCompanion
+
 /**
  * IO effect type for lazy, composable effects with typed errors.
  *
@@ -2773,7 +2776,12 @@ const IOConstructor = <A extends Type>(f: () => A | Promise<A>): IO<never, unkno
  * ]) // IO<never, never, [1, 2, 3]>
  * ```
  */
-export const IO = Companion(IOConstructor, IOCompanion)
+export const IO: IOCompanion = Companion(IOConstructor, IOStatics)
+
+/** The type of `IO`: its constructor and its statics, named so that errors and hovers print `IOCompanion`. */
+export interface IOCompanion extends IOConstructorType, IOStaticsType {}
+type IOConstructorType = typeof IOConstructor
+type IOStaticsType = typeof IOStatics
 
 // ============================================
 // Type Aliases for Common Cases

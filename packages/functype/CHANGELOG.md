@@ -6,6 +6,21 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+**2.0 (types only): companions have names, so a wrong call prints a short message.**
+
+- Each companion's type is now a named, exported interface: `OptionCompanion`, `ListCompanion`, `IOCompanion`, and so on for all 21 (`Cond`, `Match`, `Decoder`, `DecoderError`, `Either`, `Http`, `HttpError`, `Identity`, `Exit`, `IO`, `Lazy`, `LazyList`, `List`, `Map`, `Obj`, `Option`, `Ref`, `Set`, `Stack`, `Try`, `Tuple`). Errors and hovers print that name instead of the whole type.
+- `Option.map(Some(1), f)` before:
+  ```
+  error TS2339: Property 'map' does not exist on type '(<T extends Type>(value: T | null | undefined) => Option<T>) & { from: <T>(value: T) => Option<T>; none: <T>() => Option<T>; isSome: <T>(option: Option<T>) => option is SomeOf<...>; ... 4 more ...; traverse: ...'.
+  ```
+  and after:
+  ```
+  error TS2339: Property 'map' does not exist on type 'OptionCompanion'.
+  ```
+- The constructors keep their generic signatures, every static keeps its type, and `typeof Option`, `ReturnType<typeof Try<A>>` and `Option<number>` instantiation expressions work as before. `Http`, `HttpError`, `Decoder` and `DecoderError`, which are `{ _tag }` objects, are named with type aliases, so they still assign to `Record<string, unknown>`.
+- **A companion passed as a callback now keeps its generic.** `[1, null, 3].map(Option)` was `Option<unknown>[]` and is `Option<number>[]`. The same holds for `.then(List)`, `Some(1).flatMap(Option)` and `[() => 1].map(Try)`.
+- **Upgrade:** nothing to change, unless code relied on the `unknown` a companion passed as a callback used to give, such as pushing an `Option<string>` onto `arr.map(Option)` built from numbers. Annotate the array with the wider type.
+
 **2.0 (breaking, types only): `getOrElse` keeps a literal union.**
 
 - `getOrElse` now takes `() => T | T2` instead of `() => T2`, with `T2` defaulting to `never`. The default is checked against the container's own type first, so `Option<"light" | "dark">.getOrElse(() => "light")` is `"light" | "dark"`. Before, it was `string`.
