@@ -68,7 +68,7 @@
     "eslint": "^10.2.1",
     "eslint-plugin-functype": "workspace:*",
     "functype": "workspace:*",
-    "somamcp": "^2.10.1",
+    "somamcp": "^2.11.0",
     "typescript": "^6.0.3",
     "zod": "^4.6.7"
   },
