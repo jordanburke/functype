@@ -47,6 +47,7 @@ describe("recommended preset", () => {
     "functype/no-floating-io",
     "functype/no-floating-result",
     "functype/no-serialize-container",
+    "functype/no-uncalled-method",
     "functype/no-getOrThrow-in-render",
     "functype/must-fold-on-component-return",
   ])("%s is an error", (rule) => {

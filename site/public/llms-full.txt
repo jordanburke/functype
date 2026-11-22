@@ -4207,7 +4207,7 @@ There is one preset. The code it checks is written by coding agents, and an agen
 - **`error`:** every rule whose precision is measured on real code. A forgotten `.run()`, a dropped `Either` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
 - **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured.
 - **At a real boundary, mark it** rather than disable the rule: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
-- **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
+- **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container` and `no-uncalled-method` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
 - **Make sure the agent runs lint.** An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
 
 In 1.x the plugin had three presets: `recommended` and `strict`, which warned on rules still being measured, and `agent`, which didn't. 2.0's `recommended` is 1.x's `agent`, and `strict` and `agent` are gone: a config that names one fails to load (ESLint reports an `Unexpected undefined config`), so update it to `recommended`.
@@ -4238,7 +4238,7 @@ typescript-eslint, which this plugin runs on, doesn't support TypeScript 7 yet: 
 }
 ```
 
-Every rule that works without type information works there. The four type-aware rules, `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container`, report nothing, because Oxlint doesn't pass type information to JS plugins yet. Checked on 2026-11-22 with Oxlint 1.94.0.
+Every rule that works without type information works there. The five type-aware rules, `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container` and `no-uncalled-method`, report nothing, because Oxlint doesn't pass type information to JS plugins yet. Checked on 2026-11-22 with Oxlint 1.94.0.
 
 When typescript-eslint supports TypeScript 7.1's new compiler API, the 6.0 alias can go and nothing in this plugin changes; its `@typescript/native` peer suggests that name stays. Until then, prefer the side-by-side setup, which keeps the type-aware rules.
 
@@ -4264,6 +4264,7 @@ When typescript-eslint supports TypeScript 7.1's new compiler API, the 6.0 alias
 | `functype/no-floating-io`                |     error     |         | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
 | `functype/no-floating-result`            |     error     |   off   | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
 | `functype/no-serialize-container`        |     error     |   off   | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
+| `functype/no-uncalled-method`            |     error     |         | Call a functype method: `list.head()`, not `list.head`; read without `()` it is the function |
 | `functype/no-getOrThrow-in-render`       |     error     |         | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
 | `functype/must-fold-on-component-return` |     error     |         | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
@@ -4488,6 +4489,33 @@ return c.json(result.toJSON()) // fine: the envelope on purpose
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
 Measured (2026-10-31) on agent-todo's agent-gate-api, which kept a hand-written check for this. Before its fix commit (f002b90), the rule reports 4 calls, and each is a bug agent-todo fixed: `GET /billing`, which showed every paying user "billing account isn't properly linked" for about nine months; `PATCH /user/me` and `PATCH /user/preferences`, which answered 200 with a `Left` in the body; and an MCP tool that reported success on failure. On the current code it reports none, and none in agent-todo's UI or in functype's own packages. It's `error` in `recommended`, and `off` in `tests`, which assert on a container's `JSON.stringify` envelope.
+
+### `functype/no-uncalled-method`
+
+Reports a functype method read as a value instead of called. On functype 2, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are methods, and a read without `()` compiles wherever any value is accepted. It yields the function itself: always truthy, never the element. A detached functype method also throws when it's called later.
+
+```ts ignore
+const checkout = results.head // reported: a function, so `if (!checkout)` is never taken
+return Option(results.head) // reported: Some(<function>), not Some(firstRow)
+expect(results.head).toEqual(row) // reported
+if (opt.isSome) {
+} // reported: always true
+const { head } = results // reported
+
+results.head() // fine
+results.headOption() // fine
+results.head.bind(results) // fine: the function on purpose
+results.size // fine: a property
+```
+
+- **What counts:** a member declared as a method in functype's own files, read on a value with `_tag` and `fold`. A type of your own with that shape, or an interface extending `List` with methods of its own, isn't reported for those methods. Getters such as `size` and `isEmpty`, and function-valued data such as `Some(fn).value` or a `Ref` holding a callback, are never reported.
+- **Deliberate uses:** a call (`?.()`, `new` and a tagged template included, also through `as`, `!` or `satisfies`), `.bind` / `.call` / `.apply`, `typeof`, an assignment target, and `delete`.
+- **Not covered yet:** destructuring in parameters, nested patterns and `for…of`, and computed reads with a variable key (`results[key]`).
+- **Why a lint rule:** the upgrade tool rewrites these reads once, in your own code. The rule keeps them from coming back, and runs in libraries that never run the upgrade tool.
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
+
+Measured (2026-11-22) on seven codebases on functype 1.x and 2.x, 1,126 files: no hits. Run on a library's code from before its 2.0 port, it reports the `Option(list.head)` that library shipped. It's `error` in `recommended`, and stays on in `tests`: `expect(list.head)` is one of the bugs it's for.
 
 ### React rules
 

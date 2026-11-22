@@ -28,6 +28,7 @@ type CheckerLike = {
   isTupleType(type: TypeLike): boolean
   isTypeAssignableTo(source: TypeLike, target: TypeLike): boolean
   getPropertiesOfType(type: TypeLike): ReadonlyArray<{ readonly name: string }>
+  getApparentType?(type: TypeLike): TypeLike
 }
 
 type SignatureLike = {
@@ -219,6 +220,54 @@ export const containerInsideByType = (node: ASTNode, context: Rule.RuleContext):
   }
 
   return find(checker.getTypeAtLocation(tsNode), "", 0)
+}
+
+type MemberDeclaration = {
+  readonly parameters?: unknown
+  getSourceFile(): { readonly fileName: string }
+}
+type MemberSymbol = { getDeclarations?: () => ReadonlyArray<MemberDeclaration> | undefined }
+
+/**
+ * Declared by functype itself: its published `dist` (`node_modules/functype/dist/…`, pnpm's
+ * `.pnpm/functype@x/node_modules/functype/dist/…`) or, inside this repo, `packages/functype/{src,dist}`.
+ */
+const FUNCTYPE_FILE = /(?:^|[\\/])functype[\\/](?:dist|src)[\\/]/
+const isDeclaredByFunctype = (declaration: MemberDeclaration): boolean =>
+  FUNCTYPE_FILE.test(declaration.getSourceFile().fileName)
+
+/**
+ * If `object` is a functype container and `name` is one of its methods, the container's name
+ * (`List`, `Option`, `Either`); otherwise `undefined`. A container has `_tag` and `fold`. A method is
+ * declared in functype's own files, so a user type with the same shape (a union with `_tag` and a
+ * `fold`, or an interface extending `List` with methods of its own) never counts for those methods. It is a
+ * callable member whose declaration has parameters (`head(): A | undefined`, `fold<B>(…)`), so neither
+ * function-valued data (`readonly value: R` on a `Right` holding a callback) nor a getter (`size`) is one. A type parameter is read
+ * through its constraint.
+ *
+ * `undefined` when type information isn't available.
+ */
+export const functypeMethodByType = (object: ASTNode, name: string, context: Rule.RuleContext): string | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(object)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const read = checker.getNonNullableType(checker.getTypeAtLocation(tsNode))
+  const type = isTypeParameter(read) ? (checker.getApparentType?.(read) ?? read) : read
+  const isContainer =
+    checker.getPropertyOfType(type, "_tag") !== undefined && checker.getPropertyOfType(type, "fold") !== undefined
+  if (!isContainer) return undefined
+  const member = checker.getPropertyOfType(type, name) as MemberSymbol | undefined
+  const declarations = member?.getDeclarations?.() ?? []
+  // A getter (`get size(): number`) has parameters too, but reading it gives its value, not a function.
+  const isCallable = (): boolean =>
+    ((checker.getTypeOfSymbolAtLocation(member, tsNode) as TypeShape).getCallSignatures?.() ?? []).length > 0
+  const isMethod =
+    declarations.length > 0 &&
+    declarations.every((d) => Array.isArray(d.parameters) && isDeclaredByFunctype(d)) &&
+    isCallable()
+  return isMethod ? containerName(type as TypeShape) : undefined
 }
 
 /** A slot's expected type and the expression TypeScript computed it for. */
