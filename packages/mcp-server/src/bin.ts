@@ -34,7 +34,7 @@ Tools:
   search_docs           Search functype documentation
   get_type_api          Get detailed type API reference
   get_interfaces        Get interface hierarchy
-  validate_code         Type-check functype code snippets
+  validate_code         Type-check and lint functype code snippets
   set_functype_version  Switch installed functype version (stdio transport only)
 
 For more information: https://github.com/jordanburke/functype/tree/main/mcp-server

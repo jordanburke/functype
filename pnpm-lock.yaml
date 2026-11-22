@@ -454,6 +454,15 @@ importers:
 
   packages/mcp-server:
     dependencies:
+      '@typescript-eslint/parser':
+        specifier: ^8.72.2
+        version: 8.72.2(eslint@10.14.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+      eslint:
+        specifier: ^10.2.1
+        version: 10.14.0(jiti@2.7.0)(supports-color@7.2.0)
+      eslint-plugin-functype:
+        specifier: workspace:*
+        version: link:../eslint-plugin-functype
       functype:
         specifier: workspace:*
         version: link:../functype
