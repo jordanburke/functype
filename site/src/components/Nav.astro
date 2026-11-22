@@ -62,6 +62,9 @@ const links = [
   apply();
   button?.addEventListener("click", () => {
     mode = ORDER[(ORDER.indexOf(mode) + 1) % ORDER.length];
+    const root = document.documentElement;
+    root.classList.add("theme-fade");
+    window.setTimeout(() => root.classList.remove("theme-fade"), 320);
     try {
       if (mode === "auto") localStorage.removeItem("ft-theme");
       else localStorage.setItem("ft-theme", mode);

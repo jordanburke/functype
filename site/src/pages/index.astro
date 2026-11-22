@@ -191,15 +191,30 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
   type Run = { readonly vals: readonly (readonly [string, string])[]; readonly caption: string };
   const runs = JSON.parse(document.getElementById("runs")?.textContent ?? "{}") as Record<string, Run>;
   const code = document.getElementById("code") as HTMLElement;
+  // Restart a short CSS animation on an element, optionally after a delay.
+  const flash = (el: HTMLElement, cls: string, delay = 0): void => {
+    el.classList.remove(cls);
+    el.style.animationDelay = `${delay}ms`;
+    void el.offsetWidth;
+    el.classList.add(cls);
+  };
   const render = (key: string): void => {
     const run = runs[key];
-    code.querySelectorAll("[data-v]").forEach((el, i) => {
+    code.querySelectorAll<HTMLElement>("[data-v]").forEach((el, i) => {
       const [v, kind] = run.vals[i] ?? ["", "v"];
+      const cls = kind === "v" ? "v" : kind === "none" ? "v none" : "v plain";
+      if (el.textContent === v && el.className.startsWith(cls)) return;
       el.textContent = v;
-      el.className = kind === "v" ? "v" : kind === "none" ? "v none" : "v plain";
+      el.className = cls;
+      flash(el, "swap", i * 40);
     });
     (document.getElementById("caption") as HTMLElement).innerHTML = run.caption;
-    (document.getElementById("big") as HTMLElement).textContent = run.vals[run.vals.length - 1]?.[0] ?? "";
+    const big = document.getElementById("big") as HTMLElement;
+    const next = run.vals[run.vals.length - 1]?.[0] ?? "";
+    if (big.textContent !== next) {
+      big.textContent = next;
+      flash(big, "swap", 120);
+    }
   };
   document.querySelectorAll(".inputs button").forEach((b) =>
     b.addEventListener("click", () => {
@@ -231,6 +246,8 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
     }
     calls += 1;
     set("calls", calls);
+    const counter = document.getElementById("calls");
+    if (counter) flash(counter, "bump");
     set("out", pending === "42" ? 'Result: "Hello, Ada"' : 'Result: "Hello, guest". NotFound was caught by its tag.');
   });
   document.getElementById("copy")?.addEventListener("click", (e) => {
@@ -460,9 +477,70 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
     font-weight: 500;
   }
   @media (prefers-reduced-motion: no-preference) {
+    /* One entrance on first load: the headline, then the lede and buttons, then the editor's hints. */
+    .tag,
+    h1,
+    .lede,
+    .actions,
+    .shot {
+      animation: rise 0.7s var(--ease) both;
+    }
+    h1 {
+      animation-delay: 60ms;
+    }
+    .lede {
+      animation-delay: 140ms;
+    }
+    .actions {
+      animation-delay: 200ms;
+    }
+    .shot {
+      animation-delay: 260ms;
+    }
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    .hint :global(.swap),
+    .result :global(.swap) {
+      animation: swap 0.32s var(--ease) both;
+    }
+    @keyframes swap {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    .counter :global(.bump) {
+      animation: bump 0.36s var(--ease);
+    }
+    @keyframes bump {
+      40% {
+        transform: scale(1.12);
+      }
+      100% {
+        transform: none;
+      }
+    }
+    .inputs button {
+      transition:
+        background-color var(--quick) var(--ease),
+        color var(--quick) var(--ease),
+        box-shadow var(--quick) var(--ease);
+    }
     .code.intro .hint {
       animation: hint-in 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
-      animation-delay: calc(500ms + var(--i) * 160ms);
+      animation-delay: calc(700ms + var(--i) * 160ms);
     }
     @keyframes hint-in {
       from {
@@ -612,6 +690,7 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
   }
   .counter b {
     display: block;
+    transform-origin: left center;
     font-size: 44px;
     line-height: 1;
     font-weight: 600;
