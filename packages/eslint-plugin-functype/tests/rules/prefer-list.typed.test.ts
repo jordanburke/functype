@@ -36,6 +36,18 @@ describe("prefer-list (type-aware)", () => {
   typedRuleTester.run("prefer-list", rule, {
     valid: [
       {
+        name: "A mutable array changed in place is left to no-array-mutation, which reports the push itself",
+        filename: typedFilename,
+        options,
+        code: 'export function collect(): ReadonlyArray<string> { const acc: string[] = []; acc.push("a"); return acc }',
+      },
+      {
+        name: "A field changed in place is left to no-array-mutation too",
+        filename: typedFilename,
+        options,
+        code: 'export type Result = { errors: string[] }\nexport const add = (r: Result) => r.errors.push("e")',
+      },
+      {
         name: "A literal passed to an array-typed parameter",
         filename: typedFilename,
         options,
@@ -243,13 +255,6 @@ describe("prefer-list (type-aware)", () => {
       // React's real useState signature: `S | (() => S)`, a union containing the type parameter.
       literal("export const [ids, setIds] = hostReactState([1, 2])", "1, 2"),
       literal("export const ids = hostLoad([1, 2])", "1, 2"),
-      {
-        name: "A mutable array changed in place gets advice, not a ReadonlyArray suggestion that wouldn't compile",
-        filename: typedFilename,
-        options,
-        code: 'export function collect(): ReadonlyArray<string> { const acc: string[] = []; acc.push("a"); return acc }',
-        errors: [{ messageId: "mutatedArray" as const, data: { name: "acc", how: "push" } }],
-      },
       {
         name: "A cast after Array.isArray narrowing (any[]) is decoding too",
         filename: typedFilename,

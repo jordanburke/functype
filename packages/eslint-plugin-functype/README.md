@@ -14,65 +14,50 @@ npm install -D eslint-plugin-functype eslint
 // eslint.config.mjs
 import functype from "eslint-plugin-functype"
 
-export default [functype.configs.recommended]
+export default [functype.configs.recommended, functype.configs.tests]
 ```
 
-### Strict mode
+There is one preset. The code it checks is written by coding agents, and an agent acts on what fails its build and passes over a warning, so every rule is `error` or `off`. `tests` relaxes it for test files.
 
-```js
-import functype from "eslint-plugin-functype"
-
-export default [functype.configs.strict]
-```
-
-`strict` is `recommended` plus the rules that still fire on some correct code, at `error`. It also turns on `prefer-fold`'s guard check ([`checkGuards`](#functypeprefer-fold)).
-
-### Agent mode
-
-For code a coding agent writes. An agent acts on what fails its build and passes over a warning, so `agent` has no warnings: every rule is `error` or `off`.
-
-```js
-import functype from "eslint-plugin-functype"
-
-export default [functype.configs.agent]
-```
-
-- **`error`:** everything `strict` errors on, plus `no-floating-io` and the two React rules, which `strict` still warns on while they're measured. A forgotten `.run()` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
+- **`error`:** every rule whose precision is measured on real code. A forgotten `.run()`, a dropped `Either` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
 - **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured.
-- `prefer-option`, `prefer-either` and `prefer-try` are `error`, as in `strict`. At a real boundary the agent marks it instead: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
-- `no-array-mutation` and `no-floating-io` need type-aware linting (typescript-eslint's parser with `parserOptions.projectService`). Without it they report nothing.
-- Make sure the agent runs lint. An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
+- **At a real boundary, mark it** rather than disable the rule: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
+- **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
+- **Make sure the agent runs lint.** An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
+
+In 1.x the plugin had three presets: `recommended` and `strict`, which warned on rules still being measured, and `agent`, which didn't. 2.0's `recommended` is 1.x's `agent`, and `strict` and `agent` are gone: a config that names one fails to load, so update it to `recommended`.
 
 ## Rules
 
-| Rule                                     | Recommended | Strict | Agent  | Description                                                                                  |
-| ---------------------------------------- | :---------: | :----: | :----: | -------------------------------------------------------------------------------------------- |
-| `functype/no-let`                        |    error    | error  | error  | Use `const`; no reassignment                                                                 |
-| `functype/no-imperative-loops`           |    error    | error  | error  | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
-| `functype/prefer-functype-map`           |    error    | error  | error  | Use functype `Map` instead of a native `Map` you only read                                   |
-| `functype/prefer-functype-set`           |    error    | error  | error  | Use functype `Set` instead of a native `Set` you only read                                   |
-| `functype/collection-naming`             |    error    | error  | error  | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
-| `functype/prefer-map`                    |    error    | error  | error  | Use `map` instead of pushing inside `forEach`                                                |
-| `functype/prefer-fold`                   |    error    | error¹ | error¹ | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
-| `functype/prefer-option`                 |    warn     | error  | error  | Use `Option` instead of `null`/`undefined`                                                   |
-| `functype/prefer-either`                 |    warn     | error  | error  | Use `Either` for typed domain errors instead of `throw`                                      |
-| `functype/prefer-try`                    |    warn     | error  | error  | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
-| `functype/prefer-flatmap`                |    warn     |  warn  |  off   | Use `flatMap` instead of `map().flat()`                                                      |
-| `functype/prefer-do-notation`            |    warn     |  warn  |  off   | Use `Do` notation for chained operations                                                     |
-| `functype/no-get-unsafe`                 |     off     | error  | error  | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
-| `functype/prefer-list`                   |    error    | error  | error  | Use `List` instead of native arrays                                                          |
-| `functype/no-array-mutation`             |    error    | error  | error  | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
-| `functype/no-floating-io`                |     off     |  warn  | error  | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
-| `functype/no-floating-result`            |     off     | error  | error  | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
-| `functype/no-serialize-container`        |     off     | error  | error  | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
-| `functype/no-getOrThrow-in-render`       |     off     |  warn  | error  | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
-| `functype/must-fold-on-component-return` |     off     |  warn  | error  | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
+| Rule                                     | `recommended` | `tests` | Description                                                                                  |
+| ---------------------------------------- | :-----------: | :-----: | -------------------------------------------------------------------------------------------- |
+| `functype/no-let`                        |     error     |         | Use `const`; no reassignment                                                                 |
+| `functype/no-imperative-loops`           |     error     |         | Use `List`/array methods, async traversal or `IO.forEach` instead of loops                   |
+| `functype/prefer-functype-map`           |     error     |         | Use functype `Map` instead of a native `Map` you only read                                   |
+| `functype/prefer-functype-set`           |     error     |         | Use functype `Set` instead of a native `Set` you only read                                   |
+| `functype/collection-naming`             |     error     |         | Import functype's `Map`/`Set` under their own names; spell the built-in `globalThis.Map`     |
+| `functype/prefer-map`                    |     error     |         | Use `map` instead of pushing inside `forEach`                                                |
+| `functype/prefer-fold`                   |    error¹     |         | Use `fold` instead of branching on `isSome()`/`isLeft()`/…                                   |
+| `functype/prefer-option`                 |     error     |   off   | Use `Option` instead of `null`/`undefined`                                                   |
+| `functype/prefer-either`                 |     error     |   off   | Use `Either` for typed domain errors instead of `throw`                                      |
+| `functype/prefer-try`                    |     error     |   off   | Use `Try` / `Try.fromPromise` instead of try/catch                                           |
+| `functype/prefer-flatmap`                |      off      |         | Use `flatMap` instead of `map().flat()`                                                      |
+| `functype/prefer-do-notation`            |      off      |         | Use `Do` notation for chained operations                                                     |
+| `functype/no-get-unsafe`                 |    error²     |         | Disallow unsafe extraction (`.orThrow()`, `.expect()`)                                       |
+| `functype/prefer-list`                   |     error     |         | Use `List` instead of native arrays                                                          |
+| `functype/no-array-mutation`             |     error     |         | Don't change an array in place (`push`, `sort`, `xs[i] = v`…); build a new one               |
+| `functype/no-floating-io`                |     error     |         | Don't build an `IO` and drop it, or `await` it unrun; run, return or `yield*` it             |
+| `functype/no-floating-result`            |     error     |   off   | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
+| `functype/no-serialize-container`        |     error     |   off   | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
+| `functype/no-getOrThrow-in-render`       |     error     |         | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
+| `functype/must-fold-on-component-return` |     error     |         | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
 ¹ With `checkGuards: true`: a guard followed by an unwrap is reported too.
+² Allowed in test files by its own `allowInTests` option.
 
 ### Severity policy
 
-A rule is **`error` in `recommended` once it is right on ~95–99% of real code**, meaning its known false-positive classes are closed. It stays `warn` only while those classes are still open. FP here is governance: a rule that is reliably right should fail the build, not print advice nobody reads. Expect `recommended` to get stricter as boundary markers (`Wire<T>`, `@interop`) close the remaining cases for `prefer-option`, `prefer-either` and `prefer-try`.
+A rule is **`error` once it is right on ~95–99% of real code**, meaning its known false-positive classes are closed. Until then it is `off`, never `warn`: a warning is advice an agent passes over, and a rule that is reliably right should fail the build.
 
 `prefer-fold` reports only; its rewrite is a suggestion you apply, never an autofix, so `eslint --fix` can't change code on your behalf.
 
@@ -221,7 +206,7 @@ For a host that has to mutate, such as a charting library that takes the array i
 
 Measured on five consumers (2026-10-10): 91 hits, every one a real in-place mutation. Most were `push` accumulators building a list or a Markdown body line by line; the rest were `sort` on a named array and element assignment. It's `error` in every preset since 2.0. In 1.x it was `off` in `recommended`, to avoid failing builds on a minor upgrade.
 
-With `prefer-list` also on, an array that is declared and then pushed to is reported twice: `prefer-list` at the declaration, and this rule at the `push`. Both go away with the same fix.
+An array that is declared and then pushed to is reported once, here at the `push`: with type information, `prefer-list` leaves its declaration to this rule. Without type information this rule reports nothing, so `prefer-list` reports the declaration instead.
 
 ### `functype/no-floating-io`
 
@@ -242,7 +227,7 @@ void save(user) // fine: a deliberate drop
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). It recognizes `IO` by its type (it has `runExit` and `provideLayer`), whatever the call is named. Without type information it reports nothing.
 
-Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and a private web app's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `off` in `recommended` and `warn` in `strict` while it is measured further.
+Measured (2026-10-16) on functype's own source and tests, functype-log, functype-react, agent-todo's agent-gate-api and a private web app's API: 0 false positives across about 1,340 IO-typed calls. The only hits were four deliberate drops in type-only tests. It's `error` in `recommended`.
 
 ### `functype/no-floating-result`
 
@@ -265,7 +250,7 @@ void (await cache.refresh()) // fine: a deliberate drop
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
-Measured (2026-10-30) on agent-todo's agent-gate-api, which kept a hand-written check for this: at the commit that added that check, the rule reports 20 drops in production code. agent-todo fixed every one of them as a real bug, among them 8 in the Stripe webhook handler, where a failed write still answered Stripe 200. On the current code, after those fixes, it reports none in production code and 12 in tests. functype-os, functype-log, functype-react, functype-eval and functype-mcp-server report none. It's `error` in `strict` and `agent`, and `off` in `recommended`, where it moves to `error` in 2.0.
+Measured (2026-10-30) on agent-todo's agent-gate-api, which kept a hand-written check for this: at the commit that added that check, the rule reports 20 drops in production code. agent-todo fixed every one of them as a real bug, among them 8 in the Stripe webhook handler, where a failed write still answered Stripe 200. On the current code, after those fixes, it reports none in production code and 12 in tests. functype-os, functype-log, functype-react, functype-eval and functype-mcp-server report none. It's `error` in `recommended`, and `off` in `tests`, where a result is often dropped on purpose.
 
 ### `functype/no-serialize-container`
 
@@ -287,26 +272,11 @@ return c.json(result.toJSON()) // fine: the envelope on purpose
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
-Measured (2026-10-31) on agent-todo's agent-gate-api, which kept a hand-written check for this. Before its fix commit (f002b90), the rule reports 4 calls, and each is a bug agent-todo fixed: `GET /billing`, which showed every paying user "billing account isn't properly linked" for about nine months; `PATCH /user/me` and `PATCH /user/preferences`, which answered 200 with a `Left` in the body; and an MCP tool that reported success on failure. On the current code it reports none, and none in agent-todo's UI or in functype's own packages. It's `error` in `strict` and `agent`, and `off` in `recommended`, where it moves to `error` in 2.0.
+Measured (2026-10-31) on agent-todo's agent-gate-api, which kept a hand-written check for this. Before its fix commit (f002b90), the rule reports 4 calls, and each is a bug agent-todo fixed: `GET /billing`, which showed every paying user "billing account isn't properly linked" for about nine months; `PATCH /user/me` and `PATCH /user/preferences`, which answered 200 with a `Left` in the body; and an MCP tool that reported success on failure. On the current code it reports none, and none in agent-todo's UI or in functype's own packages. It's `error` in `recommended`, and `off` in `tests`, which assert on a container's `JSON.stringify` envelope.
 
 ### React rules
 
-Two rules are for React code. They fire only inside a **component** (a function named in PascalCase whose body has JSX, including one wrapped in `memo` or `forwardRef`) or a **hook** (a function named `use` + a capital letter), so other code rarely trips them. The one exception is a non-React function whose name starts with `use` + a capital letter, which is read as a hook. Both are `off` in `recommended` and `warn` in `strict` while they're measured on real React code. To turn them on with `recommended`:
-
-```js
-import functype from "eslint-plugin-functype"
-
-export default [
-  functype.configs.recommended,
-  {
-    files: ["**/*.tsx", "**/*.jsx"],
-    rules: {
-      "functype/no-getOrThrow-in-render": "error",
-      "functype/must-fold-on-component-return": "warn",
-    },
-  },
-]
-```
+Two rules are for React code. They fire only inside a **component** (a function named in PascalCase whose body has JSX, including one wrapped in `memo` or `forwardRef`) or a **hook** (a function named `use` + a capital letter), so other code rarely trips them. The one exception is a non-React function whose name starts with `use` + a capital letter, which is read as a hook. Both are `error` in `recommended`.
 
 Both work without type information. With it (`parserOptions.projectService`), the receiver must also be a functype container, so an unrelated object that happens to have an `orThrow` or `isSome` method is not reported.
 
@@ -395,7 +365,7 @@ The rule reports each match with two suggestions — `.getOrElse(() => default)`
 | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `minComplexity` | `2`     | Minimum if/else chain length (root + branches) before it is reported.                                                                                                                                              |
 | `checkNullable` | `false` | Also report null checks on plain values (`x === null ? a : b`). Off because whether `x` should be an `Option` is `prefer-option`'s call; at `error` this path fired on JSX, style objects and conditional spreads. |
-| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. On in `strict` and `agent`; off in `recommended`.                    |
+| `checkGuards`   | `false` | Also report a guard followed by an unwrap: `if (e.isLeft()) return …` and then `e.value` / `e.orThrow()` / `e.get()` later in the same block. On in `recommended`.                                                 |
 
 Reports only; the rewrite is a **suggestion, never an autofix**. A fold rewrite can't be proven type-correct without type information, and `eslint --fix` applies fixable rules at warn severity too, so an autofix here would rewrite working code during `validate`. The suggestion reads narrowed values through the fold's parameters (`e.value` after `isLeft()` becomes `left`), omits unused parameters, keeps `return` on if/else chains, parenthesizes object-literal branches, and offers `a.orElse(() => b)` for `a.isSome() ? a : b`. Rewrites follow the syntax tree, so text inside strings, template literals and comments is left alone. No suggestion is offered when the rewrite would drop a comment or could not type-check (`a.isSome() ? a : 5`). Suggestions are applied by hand, so review each one: the rule has no type information and can't prove the result compiles.
 
@@ -417,7 +387,7 @@ if (t.isFailure()) {
 
 `orThrow(error)` / `orThrow((e) => …)` after a guard isn't counted as an unwrap, matching `no-get-unsafe`, which treats a named error as a deliberate host throw. A receiver reassigned after the guard isn't reported. Only the negative predicates (`isLeft` / `isNone` / `isFailure`) are matched; `if (!e.isRight())` isn't yet.
 
-Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. That split is why it is on in `strict` and `agent`, and off in `recommended`. To turn it on with `recommended`, set `"functype/prefer-fold": ["error", { "checkGuards": true }]`.
+Pass-through guards are the clear case: they are hand-written `flatMap`. Fallback and other-work-first guards are closer to a style choice, since TypeScript narrows `Either` after the guard (Rust's `let-else` and Swift's `guard let` make the same trade). For `Option` and `Try` the guard doesn't narrow `.value`, so the case is stronger there. It is on in `recommended`. To turn it off, set `"functype/prefer-fold": ["error", { "checkGuards": false }]`; a bare `"error"` after the preset keeps it on, because ESLint keeps the earlier options.
 
 When the code after the guard awaits, the advice uses `flatMapAsync` / `foldAsync`. Declarations tagged `@interop <reason>` are skipped. On a private app monorepo it finds 75 guards, all of this shape.
 

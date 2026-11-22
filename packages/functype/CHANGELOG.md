@@ -220,20 +220,28 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 - functype-react's `structuralEq` now calls two Tuples with the same elements equal. It compares Lazies by state, as the matchers do, without running a thunk.
 - **Upgrade:** call Tuple and Lazy methods on the value, or wrap them: `xs.map((i) => tuple.get(i))`. Re-record snapshots. Replace a Lazy's `typeable` with `_tag`, and `=== None` with `isNone()`. Drop writes to a Tuple's `length`, which the compiler now reports.
 
-**2.0 (breaking): eslint-plugin-functype's presets get stricter.** From §5b of #276 (the 2.0 release plan). A new `error` fails a build, so these waited for a major.
+**2.0 (breaking): eslint-plugin-functype has one preset, `recommended`, where every rule is `error` or `off`.** From §5b of #276 (the 2.0 release plan). Code here is written by coding agents, which act on what fails their build and pass over a warning, so a preset with warnings mostly taught them to ignore findings. A new `error` fails a build, so this waited for a major.
 
-- **`recommended`:** `no-array-mutation` and `prefer-list` are now `error` (both were `off`). `no-array-mutation` found 91 hits across five consumers, every one a real in-place change. `prefer-list` was about 96% precise (#362, prefer-list flags only mutable or mutated arrays), and it skips Supabase's generated types (any file whose top level exports both `Json` and `Database`), its main false positive.
-- **`strict`:** `prefer-fold` also checks guards (`checkGuards: true`, from #363, the prefer-fold guard check): `if (e.isLeft()) return …` followed by `e.value` or `e.orThrow()` is reported. `prefer-list` is `error` here too (was `warn`). `recommended` leaves the guard check off.
-- **`agent`:** inherits both. `prefer-list` is `error` (was `off`), so `agent` no longer turns off a rule that `recommended` errors on.
-- An array that is declared and then pushed to is reported twice: by `prefer-list` at the declaration, and by `no-array-mutation` at the `push`. One fix clears both.
-- `no-array-mutation` is type-aware. Without `parserOptions.projectService` it reports nothing, so a config without type information sees only the `prefer-list` part of this change.
+- **`recommended` is 1.x's `agent` preset.** `strict` and `agent` are gone, and a config that names one fails to load with "config not found". `tests` stays, and relaxes `recommended` for test files.
+- **Now `error` in `recommended`:**
+  - `no-array-mutation` (was `off`): 91 hits across five consumers, every one a real in-place change.
+  - `prefer-list` (was `off`): about 96% precise (#362, prefer-list flags only mutable or mutated arrays). It skips Supabase's generated types (any file whose top level exports both `Json` and `Database`), its main false positive.
+  - `prefer-option`, `prefer-either`, `prefer-try` (were `warn`): at a real boundary, mark it with `@interop <reason>`, `invariant()` or `Wire<T>`.
+  - `no-get-unsafe` (was `off`), allowed in test files.
+  - `no-floating-io`, `no-floating-result`, `no-serialize-container` (were `off`). In functype, `no-floating-result` found a real bug: an async `bracket` that dropped a failed release.
+  - The React rules `no-getOrThrow-in-render` and `must-fold-on-component-return` (were `off`).
+  - `prefer-fold` also checks guards (`checkGuards: true`, from #363, the prefer-fold guard check): `if (e.isLeft()) return …` followed by `e.value` or `e.orThrow()` is reported.
+- **Now `off`:** `prefer-flatmap` and `prefer-do-notation` (were `warn`), whose precision is unmeasured. Each moves to `error` once it's measured.
+- **`tests`** also turns off `no-floating-result` and `no-serialize-container`, because tests drop results on purpose (`await io.run()` for its side effect) and assert on a container's `JSON.stringify` envelope.
+- **An array that is declared and then pushed to is reported once,** by `no-array-mutation` at the `push`, which is where the fix goes. With type information, `prefer-list` leaves the declaration to it. Without type information `no-array-mutation` reports nothing, so `prefer-list` reports the declaration instead.
+- `no-array-mutation`, `no-floating-io`, `no-floating-result` and `no-serialize-container` are type-aware. Without `parserOptions.projectService` they report nothing.
 - `prefer-list` treats `Readonly<T[]>` and `Readonly<Array<T>>` as read-only, as it treats `ReadonlyArray<T>` and `readonly T[]`. It reported them as mutable arrays.
-- `no-floating-io`, `no-floating-result` and `no-serialize-container` are unchanged in every preset.
-- **Upgrade:** run `eslint` after upgrading and fix what it reports:
+- **Upgrade:** replace `functype.configs.strict` or `functype.configs.agent` with `functype.configs.recommended`, add `functype.configs.tests`, then run `eslint` and fix what it reports:
   - A mutable type (`string[]`, `Array<T>`) becomes `ReadonlyArray<T>`, or `List<T>` for a collection you transform.
   - An in-place change (`push`, `sort`, `xs[i] = v`, `xs.length = 0`) becomes a new array (`[...xs, x]`, `toSorted`, `with`) or a fold. A shared buffer, such as a test logger's store, can hold a `List` in a field and replace it on each write.
-  - A host that needs a mutable array: mark the function `@interop <reason>`, or wrap the type in `Wire<…>`.
-  - To keep 1.x levels for now, set `"functype/no-array-mutation": "off"` and `"functype/prefer-list": "off"` after `functype.configs.recommended`. For `strict` without the guard check, set `"functype/prefer-fold": ["error", { "checkGuards": false }]` after `functype.configs.strict`. A bare `"error"` keeps the preset's options, so the check stays on.
+  - A dropped `Either` or `Try` is handled, returned, or marked with `void` where dropping it is the point.
+  - A host that needs a mutable array or a throw: mark the function `@interop <reason>`, or wrap the type in `Wire<…>`.
+  - To turn a rule off, set it to `"off"` after `functype.configs.recommended`. For the guard check, set `"functype/prefer-fold": ["error", { "checkGuards": false }]`; a bare `"error"` keeps the preset's options, so the check stays on.
 
 **2.0 (breaking): Identity, Tag, Context and Ref share their methods.** §14 of #276 (the 2.0 release plan), after #553 (Tuple and Lazy share their methods). Still to convert: TracedOption and Layer.
 

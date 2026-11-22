@@ -1,47 +1,38 @@
 /**
- * Severity policy (#325): a rule is `error` once it is right on ~95–99% of real code and its known
- * false-positive classes are closed; it stays `warn` only while those classes are still open. FP here
- * is governance — a rule that is reliably right should fail the build, not print advice nobody reads
- * (a private app monorepo shipped 85 new violations under "lint OK" because every rule but `no-let` warned).
+ * The one preset. Code here is written by coding agents, and an agent acts on what fails its build
+ * and passes over a warning, so every rule is `error` or `off`, never `warn`. A rule is `error` once it
+ * is right on ~95–99% of real code with its known false-positive classes closed (#325); until it is
+ * measured, it is `off`, because at `error` it would teach an agent to write `eslint-disable`.
  *
- * Still `warn`, and why:
- * - prefer-option / prefer-either / prefer-try: fire on correct code at serialization boundaries
- *   (JSON rows, DTOs) and on throws that are correct (bug checks, host contracts). Wire<T> (#325 B),
- *   invariant() and @interop (#342) close those; graduating them is a measured decision.
+ * In 1.x this was `agent`; `recommended` and `strict` warned on rules still being measured. 2.0 has
+ * one preset, and tests.ts relaxes it for test files.
+ *
+ * `off`, and why:
  * - prefer-flatmap / prefer-do-notation: heuristics without type information; precision unmeasured.
  *
- * Graduated with a precision condition: prefer-fold checks functype predicate calls (`isSome()`,
- * `isLeft()`) only; its null-check heuristic is opt-in (`checkNullable`) because it fired on plain
- * nullables — 31 of 31 hits in a private app monorepo. prefer-map leaves loops to no-imperative-loops (`checkForLoops`
- * off), so one loop is one error.
+ * `error`, with what it was measured on:
+ * - prefer-fold checks functype predicate calls (`isSome()`, `isLeft()`), and guards followed by an
+ *   unwrap (`checkGuards`): a pass-through guard is a hand-written flatMap. Its null-check heuristic
+ *   is opt-in (`checkNullable`) because it fired on plain nullables: 31 of 31 hits in a private app
+ *   monorepo. Inside a React component, a guard followed by an unwrap is also reported by
+ *   must-fold-on-component-return.
+ * - prefer-map leaves loops to no-imperative-loops (`checkForLoops` off), so one loop is one error.
+ * - collection-naming is a convention, not a heuristic, so it has no false-positive class.
+ * - no-array-mutation: 91 hits across five consumers, every one a real in-place mutation.
+ * - prefer-list: about 96% precise on five consumers (#362). Supabase's generated types are skipped
+ *   by shape. A `push` onto a mutable array is reported once, by no-array-mutation.
+ * - prefer-option / prefer-either / prefer-try: at a real boundary the code marks it instead
+ *   (`@interop <reason>` or `invariant()` for a throw, `Wire<T>` for a data shape).
+ * - no-floating-io: 0 false positives across ~1,340 IO-typed calls in five codebases.
+ * - no-floating-result: on agent-todo's API it found the 20 drops that project fixed by hand as real
+ *   bugs, and in functype it found an async `bracket` that dropped a failed release.
+ * - no-serialize-container: 4 calls on agent-todo's API, each a bug that project fixed.
+ * - no-getOrThrow-in-render and must-fold-on-component-return fire only inside a React component or
+ *   hook, and reported nothing on 1,403 files of React code.
+ * - no-get-unsafe: an unwrap outside an `@interop` boundary; allowed in test files.
  *
- * collection-naming is a convention, not a heuristic — functype's Map/Set imported under their own names,
- * the built-in spelled globalThis.Map — so it has no false-positive class and starts at error.
- *
- * Promoted in 2.0, which a 1.x minor couldn't do without failing consumers' builds on upgrade:
- * - no-array-mutation: 91 hits across five consumers, every one a real in-place mutation. Type-aware:
- *   without type information it reports nothing.
- * - prefer-list: about 96% precise on five consumers (#362). Its main false positive, Supabase's generated
- *   types, is skipped by shape. It reports a mutated array where it is declared and no-array-mutation where
- *   it changes, so one `push` can show up under both.
- *
- * no-floating-io (1.17) is off here and `warn` in strict while it is measured: 0 false positives across
- * ~1,340 IO-typed calls in five codebases, but no real hits yet either. 2.0 decides `recommended` after
- * measuring it against functype-os, whose async methods return IO there. Type-aware, like no-array-mutation.
- *
- * no-floating-result (1.23) is off here and `error` in strict: a dropped Either or Try is a defect, not a
- * style, and on agent-todo's API it found the 20 drops that project fixed by hand as real bugs. Turning a
- * new error on here would fail consumers' builds on a 1.x minor, so it moves to `error` here in 2.0. Type-aware.
- *
- * no-serialize-container (1.23) is off here and `error` in strict, for the same reason: a container sent
- * to `c.json()` or `JSON.stringify()` is a defect, and turning a new error on here would fail consumers'
- * builds on a 1.x minor. It moves to `error` here in 2.0. Type-aware.
- *
- * no-getOrThrow-in-render and must-fold-on-component-return are React rules: they fire only inside a
- * component (a PascalCase function with JSX) or a hook (`use*`), so non-React code rarely trips them (a
- * non-React function named `use*` is read as a hook). Both are new and unmeasured on real React code, so
- * they start where no-floating-io did: off here, `warn` in strict. They work without type information and
- * are more precise with it.
+ * no-array-mutation, no-floating-io, no-floating-result and no-serialize-container are type-aware:
+ * without `parserOptions.projectService` they report nothing.
  */
 const recommendedRules = {
   "functype/no-let": "error",
@@ -49,21 +40,21 @@ const recommendedRules = {
   "functype/prefer-functype-map": "error",
   "functype/prefer-functype-set": "error",
   "functype/prefer-map": "error",
-  "functype/prefer-fold": "error",
+  "functype/prefer-fold": ["error", { checkGuards: true }],
   "functype/collection-naming": "error",
   "functype/prefer-list": "error",
   "functype/no-array-mutation": "error",
-  "functype/prefer-option": "warn",
-  "functype/prefer-either": "warn",
-  "functype/prefer-try": "warn",
-  "functype/prefer-flatmap": "warn",
-  "functype/prefer-do-notation": "warn",
-  "functype/no-get-unsafe": "off",
-  "functype/no-floating-io": "off",
-  "functype/no-floating-result": "off",
-  "functype/no-serialize-container": "off",
-  "functype/no-getOrThrow-in-render": "off",
-  "functype/must-fold-on-component-return": "off",
+  "functype/prefer-option": "error",
+  "functype/prefer-either": "error",
+  "functype/prefer-try": "error",
+  "functype/no-get-unsafe": "error",
+  "functype/no-floating-io": "error",
+  "functype/no-floating-result": "error",
+  "functype/no-serialize-container": "error",
+  "functype/no-getOrThrow-in-render": "error",
+  "functype/must-fold-on-component-return": "error",
+  "functype/prefer-flatmap": "off",
+  "functype/prefer-do-notation": "off",
 }
 
 export default recommendedRules

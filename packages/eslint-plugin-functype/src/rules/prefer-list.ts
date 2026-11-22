@@ -466,13 +466,20 @@ const rule: Rule.RuleModule = {
           )
         })
       if (feedsFromCall) return
+      // An array that is changed in place is one mistake, building it by mutation, with two sites. With
+      // type information, no-array-mutation reports the change itself (`push`, `sort`, `x[i] = …`), which
+      // is where the fix goes, so this rule stays quiet about the declaration rather than report it twice.
+      // Without type information no-array-mutation reports nothing, so the declaration gets the advice.
+      const typed = hasTypeInformation(context)
       // A field mutated somewhere in the file (`result.errors.push(e)`, `this.events.push(e)`): a
       // ReadonlyArray suggestion wouldn't compile, so give the mutation advice. Matched by name, which only
       // picks the message, never whether to report.
       const field = annotatedFieldName(reportNode)
       const fieldMutation = field === null ? null : fieldMutationIn(field)
       if (field !== null && fieldMutation !== null) {
-        context.report({ node: reportNode, messageId: "mutatedArray", data: { name: field, how: fieldMutation } })
+        if (!typed) {
+          context.report({ node: reportNode, messageId: "mutatedArray", data: { name: field, how: fieldMutation } })
+        }
         return
       }
       const binding = annotatedBinding(reportNode)
@@ -480,7 +487,9 @@ const rule: Rule.RuleModule = {
         if (feedsMutableSlot(binding)) return
         const how = mutationOf(binding)
         if (how) {
-          context.report({ node: reportNode, messageId: "mutatedArray", data: { name: binding.name, how } })
+          if (!typed) {
+            context.report({ node: reportNode, messageId: "mutatedArray", data: { name: binding.name, how } })
+          }
           return
         }
       }
