@@ -28,6 +28,9 @@ const DecoderCompanion = {
   tagged,
 }
 
+// The statics under a second name: the .d.ts then declares no value called DecoderCompanion beside the interface
+const DecoderStatics = DecoderCompanion
+
 /**
  * Decoder namespace: combinators for converting `unknown` into typed values.
  *
@@ -39,10 +42,10 @@ const DecoderCompanion = {
  * - `Decoder.tagged.option/either/try/list/map/obj(inner?)` — round-trip the `{_tag, value}` shape
  *   used by functype's built-in `.toJSON()` (for functype-to-functype services)
  */
-export const Decoder: DecoderCompanion = Companion({ _tag: "Decoder" } as const, DecoderCompanion)
+export const Decoder: DecoderCompanion = Companion({ _tag: "Decoder" } as const, DecoderStatics)
 
 /** The type of `Decoder`: its tag and its statics, named so that errors and hovers print `DecoderCompanion`. */
 export interface DecoderCompanion extends DecoderStaticsType {
   readonly _tag: "Decoder"
 }
-type DecoderStaticsType = typeof DecoderCompanion
+type DecoderStaticsType = typeof DecoderStatics

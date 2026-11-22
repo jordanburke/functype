@@ -107,10 +107,13 @@ const HttpErrorCompanion = {
   match,
 }
 
-export const HttpError: HttpErrorCompanion = Companion({ _tag: "HttpError" } as const, HttpErrorCompanion)
+// The statics under a second name: the .d.ts then declares no value called HttpErrorCompanion beside the interface
+const HttpErrorStatics = HttpErrorCompanion
+
+export const HttpError: HttpErrorCompanion = Companion({ _tag: "HttpError" } as const, HttpErrorStatics)
 
 /** The type of `HttpError`: its tag and its statics, named so that errors and hovers print `HttpErrorCompanion`. */
 export interface HttpErrorCompanion extends HttpErrorStaticsType {
   readonly _tag: "HttpError"
 }
-type HttpErrorStaticsType = typeof HttpErrorCompanion
+type HttpErrorStaticsType = typeof HttpErrorStatics

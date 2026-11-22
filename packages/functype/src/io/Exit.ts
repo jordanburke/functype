@@ -559,6 +559,9 @@ const ExitCompanion = {
  */
 const ExitConstructor = <E extends Type, A extends Type>(value: A): Exit<E, A> => SuccessExit(value)
 
+// The statics under a second name: the .d.ts then declares no value called ExitCompanion beside the interface
+const ExitStatics = ExitCompanion
+
 /**
  * Exit type for representing effect outcomes.
  *
@@ -575,9 +578,9 @@ const ExitConstructor = <E extends Type, A extends Type>(value: A): Exit<E, A> =
  * )
  * ```
  */
-export const Exit: ExitCompanion = Companion(ExitConstructor, ExitCompanion)
+export const Exit: ExitCompanion = Companion(ExitConstructor, ExitStatics)
 
 /** The type of `Exit`: its constructor and its statics, named so that errors and hovers print `ExitCompanion`. */
 export interface ExitCompanion extends ExitConstructorType, ExitStaticsType {}
 type ExitConstructorType = typeof ExitConstructor
-type ExitStaticsType = typeof ExitCompanion
+type ExitStaticsType = typeof ExitStatics

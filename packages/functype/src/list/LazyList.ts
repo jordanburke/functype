@@ -608,6 +608,9 @@ const LazyListCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called LazyListCompanion beside the interface
+const LazyListStatics = LazyListCompanion
+
 /**
  * Lazy list implementation for efficient deferred computation
  * @example
@@ -634,9 +637,9 @@ const LazyListCompanion = {
  *   .take(5)
  *   .toArray() // [1, 5, 9, 13, 17]
  */
-export const LazyList: LazyListCompanion = Companion(LazyListConstructor, LazyListCompanion)
+export const LazyList: LazyListCompanion = Companion(LazyListConstructor, LazyListStatics)
 
 /** The type of `LazyList`: its constructor and its statics, named so that errors and hovers print `LazyListCompanion`. */
 export interface LazyListCompanion extends LazyListConstructorType, LazyListStaticsType {}
 type LazyListConstructorType = typeof LazyListConstructor
-type LazyListStaticsType = typeof LazyListCompanion
+type LazyListStaticsType = typeof LazyListStatics

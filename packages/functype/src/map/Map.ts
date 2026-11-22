@@ -287,9 +287,12 @@ const MapCompanion = {
   },
 }
 
-export const Map: MapCompanion = Companion(MapConstructor, MapCompanion)
+// The statics under a second name: the .d.ts then declares no value called MapCompanion beside the interface
+const MapStatics = MapCompanion
+
+export const Map: MapCompanion = Companion(MapConstructor, MapStatics)
 
 /** The type of `Map`: its constructor and its statics, named so that errors and hovers print `MapCompanion`. */
 export interface MapCompanion extends MapConstructorType, MapStaticsType {}
 type MapConstructorType = typeof MapConstructor
-type MapStaticsType = typeof MapCompanion
+type MapStaticsType = typeof MapStatics

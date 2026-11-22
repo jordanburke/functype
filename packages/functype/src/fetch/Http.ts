@@ -396,10 +396,13 @@ const HttpCompanion = {
   client,
 }
 
-export const Http: HttpCompanion = Companion({ _tag: "Http" } as const, HttpCompanion)
+// The statics under a second name: the .d.ts then declares no value called HttpCompanion beside the interface
+const HttpStatics = HttpCompanion
+
+export const Http: HttpCompanion = Companion({ _tag: "Http" } as const, HttpStatics)
 
 /** The type of `Http`: its tag and its statics, named so that errors and hovers print `HttpCompanion`. */
 export interface HttpCompanion extends HttpStaticsType {
   readonly _tag: "Http"
 }
-type HttpStaticsType = typeof HttpCompanion
+type HttpStaticsType = typeof HttpStatics

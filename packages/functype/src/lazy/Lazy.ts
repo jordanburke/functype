@@ -613,6 +613,9 @@ const LazyCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called LazyCompanion beside the interface
+const LazyStatics = LazyCompanion
+
 /**
  * Creates a Lazy computation that defers evaluation until needed.
  * Results are memoized after first evaluation.
@@ -652,9 +655,9 @@ const LazyCompanion = {
  *   .map(user => user.name)
  *   .orThrow() // "Alice"
  */
-export const Lazy: LazyCompanion = Companion(LazyConstructor, LazyCompanion)
+export const Lazy: LazyCompanion = Companion(LazyConstructor, LazyStatics)
 
 /** The type of `Lazy`: its constructor and its statics, named so that errors and hovers print `LazyCompanion`. */
 export interface LazyCompanion extends LazyConstructorType, LazyStaticsType {}
 type LazyConstructorType = typeof LazyConstructor
-type LazyStaticsType = typeof LazyCompanion
+type LazyStaticsType = typeof LazyStatics

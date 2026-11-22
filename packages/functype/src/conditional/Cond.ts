@@ -212,6 +212,9 @@ const CondCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called CondCompanion beside the interface
+const CondStatics = CondCompanion
+
 /**
  * Conditional expression builder for functional if/else chains
  * @example
@@ -236,9 +239,9 @@ const CondCompanion = {
  *   .when(() => checkCondition2(), () => "Result 2")
  *   .else(() => "Default")
  */
-export const Cond: CondCompanion = Companion(CondConstructor, CondCompanion)
+export const Cond: CondCompanion = Companion(CondConstructor, CondStatics)
 
 /** The type of `Cond`: its constructor and its statics, named so that errors and hovers print `CondCompanion`. */
 export interface CondCompanion extends CondConstructorType, CondStaticsType {}
 type CondConstructorType = typeof CondConstructor
-type CondStaticsType = typeof CondCompanion
+type CondStaticsType = typeof CondStatics

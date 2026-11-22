@@ -282,9 +282,12 @@ const StackCompanion = {
   },
 }
 
-export const Stack: StackCompanion = Companion(StackConstructor, StackCompanion)
+// The statics under a second name: the .d.ts then declares no value called StackCompanion beside the interface
+const StackStatics = StackCompanion
+
+export const Stack: StackCompanion = Companion(StackConstructor, StackStatics)
 
 /** The type of `Stack`: its constructor and its statics, named so that errors and hovers print `StackCompanion`. */
 export interface StackCompanion extends StackConstructorType, StackStaticsType {}
 type StackConstructorType = typeof StackConstructor
-type StackStaticsType = typeof StackCompanion
+type StackStaticsType = typeof StackStatics

@@ -517,9 +517,12 @@ const ListCompanion = {
   },
 }
 
-export const List: ListCompanion = Companion(ListConstructor, ListCompanion)
+// The statics under a second name: the .d.ts then declares no value called ListCompanion beside the interface
+const ListStatics = ListCompanion
+
+export const List: ListCompanion = Companion(ListConstructor, ListStatics)
 
 /** The type of `List`: its constructor and its statics, named so that errors and hovers print `ListCompanion`. */
 export interface ListCompanion extends ListConstructorType, ListStaticsType {}
 type ListConstructorType = typeof ListConstructor
-type ListStaticsType = typeof ListCompanion
+type ListStaticsType = typeof ListStatics

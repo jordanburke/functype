@@ -112,10 +112,13 @@ const DecoderErrorCompanion = {
   format,
 }
 
-export const DecoderError: DecoderErrorCompanion = Companion({ _tag: "DecoderError" } as const, DecoderErrorCompanion)
+// The statics under a second name: the .d.ts then declares no value called DecoderErrorCompanion beside the interface
+const DecoderErrorStatics = DecoderErrorCompanion
+
+export const DecoderError: DecoderErrorCompanion = Companion({ _tag: "DecoderError" } as const, DecoderErrorStatics)
 
 /** The type of `DecoderError`: its tag and its statics, named so that errors and hovers print `DecoderErrorCompanion`. */
 export interface DecoderErrorCompanion extends DecoderErrorStaticsType {
   readonly _tag: "DecoderError"
 }
-type DecoderErrorStaticsType = typeof DecoderErrorCompanion
+type DecoderErrorStaticsType = typeof DecoderErrorStatics

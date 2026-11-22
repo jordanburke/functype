@@ -606,6 +606,9 @@ const MatchCompanion = {
   },
 }
 
+// The statics under a second name: the .d.ts then declares no value called MatchCompanion beside the interface
+const MatchStatics = MatchCompanion
+
 /**
  * Pattern matching utility for type-safe conditional logic with exhaustiveness checking,
  * nested patterns, and guard support
@@ -646,9 +649,9 @@ const MatchCompanion = {
  *   .case("error", "Failed!")
  *   .exhaustive()
  */
-export const Match: MatchCompanion = Companion(MatchConstructor, MatchCompanion)
+export const Match: MatchCompanion = Companion(MatchConstructor, MatchStatics)
 
 /** The type of `Match`: its constructor and its statics, named so that errors and hovers print `MatchCompanion`. */
 export interface MatchCompanion extends MatchConstructorType, MatchStaticsType {}
 type MatchConstructorType = typeof MatchConstructor
-type MatchStaticsType = typeof MatchCompanion
+type MatchStaticsType = typeof MatchStatics

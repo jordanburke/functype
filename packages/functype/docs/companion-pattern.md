@@ -46,10 +46,13 @@ export const MyType: MyTypeCompanion = Companion(MyTypeConstructor, MyTypeCompan
 // 5. Name the combined type, so errors and hovers print `MyTypeCompanion`
 export interface MyTypeCompanion extends MyTypeConstructorType, MyTypeStaticsType {}
 type MyTypeConstructorType = typeof MyTypeConstructor
-type MyTypeStaticsType = typeof MyTypeCompanion
+const MyTypeStatics = MyTypeCompanion
+type MyTypeStaticsType = typeof MyTypeStatics
 ```
 
-Without step 5, a call to a name the companion doesn't have prints the whole type, every signature included. With it, `MyType.missing()` fails with `Property 'missing' does not exist on type 'MyTypeCompanion'`. The interface and the local `MyTypeCompanion` object share a name: TypeScript keeps types and values apart, so `typeof MyTypeCompanion` is the object, and `MyTypeCompanion` as a type is the interface.
+Without step 5, a call to a name the companion doesn't have prints the whole type, every signature included. With it, `MyType.missing()` fails with `Property 'missing' does not exist on type 'MyTypeCompanion'`.
+
+The interface and the local `MyTypeCompanion` object share a name, which TypeScript allows because types and values live apart. Read the object's type through a second name, `MyTypeStatics`, as above. With `typeof MyTypeCompanion`, the `.d.ts` would declare a value called `MyTypeCompanion` next to the interface, and the bundled types would then export it as a value that doesn't exist at runtime.
 
 ### Usage
 

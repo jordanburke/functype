@@ -453,9 +453,12 @@ const SetCompanion = {
   },
 }
 
-export const Set: SetCompanion = Companion(SetConstructor, SetCompanion)
+// The statics under a second name: the .d.ts then declares no value called SetCompanion beside the interface
+const SetStatics = SetCompanion
+
+export const Set: SetCompanion = Companion(SetConstructor, SetStatics)
 
 /** The type of `Set`: its constructor and its statics, named so that errors and hovers print `SetCompanion`. */
 export interface SetCompanion extends SetConstructorType, SetStaticsType {}
 type SetConstructorType = typeof SetConstructor
-type SetStaticsType = typeof SetCompanion
+type SetStaticsType = typeof SetStatics
