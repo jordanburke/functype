@@ -25,10 +25,11 @@ export interface SourceLocation {
  * public name used in src/cli/data.ts.
  */
 export const TYPE_SOURCES: Record<string, SourceLocation> = {
-  Option: { file: "src/option/Option.ts", name: "Option" },
+  // Option and Try are discriminated unions; OptionBase and TryBase hold the shared method surface.
+  Option: { file: "src/option/Option.ts", name: "OptionBase" },
   // Either is a discriminated union; EitherBase holds the shared method surface.
   Either: { file: "src/either/Either.ts", name: "EitherBase" },
-  Try: { file: "src/try/Try.ts", name: "Try" },
+  Try: { file: "src/try/Try.ts", name: "TryBase" },
   List: { file: "src/list/List.ts", name: "List" },
   Set: { file: "src/set/Set.ts", name: "Set" },
   Map: { file: "src/map/Map.ts", name: "Map" },
@@ -47,6 +48,9 @@ export const WRAPPER_SOURCES: Record<string, SourceLocation> = {
   FunctypeBase: { file: "src/functype/Functype.ts", name: "FunctypeBase" },
   FunctypeSum: { file: "src/functype/FunctypeSum.ts", name: "FunctypeSum" },
   FunctypeCollection: { file: "src/functype/Functype.ts", name: "FunctypeCollection" },
+  FunctypeCore: { file: "src/functype/Functype.ts", name: "FunctypeCore" },
+  FunctypeValue: { file: "src/functype/Functype.ts", name: "FunctypeValue" },
+  Traversable: { file: "src/traversable/Traversable.ts", name: "Traversable" },
   AsyncMonad: { file: "src/typeclass/Functor.ts", name: "AsyncMonad" },
   Monad: { file: "src/typeclass/Functor.ts", name: "Monad" },
   Applicative: { file: "src/typeclass/Functor.ts", name: "Applicative" },
@@ -67,6 +71,9 @@ export const INTERNAL_NAMES = new Set<string>([
   "FunctypeBase",
   "FunctypeSum",
   "FunctypeCollection",
+  "FunctypeCore",
+  "FunctypeValue",
+  "Reducible",
 ])
 
 /**
