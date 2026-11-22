@@ -1,7 +1,7 @@
 ---
 const path = Astro.url.pathname;
 const links = [
-  { href: "/option/", label: "Docs", match: (p: string) => p !== "/" && !p.startsWith("/upgrading-to-2") },
+  { href: "/option/", label: "Docs", match: (p: string) => p !== "/" && !p.startsWith("/upgrading-to-2") && !p.startsWith("/mcp-server") },
   { href: "/#types", label: "Types", match: () => false },
   { href: "/mcp-server/", label: "Agents", match: (p: string) => p.startsWith("/mcp-server") },
   { href: "/upgrading-to-2/", label: "Upgrade to 2.0", match: (p: string) => p.startsWith("/upgrading-to-2") },
@@ -16,7 +16,7 @@ const links = [
     <ul>
       {
         links.map((l) => (
-          <li class="hide-sm">
+          <li class={l.label === "Docs" ? undefined : "hide-sm"}>
             <a href={l.href} aria-current={l.match(path) ? "page" : undefined}>
               {l.label}
             </a>

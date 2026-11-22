@@ -3,6 +3,7 @@
    data-theme choice (the nav's toggle), so the three can't drift apart. */
 
 :root {
+  color-scheme: light;
   --bg: #fbfbfd;
   --panel: #f3f3f6;
   --surface: #ffffff;

@@ -27,7 +27,7 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
       </p>
       <div class="actions">
         <a class="btn btn-solid" href="/option/">Read the docs</a>
-        <button class="btn btn-ghost install" type="button" id="copy">npm i functype <span class="copy">Copy</span></button>
+        <button class="btn btn-ghost install" type="button" id="copy">npm i functype <span class="copy" aria-live="polite">Copy</span></button>
       </div>
 
       <div class="shot">
@@ -65,7 +65,7 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
             <figcaption class="result">
               <span class="label"><code>port</code> is a plain number</span>
               <span class="big" id="big">8080</span>
-              <span class="why" id="caption" set:html={runs.ok.caption} />
+              <span class="why" id="caption" aria-live="polite" set:html={runs.ok.caption} />
             </figcaption>
           </div>
         </figure>
