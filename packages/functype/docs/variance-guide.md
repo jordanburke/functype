@@ -215,6 +215,6 @@ The variance story was painful to get right. Past mistakes worth remembering:
 new method takes an A?         → accept `unknown` if it's a query, or widen via `<B>(B): C<A | B>` if it's additive
 new method returns A?          → already fine (covariant output)
 new method does both?          → it's a reduce shape — use `Widen<A, B>`
-new method has a fallback?     → widen the fallback via `<T2>(...): T | T2`
+new method has a fallback?     → `<T2 = never>(d: () => T | T2): T | T2`, so a default that fits T keeps T
 container won't accept `<out>`? → TS will tell you which method — fix it with one of the rules above
 ```

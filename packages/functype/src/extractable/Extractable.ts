@@ -22,9 +22,10 @@ export interface Unsafe<out T extends Type> {
  * with various fallback strategies.
  *
  * Covariance: T is declared `<out T>`. The fallback methods `getOrElse` and `orElse`
- * widen the result via `<T2>`, matching Scala's `getOrElse[B1 >: B](default: => B1): B1`
- * shape — when the caller's default returns a T the result is just T, and when it
- * returns a wider T2 the result union widens accordingly.
+ * widen the result via `T2`, matching Scala's `getOrElse[B1 >: B](default: => B1): B1`
+ * shape. `getOrElse<T2 = never>(() => T | T2)` types its default against T first, so a
+ * default that fits T keeps T exactly (a literal union like `"light" | "dark"` isn't widened
+ * to `string`), and only a default of another type widens the result to `T | T2`.
  *
  * Both fallbacks are lazy: they take a function, which runs only when the container
  * has no value. This is Scala's by-name parameter written as a thunk, as Effect and

@@ -1,3 +1,4 @@
+import { type A as Hole, define, type Mutable } from "@/internal/define"
 import type { Option } from "@/option/Option"
 
 import type { TraceOp } from "./TraceEvent.js"
@@ -24,6 +25,8 @@ function typeTagOf(v: Option<unknown>): string {
  * raw value, exiting the wrapper. `unwrap()` emits a terminal event too, so a
  * span never ends without one.
  *
+ * Its methods are shared, so call them on the value: `const { map } = traced` loses `this`.
+ *
  * @example
  * ```ts
  * declare const user: Option<{ name: string }>
@@ -37,6 +40,7 @@ function typeTagOf(v: Option<unknown>): string {
  * ```
  */
 export type TracedOption<A> = {
+  readonly _tag: "TracedOption"
   map<B>(f: (a: A) => B, label?: string): TracedOption<B>
   flatMap<B>(f: (a: A) => Option<B>, label?: string): TracedOption<B>
   filter(predicate: (a: A) => boolean, label?: string): TracedOption<A>
@@ -44,6 +48,82 @@ export type TracedOption<A> = {
   getOrElse<B = never>(defaultValue: () => A | B, label?: string): A | B
   unwrap(): Option<A>
 }
+
+// ── shared methods ────────────────────────────────────────────────────────────
+
+/**
+ * A TracedOption's own data: the Option it wraps, where its events go, and the span and sequence
+ * number of its next event. None of these is on {@link TracedOption}. @internal
+ */
+type TracedOptionOf<A> = TracedOption<A> & {
+  readonly inner: Option<A>
+  readonly tracer: Tracer
+  readonly spanId: string
+  readonly seq: number
+}
+
+/** Sends one event for an op on `self`, and returns the next sequence number. */
+function emit(
+  self: TracedOptionOf<unknown>,
+  op: TraceOp,
+  outTag: string | undefined,
+  label: string | undefined,
+  meta?: Record<string, unknown>,
+): number {
+  const { inner, tracer, spanId, seq } = self
+  tracer.emit({
+    spanId,
+    seq,
+    op,
+    tag: typeTagOf(inner),
+    inTag: variantOf(inner),
+    ...(outTag !== undefined && { outTag }),
+    ...(label !== undefined && { label }),
+    ...(meta !== undefined && { meta }),
+  })
+  return seq + 1
+}
+
+/**
+ * Every TracedOption shares these methods (#276 §14). They used to be six closures built per value,
+ * and per step of a traced chain.
+ */
+const TracedOptionProto = define<TracedOptionOf<Hole>, "_tag" | "inner" | "tracer" | "spanId" | "seq">()(
+  "TracedOption",
+  {
+    map(f, label) {
+      const out = this.inner.map(f)
+      return TracedOption(out, this.tracer, this.spanId, emit(this, "map", variantOf(out), label))
+    },
+
+    flatMap(f, label) {
+      const out = this.inner.flatMap(f)
+      return TracedOption(out, this.tracer, this.spanId, emit(this, "flatMap", variantOf(out), label))
+    },
+
+    filter(predicate, label) {
+      const out = this.inner.filter(predicate)
+      const kept = variantOf(out) !== "None"
+      return TracedOption(out, this.tracer, this.spanId, emit(this, "filter", variantOf(out), label, { kept }))
+    },
+
+    fold(onNone, onSome, label) {
+      emit(this, "fold", undefined, label)
+      return this.inner.fold(onNone, onSome)
+    },
+
+    getOrElse(defaultValue, label) {
+      const usedDefault = variantOf(this.inner) === "None"
+      emit(this, "getOrElse", undefined, label, { usedDefault })
+      return this.inner.getOrElse(defaultValue)
+    },
+
+    unwrap() {
+      emit(this, "unwrap", undefined, undefined)
+      return this.inner
+    },
+  },
+)
 
 // ── constructor ───────────────────────────────────────────────────────────────
 
@@ -59,59 +139,14 @@ export type TracedOption<A> = {
  * @param seq      - Starting sequence number. Defaults to 0. Increments on each op.
  */
 export function TracedOption<A>(inner: Option<A>, tracer: Tracer, spanId: string, seq = 0): TracedOption<A> {
-  function emit(
-    op: TraceOp,
-    outTag: string | undefined,
-    label: string | undefined,
-    meta?: Record<string, unknown>,
-  ): number {
-    tracer.emit({
-      spanId,
-      seq,
-      op,
-      tag: typeTagOf(inner),
-      inTag: variantOf(inner),
-      ...(outTag !== undefined && { outTag }),
-      ...(label !== undefined && { label }),
-      ...(meta !== undefined && { meta }),
-    })
-    return seq + 1
-  }
-
-  return {
-    map<B>(f: (a: A) => B, label?: string): TracedOption<B> {
-      const out = inner.map(f)
-      const next = emit("map", variantOf(out), label)
-      return TracedOption(out, tracer, spanId, next)
-    },
-
-    flatMap<B>(f: (a: A) => Option<B>, label?: string): TracedOption<B> {
-      const out = inner.flatMap(f)
-      const next = emit("flatMap", variantOf(out), label)
-      return TracedOption(out, tracer, spanId, next)
-    },
-
-    filter(predicate: (a: A) => boolean, label?: string): TracedOption<A> {
-      const out = inner.filter(predicate)
-      const kept = variantOf(out) !== "None"
-      const next = emit("filter", variantOf(out), label, { kept })
-      return TracedOption(out, tracer, spanId, next)
-    },
-
-    fold<B>(onNone: () => B, onSome: (a: A) => B, label?: string): B {
-      emit("fold", undefined, label)
-      return inner.fold(onNone, onSome)
-    },
-
-    getOrElse<B = never>(defaultValue: () => A | B, label?: string): A | B {
-      const usedDefault = variantOf(inner) === "None"
-      emit("getOrElse", undefined, label, { usedDefault })
-      return inner.getOrElse(defaultValue)
-    },
-
-    unwrap(): Option<A> {
-      emit("unwrap", undefined, undefined)
-      return inner
-    },
-  }
+  // The one cast: a prototype checked at the opaque Hole works for every A.
+  const traced = Object.create(TracedOptionProto) as Mutable<TracedOptionOf<A>>
+  /* eslint-disable functional/immutable-data -- filling in the value just created */
+  traced._tag = "TracedOption"
+  traced.inner = inner
+  traced.tracer = tracer
+  traced.spanId = spanId
+  traced.seq = seq
+  /* eslint-enable functional/immutable-data */
+  return traced
 }
