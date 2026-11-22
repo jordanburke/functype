@@ -562,7 +562,8 @@ new method, follow these four rules and the variance declaration will hold:
    `Widen<A, B> = A extends B ? B : never`. Blocks `list.reduce<UnrelatedType>(...)`
    at compile time.
 4. **Recovery / fallback** (`orElse`, `getOrElse`, `recover`) → widen via
-   `<T2>(...): T | T2` or `C<T | T2>`.
+   `<T2 = never>(d: () => T | T2): T | T2`, so a default that fits `T` keeps `T`
+   (a literal union isn't widened to `string`), or `C<T | T2>`.
 
 **When to stay invariant:** mutable cells (`Ref<A>`), record types with
 `keyof` dependence (`Obj<T>`), equality-sensitive keys (`Map<K, _>`). Document

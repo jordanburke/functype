@@ -55,6 +55,9 @@ type ValueType = {
   readonly tagOnPrototype?: string
 }
 
+/** One tracer for every TracedOption sample, so matchers compare their Options, not two tracers. */
+const quietTracer = { emit: (): void => undefined }
+
 /** A Lazy that has run, so matchers compare its value rather than its thunk's identity. */
 const evaluated = <T>(value: T): Lazy<T> => {
   const lazy = Lazy(() => value)
@@ -117,15 +120,21 @@ const VALUE_TYPES: Readonly<Record<string, ValueType>> = {
   Obj: { exports: ["Obj"], variants: [["Obj", () => Obj({ a: 1 }), () => Obj({ a: 2 })]] },
   Tuple: { exports: ["Tuple"], variants: [["Tuple", () => Tuple([1, "a"]), () => Tuple([1, "b"])]] },
   Lazy: { exports: ["Lazy"], variants: [["Lazy", () => evaluated(1), () => evaluated(2)]] },
+  TracedOption: {
+    exports: ["TracedOption"],
+    variants: [
+      [
+        "TracedOption",
+        () => TracedOption(Some(1), quietTracer, "span"),
+        () => TracedOption(Some(2), quietTracer, "span"),
+      ],
+    ],
+  },
 }
 
 /** Value types that don't meet the rules yet: each still builds its methods per value. */
 const NOT_YET: Readonly<Record<string, { readonly reason: string; readonly sample: () => object }>> = {
   Identity: { reason: "builds isSame per value", sample: () => Identity(1) },
-  TracedOption: {
-    reason: "builds map, flatMap and the rest per value",
-    sample: () => TracedOption(Some(1), { emit: () => undefined }, "span"),
-  },
   Context: { reason: "builds get, has, add and the rest per value", sample: () => Context.empty() },
   Layer: { reason: "builds build, merge, map and toString per value", sample: () => Layer.succeed(Tag("x"), 1) },
   Tag: { reason: "builds toString per value", sample: () => Tag("x") },
