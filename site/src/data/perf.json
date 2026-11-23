@@ -1,6 +1,6 @@
 {
-  "generated": "2026-11-23T14:30:53.826Z",
-  "commit": "02e564aa4b5bab92f0c530ebb846162425f5b36d",
+  "generated": "2026-11-23T14:42:41.148Z",
+  "commit": "abe215681a4641455d1aa9b26043c7fafa05d294",
   "machine": {
     "cpu": "Apple M5 Max",
     "cores": 18,
@@ -16,7 +16,7 @@
     "processes": 5,
     "rounds": 7
   },
-  "setup": "const inc = (x) => x + 1\nconst items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\nclass Boom { _tag = \"Boom\" }\n// functype: const Db = Tag(\"Db\")\n// Effect:   class Db extends Context.Service()(\"Db\") {}\nconst db = { k: 3 }",
+  "setup": "const inc = (x) => x + 1\nconst items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\nclass Boom { _tag = \"Boom\" }\nconst DbF = Tag(\"Db\")                            // functype\nclass DbE extends Context.Service()(\"Db\") {}     // Effect\nconst db = { k: 3 }",
   "cases": [
     {
       "id": "option",
@@ -29,20 +29,20 @@
       },
       "ns": {
         "functype": {
-          "median": 4.533,
-          "min": 4.337918,
-          "max": 5.034584
+          "median": 4.653584,
+          "min": 4.229334,
+          "max": 5.34675
         },
         "effect": {
-          "median": 4.32975,
-          "min": 4.0855,
-          "max": 5.329168
+          "median": 4.133418,
+          "min": 4.095582,
+          "max": 5.6385
         }
       },
       "vsEffect": {
-        "median": 0.9701715660260853,
-        "min": 0.9012795058460179,
-        "max": 1.0585120836200173,
+        "median": 0.9376908142815854,
+        "min": 0.7712629167251134,
+        "max": 1.211646765159928,
         "verdict": "same"
       }
     },
@@ -57,49 +57,49 @@
       },
       "ns": {
         "functype": {
-          "median": 4.052584,
-          "min": 3.83625,
-          "max": 4.17375
+          "median": 4.07675,
+          "min": 3.7935,
+          "max": 4.118834
         },
         "effect": {
-          "median": 3.915582,
-          "min": 3.848166,
-          "max": 4.0495
+          "median": 3.833834,
+          "min": 3.811334,
+          "max": 4.277918
         }
       },
       "vsEffect": {
-        "median": 0.9894921363752113,
-        "min": 0.9381448337825696,
-        "max": 1.01001394591072,
+        "median": 0.9423212486174265,
+        "min": 0.9270424591037173,
+        "max": 1.0493451891825596,
         "verdict": "same"
       }
     },
     {
       "id": "list",
       "group": "Data types",
-      "name": "List (Effect's Chunk): 10 items, map, filter",
+      "name": "List (Effect's Array module): 10 items, map, filter",
       "async": false,
       "code": {
         "functype": "(i) => List(items).map((x) => x + i).filter((x) => x % 2 === 0).size",
-        "effect": "(i) =>\n        Chunk.size(\n          Chunk.filter(\n            Chunk.map(Chunk.fromIterable(items), (x) => x + i),\n            (x) => x % 2 === 0,\n          ),\n        )"
+        "effect": "(i) => Arr.filter(Arr.map(items, (x) => x + i), (x) => x % 2 === 0).length"
       },
       "ns": {
         "functype": {
-          "median": 77.53055666666667,
-          "min": 76.23222,
-          "max": 78.67347
+          "median": 74.58930666666667,
+          "min": 74.52833333333334,
+          "max": 76.21972333333333
         },
         "effect": {
-          "median": 110.72486,
-          "min": 107.36416666666666,
-          "max": 112.89597
+          "median": 24.50111,
+          "min": 23.73389,
+          "max": 24.972223333333332
         }
       },
       "vsEffect": {
-        "median": 1.4382035693711643,
-        "min": 1.3891789697340158,
-        "max": 1.452467998439505,
-        "verdict": "faster"
+        "median": 0.32874893217344636,
+        "min": 0.31166038604011326,
+        "max": 0.3350645772651799,
+        "verdict": "slower"
       }
     },
     {
@@ -113,20 +113,20 @@
       },
       "ns": {
         "functype": {
-          "median": 33.312416,
-          "min": 32.98925,
-          "max": 33.562332
+          "median": 32.369168,
+          "min": 31.965418,
+          "max": 34.001666
         },
         "effect": {
-          "median": 188.049666,
-          "min": 181.56425,
-          "max": 193.21525
+          "median": 181.372666,
+          "min": 177.385082,
+          "max": 183.8775
         }
       },
       "vsEffect": {
-        "median": 5.664563204672738,
-        "min": 5.458321746646123,
-        "max": 5.756907773869826,
+        "median": 5.5236778631545995,
+        "min": 5.350063846871503,
+        "max": 5.75238840924902,
         "verdict": "faster"
       }
     },
@@ -141,20 +141,20 @@
       },
       "ns": {
         "functype": {
-          "median": 1508.74795,
-          "min": 1481.21455,
-          "max": 1567.3
+          "median": 1457.23125,
+          "min": 1447.27915,
+          "max": 1492.7521
         },
         "effect": {
-          "median": 2315.71875,
-          "min": 2272.51045,
-          "max": 2373.34795
+          "median": 2311.28335,
+          "min": 2237.3021,
+          "max": 2365.6479
         }
       },
       "vsEffect": {
-        "median": 1.5497078469343795,
-        "min": 1.4499524341223762,
-        "max": 1.573057945165725,
+        "median": 1.596985177323946,
+        "min": 1.5351385203209564,
+        "max": 1.612987573510611,
         "verdict": "faster"
       }
     },
@@ -169,20 +169,20 @@
       },
       "ns": {
         "functype": {
-          "median": 713.0425,
-          "min": 700.52084,
-          "max": 723.58334
+          "median": 681.1975,
+          "min": 679.4125,
+          "max": 704.4875
         },
         "effect": {
-          "median": 754.27416,
-          "min": 733.44668,
-          "max": 767.19832
+          "median": 733.74416,
+          "min": 725.15582,
+          "max": 747.27082
         }
       },
       "vsEffect": {
-        "median": 1.0607357141869564,
-        "min": 1.0207312954441432,
-        "max": 1.0767333631359204,
+        "median": 1.0730545287288649,
+        "min": 1.0415289980304832,
+        "max": 1.0979521782529216,
         "verdict": "same"
       }
     },
@@ -197,20 +197,20 @@
       },
       "ns": {
         "functype": {
-          "median": 57.08146,
-          "min": 56.0075,
-          "max": 59.051875
+          "median": 57.13521,
+          "min": 55.83271,
+          "max": 58.19271
         },
         "effect": {
-          "median": 259.85229,
-          "min": 255.64875,
-          "max": 265.99104
+          "median": 252.136665,
+          "min": 248.547705,
+          "max": 267.02542
         }
       },
       "vsEffect": {
-        "median": 4.562237847509858,
-        "min": 4.499022464614985,
-        "max": 4.598348045057011,
+        "median": 4.490879239187189,
+        "min": 4.271114113778169,
+        "max": 4.649597708784936,
         "verdict": "faster"
       }
     },
@@ -225,20 +225,20 @@
       },
       "ns": {
         "functype": {
-          "median": 132.718125,
-          "min": 131.51,
-          "max": 137.92542
+          "median": 129.794375,
+          "min": 128.171045,
+          "max": 131.5275
         },
         "effect": {
-          "median": 277.47167,
-          "min": 275.45875,
-          "max": 284.6225
+          "median": 271.337085,
+          "min": 269.793335,
+          "max": 281.57875
         }
       },
       "vsEffect": {
-        "median": 2.0900298646849147,
-        "min": 2.0358919334811523,
-        "max": 2.0945840620485137,
+        "median": 2.080558498779319,
+        "min": 2.05123137746859,
+        "max": 2.196898293214353,
         "verdict": "faster"
       }
     },
@@ -253,20 +253,20 @@
       },
       "ns": {
         "functype": {
-          "median": 165.14458,
-          "min": 163.84083,
-          "max": 168.25916
+          "median": 162.28291,
+          "min": 161.74708,
+          "max": 171.17583
         },
         "effect": {
-          "median": 258.37792,
-          "min": 240.735,
-          "max": 264.84125
+          "median": 241.00791,
+          "min": 239.59125,
+          "max": 247.96083
         }
       },
       "vsEffect": {
-        "median": 1.550562126804093,
-        "min": 1.4693223905176749,
-        "max": 1.6036932607779197,
+        "median": 1.4858846292619317,
+        "min": 1.3996792070469295,
+        "max": 1.518579945883024,
         "verdict": "faster"
       }
     },
@@ -281,20 +281,20 @@
       },
       "ns": {
         "functype": {
-          "median": 1962.525,
-          "min": 1816,
-          "max": 2009.9875
+          "median": 1909.0459,
+          "min": 1889.5833,
+          "max": 1974.075
         },
         "effect": {
-          "median": 2244.0042,
-          "min": 2236.6,
-          "max": 2361.5709
+          "median": 2219.7417,
+          "min": 2193.9042,
+          "max": 2299
         }
       },
       "vsEffect": {
-        "median": 1.160022109193629,
-        "min": 1.1214110603006684,
-        "max": 1.24622109030837,
+        "median": 1.1627492560550796,
+        "min": 1.147153262790913,
+        "max": 1.194729842809587,
         "verdict": "faster"
       }
     }
@@ -323,7 +323,7 @@
       "name": "An app with effects, Either, Option and List",
       "code": {
         "functype": "import { IO, Either, Option, List } from \"functype\"\nconst p = IO.gen(function* () { const a = yield* IO.succeed(1); return a + 1 }).catchTag(\"X\", () => IO.succeed(0))\nconsole.log(p.runSyncOrThrow(), Either.right(1).map((x) => x), Option(1), List([1]).map((x) => x))",
-        "effect": "import { Effect, Result, Option, Chunk } from \"effect\"\nconst p = Effect.catchTag(Effect.gen(function* () { const a = yield* Effect.succeed(1); return a + 1 }), \"X\", () => Effect.succeed(0))\nconsole.log(Effect.runSync(p), Result.map(Result.succeed(1), (x) => x), Option.some(1), Chunk.map(Chunk.make(1), (x) => x))"
+        "effect": "import { Effect, Result, Option, Array as Arr } from \"effect\"\nconst p = Effect.catchTag(Effect.gen(function* () { const a = yield* Effect.succeed(1); return a + 1 }), \"X\", () => Effect.succeed(0))\nconsole.log(Effect.runSync(p), Result.map(Result.succeed(1), (x) => x), Option.some(1), Arr.map([1], (x) => x))"
       },
       "sizes": {
         "functype": {
@@ -331,8 +331,8 @@
           "gzipped": 11571
         },
         "effect": {
-          "minified": 107941,
-          "gzipped": 37305
+          "minified": 107852,
+          "gzipped": 37583
         }
       }
     }

@@ -38,12 +38,18 @@ for (const v of variants) {
 const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]
 const spread = (xs) => ({ median: median(xs), min: Math.min(...xs), max: Math.max(...xs) })
 
-// Faster or slower only when every process agrees and the median moves at least 10%.
+// Faster or slower only when every process agrees (by 3%) and the median moves at least 10%. The two
+// sides mirror each other: slower uses the reciprocals of faster's thresholds.
 const verdict = (ratio) =>
-  ratio.min > 1.03 && ratio.median >= 1.1 ? "faster" : ratio.max < 0.97 && ratio.median <= 0.9 ? "slower" : "same"
+  ratio.min > 1.03 && ratio.median >= 1.1
+    ? "faster"
+    : ratio.max < 1 / 1.03 && ratio.median <= 1 / 1.1
+      ? "slower"
+      : "same"
 
-// Each process times two implementations: functype against Effect, and with --base, functype
-// against the base build in processes of their own.
+// Each process times two implementations: functype against Effect. With --base, the base build
+// is timed against Effect in processes of its own, and the two are compared through Effect: two
+// functype builds in one process slowed both builds' few-nanosecond cases by over half.
 const work = (spec, p) => {
   const child = spawnSync(
     process.execPath,
@@ -59,7 +65,7 @@ const perProcess = []
 const perBaseProcess = []
 for (let p = 0; p < processes; p++) {
   perProcess.push(work({ variants: variants.slice(0, 1), withEffect: true }, p))
-  if (baseDist) perBaseProcess.push(work({ variants, withEffect: false }, p))
+  if (baseDist) perBaseProcess.push(work({ variants: variants.slice(1), withEffect: true }, p))
   if (!smoke) process.stderr.write(`process ${p + 1} of ${processes} done\n`)
 }
 
@@ -72,7 +78,14 @@ const cases = shapes.map((c) => {
     ...(baseDist ? { base: spread(perBaseProcess.map((r) => r[c.id].base)) } : {}),
   }
   const vsEffect = spread(perProcess.map((r) => r[c.id].effect / r[c.id].functype))
-  const vsBase = baseDist ? spread(perBaseProcess.map((r) => r[c.id].base / r[c.id].functype)) : undefined
+  // (Effect / this build) over (Effect / base) is base / this build, measured against the same yardstick.
+  const vsBase = baseDist
+    ? spread(
+        perProcess.map(
+          (r, p) => r[c.id].effect / r[c.id].functype / (perBaseProcess[p][c.id].effect / perBaseProcess[p][c.id].base),
+        ),
+      )
+    : undefined
   return {
     id: c.id,
     group: c.group,

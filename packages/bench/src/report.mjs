@@ -25,17 +25,17 @@ export const renderMarkdown = (r) => {
     "",
     `functype ${r.versions.functype} (this PR's build) against Effect ${r.versions.effect}, on Node ${r.versions.node}, ${r.machine.cpu}. Medians of ${r.method.processes} processes × ${r.method.rounds} rounds.` +
       (hasBase
-        ? " \"vs base branch\" times this build against the base branch's in processes of their own, and its range is the base's time over this build's in each process: above 1 is faster."
+        ? ' The base branch\'s build is timed against Effect in processes of its own, and "vs base branch" compares the two through Effect; its range is the spread across processes, where above 1 means this PR is faster.'
         : " The range is Effect's time over functype's in each process.") +
       " Timings on shared CI runners move by 10% or so between runs, so this never fails a build.",
     "",
     hasBase
-      ? "| Case | functype | Effect | vs Effect | vs base branch | range |"
+      ? "| Case | functype | Effect | vs Effect | base branch | vs base branch | range |"
       : "| Case | functype | Effect | vs Effect | ratio range |",
-    hasBase ? "| --- | ---: | ---: | --- | --- | ---: |" : "| --- | ---: | ---: | --- | ---: |",
+    hasBase ? "| --- | ---: | ---: | --- | ---: | --- | ---: |" : "| --- | ---: | ---: | --- | ---: |",
     ...r.cases.map((c) =>
       hasBase
-        ? `| ${c.name} | ${formatNs(c.ns.functype.median)} | ${formatNs(c.ns.effect.median)} | ${formatRatio(c.vsEffect)} | ${c.vsBase.verdict === "same" ? "no change" : c.vsBase.verdict === "faster" ? `**${c.vsBase.median.toFixed(2)}× faster**` : `**${(1 / c.vsBase.median).toFixed(2)}× slower**`} | ${range(c.vsBase)} |`
+        ? `| ${c.name} | ${formatNs(c.ns.functype.median)} | ${formatNs(c.ns.effect.median)} | ${formatRatio(c.vsEffect)} | ${formatNs(c.ns.base.median)} | ${c.vsBase.verdict === "same" ? "no change" : c.vsBase.verdict === "faster" ? `**${c.vsBase.median.toFixed(2)}× faster**` : `**${(1 / c.vsBase.median).toFixed(2)}× slower**`} | ${range(c.vsBase)} |`
         : `| ${c.name} | ${formatNs(c.ns.functype.median)} | ${formatNs(c.ns.effect.median)} | ${formatRatio(c.vsEffect)} | ${range(c.vsEffect)} |`,
     ),
     "",

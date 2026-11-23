@@ -24,9 +24,9 @@ console.log(Option.getOrElse(Option.map(Option.some(1), (x) => x + 1), () => 0))
     functype: `import { IO, Either, Option, List } from "{F}"
 const p = IO.gen(function* () { const a = yield* IO.succeed(1); return a + 1 }).catchTag("X", () => IO.succeed(0))
 console.log(p.runSyncOrThrow(), Either.right(1).map((x) => x), Option(1), List([1]).map((x) => x))`,
-    effect: `import { Effect, Result, Option, Chunk } from "effect"
+    effect: `import { Effect, Result, Option, Array as Arr } from "effect"
 const p = Effect.catchTag(Effect.gen(function* () { const a = yield* Effect.succeed(1); return a + 1 }), "X", () => Effect.succeed(0))
-console.log(Effect.runSync(p), Result.map(Result.succeed(1), (x) => x), Option.some(1), Chunk.map(Chunk.make(1), (x) => x))`,
+console.log(Effect.runSync(p), Result.map(Result.succeed(1), (x) => x), Option.some(1), Arr.map([1], (x) => x))`,
   },
 ]
 

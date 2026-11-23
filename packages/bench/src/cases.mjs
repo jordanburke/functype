@@ -9,8 +9,8 @@
 export const SETUP = `const inc = (x) => x + 1
 const items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 class Boom { _tag = "Boom" }
-// functype: const Db = Tag("Db")
-// Effect:   class Db extends Context.Service()("Db") {}
+const DbF = Tag("Db")                            // functype
+class DbE extends Context.Service()("Db") {}     // Effect
 const db = { k: 3 }`
 
 /**
@@ -19,7 +19,8 @@ const db = { k: 3 }`
  */
 export const makeCases = (F, E) => {
   const { Some, Right, IO, List, Tag } = F
-  const { Effect, Option, Result, Chunk, Context } = E
+  const { Effect, Option, Result, Context } = E
+  const Arr = E.Array
 
   const inc = (x) => x + 1
   const items = Array.from({ length: 10 }, (_, i) => i)
@@ -54,17 +55,12 @@ export const makeCases = (F, E) => {
     {
       id: "list",
       group: "Data types",
-      name: "List (Effect's Chunk): 10 items, map, filter",
+      name: "List (Effect's Array module): 10 items, map, filter",
       ops: 300_000,
       // prettier-ignore
       functype: (i) => List(items).map((x) => x + i).filter((x) => x % 2 === 0).size,
-      effect: (i) =>
-        Chunk.size(
-          Chunk.filter(
-            Chunk.map(Chunk.fromIterable(items), (x) => x + i),
-            (x) => x % 2 === 0,
-          ),
-        ),
+      // prettier-ignore
+      effect: (i) => Arr.filter(Arr.map(items, (x) => x + i), (x) => x % 2 === 0).length,
     },
     {
       id: "effect-map",

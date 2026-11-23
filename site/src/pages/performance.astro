@@ -16,15 +16,15 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
 
 <Layout
   title="Performance: functype against Effect"
-  description={`functype against Effect ${perf.versions.effect}: ten everyday operations timed on every change to main, and the bundle each ships.`}
+  description={`functype against Effect ${perf.versions.effect}: ten everyday operations timed whenever functype's code changes on main, and the bundle each ships.`}
 >
   <main>
     <section class="hero wrap">
       <p class="kicker">Performance</p>
       <h1>Measured against Effect, in the open.</h1>
       <p class="lede">
-        {perf.cases.length} everyday operations, each written the way its library's docs write it, timed on every change to
-        main. Where the two are level, this page says so.
+        {perf.cases.length} everyday operations, each written the way its library's docs write it, timed whenever functype's
+        code changes on main and every week. Where the two are level, or Effect is faster, this page says so.
       </p>
       <div class="tally" role="list">
         <div role="listitem"><b>{tally.faster}</b><span>faster</span></div>
@@ -32,8 +32,8 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
         <div role="listitem"><b>{tally.slower}</b><span>slower</span></div>
       </div>
       <p class="stamp">
-        functype {perf.versions.functype} · Effect {perf.versions.effect} · Node {perf.versions.node.replace(/^v/, "")} ·{" "}
-        {runDate()} · <a href={commitUrl}>{perf.commit.slice(0, 7)}</a>
+        functype main at <a href={commitUrl}>{perf.commit.slice(0, 7)}</a> · Effect {perf.versions.effect} · Node {perf.versions.node.replace(/^v/, "")} ·{" "}
+        {runDate()}
       </p>
     </section>
 
@@ -152,13 +152,14 @@ const themes = { light: "github-light", dark: "github-dark" } as const;
           10% and no process says otherwise. Everything else is "about the same".
         </li>
         <li>
-          <strong>Built packages, idiomatic code.</strong> Both libraries load from their published builds, and each case is
-          written the way that library's docs write it. Open a case to read both sides.
+          <strong>Built code, idiomatic code.</strong> Effect loads from its npm package, and functype from its own build of
+          main at the commit below, after the last release ({perf.versions.functype}). Each case is written the way that
+          library's docs write it. Open a case to read both sides.
         </li>
         <li>
           <strong>This run:</strong> {machine}, {perf.machine.os}, Node {perf.versions.node}, on {runDate()} at{" "}
-          <a href={commitUrl}>{perf.commit.slice(0, 7)}</a>. The Perf workflow runs on every change to main and weekly, and
-          posts the same table on pull requests. Shared CI runners vary by about 10% between runs, so it never fails a build.
+          <a href={commitUrl}>{perf.commit.slice(0, 7)}</a>. The Perf workflow runs whenever functype's code or these
+          benchmarks change on main, and every week, and posts the same table on pull requests. Shared CI runners vary by about 10% between runs, so it never fails a build.
         </li>
       </ul>
       <h3>Shared setup</h3>

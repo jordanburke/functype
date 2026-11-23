@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      pull-requests: write # for the report comment
+      pull-requests: write # for the report comment; a fork's token can't comment, so that step skips
     steps:
       - uses: actions/checkout@v4
 
@@ -79,6 +79,7 @@ jobs:
         run: cat "$RUNNER_TEMP/perf.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Post or update the PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: actions/github-script@v7
         with:
           script: |
@@ -94,7 +95,8 @@ jobs:
 
   publish:
     name: Publish the results to perf-data
-    if: github.event_name != 'pull_request'
+    # Only main's results go to the site: a dispatch from another branch reports and stops here.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:

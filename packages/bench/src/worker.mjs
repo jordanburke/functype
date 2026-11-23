@@ -1,7 +1,7 @@
 // Times every case in one fresh Node process and prints one JSON line: the median ns per operation
 // for each implementation. run.mjs starts several of these and combines them. A process times two
-// implementations, never more: a third library in the same process slowed functype's
-// few-nanosecond cases by over half.
+// implementations, functype and Effect, never more: a third library in the same process slowed
+// functype's few-nanosecond cases by over half.
 //
 // Each round times every implementation once, and the order rotates every round and with the
 // process index, so no library is always the first, warm-cache or after-GC one.
