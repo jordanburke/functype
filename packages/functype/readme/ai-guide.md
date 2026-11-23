@@ -40,8 +40,12 @@ const result = Either.tryCatch(
   (err) => `Parse error: ${err}`,
 ) // Right({key: "value"})
 
-// Transform: .map(), .mapLeft(), .flatMap()
+// Transform: .map(), .mapTry(), .mapLeft(), .flatMap()
 right.map((x) => x * 2) // Right(84)
+right.mapTry(
+  (x) => x * 2,
+  (err) => String(err),
+) // a throw in f becomes a Left
 left.mapLeft((e) => e.toUpperCase()) // Left("ERROR")
 right.flatMap((x) => Right(x.toString())) // Right("42")
 
@@ -137,6 +141,12 @@ const fetched = IO.tryPromise({
   try: (signal) => fetchData(signal),
   catch: (err) => new Error(`Fetch failed: ${err}`),
 })
+
+// Map with a callback you don't own: a throw becomes a typed error, not a defect
+const sizes = parsed.mapTry(
+  (value) => JSON.stringify(value).length,
+  (err) => new Error(`Mapper failed: ${err}`),
+)
 
 // Run: Either<E, A>, or Exit<E, A> for all four outcomes
 const result = await fetched.run()

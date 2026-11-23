@@ -344,6 +344,11 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * - A failure passes through unchanged, and `f` doesn't run.
    * - A throw from `onError` itself is still a defect.
    * - Only a synchronous throw is caught. For an async callback, use `flatMap` with `IO.tryPromise`.
+   * - The failure is typed, so `retry` re-runs a step whose `f` threw. A `map` throw is a defect and is
+   *   never retried.
+   * - If `f` runs another IO itself (`inner.runSync()`), that run's interruption or defect reaches `f`
+   *   as an ordinary throw, so `onError` turns it into a typed error. The outer run's own interruption
+   *   never does: `f` doesn't run.
    *
    * Same as `io.flatMap((a) => IO.tryCatch(() => f(a), onError))`.
    * @param f - Function to apply to the success value; it may throw

@@ -64,6 +64,10 @@ either.swap().orThrow() // Gets Left value or throws if Right
 
 // Transforming
 either.map((x) => x * 2) // Transforms Right value
+either.mapTry(
+  (x) => x * 2,
+  (err) => String(err),
+) // Like map, but a throw in f becomes a Left
 either.mapLeft((e) => `Error: ${e}`) // Transforms Left value
 either.flatMap((x) => Right(x.toString())) // Chains with operations returning Either
 either.filterOrElse(
@@ -281,6 +285,12 @@ const parsed = IO.tryCatch(
   (err) => new Error(`Failed: ${String(err)}`),
 )
 const parsedNow = parsed.runSync() // Either<Error, unknown>
+
+// Map with a callback you don't own: a throw becomes a typed error, not a defect
+const lengths = IO.succeed(["a", "bb"]).mapTry(
+  (words) => words.map((word) => word.length),
+  (err) => new Error(`Mapper failed: ${String(err)}`),
+)
 
 // Async work
 const fetched = IO.tryPromise({
