@@ -10,6 +10,7 @@ import { inspect } from "node:util"
 import { describe, expect, it, vi } from "vitest"
 
 import { LazyList, List, Map, Obj, Set, Some, Stack } from "@/index"
+import { FREEZE_VALUES } from "@/internal/freeze"
 
 /** Two values of each type with different data, built from re-iterable sources. */
 const pairs = [
@@ -66,7 +67,7 @@ describe("each collection's shape", () => {
     const proto = Object.getPrototypeOf(values[0]) as object
     for (const value of values) {
       expect(Object.getPrototypeOf(value)).toBe(proto)
-      expect(Object.isFrozen(value)).toBe(value === List.empty())
+      expect(Object.isFrozen(value)).toBe(FREEZE_VALUES || value === List.empty())
     }
     expect(Object.isFrozen(proto)).toBe(true)
     expect(Object.getPrototypeOf(proto)).toBe(Object.prototype)
@@ -242,17 +243,22 @@ describe("the collections' 2.0 breaks", () => {
         // eslint-disable-next-line functional/immutable-data -- the write is what's under test
         record.map = () => 0
       }).toThrow(TypeError)
-      // Since 2.2 values aren't frozen, so these writes succeed at run time. The types forbid them, and
-      // eslint-plugin-functype's no-container-mutation reports them through a cast.
-      expect(() => {
+      // Since 2.2 values aren't frozen in production, so these writes succeed at run time. The types forbid
+      // them, and eslint-plugin-functype's no-container-mutation reports them through a cast. In development
+      // (FUNCTYPE_FREEZE=1 in CI's second run) the value is frozen and the write throws.
+      const write = () => {
         // eslint-disable-next-line functional/immutable-data -- the write is what's under test
         record.extra = 1
-      }).not.toThrow()
-      expect(record.extra).toBe(1)
+      }
+      if (FREEZE_VALUES) expect(write).toThrow(TypeError)
+      else {
+        expect(write).not.toThrow()
+        expect(record.extra).toBe(1)
+      }
     }
   })
 
-  it("a method on a value can be spied on, now that the value isn't frozen", () => {
+  it.skipIf(FREEZE_VALUES)("a method on a value can be spied on, now that the value isn't frozen", () => {
     const list = List([1, 2])
     const spy = vi.spyOn(list, "map")
     list.map((x) => x + 1)

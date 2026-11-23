@@ -30,7 +30,7 @@ npx functype --json       # JSON output for programmatic use
 ## Core Principles
 
 - **Zero Dependencies**: No third-party runtime dependencies — just TypeScript
-- **Immutability**: All data structures are immutable, promoting predictable and side-effect-free code
+- **Immutability**: All data structures are immutable, promoting predictable and side-effect-free code. The types mark every field read-only, and eslint-plugin-functype's `no-container-mutation` reports a write through a cast. Under `NODE_ENV=development` collections also freeze each value, so a write from untyped code throws; `FUNCTYPE_FREEZE=1` turns that on anywhere, such as a test suite, and `FUNCTYPE_FREEZE=0` turns it off. Production doesn't freeze, because freezing was most of what building a collection cost
 - **Type Safety**: Leverages TypeScript's type system to ensure compile-time safety
 - **Composability**: Provides abstractions for building complex programs from simple components
 - **Functional Paradigms**: Embraces concepts like monads, functors, and type classes

@@ -13,6 +13,11 @@ export default defineConfig({
     // Environment setup
     environment: "node",
 
+    // Collections freeze each value under NODE_ENV=development (src/internal/freeze.ts). Vitest only sets
+    // NODE_ENV=test when it's unset, so a shell with NODE_ENV=development would freeze them here too. Pin it
+    // off unless FUNCTYPE_FREEZE is set explicitly; CI runs the suite a second time with FUNCTYPE_FREEZE=1.
+    env: { FUNCTYPE_FREEZE: process.env.FUNCTYPE_FREEZE ?? "0" },
+
     // Include patterns
     include: ["**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"],
 
