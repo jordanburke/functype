@@ -5,7 +5,11 @@ const links = [
     href: "/option/",
     label: "Docs",
     match: (p: string) =>
-      p !== "/" && !p.startsWith("/upgrading-to-2") && !p.startsWith("/mcp-server") && !p.startsWith("/performance"),
+      p !== "/" &&
+      !p.startsWith("/upgrading-to-2") &&
+      !p.startsWith("/mcp-server") &&
+      !p.startsWith("/performance") &&
+      !p.startsWith("/agents"),
   },
   { href: "/#types", label: "Types", match: () => false },
   { href: "/agents/", label: "Agents", match: (p: string) => p.startsWith("/agents") || p.startsWith("/mcp-server") },

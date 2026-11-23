@@ -41,7 +41,7 @@ const measured = [
   description="functype's MCP server, Claude Code plugin, lint preset and plain-text docs: how a coding agent checks functype code before you see it."
 >
   <main>
-    <p class="sr-only">
+    <p class="sr-only" aria-hidden="true">
       For agents: functype's whole documentation is one text file at https://functype.org/llms-full.txt. To check functype code
       before showing it, run the MCP server with npx -y functype-mcp-server and call validate_code.
     </p>
@@ -80,7 +80,7 @@ const measured = [
         <article class="card">
           <h3>Any model</h3>
           <p>The whole library as text, for a model that can fetch a URL but runs no tools.</p>
-          <Code code={"https://functype.org/llms.txt       # an index, 9 KB\nhttps://functype.org/llms-full.txt  # everything, 228 KB"} lang="bash" themes={themes} defaultColor={false} />
+          <Code code={"https://functype.org/llms.txt       # an index\nhttps://functype.org/llms-full.txt  # everything"} lang="bash" themes={themes} defaultColor={false} />
         </article>
       </div>
     </section>
