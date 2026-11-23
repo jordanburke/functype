@@ -50,6 +50,13 @@ jobs:
       - name: Run turbo validate
         run: pnpm turbo run validate
 
+      # Collections freeze each value in development (packages/functype/src/internal/freeze.ts). Run the
+      # suite again that way, so the frozen path keeps working. Coverage was measured in the first run.
+      - name: Test functype with collections frozen, as in development
+        run: pnpm --filter functype exec vitest run --coverage.enabled=false
+        env:
+          FUNCTYPE_FREEZE: "1"
+
       - name: Test the release scripts
         run: pnpm test:scripts
 
