@@ -12,7 +12,7 @@
     {
       "name": "functype",
       "description": "Help developers use functype patterns in their TypeScript projects - pattern conversion, API lookup, common use cases",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "Jordan Burke",
         "email": "jordan.burke@gmail.com"
