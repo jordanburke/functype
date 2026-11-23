@@ -372,7 +372,7 @@ const pairs = Do(function* () {
 | Access service | `IO.service(Tag)`             | `IO.service(Database)`                     |
 | Provide deps   | `effect.provide(layer)`       | `program.provide(dbLayer)`                 |
 | Pure defect    | `IO.die(defect)`              | `IO.die(new Error("bug"))`                 |
-| Map, catching a throw (2.1+) | `effect.mapTry(f, onError)` | `io.mapTry(parse, (e) => new ParseError(e))`; a throw in `f` is a typed error, not a defect |
+| Map, catching a throw (2.1+) | `effect.mapTry(f, onError)` | `io.mapTry(parse, (e) => new Error(`parse failed: ${String(e)}`))`; a throw in `f` is a typed error, not a defect |
 | Run (async)    | `effect.run()`                | `await effect.run()`                       |
 | Run (sync)     | `effect.runSync()`            | `effect.runSync()`                         |
 | Run to Either  | `effect.runEither()`          | `await effect.runEither()`                 |
