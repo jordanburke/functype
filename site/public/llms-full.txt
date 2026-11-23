@@ -4841,6 +4841,7 @@ Implements: Applicative, AsyncMonad, Doable, Extractable, Foldable, Functor, Mon
 **Transform**
 
 - `.map(f)`
+- `.mapTry(f, onError)`
 - `.flatMap(f)`
 - `.mapLeft(f)`
 - `.swap()`
@@ -5255,6 +5256,7 @@ Implements: Functor, Monad, Foldable, Matchable
 **Transform**
 
 - `.map(f)`
+- `.mapTry(f, onError) // a throw in f becomes a typed error, not a defect`
 - `.flatMap(f)`
 - `.tap(f)`
 - `.mapError(f)`
