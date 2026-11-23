@@ -1,6 +1,9 @@
 ---
+import AgentLoop from "../components/AgentLoop.astro";
 import Layout from "../layouts/Layout.astro";
-import { bundleById, caseById, formatKb, formatNs, perf, splitNs, widths } from "../data/perf";
+import { bundleById, caseById, counts, formatKb, formatNs, perf, splitNs, widths } from "../data/perf";
+
+const tally = counts();
 
 // The hero's Option chain: each line, its inferred type, and its value for each PORT.
 const lines = [
@@ -41,13 +44,14 @@ const stats = [
   <main>
     <section class="hero wrap">
       <a class="tag" href="/upgrading-to-2/"><b>2.0</b> is out. See what changed</a>
-      <h1>Put what can go wrong in the type.</h1>
+      <h1>Put what can go wrong in the type. Let your agent check it.</h1>
       <p class="lede">
-        Option, Either, Try, List and IO for TypeScript. Missing values, errors and effects become types your compiler
-        checks, and so does the agent writing your code.
+        Option, Either, Try, List and IO for TypeScript. Missing values, errors and effects become types the compiler
+        checks. Your coding agent runs the same checks through one MCP call, and every error says what to write instead.
       </p>
       <div class="actions">
-        <a class="btn btn-solid" href="/option/">Read the docs</a>
+        <a class="btn btn-solid" href="/agents/">Set up your agent</a>
+        <a class="btn btn-ghost" href="/option/">Read the docs</a>
         <button class="btn btn-ghost install" type="button" id="copy">npm i functype <span class="copy" aria-live="polite">Copy</span></button>
       </div>
 
@@ -91,6 +95,29 @@ const stats = [
           </div>
         </figure>
       </div>
+    </section>
+
+    <section class="section wrap" id="agents">
+      <div class="head">
+        <h2>Your agent checks its work before you see it.</h2>
+        <p>One call type-checks and lints the code. Every error names the fix.</p>
+      </div>
+      <div class="grid">
+        <div class="panel span-6 feature"><AgentLoop /></div>
+        <a class="panel span-3 agent" href="/mcp-server/"
+          ><h3>MCP server</h3><p>validate_code type-checks and lints a snippet before you see it.</p><code class="cmd">npx -y functype-mcp-server</code></a
+        >
+        <div class="panel span-3 agent">
+          <h3>Claude Code plugin</h3><p>The skills and the MCP server in one install.</p><code class="cmd">/plugin marketplace add jordanburke/functype</code><code class="cmd">/plugin install functype</code>
+        </div>
+        <a class="panel span-3 agent" href="/eslint/"
+          ><h3>ESLint plugin</h3><p>One preset where every rule is an error or off, and every message names the fix.</p><code class="cmd">npm i -D eslint-plugin-functype</code></a
+        >
+        <a class="panel span-3 agent" href="/llms-full.txt"
+          ><h3>Docs as text</h3><p>The whole library in one file, for any model that can fetch a URL.</p><code class="cmd">functype.org/llms-full.txt</code></a
+        >
+      </div>
+      <p class="foot-note"><a class="more-inline" href="/agents/">How functype works with coding agents</a></p>
     </section>
 
     <section class="section wrap" id="types">
@@ -154,7 +181,9 @@ const stats = [
         <h2>Small and fast, measured.</h2>
         <p>
           Against Effect {perf.versions.effect} on Node {perf.versions.node.replace(/^v/, "")}, with functype built from main.
-          <a class="more" href="/performance/">Every benchmark</a>
+          <a class="more" href="/performance/"
+            >All {perf.cases.length} benchmarks: {tally.faster} faster, {tally.same} about the same, {tally.slower} slower</a
+          >
         </p>
       </div>
       <div class="grid">
@@ -185,26 +214,6 @@ const stats = [
       <p class="foot-note">A million chained steps run without a stack overflow, and there are no runtime dependencies.</p>
     </section>
 
-    <section class="section wrap" id="agents">
-      <div class="head">
-        <h2>Your coding agent reads the same docs.</h2>
-        <p>It can search them, check its own code against the compiler and the linter, and load everything as plain text.</p>
-      </div>
-      <div class="grid">
-        <a class="panel span-3 agent" href="/mcp-server/"
-          ><h3>MCP server</h3><p>validate_code type-checks and lints a snippet before you see it.</p><code class="cmd">npx -y functype-mcp-server</code></a
-        >
-        <div class="panel span-3 agent">
-          <h3>Claude Code plugin</h3><p>The skills and the MCP server in one install.</p><code class="cmd">/plugin marketplace add jordanburke/functype</code><code class="cmd">/plugin install functype</code>
-        </div>
-        <a class="panel span-3 agent" href="/eslint/"
-          ><h3>ESLint plugin</h3><p>One preset, and every message names the fix.</p><code class="cmd">npm i -D eslint-plugin-functype</code></a
-        >
-        <a class="panel span-3 agent" href="/llms-full.txt"
-          ><h3>Docs as text</h3><p>The whole library, for any model that can fetch a URL.</p><code class="cmd">functype.org/llms-full.txt</code></a
-        >
-      </div>
-    </section>
   </main>
 </Layout>
 
@@ -806,6 +815,12 @@ const stats = [
     font-size: 16px;
   }
   .head .more::after {
+    content: " →";
+  }
+  .more-inline {
+    color: var(--value);
+  }
+  .more-inline::after {
     content: " →";
   }
   .foot-note {

@@ -1,0 +1,302 @@
+---
+// A coding agent writing a bug that compiles, the MCP server's validate_code catching it, and the fix.
+// The lint message and both results are what functype-mcp-server 2.1.0 returns for this code, word for
+// word (the message is cut before its last sentence, "Use void if dropping it is deliberate").
+interface Props {
+  heading?: string;
+}
+const { heading = "h3" } = Astro.props;
+const Heading = heading as "h2" | "h3";
+---
+
+<div class="loop">
+  <div class="copy">
+    <Heading class="title">The bug compiles. The check doesn't let it through.</Heading>
+    <p>
+      <code>users.save</code> returns an <code>Either</code>, so a failed save is a value, not a throw. Drop it and
+      TypeScript says nothing: the user is welcomed whether or not the save worked.
+    </p>
+    <p>
+      <code>validate_code</code> runs the compiler and functype's lint preset, and the error tells the agent what to write
+      instead.
+    </p>
+    <button class="replay" type="button" data-replay>Replay</button>
+  </div>
+
+  <figure class="session" aria-label="A coding agent checks its code with functype's MCP server and fixes it">
+    <div class="session-bar">
+      <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <span>agent session</span>
+    </div>
+    <ol class="steps" data-steps>
+      <li class="step you">
+        <span class="who">You</span>
+        <p>Save the new user, then welcome them.</p>
+      </li>
+      <li class="step">
+        <span class="who">Agent</span>
+        <div class="code">
+          <div><span class="ln">7</span><span class="k">export const</span> register = (user: User): string =&gt; {"{"}</div>
+          <div><span class="ln">8</span>&nbsp;&nbsp;<mark class="bad">users.<span class="f">save</span>(user)</mark></div>
+          <div>
+            <span class="ln">9</span>&nbsp;&nbsp;<span class="k">return</span> <span class="s">`Welcome, ${"{"}user.email{"}"}`</span>
+          </div>
+          <div><span class="ln">10</span>{"}"}</div>
+        </div>
+        <span class="chip">tsc: 0 errors</span>
+      </li>
+      <li class="step tool">
+        <span class="who">validate_code</span>
+        <p class="fail">
+          <b>✗ Line 8:</b> This result is dropped, so a failure in it is silently ignored. Check isLeft() / isFailure(), fold
+          it, or return it.
+          <span class="rule">functype/no-floating-result</span>
+        </p>
+      </li>
+      <li class="step">
+        <span class="who">Agent</span>
+        <div class="code diff">
+          <div class="del">-&nbsp;&nbsp;register = (user: User): string =&gt; {"{"} …</div>
+          <div class="add">+&nbsp;&nbsp;register = (user: User): Either&lt;SaveError, string&gt; =&gt;</div>
+          <div class="add">
+            +&nbsp;&nbsp;&nbsp;&nbsp;users.<span class="f">save</span>(user).<span class="f">map</span>((saved) =&gt;{" "}
+            <span class="s">`Welcome, ${"{"}saved.email{"}"}`</span>)
+          </div>
+        </div>
+      </li>
+      <li class="step tool">
+        <span class="who">validate_code</span>
+        <p class="pass"><b>✓ PASSED.</b> The code is type-correct and passes the lint preset.</p>
+      </li>
+    </ol>
+  </figure>
+</div>
+
+<script>
+  // Plays the session one step at a time when it scrolls into view. A session already on screen at
+  // load, reduced motion, no JavaScript and print all show every step. Only a session that starts below
+  // the fold is hidden, then played when the session itself (not the copy above it on a phone) comes
+  // into view.
+  const loops = document.querySelectorAll<HTMLElement>(".loop");
+  const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  loops.forEach((loop) => {
+    const steps = [...loop.querySelectorAll<HTMLElement>(".step")];
+    const session = loop.querySelector<HTMLElement>(".session") ?? loop;
+    const replay = loop.querySelector<HTMLElement>("[data-replay]");
+    if (still && replay) replay.hidden = true;
+    let timers: number[] = [];
+    const play = (): void => {
+      timers.forEach((t) => window.clearTimeout(t));
+      timers = [];
+      if (still) return;
+      steps.forEach((s) => s.classList.add("hidden"));
+      steps.forEach((s, i) => timers.push(window.setTimeout(() => s.classList.remove("hidden"), 350 + i * 900)));
+    };
+    replay?.addEventListener("click", play);
+    if (still || session.getBoundingClientRect().top < window.innerHeight) return;
+    steps.forEach((s) => s.classList.add("hidden"));
+    const seen = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          seen.disconnect();
+          play();
+        }
+      },
+      { threshold: 0.35 },
+    );
+    seen.observe(session);
+  });
+</script>
+
+<style>
+  .loop {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 40px;
+    align-items: center;
+  }
+  .title {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: #f2f2f5;
+  }
+  .copy p {
+    margin: 12px 0 0;
+    color: #a8a8b3;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .copy code {
+    color: #f2f2f5;
+    font-size: 0.92em;
+  }
+  .replay {
+    margin-top: 22px;
+    border: 0;
+    border-radius: 999px;
+    height: 36px;
+    padding: 0 16px;
+    font: 500 14px var(--sans);
+    background: #2a2a32;
+    color: #f2f2f5;
+    cursor: pointer;
+  }
+  .replay:hover {
+    background: #34343d;
+  }
+  .session {
+    margin: 0;
+    background: #0e0e12;
+    border-radius: 18px;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+  }
+  .session-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    font: 400 12px var(--mono);
+    color: #6f6f7c;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .dots {
+    display: flex;
+    gap: 6px;
+  }
+  .dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2c2c35;
+  }
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 18px 18px 20px;
+    display: grid;
+    gap: 14px;
+    min-height: 372px;
+    align-content: start;
+  }
+  .step {
+    display: grid;
+    gap: 6px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .step {
+      transition:
+        opacity 0.35s var(--ease),
+        transform 0.35s var(--ease);
+    }
+  }
+  .step.hidden {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  @media print {
+    .step.hidden {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .who {
+    font: 500 11px var(--mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #6f6f7c;
+  }
+  .tool .who {
+    color: #b8a6ff;
+  }
+  .step p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: #d9d9e0;
+  }
+  .code {
+    font: 400 12.5px/1.75 var(--mono);
+    color: #d9d9e0;
+    background: #16161c;
+    border-radius: 10px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  .code .ln {
+    display: inline-block;
+    width: 1.6em;
+    color: #4a4a55;
+    user-select: none;
+  }
+  .code .k {
+    color: #f28cc4;
+  }
+  .code .f {
+    color: #8ab4ff;
+  }
+  .code .s {
+    color: #b8a6ff;
+  }
+  mark.bad {
+    background: none;
+    color: inherit;
+    text-decoration: underline wavy #ff7b72;
+    text-underline-offset: 4px;
+  }
+  .chip {
+    width: fit-content;
+    font: 400 11.5px var(--mono);
+    color: #8b949e;
+    border-radius: 999px;
+    padding: 2px 10px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  .fail,
+  .pass {
+    font: 400 12.5px/1.65 var(--mono);
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .step .fail {
+    color: #ffb3ad;
+    background: rgba(255, 123, 114, 0.09);
+  }
+  .step .pass {
+    color: #8ee6a8;
+    background: rgba(63, 185, 80, 0.1);
+  }
+  .fail b,
+  .pass b {
+    font-weight: 600;
+  }
+  .rule {
+    display: block;
+    margin-top: 4px;
+    color: #8b949e;
+  }
+  .diff .del {
+    color: #ffb3ad;
+  }
+  .diff .add {
+    color: #8ee6a8;
+  }
+
+  @media (max-width: 820px) {
+    .loop {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
+    }
+    .steps {
+      min-height: 0;
+    }
+    .code {
+      font-size: 11.5px;
+      white-space: normal;
+    }
+  }
+</style>

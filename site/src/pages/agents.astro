@@ -1,0 +1,429 @@
+---
+import { Code } from "astro:components";
+import AgentLoop from "../components/AgentLoop.astro";
+import Layout from "../layouts/Layout.astro";
+
+const themes = { light: "github-light", dark: "github-dark" } as const;
+const mcpJson = `{
+  "mcpServers": {
+    "functype": {
+      "command": "npx",
+      "args": ["-y", "functype-mcp-server"]
+    }
+  }
+}`;
+const eslintConfig = `import functype from "eslint-plugin-functype"
+
+export default [
+  functype.configs.recommended,
+  functype.configs.tests,
+]`;
+
+const tools = [
+  ["search_docs", "Every type and its interfaces, or a keyword search."],
+  ["get_type_api", "One type's full API: constructors, methods and what each returns."],
+  ["get_interfaces", "The interface hierarchy: Functor, Monad, Foldable and the rest."],
+  ["validate_code", "Type-checks a snippet, then lints it with the recommended preset."],
+  ["set_functype_version", "Switches the docs and the checker to the version your project uses."],
+] as const;
+
+// From the measurements recorded in eslint-plugin-functype's src/configs/recommended.ts.
+const measured = [
+  ["no-floating-io", "0 false positives across about 1,340 IO-typed calls in five codebases."],
+  ["no-array-mutation", "91 hits across five consumers, every one a real in-place mutation."],
+  ["no-uncalled-method", "0 hits on 1,126 files of seven codebases. On supabase-typed-query's code from before its 2.0 port, it reports the Option(list.head) that port fixed."],
+  ["no-serialize-container", "4 hits on one API, each a bug that project then fixed by hand."],
+] as const;
+---
+
+<Layout
+  title="functype for coding agents"
+  description="functype's MCP server, Claude Code plugin, lint preset and plain-text docs: how a coding agent checks functype code before you see it."
+>
+  <main>
+    <section class="hero wrap">
+      <p class="kicker">Agents</p>
+      <h1>A checker your coding agent can call.</h1>
+      <p class="lede">
+        A coding agent stops at whatever compiles. functype puts more into the types, lints what types can't say, and tells
+        the agent what to write instead.
+      </p>
+    </section>
+
+    <section class="wrap block">
+      <div class="panel feature"><AgentLoop heading="h2" /></div>
+    </section>
+
+    <section class="wrap block">
+      <h2>A compiler checks only what the types say.</h2>
+      <p class="lead">
+        Strict TypeScript already catches a value that might be missing. It can't see a thrown error, or what an effect needs
+        before it runs. functype puts those in the types too, so the compiler checks an agent's error handling, not only its
+        spelling.
+      </p>
+      <div class="kinds">
+        <article class="kind">
+          <code>Either&lt;NotFound, User&gt;</code>
+          <h3>Failures</h3>
+          <p>The error is part of the signature. Dropping the result without handling it is a lint error.</p>
+        </article>
+        <article class="kind">
+          <code>IO&lt;Users, DbError, User&gt;</code>
+          <h3>Effects</h3>
+          <p>
+            What it needs, how it fails, and nothing runs until you run it. Run it without its services and the compiler says:
+            "Provide these services first, with provideLayer or provideService".
+          </p>
+        </article>
+        <article class="kind">
+          <code>Option&lt;User&gt;</code>
+          <h3>Missing values</h3>
+          <p>Like strict null checks, but chainable: an agent can't read <code>.name</code> off a user that might not be there. It handles <code>None</code> or the code doesn't compile.</p>
+        </article>
+      </div>
+      <p class="hatch">
+        <strong>The escape hatches are guarded too.</strong> Rust has <code>unsafe</code>. TypeScript has{" "}
+        <code>null</code>, <code>throw</code> and <code>.orThrow()</code>, and functype's lint preset reports each one unless
+        the code marks it as a real boundary.
+      </p>
+      <ul class="evidence">
+        <li>
+          <span>
+            GitHub reports that <q>developers are shifting toward typed languages that make agent-assisted coding more
+            reliable in production</q>, as TypeScript became its most-used language.
+          </span>
+          <a class="src" href="https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/"
+            >GitHub, Octoverse 2025</a
+          >
+        </li>
+        <li>
+          <span>Letting the type checker guide a model <q>reduces compilation errors by more than half.</q></span>
+          <a class="src" href="https://arxiv.org/abs/2504.09246">Mündler et al., 2025</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="wrap block">
+      <h2>Set it up</h2>
+      <div class="setup">
+        <article class="card">
+          <h3>Claude Code</h3>
+          <p>The plugin installs functype's skills and the MCP server together.</p>
+          <Code code={"/plugin marketplace add jordanburke/functype\n/plugin install functype"} lang="bash" themes={themes} defaultColor={false} />
+        </article>
+        <article class="card">
+          <h3>Any MCP client</h3>
+          <p>Cursor, Windsurf and other clients that read an <code>mcpServers</code> config: add the server there.</p>
+          <Code code={mcpJson} lang="json" themes={themes} defaultColor={false} />
+        </article>
+        <article class="card">
+          <h3>Your build</h3>
+          <p>The preset the MCP server runs, in your build, so CI holds the agent to it too. Its type-aware rules need <code>parserOptions.projectService</code>.</p>
+          <Code code={"npm i -D eslint-plugin-functype"} lang="bash" themes={themes} defaultColor={false} />
+          <Code code={eslintConfig} lang="js" themes={themes} defaultColor={false} />
+        </article>
+        <article class="card">
+          <h3>Any model</h3>
+          <p>The whole library as text, for a model that can fetch a URL but runs no tools.</p>
+          <Code code={"https://functype.org/llms.txt       # an index\nhttps://functype.org/llms-full.txt  # everything"} lang="bash" themes={themes} defaultColor={false} />
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap block">
+      <h2>What the MCP server gives an agent</h2>
+      <div class="tools">
+        {
+          tools.map(([name, say]) => (
+            <div class="tool">
+              <code>{name}</code>
+              <p>{say}</p>
+            </div>
+          ))
+        }
+      </div>
+      <p class="note">Details and example output: <a href="/mcp-server/">the MCP server page</a>.</p>
+    </section>
+
+    <section class="wrap block">
+      <h2>A lint preset built for agents</h2>
+      <div class="split">
+        <div class="points">
+          <p>
+            <strong>Every rule is an error or off.</strong> An agent fixes what fails its build and passes over a warning, so a
+            rule that isn't reliable stays off until it is.
+          </p>
+          <p>
+            <strong>A rule turns on once it's right on real code:</strong> about 95–99% of the time, with its known kinds of
+            false alarm closed rather than left to warn.
+          </p>
+          <p>
+            <strong>Every message names the fix.</strong> "Call it: <code>head()</code>" is an instruction an agent can follow
+            in one edit.
+          </p>
+        </div>
+        <ul class="measured">
+          {
+            measured.map(([rule, said]) => (
+              <li>
+                <code>functype/{rule}</code>
+                <span>{said}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <p class="note">Every rule, with its options and measurements: <a href="/eslint/">the ESLint page</a>.</p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding-block: 88px 0;
+  }
+  .kicker {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--type);
+  }
+  h1 {
+    margin: 14px auto 0;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    max-width: 12em;
+    text-wrap: balance;
+  }
+  .lede {
+    margin: 18px auto 0;
+    max-width: 36em;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+  .block {
+    padding-block: 72px 0;
+  }
+  .hero + .block {
+    padding-top: 56px;
+  }
+  .block h2 {
+    margin: 0 0 22px;
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .panel {
+    border-radius: 28px;
+    padding: 36px;
+  }
+  .feature {
+    background: var(--feature);
+    color: #f2f2f5;
+    box-shadow: 0 0 0 1px var(--feature-edge);
+  }
+  .lead {
+    margin: 0;
+    max-width: 44em;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .kinds {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .kind {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 20px 22px;
+    min-width: 0;
+  }
+  .kind > code {
+    display: inline-block;
+    font: 500 13px var(--mono);
+    color: var(--type);
+    background: var(--type-tint);
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .kind h3 {
+    margin: 14px 0 0;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .kind p {
+    margin: 6px 0 0;
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .kind p code,
+  .hatch code {
+    font-size: 0.9em;
+  }
+  .hatch {
+    margin: 22px 0 0;
+    max-width: 44em;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .hatch strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .evidence {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .evidence li {
+    display: grid;
+    gap: 4px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .evidence q {
+    color: var(--ink);
+  }
+
+  .evidence .src {
+    color: var(--value);
+    font-size: 13px;
+  }
+  .setup {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .card {
+    background: var(--panel);
+    border-radius: 22px;
+    padding: 24px;
+    min-width: 0;
+  }
+  .card h3,
+  .tool code {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .card p code {
+    font-size: 0.9em;
+  }
+  .card p {
+    margin: 6px 0 14px;
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .card :global(pre),
+  .card :global(pre + pre) {
+    margin: 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--rule);
+    font: 400 12.5px/1.6 var(--mono);
+    overflow-x: auto;
+  }
+  .card :global(pre + pre) {
+    margin-top: 8px;
+  }
+  .tools {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .tool {
+    background: var(--panel);
+    border-radius: 18px;
+    padding: 18px 20px;
+  }
+  .tool code {
+    font: 500 14px var(--mono);
+    color: var(--type);
+  }
+  .tool p {
+    margin: 6px 0 0;
+    color: var(--ink-2);
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  .note {
+    margin: 18px 0 0;
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .note a {
+    color: var(--value);
+  }
+  .split {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+  .points p {
+    margin: 0 0 16px;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .points strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .measured {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+  .measured li {
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 14px 18px;
+    display: grid;
+    gap: 4px;
+  }
+  .measured code {
+    font: 500 13px var(--mono);
+    color: var(--type);
+  }
+  .measured span {
+    font-size: 14.5px;
+    line-height: 1.5;
+  }
+  main {
+    padding-bottom: 48px;
+  }
+
+  @media (max-width: 820px) {
+    .hero {
+      padding-top: 56px;
+    }
+    .panel {
+      padding: 24px;
+      border-radius: 24px;
+    }
+    .setup,
+    .split,
+    .kinds {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>
