@@ -35,7 +35,7 @@ const Heading = heading as "h2" | "h3";
       </li>
       <li class="step">
         <span class="who">Agent</span>
-        <div class="code" aria-label="register.ts">
+        <div class="code">
           <div><span class="ln">7</span><span class="k">export const</span> register = (user: User): string =&gt; {"{"}</div>
           <div><span class="ln">8</span>&nbsp;&nbsp;<mark class="bad">users.<span class="f">save</span>(user)</mark></div>
           <div>
@@ -73,12 +73,17 @@ const Heading = heading as "h2" | "h3";
 </div>
 
 <script>
-  // Plays the session one step at a time when it scrolls into view. With reduced motion, or without
-  // JavaScript, every step is simply shown.
+  // Plays the session one step at a time when it scrolls into view. A session already on screen at
+  // load, reduced motion, no JavaScript and print all show every step. Only a session that starts below
+  // the fold is hidden, then played when the session itself (not the copy above it on a phone) comes
+  // into view.
   const loops = document.querySelectorAll<HTMLElement>(".loop");
   const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   loops.forEach((loop) => {
     const steps = [...loop.querySelectorAll<HTMLElement>(".step")];
+    const session = loop.querySelector<HTMLElement>(".session") ?? loop;
+    const replay = loop.querySelector<HTMLElement>("[data-replay]");
+    if (still && replay) replay.hidden = true;
     let timers: number[] = [];
     const play = (): void => {
       timers.forEach((t) => window.clearTimeout(t));
@@ -87,8 +92,8 @@ const Heading = heading as "h2" | "h3";
       steps.forEach((s) => s.classList.add("hidden"));
       steps.forEach((s, i) => timers.push(window.setTimeout(() => s.classList.remove("hidden"), 350 + i * 900)));
     };
-    loop.querySelector("[data-replay]")?.addEventListener("click", play);
-    if (still) return;
+    replay?.addEventListener("click", play);
+    if (still || session.getBoundingClientRect().top < window.innerHeight) return;
     steps.forEach((s) => s.classList.add("hidden"));
     const seen = new IntersectionObserver(
       (entries) => {
@@ -99,7 +104,7 @@ const Heading = heading as "h2" | "h3";
       },
       { threshold: 0.35 },
     );
-    seen.observe(loop);
+    seen.observe(session);
   });
 </script>
 
@@ -191,6 +196,12 @@ const Heading = heading as "h2" | "h3";
   .step.hidden {
     opacity: 0;
     transform: translateY(6px);
+  }
+  @media print {
+    .step.hidden {
+      opacity: 1;
+      transform: none;
+    }
   }
   .who {
     font: 500 11px var(--mono);

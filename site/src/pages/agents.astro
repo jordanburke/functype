@@ -51,7 +51,7 @@ const measured = [
     </section>
 
     <section class="wrap block">
-      <div class="panel feature"><AgentLoop /></div>
+      <div class="panel feature"><AgentLoop heading="h2" /></div>
     </section>
 
     <section class="wrap block">
@@ -90,7 +90,7 @@ const measured = [
         <li>
           <span>
             GitHub reports that <q>developers are shifting toward typed languages that make agent-assisted coding more
-            reliable in production,</q> as TypeScript became its most-used language.
+            reliable in production</q>, as TypeScript became its most-used language.
           </span>
           <a class="src" href="https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/"
             >GitHub, Octoverse 2025</a
@@ -98,7 +98,7 @@ const measured = [
         </li>
         <li>
           <span>Letting the type checker guide a model <q>reduces compilation errors by more than half.</q></span>
-          <a class="src" href="https://arxiv.org/abs/2504.09246">Mündler et al., ETH Zurich and UC Berkeley, 2025</a>
+          <a class="src" href="https://arxiv.org/abs/2504.09246">Mündler et al., 2025</a>
         </li>
       </ul>
     </section>
@@ -209,7 +209,7 @@ const measured = [
   .block {
     padding-block: 72px 0;
   }
-  .block:first-of-type {
+  .hero + .block {
     padding-top: 56px;
   }
   .block h2 {
@@ -288,6 +288,8 @@ const measured = [
     border-top: 1px solid var(--rule);
   }
   .evidence li {
+    display: grid;
+    gap: 4px;
     padding: 16px 0;
     border-bottom: 1px solid var(--rule);
     font-size: 15px;
@@ -297,14 +299,7 @@ const measured = [
   .evidence q {
     color: var(--ink);
   }
-  .evidence cite {
-    font-style: italic;
-    color: var(--ink);
-  }
-  .evidence li {
-    display: grid;
-    gap: 4px;
-  }
+
   .evidence .src {
     color: var(--value);
     font-size: 13px;
