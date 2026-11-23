@@ -93,7 +93,8 @@ const memberTargets = (pattern: ASTNode | null | undefined): ReadonlyArray<ASTNo
  * - an assignment, compound assignment, `++`/`--`, `delete`, destructuring or `for…of`/`for…in` target
  *   whose path starts from a functype value held under a hiding cast; and
  * - a mutating method (`push`, `splice`, `sort`, `add`, `set`, `delete`, `clear` and the like) called on
- *   data reached through such a value: `(list as any).value.push(9)`; and
+ *   data reached through such a value: `(list as any).value.push(9)`. Called on the functype value
+ *   itself, cast or not, the method is functype's own and builds a new value, so it isn't reported; and
  * - `Object.assign`, `Object.defineProperty(ies)`, `Object.setPrototypeOf` and the matching `Reflect`
  *   calls aimed at a functype value, cast or not, since those compile without one.
  *
@@ -166,6 +167,20 @@ const rule: Rule.RuleModule = {
       return held === undefined ? undefined : targetRoot(held.init, depth + 1)
     }
 
+    /**
+     * Is `node` the functype value itself, however it's cast or aliased? Then a method called on it is
+     * functype's own and builds a new value: `(fmap as FMap<K, V>).set(k, v)`, `(list as any).add(1)`.
+     */
+    const isContainerItself = (node: ASTNode, depth = 0): boolean => {
+      if (depth > 10) return false
+      if (ERASING.has(node.type) || TRANSPARENT.has(node.type))
+        return isContainerItself(node.expression as ASTNode, depth + 1)
+      if (functypeValueByType(node, context) !== undefined) return true
+      if (node.type !== "Identifier") return false
+      const held = soleValue(node)
+      return held !== undefined && isContainerItself(held.init, depth + 1)
+    }
+
     const report = (node: ASTNode, name: string | undefined): void => {
       if (name !== undefined) context.report({ node, messageId: "mutation", data: { name } })
     }
@@ -199,8 +214,9 @@ const rule: Rule.RuleModule = {
         // Object.* and Reflect.* first: `Reflect.set` is a target-first call, not a Map's `set`.
         if (callee.type === "MemberExpression" && !isTargetFirstCall(node)) {
           const method = keyName(callee)
-          if (method !== undefined && MUTATING_METHODS.has(method)) {
-            report(node, hiddenRoot(callee.object as ASTNode, false))
+          const receiver = callee.object as ASTNode
+          if (method !== undefined && MUTATING_METHODS.has(method) && !isContainerItself(receiver)) {
+            report(node, hiddenRoot(receiver, false))
             return
           }
         }

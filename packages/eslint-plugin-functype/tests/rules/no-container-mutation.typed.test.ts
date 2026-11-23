@@ -70,6 +70,19 @@ describe("no-container-mutation (type-aware)", () => {
         "Pushing to an Option's array payload, no cast",
         "declare const arr: Option<number[]>; if (arr.isSome()) arr.value.push(1)",
       ),
+      valid("functype's own add, through a cast", "export const a = (list as List<number>).add(1)"),
+      valid(
+        "functype's own set and delete on a Map, through a cast",
+        'export const a = (fmap as FMap<string, number>).set("a", 1).delete("a")',
+      ),
+      valid("functype's own add on a Set, through a cast", "export const a = (set as FSet<number>).add(1)"),
+      valid("functype's own reverse, through a cast", "export const a = (list as List<number>).reverse()"),
+      valid(
+        "functype's own method on an unwrapped value",
+        "declare const optL: Option<List<number>>; export const a = (optL.orThrow() as List<number>).add(1)",
+      ),
+      valid("functype's own method through an any cast", "export const a = (list as any).add(1)"),
+      valid("functype's own method through an alias", "const o = list as any; export const a = o.add(1)"),
       valid("A reassigned variable is not followed", "export function f() { let o: any = {}; o = list; o.x = 1 }"),
     ],
     invalid: [
