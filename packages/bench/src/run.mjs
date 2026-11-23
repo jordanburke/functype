@@ -54,9 +54,8 @@ const work = (spec, p) => {
   const child = spawnSync(
     process.execPath,
     [resolve(here, "worker.mjs"), JSON.stringify({ ...spec, rounds, shift: p, smoke })],
-    {
-      encoding: "utf8",
-    },
+    // Production behaviour, whatever the shell says: functype freezes collections in development.
+    { encoding: "utf8", env: { ...process.env, FUNCTYPE_FREEZE: "0" } },
   )
   if (child.status !== 0) throw new Error(`worker ${p} failed:\n${child.stderr}`)
   return JSON.parse(child.stdout.trim().split("\n").at(-1)).results

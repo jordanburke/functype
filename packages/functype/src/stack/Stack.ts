@@ -2,6 +2,7 @@ import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -226,14 +227,14 @@ const StackProto = define<StackOf<A>, "_tag" | "value">()("Stack", {
 })
 
 /**
- * Builds a Stack around an array it now owns: nothing may change the array afterwards. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
+ * Builds a Stack around an array it now owns: nothing may change the array afterwards. Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost.
  */
 const wrap = <A extends Type>(items: readonly A[]): Stack<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const stack = Object.create(StackProto) as Mutable<StackOf<A>>
   stack._tag = "Stack"
   stack.value = items
-  return stack
+  return freezeInDevelopment(stack)
 }
 
 /* eslint-enable functional/immutable-data */
