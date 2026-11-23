@@ -15,6 +15,26 @@ const TARGET_FIRST: Readonly<Record<string, ReadonlySet<string>>> = {
   Reflect: new Set(["set", "defineProperty", "deleteProperty", "setPrototypeOf"]),
 }
 
+/**
+ * Methods that change the array, Set or Map they're called on. Through a cast, they change the data a
+ * container holds: `(list as any).value.push(9)`.
+ */
+const MUTATING_METHODS: ReadonlySet<string> = new Set([
+  "push",
+  "pop",
+  "shift",
+  "unshift",
+  "splice",
+  "sort",
+  "reverse",
+  "fill",
+  "copyWithin",
+  "add",
+  "set",
+  "delete",
+  "clear",
+])
+
 /** Names the global object goes by: `globalThis.Object.assign(…)`. */
 const GLOBALS: ReadonlySet<string> = new Set(["globalThis", "window", "self", "global"])
 
@@ -72,6 +92,8 @@ const memberTargets = (pattern: ASTNode | null | undefined): ReadonlyArray<ASTNo
  *
  * - an assignment, compound assignment, `++`/`--`, `delete`, destructuring or `for…of`/`for…in` target
  *   whose path starts from a functype value held under a hiding cast; and
+ * - a mutating method (`push`, `splice`, `sort`, `add`, `set`, `delete`, `clear` and the like) called on
+ *   data reached through such a value: `(list as any).value.push(9)`; and
  * - `Object.assign`, `Object.defineProperty(ies)`, `Object.setPrototypeOf` and the matching `Reflect`
  *   calls aimed at a functype value, cast or not, since those compile without one.
  *
@@ -173,6 +195,15 @@ const rule: Rule.RuleModule = {
         if (left.type !== "VariableDeclaration") checkPattern(node, left)
       },
       CallExpression(node: ASTNode) {
+        const callee = node.callee as ASTNode
+        // Object.* and Reflect.* first: `Reflect.set` is a target-first call, not a Map's `set`.
+        if (callee.type === "MemberExpression" && !isTargetFirstCall(node)) {
+          const method = keyName(callee)
+          if (method !== undefined && MUTATING_METHODS.has(method)) {
+            report(node, hiddenRoot(callee.object as ASTNode, false))
+            return
+          }
+        }
         const [first] = node.arguments as ReadonlyArray<ASTNode>
         if (first !== undefined && first.type !== "SpreadElement" && isTargetFirstCall(node)) {
           report(node, targetRoot(first))

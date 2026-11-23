@@ -4545,6 +4545,7 @@ Reports a write to a functype value that TypeScript can't see. The types mark ev
 ```ts ignore
 ;(list as unknown as { value: number[] }).value = [9] // reported
 ;(list as any).value[0] = 9 // reported: the List's own array
+;(list as any).value.push(9) // reported: a mutating method through a cast
 const record = list as unknown as Record<string, unknown>
 record.extra = 1 // reported: a variable holding a cast
 delete (opt as any).value // reported
@@ -4557,7 +4558,7 @@ if (box.isSome()) box.value.n = 1 // fine: the Option's payload, not the Option
 mine.dirty = true // fine: a field of your own subtype of List
 ```
 
-- **What it reports:** an assignment, compound assignment, `++`/`--`, `delete`, or a destructuring or `for…of`/`for…in` target whose path starts from a functype value held under an `as` cast or `<T>` assertion. That includes a variable written only where it's declared and initialised from one, or declared `: any`. It also reports `Object.assign`, `Object.defineProperty`, `Object.defineProperties` and `Object.setPrototypeOf`, and the matching `Reflect` calls, aimed at a functype value, cast or not, since those compile without one. `globalThis.Object.assign` and `Object["assign"]` count too.
+- **What it reports:** an assignment, compound assignment, `++`/`--`, `delete`, or a destructuring or `for…of`/`for…in` target whose path starts from a functype value held under an `as` cast or `<T>` assertion. That includes a variable written only where it's declared and initialised from one, or declared `: any`. It also reports a mutating method, such as `push`, `splice`, `sort`, `add`, `set`, `delete` or `clear`, called on data reached through such a value. And it reports `Object.assign`, `Object.defineProperty`, `Object.defineProperties` and `Object.setPrototypeOf`, and the matching `Reflect` calls, aimed at a functype value, cast or not, since those compile without one. `globalThis.Object.assign` and `Object["assign"]` count too.
 - **What it leaves alone:** a write that compiles without a cast. That's either a field of your own type, or data a container holds but doesn't own, such as an Option's payload or a List element's own field. Freezing never stopped those writes either. A cast anywhere on the path still counts, so `(opt.value as T).n = 1` is reported.
 - **A functype value** has `_tag` and a `fold` that functype itself declares, so a type of your own with that shape isn't reported. A union counts when any of its members is a functype value.
 - **What it can't see:** a value passed to a parameter typed `any` and written there, plain JavaScript, `Reflect.apply` and `.call` on these functions, and a destructured `assign`. Linting can't follow a value once its type is gone. It also doesn't follow a cast through:
@@ -4565,8 +4566,6 @@ mine.dirty = true // fine: a field of your own subtype of List
   - an object field;
   - a conditional or `??` (`const o = ok ? (list as any) : null`);
   - a comma expression.
-
-  And it doesn't report a method call that changes the data a container holds, such as `(list as any).value.push(9)`: freezing never stopped that either, and `no-array-mutation` reports the push.
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 

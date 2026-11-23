@@ -64,6 +64,12 @@ describe("no-container-mutation (type-aware)", () => {
         "export function f() { const ys = [...list.toArray()]; ys[0] = 9; return ys }",
       ),
       valid("A cast of something else", "(source as { x: number }).x = 2"),
+      valid("A non-mutating method through a cast", "export const a = (list as any).value.map((x: number) => x)"),
+      valid("Pushing to a copy", "export function f() { const ys = [...list.toArray()]; ys.push(1); return ys }"),
+      valid(
+        "Pushing to an Option's array payload, no cast",
+        "declare const arr: Option<number[]>; if (arr.isSome()) arr.value.push(1)",
+      ),
       valid("A reassigned variable is not followed", "export function f() { let o: any = {}; o = list; o.x = 1 }"),
     ],
     invalid: [
@@ -92,6 +98,12 @@ describe("no-container-mutation (type-aware)", () => {
       changed("[(list as any).extra] = [1]", "List"),
       changed("for ((list as any).extra of xs) {}", "List"),
       changed("for ((list as any).extra in { a: 1 }) {}", "List"),
+      // Mutating methods on data reached through a cast.
+      changed("(list as any).value.push(9)", "List"),
+      changed("(list as unknown as { value: number[] }).value.sort()", "List"),
+      changed("(set as any).value.add(1)", "Set"),
+      changed('(fmap as any).value.delete("a")', "Map"),
+      changed("const o = list as any; o.value.splice(0, 1)", "List"),
       // Calls that change their target, cast or not.
       changed("Object.assign(list, { extra: 1 })", "List"),
       changed('Object.defineProperty(set, "value", { value: new globalThis.Set() })', "Set"),
