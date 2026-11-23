@@ -1,0 +1,28 @@
+{
+  "name": "functype-bench",
+  "version": "0.0.0",
+  "private": true,
+  "description": "functype against Effect: timings and bundle sizes, for functype.org/performance and the Perf workflow",
+  "type": "module",
+  "scripts": {
+    "bench": "node src/run.mjs",
+    "smoke": "node src/run.mjs --smoke",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "validate": "prettier --write . && node src/run.mjs --smoke"
+  },
+  "devDependencies": {
+    "effect": "4.1.5",
+    "esbuild": "^0.28.2",
+    "functype": "workspace:*",
+    "prettier": "^3.10.1"
+  },
+  "prettier": {
+    "semi": false,
+    "trailingComma": "all",
+    "singleQuote": false,
+    "printWidth": 120,
+    "tabWidth": 2,
+    "endOfLine": "auto"
+  }
+}

@@ -1,5 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { bundleById, caseById, formatKb, formatNs, perf, splitNs, widths } from "../data/perf";
 
 // The hero's Option chain: each line, its inferred type, and its value for each PORT.
 const lines = [
@@ -14,6 +15,26 @@ const runs = {
   unset: { vals: [["None", "none"], ["None", "none"], ["None", "none"], ["3000", "plain"]], caption: "<strong>PORT unset</strong> is None from the start. map and filter never run." },
 } as const;
 const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "none" ? "v none" : "v plain");
+
+// The "Small and fast" figures: the same results file as /performance/.
+const sizeStat = (id: string, label: string) => {
+  const b = bundleById(id);
+  if (b === undefined) throw new Error(`No bundle "${id}" in src/data/perf.json`);
+  const us = b.sizes.functype.gzipped;
+  const them = b.sizes.effect.gzipped;
+  return { href: `/performance/#bundle-${id}`, label, value: formatKb(us), unit: "KB", us: `${formatKb(us)} KB`, them: `${formatKb(them)} KB`, widths: widths(us, them) };
+};
+const timeStat = (id: string, label: string) => {
+  const c = caseById(id);
+  if (c === undefined) throw new Error(`No case "${id}" in src/data/perf.json`);
+  const [value, unit] = splitNs(c.ns.functype.median);
+  return { href: `/performance/#${id}`, label, value, unit, us: formatNs(c.ns.functype.median), them: formatNs(c.ns.effect.median), widths: widths(c.ns.functype.median, c.ns.effect.median) };
+};
+const stats = [
+  sizeStat("option", "Option-only app, gzipped"),
+  sizeStat("io-app", "App with IO, Either, Option, List"),
+  timeStat("effect-map", "Build, map and run an effect"),
+];
 ---
 
 <Layout title="functype: Option, Either, Try and IO for TypeScript">
@@ -131,33 +152,35 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
     <section class="section wrap">
       <div class="head">
         <h2>Small and fast, measured.</h2>
-        <p>Against Effect 4.1.5 on Node 24, using the published packages.</p>
+        <p>
+          Against Effect {perf.versions.effect} on Node {perf.versions.node.replace(/^v/, "")}, using the published packages.
+          <a class="more" href="/performance/">Every benchmark</a>
+        </p>
       </div>
       <div class="grid">
-        <div class="panel span-2 stat">
-          <div class="k">Option-only app, gzipped</div>
-          <div class="n">5.7<small>KB</small></div>
-          <div class="vs">
-            <div class="track us"><span>functype</span><i style="width:81%"></i><span>5.7 KB</span></div>
-            <div class="track"><span>Effect</span><i style="width:100%"></i><span>7.0 KB</span></div>
-          </div>
-        </div>
-        <div class="panel span-2 stat">
-          <div class="k">App with IO, Either, Option, List</div>
-          <div class="n">11.5<small>KB</small></div>
-          <div class="vs">
-            <div class="track us"><span>functype</span><i style="width:31%"></i><span>11.5 KB</span></div>
-            <div class="track"><span>Effect</span><i style="width:100%"></i><span>37.3 KB</span></div>
-          </div>
-        </div>
-        <div class="panel span-2 stat">
-          <div class="k">Build, map and run an effect</div>
-          <div class="n">32<small>ns</small></div>
-          <div class="vs">
-            <div class="track us"><span>functype</span><i style="width:18%"></i><span>32 ns</span></div>
-            <div class="track"><span>Effect</span><i style="width:100%"></i><span>182 ns</span></div>
-          </div>
-        </div>
+        {
+          stats.map((s) => (
+            <a class="panel span-2 stat" href={s.href}>
+              <div class="k">{s.label}</div>
+              <div class="n">
+                {s.value}
+                <small>{s.unit}</small>
+              </div>
+              <div class="vs">
+                <div class="track us">
+                  <span>functype</span>
+                  <i style={`width:${s.widths[0]}%`} />
+                  <span>{s.us}</span>
+                </div>
+                <div class="track">
+                  <span>Effect</span>
+                  <i style={`width:${s.widths[1]}%`} />
+                  <span>{s.them}</span>
+                </div>
+              </div>
+            </a>
+          ))
+        }
       </div>
       <p class="foot-note">A million chained steps run without a stack overflow, and there are no runtime dependencies.</p>
     </section>
@@ -775,6 +798,15 @@ const valueClass = (kind: string): string => (kind === "v" ? "v" : kind === "non
   .stat .track span:last-child {
     text-align: right;
     font-variant-numeric: tabular-nums;
+  }
+  .head .more {
+    display: block;
+    margin-top: 8px;
+    color: var(--value);
+    font-size: 16px;
+  }
+  .head .more::after {
+    content: " →";
   }
   .foot-note {
     text-align: center;

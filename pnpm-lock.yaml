@@ -230,6 +230,21 @@ importers:
         specifier: ^5.1.0
         version: 5.1.1(@types/node@24.19.2)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/bench:
+    devDependencies:
+      effect:
+        specifier: 4.1.5
+        version: 4.1.5
+      esbuild:
+        specifier: ^0.28.2
+        version: 0.28.2
+      functype:
+        specifier: workspace:*
+        version: link:../functype
+      prettier:
+        specifier: ^3.10.1
+        version: 3.10.1
+
   packages/eslint-config-functype:
     dependencies:
       '@eslint/js':
@@ -2495,6 +2510,9 @@ packages:
     peerDependenciesMeta:
       oxc-resolver:
         optional: true
+
+  effect@4.1.5:
+    resolution: {integrity: sha512-xyR20KhQI0vg2gD8ILUSQRTTESEYJ0JKdP+QD8J37xbwPTqXRxFM/l0+vUVD9fuSvoYruoTqyt33C4FZv1s4TQ==}
 
   emmet@2.4.11:
     resolution: {integrity: sha512-23QPJB3moh/U9sT4rQzGgeyyGIrcM+GH5uVYg2C6wZIxAIJq7Ng3QLT79tl8FUwDXhyq9SusfknOrofAKqvgyQ==}
@@ -6044,6 +6062,8 @@ snapshots:
   dset@3.1.4: {}
 
   dts-resolver@3.0.0: {}
+
+  effect@4.1.5: {}
 
   emmet@2.4.11:
     dependencies:
