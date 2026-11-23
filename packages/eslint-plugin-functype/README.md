@@ -22,7 +22,7 @@ There is one preset. The code it checks is written by coding agents, and an agen
 - **`error`:** every rule whose precision is measured on real code. A forgotten `.run()`, a dropped `Either` or a throw in render is the kind of mistake an agent makes and a reviewer misses.
 - **`off`:** `prefer-flatmap` and `prefer-do-notation`, whose precision is unmeasured. At `error` they would teach an agent to write `eslint-disable`. Each moves to `error` once it's measured.
 - **At a real boundary, mark it** rather than disable the rule: `@interop <reason>` or `invariant()` for a throw (see below), `Wire<T>` for a data shape.
-- **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container` and `no-uncalled-method` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
+- **Type-aware rules:** `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container`, `no-uncalled-method` and `no-container-mutation` need typescript-eslint's parser with `parserOptions.projectService`. Without it they report nothing.
 - **Make sure the agent runs lint.** An error it never sees doesn't steer it, so put `eslint` in the check it runs before it's done, such as `pnpm validate`.
 
 In 1.x the plugin had three presets: `recommended` and `strict`, which warned on rules still being measured, and `agent`, which didn't. 2.0's `recommended` is 1.x's `agent`, and `strict` and `agent` are gone: a config that names one fails to load (ESLint reports an `Unexpected undefined config`), so update it to `recommended`.
@@ -53,7 +53,7 @@ typescript-eslint, which this plugin runs on, doesn't support TypeScript 7 yet: 
 }
 ```
 
-Every rule that works without type information works there. The five type-aware rules, `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container` and `no-uncalled-method`, report nothing, because Oxlint doesn't pass type information to JS plugins yet. Checked on 2026-11-22 with Oxlint 1.94.0.
+Every rule that works without type information works there. The six type-aware rules, `no-array-mutation`, `no-floating-io`, `no-floating-result`, `no-serialize-container`, `no-uncalled-method` and `no-container-mutation`, report nothing, because Oxlint doesn't pass type information to JS plugins yet. Checked on 2026-11-22 with Oxlint 1.94.0.
 
 When typescript-eslint supports TypeScript 7.1's new compiler API, the 6.0 alias can go and nothing in this plugin changes; its `@typescript/native` peer suggests that name stays. Until then, prefer the side-by-side setup, which keeps the type-aware rules.
 
@@ -80,6 +80,7 @@ When typescript-eslint supports TypeScript 7.1's new compiler API, the 6.0 alias
 | `functype/no-floating-result`            |     error     |   off   | Don't drop an `Either`/`Try` result; a failure in it is silently ignored                     |
 | `functype/no-serialize-container`        |     error     |   off   | Don't send an `Either`/`Option`/`List` to `c.json()` or `JSON.stringify()`; unwrap it first  |
 | `functype/no-uncalled-method`            |     error     |         | Call a functype method: `list.head()`, not `list.head`; read without `()` it is the function |
+| `functype/no-container-mutation`         |     error     |         | Don't change a functype value in place, even through a cast; build a new one                 |
 | `functype/no-getOrThrow-in-render`       |     error     |         | React: no bare `.orThrow()` in a component or hook body; a throw in render unmounts the tree |
 | `functype/must-fold-on-component-return` |     error     |         | React: render an `Option`/`Either`/`Try` with `fold` or `<MatchOption>`, not a guard or `&&` |
 
@@ -331,6 +332,39 @@ results.size // fine: a property
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
 Measured (2026-11-22) on seven codebases on functype 1.x and 2.x, 1,126 files: no hits. Run on a library's code from before its 2.0 port, it reports the `Option(list.head)` that library shipped. It's `error` in `recommended`, and stays on in `tests`: `expect(list.head)` is one of the bugs it's for.
+
+### `functype/no-container-mutation`
+
+Reports a write to a functype value that TypeScript can't see. The types mark every field read-only, so such a write needs the value's type hidden: an `as` cast, or a variable that holds one. Since functype 2.2, collections no longer freeze each value, so at run time nothing else stops these writes.
+
+```ts ignore
+;(list as unknown as { value: number[] }).value = [9] // reported
+;(list as any).value[0] = 9 // reported: the List's own array
+;(list as any).value.push(9) // reported: a mutating method through a cast
+const record = list as unknown as Record<string, unknown>
+record.extra = 1 // reported: a variable holding a cast
+delete (opt as any).value // reported
+Object.assign(list, { extra: 1 }) // reported: compiles without a cast
+for ((list as any).extra of xs) {
+} // reported
+
+list.map((x) => x + 1) // fine: a new List
+if (box.isSome()) box.value.n = 1 // fine: the Option's payload, not the Option
+mine.dirty = true // fine: a field of your own subtype of List
+```
+
+- **What it reports:** an assignment, compound assignment, `++`/`--`, `delete`, or a destructuring or `for…of`/`for…in` target whose path starts from a functype value held under an `as` cast or `<T>` assertion. That includes a variable written only where it's declared and initialised from one, or declared `: any`. It also reports a mutating method, such as `push`, `splice`, `sort`, `add`, `set`, `delete` or `clear`, called on data reached through such a value. Called on the functype value itself, cast or not, the method is functype's own and returns a new value, so `(fmap as Map<string, number>).set("a", 1)` isn't reported. And it reports `Object.assign`, `Object.defineProperty`, `Object.defineProperties` and `Object.setPrototypeOf`, and the matching `Reflect` calls, aimed at a functype value, cast or not, since those compile without one. `globalThis.Object.assign` and `Object["assign"]` count too.
+- **What it leaves alone:** a write that compiles without a cast. That's either a field of your own type, or data a container holds but doesn't own, such as an Option's payload or a List element's own field. Freezing never stopped those writes either. A cast anywhere on the path still counts, so `(opt.value as T).n = 1` is reported.
+- **A functype value** has `_tag` and a `fold` that functype itself declares, so a type of your own with that shape isn't reported. A union counts when any of its members is a functype value.
+- **What it can't see:** a value passed to a parameter typed `any` and written there, plain JavaScript, `Reflect.apply` and `.call` on these functions, and a destructured `assign`. Linting can't follow a value once its type is gone. It also doesn't follow a cast through:
+  - a variable assigned again after its declaration;
+  - an object field;
+  - a conditional or `??` (`const o = ok ? (list as any) : null`);
+  - a comma expression.
+
+**It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
+
+Measured (2026-11-23) on seven codebases, 1,128 files including 343 test files, all with type information: no hits. Writes planted in one of those test files, through a cast-holding variable and through `: any`, are reported. It's `error` in `recommended`, and stays on in `tests`.
 
 ### React rules
 

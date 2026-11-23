@@ -232,14 +232,14 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
 
 /**
  * Builds a Map around a native Map it now owns: nothing may change the native Map afterwards.
- * Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
+ * Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
  */
 const wrap = <K, V>(values: ReadonlyMap<K, V>): Map<K, V> => {
   // The one cast: a prototype checked at the opaque A and B works for every K and V.
   const map = Object.create(MapProto) as Mutable<MapOf<K, V>>
   map._tag = "Map"
   map.value = values
-  return Object.freeze(map)
+  return map
 }
 
 /* eslint-enable functional/immutable-data */

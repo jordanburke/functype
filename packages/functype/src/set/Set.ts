@@ -399,14 +399,14 @@ const SetProto = define<SetOf<A>, "_tag" | "value">()("Set", {
 
 /**
  * Builds a Set around a native Set it now owns: nothing may change the native Set afterwards.
- * Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
+ * Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
  */
 const wrap = <A>(values: ReadonlySet<A>): Set<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const set = Object.create(SetProto) as Mutable<SetOf<A>>
   set._tag = "Set"
   set.value = values
-  return Object.freeze(set)
+  return set
 }
 
 /* eslint-enable functional/immutable-data */

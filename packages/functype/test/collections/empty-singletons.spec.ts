@@ -21,6 +21,18 @@ describe("empty collections can't be corrupted through a cast", () => {
     expect(List.empty<number>().toArray()).toEqual([])
   })
 
+  it("List.empty() itself is frozen, so a property written onto it through a cast can't reach later empties", () => {
+    const empty = List.empty<number>() as unknown as Record<string, unknown>
+    expect(Object.isFrozen(empty)).toBe(true)
+    expect(() => {
+      // eslint-disable-next-line functional/immutable-data -- the write is what's under test
+      empty.extra = 1
+    }).toThrow(TypeError)
+    expect(() => Object.defineProperty(empty, "size", { value: 99 })).toThrow(TypeError)
+    expect("extra" in List.empty<number>()).toBe(false)
+    expect(List.empty<number>().size).toBe(0)
+  })
+
   it("List.empty() is still one shared value", () => {
     expect(List.empty<number>()).toBe(List.empty<string>())
   })

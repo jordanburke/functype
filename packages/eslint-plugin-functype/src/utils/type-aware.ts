@@ -270,6 +270,34 @@ export const functypeMethodByType = (object: ASTNode, name: string, context: Rul
   return isMethod ? containerName(type as TypeShape) : undefined
 }
 
+/**
+ * If `node`'s value is a functype value, the container's name (`List`, `Option`, `Either`); otherwise
+ * `undefined`. A functype value has `_tag` and a `fold` that functype itself declares, so a user type
+ * with the same shape doesn't count. A type parameter is read through its constraint, and a union counts
+ * when any of its members is a functype value (`List<number> | string[]`).
+ *
+ * `undefined` when type information isn't available.
+ */
+export const functypeValueByType = (node: ASTNode, context: Rule.RuleContext): string | undefined => {
+  const services = typedServices(context)
+  if (!services) return undefined
+  const tsNode = services.esTreeNodeToTSNodeMap.get(node)
+  if (!tsNode) return undefined
+  const checker = services.program.getTypeChecker()
+  const read = checker.getNonNullableType(checker.getTypeAtLocation(tsNode))
+  const type = isTypeParameter(read) ? (checker.getApparentType?.(read) ?? read) : read
+  const isFunctype = (candidate: TypeLike): boolean => {
+    if (checker.getPropertyOfType(candidate, "_tag") === undefined) return false
+    const fold = checker.getPropertyOfType(candidate, "fold") as MemberSymbol | undefined
+    const declarations = fold?.getDeclarations?.() ?? []
+    return declarations.length > 0 && declarations.every(isDeclaredByFunctype)
+  }
+  if (isFunctype(type)) return containerName(type as TypeShape)
+  // A union whose members aren't all functype values: `List<number> | string[]`.
+  const member = ((type as TypeShape).types ?? []).find(isFunctype)
+  return member === undefined ? undefined : containerName(member as TypeShape)
+}
+
 /** A slot's expected type and the expression TypeScript computed it for. */
 type Slot = { readonly type: TypeLike; readonly at: ASTNode }
 

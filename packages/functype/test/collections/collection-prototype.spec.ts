@@ -58,12 +58,15 @@ describe("each collection's shape", () => {
     ["LazyList", [() => LazyList([1]), () => LazyList([1]).map((x) => x + 1), () => LazyList.empty()]],
     ["Obj", [() => Obj({ a: 1 }), () => Obj({ a: 1 }).set("a", 2), () => Obj.empty()]],
   ]
-  it.each(families)("every %s shares one frozen prototype, and each value is frozen", (_, makers) => {
+  // Since 2.2 a value isn't frozen: freezing was most of what building one cost, and
+  // eslint-plugin-functype's no-container-mutation reports the writes it stopped. The prototype stays
+  // frozen, and so does List.empty(), the one value every caller shares.
+  it.each(families)("every %s shares one frozen prototype, and only a shared empty value is frozen", (_, makers) => {
     const values = makers.map((make) => make())
     const proto = Object.getPrototypeOf(values[0]) as object
     for (const value of values) {
       expect(Object.getPrototypeOf(value)).toBe(proto)
-      expect(Object.isFrozen(value)).toBe(true)
+      expect(Object.isFrozen(value)).toBe(value === List.empty())
     }
     expect(Object.isFrozen(proto)).toBe(true)
     expect(Object.getPrototypeOf(proto)).toBe(Object.prototype)
@@ -232,22 +235,29 @@ describe("the collections' 2.0 breaks", () => {
     expect(structuredClone(Map([["a", 1]]))).toEqual({ _tag: "Map", value: new globalThis.Map([["a", 1]]) })
   })
 
-  it("assigning over a method or a property throws, because values and prototypes are frozen", () => {
+  it("assigning over a method throws, because the prototype is frozen; a field or a new property is no longer stopped", () => {
     for (const value of [List([1]), Set([1]), Map([["a", 1]]), Stack([1]), LazyList([1]), Obj({ a: 1 })]) {
       const record = value as unknown as Record<string, unknown>
       expect(() => {
         // eslint-disable-next-line functional/immutable-data -- the write is what's under test
         record.map = () => 0
       }).toThrow(TypeError)
-      expect(() => {
-        // eslint-disable-next-line functional/immutable-data -- the write is what's under test
-        record._tag = "Other"
-      }).toThrow(TypeError)
+      // Since 2.2 values aren't frozen, so these writes succeed at run time. The types forbid them, and
+      // eslint-plugin-functype's no-container-mutation reports them through a cast.
       expect(() => {
         // eslint-disable-next-line functional/immutable-data -- the write is what's under test
         record.extra = 1
-      }).toThrow(TypeError)
+      }).not.toThrow()
+      expect(record.extra).toBe(1)
     }
+  })
+
+  it("a method on a value can be spied on, now that the value isn't frozen", () => {
+    const list = List([1, 2])
+    const spy = vi.spyOn(list, "map")
+    list.map((x) => x + 1)
+    expect(spy).toHaveBeenCalledTimes(1)
+    spy.mockRestore()
   })
 
   it("some methods return the value itself when the result would hold the same data", () => {
