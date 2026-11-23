@@ -132,6 +132,58 @@ describe("IO.mapTry", () => {
     })
   })
 
+  it("works the same under runSync", () => {
+    expect(
+      IO.succeed(2)
+        .mapTry((n) => n * 3, toParseError)
+        .runSync(),
+    ).toEqual(Right(6))
+    expect(IO.succeed(2).mapTry(boom, toParseError).runSync()).toEqual(Left({ _tag: "ParseError", message: "boom" }))
+    expect(() =>
+      IO.succeed(1)
+        .mapTry(boom, () => {
+          throw new Error("onError bug")
+        })
+        .runSync(),
+    ).toThrow("onError bug")
+  })
+
+  it("never sees an interruption: f doesn't run and the run stays interrupted", async () => {
+    const calls: number[] = []
+    const exit = await IO.interrupt()
+      .mapTry((n: number) => {
+        calls.push(n)
+        return n
+      }, toParseError)
+      .runExit()
+
+    expect(exit.isInterrupted()).toBe(true)
+    expect(calls).toEqual([])
+  })
+
+  it("composes inside IO.gen", async () => {
+    const program = IO.gen(function* () {
+      const n = yield* IO.succeed("21").mapTry((s) => Number.parseInt(s, 10), toParseError)
+      return n * 2
+    })
+
+    expect(await program.run()).toEqual(Right(42))
+  })
+
+  it("lets retry re-run f, because the failure is typed", async () => {
+    const attempts: number[] = []
+    const result = await IO.succeed(1)
+      .mapTry((n) => {
+        attempts.push(n)
+        return boom()
+      }, toParseError)
+      .retry(2)
+      .run()
+
+    expect(result.isLeft()).toBe(true)
+    expect(attempts).toEqual([1, 1, 1])
+  })
+
   it("adds onError's type to the error channel", () => {
     const io = IO.fail<"earlier">("earlier").mapTry((n: number) => String(n), toParseError)
 

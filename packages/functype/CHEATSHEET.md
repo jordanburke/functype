@@ -118,6 +118,7 @@ Unlike Scala, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are 
 | `ZIO.fail(e)`                 | `TE.left(e)`                     | `IO.fail(e)`                       |
 | `ZIO.attempt(() => ...)`      | `TE.tryCatch(() => ..., id)`     | `IO.sync(() => ...)`               |
 | `ZIO.tryPromise(p, e => ...)` | `TE.tryCatch(() => p, e => ...)` | `IO.tryPromise({ try, catch })`    |
+| `effect.mapAttempt(f)`        | —                                | `effect.mapTry(f, onError)`        |
 | `ZIO.service(Tag)`            | `R.ask`                          | `IO.service(Tag)`                  |
 | `effect.provide(layer)`       | `R.local(...)`                   | `effect.provide(layer)`            |
 | `effect.retry(n)`             | `Schedule.recurs(n)`             | `effect.retry(n)`                  |
