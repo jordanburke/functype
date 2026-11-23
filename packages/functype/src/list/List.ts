@@ -473,9 +473,10 @@ const wrap = <A>(array: readonly A[]): List<A> => {
 
 const ListConstructor = <A>(values?: Iterable<A>): List<A> => wrap(Array.from(values ?? []))
 
-// Singleton empty list - uses 'never' which is subtype of all types. Its array is frozen too: every
-// `List.empty()` shares it, so a write through a cast would otherwise change them all.
-const EMPTY_LIST: List<never> = wrap<never>(Object.freeze([]))
+// Singleton empty list - uses 'never' which is subtype of all types. It and its array stay frozen,
+// though other Lists aren't: every `List.empty()` shares it, so a write through a cast would otherwise
+// change them all.
+const EMPTY_LIST: List<never> = Object.freeze(wrap<never>(Object.freeze([])))
 
 /** Rebuilds a List from a parsed envelope. */
 const listFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): List<A> => {
@@ -486,7 +487,7 @@ const listFromEnvelope = <A>(parsed: ParsedEnvelope, method: string): List<A> =>
 const ListCompanion = {
   /**
    * Creates an empty List
-   * Returns one shared instance, whose backing array is frozen
+   * Returns one shared instance. It and its backing array are frozen, though other Lists are not
    * @returns An empty List instance
    */
   empty: <A extends Type>(): List<A> => EMPTY_LIST as unknown as List<A>,

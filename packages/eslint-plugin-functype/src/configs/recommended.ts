@@ -30,8 +30,9 @@
  * - no-serialize-container: 4 calls on agent-todo's API, each a bug that project fixed.
  * - no-uncalled-method: 0 hits on 1,126 files of seven consumers on 1.x and 2.x; it finds the
  *   `Option(list.head)` a published library shipped against 2.0 (#603).
- * - no-container-mutation: 0 hits on 1,128 files of seven consumers. A write to a functype value
- *   needs a cast, and since 2.2 nothing else stops it: collections no longer freeze each value.
+ * - no-container-mutation: 0 hits on 1,128 files of seven consumers, 343 of them tests, all type-checked;
+ *   planted writes through a cast-holding variable are reported. Since functype 2.2 collections no
+ *   longer freeze each value, so this rule is what reports a write through a cast.
  * - no-getOrThrow-in-render and must-fold-on-component-return fire only inside a React component or
  *   hook, and reported nothing on 1,403 files of React code.
  * - no-get-unsafe: an unwrap outside an `@interop` boundary; allowed in test files.

@@ -59,13 +59,14 @@ describe("each collection's shape", () => {
     ["Obj", [() => Obj({ a: 1 }), () => Obj({ a: 1 }).set("a", 2), () => Obj.empty()]],
   ]
   // Since 2.2 a value isn't frozen: freezing was most of what building one cost, and
-  // eslint-plugin-functype's no-container-mutation reports the writes it stopped. The prototype stays frozen.
-  it.each(families)("every %s shares one frozen prototype, and each value is not frozen", (_, makers) => {
+  // eslint-plugin-functype's no-container-mutation reports the writes it stopped. The prototype stays
+  // frozen, and so does List.empty(), the one value every caller shares.
+  it.each(families)("every %s shares one frozen prototype, and only a shared empty value is frozen", (_, makers) => {
     const values = makers.map((make) => make())
     const proto = Object.getPrototypeOf(values[0]) as object
     for (const value of values) {
       expect(Object.getPrototypeOf(value)).toBe(proto)
-      expect(Object.isFrozen(value)).toBe(false)
+      expect(Object.isFrozen(value)).toBe(value === List.empty())
     }
     expect(Object.isFrozen(proto)).toBe(true)
     expect(Object.getPrototypeOf(proto)).toBe(Object.prototype)

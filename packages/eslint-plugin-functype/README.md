@@ -335,26 +335,31 @@ Measured (2026-11-22) on seven codebases on functype 1.x and 2.x, 1,126 files: n
 
 ### `functype/no-container-mutation`
 
-Reports a write to a functype value. The types mark every field read-only, so a write needs a cast; the rule looks through the cast at the value underneath. Collections stopped freezing each value in 2.2, and this rule is what stops these writes now.
+Reports a write to a functype value that TypeScript can't see. The types mark every field read-only, so such a write needs the value's type hidden: an `as` cast, or a variable that holds one. Since functype 2.2, collections no longer freeze each value, so at run time nothing else stops these writes.
 
 ```ts ignore
 ;(list as unknown as { value: number[] }).value = [9] // reported
 ;(list as any).value[0] = 9 // reported: the List's own array
+const record = list as unknown as Record<string, unknown>
+record.extra = 1 // reported: a variable holding a cast
 delete (opt as any).value // reported
-Object.assign(list, { extra: 1 }) // reported
-Reflect.set(map, "value", other) // reported
+Object.assign(list, { extra: 1 }) // reported: compiles without a cast
+for ((list as any).extra of xs) {
+} // reported
 
 list.map((x) => x + 1) // fine: a new List
-const xs = [...list.toArray()]
-xs[0] = 9 // fine: a copy
+if (box.isSome()) box.value.n = 1 // fine: the Option's payload, not the Option
+mine.dirty = true // fine: a field of your own subtype of List
 ```
 
-- **What counts:** an assignment, `++`/`--` or `delete` on a functype value's field, or on anything reached through it; and `Object.assign`, `Object.defineProperty`, `Object.defineProperties`, `Object.setPrototypeOf`, `Reflect.set`, `Reflect.defineProperty`, `Reflect.deleteProperty` and `Reflect.setPrototypeOf` with a functype value as the target.
-- **A functype value** has `_tag` and a `fold` that functype itself declares, so a type of your own with that shape isn't reported.
+- **What it reports:** an assignment, compound assignment, `++`/`--`, `delete`, or a destructuring or `for…of`/`for…in` target whose path starts from a functype value held under an `as` cast or `<T>` assertion. That includes a variable written only where it's declared and initialised from one, or declared `: any`. It also reports `Object.assign`, `Object.defineProperty`, `Object.defineProperties` and `Object.setPrototypeOf`, and the matching `Reflect` calls, aimed at a functype value, cast or not, since those compile without one. `globalThis.Object.assign` and `Object["assign"]` count too.
+- **What it leaves alone:** a write that compiles without a cast. That's either a field of your own type, or data a container holds but doesn't own, such as an Option's payload or a List element's own field. Freezing never stopped those writes either.
+- **A functype value** has `_tag` and a `fold` that functype itself declares, so a type of your own with that shape isn't reported. A union counts when any of its members is a functype value.
+- **What it can't see:** a value passed to a parameter typed `any` and written there, plain JavaScript, `Reflect.apply` and `.call` on these functions, and a destructured `assign`. Linting can't follow a value once its type is gone.
 
 **It only runs with type-aware linting** (`parserOptions.projectService`). Without type information it reports nothing.
 
-Measured (2026-11-23) on seven codebases, 1,128 files: no hits. A write planted in one of them, through a cast and with `Object.assign`, is reported. It's `error` in `recommended`, and stays on in `tests`.
+Measured (2026-11-23) on seven codebases, 1,128 files including 343 test files, all with type information: no hits. Writes planted in one of those test files, through a cast-holding variable and through `: any`, are reported. It's `error` in `recommended`, and stays on in `tests`.
 
 ### React rules
 
