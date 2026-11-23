@@ -1,0 +1,340 @@
+{
+  "generated": "2026-11-23T14:49:24.248Z",
+  "commit": "019d8b7e740f053f932a750e639dec5582908650",
+  "machine": {
+    "cpu": "Intel(R) Xeon(R) 6975P-C",
+    "cores": 4,
+    "os": "linux x64",
+    "ci": true
+  },
+  "versions": {
+    "node": "v24.20.0",
+    "functype": "2.1.0",
+    "effect": "4.1.5"
+  },
+  "method": {
+    "processes": 5,
+    "rounds": 7
+  },
+  "setup": "const inc = (x) => x + 1\nconst items = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]\nclass Boom { _tag = \"Boom\" }\nconst DbF = Tag(\"Db\")                            // functype\nclass DbE extends Context.Service()(\"Db\") {}     // Effect\nconst db = { k: 3 }",
+  "cases": [
+    {
+      "id": "option",
+      "group": "Data types",
+      "name": "Option: build, map, getOrElse",
+      "async": false,
+      "code": {
+        "functype": "(i) => Some(i).map(inc).getOrElse(() => 0)",
+        "effect": "(i) => Option.getOrElse(Option.map(Option.some(i), inc), () => 0)"
+      },
+      "ns": {
+        "functype": {
+          "median": 5.769878,
+          "min": 5.7292,
+          "max": 6.02727
+        },
+        "effect": {
+          "median": 4.836608,
+          "min": 4.814522,
+          "max": 5.660152
+        }
+      },
+      "vsEffect": {
+        "median": 0.8403480416113943,
+        "min": 0.8297141688650641,
+        "max": 0.9390905003426095,
+        "verdict": "slower"
+      }
+    },
+    {
+      "id": "either",
+      "group": "Data types",
+      "name": "Either (Effect's Result): build, map, getOrElse",
+      "async": false,
+      "code": {
+        "functype": "(i) => Right(i).map(inc).getOrElse(() => 0)",
+        "effect": "(i) => Result.getOrElse(Result.map(Result.succeed(i), inc), () => 0)"
+      },
+      "ns": {
+        "functype": {
+          "median": 4.026632,
+          "min": 4.024878,
+          "max": 5.155806
+        },
+        "effect": {
+          "median": 5.238766,
+          "min": 5.065366,
+          "max": 5.83224
+        }
+      },
+      "vsEffect": {
+        "median": 1.2614394771717303,
+        "min": 1.1311984973833382,
+        "max": 1.3183613684080526,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "list",
+      "group": "Data types",
+      "name": "List (Effect's Array module): 10 items, map, filter",
+      "async": false,
+      "code": {
+        "functype": "(i) => List(items).map((x) => x + i).filter((x) => x % 2 === 0).size",
+        "effect": "(i) => Arr.filter(Arr.map(items, (x) => x + i), (x) => x % 2 === 0).length"
+      },
+      "ns": {
+        "functype": {
+          "median": 132.99482333333333,
+          "min": 130.86556,
+          "max": 136.56086
+        },
+        "effect": {
+          "median": 45.066336666666665,
+          "min": 42.32957666666667,
+          "max": 46.441316666666665
+        }
+      },
+      "vsEffect": {
+        "median": 0.338857825719382,
+        "min": 0.3234200748180443,
+        "max": 0.3404380010046099,
+        "verdict": "slower"
+      }
+    },
+    {
+      "id": "effect-map",
+      "group": "Effects, run synchronously",
+      "name": "Build, map and run an effect",
+      "async": false,
+      "code": {
+        "functype": "(i) => IO.succeed(i).map(inc).runSyncOrThrow()",
+        "effect": "(i) => Effect.runSync(Effect.map(Effect.succeed(i), inc))"
+      },
+      "ns": {
+        "functype": {
+          "median": 63.876682,
+          "min": 57.843814,
+          "max": 66.646542
+        },
+        "effect": {
+          "median": 366.00677,
+          "min": 362.963922,
+          "max": 372.036016
+        }
+      },
+      "vsEffect": {
+        "median": 5.727327370194957,
+        "min": 5.582225346365308,
+        "max": 6.327500638184059,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "flatmap-50",
+      "group": "Effects, run synchronously",
+      "name": "50 flatMaps, built and run",
+      "async": false,
+      "code": {
+        "functype": "(i) => {\n        let io = IO.succeed(i)\n        for (let k = 0; k < 50; k++) io = io.flatMap((x) => IO.succeed(x + 1))\n        return io.runSyncOrThrow()\n      }",
+        "effect": "(i) => {\n        let ef = Effect.succeed(i)\n        for (let k = 0; k < 50; k++) ef = Effect.flatMap(ef, (x) => Effect.succeed(x + 1))\n        return Effect.runSync(ef)\n      }"
+      },
+      "ns": {
+        "functype": {
+          "median": 2739.3393,
+          "min": 2613.0424,
+          "max": 2807.22435
+        },
+        "effect": {
+          "median": 4421.4966,
+          "min": 4380.6045,
+          "max": 4463.48295
+        }
+      },
+      "vsEffect": {
+        "median": 1.6199568633210204,
+        "min": 1.5720064732268368,
+        "max": 1.7081555775750137,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "gen-10",
+      "group": "Effects, run synchronously",
+      "name": "A generator with 10 yields",
+      "async": false,
+      "code": {
+        "functype": "(i) =>\n        IO.gen(function* () {\n          let x = i\n          for (let k = 0; k < 10; k++) x = yield* IO.succeed(x + 1)\n          return x\n        }).runSyncOrThrow()",
+        "effect": "(i) =>\n        Effect.runSync(\n          Effect.gen(function* () {\n            let x = i\n            for (let k = 0; k < 10; k++) x = yield* Effect.succeed(x + 1)\n            return x\n          }),\n        )"
+      },
+      "ns": {
+        "functype": {
+          "median": 1589.25578,
+          "min": 1568.53692,
+          "max": 1655.2252
+        },
+        "effect": {
+          "median": 1673.1981,
+          "min": 1553.08918,
+          "max": 1747.8729
+        }
+      },
+      "vsEffect": {
+        "median": 1.0559728670153161,
+        "min": 0.987266443526326,
+        "max": 1.0667253532036722,
+        "verdict": "same"
+      }
+    },
+    {
+      "id": "catch-tag",
+      "group": "Effects, run synchronously",
+      "name": "Fail, then recover by tag",
+      "async": false,
+      "code": {
+        "functype": "(i) =>\n        IO.fail(new Boom())\n          .catchTag(\"Boom\", () => IO.succeed(i))\n          .runSyncOrThrow()",
+        "effect": "(i) => Effect.runSync(Effect.catchTag(Effect.fail(new Boom()), \"Boom\", () => Effect.succeed(i)))"
+      },
+      "ns": {
+        "functype": {
+          "median": 103.76266,
+          "min": 101.8642,
+          "max": 110.084885
+        },
+        "effect": {
+          "median": 514.223705,
+          "min": 512.470325,
+          "max": 524.580525
+        }
+      },
+      "vsEffect": {
+        "median": 4.938870350856464,
+        "min": 4.693296859055628,
+        "max": 5.058029935083956,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "service",
+      "group": "Effects, run synchronously",
+      "name": "Read a service, provide it, run",
+      "async": false,
+      "code": {
+        "functype": "(i) =>\n        IO.service(DbF)\n          .map((d) => d.k + i)\n          .provideService(DbF, db)\n          .runSyncOrThrow()",
+        "effect": "(i) =>\n        Effect.runSync(\n          Effect.provideService(\n            Effect.map(DbE, (d) => d.k + i),\n            DbE,\n            db,\n          ),\n        )"
+      },
+      "ns": {
+        "functype": {
+          "median": 228.508195,
+          "min": 224.612855,
+          "max": 231.84701
+        },
+        "effect": {
+          "median": 531.793405,
+          "min": 530.78254,
+          "max": 538.503745
+        }
+      },
+      "vsEffect": {
+        "median": 2.3387913757007053,
+        "min": 2.2937255261562353,
+        "max": 2.3642655270109096,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "promise",
+      "group": "Effects, run asynchronously",
+      "name": "Wrap a promise, map, run",
+      "async": true,
+      "code": {
+        "functype": "(i) =>\n        IO.async(() => Promise.resolve(i))\n          .map(inc)\n          .runOrThrow()",
+        "effect": "(i) =>\n        Effect.runPromise(\n          Effect.map(\n            Effect.promise(() => Promise.resolve(i)),\n            inc,\n          ),\n        )"
+      },
+      "ns": {
+        "functype": {
+          "median": 305.86905,
+          "min": 298.03794,
+          "max": 326.19855
+        },
+        "effect": {
+          "median": 463.17025,
+          "min": 456.64412,
+          "max": 464.53619
+        }
+      },
+      "vsEffect": {
+        "median": 1.5142762891505368,
+        "min": 1.4240902971518419,
+        "max": 1.55361789477498,
+        "verdict": "faster"
+      }
+    },
+    {
+      "id": "async-50",
+      "group": "Effects, run asynchronously",
+      "name": "50 steps, run as a promise",
+      "async": true,
+      "code": {
+        "functype": "(i) => {\n        let io = IO.succeed(i)\n        for (let k = 0; k < 50; k++) io = io.flatMap((x) => IO.succeed(x + 1))\n        return io.runOrThrow()\n      }",
+        "effect": "(i) => {\n        let ef = Effect.succeed(i)\n        for (let k = 0; k < 50; k++) ef = Effect.flatMap(ef, (x) => Effect.succeed(x + 1))\n        return Effect.runPromise(ef)\n      }"
+      },
+      "ns": {
+        "functype": {
+          "median": 3474.1262,
+          "min": 3451.2053,
+          "max": 3554.6999
+        },
+        "effect": {
+          "median": 4334.6671,
+          "min": 4284.4913,
+          "max": 4447.4062
+        }
+      },
+      "vsEffect": {
+        "median": 1.24065584018386,
+        "min": 1.2207050727404585,
+        "max": 1.2801510204206168,
+        "verdict": "faster"
+      }
+    }
+  ],
+  "bundles": [
+    {
+      "id": "option",
+      "name": "An Option-only app",
+      "code": {
+        "functype": "import { Option } from \"functype\"\nconsole.log(Option(1).map((x) => x + 1).getOrElse(() => 0))",
+        "effect": "import { Option } from \"effect\"\nconsole.log(Option.getOrElse(Option.map(Option.some(1), (x) => x + 1), () => 0))"
+      },
+      "sizes": {
+        "functype": {
+          "minified": 22903,
+          "gzipped": 5658
+        },
+        "effect": {
+          "minified": 19250,
+          "gzipped": 6983
+        }
+      }
+    },
+    {
+      "id": "io-app",
+      "name": "An app with effects, Either, Option and List",
+      "code": {
+        "functype": "import { IO, Either, Option, List } from \"functype\"\nconst p = IO.gen(function* () { const a = yield* IO.succeed(1); return a + 1 }).catchTag(\"X\", () => IO.succeed(0))\nconsole.log(p.runSyncOrThrow(), Either.right(1).map((x) => x), Option(1), List([1]).map((x) => x))",
+        "effect": "import { Effect, Result, Option, Array as Arr } from \"effect\"\nconst p = Effect.catchTag(Effect.gen(function* () { const a = yield* Effect.succeed(1); return a + 1 }), \"X\", () => Effect.succeed(0))\nconsole.log(Effect.runSync(p), Result.map(Result.succeed(1), (x) => x), Option.some(1), Arr.map([1], (x) => x))"
+      },
+      "sizes": {
+        "functype": {
+          "minified": 44647,
+          "gzipped": 11571
+        },
+        "effect": {
+          "minified": 107852,
+          "gzipped": 37583
+        }
+      }
+    }
+  ]
+}
