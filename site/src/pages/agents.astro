@@ -59,6 +59,63 @@ const measured = [
     </section>
 
     <section class="wrap block">
+      <h2>A compiler checks only what the types say.</h2>
+      <p class="lead">
+        Plain TypeScript types say what a value is. Functional types also say what can be missing, what can fail and how,
+        and what an effect needs before it can run. So the compiler checks an agent's error handling, not only its spelling.
+        Rust earned its place with agents the same way: ownership is in its types, so the compiler rejects a use-after-move
+        before anything runs.
+      </p>
+      <div class="kinds">
+        <article class="kind">
+          <code>Option&lt;User&gt;</code>
+          <h3>Missing values</h3>
+          <p>An agent can't read <code>.name</code> off a user that might not be there. It handles <code>None</code> or the code doesn't compile.</p>
+        </article>
+        <article class="kind">
+          <code>Either&lt;NotFound, User&gt;</code>
+          <h3>Failures</h3>
+          <p>The error is part of the signature. Dropping the result without handling it is a lint error.</p>
+        </article>
+        <article class="kind">
+          <code>IO&lt;Users, DbError, User&gt;</code>
+          <h3>Effects</h3>
+          <p>
+            What it needs, how it fails, and nothing runs until you run it. Run it without its services and the compiler says:
+            "Provide these services first, with provideLayer or provideService".
+          </p>
+        </article>
+      </div>
+      <p class="hatch">
+        <strong>The escape hatches are guarded too.</strong> Rust has <code>unsafe</code>. TypeScript has{" "}
+        <code>null</code>, <code>throw</code> and <code>.orThrow()</code>, and functype's lint preset reports each one unless
+        the code marks it as a real boundary.
+      </p>
+      <ul class="evidence">
+        <li>
+          <span>
+            GitHub reports that <q>developers are shifting toward typed languages that make agent-assisted coding more
+            reliable in production,</q> as TypeScript became its most-used language.
+          </span>
+          <a class="src" href="https://github.blog/news-insights/octoverse/octoverse-a-new-developer-joins-github-every-second-as-ai-leads-typescript-to-1/"
+            >GitHub, Octoverse 2025</a
+          >
+        </li>
+        <li>
+          <span>Letting the type checker guide a model <q>reduces compilation errors by more than half.</q></span>
+          <a class="src" href="https://arxiv.org/abs/2504.09246">Mündler et al., ETH Zurich and UC Berkeley, 2025</a>
+        </li>
+        <li>
+          <span>
+            Boris Cherny, who created Claude Code, names <cite>Functional Programming in Scala</cite> the best technical book he
+            has read, for the way it teaches you to think in types.
+          </span>
+          <a class="src" href="https://www.lennysnewsletter.com/p/head-of-claude-code-what-happens">Lenny's Podcast, February 2026</a>
+        </li>
+      </ul>
+    </section>
+
+    <section class="wrap block">
       <h2>Set it up</h2>
       <div class="setup">
         <article class="card">
@@ -182,6 +239,88 @@ const measured = [
     color: #f2f2f5;
     box-shadow: 0 0 0 1px var(--feature-edge);
   }
+  .lead {
+    margin: 0;
+    max-width: 44em;
+    font-size: 18px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .kinds {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .kind {
+    background: var(--panel);
+    border-radius: 20px;
+    padding: 20px 22px;
+    min-width: 0;
+  }
+  .kind > code {
+    display: inline-block;
+    font: 500 13px var(--mono);
+    color: var(--type);
+    background: var(--type-tint);
+    border-radius: 8px;
+    padding: 3px 8px;
+  }
+  .kind h3 {
+    margin: 14px 0 0;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .kind p {
+    margin: 6px 0 0;
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  .kind p code,
+  .hatch code {
+    font-size: 0.9em;
+  }
+  .hatch {
+    margin: 22px 0 0;
+    max-width: 44em;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .hatch strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .evidence {
+    list-style: none;
+    margin: 28px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .evidence li {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .evidence q {
+    color: var(--ink);
+  }
+  .evidence cite {
+    font-style: italic;
+    color: var(--ink);
+  }
+  .evidence li {
+    display: grid;
+    gap: 4px;
+  }
+  .evidence .src {
+    color: var(--value);
+    font-size: 13px;
+  }
   .setup {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -299,7 +438,8 @@ const measured = [
       border-radius: 24px;
     }
     .setup,
-    .split {
+    .split,
+    .kinds {
       grid-template-columns: minmax(0, 1fr);
     }
   }
