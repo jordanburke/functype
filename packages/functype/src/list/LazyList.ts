@@ -1,6 +1,7 @@
 import { Companion } from "@/companion/Companion"
 import type { Foldable } from "@/foldable/Foldable"
 import { type A, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { Counter } from "@/internal/mutation-utils"
 import { Option } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -420,13 +421,13 @@ const LazyListProto = define<LazyListOf<A>, "_tag" | "source">()("LazyList", {
   },
 })
 
-/** Builds a LazyList that reads `source`. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost. */
+/** Builds a LazyList that reads `source`. Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost. */
 const wrap = <A extends Type>(source: Iterable<A>): LazyList<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const lazyList = Object.create(LazyListProto) as Mutable<LazyListOf<A>>
   lazyList._tag = "LazyList"
   lazyList.source = source
-  return lazyList
+  return freezeInDevelopment(lazyList)
 }
 
 /* eslint-enable functional/immutable-data */

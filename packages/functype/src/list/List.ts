@@ -5,6 +5,7 @@ import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { type A, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { safeStringify } from "@/internal/stringify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
@@ -459,14 +460,14 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
 })
 
 /**
- * Builds a List around an array it now owns: nothing may change the array afterwards. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
+ * Builds a List around an array it now owns: nothing may change the array afterwards. Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost.
  */
 const wrap = <A>(array: readonly A[]): List<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const list = Object.create(ListProto) as Mutable<ListOf<A>>
   list._tag = "List"
   list.value = array
-  return list
+  return freezeInDevelopment(list)
 }
 
 /* eslint-enable functional/immutable-data */

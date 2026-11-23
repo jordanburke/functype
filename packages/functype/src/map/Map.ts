@@ -3,6 +3,7 @@ import type { Typeable } from "@/index"
 import { Companion, type Foldable } from "@/index"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, type B, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -232,14 +233,14 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
 
 /**
  * Builds a Map around a native Map it now owns: nothing may change the native Map afterwards.
- * Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
+ * Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost.
  */
 const wrap = <K, V>(values: ReadonlyMap<K, V>): Map<K, V> => {
   // The one cast: a prototype checked at the opaque A and B works for every K and V.
   const map = Object.create(MapProto) as Mutable<MapOf<K, V>>
   map._tag = "Map"
   map.value = values
-  return map
+  return freezeInDevelopment(map)
 }
 
 /* eslint-enable functional/immutable-data */

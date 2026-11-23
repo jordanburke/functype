@@ -4,6 +4,7 @@ import type { Extractable } from "@/extractable/Extractable"
 import type { FunctypeValue } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { safeStringify } from "@/internal/stringify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
@@ -390,7 +391,7 @@ const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
 
 /**
  * Creates an Obj instance wrapping a plain object with immutable operations. The object isn't
- * copied. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
+ * copied. Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost.
  * @param data - The plain object to wrap
  * @returns A new Obj instance
  * @typeParam T - The record type
@@ -400,7 +401,7 @@ const wrap = <T extends Record<string, Type>>(data: T): Obj<T> => {
   const obj = Object.create(ObjProto) as Mutable<Obj<T>>
   obj._tag = "Obj"
   obj.data = data
-  return obj
+  return freezeInDevelopment(obj)
 }
 
 /* eslint-enable functional/immutable-data */

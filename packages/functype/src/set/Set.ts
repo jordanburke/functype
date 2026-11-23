@@ -4,6 +4,7 @@ import type { FunctypeCollection } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { type A, define, type Mutable } from "@/internal/define"
+import { freezeInDevelopment } from "@/internal/freeze"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
@@ -399,14 +400,14 @@ const SetProto = define<SetOf<A>, "_tag" | "value">()("Set", {
 
 /**
  * Builds a Set around a native Set it now owns: nothing may change the native Set afterwards.
- * Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
+ * Frozen only in development (`NODE_ENV=development` or `FUNCTYPE_FREEZE=1`; see `internal/freeze.ts`): in production the types mark its fields read-only, eslint-plugin-functype's no-container-mutation reports a write through a cast, and freezing was most of what building one cost.
  */
 const wrap = <A>(values: ReadonlySet<A>): Set<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const set = Object.create(SetProto) as Mutable<SetOf<A>>
   set._tag = "Set"
   set.value = values
-  return set
+  return freezeInDevelopment(set)
 }
 
 /* eslint-enable functional/immutable-data */
