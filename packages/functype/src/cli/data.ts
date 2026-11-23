@@ -66,7 +66,7 @@ export const TYPES: Record<string, TypeData> = {
     interfaces: mergeInterfaces("Either", "Traversable"),
     methods: {
       create: ["Right(v)", "Left(e)", "Either.right(v)", "Either.left(e)", "Either.void()"],
-      transform: [".map(f)", ".flatMap(f)", ".mapLeft(f)", ".swap()", ".orElse(() => alt)"],
+      transform: [".map(f)", ".mapTry(f, onError)", ".flatMap(f)", ".mapLeft(f)", ".swap()", ".orElse(() => alt)"],
       extract: [
         ".fold(l, r)",
         ".foldAsync(l, r)",
@@ -364,7 +364,15 @@ export const TYPES: Record<string, TypeData> = {
         "IO.fromTry(t)",
         "IO.die(defect)",
       ],
-      transform: [".map(f)", ".flatMap(f)", ".tap(f)", ".mapError(f)", ".recover(v)", ".recoverWith(f)"],
+      transform: [
+        ".map(f)",
+        ".mapTry(f, onError) // a throw in f becomes a typed error, not a defect",
+        ".flatMap(f)",
+        ".tap(f)",
+        ".mapError(f)",
+        ".recover(v)",
+        ".recoverWith(f)",
+      ],
       extract: [
         ".run() // Either<E,A> — Left holds only E; a defect or interruption rejects",
         ".runOrThrow()",

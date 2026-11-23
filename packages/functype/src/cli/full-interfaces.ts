@@ -231,6 +231,17 @@ export interface EitherBase<out L extends Type, out R extends Type>
   orNull(): R | null
   orUndefined(): R | undefined
   map<U extends Type>(f: (value: R) => U): Either<L, U>
+  /**
+   * Maps the Right value with a function that may throw, catching the throw into a Left built by
+   * \`onError\`. \`map\` lets a throw escape. Use \`mapTry\` for a callback you don't own.
+   *
+   * - A Left passes through unchanged, and \`f\` doesn't run.
+   * - A throw from \`onError\` itself escapes.
+   * - Only a synchronous throw is caught. For an async callback, use \`tryCatchAsync\`.
+   *
+   * Same as \`either.flatMap((value) => tryCatch(() => f(value), onError))\`, with functype's \`tryCatch\`.
+   */
+  mapTry<U extends Type, L2 extends Type>(f: (value: R) => U, onError: (error: unknown) => L2): Either<L | L2, U>
   ap<L2 extends Type, U extends Type>(ff: Either<L2, (value: R) => U>): Either<L | L2, U>
   merge<L1 extends Type, R1 extends Type>(other: Either<L1, R1>): Either<L | L1, [R, R1]>
   /**

@@ -337,6 +337,22 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
   map<B extends Type>(f: (a: A) => B): IO<R, E, B>
 
   /**
+   * Transforms the success value with a function that may throw, catching the throw into the error
+   * channel. In `map` a throw is a defect, so `run()` rejects; `mapTry` turns it into a typed error
+   * built by `onError`. Use it for a callback you don't own, such as a caller's mapper inside a library.
+   *
+   * - A failure passes through unchanged, and `f` doesn't run.
+   * - A throw from `onError` itself is still a defect.
+   * - Only a synchronous throw is caught. For an async callback, use `flatMap` with `IO.tryPromise`.
+   *
+   * Same as `io.flatMap((a) => IO.tryCatch(() => f(a), onError))`.
+   * @param f - Function to apply to the success value; it may throw
+   * @param onError - Turns what `f` threw into a typed error
+   * @returns New IO whose error channel also carries `onError`'s result
+   */
+  mapTry<B extends Type, E2 extends Type>(f: (a: A) => B, onError: (error: unknown) => E2): IO<R, E | E2, B>
+
+  /**
    * Chains another IO effect based on the success value.
    * @param f - Function returning next IO effect
    * @returns New IO with combined effects
@@ -835,6 +851,10 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
 
   flatMap(f) {
     return createIO(unsafeCoerce({ _tag: "FlatMap", effect: this, f }))
+  },
+
+  mapTry(f, onError) {
+    return this.flatMap((a) => IOCompanion.tryCatch(() => f(a), onError))
   },
 
   tap(f) {
