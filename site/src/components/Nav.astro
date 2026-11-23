@@ -1,9 +1,15 @@
 ---
 const path = Astro.url.pathname;
 const links = [
-  { href: "/option/", label: "Docs", match: (p: string) => p !== "/" && !p.startsWith("/upgrading-to-2") && !p.startsWith("/mcp-server") },
+  {
+    href: "/option/",
+    label: "Docs",
+    match: (p: string) =>
+      p !== "/" && !p.startsWith("/upgrading-to-2") && !p.startsWith("/mcp-server") && !p.startsWith("/performance"),
+  },
   { href: "/#types", label: "Types", match: () => false },
   { href: "/mcp-server/", label: "Agents", match: (p: string) => p.startsWith("/mcp-server") },
+  { href: "/performance/", label: "Performance", match: (p: string) => p.startsWith("/performance") },
   { href: "/upgrading-to-2/", label: "Upgrade to 2.0", match: (p: string) => p.startsWith("/upgrading-to-2") },
 ];
 ---

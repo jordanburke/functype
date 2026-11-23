@@ -1,0 +1,426 @@
+---
+import { Code } from "astro:components";
+import Layout from "../layouts/Layout.astro";
+import { counts, dedent, formatKb, formatNs, perf, ratioLabel, runDate, widths } from "../data/perf";
+
+const groups = [...new Set(perf.cases.map((c) => c.group))].map((group) => ({
+  group,
+  cases: perf.cases.filter((c) => c.group === group),
+}));
+const tally = counts();
+const repo = "https://github.com/jordanburke/functype";
+const commitUrl = `${repo}/commit/${perf.commit}`;
+const machine = perf.machine.ci ? `a GitHub Actions runner (${perf.machine.cpu})` : perf.machine.cpu;
+const themes = { light: "github-light", dark: "github-dark" } as const;
+---
+
+<Layout
+  title="Performance: functype against Effect"
+  description={`functype against Effect ${perf.versions.effect}: ten everyday operations timed whenever functype's code changes on main, and the bundle each ships.`}
+>
+  <main>
+    <section class="hero wrap">
+      <p class="kicker">Performance</p>
+      <h1>Measured against Effect, in the open.</h1>
+      <p class="lede">
+        {perf.cases.length} everyday operations, each written the way its library's docs write it, timed whenever functype's
+        code changes on main and every week. Where the two are level, or Effect is faster, this page says so.
+      </p>
+      <div class="tally" role="list">
+        <div role="listitem"><b>{tally.faster}</b><span>faster</span></div>
+        <div role="listitem"><b>{tally.same}</b><span>about the same</span></div>
+        <div role="listitem"><b>{tally.slower}</b><span>slower</span></div>
+      </div>
+      <p class="stamp">
+        functype main at <a href={commitUrl}>{perf.commit.slice(0, 7)}</a> · Effect {perf.versions.effect} · Node {perf.versions.node.replace(/^v/, "")} ·{" "}
+        {runDate()}
+      </p>
+    </section>
+
+    {
+      groups.map(({ group, cases }) => (
+        <section class="wrap block">
+          <h2>{group}</h2>
+          <div class="rows">
+            {cases.map((c) => {
+              const [us, them] = widths(c.ns.functype.median, c.ns.effect.median);
+              return (
+                <article class="row" id={c.id}>
+                  <div class="row-head">
+                    <h3>{c.name}</h3>
+                    <span class={`badge ${c.vsEffect.verdict}`}>{ratioLabel(c.vsEffect)}</span>
+                  </div>
+                  <div class="bars">
+                    <div class="bar us">
+                      <span>functype</span>
+                      <i style={`width:${us}%`} />
+                      <span>{formatNs(c.ns.functype.median)}</span>
+                    </div>
+                    <div class="bar">
+                      <span>Effect</span>
+                      <i style={`width:${them}%`} />
+                      <span>{formatNs(c.ns.effect.median)}</span>
+                    </div>
+                  </div>
+                  <details>
+                    <summary>Show the code</summary>
+                    <p class="spread">
+                      Effect's time over functype's, in each of the {perf.method.processes} processes: from{" "}
+                      {c.vsEffect.min.toFixed(2)} to {c.vsEffect.max.toFixed(2)}.
+                    </p>
+                    <div class="pair">
+                      <figure>
+                        <figcaption>functype</figcaption>
+                        <Code code={dedent(c.code.functype)} lang="js" themes={themes} defaultColor={false} />
+                      </figure>
+                      <figure>
+                        <figcaption>Effect</figcaption>
+                        <Code code={dedent(c.code.effect)} lang="js" themes={themes} defaultColor={false} />
+                      </figure>
+                    </div>
+                  </details>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))
+    }
+
+    <section class="wrap block">
+      <h2>What an app ships</h2>
+      <p class="note">The same small program in each library, bundled by esbuild for the browser, minified, then gzipped.</p>
+      <div class="rows">
+        {
+          perf.bundles.map((b) => {
+            const [us, them] = widths(b.sizes.functype.gzipped, b.sizes.effect.gzipped);
+            const ratio = b.sizes.effect.gzipped / b.sizes.functype.gzipped;
+            return (
+              <article class="row" id={`bundle-${b.id}`}>
+                <div class="row-head">
+                  <h3>{b.name}</h3>
+                  <span class={`badge ${ratio >= 1.1 ? "faster" : ratio <= 0.9 ? "slower" : "same"}`}>
+                    {ratio >= 1.1 ? `${ratio.toFixed(1)}× smaller` : ratio <= 0.9 ? `${(1 / ratio).toFixed(1)}× larger` : "About the same"}
+                  </span>
+                </div>
+                <div class="bars">
+                  <div class="bar us">
+                    <span>functype</span>
+                    <i style={`width:${us}%`} />
+                    <span>{formatKb(b.sizes.functype.gzipped)} KB</span>
+                  </div>
+                  <div class="bar">
+                    <span>Effect</span>
+                    <i style={`width:${them}%`} />
+                    <span>{formatKb(b.sizes.effect.gzipped)} KB</span>
+                  </div>
+                </div>
+                <details>
+                  <summary>The program</summary>
+                  <div class="pair">
+                    <figure>
+                      <figcaption>functype</figcaption>
+                      <Code code={b.code.functype} lang="js" themes={themes} defaultColor={false} />
+                    </figure>
+                    <figure>
+                      <figcaption>Effect</figcaption>
+                      <Code code={b.code.effect} lang="js" themes={themes} defaultColor={false} />
+                    </figure>
+                  </div>
+                </details>
+              </article>
+            );
+          })
+        }
+      </div>
+    </section>
+
+    <section class="wrap block method">
+      <h2>How it's measured</h2>
+      <ul>
+        <li>
+          <strong>Same answers first.</strong> Every case runs once in both libraries, and the run stops if they return different
+          results, so a broken case can't post a fast time.
+        </li>
+        <li>
+          <strong>Fresh processes, rotating order.</strong>{" "}
+          {perf.method.processes} Node processes each warm every case, then time it in {perf.method.rounds} rounds. Each round
+          times both libraries, and the order rotates, so neither always runs first. A time is the median.
+        </li>
+        <li>
+          <strong>Faster only when every process agrees.</strong> A case counts as faster or slower when the median moves at least
+          10% and no process says otherwise. Everything else is "about the same".
+        </li>
+        <li>
+          <strong>Built code, idiomatic code.</strong> Effect loads from its npm package, and functype from its own build of
+          main at the commit below, after the last release ({perf.versions.functype}). Each case is written the way that
+          library's docs write it. Open a case to read both sides.
+        </li>
+        <li>
+          <strong>This run:</strong> {machine}, {perf.machine.os}, Node {perf.versions.node}, on {runDate()} at{" "}
+          <a href={commitUrl}>{perf.commit.slice(0, 7)}</a>. The Perf workflow runs whenever functype's code or these
+          benchmarks change on main, and every week, and posts the same table on pull requests. Shared CI runners vary by about 10% between runs, so it never fails a build.
+        </li>
+      </ul>
+      <h3>Shared setup</h3>
+      <Code code={perf.setup} lang="js" themes={themes} defaultColor={false} />
+      <h3>Run it yourself</h3>
+      <Code code={"pnpm install\npnpm -F functype build\npnpm -F functype-bench bench"} lang="bash" themes={themes} defaultColor={false} />
+      <p class="note">
+        The cases are in <a href={`${repo}/blob/main/packages/bench/src/cases.mjs`}>packages/bench/src/cases.mjs</a>. A case
+        that's unfair to either library is a bug: <a href={`${repo}/issues/new`}>open an issue</a>.
+      </p>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  .hero {
+    text-align: center;
+    padding-block: 88px 0;
+  }
+  .kicker {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--type);
+  }
+  h1 {
+    margin: 14px auto 0;
+    font-size: clamp(36px, 5vw, 56px);
+    line-height: 1.06;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    max-width: 12em;
+    text-wrap: balance;
+  }
+  .lede {
+    margin: 18px auto 0;
+    max-width: 36em;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    text-wrap: balance;
+  }
+  .tally {
+    display: inline-grid;
+    grid-template-columns: repeat(3, auto);
+    gap: 10px;
+    margin-top: 36px;
+  }
+  .tally div {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-width: 132px;
+    padding: 18px 20px;
+    border-radius: 20px;
+    background: var(--panel);
+  }
+  .tally b {
+    font-size: 40px;
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+  .tally div:first-child b {
+    color: var(--value);
+  }
+  .tally span {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .stamp {
+    margin: 22px 0 0;
+    font: 400 13px/1.6 var(--mono);
+    color: var(--ink-2);
+  }
+  .stamp a,
+  .method a,
+  .note a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--outline);
+    text-underline-offset: 3px;
+  }
+
+  .block {
+    padding-block: 88px 0;
+  }
+  .block h2 {
+    margin: 0 0 20px;
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+  .note {
+    margin: -8px 0 20px;
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .rows {
+    display: grid;
+    gap: 12px;
+  }
+  .row {
+    background: var(--panel);
+    border-radius: 22px;
+    padding: 22px 26px;
+    min-width: 0;
+  }
+  .row-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .row h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .badge {
+    font-size: 13px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--rule);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .badge.faster {
+    color: var(--value);
+    background: var(--value-tint);
+    box-shadow: none;
+  }
+  .badge.slower {
+    color: var(--num);
+  }
+  .bars {
+    display: grid;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .bar {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 76px;
+    align-items: center;
+    gap: 12px;
+  }
+  .bar i {
+    display: block;
+    height: 8px;
+    border-radius: 99px;
+    background: var(--bar-them);
+  }
+  .bar.us i {
+    background: var(--value);
+  }
+  .bar span:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  details {
+    margin-top: 14px;
+  }
+  summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--ink-2);
+    width: fit-content;
+  }
+  summary:hover {
+    color: var(--ink);
+  }
+  .spread {
+    margin: 10px 0 0;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  figure {
+    margin: 0;
+    min-width: 0;
+  }
+  figcaption {
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-bottom: 6px;
+  }
+  .pair :global(pre),
+  .method :global(pre) {
+    margin: 0;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--rule);
+    font: 400 12.5px/1.6 var(--mono);
+    overflow-x: auto;
+  }
+  .method ul {
+    margin: 0;
+    padding-left: 1.1em;
+    display: grid;
+    gap: 12px;
+    max-width: 46em;
+    color: var(--ink-2);
+    line-height: 1.6;
+  }
+  .method strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .method h3 {
+    margin: 36px 0 12px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .method .note {
+    margin-top: 20px;
+  }
+  main {
+    padding-bottom: 40px;
+  }
+
+  @media (max-width: 720px) {
+    .hero {
+      padding-top: 56px;
+    }
+    .tally {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      width: 100%;
+    }
+    .tally div {
+      min-width: 0;
+      padding: 14px 8px;
+    }
+    .tally b {
+      font-size: 32px;
+    }
+    .block {
+      padding-top: 64px;
+    }
+    .row {
+      padding: 18px;
+    }
+    .pair {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .bar {
+      grid-template-columns: 62px minmax(0, 1fr) 64px;
+      gap: 8px;
+    }
+  }
+</style>

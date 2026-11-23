@@ -9,6 +9,12 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+  # A Perf run on main writes new results to the perf-data branch; publish them.
+  workflow_run:
+    workflows: ["Perf"]
+    types: [completed]
+    branches: [main]
+
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
@@ -23,6 +29,7 @@ concurrency:
 jobs:
   # Build job
   build:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event != 'pull_request')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -47,6 +54,17 @@ jobs:
 
       - name: Build functype (needed by site llms-full generator)
         run: pnpm --filter functype build
+
+      # functype.org/performance and the home page read site/src/data/perf.json. The Perf workflow
+      # keeps the latest run on the perf-data branch; without that branch, the committed file stays.
+      - name: Use the latest benchmark results
+        run: |
+          if git ls-remote --exit-code --heads origin perf-data > /dev/null; then
+            git fetch --depth=1 origin perf-data
+            git show FETCH_HEAD:latest.json > site/src/data/perf.json
+          else
+            echo "No perf-data branch yet: keeping the committed site/src/data/perf.json"
+          fi
 
       - name: Build site
         run: pnpm --filter site build

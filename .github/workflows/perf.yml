@@ -1,0 +1,143 @@
+name: Perf
+
+# functype against Effect: timings and bundle sizes, from packages/bench.
+#
+# - On a pull request: times this PR's functype, the base branch's functype and Effect in the same
+#   job, and posts one comment it keeps up to date. Shared runners move timings by about 10% between
+#   runs, so it reports and never fails.
+# - On main, weekly and by hand: writes the results to the perf-data branch (latest.json, and a line in
+#   history.jsonl). Its completion triggers deploy-docs, which publishes them on functype.org/performance.
+
+on:
+  pull_request:
+    paths:
+      - "packages/functype/src/**"
+      - "packages/functype/package.json"
+      - "packages/functype/tsdown.config.ts"
+      - "packages/bench/**"
+      - ".github/workflows/perf.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/functype/src/**"
+      - "packages/functype/package.json"
+      - "packages/functype/tsdown.config.ts"
+      - "packages/bench/**"
+      - ".github/workflows/perf.yml"
+  schedule:
+    - cron: "0 7 * * 1" # Mondays, so an Effect release shows up within the week
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pull-request:
+    name: Compare with the base branch and Effect
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write # for the report comment; a fork's token can't comment, so that step skips
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install and build this PR's functype
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter functype build
+
+      - name: Install and build the base branch's functype
+        working-directory: base
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter functype build
+
+      - name: Time this PR, the base branch and Effect
+        run: pnpm --filter functype-bench bench --base "$GITHUB_WORKSPACE/base/packages/functype/dist" --md "$RUNNER_TEMP/perf.md"
+
+      - name: Add the report to the job summary
+        run: cat "$RUNNER_TEMP/perf.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post or update the PR comment
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs")
+            const body = fs.readFileSync(`${process.env.RUNNER_TEMP}/perf.md`, "utf8")
+            const marker = "<!-- functype-perf -->"
+            const { owner, repo } = context.repo
+            const issue_number = context.issue.number
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number, per_page: 100 })
+            const mine = comments.find((c) => c.user?.type === "Bot" && c.body?.startsWith(marker))
+            if (mine) await github.rest.issues.updateComment({ owner, repo, comment_id: mine.id, body })
+            else await github.rest.issues.createComment({ owner, repo, issue_number, body })
+
+  publish:
+    name: Publish the results to perf-data
+    # Only main's results go to the site: a dispatch from another branch reports and stops here.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # to push to the perf-data branch, which holds only results
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v6.1.0
+        with:
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Install and build functype
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter functype build
+
+      - name: Time functype and Effect
+        run: pnpm --filter functype-bench bench --out "$RUNNER_TEMP/perf.json" --md "$RUNNER_TEMP/perf.md"
+
+      - name: Add the report to the job summary
+        run: cat "$RUNNER_TEMP/perf.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit the results to the perf-data branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin perf-data > /dev/null; then
+            git fetch --depth=1 origin perf-data
+            git worktree add -B perf-data "$RUNNER_TEMP/data" FETCH_HEAD
+          else
+            git worktree add --orphan -b perf-data "$RUNNER_TEMP/data"
+          fi
+          cd "$RUNNER_TEMP/data"
+          cp "$RUNNER_TEMP/perf.json" latest.json
+          # History keeps the numbers and drops the code, which latest.json already carries.
+          jq -c 'del(.setup, .cases[].code, .bundles[].code)' latest.json >> history.jsonl
+          git add latest.json history.jsonl
+          git commit -m "perf: ${GITHUB_SHA::7} (${GITHUB_EVENT_NAME})"
+          git push origin perf-data
