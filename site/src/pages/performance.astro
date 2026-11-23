@@ -3,10 +3,19 @@ import { Code } from "astro:components";
 import Layout from "../layouts/Layout.astro";
 import { counts, dedent, formatKb, formatNs, perf, ratioLabel, runDate, widths } from "../data/perf";
 
-const groups = [...new Set(perf.cases.map((c) => c.group))].map((group) => ({
-  group,
-  cases: perf.cases.filter((c) => c.group === group),
-}));
+// Effects first, since they are what functype is for, then the data types. Within a group, the largest
+// lead over Effect comes first. Every case is still listed, and the tally above counts all of them.
+const GROUP_ORDER = ["Effects, run synchronously", "Effects, run asynchronously", "Data types"];
+const rank = (group: string): number => {
+  const i = GROUP_ORDER.indexOf(group);
+  return i === -1 ? GROUP_ORDER.length : i;
+};
+const groups = [...new Set(perf.cases.map((c) => c.group))]
+  .sort((a, b) => rank(a) - rank(b))
+  .map((group) => ({
+    group,
+    cases: perf.cases.filter((c) => c.group === group).sort((a, b) => b.vsEffect.median - a.vsEffect.median),
+  }));
 const tally = counts();
 const repo = "https://github.com/jordanburke/functype";
 const commitUrl = `${repo}/commit/${perf.commit}`;
