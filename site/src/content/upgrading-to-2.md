@@ -142,6 +142,7 @@ ts-builds' functype preset reports these through `@typescript-eslint/unbound-met
 
 - **`run()`'s `Left` holds only typed errors.** A defect, such as a throw in `IO.sync` or a `map` callback, rejects the promise. An interruption rejects with an `InterruptedError`, except inside an `interruptOn(signal)` region or `runCancellable()`, which still resolve to `Left(InterruptedError)`.
 - **`runSync()`** throws a defect instead of returning it in a `Left`.
+- **Mapping over a callback you don't own?** On 1.x, a throwing `map` callback gave a `Left`. On 2.x it's a defect. From 2.1.0, `io.mapTry(f, onError)` keeps the 1.x behaviour, with the throw as a typed error built by `onError`. On 2.0.0, write `io.flatMap((a) => IO.tryCatch(() => f(a), onError))`.
 - **A `throw` inside `IO.gen` is a defect.** Use `yield* IO.fail(e)` for a typed failure.
 - **More defects:** `IO.race([])`, `IO.firstSuccessOf([])` and an `IO.service` whose service was never provided are now defects, so they reject `run()`.
 - **`runCancellable().result` rejects on a defect.** A caller that keeps only `cancel` gets an unhandled rejection; attach a handler to `result`.
@@ -178,7 +179,7 @@ const inOrder = IO.all(steps, { concurrency: 1 });
 
 ### Other changes the compiler can't see
 
-- **Accessor reads without `()`** in a truthiness check, before `??`, in a template string, or passed as `unknown` or a generic (`expect(list.head)`, `Option(list.head)`) get the method itself. That includes the built code of a library you depend on: see [Before you start](#before-you-start).
+- **Accessor reads without `()`** in a truthiness check, before `??`, in a template string, or passed as `unknown` or a generic (`expect(list.head)`, `Option(list.head)`) get the method itself. That includes the built code of a library you depend on: see [Before you start](#before-you-start). From eslint-plugin-functype 2.201.0, `functype/no-uncalled-method` reports these reads in your own code.
 - **A default that is a function:** `opt.getOrElse(fn)` calls `fn`. Write `opt.getOrElse(() => fn)` to get the function back.
 - **Side effects in a default** now run only when the value is missing.
 - **Code typed `any`** passes the compiler with a 1.x call, such as `opt.orElse(42)`, and fails at run time.
