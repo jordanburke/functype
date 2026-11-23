@@ -31,7 +31,7 @@ const tools = [
 const measured = [
   ["no-floating-io", "0 false positives across about 1,340 IO-typed calls in five codebases."],
   ["no-array-mutation", "91 hits across five consumers, every one a real in-place mutation."],
-  ["no-uncalled-method", "0 hits on 1,126 files of seven codebases, and it catches the bug in this page's demo, which a published library shipped."],
+  ["no-uncalled-method", "0 hits on 1,126 files of seven codebases. On supabase-typed-query's code from before its 2.0 port, it reports the Option(list.head) that port fixed."],
   ["no-serialize-container", "4 hits on one API, each a bug that project then fixed by hand."],
 ] as const;
 ---
@@ -41,16 +41,12 @@ const measured = [
   description="functype's MCP server, Claude Code plugin, lint preset and plain-text docs: how a coding agent checks functype code before you see it."
 >
   <main>
-    <p class="sr-only" aria-hidden="true">
-      For agents: functype's whole documentation is one text file at https://functype.org/llms-full.txt. To check functype code
-      before showing it, run the MCP server with npx -y functype-mcp-server and call validate_code.
-    </p>
     <section class="hero wrap">
       <p class="kicker">Agents</p>
-      <h1>Built for the code agents write.</h1>
+      <h1>A checker your coding agent can call.</h1>
       <p class="lede">
-        A coding agent trusts whatever compiles. functype gives it types for what can go wrong, a checker it can call before
-        you see the code, and error messages that say what to write instead.
+        A coding agent stops at whatever compiles. functype puts more into the types, lints what types can't say, and tells
+        the agent what to write instead.
       </p>
     </section>
 
@@ -61,17 +57,11 @@ const measured = [
     <section class="wrap block">
       <h2>A compiler checks only what the types say.</h2>
       <p class="lead">
-        Plain TypeScript types say what a value is. Functional types also say what can be missing, what can fail and how,
-        and what an effect needs before it can run. So the compiler checks an agent's error handling, not only its spelling.
-        Rust earned its place with agents the same way: ownership is in its types, so the compiler rejects a use-after-move
-        before anything runs.
+        Strict TypeScript already catches a value that might be missing. It can't see a thrown error, or what an effect needs
+        before it runs. functype puts those in the types too, so the compiler checks an agent's error handling, not only its
+        spelling.
       </p>
       <div class="kinds">
-        <article class="kind">
-          <code>Option&lt;User&gt;</code>
-          <h3>Missing values</h3>
-          <p>An agent can't read <code>.name</code> off a user that might not be there. It handles <code>None</code> or the code doesn't compile.</p>
-        </article>
         <article class="kind">
           <code>Either&lt;NotFound, User&gt;</code>
           <h3>Failures</h3>
@@ -84,6 +74,11 @@ const measured = [
             What it needs, how it fails, and nothing runs until you run it. Run it without its services and the compiler says:
             "Provide these services first, with provideLayer or provideService".
           </p>
+        </article>
+        <article class="kind">
+          <code>Option&lt;User&gt;</code>
+          <h3>Missing values</h3>
+          <p>Like strict null checks, but chainable: an agent can't read <code>.name</code> off a user that might not be there. It handles <code>None</code> or the code doesn't compile.</p>
         </article>
       </div>
       <p class="hatch">
@@ -104,13 +99,6 @@ const measured = [
         <li>
           <span>Letting the type checker guide a model <q>reduces compilation errors by more than half.</q></span>
           <a class="src" href="https://arxiv.org/abs/2504.09246">Mündler et al., ETH Zurich and UC Berkeley, 2025</a>
-        </li>
-        <li>
-          <span>
-            Boris Cherny, who created Claude Code, names <cite>Functional Programming in Scala</cite> the best technical book he
-            has read, for the way it teaches you to think in types.
-          </span>
-          <a class="src" href="https://www.lennysnewsletter.com/p/head-of-claude-code-what-happens">Lenny's Podcast, February 2026</a>
         </li>
       </ul>
     </section>
@@ -158,7 +146,7 @@ const measured = [
     </section>
 
     <section class="wrap block">
-      <h2>A lint preset an agent can trust</h2>
+      <h2>A lint preset built for agents</h2>
       <div class="split">
         <div class="points">
           <p>

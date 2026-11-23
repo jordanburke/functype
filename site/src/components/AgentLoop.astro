@@ -1,7 +1,7 @@
 ---
 // A coding agent writing a bug that compiles, the MCP server's validate_code catching it, and the fix.
 // The lint message and both results are what functype-mcp-server 2.1.0 returns for this code, word for
-// word (the message is cut after its first two sentences).
+// word (the message is cut before its last sentence, "Use void if dropping it is deliberate").
 interface Props {
   heading?: string;
 }
@@ -13,12 +13,12 @@ const Heading = heading as "h2" | "h3";
   <div class="copy">
     <Heading class="title">The bug compiles. The check doesn't let it through.</Heading>
     <p>
-      In functype 2, <code>head</code> is a method, so <code>Option(rows.head)</code> wraps the function itself. TypeScript
-      accepts it: a function has a <code>.name</code> too.
+      <code>users.save</code> returns an <code>Either</code>, so a failed save is a value, not a throw. Drop it and
+      TypeScript says nothing: the user is welcomed whether or not the save worked.
     </p>
     <p>
-      <code>validate_code</code> runs the compiler and the lint preset, the same checks as your build, and the error tells
-      the agent what to write instead.
+      <code>validate_code</code> runs the compiler and functype's lint preset, and the error tells the agent what to write
+      instead.
     </p>
     <button class="replay" type="button" data-replay>Replay</button>
   </div>
@@ -31,34 +31,36 @@ const Heading = heading as "h2" | "h3";
     <ol class="steps" data-steps>
       <li class="step you">
         <span class="who">You</span>
-        <p>Return the first row's name, or "nobody".</p>
+        <p>Save the new user, then welcome them.</p>
       </li>
       <li class="step">
         <span class="who">Agent</span>
-        <div class="code" aria-label="names.ts">
-          <div><span class="ln">5</span><span class="k">export const</span> firstName = (rows: List&lt;Row&gt;): string =&gt;</div>
+        <div class="code" aria-label="register.ts">
+          <div><span class="ln">7</span><span class="k">export const</span> register = (user: User): string =&gt; {"{"}</div>
+          <div><span class="ln">8</span>&nbsp;&nbsp;<mark class="bad">users.<span class="f">save</span>(user)</mark></div>
           <div>
-            <span class="ln">6</span>&nbsp;&nbsp;<span class="f">Option</span>(<mark class="bad">rows.head</mark>).<span class="f">map</span>((row) =&gt; row.name)
+            <span class="ln">9</span>&nbsp;&nbsp;<span class="k">return</span> <span class="s">`Welcome, ${"{"}user.email{"}"}`</span>
           </div>
-          <div>
-            <span class="ln">7</span>&nbsp;&nbsp;&nbsp;&nbsp;.<span class="f">getOrElse</span>(() =&gt; <span class="s">"nobody"</span>)
-          </div>
+          <div><span class="ln">10</span>{"}"}</div>
         </div>
         <span class="chip">tsc: 0 errors</span>
       </li>
       <li class="step tool">
         <span class="who">validate_code</span>
         <p class="fail">
-          <b>✗ Line 6:</b> `head` is a method of List, so this reads the function itself, not a value. Call it: `head()`.
-          <span class="rule">functype/no-uncalled-method</span>
+          <b>✗ Line 8:</b> This result is dropped, so a failure in it is silently ignored. Check isLeft() / isFailure(), fold
+          it, or return it.
+          <span class="rule">functype/no-floating-result</span>
         </p>
       </li>
       <li class="step">
         <span class="who">Agent</span>
         <div class="code diff">
-          <div class="del">-&nbsp;&nbsp;Option(rows.head).map((row) =&gt; row.name)…</div>
+          <div class="del">-&nbsp;&nbsp;register = (user: User): string =&gt; {"{"} …</div>
+          <div class="add">+&nbsp;&nbsp;register = (user: User): Either&lt;SaveError, string&gt; =&gt;</div>
           <div class="add">
-            +&nbsp;&nbsp;rows.<span class="f">headOption</span>().<span class="f">map</span>((row) =&gt; row.name)…
+            +&nbsp;&nbsp;&nbsp;&nbsp;users.<span class="f">save</span>(user).<span class="f">map</span>((saved) =&gt;{" "}
+            <span class="s">`Welcome, ${"{"}saved.email{"}"}`</span>)
           </div>
         </div>
       </li>
