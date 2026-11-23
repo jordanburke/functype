@@ -6,6 +6,13 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **Collections are up to 2.5× faster to build, because they no longer freeze each value.** `List`, `Set`, `Map`, `Stack`, `LazyList` and `Obj` froze every value they built, since 1.27.0. In 1.27 that kept stored fields such as `size` from going stale; in 2.0 those became getters that read the data, so nothing could go stale any more, and the freeze was most of what building a collection cost. A List built, mapped and filtered over 10 items takes 30 ns instead of 77 ns on Node 24.20.0, against 24 ns for Effect's `Array` functions on a plain array. The prototypes stay frozen, and so does the array `List.empty()` shares. What changes at run time:
+  - `Object.isFrozen(list)` is `false`.
+  - Writing a field or adding a property through a cast, such as `(list as any).extra = 1`, no longer throws. The types still mark every field read-only, and the new `no-container-mutation` lint rule reports the write.
+  - Assigning over a method, such as `(list as any).map = f`, still throws in strict mode, because the method lives on the frozen prototype.
+  - `vi.spyOn(list, "map")` works again: it threw on a frozen value.
+- **eslint-plugin-functype: `no-container-mutation`**, `error` in `recommended`. It reports a write to a functype value: an assignment, `++`/`--` or `delete` on one of its fields or anything reached through them, such as a List's array, and `Object.assign`, `Object.defineProperty`, `Reflect.set` and similar calls aimed at one. It looks through a cast at the value underneath, so `(list as unknown as { value: number[] }).value = []` is reported. Only values whose `fold` functype declares count. Type-aware only. It found nothing in 1,128 files of seven codebases.
+
 ## 2.1.0 - 2026-11-22
 
 - **`IO.mapTry(f, onError)` and `Either.mapTry(f, onError)`: map with a callback that may throw.** In 2.0 a throw inside `IO.map` is a defect, so `run()` rejects, and `Either.map` lets a throw escape. `mapTry` catches the throw into the error channel instead, as a typed error built by `onError`: `IO<R, E | E2, B>` and `Either<L | L2, U>`. Use it where you map over a callback you don't own, such as a caller's mapper inside a library. It replaces `io.flatMap((a) => IO.tryCatch(() => f(a), onError))`, which is exactly what it does. Only a synchronous throw is caught, and a throw from `onError` itself stays a defect. Because the failure is typed, `retry` re-runs a step whose `f` threw, where a `map` throw is a defect and never retried. `Try.map` already catches, so Try has no `mapTry` (#605).

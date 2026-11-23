@@ -390,7 +390,7 @@ const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
 
 /**
  * Creates an Obj instance wrapping a plain object with immutable operations. The object isn't
- * copied. Frozen, as collections have been since 1.27.0 (#276 §14 Rules).
+ * copied. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost.
  * @param data - The plain object to wrap
  * @returns A new Obj instance
  * @typeParam T - The record type
@@ -400,7 +400,7 @@ const wrap = <T extends Record<string, Type>>(data: T): Obj<T> => {
   const obj = Object.create(ObjProto) as Mutable<Obj<T>>
   obj._tag = "Obj"
   obj.data = data
-  return Object.freeze(obj)
+  return obj
 }
 
 /* eslint-enable functional/immutable-data */

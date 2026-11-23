@@ -420,13 +420,13 @@ const LazyListProto = define<LazyListOf<A>, "_tag" | "source">()("LazyList", {
   },
 })
 
-/** Builds a LazyList that reads `source`. Frozen, as collections have been since 1.27.0 (#276 §14 Rules). */
+/** Builds a LazyList that reads `source`. Not frozen: the types mark its fields read-only, and eslint-plugin-functype's no-container-mutation reports a write through a cast. Freezing each value was most of what building one cost. */
 const wrap = <A extends Type>(source: Iterable<A>): LazyList<A> => {
   // The one cast: a prototype checked at the opaque A works for every A.
   const lazyList = Object.create(LazyListProto) as Mutable<LazyListOf<A>>
   lazyList._tag = "LazyList"
   lazyList.source = source
-  return Object.freeze(lazyList)
+  return lazyList
 }
 
 /* eslint-enable functional/immutable-data */

@@ -30,12 +30,14 @@
  * - no-serialize-container: 4 calls on agent-todo's API, each a bug that project fixed.
  * - no-uncalled-method: 0 hits on 1,126 files of seven consumers on 1.x and 2.x; it finds the
  *   `Option(list.head)` a published library shipped against 2.0 (#603).
+ * - no-container-mutation: 0 hits on 1,128 files of seven consumers. A write to a functype value
+ *   needs a cast, and since 2.2 nothing else stops it: collections no longer freeze each value.
  * - no-getOrThrow-in-render and must-fold-on-component-return fire only inside a React component or
  *   hook, and reported nothing on 1,403 files of React code.
  * - no-get-unsafe: an unwrap outside an `@interop` boundary; allowed in test files.
  *
- * no-array-mutation, no-floating-io, no-floating-result, no-serialize-container and no-uncalled-method
- * are type-aware:
+ * no-array-mutation, no-floating-io, no-floating-result, no-serialize-container, no-uncalled-method
+ * and no-container-mutation are type-aware:
  * without `parserOptions.projectService` they report nothing.
  */
 const recommendedRules = {
@@ -56,6 +58,7 @@ const recommendedRules = {
   "functype/no-floating-result": "error",
   "functype/no-serialize-container": "error",
   "functype/no-uncalled-method": "error",
+  "functype/no-container-mutation": "error",
   "functype/no-getOrThrow-in-render": "error",
   "functype/must-fold-on-component-return": "error",
   "functype/prefer-flatmap": "off",
