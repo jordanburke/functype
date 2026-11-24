@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package's guide, so the comparison has one source.
+import { Content as VsEffectContent } from "../../../packages/functype/docs/vs-effect.md";
+
+const links = [
+  {
+    href: "/performance/",
+    label: "Performance vs Effect",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/blob/main/packages/functype/docs/vs-effect.md",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype vs Effect (effect-ts): which one to use"
+  heading="functype vs Effect"
+  tagline="functype and Effect (effect-ts) both bring typed errors and effects to TypeScript. functype is a small library you adopt per function; Effect is a runtime."
+  links={links}
+>
+  <VsEffectContent />
+</DocLayout>

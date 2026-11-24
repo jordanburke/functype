@@ -67,7 +67,7 @@ Install with `npm install functype`. Every type listed below is also available f
 - [AI Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/ai-guide.md): Guide for AI assistants writing functype code
 - [Quick Reference](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/quick-reference.md): Concise guide to common patterns and operations
 - [Examples](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/examples.md): Practical examples for the major types
-- [functype vs Effect](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/vs-effect.md): How functype relates to Effect-TS
+- [functype vs Effect](https://functype.org/vs-effect): How functype relates to Effect (effect-ts), and when to choose each
 - [Companion Pattern](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/companion-pattern.md): Scala-style constructors with static utilities
 - [Variance Guide](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/variance-guide.md): Covariance conventions and the Widen helper
 - [Error Formatting](https://github.com/jordanburke/functype/blob/main/packages/functype/docs/error-formatting.md): Utilities for readable error output

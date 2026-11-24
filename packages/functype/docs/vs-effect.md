@@ -1,7 +1,7 @@
 # functype vs Effect
 
-functype and Effect both bring functional programming to TypeScript and overlap on the
-surface — both have an effect type, typed errors, and dependency injection — but they
+functype and Effect (Effect-TS on GitHub, often searched as effect-ts) both bring functional
+programming to TypeScript and overlap on the surface — both have an effect type, typed errors, and dependency injection — but they
 solve different problems. **functype is a small, dependency-free library of functional data
 types you adopt incrementally. Effect is a comprehensive effect system and runtime you
 build your application around.**
@@ -55,8 +55,9 @@ dependency-free, and adoptable one function at a time.
 
 For any of these, Effect is the better tool:
 
-- You need **structured concurrency**: racing, supervised fibers, safe interruption,
-  resource scoping across concurrent work.
+- You need **structured concurrency**: supervised fibers, `fork`/`join`, and resource scoping
+  across concurrent work. functype's `IO` has `race`, `timeout` and cancellation, but no fibers
+  and no supervision.
 - You're building around **streaming** (`Stream`) or want first-class **scheduling**.
 - You want an **integrated ecosystem** — Schema, platform/runtime, HTTP, config —
   designed to compose as one system.
@@ -87,10 +88,12 @@ This is where functype is doing something no other TypeScript FP library is doin
 the library is a complete **enforce → measure → teach** loop for AI-assisted development:
 
 - **Enforce** — [`eslint-plugin-functype`](https://www.npmjs.com/package/eslint-plugin-functype):
-  12 lint rules that steer code (human- or model-written) toward functype idioms.
+  a lint preset in which every rule is an error, and each message names the functype fix. It
+  steers code, human- or model-written, toward functype idioms.
 - **Measure** — [`functype-eval`](https://www.npmjs.com/package/functype-eval): scores a
-  codebase's FP/functype adherence 0–100, and (Phase 2) benchmarks whether LLMs write
-  better TypeScript with functype than without.
+  codebase's FP/functype adherence 0–100, and its `baseline`/`check` commands keep each file's
+  count from rising. A planned phase benchmarks whether LLMs write better TypeScript with
+  functype than without.
 - **Teach** — a functype MCP server (`search_docs`, `get_type_api`, `validate_code`) and a
   Claude skill that put accurate, version-correct functype guidance directly in the model's
   context.
@@ -104,12 +107,16 @@ claim rather than just assert it.
 ## Performance
 
 functype's collections are immutable and **array-backed (copy-on-write)** — simple,
-predictable, zero-dependency — not structurally-shared persistent data structures. Each
-container is built by a constructor function, so methods are per-instance rather than
-shared on a prototype. This is the right trade for domain and service-layer code; in
-measured hot loops, drop to native arrays (`list.toArray()` is the escape hatch). Effect's
-collections make different trade-offs suited to its runtime. See the (forthcoming)
-performance guide for benchmarks and guidance.
+predictable, zero-dependency — not structurally-shared persistent data structures. Their
+methods live on a shared prototype, and values are frozen only in development. This is the
+right trade for domain and service-layer code; in measured hot loops, drop to native arrays
+(`list.toArray()` is the escape hatch).
+
+The [performance page](https://functype.org/performance/) times everyday operations against
+Effect on every change to functype. functype's `IO` builds and runs effects faster than
+Effect's in most cases. On plain data types, `Either` is level with Effect's `Result`, while
+`Option` and `List` trail Effect's by a few nanoseconds per operation. The page has the
+current numbers and the code for each case.
 
 ## Summary
 
