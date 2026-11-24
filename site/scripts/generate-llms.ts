@@ -97,10 +97,10 @@ const GUIDES: ReadonlyArray<Link> = [
     "Concise guide to common patterns and operations",
   ),
   guide("Examples", "examples.md", "Practical examples for the major types"),
-  guide(
+  sitePage(
     "functype vs Effect",
-    "vs-effect.md",
-    "How functype relates to Effect-TS",
+    "vs-effect",
+    "How functype relates to Effect (effect-ts), and when to choose each",
   ),
   guide(
     "Companion Pattern",
