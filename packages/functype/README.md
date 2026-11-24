@@ -87,6 +87,7 @@ bun add functype
 
 ```typescript
 import { Option } from "functype/option" // bundles the same as importing from "functype"
+import { Either, IO, List, Option } from "functype/core" // the 17 names most code needs, in one import
 ```
 
 For the measured sizes and how they are checked, see the [Bundle Size guide](docs/BUNDLE_OPTIMIZATION.md).
@@ -272,7 +273,7 @@ const asyncResult = await DoAsync(async function* () {
 ```typescript
 import { IO } from "functype"
 
-type User = { id: string; name: string }
+type User = { id: string; name: string; settings: string }
 
 const loadUser = (id: string) =>
   IO.tryPromise({
@@ -288,6 +289,12 @@ const user = await loadUser("42").retry(2).timeout(5000).run()
 const { result, cancel } = loadUser("42").runCancellable()
 const controller = new AbortController()
 const exit = await loadUser("42").runExit({ signal: controller.signal }) // Success | Failure | Die | Interrupted
+
+// A callback that may throw: in map a throw is a defect and run() rejects; mapTry makes it a typed error
+const settings = loadUser("42").mapTry(
+  (user) => JSON.parse(user.settings) as unknown,
+  (error) => new Error(`Bad settings: ${String(error)}`),
+)
 ```
 
 #### Tracing

@@ -516,7 +516,18 @@ Option.fromBinary<string>(binaryData)
 
 ## Lint Conventions (eslint-plugin-functype)
 
-`recommended` **errors** on `no-let`, `no-imperative-loops`, `prefer-map`, `prefer-fold`, `prefer-functype-map`, `prefer-functype-set` and `collection-naming`. `prefer-option`, `prefer-either` and `prefer-try` warn. Write code that passes, and when code is correct *because* it isn't FP-shaped, declare the boundary instead of disabling the rule:
+Since 2.0 there is one preset, `recommended`, and every rule in it is an **error** or **off**: an agent acts on a failed build and passes over a warning. Twenty rules are errors; only `prefer-flatmap` and `prefer-do-notation` are off. `functype.configs.tests` relaxes a few for test files.
+
+The type-aware rules need `parserOptions.projectService`, and they catch bugs that compile. Each message names the fix:
+
+- **`no-uncalled-method`:** `list.head` without `()` reads the method itself. Call it: `list.head()` or `list.headOption()`.
+- **`no-floating-result`:** an `Either` or `Try` that's dropped loses its failure. Return it, `fold` it, or mark a deliberate drop with `void`.
+- **`no-floating-io`:** an `IO` that's built and never run does nothing. Run it, return it, or `yield*` it.
+- **`no-serialize-container`:** an `Either` or `Option` sent to `c.json()` or `JSON.stringify` sends its envelope. Unwrap it first.
+- **`no-container-mutation`:** a write to a functype value through a cast. Build a new value instead. Collections also freeze each value under `NODE_ENV=development` (or `FUNCTYPE_FREEZE=1`), so such a write throws there.
+- **`no-array-mutation`:** `push`, `sort` or `xs[i] = v` changes an array in place. Build a new one.
+
+Write code that passes, and when code is correct *because* it isn't FP-shaped, declare the boundary instead of disabling the rule:
 
 | Situation | Do this | Not this |
 | --- | --- | --- |
