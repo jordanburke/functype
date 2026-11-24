@@ -594,6 +594,8 @@ async function fetchUserSafe(id: string): Promise<Either<Error, User>> {
 | `Option(user).map(u => Option(u.email))`       | `Option(user).flatMap(u => Option(u.email))`      |
 | `Try(() => x).orThrow()` in non-error contexts | `Try(() => x).getOrElse(() => fallback)`          |
 | `list.toArray().push(item)` (mutates)          | `list.add(item).toArray()`                        |
+| `list.head` / `if (opt.isSome)` (no call)      | `list.head()` / `opt.isSome()`: these are methods |
+| `(list as any).value = …` (write through a cast) | Build a new one: `list.map(…)`, `list.add(…)`   |
 | Using `any` type                               | Use proper type parameters: `Option<T>`           |
 
 ## Performance Tips

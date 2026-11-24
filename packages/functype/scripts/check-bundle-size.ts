@@ -31,6 +31,12 @@ console.log(Option(1).map((x) => x + 1).getOrElse(() => 0))`,
     ceiling: 6_500,
   },
   {
+    name: "Option only, from functype/core",
+    source: `import { Option } from "./dist/core/exports.js"
+console.log(Option(1).map((x) => x + 1).getOrElse(() => 0))`,
+    ceiling: 6_500,
+  },
+  {
     name: "Option only, from the root import",
     source: `import { Option } from "./dist/index.js"
 console.log(Option(1).map((x) => x + 1).getOrElse(() => 0))`,

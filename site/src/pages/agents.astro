@@ -33,6 +33,10 @@ const measured = [
   ["no-array-mutation", "91 hits across five consumers, every one a real in-place mutation."],
   ["no-uncalled-method", "0 hits on 1,126 files of seven codebases. On supabase-typed-query's code from before its 2.0 port, it reports the Option(list.head) that port fixed."],
   ["no-serialize-container", "4 hits on one API, each a bug that project then fixed by hand."],
+  [
+    "no-container-mutation",
+    "0 hits on 1,128 files of seven codebases, 343 of them tests, and every write planted through a cast is reported.",
+  ],
 ] as const;
 ---
 

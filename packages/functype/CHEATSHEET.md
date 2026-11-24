@@ -1,6 +1,6 @@
-# Functype Cheatsheet — for Scala / cats / fp-ts users
+# Functype Cheatsheet — for Scala / cats / Effect users
 
-You know functional programming. functype is Scala-inspired but TypeScript-idiomatic, and since 2.0 its extraction methods use Scala's names with lazy arguments, as Effect and fp-ts do. This page maps your existing muscle memory to functype 2.x.
+You know functional programming. functype is Scala-inspired but TypeScript-idiomatic, and since 2.0 its extraction methods use Scala's names with lazy arguments, as Effect does. This page maps your existing muscle memory to functype 2.x. The Effect column uses Effect 4's names: Effect 4 calls Either `Result`. Coming from fp-ts? fp-ts is merging into Effect, which Effect's docs call its successor, so the Effect column is where fp-ts's names went.
 
 For a JavaScript-first introduction, see [`docs/JAVASCRIPT_TO_FUNCTYPE_PATTERNS.md`](./docs/JAVASCRIPT_TO_FUNCTYPE_PATTERNS.md). For an exhaustive interface matrix, see [`docs/FUNCTYPE_FEATURE_MATRIX.md`](./docs/FUNCTYPE_FEATURE_MATRIX.md).
 
@@ -16,28 +16,33 @@ import { Either, Left, Right } from "functype/either"
 import { Try } from "functype/try"
 import { List } from "functype/list"
 
-// Or import everything from the root:
-import { Option, Either, Try, List, IO } from "functype"
+// The names most code needs, in one short import:
+import { Option, Either, Try, IO, List, Set, Map } from "functype/core"
+
+// Or everything, from the root:
+import { Option, Either, Try, List, IO, Layer, Http } from "functype"
 ```
+
+`functype/core` is a curated list of 17 names: Option, Some, None, Either, Left, Right, Try, IO, Tag, List, Set, Map, Tuple, `tryCatch`, `tryCatchAsync`, `isLeft` and `isRight`. It's for finding your way, not for bundle size: every import tree-shakes to the same bundle.
 
 ---
 
 ## Option
 
-| Scala / cats                | fp-ts                           | functype                    |
-| --------------------------- | ------------------------------- | --------------------------- |
-| `Some(x)` / `None`          | `O.some(x)` / `O.none`          | `Some(x)` / `None()`        |
-| `Option(x)` (null-aware)    | `O.fromNullable(x)`             | `Option(x)`                 |
-| `opt.getOrElse(d)`          | `O.getOrElse(() => d)(opt)`     | `opt.getOrElse(() => d)`    |
-| `opt.orElse(other)`         | `O.alt(() => other)(opt)`       | `opt.orElse(() => other)`   |
-| `opt.map(f)` / `flatMap(f)` | `O.map(f)` / `O.chain(f)`       | `opt.map(f)` / `flatMap(f)` |
-| `opt.fold(zero, f)`         | `O.fold(() => zero, f)(opt)`    | `opt.fold(() => zero, f)`   |
-| `opt.getOrElse(throw err)`  | `O.getOrElseW(() => throw)`     | `opt.orThrow(err?)`         |
-| `opt.toRight(left)`         | `E.fromOption(() => left)(opt)` | `opt.toEither(left)`        |
-| `Option.sequence(opts)`     | `A.sequence(O.Applicative)`     | `Option.sequence(opts)`     |
-| `opts.traverse(f)`          | `A.traverse(O.Applicative)(f)`  | `Option.traverse(opts, f)`  |
+| Scala / cats                | Effect                                                 | functype                    |
+| --------------------------- | ------------------------------------------------------ | --------------------------- |
+| `Some(x)` / `None`          | `Option.some(x)` / `Option.none()`                     | `Some(x)` / `None()`        |
+| `Option(x)` (null-aware)    | `Option.fromNullishOr(x)`                              | `Option(x)`                 |
+| `opt.getOrElse(d)`          | `Option.getOrElse(opt, () => d)`                       | `opt.getOrElse(() => d)`    |
+| `opt.orElse(other)`         | `Option.orElse(opt, () => other)`                      | `opt.orElse(() => other)`   |
+| `opt.map(f)` / `flatMap(f)` | `Option.map(opt, f)` / `Option.flatMap(opt, f)`        | `opt.map(f)` / `flatMap(f)` |
+| `opt.fold(zero, f)`         | `Option.match(opt, { onNone: () => zero, onSome: f })` | `opt.fold(() => zero, f)`   |
+| `opt.getOrElse(throw err)`  | `Option.getOrThrowWith(opt, () => err)`                | `opt.orThrow(err?)`         |
+| `opt.toRight(left)`         | `Result.fromOption(opt, () => left)`                   | `opt.toEither(left)`        |
+| `Option.sequence(opts)`     | `Option.all(opts)`                                     | `Option.sequence(opts)`     |
+| `opts.traverse(f)`          | `Option.all(Array.map(opts, f))`                       | `Option.traverse(opts, f)`  |
 
-**Lazy fallbacks:** both methods take a function, which runs only when there is no value. This is Scala's by-name `default: => B`, written as a thunk the way Effect and fp-ts write it.
+**Lazy fallbacks:** both methods take a function, which runs only when there is no value. This is Scala's by-name `default: => B`, written as a thunk the way Effect writes it.
 
 - `opt.getOrElse(() => 42)` returns `T | 42`.
 - `opt.orElse(() => Option(42))` returns `Option<T | 42>`.
@@ -48,38 +53,40 @@ A bare value fails to compile at the argument: `getOrElse(42)` is a type error, 
 
 ## Either
 
-| Scala / cats              | fp-ts                       | functype                   |
-| ------------------------- | --------------------------- | -------------------------- |
-| `Right(x)` / `Left(e)`    | `E.right(x)` / `E.left(e)`  | `Right(x)` / `Left(e)`     |
-| `e.isRight` / `isLeft`    | `E.isRight(e)` / `isLeft`   | `e.isRight()` / `isLeft()` |
-| `e.map(f)` / `flatMap(f)` | `E.map(f)` / `E.chain(f)`   | `e.map(f)` / `flatMap(f)`  |
-| `e.mapLeft(f)`            | `E.mapLeft(f)`              | `e.mapLeft(f)`             |
-| `e.swap`                  | `E.swap`                    | `e.swap()`                 |
-| `e.fold(l, r)`            | `E.fold(l, r)(e)`           | `e.fold(l, r)`             |
-| `e.getOrElse(d)`          | `E.getOrElse(() => d)(e)`   | `e.getOrElse(() => d)`     |
-| `e.toOption`              | `E.toOption`                | `e.toOption()`             |
-| `Either.sequence(arr)`    | `A.sequence(E.Applicative)` | `Either.sequence(arr)`     |
-| `arr.traverse(f)`         | `A.traverse(E.Applicative)` | `Either.traverse(arr, f)`  |
+| Scala / cats              | Effect (`Result`)                                 | functype                   |
+| ------------------------- | ------------------------------------------------- | -------------------------- |
+| `Right(x)` / `Left(e)`    | `Result.succeed(x)` / `Result.fail(e)`            | `Right(x)` / `Left(e)`     |
+| `e.isRight` / `isLeft`    | `Result.isSuccess(r)` / `Result.isFailure(r)`     | `e.isRight()` / `isLeft()` |
+| `e.map(f)` / `flatMap(f)` | `Result.map(r, f)` / `Result.flatMap(r, f)`       | `e.map(f)` / `flatMap(f)`  |
+| `e.mapLeft(f)`            | `Result.mapError(r, f)`                           | `e.mapLeft(f)`             |
+| `e.swap`                  | `Result.flip(r)`                                  | `e.swap()`                 |
+| `e.fold(l, r)`            | `Result.match(r, { onFailure: l, onSuccess: r })` | `e.fold(l, r)`             |
+| `e.getOrElse(d)`          | `Result.getOrElse(r, () => d)`                    | `e.getOrElse(() => d)`     |
+| `e.toOption`              | `Result.getSuccess(r)`                            | `e.toOption()`             |
+| `Either.sequence(arr)`    | `Result.all(arr)`                                 | `Either.sequence(arr)`     |
+| `arr.traverse(f)`         | `Result.all(Array.map(arr, f))`                   | `Either.traverse(arr, f)`  |
 
 ---
 
 ## Try
 
-| Scala                           | fp-ts equivalent                    | functype                                                                                     |
-| ------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------- |
-| `Try { code }`                  | `E.tryCatch(() => code, identity)`  | `Try(() => code)`                                                                            |
-| `Success(x)` / `Failure(err)`   | `E.right(x)` / `E.left(err)`        | `Try.success(x)` / `Try.failure(err)`                                                        |
-| `t.recover { case ... => ... }` | `E.orElse(...)`                     | `t.recover(err => fallback)`                                                                 |
-| `t.recoverWith { case ... }`    | `E.orElse(err => E.right(...))`     | `t.recoverWith(err => Try.success(alt))`                                                     |
-| `t.toEither` (loses error)      | n/a                                 | `t.toEither(left)` or `t.toEither(e => buildLeft(e))` ← **builder threads underlying Error** |
-| `t.toOption`                    | `O.fromNullable(t.toOption.orNull)` | `t.toOption()`                                                                               |
-| `Try.sequence(tries)`           | n/a                                 | `Try.sequence(tries)` (first Failure wins)                                                   |
-| `tries.traverse(f)`             | n/a                                 | `Try.traverse(arr, f)`                                                                       |
+Effect has no Try type: a throwing call becomes a `Result` through `Result.try`.
+
+| Scala                           | Effect equivalent                                   | functype                                                                                     |
+| ------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `Try { code }`                  | `Result.try(() => code)`                            | `Try(() => code)`                                                                            |
+| `Success(x)` / `Failure(err)`   | `Result.succeed(x)` / `Result.fail(err)`            | `Try.success(x)` / `Try.failure(err)`                                                        |
+| `t.recover { case ... => ... }` | `Result.orElse(r, (e) => Result.succeed(fallback))` | `t.recover(err => fallback)`                                                                 |
+| `t.recoverWith { case ... }`    | `Result.orElse(r, (e) => alt)`                      | `t.recoverWith(err => Try.success(alt))`                                                     |
+| `t.toEither` (loses error)      | n/a                                                 | `t.toEither(left)` or `t.toEither(e => buildLeft(e))` ← **builder threads underlying Error** |
+| `t.toOption`                    | `Result.getSuccess(r)`                              | `t.toOption()`                                                                               |
+| `Try.sequence(tries)`           | `Result.all(results)`                               | `Try.sequence(tries)` (first Failure wins)                                                   |
+| `tries.traverse(f)`             | `Result.all(Array.map(arr, f))`                     | `Try.traverse(arr, f)`                                                                       |
 
 **Wrapping a throwing call with structured error:**
 
 ```ts
-// Scala-y / fp-ts-y
+// Either-shaped, as Scala and Effect write it
 tryCatch(
   () => yaml.load(text),
   (e) => ScopeError(path, `parse: ${(e as Error).message}`),
@@ -93,16 +100,16 @@ Try(() => yaml.load(text)).toEither((e) => ScopeError(path, `parse: ${e.message}
 
 ## Containers
 
-| Scala / cats          | fp-ts                          | functype                                      |
-| --------------------- | ------------------------------ | --------------------------------------------- |
-| `List(1, 2, 3)`       | `[1, 2, 3]` (with combinators) | `List([1, 2, 3])` or `List.of(1, 2, 3)`       |
-| `list.foldLeft(z)(f)` | `RA.reduce(z, f)`              | `list.fold(z, f)` / `list.reduce(f)`          |
-| `list.head` / `.tail` | `RA.head(xs)` / `RA.tail(xs)`  | `list.head()` / `list.tail()` (methods)       |
-| `list.groupBy(f)`     | `RA.groupBy(f)`                | `list.groupBy(f)`                             |
-| `Set(1, 2, 3)`        | `RS.fromArray(...)`            | `Set([1, 2, 3])` or `Set.of(1, 2, 3)`         |
-| `Map(k -> v, ...)`    | `RM.fromFoldable(...)`         | `Map([[k, v], ...])` or `Map.of([k, v], ...)` |
-| `(a, b)` tuple        | `[a, b]` as readonly tuple     | `Tuple(a, b)`                                 |
-| `Stack`               | n/a                            | `Stack.of(1, 2, 3)`                           |
+| Scala / cats          | Effect                                        | functype                                      |
+| --------------------- | --------------------------------------------- | --------------------------------------------- |
+| `List(1, 2, 3)`       | `[1, 2, 3]` with the `Array` module           | `List([1, 2, 3])` or `List.of(1, 2, 3)`       |
+| `list.foldLeft(z)(f)` | `Array.reduce(xs, z, f)`                      | `list.fold(z, f)` / `list.reduce(f)`          |
+| `list.head` / `.tail` | `Array.head(xs)` / `Array.tail(xs)` (Options) | `list.head()` / `list.tail()` (methods)       |
+| `list.groupBy(f)`     | `Array.groupBy(xs, f)`                        | `list.groupBy(f)`                             |
+| `Set(1, 2, 3)`        | `HashSet.make(1, 2, 3)`                       | `Set([1, 2, 3])` or `Set.of(1, 2, 3)`         |
+| `Map(k -> v, ...)`    | `HashMap.make([k, v], ...)`                   | `Map([[k, v], ...])` or `Map.of([k, v], ...)` |
+| `(a, b)` tuple        | `Tuple.make(a, b)`                            | `Tuple([a, b])` or `Tuple.of(a, b)`           |
+| `Stack`               | n/a                                           | `Stack.of(1, 2, 3)`                           |
 
 functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators, and `Set` / `Map` are the default collections: import them under their own names. When you need the built-in (a cache you mutate, an API that takes a native `ReadonlyMap`), spell it `globalThis.Map` / `globalThis.Set`. The `eslint-plugin-functype` rules `collection-naming`, `prefer-functype-set` and `prefer-functype-map` enforce this; a mutated collection or one passed to a declared `ReadonlyMap` / `ReadonlySet` is allowed.
 
@@ -112,18 +119,19 @@ Unlike Scala, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are 
 
 ## Effects
 
-| ZIO / cats-effect             | fp-ts                            | functype                           |
-| ----------------------------- | -------------------------------- | ---------------------------------- |
-| `ZIO.succeed(x)`              | `T.of(x)`                        | `IO.succeed(x)`                    |
-| `ZIO.fail(e)`                 | `TE.left(e)`                     | `IO.fail(e)`                       |
-| `ZIO.attempt(() => ...)`      | `TE.tryCatch(() => ..., id)`     | `IO.sync(() => ...)`               |
-| `ZIO.tryPromise(p, e => ...)` | `TE.tryCatch(() => p, e => ...)` | `IO.tryPromise({ try, catch })`    |
-| `effect.mapAttempt(f)`        | —                                | `effect.mapTry(f, onError)`        |
-| `ZIO.service(Tag)`            | `R.ask`                          | `IO.service(Tag)`                  |
-| `effect.provide(layer)`       | `R.local(...)`                   | `effect.provide(layer)`            |
-| `effect.retry(n)`             | `Schedule.recurs(n)`             | `effect.retry(n)`                  |
-| `for { ... } yield`           | `pipe(..., chain(...))`          | `IO.gen(function*() { ... })`      |
-| `effect.unsafeRun`            | `effect()`                       | `await effect.run()` / `runSync()` |
+| ZIO / cats-effect             | Effect                                       | functype                           |
+| ----------------------------- | -------------------------------------------- | ---------------------------------- |
+| `ZIO.succeed(x)`              | `Effect.succeed(x)`                          | `IO.succeed(x)`                    |
+| `ZIO.fail(e)`                 | `Effect.fail(e)`                             | `IO.fail(e)`                       |
+| `ZIO.succeed(sideEffect)`     | `Effect.sync(() => ...)`                     | `IO.sync(() => ...)`               |
+| `ZIO.attempt(() => ...)`      | `Effect.try(() => ...)`                      | `IO.tryCatch(() => ..., onError)`  |
+| `ZIO.tryPromise(p, e => ...)` | `Effect.tryPromise({ try, catch })`          | `IO.tryPromise({ try, catch })`    |
+| `effect.mapAttempt(f)`        | `Effect.flatMap` with `Effect.try`           | `effect.mapTry(f, onError)`        |
+| `ZIO.service(Tag)`            | `Effect.service(Tag)`                        | `IO.service(Tag)`                  |
+| `effect.provide(layer)`       | `Effect.provide(effect, layer)`              | `effect.provideLayer(layer)`       |
+| `effect.retry(n)`             | `Effect.retry(effect, Schedule.recurs(n))`   | `effect.retry(n)`                  |
+| `for { ... } yield`           | `Effect.gen(function* () { ... })`           | `IO.gen(function*() { ... })`      |
+| `effect.unsafeRun`            | `Effect.runPromise(e)` / `Effect.runSync(e)` | `await effect.run()` / `runSync()` |
 
 `IO<R, E, A>` is functype's one effect type. functype 2.0 deleted `Task`: cancel an IO with `runCancellable()`, `runExit({ signal })` or `interruptOn(signal)`.
 
