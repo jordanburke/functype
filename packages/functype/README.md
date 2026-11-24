@@ -765,7 +765,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 
 ### Medium Priority
 
-- [ ] Implement ValidatedNel<E, A> for validation with error accumulation
+- [ ] Implement `ValidatedNel<E, A>` for validation with error accumulation
   - Unlike Either, collects multiple errors
   - Uses NonEmptyList for error collection
   - Applicative instance combines errors
@@ -775,7 +775,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - ✓ Add guard clauses (when conditions)
   - ✓ Support destructuring patterns
   - ✓ Consolidated into unified Match implementation
-- [x] Implement IO<R,E,A> effect type
+- [x] Implement `IO<R,E,A>` effect type
   - ✓ Lazy execution with typed errors
   - ✓ Dependency injection (Tag, Context, Layer)
   - ✓ Composable operations (map, flatMap, zip, race)
@@ -790,7 +790,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - ✓ Add Serializable for persistence
   - ✓ Add Companion pattern with utility methods
   - ✓ Added specialized pair() and triple() constructors
-- [ ] Implement Lens<S, A> for immutable updates
+- [ ] Implement `Lens<S, A>` for immutable updates
   - Composable property access
   - Type-safe nested updates
   - Works with all functype data structures
@@ -836,7 +836,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
 - [x] Add noUncheckedIndexedAccess for safer array indexing
 - [ ] Improve support for higher-kinded types:
   - Current type parameters work well for first-order types
-  - Expand to support type constructors as parameters (F<A> => F<B>)
+  - Expand to support type constructors as parameters (`F<A> => F<B>`)
 - [x] Add branded/nominal types for stronger type safety
 - [x] Implement more type-level utilities — partial (`Widen<A, B>` conditional-type helper in `src/typeclass/variance.ts`; more in `src/types/`, `src/typeable/`)
 - [ ] Leverage newer TypeScript features (const type parameters, tuple manipulation)
