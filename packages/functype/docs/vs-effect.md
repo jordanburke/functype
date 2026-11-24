@@ -120,7 +120,7 @@ right trade for domain and service-layer code; in measured hot loops, drop to na
 The [performance page](https://functype.org/performance/) times everyday operations against
 Effect on every change to functype. functype's `IO` builds and runs effects faster than
 Effect's in nearly every case, from about 1.2× to about 9× in recent runs. On plain data
-types, `Either` usually beats Effect's `Result`, `Option` is about level, and `List` trails
+types, `Either` usually beats Effect's `Result`, `Option` ranges from level to somewhat behind, and `List` trails
 Effect's `Array` module by about a quarter (around 20 ns on the 10-item case). The numbers
 move a little between runs; the page has the current ones and the code for each case.
 
