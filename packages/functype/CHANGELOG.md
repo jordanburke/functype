@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 2.2.0 - 2026-11-23
+
 - **`functype/core`: the names most code needs, in one import** (#141). It exports 17 names: `Option`, `Some`, `None`, `Either`, `Left`, `Right`, `Try`, `IO`, `Tag`, `List`, `Set`, `Map`, `Tuple`, `tryCatch`, `tryCatchAsync`, `isLeft` and `isRight`. Each is the same value as its root export. It's for finding your way among the root import's hundred-plus values, not for size: an Option-only program bundles to 5.8 KB gzipped from `functype/core`, `functype/option` or `functype` alike, and the size check now measures it too.
 - **The cheatsheet compares against Effect instead of fp-ts.** fp-ts is merging into Effect, which Effect's docs call its successor, so `CHEATSHEET.md` now has a Scala, Effect and functype column. Every Effect call in it was run against Effect 4.1.5.
 
