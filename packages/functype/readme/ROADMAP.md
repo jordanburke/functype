@@ -1,6 +1,6 @@
-# Functype Roadmap (2025-2026)
+# functype Roadmap (2025-2026)
 
-This roadmap outlines the planned development path for the Functype library, focusing on expanding functionality, improving performance, ensuring API consistency, and enhancing TypeScript integration.
+This roadmap outlines the planned development path for the functype library, focusing on expanding functionality, improving performance, ensuring API consistency, and enhancing TypeScript integration.
 
 ## Q2 2025: Core Functional Data Types
 

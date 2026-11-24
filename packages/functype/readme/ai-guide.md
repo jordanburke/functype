@@ -1,6 +1,6 @@
-# AI Guide to Functype
+# AI Guide to functype
 
-This document provides a concise reference for AI models to understand the patterns and usage of the Functype library.
+This document provides a concise reference for AI models to understand the patterns and usage of the functype library.
 
 ## Core Types
 

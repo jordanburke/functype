@@ -1,4 +1,4 @@
-# AI Pattern Suggestion Tool for Functype
+# AI Pattern Suggestion Tool for functype
 
 ## Overview
 

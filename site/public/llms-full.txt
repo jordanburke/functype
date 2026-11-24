@@ -12,9 +12,9 @@ This file contains the complete functype documentation concatenated into a singl
 ## AI Guide
 ────────────────────────────────────────────────────────────────────────────────
 
-# AI Guide to Functype
+# AI Guide to functype
 
-This document provides a concise reference for AI models to understand the patterns and usage of the Functype library.
+This document provides a concise reference for AI models to understand the patterns and usage of the functype library.
 
 ## Core Types
 
@@ -412,7 +412,7 @@ import { List } from "functype/list"
 ## Quick Reference
 ────────────────────────────────────────────────────────────────────────────────
 
-# Functype Quick Reference
+# functype Quick Reference
 
 ## Option<T>
 
@@ -1127,7 +1127,7 @@ const instance: PointInst = Point(1, 2)
 ## Feature Matrix
 ────────────────────────────────────────────────────────────────────────────────
 
-# Functype Feature Matrix
+# functype Feature Matrix
 
 This matrix shows which interfaces are supported by each data structure in the functype library.
 
@@ -3925,7 +3925,7 @@ const describe = Match(value)
   .default(() => "Unknown type");
 ```
 
-### With Functype Types
+### With functype Types
 
 Option, Either, Try, and other types have built-in match methods:
 

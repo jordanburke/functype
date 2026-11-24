@@ -12,7 +12,7 @@
 
 ## A Functional Programming Library for TypeScript
 
-Functype is a lightweight functional programming library for TypeScript, drawing inspiration from functional programming paradigms, the Scala Standard Library, and ZIO. It provides a comprehensive set of utilities and abstractions designed to facilitate functional programming within TypeScript applications.
+functype is a lightweight functional programming library for TypeScript, drawing inspiration from functional programming paradigms, the Scala Standard Library, and ZIO. It provides a comprehensive set of utilities and abstractions designed to facilitate functional programming within TypeScript applications.
 
 [API Documentation](https://jordanburke.github.io/functype/) · [Cheatsheet for Scala / cats / fp-ts users](./CHEATSHEET.md)
 
@@ -181,7 +181,7 @@ const result = Lazy(() => 10)
 
 ### Do-notation (High-Performance For-Comprehensions)
 
-Functype provides generator-based Do-notation for monadic composition, similar to Scala's for-comprehensions, with **significant performance advantages for List operations**:
+functype provides generator-based Do-notation for monadic composition, similar to Scala's for-comprehensions, with **significant performance advantages for List operations**:
 
 ```typescript
 import { Do, DoAsync, $ } from "functype"
@@ -394,7 +394,7 @@ TracedOption(user, tracer, "span-1")
 
 ## Conditional Programming
 
-Functype provides `Cond` and `Match` for functional conditional logic without early returns:
+functype provides `Cond` and `Match` for functional conditional logic without early returns:
 
 ### Cond
 
@@ -501,7 +501,7 @@ const classifier = Match.builder<Animal, string>()
 
 ## Fold
 
-Functype includes a powerful `fold` operation for pattern matching and extracting values:
+functype includes a powerful `fold` operation for pattern matching and extracting values:
 
 ```typescript
 import { Option, Either, Try, List } from "functype"
@@ -534,7 +534,7 @@ const listResult = list.foldLeft(0)((acc, num) => acc + num) // 6
 
 ## Foldable
 
-Functype includes a `Foldable` type class that all data structures implement:
+functype includes a `Foldable` type class that all data structures implement:
 
 ```typescript
 import { FoldableUtils, Option, List, Try } from "functype"
@@ -565,7 +565,7 @@ const convertedToEither = FoldableUtils.toEither(tryVal, "Error") // Right(10)
 
 ## Matchable
 
-Functype includes a `Matchable` type class for enhanced pattern matching:
+functype includes a `Matchable` type class for enhanced pattern matching:
 
 ```typescript
 import { Option, Either, Try, List, MatchableUtils } from "functype"
@@ -613,11 +613,11 @@ const result = isPositive(num) ?? defaultCase(num) // "Positive: 42"
 
 ## Interface Hierarchy
 
-All data structures in Functype implement a unified hierarchy of interfaces, providing consistent behavior across the library:
+All data structures in functype implement a unified hierarchy of interfaces, providing consistent behavior across the library:
 
 ### Type Classes
 
-Functype leverages type classes to provide common operations:
+functype leverages type classes to provide common operations:
 
 - **Functor**: Supports `map` operation for transforming wrapped values
 - **Applicative**: Extends Functor with `ap` for applying wrapped functions
@@ -684,11 +684,11 @@ list.forEach(console.log) // Logs: 1, 2, 3, 4, 5
 
 ## Feature Matrix
 
-For a comprehensive overview of which interfaces are supported by each data structure, see the [Functype Feature Matrix](docs/FUNCTYPE_FEATURE_MATRIX.md).
+For a comprehensive overview of which interfaces are supported by each data structure, see the [functype Feature Matrix](docs/FUNCTYPE_FEATURE_MATRIX.md).
 
 ## Type Safety
 
-Functype leverages TypeScript's advanced type system to provide compile-time safety for functional patterns, ensuring that your code is both robust and maintainable.
+functype leverages TypeScript's advanced type system to provide compile-time safety for functional patterns, ensuring that your code is both robust and maintainable.
 
 ```typescript
 // Type inference works seamlessly
@@ -700,7 +700,7 @@ const mappedValue = option.map((x) => x.toString())
 
 ## Error Formatting
 
-Functype provides utilities for improved error visualization and logging:
+functype provides utilities for improved error visualization and logging:
 
 ```typescript
 import { Throwable, createErrorSerializer, formatError, formatErrorChain } from "functype"
@@ -868,9 +868,9 @@ Work that shipped but wasn't captured in the planned roadmap above:
 
 ## Claude Code Skills
 
-Functype provides two specialized Claude Code skills to enhance your development experience:
+functype provides two specialized Claude Code skills to enhance your development experience:
 
-### Functype User Guide
+### functype User Guide
 
 Help for developers using functype in their projects:
 
@@ -880,7 +880,7 @@ Help for developers using functype in their projects:
 
 **Install**: Download from [dist/skills/functype-user.zip](./dist/skills/functype-user.zip)
 
-### Functype Library Developer
+### functype Library Developer
 
 Guide for contributors developing functype itself:
 

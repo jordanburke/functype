@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines coding standards for the Functype project, a functional programming library for TypeScript. These standards aim to ensure code consistency, maintainability, and type safety across the codebase.
+This document outlines coding standards for the functype project, a functional programming library for TypeScript. These standards aim to ensure code consistency, maintainability, and type safety across the codebase.
 
 ## Core Principles
 

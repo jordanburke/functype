@@ -29,7 +29,7 @@ How can functype prevent confusion between its functional `Set<A>` and `Map<K,V>
 
 ## Current Implementation
 
-Functype uses a **two-layer approach** that already prevents most confusion:
+functype uses a **two-layer approach** that already prevents most confusion:
 
 ### Internal Layer (Shim Pattern)
 
@@ -335,7 +335,7 @@ function process(set: unknown) {
 ## Key Findings
 
 1. **The real problem isn't library naming** - It's how users import and use types
-2. **Functype's design is already sound** - The ES prefix pattern + distinct type names prevent shadowing
+2. **functype's design is already sound** - The ES prefix pattern + distinct type names prevent shadowing
 3. **fp-ts got it right** - Module aliasing works but requires discipline
 4. **Prototype extensions are problematic** - Avoid at library level (see [array-list-integration.md](./array-list-integration.md))
 5. **Documentation matters most** - Clear examples prevent confusion better than clever naming

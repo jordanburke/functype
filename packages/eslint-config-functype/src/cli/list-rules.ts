@@ -366,7 +366,7 @@ function printDiff(diffs: RuleDiff[], functypeConfigName: string): void {
       const functypeSeverity = formatSeverity(diff.functypeSeverity!)
       console.log(`  • ${diff.name}`)
       console.log(`    Local:    ${localSeverity}`)
-      console.log(`    Functype: ${functypeSeverity}`)
+      console.log(`    functype: ${functypeSeverity}`)
     })
   }
 
@@ -439,7 +439,7 @@ async function main(): Promise<void> {
   const diffConfigPath = diffConfigIndex !== -1 && args[diffConfigIndex + 1] ? args[diffConfigIndex + 1] : ""
 
   if (showHelp) {
-    console.log(colorize("📋 ESLint Plugin Functype - Rule Lister", "bright"))
+    console.log(colorize("📋 eslint-plugin-functype: Rule Lister", "bright"))
     console.log("\nUsage: pnpm run list-rules [options]")
     console.log("\nOptions:")
     console.log("  --verbose, -v      Show rule options")
@@ -462,7 +462,7 @@ async function main(): Promise<void> {
 
   // Handle dependency check
   if (checkDeps) {
-    console.log(colorize("🔧 ESLint Plugin Functype - Dependency Check", "bright"))
+    console.log(colorize("🔧 eslint-plugin-functype: Dependency Check", "bright"))
     const result = validatePeerDependencies()
     printDependencyStatus(result)
 
@@ -472,7 +472,7 @@ async function main(): Promise<void> {
     return
   }
 
-  console.log(colorize("🔧 ESLint Plugin Functype - Supported Rules", "bright"))
+  console.log(colorize("🔧 eslint-plugin-functype: Supported Rules", "bright"))
 
   const distPath = path.join(__dirname, "..", "..", "dist")
 

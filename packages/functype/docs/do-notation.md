@@ -2,7 +2,7 @@
 
 ## Overview
 
-Functype's Do-notation provides generator-based monadic comprehensions similar to Scala's for-comprehensions. It enables elegant composition of monadic operations without nested `flatMap` calls, making complex monadic chains more readable and maintainable.
+functype's Do-notation provides generator-based monadic comprehensions similar to Scala's for-comprehensions. It enables elegant composition of monadic operations without nested `flatMap` calls, making complex monadic chains more readable and maintainable.
 
 ## Comparison with Scala's For-Comprehensions
 
@@ -20,7 +20,7 @@ val result = for {
 // result: Option[Int] = Some(15)
 ```
 
-**Functype:**
+**functype:**
 
 ```typescript
 const result = Do(function* () {
@@ -43,7 +43,7 @@ val result = for {
 } yield profile
 ```
 
-**Functype:**
+**functype:**
 
 ```typescript
 const result = Do(function* () {
@@ -66,7 +66,7 @@ val pairs = for {
 // List((1,10), (1,20), (2,10), (2,20), (3,10), (3,20))
 ```
 
-**Functype:**
+**functype:**
 
 ```typescript
 const pairs = Do(function* () {
@@ -79,7 +79,7 @@ const pairs = Do(function* () {
 
 ## Feature Mapping
 
-| Scala Feature       | Functype Equivalent         | Notes                                |
+| Scala Feature       | functype Equivalent         | Notes                                |
 | ------------------- | --------------------------- | ------------------------------------ |
 | `x <- monad`        | `const x = yield* $(monad)` | Extract value from monad             |
 | `yield expr`        | `return expr`               | Return final value                   |
@@ -113,7 +113,7 @@ for {
 } yield y
 ```
 
-Functype requires conditional logic with early returns:
+functype requires conditional logic with early returns:
 
 ```typescript
 const result = Do(function* () {
@@ -138,7 +138,7 @@ for {
 } yield x + y
 ```
 
-Functype uses object destructuring:
+functype uses object destructuring:
 
 ```typescript
 const result = Do(function* () {
@@ -312,7 +312,7 @@ const right = Do(function* () {
 
 If you're coming from Scala, here's a quick reference:
 
-| Scala                   | Functype                             |
+| Scala                   | functype                             |
 | ----------------------- | ------------------------------------ |
 | `for { ... } yield ...` | `Do(function* () { ... })`           |
 | `x <- someOption`       | `const x = yield* $(someOption)`     |

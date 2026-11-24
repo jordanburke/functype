@@ -39,7 +39,7 @@ const describe = Match(value)
   .default(() => "Unknown type");
 ```
 
-### With Functype Types
+### With functype Types
 
 Option, Either, Try, and other types have built-in match methods:
 

@@ -1,4 +1,4 @@
-# Functype Feature Matrix
+# functype Feature Matrix
 
 This matrix shows which interfaces are supported by each data structure in the functype library.
 

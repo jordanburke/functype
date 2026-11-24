@@ -3,7 +3,7 @@ name: functype
 description: Help developers use functype functional programming patterns in their TypeScript projects. Use this skill when converting imperative/OOP code to functional patterns, looking up functype APIs and methods, handling nulls with Option, managing errors with Either/Try, composing effects with IO (lazy effects, typed errors, dependency injection, retry, cancellation), working with immutable collections like List and Set, or making HTTP requests with Http (typed fetch wrapper).
 ---
 
-# Functype User Guide
+# functype User Guide
 
 ## Overview
 
@@ -43,7 +43,7 @@ import { Option, Either, Left, Right, Try, List, IO, Tag, Layer } from "functype
 
 ## Constructor vs Companion Methods
 
-Functype collections provide multiple ways to create instances:
+functype collections provide multiple ways to create instances:
 
 | Method         | Use When                     | Example                |
 | -------------- | ---------------------------- | ---------------------- |
@@ -102,7 +102,7 @@ function shout(name: string | null | undefined): string {
 }
 ```
 
-**After (Functype):**
+**After (functype):**
 
 ```typescript
 const shout = (name: string | null | undefined): string =>
@@ -548,7 +548,7 @@ Write code that passes, and when code is correct *because* it isn't FP-shaped, d
 
 `@interop` needs a reason on the same line (`@interop React Query needs a rejection.`); a bare tag exempts nothing. It covers the tagged declaration and what is nested inside it. Rule of thumb: host needs the throw → `@interop` or `orThrow(builder)`; only a bug can trip it → `invariant()`; can fail in normal operation → `Either`.
 
-## Looking Up Functype APIs
+## Looking Up functype APIs
 
 ### Feature Matrix Reference
 

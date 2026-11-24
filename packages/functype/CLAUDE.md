@@ -204,7 +204,7 @@ When changing public APIs:
 - Run `pnpm docs:sync` to sync feature matrix to site
 - Run `pnpm validate` before committing
 
-## Functype API Quick Reference (v0.60.0+)
+## functype API Quick Reference (v0.60.0+)
 
 ```typescript
 // List - immutable array
@@ -430,7 +430,7 @@ DecoderError.flatten(e): List<{path, message}> // collect all leaves
 DecoderError.format(e): string                // multi-line render for display
 ```
 
-## Functype Refactoring Patterns
+## functype Refactoring Patterns
 
 ### Pattern 1: Array mutations → List
 

@@ -1,14 +1,14 @@
 # Error Formatting and Logging
 
-This guide explains how to effectively format and log errors in Functype, focusing on improving error display for better debugging and troubleshooting.
+This guide explains how to effectively format and log errors in functype, focusing on improving error display for better debugging and troubleshooting.
 
 ## The Challenge of Error Display
 
-JavaScript errors can be challenging to understand, especially in complex functional applications. Functype's `Throwable` and error modules provide robust error handling capabilities, but default error output in logs and consoles doesn't always provide a clear picture of what went wrong.
+JavaScript errors can be challenging to understand, especially in complex functional applications. functype's `Throwable` and error modules provide robust error handling capabilities, but default error output in logs and consoles doesn't always provide a clear picture of what went wrong.
 
 ## Built-in Error Utilities
 
-Functype provides several built-in utilities for working with errors:
+functype provides several built-in utilities for working with errors:
 
 ### Throwable
 
@@ -54,7 +54,7 @@ console.error(formatErrorChain(error, { includeTasks: true }))
 
 ## Enhanced Error Formatting
 
-Functype provides more advanced error formatting utilities in the `error` module:
+functype provides more advanced error formatting utilities in the `error` module:
 
 ```typescript
 import { formatError, createErrorSerializer } from "@/error"
@@ -248,7 +248,7 @@ console.log(JSON.stringify(createErrorSerializer()(error), null, 2))
 
 ## Conclusion
 
-Effective error formatting and logging significantly improves debugging and troubleshooting. By using Functype's error utilities, you can:
+Effective error formatting and logging significantly improves debugging and troubleshooting. By using functype's error utilities, you can:
 
 1. Preserve full error context, including step names
 2. Create human-readable error displays for development

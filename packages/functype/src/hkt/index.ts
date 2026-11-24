@@ -13,7 +13,7 @@ import type { Type } from "@/types"
 export type Kind<F, A> = F extends (arg: infer T) => infer R ? R : never
 
 /**
- * Type constructors for common Functype data types
+ * Type constructors for common functype data types
  */
 export type OptionKind = <A>(a: A) => Option<A>
 export type ListKind = <A>(a: A) => List<A>

@@ -55,7 +55,7 @@ marketing artifact no competing FP library has.
 **Goal:** a crisp public answer to "why not Effect?". One day of work; highest leverage per hour.
 
 1. Add a **"functype vs Effect"** section to the README + a site page. Frame: _Effect is a runtime
-   you marry; functype is a vocabulary you adopt_ — the cats/ZIO split. Functype = Scala's standard
+   you marry; functype is a vocabulary you adopt_ — the cats/ZIO split. functype = Scala's standard
    library for TypeScript; Effect = the application framework.
 2. State **explicit non-goals** publicly: no fiber runtime, no structured concurrency, no
    Clock/Random, no persistent data structures.

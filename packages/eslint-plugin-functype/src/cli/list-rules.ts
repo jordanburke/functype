@@ -68,7 +68,7 @@ async function main(): Promise<void> {
   const checkDeps = args.includes("--check-deps") || args.includes("--check")
 
   if (showHelp) {
-    console.log(colorize("📋 ESLint Plugin Functype - Custom Rules", "bright"))
+    console.log(colorize("📋 eslint-plugin-functype: Custom Rules", "bright"))
     console.log("\nUsage: pnpm run list-rules [options]")
     console.log("\nOptions:")
     console.log("  --verbose, -v      Show rule descriptions and schemas")
@@ -81,7 +81,7 @@ async function main(): Promise<void> {
 
   // Handle dependency check
   if (checkDeps) {
-    console.log(colorize("🔧 ESLint Plugin Functype - Dependency Check", "bright"))
+    console.log(colorize("🔧 eslint-plugin-functype: Dependency Check", "bright"))
     const result = validatePeerDependencies()
     printDependencyStatus(result)
 
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     return
   }
 
-  console.log(colorize("🔧 ESLint Plugin Functype - Custom Rules", "bright"))
+  console.log(colorize("🔧 eslint-plugin-functype: Custom Rules", "bright"))
 
   if (!plugin.rules) {
     console.error(colorize("❌ No rules found in plugin.", "red"))
@@ -142,7 +142,7 @@ async function main(): Promise<void> {
   console.log(colorize("\n🔗 Links:", "bright"))
   console.log("• Documentation: https://github.com/jordanburke/eslint-plugin-functype")
   console.log("• Configuration Bundle: https://github.com/jordanburke/eslint-config-functype")
-  console.log("• Functype Library: https://github.com/jordanburke/functype")
+  console.log("• functype library: https://github.com/jordanburke/functype")
 }
 
 function printCustomUsageInfo(): void {

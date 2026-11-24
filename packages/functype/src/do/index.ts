@@ -4,10 +4,10 @@
  *
  * ## Scala Equivalents
  *
- * Functype:  `const x = yield* $(Option(5))`
+ * functype:  `const x = yield* $(Option(5))`
  * Scala:     `x <- Some(5)`
  *
- * Functype:  `return x + y`
+ * functype:  `return x + y`
  * Scala:     `yield x + y`
  *
  * ## Core Concepts

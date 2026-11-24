@@ -1,4 +1,4 @@
-# Functype Completeness Roadmap
+# functype Completeness Roadmap
 
 > **Version**: 0.43.x → 1.0.0 Target
 > **Updated**: January 2026

@@ -56,7 +56,7 @@ Four exhaustive cases — three are shipped 1.3+ behavior, one is the 2.0 additi
 | **External API, no ADTs** *(1.3 baseline)* | `{name, age: 30}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age}` (decode optional) |
 | **External API, ADTs in body** *(1.3 default flatten)* | `{name, age: Option(30)}` | `{"name":"...","age":30}` | `{"name":"...","age":30}` | `{name, age: Option(30)}` via `Decoder.option(Decoder.number)` |
 | **External API, custom transform** *(new in 2.0, per-call `encode`)* | `{name, createdAt: Date}` | `{"name":"...","created_at":"2026-06-01"}` | …whatever the server returns | matched `Decoder` |
-| **Functype-to-functype** *(1.3 `flatten: false`)* | `{name, age: Option(30)}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{name, age: Option(30)}` via `Decoder.tagged.option(Decoder.number)` |
+| **functype-to-functype** *(1.3 `flatten: false`)* | `{name, age: Option(30)}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{"name":"...","age":{"_tag":"Some","value":30}}` | `{name, age: Option(30)}` via `Decoder.tagged.option(Decoder.number)` |
 
 **The encode/decode design (minimum-symmetric, not full Codec):**
 - **Decode side already has primitives + ADT combinators** (shipped pre-2.0) — `Decoder.string`, `Decoder.object`, `Decoder.option`, etc. — because raw JSON is opaque to TypeScript and combinators do real type-system work.

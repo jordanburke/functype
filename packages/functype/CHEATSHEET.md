@@ -1,4 +1,4 @@
-# Functype Cheatsheet — for Scala / cats / Effect users
+# functype Cheatsheet — for Scala / cats / Effect users
 
 You know functional programming. functype is Scala-inspired but TypeScript-idiomatic, and since 2.0 its extraction methods use Scala's names with lazy arguments, as Effect does. This page maps your existing muscle memory to functype 2.x. The Effect column uses Effect 4's names: Effect 4 calls Either `Result`. Coming from fp-ts? fp-ts is merging into Effect, which Effect's docs call its successor, so the Effect column is where fp-ts's names went.
 
