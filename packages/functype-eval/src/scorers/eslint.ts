@@ -31,13 +31,22 @@ export const IGNORE_GLOBS: ReadonlyArray<string> = [
 /** Per-rule violation counts keyed by full rule id (`functype/<rule>`). */
 export type RuleCounts = ReadonlyMap<string, number>
 
-const buildEslint = (cwd: string, rules: ReadonlyArray<string>): ESLint => {
+export type LintOptions = {
+  /**
+   * Honor `eslint-disable` comments (default true, as `score` always has). `baseline`/`check` pass
+   * false, so a new disable comment can't hide a rise: disabled findings still count.
+   */
+  readonly allowInlineConfig?: boolean
+}
+
+const buildEslint = (cwd: string, rules: ReadonlyArray<string>, options: LintOptions): ESLint => {
   const ruleRecord: Linter.RulesRecord = Object.fromEntries(rules.map((rule) => [`functype/${rule}`, "error"]))
 
   return new ESLint({
     // Run with cwd = target so flat-config `files` globs match the target's files (they're matched
     // relative to cwd; a target outside our own cwd would otherwise match nothing → no rules applied).
     cwd,
+    allowInlineConfig: options.allowInlineConfig ?? true,
     // Ignore any ESLint config the target ships — the score must reflect our rule set, not theirs.
     overrideConfigFile: true,
     overrideConfig: [
@@ -82,8 +91,11 @@ export const scoreEslint = async (
  * `baseline`/`check`, so every command sees the same file set (`IGNORE_GLOBS` applied). ESLint
  * returns one result per file, so no file is counted twice. Empty when no source file matches.
  */
-export const lintTarget = async (target: string, rules: ReadonlyArray<string>): Promise<ESLint.LintResult[]> =>
-  lintOrEmpty(buildEslint(resolve(target), rules), "**/*.{ts,tsx}")
+export const lintTarget = async (
+  target: string,
+  rules: ReadonlyArray<string>,
+  options: LintOptions = {},
+): Promise<ESLint.LintResult[]> => lintOrEmpty(buildEslint(resolve(target), rules, options), "**/*.{ts,tsx}")
 
 /** `lintFiles` throws when a pattern matches nothing; treat that as "no violations". */
 const lintOrEmpty = async (eslint: ESLint, pattern: string): Promise<ESLint.LintResult[]> => {

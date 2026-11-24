@@ -45,7 +45,7 @@ export const DEFAULT_TRACKED_RULES: ReadonlyArray<string> = [
  * tsconfig), so tracking one of these would record a silent 0 forever. Each rule's JSDoc says
  * "Type-aware only".
  */
-const TYPE_AWARE_ONLY: ReadonlySet<string> = new Set([
+export const TYPE_AWARE_ONLY: ReadonlySet<string> = new Set([
   "no-array-mutation",
   "no-container-mutation",
   "no-floating-io",
@@ -64,8 +64,8 @@ export type FileCountsByPath = Readonly<Record<string, FileCounts>>
 
 export type Baseline = {
   readonly schema: number
-  /** The linted directory, relative to the baseline's directory, POSIX. `"."` for the root itself. */
-  readonly target: string
+  /** The linted directories, relative to the baseline's directory, POSIX, sorted. `"."` is the root itself. */
+  readonly targets: ReadonlyArray<string>
   /** Full rule ids (`functype/<rule>`), sorted. */
   readonly trackedRules: ReadonlyArray<string>
   readonly files: FileCountsByPath
@@ -113,9 +113,12 @@ const pluginRuleNames = (): ReadonlySet<string> =>
 
 /**
  * Turn configured rule names (with or without the `functype/` prefix) into sorted full rule ids.
- * Throws on a name the plugin doesn't have, or on a type-aware-only rule.
+ * Throws on an empty list, a name the plugin doesn't have, or a type-aware-only rule.
  */
 export const resolveTrackedRules = (names: ReadonlyArray<string> = DEFAULT_TRACKED_RULES): ReadonlyArray<string> => {
+  if (names.length === 0) {
+    throw new Error("functype-eval: trackedRules is empty, so check would always pass. List at least one rule.")
+  }
   const short = unique(names.map(shortRuleName))
   const known = pluginRuleNames()
   const unknown = short.filter((name) => !known.has(name))
@@ -146,41 +149,39 @@ export const relativeTarget = (root: string, target: string): string => {
 
 export type Collected = {
   readonly files: FileCountsByPath
-  /** Number of source files ESLint linted (with or without findings). */
+  /** Number of distinct source files ESLint linted (with or without findings). */
   readonly fileCount: number
   /** Files ESLint couldn't parse. Their findings are unknown, so callers must not trust the counts. */
   readonly unparsable: ReadonlyArray<string>
 }
 
-/**
- * Tally tracked findings per file from ESLint's results. `targetRel` is the linted directory relative
- * to the root (POSIX), and `targetAbs` its absolute path as given to ESLint; each key becomes
- * `targetRel/<path under target>`. A path seen twice keeps one entry, so no file is counted twice.
- */
-export const collectCounts = (
-  results: ReadonlyArray<ESLint.LintResult>,
-  targetAbs: string,
-  targetRel: string,
-  trackedRules: ReadonlyArray<string>,
-): Collected => {
-  const tracked = new Set(trackedRules)
-  const keyOf = (filePath: string): string => posix.join(targetRel, toPosixPath(relative(targetAbs, filePath)))
+/** One target's ESLint results. `targetAbs` is the directory as given to ESLint; `targetRel` its POSIX path from the root. */
+export type LintedTarget = {
+  readonly results: ReadonlyArray<ESLint.LintResult>
+  readonly targetAbs: string
+  readonly targetRel: string
+}
 
-  const perFile = new Map(
-    results.map((result) => {
-      const counts = result.messages
+/**
+ * Tally tracked findings per file from ESLint's results, over one or more targets. Each key becomes
+ * `targetRel/<path under target>`, so overlapping targets (`src` and `src/sub`) yield the same key
+ * for a shared file, and a path seen twice keeps one entry: no file is counted twice.
+ */
+export const collectCounts = (linted: ReadonlyArray<LintedTarget>, trackedRules: ReadonlyArray<string>): Collected => {
+  const tracked = new Set(trackedRules)
+  const entries = linted.flatMap(({ results, targetAbs, targetRel }) =>
+    results.map((result) => ({
+      key: posix.join(targetRel, toPosixPath(relative(targetAbs, result.filePath))),
+      fatal: result.messages.some((message) => message.fatal === true),
+      counts: result.messages
         .map((message) => message.ruleId)
         .filter((id): id is string => id !== null && tracked.has(id))
-        .reduce<Record<string, number>>((acc, id) => ({ ...acc, [id]: (lookup(acc, id) ?? 0) + 1 }), {})
-      return [keyOf(result.filePath), counts] as const
-    }),
+        .reduce<Record<string, number>>((acc, id) => ({ ...acc, [id]: (lookup(acc, id) ?? 0) + 1 }), {}),
+    })),
   )
-
-  const unparsable = unique(
-    results.filter((result) => result.messages.some((message) => message.fatal === true)).map((r) => keyOf(r.filePath)),
-  )
-
+  const perFile = new Map(entries.map((entry) => [entry.key, entry.counts] as const))
   const files = Object.fromEntries([...perFile].filter(([, counts]) => Object.keys(counts).length > 0))
+  const unparsable = unique(entries.filter((entry) => entry.fatal).map((entry) => entry.key))
   return { files, fileCount: perFile.size, unparsable }
 }
 
@@ -193,12 +194,12 @@ const sortCounts = (counts: FileCounts): FileCounts =>
   )
 
 export const buildBaseline = (
-  target: string,
+  targets: ReadonlyArray<string>,
   trackedRules: ReadonlyArray<string>,
   files: FileCountsByPath,
 ): Baseline => ({
   schema: BASELINE_SCHEMA,
-  target,
+  targets: unique(targets),
   trackedRules: unique(trackedRules),
   files: Object.fromEntries(
     Object.keys(files)
@@ -210,9 +211,9 @@ export const buildBaseline = (
 
 /** Serialize with a fixed key order and a trailing newline, so the file diffs cleanly. */
 export const serializeBaseline = (baseline: Baseline): string => {
-  const ordered = buildBaseline(baseline.target, baseline.trackedRules, baseline.files)
+  const ordered = buildBaseline(baseline.targets, baseline.trackedRules, baseline.files)
   return `${JSON.stringify(
-    { schema: ordered.schema, target: ordered.target, trackedRules: ordered.trackedRules, files: ordered.files },
+    { schema: ordered.schema, targets: ordered.targets, trackedRules: ordered.trackedRules, files: ordered.files },
     null,
     2,
   )}\n`
@@ -234,15 +235,17 @@ export const parseBaseline = (text: string): Baseline => {
         `Re-create it with \`functype-eval baseline <dir>\`.`,
     )
   }
-  const { target, trackedRules, files } = raw
-  if (typeof target !== "string") throw new Error(`${BASELINE_FILE}: "target" must be a string`)
+  const { targets, trackedRules, files } = raw
+  if (!Array.isArray(targets) || !targets.every((t): t is string => typeof t === "string")) {
+    throw new Error(`${BASELINE_FILE}: "targets" must be an array of directories`)
+  }
   if (!Array.isArray(trackedRules) || !trackedRules.every((r): r is string => typeof r === "string")) {
     throw new Error(`${BASELINE_FILE}: "trackedRules" must be an array of strings`)
   }
   if (!isRecord(files) || !Object.values(files).every(isCounts)) {
     throw new Error(`${BASELINE_FILE}: "files" must map paths to { rule: count } objects`)
   }
-  return { schema: BASELINE_SCHEMA, target, trackedRules, files: files as FileCountsByPath }
+  return { schema: BASELINE_SCHEMA, targets, trackedRules, files: files as FileCountsByPath }
 }
 
 const sum = (values: ReadonlyArray<number>): number => values.reduce((total, n) => total + n, 0)

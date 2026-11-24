@@ -37,9 +37,9 @@ const readBaseline = (dir: string): string => readFileSync(join(dir, BASELINE_FI
 
 const parsed = (
   dir: string,
-): { target: string; trackedRules: string[]; files: Record<string, Record<string, number>> } =>
+): { targets: string[]; trackedRules: string[]; files: Record<string, Record<string, number>> } =>
   JSON.parse(readBaseline(dir)) as {
-    target: string
+    targets: string[]
     trackedRules: string[]
     files: Record<string, Record<string, number>>
   }
@@ -53,7 +53,7 @@ describe("functype-eval baseline", () => {
 
     expect(await runBaseline(["src"], dir)).toBe(0)
     const baseline = parsed(dir)
-    expect(baseline.target).toBe("src")
+    expect(baseline.targets).toEqual(["src"])
     expect(baseline.files).toEqual({
       "src/a.ts": { "functype/no-imperative-loops": 1, "functype/no-let": 2 },
       "src/nested/b.ts": { "functype/no-let": 1 },
@@ -85,6 +85,61 @@ describe("functype-eval baseline", () => {
 
     await runBaseline(["src"], dir)
     expect(parsed(dir).files).toEqual({ "src/a.ts": { "functype/no-let": 1 } })
+    removeProject(dir)
+  })
+
+  it("accepts several directories, counting a file under two overlapping ones once", async () => {
+    const dir = writeProject({ "packages/a/src/a.ts": ONE_LET, "packages/b/src/b.ts": IMPERATIVE })
+    capture()
+
+    expect(await runBaseline(["packages/b/src", "packages/a/src", "packages/a"], dir)).toBe(0)
+    const baseline = parsed(dir)
+    expect(baseline.targets).toEqual(["packages/a", "packages/a/src", "packages/b/src"])
+    expect(baseline.files).toEqual({
+      "packages/a/src/a.ts": { "functype/no-let": 1 },
+      "packages/b/src/b.ts": { "functype/no-imperative-loops": 1, "functype/no-let": 2 },
+    })
+    removeProject(dir)
+  })
+
+  it("counts findings under an eslint-disable comment, so a new disable can't hide a rise", async () => {
+    const dir = writeProject({
+      "src/a.ts":
+        "// eslint-disable-next-line functype/no-let\nexport let x = 1\n/* eslint-disable */\nexport let y = 2\n",
+    })
+    capture()
+
+    await runBaseline(["src"], dir)
+    expect(parsed(dir).files).toEqual({ "src/a.ts": { "functype/no-let": 2 } })
+    removeProject(dir)
+  })
+
+  it("exits 2 on an unknown option, a missing directory, or --update", async () => {
+    const dir = writeProject({ "src/a.ts": ONE_LET })
+    const output = capture()
+
+    expect(await runBaseline(["src", "--update"], dir)).toBe(2)
+    expect(output.err()).toContain("unknown option --update")
+    expect(await runBaseline([], dir)).toBe(2)
+    expect(output.err()).toContain("Usage: functype-eval baseline")
+    expect(await runBaseline(["nope"], dir)).toBe(2)
+    expect(output.err()).toContain("nope does not exist")
+    expect(() => readBaseline(dir)).toThrow()
+    removeProject(dir)
+  })
+
+  it.each([
+    ["an empty trackedRules", { trackedRules: [] }, "trackedRules is empty"],
+    ["a config of []", [], "must be a JSON object"],
+    ["a config of null", null, "must be a JSON object"],
+    ["a non-array trackedRules", { trackedRules: "no-let" }, "trackedRules must be an array"],
+  ])("exits 2 for %s", async (_label, config, message) => {
+    const dir = writeProject({ "src/a.ts": ONE_LET, "functype-eval.config.json": JSON.stringify(config) })
+    const output = capture()
+
+    expect(await runBaseline(["src"], dir)).toBe(2)
+    expect(output.err()).toContain(message)
+    expect(() => readBaseline(dir)).toThrow()
     removeProject(dir)
   })
 
@@ -218,6 +273,31 @@ describe("functype-eval check", () => {
     expect(await runCheck(["src", "--update"], dir)).toBe(1)
     expect(output.err()).toContain("Refusing to update")
     expect(readBaseline(dir)).toBe(before)
+    removeProject(dir)
+  })
+
+  it("exits 2 on a mistyped flag instead of ignoring it", async () => {
+    const dir = writeProject({ "src/a.ts": ONE_LET })
+    const output = capture()
+    await runBaseline(["src"], dir)
+
+    expect(await runCheck(["src", "--updat"], dir)).toBe(2)
+    expect(output.err()).toContain("unknown option --updat")
+    expect(await runCheck([], dir)).toBe(2)
+    removeProject(dir)
+  })
+
+  it("checks several directories against a baseline written for the same set", async () => {
+    const dir = writeProject({ "packages/a/src/a.ts": ONE_LET, "packages/b/src/b.ts": CLEAN })
+    const output = capture()
+    await runBaseline(["packages/a/src", "packages/b/src"], dir)
+
+    expect(await runCheck(["packages/b/src", "packages/a/src"], dir)).toBe(0)
+    writeFileSync(join(dir, "packages/b/src/b.ts"), ONE_LET)
+    expect(await runCheck(["packages/a/src", "packages/b/src"], dir)).toBe(1)
+    expect(output.err()).toMatch(/packages\/b\/src\/b\.ts\s+no-let\s+0 → 1/)
+    expect(await runCheck(["packages/a/src"], dir)).toBe(2)
+    expect(output.err()).toContain("was written for packages/a/src, packages/b/src, not packages/a/src")
     removeProject(dir)
   })
 

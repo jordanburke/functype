@@ -1,19 +1,21 @@
 /**
  * `functype-eval baseline <dir>` and `functype-eval check <dir> [--update]`: a per-file ratchet.
  *
- * `baseline` writes `.functype-baseline.json` in the current directory. `check` fails (exit 1) when
+ * Both take one or more directories. `baseline` writes `.functype-baseline.json` in the current
+ * directory, with paths relative to it. `check` fails (exit 1) when
  * any file's count for a tracked rule rose, or a file outside the baseline has findings; `--update`
  * rewrites the baseline, but only when nothing regressed. Tracked rules come from
  * `functype-eval.config.json` (`{ "trackedRules": [...] }`) in the current directory, else defaults.
  *
- * Exit codes: 0 ok, 1 regression (or a refused `--update`), 2 nothing to compare (a bad config, no
- * sources, no or unreadable baseline, a different target, or a file ESLint couldn't parse).
+ * Exit codes: 0 ok, 1 regression (or a refused `--update`), 2 nothing to compare (bad arguments, a bad
+ * config, no sources, no or unreadable baseline, different targets, or a file ESLint couldn't parse).
  */
 
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
 
 import {
+  type Baseline,
   BASELINE_FILE,
   buildBaseline,
   collectCounts,
@@ -29,25 +31,39 @@ import {
 import { lintTarget } from "../scorers/eslint"
 
 type ParsedArgs = {
-  readonly target?: string
+  readonly targets: ReadonlyArray<string>
   readonly update: boolean
+  /** Flags this command doesn't know. Any of them is an error, so a typo such as `--updat` can't pass silently. */
+  readonly unknown: ReadonlyArray<string>
 }
 
-const parseArgs = (args: ReadonlyArray<string>): ParsedArgs =>
+const parseArgs = (args: ReadonlyArray<string>, flags: ReadonlyArray<string>): ParsedArgs =>
   args.reduce<ParsedArgs>(
     (acc, arg) => {
-      if (arg === "--update") return { ...acc, update: true }
-      if (!arg.startsWith("-") && acc.target === undefined) return { ...acc, target: arg }
-      return acc
+      if (!arg.startsWith("-")) return { ...acc, targets: [...acc.targets, arg] }
+      if (arg === "--update" && flags.includes(arg)) return { ...acc, update: true }
+      return { ...acc, unknown: [...acc.unknown, arg] }
     },
-    { update: false },
+    { targets: [], update: false, unknown: [] },
   )
+
+/** The parsed args, or the usage error to print (exit 2). */
+const argsFor = (args: ReadonlyArray<string>, flags: ReadonlyArray<string>, usage: string): ParsedArgs | string => {
+  const parsed = parseArgs(args, flags)
+  if (parsed.unknown.length > 0) return `functype-eval: unknown option ${parsed.unknown.join(", ")}\n${usage}`
+  if (parsed.targets.length === 0) return usage
+  return parsed
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
 
 /** `trackedRules` from `functype-eval.config.json` in `cwd`, or undefined for the defaults. */
 const configuredRules = (cwd: string): ReadonlyArray<string> | undefined => {
   const path = join(cwd, "functype-eval.config.json")
   if (!existsSync(path)) return undefined
-  const parsed = JSON.parse(readFileSync(path, "utf8")) as { trackedRules?: unknown }
+  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"))
+  if (!isRecord(parsed)) throw new Error("functype-eval: functype-eval.config.json must be a JSON object")
   const rules = parsed.trackedRules
   if (rules === undefined) return undefined
   if (!Array.isArray(rules) || !rules.every((r): r is string => typeof r === "string")) {
@@ -56,9 +72,6 @@ const configuredRules = (cwd: string): ReadonlyArray<string> | undefined => {
   return rules
 }
 
-type Lint = Collected & { readonly targetRel: string; readonly trackedRules: ReadonlyArray<string> }
-
-/** Lint `target` with the tracked rules; a string is the error to print (exit 2). */
 /** The tracked rule ids, or the config error to print (exit 2, not the exit 1 of a regression). */
 const trackedRulesFor = (cwd: string): ReadonlyArray<string> | string => {
   try {
@@ -69,47 +82,71 @@ const trackedRulesFor = (cwd: string): ReadonlyArray<string> | string => {
   }
 }
 
-const lint = async (target: string, cwd: string): Promise<Lint | string> => {
-  const trackedRules = trackedRulesFor(cwd)
-  if (typeof trackedRules === "string") return trackedRules
+type Lint = Collected & { readonly targets: ReadonlyArray<string>; readonly trackedRules: ReadonlyArray<string> }
+
+type Located = { readonly target: string; readonly targetAbs: string; readonly targetRel: string }
+
+/** Resolve one target against `cwd`, or the error to print. */
+const locate = (target: string, cwd: string): Located | string => {
   const targetAbs = resolve(cwd, target)
   if (!existsSync(targetAbs)) return `functype-eval: ${target} does not exist`
   const targetRel = relativeTarget(realpathSync(cwd), realpathSync(targetAbs))
   if (targetRel === ".." || targetRel.startsWith("../") || targetRel.startsWith("/")) {
     return `functype-eval: ${target} is outside the current directory; run from a directory that contains it`
   }
-  const collected = collectCounts(
-    await lintTarget(targetAbs, trackedRules.map(shortRuleName)),
-    targetAbs,
-    targetRel,
-    trackedRules,
+  return { target, targetAbs, targetRel }
+}
+
+/**
+ * Lint the targets with the tracked rules; a string is the error to print (exit 2). Inline
+ * `eslint-disable` comments are ignored, so a new one can't hide a rise.
+ */
+const lint = async (targets: ReadonlyArray<string>, cwd: string): Promise<Lint | string> => {
+  const trackedRules = trackedRulesFor(cwd)
+  if (typeof trackedRules === "string") return trackedRules
+  const located = targets.map((target) => locate(target, cwd))
+  const failed = located.find((l): l is string => typeof l === "string")
+  if (failed !== undefined) return failed
+  const ok = located.filter((l): l is Located => typeof l !== "string")
+
+  const rules = trackedRules.map(shortRuleName)
+  const linted = await Promise.all(
+    ok.map(async ({ targetAbs, targetRel }) => ({
+      results: await lintTarget(targetAbs, rules, { allowInlineConfig: false }),
+      targetAbs,
+      targetRel,
+    })),
   )
+  const collected = collectCounts(linted, trackedRules)
   if (collected.fileCount === 0) {
     return (
-      `functype-eval: no TypeScript sources found under ${target}.\n` +
+      `functype-eval: no TypeScript sources found under ${targets.join(", ")}.\n` +
       `  (looked for **/*.ts and **/*.tsx, excluding tests, .d.ts, node_modules, dist, lib)`
     )
   }
   if (collected.unparsable.length > 0) {
     return `functype-eval: ESLint couldn't parse ${collected.unparsable.join(", ")}; their findings are unknown`
   }
-  return { ...collected, targetRel, trackedRules }
+  return { ...collected, targets: [...new Set(ok.map((l) => l.targetRel))], trackedRules }
 }
 
 const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`
 
+const BASELINE_USAGE = "Usage: functype-eval baseline <dir> [<dir> ...]"
+const CHECK_USAGE = "Usage: functype-eval check <dir> [<dir> ...] [--update]"
+
 export const runBaseline = async (args: ReadonlyArray<string>, cwd: string = process.cwd()): Promise<number> => {
-  const { target } = parseArgs(args)
-  if (target === undefined) {
-    console.error("Usage: functype-eval baseline <dir>")
-    return 1
+  const parsed = argsFor(args, [], BASELINE_USAGE)
+  if (typeof parsed === "string") {
+    console.error(parsed)
+    return 2
   }
-  const result = await lint(target, cwd)
+  const result = await lint(parsed.targets, cwd)
   if (typeof result === "string") {
     console.error(result)
     return 2
   }
-  const baseline = buildBaseline(result.targetRel, result.trackedRules, result.files)
+  const baseline = buildBaseline(result.targets, result.trackedRules, result.files)
   writeFileSync(join(cwd, BASELINE_FILE), serializeBaseline(baseline))
   const findings = Object.values(baseline.files).reduce(
     (total, counts) => total + Object.values(counts).reduce((a, b) => a + b, 0),
@@ -122,16 +159,20 @@ export const runBaseline = async (args: ReadonlyArray<string>, cwd: string = pro
   return 0
 }
 
-const readBaseline = (cwd: string, target: string, targetRel: string): ReturnType<typeof parseBaseline> | string => {
+const sameTargets = (a: ReadonlyArray<string>, b: ReadonlyArray<string>): boolean =>
+  JSON.stringify([...a].sort()) === JSON.stringify([...b].sort())
+
+const readBaseline = (cwd: string, args: string, targets: ReadonlyArray<string>): Baseline | string => {
   const path = join(cwd, BASELINE_FILE)
-  if (!existsSync(path))
-    return `functype-eval: no ${BASELINE_FILE} here. Create one with \`functype-eval baseline ${target}\`.`
+  if (!existsSync(path)) {
+    return `functype-eval: no ${BASELINE_FILE} here. Create one with \`functype-eval baseline ${args}\`.`
+  }
   try {
     const baseline = parseBaseline(readFileSync(path, "utf8"))
-    return baseline.target === targetRel
+    return sameTargets(baseline.targets, targets)
       ? baseline
-      : `functype-eval: ${BASELINE_FILE} was written for ${baseline.target}, not ${targetRel}. ` +
-          `Check the same directory, or re-create the baseline.`
+      : `functype-eval: ${BASELINE_FILE} was written for ${baseline.targets.join(", ")}, not ${[...targets].sort().join(", ")}. ` +
+          `Check the same directories, or re-create the baseline.`
   } catch (error) {
     return `functype-eval: ${error instanceof Error ? error.message : String(error)}`
   }
@@ -161,17 +202,18 @@ const notes = (comparison: Comparison): ReadonlyArray<string> => [
 ]
 
 export const runCheck = async (args: ReadonlyArray<string>, cwd: string = process.cwd()): Promise<number> => {
-  const { target, update } = parseArgs(args)
-  if (target === undefined) {
-    console.error("Usage: functype-eval check <dir> [--update]")
-    return 1
+  const parsed = argsFor(args, ["--update"], CHECK_USAGE)
+  if (typeof parsed === "string") {
+    console.error(parsed)
+    return 2
   }
-  const result = await lint(target, cwd)
+  const { targets, update } = parsed
+  const result = await lint(targets, cwd)
   if (typeof result === "string") {
     console.error(result)
     return 2
   }
-  const baseline = readBaseline(cwd, target, result.targetRel)
+  const baseline = readBaseline(cwd, targets.join(" "), result.targets)
   if (typeof baseline === "string") {
     console.error(baseline)
     return 2
@@ -200,11 +242,12 @@ export const runCheck = async (args: ReadonlyArray<string>, cwd: string = proces
   )
 
   if (!update) {
-    if (comparison.findingsDown > 0) console.log(`  Run \`functype-eval check ${target} --update\` to lock it in.`)
+    if (comparison.findingsDown > 0)
+      console.log(`  Run \`functype-eval check ${targets.join(" ")} --update\` to lock it in.`)
     return 0
   }
   const path = join(cwd, BASELINE_FILE)
-  const next = serializeBaseline(buildBaseline(result.targetRel, result.trackedRules, result.files))
+  const next = serializeBaseline(buildBaseline(result.targets, result.trackedRules, result.files))
   if (next === readFileSync(path, "utf8")) {
     console.log(`  ${BASELINE_FILE} is already up to date.`)
     return 0

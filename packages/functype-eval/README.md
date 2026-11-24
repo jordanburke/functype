@@ -59,11 +59,16 @@ file instead:
 functype-eval baseline ./src            # write .functype-baseline.json (commit it)
 functype-eval check ./src               # exit 1 if any file got worse
 functype-eval check ./src --update      # accept the counts once they went down or stayed level
+functype-eval baseline packages/*/src   # several directories in one baseline (a monorepo)
 ```
 
 - `baseline` records, for every file with findings, how many each tracked rule reports. Paths are
-  relative to the current directory and use `/`, and keys are sorted, so the file is the same on
-  every machine. Run it from the repo root and commit the file.
+  relative to the working directory and use `/`, and keys are sorted, so the file is the same on
+  every machine. Run both commands from the repo root, where the baseline and
+  `functype-eval.config.json` live, and commit the baseline.
+- Both take one or more directories. The baseline records which ones, and `check` must be given the
+  same set, so a narrower `check --update` can't drop the other files. A file under two overlapping
+  directories is counted once.
 - `check` fails when a file's count for a tracked rule rose, or when a file missing from the baseline
   has findings. It prints each one as `path  rule  old → new`. When nothing rose it exits 0 and says
   how many findings went down.
@@ -73,9 +78,17 @@ functype-eval check ./src --update      # accept the counts once they went down 
 - Both lint the same files as `score`: `.ts`/`.tsx` under the directory, without tests, `.d.ts`,
   `node_modules`, `dist`, `lib` or `coverage`. Each file is counted once.
 
+**What gets counted.** Like `score`, the ratchet runs functype's rules with their defaults and
+ignores the project's own ESLint config. A rule the project turns off, for one file or everywhere,
+is still counted there. Unlike `score`, `baseline` and `check` also ignore `eslint-disable` comments,
+so a new disable comment can't hide a rise; findings already disabled on purpose sit in the
+baseline like any other. The counts can therefore differ from the project's `lint`, but the ratchet
+measures the same way every run, which is all it needs: it compares each file only with itself.
+
 **Exit codes:** `0` baseline written, or nothing regressed; `1` a count rose, or `--update` was
-refused; `2` nothing to compare: a bad `trackedRules` config, no TypeScript sources, no or
-unreadable baseline, a baseline written for a different directory, or a file ESLint couldn't parse.
+refused; `2` nothing to compare: an unknown option or no directory, a bad config (including an empty
+`trackedRules`), a missing directory, no TypeScript sources, no or unreadable baseline, a baseline
+written for different directories, or a file ESLint couldn't parse.
 
 ### Tracked rules
 

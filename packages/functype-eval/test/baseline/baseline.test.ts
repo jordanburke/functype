@@ -1,3 +1,7 @@
+import { readdirSync, readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
+
 import { describe, expect, it } from "vitest"
 
 import {
@@ -11,13 +15,14 @@ import {
   resolveTrackedRules,
   serializeBaseline,
   toPosixPath,
+  TYPE_AWARE_ONLY,
 } from "../../src/baseline/index"
 
 const LET = "functype/no-let"
 const LOOPS = "functype/no-imperative-loops"
 
 const baselineOf = (files: Baseline["files"], trackedRules: ReadonlyArray<string> = [LET, LOOPS]): Baseline =>
-  buildBaseline("src", trackedRules, files)
+  buildBaseline(["src"], trackedRules, files)
 
 describe("resolveTrackedRules", () => {
   it("defaults to the eight rules from the issue, prefixed and sorted", () => {
@@ -36,6 +41,10 @@ describe("resolveTrackedRules", () => {
 
   it("rejects a rule the plugin doesn't have", () => {
     expect(() => resolveTrackedRules(["no-such-rule"])).toThrow(/unknown rule.*no-such-rule/)
+  })
+
+  it("rejects an empty list, which would always pass", () => {
+    expect(() => resolveTrackedRules([])).toThrow(/trackedRules is empty/)
   })
 
   it("rejects a type-aware-only rule, which would always count 0 here", () => {
@@ -60,20 +69,20 @@ describe("path normalisation", () => {
 
 describe("serializeBaseline", () => {
   it("is identical whatever order the input arrives in", () => {
-    const a = buildBaseline("src", [LOOPS, LET], { "src/b.ts": { [LOOPS]: 1, [LET]: 2 }, "src/a.ts": { [LET]: 1 } })
-    const b = buildBaseline("src", [LET, LOOPS], { "src/a.ts": { [LET]: 1 }, "src/b.ts": { [LET]: 2, [LOOPS]: 1 } })
+    const a = buildBaseline(["src"], [LOOPS, LET], { "src/b.ts": { [LOOPS]: 1, [LET]: 2 }, "src/a.ts": { [LET]: 1 } })
+    const b = buildBaseline(["src"], [LET, LOOPS], { "src/a.ts": { [LET]: 1 }, "src/b.ts": { [LET]: 2, [LOOPS]: 1 } })
     expect(serializeBaseline(a)).toBe(serializeBaseline(b))
     expect(Object.keys(a.files)).toEqual(["src/a.ts", "src/b.ts"])
     expect(Object.keys(a.files["src/b.ts"] ?? {})).toEqual([LOOPS, LET])
   })
 
   it("sorts by code unit, not locale (uppercase before lowercase)", () => {
-    const b = buildBaseline("src", [LET], { "src/b.ts": { [LET]: 1 }, "src/B.ts": { [LET]: 1 } })
+    const b = buildBaseline(["src"], [LET], { "src/b.ts": { [LET]: 1 }, "src/B.ts": { [LET]: 1 } })
     expect(Object.keys(b.files)).toEqual(["src/B.ts", "src/b.ts"])
   })
 
   it("drops zero counts and files left empty", () => {
-    const b = buildBaseline("src", [LET], { "src/a.ts": { [LET]: 0 }, "src/b.ts": { [LET]: 1 } })
+    const b = buildBaseline(["src"], [LET], { "src/a.ts": { [LET]: 0 }, "src/b.ts": { [LET]: 1 } })
     expect(Object.keys(b.files)).toEqual(["src/b.ts"])
   })
 
@@ -85,12 +94,17 @@ describe("serializeBaseline", () => {
 
 describe("parseBaseline", () => {
   it("refuses a schema it doesn't know", () => {
-    const text = JSON.stringify({ schema: BASELINE_SCHEMA + 1, target: "src", trackedRules: [], files: {} })
+    const text = JSON.stringify({ schema: BASELINE_SCHEMA + 1, targets: ["src"], trackedRules: [], files: {} })
     expect(() => parseBaseline(text)).toThrow(/schema 2/)
   })
 
   it("refuses malformed counts", () => {
-    const text = JSON.stringify({ schema: BASELINE_SCHEMA, target: "src", trackedRules: [], files: { a: { r: -1 } } })
+    const text = JSON.stringify({
+      schema: BASELINE_SCHEMA,
+      targets: ["src"],
+      trackedRules: [],
+      files: { a: { r: -1 } },
+    })
     expect(() => parseBaseline(text)).toThrow(/files/)
   })
 })
@@ -143,5 +157,20 @@ describe("compareBaseline", () => {
     ])
     expect(result.newRules).toEqual([fold])
     expect(result.regressions).toEqual([{ path: "src/a.ts", rule: fold, before: 0, after: 1, newFile: false }])
+  })
+})
+
+describe("TYPE_AWARE_ONLY", () => {
+  // The list is copied by hand from the plugin. Pin it to the rules whose source says "Type-aware only",
+  // so a new type-aware rule (or one that gains a syntactic fallback) fails here instead of drifting.
+  it("matches the plugin rules documented as type-aware only", () => {
+    const rulesDir = join(dirname(fileURLToPath(import.meta.url)), "../../../eslint-plugin-functype/src/rules")
+    const documented = readdirSync(rulesDir)
+      .filter((file) => file.endsWith(".ts") && file !== "index.ts")
+      .filter((file) => readFileSync(join(rulesDir, file), "utf8").includes("Type-aware only"))
+      .map((file) => file.replace(/\.ts$/, ""))
+      .sort()
+    expect(documented.length).toBeGreaterThan(0)
+    expect([...TYPE_AWARE_ONLY].sort()).toEqual(documented)
   })
 })

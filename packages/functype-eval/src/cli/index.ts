@@ -15,8 +15,8 @@ Usage: functype-eval <command> [options]
 
 Commands:
   score <target>        Score a directory's functype/FP adherence (0–100)
-  baseline <dir>        Write .functype-baseline.json: per-file counts for the tracked rules
-  check <dir>           Exit 1 if any file's tracked count rose, or a new file has findings
+  baseline <dir...>     Write .functype-baseline.json: per-file counts for the tracked rules
+  check <dir...>        Exit 1 if any file's tracked count rose, or a new file has findings
   bench                 LLM eval harness (Phase 2, not yet implemented)
 
 Score options:
@@ -29,7 +29,8 @@ Check options:
 
 Tracked rules default to no-imperative-loops, prefer-functype-map, prefer-functype-set, prefer-map,
 prefer-fold, no-let, prefer-flatmap and prefer-do-notation. Override them with
-{ "trackedRules": [...] } in functype-eval.config.json.
+{ "trackedRules": [...] } in functype-eval.config.json. Run baseline and check from the repo root:
+paths are stored relative to it. They count findings under eslint-disable comments too.
 
 Global:
   -v, --version         Show version number
@@ -43,8 +44,8 @@ Exit codes (score):
 Exit codes (baseline / check):
   0  baseline written / nothing regressed
   1  a count rose, or --update was refused
-  2  nothing to compare: bad config, no sources, no or unreadable baseline, different target,
-     unparsable file
+  2  nothing to compare: bad arguments or config, no sources, no or unreadable baseline,
+     different directories, unparsable file
 
 Examples:
   functype-eval score ./src
