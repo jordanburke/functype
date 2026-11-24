@@ -65,9 +65,7 @@ export const scoreEslint = async (
   dimensions: ReadonlyArray<DimensionConfig> = DEFAULT_DIMENSIONS,
 ): Promise<RuleCounts> => {
   const rules = enabledRuleNames(dimensions)
-  const eslint = buildEslint(resolve(target), rules)
-
-  const results = await lintOrEmpty(eslint, "**/*.{ts,tsx}")
+  const results = await lintTarget(target, rules)
 
   const initial = new Map<string, number>(rules.map((rule) => [`functype/${rule}`, 0]))
   return results
@@ -77,6 +75,15 @@ export const scoreEslint = async (
       return id !== null && counts.has(id) ? counts.set(id, (counts.get(id) ?? 0) + 1) : counts
     }, initial)
 }
+
+/**
+ * Lint every `.ts`/`.tsx` file under `target` with the given rules (names without the `functype/`
+ * prefix) and return ESLint's per-file results. The single lint pass behind both `score` and
+ * `baseline`/`check`, so every command sees the same file set (`IGNORE_GLOBS` applied). ESLint
+ * returns one result per file, so no file is counted twice. Empty when no source file matches.
+ */
+export const lintTarget = async (target: string, rules: ReadonlyArray<string>): Promise<ESLint.LintResult[]> =>
+  lintOrEmpty(buildEslint(resolve(target), rules), "**/*.{ts,tsx}")
 
 /** `lintFiles` throws when a pattern matches nothing; treat that as "no violations". */
 const lintOrEmpty = async (eslint: ESLint, pattern: string): Promise<ESLint.LintResult[]> => {

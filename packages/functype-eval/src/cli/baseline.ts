@@ -1,0 +1,204 @@
+/**
+ * `functype-eval baseline <dir>` and `functype-eval check <dir> [--update]`: a per-file ratchet.
+ *
+ * `baseline` writes `.functype-baseline.json` in the current directory. `check` fails (exit 1) when
+ * any file's count for a tracked rule rose, or a file outside the baseline has findings; `--update`
+ * rewrites the baseline, but only when nothing regressed. Tracked rules come from
+ * `functype-eval.config.json` (`{ "trackedRules": [...] }`) in the current directory, else defaults.
+ *
+ * Exit codes: 0 ok, 1 regression (or a refused `--update`), 2 nothing to compare (no sources, no or
+ * unreadable baseline, a different target, or a file ESLint couldn't parse).
+ */
+
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
+import { join, resolve } from "node:path"
+
+import {
+  BASELINE_FILE,
+  buildBaseline,
+  collectCounts,
+  type Collected,
+  compareBaseline,
+  type Comparison,
+  parseBaseline,
+  relativeTarget,
+  resolveTrackedRules,
+  serializeBaseline,
+  shortRuleName,
+} from "../baseline/index"
+import { lintTarget } from "../scorers/eslint"
+
+type ParsedArgs = {
+  readonly target?: string
+  readonly update: boolean
+}
+
+const parseArgs = (args: ReadonlyArray<string>): ParsedArgs =>
+  args.reduce<ParsedArgs>(
+    (acc, arg) => {
+      if (arg === "--update") return { ...acc, update: true }
+      if (!arg.startsWith("-") && acc.target === undefined) return { ...acc, target: arg }
+      return acc
+    },
+    { update: false },
+  )
+
+/** `trackedRules` from `functype-eval.config.json` in `cwd`, or undefined for the defaults. */
+const configuredRules = (cwd: string): ReadonlyArray<string> | undefined => {
+  const path = join(cwd, "functype-eval.config.json")
+  if (!existsSync(path)) return undefined
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as { trackedRules?: unknown }
+  const rules = parsed.trackedRules
+  if (rules === undefined) return undefined
+  if (!Array.isArray(rules) || !rules.every((r): r is string => typeof r === "string")) {
+    throw new Error("functype-eval.config.json: trackedRules must be an array of rule names")
+  }
+  return rules
+}
+
+type Lint = Collected & { readonly targetRel: string; readonly trackedRules: ReadonlyArray<string> }
+
+/** Lint `target` with the tracked rules; a string is the error to print (exit 2). */
+const lint = async (target: string, cwd: string): Promise<Lint | string> => {
+  const trackedRules = resolveTrackedRules(configuredRules(cwd))
+  const targetAbs = resolve(cwd, target)
+  if (!existsSync(targetAbs)) return `functype-eval: ${target} does not exist`
+  const targetRel = relativeTarget(realpathSync(cwd), realpathSync(targetAbs))
+  if (targetRel === ".." || targetRel.startsWith("../") || targetRel.startsWith("/")) {
+    return `functype-eval: ${target} is outside the current directory; run from a directory that contains it`
+  }
+  const collected = collectCounts(
+    await lintTarget(targetAbs, trackedRules.map(shortRuleName)),
+    targetAbs,
+    targetRel,
+    trackedRules,
+  )
+  if (collected.fileCount === 0) {
+    return (
+      `functype-eval: no TypeScript sources found under ${target}.\n` +
+      `  (looked for **/*.ts and **/*.tsx, excluding tests, .d.ts, node_modules, dist, lib)`
+    )
+  }
+  if (collected.unparsable.length > 0) {
+    return `functype-eval: ESLint couldn't parse ${collected.unparsable.join(", ")}; their findings are unknown`
+  }
+  return { ...collected, targetRel, trackedRules }
+}
+
+const plural = (n: number, word: string): string => `${n} ${word}${n === 1 ? "" : "s"}`
+
+export const runBaseline = async (args: ReadonlyArray<string>, cwd: string = process.cwd()): Promise<number> => {
+  const { target } = parseArgs(args)
+  if (target === undefined) {
+    console.error("Usage: functype-eval baseline <dir>")
+    return 1
+  }
+  const result = await lint(target, cwd)
+  if (typeof result === "string") {
+    console.error(result)
+    return 2
+  }
+  const baseline = buildBaseline(result.targetRel, result.trackedRules, result.files)
+  writeFileSync(join(cwd, BASELINE_FILE), serializeBaseline(baseline))
+  const findings = Object.values(baseline.files).reduce(
+    (total, counts) => total + Object.values(counts).reduce((a, b) => a + b, 0),
+    0,
+  )
+  console.log(
+    `Wrote ${BASELINE_FILE}: ${plural(findings, "finding")} in ${plural(Object.keys(baseline.files).length, "file")} ` +
+      `(${plural(result.fileCount, "file")} linted, ${plural(result.trackedRules.length, "rule")} tracked).`,
+  )
+  return 0
+}
+
+const readBaseline = (cwd: string, target: string, targetRel: string): ReturnType<typeof parseBaseline> | string => {
+  const path = join(cwd, BASELINE_FILE)
+  if (!existsSync(path))
+    return `functype-eval: no ${BASELINE_FILE} here. Create one with \`functype-eval baseline ${target}\`.`
+  try {
+    const baseline = parseBaseline(readFileSync(path, "utf8"))
+    return baseline.target === targetRel
+      ? baseline
+      : `functype-eval: ${BASELINE_FILE} was written for ${baseline.target}, not ${targetRel}. ` +
+          `Check the same directory, or re-create the baseline.`
+  } catch (error) {
+    return `functype-eval: ${error instanceof Error ? error.message : String(error)}`
+  }
+}
+
+const formatRegressions = (comparison: Comparison): string => {
+  const rows = comparison.regressions.map((r) => ({
+    path: r.path,
+    rule: shortRuleName(r.rule),
+    change: `${r.before} → ${r.after}${r.newFile ? "  (not in baseline)" : ""}`,
+  }))
+  const pathWidth = Math.max(...rows.map((r) => r.path.length))
+  const ruleWidth = Math.max(...rows.map((r) => r.rule.length))
+  return rows.map((r) => `  ${r.path.padEnd(pathWidth)}  ${r.rule.padEnd(ruleWidth)}  ${r.change}`).join("\n")
+}
+
+const notes = (comparison: Comparison): ReadonlyArray<string> => [
+  ...(comparison.ignoredRules.length > 0
+    ? [`  note: ignoring rules no longer tracked: ${comparison.ignoredRules.map(shortRuleName).join(", ")}`]
+    : []),
+  ...(comparison.newRules.length > 0
+    ? [
+        `  note: ${comparison.newRules.map(shortRuleName).join(", ")} not in the baseline, so compared against 0. ` +
+          `Re-run \`functype-eval baseline\` to start tracking them.`,
+      ]
+    : []),
+]
+
+export const runCheck = async (args: ReadonlyArray<string>, cwd: string = process.cwd()): Promise<number> => {
+  const { target, update } = parseArgs(args)
+  if (target === undefined) {
+    console.error("Usage: functype-eval check <dir> [--update]")
+    return 1
+  }
+  const result = await lint(target, cwd)
+  if (typeof result === "string") {
+    console.error(result)
+    return 2
+  }
+  const baseline = readBaseline(cwd, target, result.targetRel)
+  if (typeof baseline === "string") {
+    console.error(baseline)
+    return 2
+  }
+
+  const comparison = compareBaseline(baseline, result.files, result.trackedRules)
+  notes(comparison).forEach((line) => console.error(line))
+
+  if (comparison.regressions.length > 0) {
+    console.error(`✗ ${plural(comparison.regressions.length, "regression")} against ${BASELINE_FILE}:\n`)
+    console.error(formatRegressions(comparison))
+    console.error(
+      update
+        ? `\nRefusing to update ${BASELINE_FILE} while anything regressed. Fix the findings above first.`
+        : "\nFix the new findings; counts may go down or stay level, never up.",
+    )
+    return 1
+  }
+
+  const down =
+    comparison.findingsDown > 0
+      ? `${plural(comparison.findingsDown, "finding")} down across ${plural(comparison.filesDown, "file")}`
+      : "nothing went down"
+  console.log(
+    `✓ no regressions: ${plural(comparison.findings, "finding")} in ${plural(comparison.filesWithFindings, "file")}; ${down}.`,
+  )
+
+  if (!update) {
+    if (comparison.findingsDown > 0) console.log(`  Run \`functype-eval check ${target} --update\` to lock it in.`)
+    return 0
+  }
+  const path = join(cwd, BASELINE_FILE)
+  const next = serializeBaseline(buildBaseline(result.targetRel, result.trackedRules, result.files))
+  if (next === readFileSync(path, "utf8")) {
+    console.log(`  ${BASELINE_FILE} is already up to date.`)
+    return 0
+  }
+  writeFileSync(path, next)
+  console.log(`  Updated ${BASELINE_FILE}.`)
+  return 0
+}
