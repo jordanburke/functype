@@ -1,4 +1,4 @@
-# Functype - Agent Guide
+# functype - Agent Guide
 
 ## Overview
 

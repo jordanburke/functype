@@ -1,6 +1,6 @@
-# Functype Development Guidelines
+# functype Development Guidelines
 
-This document provides essential information for developing and maintaining the Functype project, a functional programming library for TypeScript.
+This document provides essential information for developing and maintaining the functype project, a functional programming library for TypeScript.
 
 ## Build/Configuration Instructions
 

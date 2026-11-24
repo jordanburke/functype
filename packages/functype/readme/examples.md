@@ -1,6 +1,6 @@
-# Functype Examples
+# functype Examples
 
-This document provides comprehensive examples of using the Functype library. These examples are designed to help you understand the core concepts and practical applications of functional programming with TypeScript.
+This document provides comprehensive examples of using the functype library. These examples are designed to help you understand the core concepts and practical applications of functional programming with TypeScript.
 
 ## Table of Contents
 
@@ -1839,4 +1839,4 @@ userState.fold(
 )
 ```
 
-These examples cover a wide range of use cases and demonstrate how to use Functype effectively in real-world applications. Feel free to adapt them to your specific needs!
+These examples cover a wide range of use cases and demonstrate how to use functype effectively in real-world applications. Feel free to adapt them to your specific needs!

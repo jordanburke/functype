@@ -1,10 +1,10 @@
-# Companion Pattern in Functype
+# Companion Pattern in functype
 
 The Companion pattern is a core architectural pattern in functype, inspired by Scala's companion objects. It provides a clean way to combine constructor functions with static utility methods, creating a unified API that feels both functional and object-oriented.
 
 ## Why Companion Over Classes?
 
-Functype uses the Companion pattern instead of classes for several reasons:
+functype uses the Companion pattern instead of classes for several reasons:
 
 1. **Functional Programming Alignment**: Constructor functions are just functions, making them easier to compose and pass around
 2. **Immutability by Default**: Objects created by constructors don't inherit mutable prototype chains
@@ -142,7 +142,7 @@ object Option {
 }
 ```
 
-Functype adapts this to TypeScript:
+functype adapts this to TypeScript:
 
 ```typescript
 // TypeScript with Companion
@@ -245,7 +245,7 @@ const instance = {
 
 ## Helper Types
 
-Functype provides helper types for working with Companion objects:
+functype provides helper types for working with Companion objects:
 
 ```typescript
 import { type CompanionMethods, type InstanceType, isCompanion } from "functype/companion"

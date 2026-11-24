@@ -1,4 +1,4 @@
-# Functype Library Improvement Recommendations
+# functype Library Improvement Recommendations
 
 ## Executive Summary
 

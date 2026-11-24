@@ -6,7 +6,7 @@
 
 ## Summary
 
-Functype has removed the `get()` method from all data structures (Option, Either, Try, etc.) and replaced it with `getOrThrow(error?: Error)` as the sole unsafe extraction method. This decision aligns with functional programming best practices while providing better error handling than traditional approaches.
+functype has removed the `get()` method from all data structures (Option, Either, Try, etc.) and replaced it with `getOrThrow(error?: Error)` as the sole unsafe extraction method. This decision aligns with functional programming best practices while providing better error handling than traditional approaches.
 
 ## Background
 

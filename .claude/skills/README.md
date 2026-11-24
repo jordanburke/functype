@@ -1,4 +1,4 @@
-# Functype Skills
+# functype Skills
 
 This directory contains Claude Code skills for working with the functype library.
 
@@ -203,6 +203,6 @@ python3 ~/.claude/plugins/marketplaces/anthropic-agent-skills/skill-creator/scri
 ## Resources
 
 - **Skill Creator Docs**: See the skill-creator skill for guidelines
-- **Functype Docs**: https://jordanburke.github.io/functype/
+- **functype Docs**: https://jordanburke.github.io/functype/
 - **Feature Matrix**: `docs/FUNCTYPE_FEATURE_MATRIX.md`
 - **GitHub**: https://github.com/jordanburke/functype

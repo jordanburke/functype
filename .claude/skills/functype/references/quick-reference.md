@@ -1,4 +1,4 @@
-# Functype Quick Reference
+# functype Quick Reference
 
 Quick lookup guide for common functype operations.
 

@@ -1,4 +1,4 @@
-# JavaScript/TypeScript to Functype Pattern Guide
+# JavaScript/TypeScript to functype Pattern Guide
 
 This guide shows common JavaScript/TypeScript patterns and their functype equivalents. Each pattern includes a "before" example using traditional JavaScript/TypeScript and an "after" example using functype.
 
@@ -30,7 +30,7 @@ function getUserName(user: User | null | undefined): string {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getUserName(user: User | null | undefined): string {
@@ -54,7 +54,7 @@ if (zipCode) {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 const city = Option(user)
@@ -85,7 +85,7 @@ function getConfig(config?: Partial<Config>): Config {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getConfig(config?: Partial<Config>): Config {
@@ -123,7 +123,7 @@ if (result.error) {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function parseJSON(jsonString: string): Try<any> {
@@ -160,7 +160,7 @@ function processUser(userId: string): { user?: User; error?: string } {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function processUser(userId: string): Either<string, User> {
@@ -190,7 +190,7 @@ async function fetchUserData(userId: string): Promise<User | null> {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function fetchUserData(userId: string): IO<never, Error, User> {
@@ -228,7 +228,7 @@ function getActiveUserNames(users: User[]): string[] {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getActiveUserNames(users: User[]): List<string> {
@@ -252,7 +252,7 @@ function getThirdUser(users: User[]): User | null {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getFirstActiveUser(users: User[]): Option<User> {
@@ -280,7 +280,7 @@ function calculateTotal(items: Item[]): number {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function calculateTotal(items: Item[]): number {
@@ -307,7 +307,7 @@ function getUniqueCategories(products: Product[]): string[] {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getUniqueCategories(products: Product[]): Set<string> {
@@ -339,7 +339,7 @@ function getStatusMessage(status: number): string {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getStatusMessage(status: number): string {
@@ -371,7 +371,7 @@ function processAction(action: Action): string {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function processAction(action: Action): string {
@@ -405,7 +405,7 @@ function validateUser(user: any): string | null {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function validateUser(user: any): Option<string> {
@@ -439,7 +439,7 @@ async function fetchUserWithPosts(userId: string): Promise<UserWithPosts | null>
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function fetchUserWithPosts(userId: string): IO<never, Error, UserWithPosts> {
@@ -465,7 +465,7 @@ async function fetchAllData(): Promise<{ users?: User[]; posts?: Post[]; error?:
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function fetchAllData(): IO<never, Error, { users: User[]; posts: Post[] }> {
@@ -490,7 +490,7 @@ function fetchWithTimeout<T>(promise: Promise<T>, timeout: number): Promise<T> {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function fetchWithTimeout<T>(fn: () => Promise<T>, timeout: number): IO<never, Error, T> {
@@ -524,7 +524,7 @@ function getConfigValue(config: Config, path: string): any {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function getConfigValue(config: Config, path: string): Option<any> {
@@ -552,7 +552,7 @@ function countByCategory(items: Item[]): Record<string, number> {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function countByCategory(items: Item[]): Map<string, number> {
@@ -582,7 +582,7 @@ function mergeConfigs(base: Config, overrides: Partial<Config>[]): Config {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function mergeConfigs(base: Config, overrides: Partial<Config>[]): Config {
@@ -619,7 +619,7 @@ function validateEmail(email: string): string {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 import { ValidatedBrand } from "functype/branded"
@@ -665,7 +665,7 @@ function validateUser(data: any): User {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function validateUser(data: any): Either<string[], User> {
@@ -742,7 +742,7 @@ function processOrders(orders: Order[]): Summary {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function processOrders(orders: Order[]): Summary {
@@ -802,7 +802,7 @@ async function processDataFile(filePath: string): Promise<ProcessedData | null> 
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function processDataFile(filePath: string): IO<never, Error, ProcessedData> {
@@ -884,7 +884,7 @@ function reducer(state: State, action: Action): State {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 type State = {
@@ -940,7 +940,7 @@ function reducer(state: State, action: Action): State {
 const message = user ? (user.isActive ? (user.isAdmin ? "Active Admin" : "Active User") : "Inactive User") : "No User"
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 const message = Option(user).fold(
@@ -971,7 +971,7 @@ function processItems(items: Item[]): Item[] {
 }
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 function processItems(items: Item[]): List<Item> {
@@ -1014,7 +1014,7 @@ getUserById(userId, (err, user) => {
 })
 ```
 
-**✅ Functype Pattern:**
+**✅ functype Pattern:**
 
 ```typescript
 const toErr = (e: unknown) => (e instanceof Error ? e : new Error(String(e)))

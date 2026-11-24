@@ -1,4 +1,4 @@
-# Common Functype Patterns
+# Common functype Patterns
 
 This document provides additional pattern examples and recipes for using functype in real-world scenarios.
 

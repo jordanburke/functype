@@ -1,10 +1,10 @@
-# Functype Architecture
+# functype Architecture
 
 Complete guide to functype's architectural patterns and design principles.
 
 ## Design Philosophy
 
-Functype follows Scala's functional programming model adapted for TypeScript:
+functype follows Scala's functional programming model adapted for TypeScript:
 
 1. **Constructor functions** instead of classes
 2. **Immutable** data structures
@@ -151,7 +151,7 @@ function process(value: unknown): void
 
 ### Higher-Kinded Types (HKT)
 
-Functype implements HKT to enable generic programming:
+functype implements HKT to enable generic programming:
 
 ```typescript
 // HKT allows abstracting over type constructors
@@ -437,7 +437,7 @@ import { Option, Either } from "functype"
 
 ### Tree-Shaking
 
-Functype is optimized for tree-shaking:
+functype is optimized for tree-shaking:
 
 ```json
 {

@@ -1,6 +1,6 @@
-# Functype Type Index
+# functype Type Index
 
-This document provides a comprehensive index of all types and data structures in the Functype library, along with the type classes each implements.
+This document provides a comprehensive index of all types and data structures in the functype library, along with the type classes each implements.
 
 ## Core Data Structures
 
@@ -142,7 +142,7 @@ Identity monad that simply wraps a value.
 
 ## Higher-Kinded Types
 
-Functype provides higher-kinded type emulation through the following interfaces:
+functype provides higher-kinded type emulation through the following interfaces:
 
 ```typescript
 // Base higher-kinded type

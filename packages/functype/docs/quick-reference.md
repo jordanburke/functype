@@ -1,4 +1,4 @@
-# Functype Quick Reference
+# functype Quick Reference
 
 ## Option<T>
 
