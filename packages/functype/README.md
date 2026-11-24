@@ -757,7 +757,7 @@ For more details, see the [Error Formatting Guide](docs/error-formatting.md).
   - ✓ Add Pipe interface for composition
   - ✓ Add Serializable for persistence
   - ✓ Add Typeable support
-- [ ] Implement NonEmptyList<A>
+- [ ] Implement `NonEmptyList<A>`
   - List guaranteed to have at least one element
   - Prevents empty list errors at compile time
   - Full standard interface implementation
