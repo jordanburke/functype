@@ -169,7 +169,7 @@ const categoryTitle = (category: string): string => category;
 
 const llmsTxt = (): string =>
   [
-    "# Functype",
+    "# functype",
     "",
     `> ${pkg.description}. Scala-inspired: Option, Either, Try, List, IO and more, with typed errors, dependency injection and do-notation. Version ${VERSION}.`,
     "",
@@ -237,7 +237,7 @@ const typeSection = (name: string, data: TypeData): string =>
 
 const referenceMd = (): string =>
   [
-    `# Functype API reference (v${VERSION})`,
+    `# functype API reference (v${VERSION})`,
     "",
     "Generated from the functype CLI data — the same source as `npx functype` and the MCP server's `search_docs`. Types are grouped as in the CLI overview.",
     "",
@@ -294,7 +294,7 @@ const separator = (label: string): string =>
 
 const llmsFullTxt = (reference: string): string =>
   [
-    `# Functype v${VERSION}`,
+    `# functype v${VERSION}`,
     "",
     `> ${pkg.description}, with Scala-inspired patterns.`,
     "",

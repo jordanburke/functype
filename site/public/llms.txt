@@ -1,4 +1,4 @@
-# Functype
+# functype
 
 > A functional programming library for TypeScript, using immutable data structures and type classes. Scala-inspired: Option, Either, Try, List, IO and more, with typed errors, dependency injection and do-notation. Version 2.2.0.
 
