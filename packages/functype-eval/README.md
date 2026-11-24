@@ -74,8 +74,8 @@ functype-eval check ./src --update      # accept the counts once they went down 
   `node_modules`, `dist`, `lib` or `coverage`. Each file is counted once.
 
 **Exit codes:** `0` baseline written, or nothing regressed; `1` a count rose, or `--update` was
-refused; `2` nothing to compare: no TypeScript sources, no or unreadable baseline, a baseline written
-for a different directory, or a file ESLint couldn't parse.
+refused; `2` nothing to compare: a bad `trackedRules` config, no TypeScript sources, no or
+unreadable baseline, a baseline written for a different directory, or a file ESLint couldn't parse.
 
 ### Tracked rules
 

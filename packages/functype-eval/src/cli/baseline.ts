@@ -6,8 +6,8 @@
  * rewrites the baseline, but only when nothing regressed. Tracked rules come from
  * `functype-eval.config.json` (`{ "trackedRules": [...] }`) in the current directory, else defaults.
  *
- * Exit codes: 0 ok, 1 regression (or a refused `--update`), 2 nothing to compare (no sources, no or
- * unreadable baseline, a different target, or a file ESLint couldn't parse).
+ * Exit codes: 0 ok, 1 regression (or a refused `--update`), 2 nothing to compare (a bad config, no
+ * sources, no or unreadable baseline, a different target, or a file ESLint couldn't parse).
  */
 
 import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
@@ -51,7 +51,7 @@ const configuredRules = (cwd: string): ReadonlyArray<string> | undefined => {
   const rules = parsed.trackedRules
   if (rules === undefined) return undefined
   if (!Array.isArray(rules) || !rules.every((r): r is string => typeof r === "string")) {
-    throw new Error("functype-eval.config.json: trackedRules must be an array of rule names")
+    throw new Error("functype-eval: functype-eval.config.json: trackedRules must be an array of rule names")
   }
   return rules
 }
@@ -59,8 +59,19 @@ const configuredRules = (cwd: string): ReadonlyArray<string> | undefined => {
 type Lint = Collected & { readonly targetRel: string; readonly trackedRules: ReadonlyArray<string> }
 
 /** Lint `target` with the tracked rules; a string is the error to print (exit 2). */
+/** The tracked rule ids, or the config error to print (exit 2, not the exit 1 of a regression). */
+const trackedRulesFor = (cwd: string): ReadonlyArray<string> | string => {
+  try {
+    return resolveTrackedRules(configuredRules(cwd))
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return message.startsWith("functype-eval") ? message : `functype-eval: functype-eval.config.json: ${message}`
+  }
+}
+
 const lint = async (target: string, cwd: string): Promise<Lint | string> => {
-  const trackedRules = resolveTrackedRules(configuredRules(cwd))
+  const trackedRules = trackedRulesFor(cwd)
+  if (typeof trackedRules === "string") return trackedRules
   const targetAbs = resolve(cwd, target)
   if (!existsSync(targetAbs)) return `functype-eval: ${target} does not exist`
   const targetRel = relativeTarget(realpathSync(cwd), realpathSync(targetAbs))

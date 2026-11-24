@@ -88,6 +88,28 @@ describe("functype-eval baseline", () => {
     removeProject(dir)
   })
 
+  it("exits 2 and writes nothing for an unknown rule in the config", async () => {
+    const dir = writeProject({
+      "src/a.ts": ONE_LET,
+      "functype-eval.config.json": JSON.stringify({ trackedRules: ["no-such-rule"] }),
+    })
+    const output = capture()
+
+    expect(await runBaseline(["src"], dir)).toBe(2)
+    expect(output.err()).toContain("unknown rule(s) in trackedRules: no-such-rule")
+    expect(() => readBaseline(dir)).toThrow()
+    removeProject(dir)
+  })
+
+  it("exits 2 for malformed config JSON", async () => {
+    const dir = writeProject({ "src/a.ts": ONE_LET, "functype-eval.config.json": "{ not json" })
+    const output = capture()
+
+    expect(await runBaseline(["src"], dir)).toBe(2)
+    expect(output.err()).toContain("functype-eval.config.json")
+    removeProject(dir)
+  })
+
   it("exits 2 and writes nothing when there are no TypeScript sources", async () => {
     const dir = writeProject({ "src/readme.md": "no ts" })
     const output = capture()

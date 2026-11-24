@@ -43,7 +43,8 @@ Exit codes (score):
 Exit codes (baseline / check):
   0  baseline written / nothing regressed
   1  a count rose, or --update was refused
-  2  nothing to compare: no sources, no or unreadable baseline, different target, unparsable file
+  2  nothing to compare: bad config, no sources, no or unreadable baseline, different target,
+     unparsable file
 
 Examples:
   functype-eval score ./src
