@@ -6,13 +6,17 @@ import Footer from "../components/Footer.astro";
 interface Props {
   title: string;
   description?: string;
+  /** schema.org data for search engines, emitted as JSON-LD. */
+  structuredData?: Record<string, unknown>;
 }
 
 const image = new URL("/og.png", Astro.site).href;
 const {
   title,
   description = "Option, Either, Try, List and IO for TypeScript: missing values, errors and effects as types your compiler checks.",
+  structuredData,
 } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
 ---
 
 <!doctype html>
@@ -24,13 +28,14 @@ const {
     <meta name="generator" content={Astro.generator} />
     <meta name="color-scheme" content="light dark" />
     <title>{title}</title>
+    <link rel="canonical" href={canonical} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="functype docs for language models" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="functype" />
-    <meta property="og:url" content={new URL(Astro.url.pathname, Astro.site).href} />
+    <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={image} />
@@ -38,6 +43,7 @@ const {
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="functype: Put what can go wrong in the type." />
     <meta name="twitter:card" content="summary_large_image" />
+    {structuredData && <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
