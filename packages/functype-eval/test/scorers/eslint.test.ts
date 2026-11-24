@@ -52,6 +52,13 @@ describe("scoreEslint", () => {
     expect(totalViolations(bad)).toBeGreaterThan(totalViolations(good))
   })
 
+  it("honors eslint-disable comments for score (baseline/check turn them off)", async () => {
+    const dir = writeProject({ "a.ts": "// eslint-disable-next-line functype/no-let\nexport let x = 1\n" })
+    const counts = await scoreEslint(dir)
+    expect(counts.get("functype/no-let")).toBe(0)
+    removeProject(dir)
+  })
+
   it("returns zeroed counts (no throw) for an empty directory", async () => {
     const emptyDir = writeProject({ "readme.md": "no ts here" })
     const counts = await scoreEslint(emptyDir)

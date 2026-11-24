@@ -15,7 +15,8 @@ Guidance for Claude Code when working in this package. Repo-wide conventions liv
 
 ## Phases
 
-- **Phase 1 (current): the `score` CLI.** Fully implemented.
+- **Phase 1 (current): the `score` CLI.** Fully implemented. `baseline`/`check` reuse its lint pass
+  (`lintTarget` in `scorers/eslint.ts`) for a per-file ratchet.
 - **Phase 2 (future): `bench`** — run programming tasks through LLMs (Anthropic API) under varying
   context conditions, score each solution with the Phase 1 scorer. Currently a stub.
 - **Phase 3 (future): MCP server** — expose `score-codebase` / `suggest-functype-fix` as MCP tools.
@@ -73,9 +74,11 @@ src/
     type-coverage.ts      # type-coverage-core (native percent)
     ts-morph.ts           # non-null assertion scan
     aggregate.ts          # density formula + weighted composite + renormalization
+  baseline/index.ts       # per-file ratchet: tracked rules, collect/serialize/parse/compare (pure)
   cli/
     index.ts              # bin entry (shebang): score | bench | --help
     score.ts              # `functype-eval score <target>` — table / --json / --threshold
+    baseline.ts           # `functype-eval baseline <dir>` / `check <dir> [--update]`
     bench.ts              # Phase 2 stub
   index.ts                # public API: score(), ScoreResult
 test/scorers/             # mirrors src/scorers

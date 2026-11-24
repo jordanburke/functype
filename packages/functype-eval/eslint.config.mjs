@@ -10,6 +10,7 @@ export default [
     rules: {
       "functype/prefer-option": "off",
       "functype/prefer-either": "off",
+      "functype/prefer-try": "off",
       "functype/prefer-fold": "off",
       "functype/prefer-map": "off",
       "functype/prefer-flatmap": "off",
