@@ -108,7 +108,7 @@ Try(() => yaml.load(text)).toEither((e) => ScopeError(path, `parse: ${e.message}
 | `list.groupBy(f)`     | `Array.groupBy(xs, f)`                        | `list.groupBy(f)`                             |
 | `Set(1, 2, 3)`        | `HashSet.make(1, 2, 3)`                       | `Set([1, 2, 3])` or `Set.of(1, 2, 3)`         |
 | `Map(k -> v, ...)`    | `HashMap.make([k, v], ...)`                   | `Map([[k, v], ...])` or `Map.of([k, v], ...)` |
-| `(a, b)` tuple        | `Tuple.make(a, b)`                            | `Tuple(a, b)`                                 |
+| `(a, b)` tuple        | `Tuple.make(a, b)`                            | `Tuple([a, b])` or `Tuple.of(a, b)`           |
 | `Stack`               | n/a                                           | `Stack.of(1, 2, 3)`                           |
 
 functype's `List` / `Set` / `Map` are immutable wrappers with FP combinators, and `Set` / `Map` are the default collections: import them under their own names. When you need the built-in (a cache you mutate, an API that takes a native `ReadonlyMap`), spell it `globalThis.Map` / `globalThis.Set`. The `eslint-plugin-functype` rules `collection-naming`, `prefer-functype-set` and `prefer-functype-map` enforce this; a mutated collection or one passed to a declared `ReadonlyMap` / `ReadonlySet` is allowed.
@@ -123,11 +123,12 @@ Unlike Scala, `head`, `last`, `tail`, `init`, `headOption` and `lastOption` are 
 | ----------------------------- | -------------------------------------------- | ---------------------------------- |
 | `ZIO.succeed(x)`              | `Effect.succeed(x)`                          | `IO.succeed(x)`                    |
 | `ZIO.fail(e)`                 | `Effect.fail(e)`                             | `IO.fail(e)`                       |
-| `ZIO.attempt(() => ...)`      | `Effect.try(() => ...)`                      | `IO.sync(() => ...)`               |
+| `ZIO.succeed(sideEffect)`     | `Effect.sync(() => ...)`                     | `IO.sync(() => ...)`               |
+| `ZIO.attempt(() => ...)`      | `Effect.try(() => ...)`                      | `IO.tryCatch(() => ..., onError)`  |
 | `ZIO.tryPromise(p, e => ...)` | `Effect.tryPromise({ try, catch })`          | `IO.tryPromise({ try, catch })`    |
 | `effect.mapAttempt(f)`        | `Effect.flatMap` with `Effect.try`           | `effect.mapTry(f, onError)`        |
 | `ZIO.service(Tag)`            | `Effect.service(Tag)`                        | `IO.service(Tag)`                  |
-| `effect.provide(layer)`       | `Effect.provide(effect, layer)`              | `effect.provide(layer)`            |
+| `effect.provide(layer)`       | `Effect.provide(effect, layer)`              | `effect.provideLayer(layer)`       |
 | `effect.retry(n)`             | `Effect.retry(effect, Schedule.recurs(n))`   | `effect.retry(n)`                  |
 | `for { ... } yield`           | `Effect.gen(function* () { ... })`           | `IO.gen(function*() { ... })`      |
 | `effect.unsafeRun`            | `Effect.runPromise(e)` / `Effect.runSync(e)` | `await effect.run()` / `runSync()` |

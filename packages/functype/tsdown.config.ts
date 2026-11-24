@@ -11,7 +11,7 @@ const entries = {
   "cli/index": "src/cli/index.ts",
   "cli/exports": "src/cli/exports.ts",
   // functype/core: a curated short list of the root export (#141), from its own file as cli/exports is.
-  "core/index": "src/core/exports.ts",
+  "core/exports": "src/core/exports.ts",
   // Core types — entry points target each type's main file (not its barrel index.ts,
   // whose surface intentionally differs, e.g. list/index re-exports LazyList too).
   "option/index": "src/option/Option.ts",

@@ -1,6 +1,6 @@
 /**
  * `functype/core`: the names most code needs, as one short import. The root `functype` import exports
- * everything, about 150 names; reach for it when you need more, such as Layer, Http, Match, Cond, Lazy,
+ * everything, over a hundred values; reach for it when you need more, such as Layer, Http, Match, Cond, Lazy,
  * branded types, validation or serialization.
  *
  * This is for discoverability, not bundle size: since 2.0 a root import tree-shakes to the same bundle

@@ -87,9 +87,9 @@
       "default": "./dist/cli/exports.js"
     },
     "./core": {
-      "types": "./dist/core/index.d.ts",
-      "import": "./dist/core/index.js",
-      "default": "./dist/core/index.js"
+      "types": "./dist/core/exports.d.ts",
+      "import": "./dist/core/exports.js",
+      "default": "./dist/core/exports.js"
     },
     "./option": {
       "types": "./dist/option/index.d.ts",
