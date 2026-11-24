@@ -4,6 +4,18 @@ import Layout from "../layouts/Layout.astro";
 import { bundleById, caseById, counts, formatKb, formatNs, perf, splitNs, widths } from "../data/perf";
 
 const tally = counts();
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareSourceCode",
+  name: "functype",
+  description:
+    "Option, Either, Try, List and IO for TypeScript: missing values, errors and effects as types your compiler checks.",
+  url: "https://functype.org/",
+  codeRepository: "https://github.com/jordanburke/functype",
+  programmingLanguage: "TypeScript",
+  runtimePlatform: "Node.js",
+  license: "https://opensource.org/licenses/MIT",
+};
 
 // The hero's Option chain: each line, its inferred type, and its value for each PORT.
 const lines = [
@@ -40,7 +52,7 @@ const stats = [
 ];
 ---
 
-<Layout title="functype: Option, Either, Try and IO for TypeScript">
+<Layout title="functype: Option, Either, Try and IO for TypeScript" structuredData={structuredData}>
   <main>
     <section class="hero wrap">
       <a class="tag" href="/upgrading-to-2/"><b>2.0</b> is out. See what changed</a>
