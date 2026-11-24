@@ -61,7 +61,7 @@ function createServer() {
     enableIntrospection: false,
     enableDashboard: false,
     enableInfoEndpoint: false,
-    instructions: `Functype MCP Server — documentation lookup and code validation for the functype TypeScript FP library (v${VERSION}).
+    instructions: `functype MCP server: documentation lookup and code validation for the functype TypeScript FP library (v${VERSION}).
 
 Available tools:
 ${toolList}

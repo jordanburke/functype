@@ -6,7 +6,7 @@ import { OptionDefaults } from "typedoc"
 const config = {
   entryPoints: ["./src/index.ts"],
   out: "typedocs",
-  name: "FuncType",
+  name: "functype",
   includeVersion: true,
   excludePrivate: true,
   excludeProtected: true,

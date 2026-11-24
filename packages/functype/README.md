@@ -5,7 +5,7 @@
   </picture>
 </p>
 
-# Functype
+# functype
 
 [![NPM Version](https://img.shields.io/npm/v/functype)](https://www.npmjs.com/package/functype)
 [![CI](https://github.com/jordanburke/functype/actions/workflows/ci.yml/badge.svg)](https://github.com/jordanburke/functype/actions/workflows/ci.yml)
