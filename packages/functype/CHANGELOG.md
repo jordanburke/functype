@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 2.2.1 - 2026-11-24
+
 - **functype-react: `isFailure`, `isSuccess`, `isPending` and `isIdle` now narrow the state** (#633). `useIO`, `useIOQueryState` and `useIOMutationState` typed every flag as `boolean`, so after `if (state.isFailure)` TypeScript still didn't know which case it had, and `state.error` didn't type-check. Each flag is now the literal `true` on its own case and `false` on the others, so a flag narrows the way `_tag` does. Two kinds of code stop compiling, both at compile time only. Code that builds one of these results by hand with `boolean` flags, such as a test mock, needs literal flags. Code that checks a flag and then handles that same case again, such as `if (s.isIdle) return null` followed by a `<Match>` with an `Idle` case or a later `s._tag === "Idle"` check, now gets an error, because TypeScript knows that case can't happen there; delete the dead branch.
 
 ## 2.2.0 - 2026-11-23
