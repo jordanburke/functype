@@ -271,7 +271,7 @@ Both the hooks and the primitives are generic over any `IO<never, E, A>` — not
 
 Both are `error` in `functype.configs.recommended`, the plugin's one preset.
 
-They work without type information and are more precise with it (`parserOptions.projectService`). See the [plugin README](../eslint-plugin-functype/README.md#react-rules) for what each one reports.
+They work without type information and are more precise with it (`parserOptions.projectService`). See the [plugin README](https://functype.org/eslint/#react-rules) for what each one reports.
 
 ## Deferred to v0.2
 
@@ -281,4 +281,4 @@ They work without type information and are more precise with it (`parserOptions.
 
 ## License
 
-MIT — see [LICENSE](../../LICENSE).
+MIT — see [LICENSE](https://github.com/jordanburke/functype/blob/main/LICENSE).

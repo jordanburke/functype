@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeReactReadme } from "../../../packages/functype-react/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-react",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-react",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-react: React hooks for Option and Either | functype"
+  heading="functype-react"
+  tagline="React bindings for functype: hooks that understand Option, Either and IO, and pattern-matching components that make every case explicit. An early release."
+  links={links}
+>
+  <FunctypeReactReadme />
+</DocLayout>

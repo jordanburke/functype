@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeLogReadme } from "../../../packages/functype-log/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-log",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-log",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-log: logging as IO effects | functype"
+  heading="functype-log"
+  tagline="Logging for functype built on IO and Tag/Layer dependency injection: every log call is a lazy effect, with a console logger, a one-function sink and test tools."
+  links={links}
+>
+  <FunctypeLogReadme />
+</DocLayout>

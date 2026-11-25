@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeEvalReadme } from "../../../packages/functype-eval/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-eval",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-eval",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-eval: score functional TypeScript | functype"
+  heading="functype-eval"
+  tagline="A CLI that scores how functional a TypeScript codebase is, from 0 to 100, with a per-file baseline and check so lint findings can't rise in CI."
+  links={links}
+>
+  <FunctypeEvalReadme />
+</DocLayout>

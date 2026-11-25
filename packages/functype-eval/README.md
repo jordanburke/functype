@@ -111,7 +111,7 @@ compared against 0, so `check` fails until you re-run `baseline` to record it.
 
 ## How the score works
 
-The composite is a weighted sum of ten dimensions (see [CLAUDE.md](./CLAUDE.md) for the full table
+The composite is a weighted sum of ten dimensions (see [CLAUDE.md](https://github.com/jordanburke/functype/blob/main/packages/functype-eval/CLAUDE.md) for the full table
 and weights). The eight ESLint dimensions and the non-null dimension are normalized by **violation
 density** per 1000 lines of code:
 
