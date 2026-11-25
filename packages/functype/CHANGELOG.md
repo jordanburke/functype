@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **functype-react: `isFailure`, `isSuccess`, `isPending` and `isIdle` now narrow the state** (#633). `useIO`, `useIOQueryState` and `useIOMutationState` typed every flag as `boolean`, so after `if (state.isFailure)` TypeScript still didn't know which case it had, and `state.error` didn't type-check. Each flag is now the literal `true` on its own case and `false` on the others, so a flag narrows the way `_tag` does. The new `AsyncStateWithFlags<E, A>` type and `withFlags(state)` helper in `functype-react/async` build the same shape for your own `AsyncState` values. Code that only reads the flags is unaffected; code that builds one of these results by hand with `boolean` flags needs literal ones.
+
 ## 2.2.0 - 2026-11-23
 
 - **`functype/core`: the names most code needs, in one import** (#141). It exports 17 names: `Option`, `Some`, `None`, `Either`, `Left`, `Right`, `Try`, `IO`, `Tag`, `List`, `Set`, `Map`, `Tuple`, `tryCatch`, `tryCatchAsync`, `isLeft` and `isRight`. Each is the same value as its root export. It's for finding your way among the root import's hundred-plus values, not for size: an Option-only program bundles to 5.8 KB gzipped from `functype/core`, `functype/option` or `functype` alike, and the size check now measures it too.

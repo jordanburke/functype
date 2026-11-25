@@ -3,7 +3,7 @@
 import type { QueryFunctionContext, QueryKey, UseQueryResult } from "@tanstack/react-query"
 import type { IO } from "functype/io"
 
-import type { AsyncState } from "../async/AsyncState"
+import { type AsyncStateWithFlags, withFlags } from "../async/AsyncState"
 import type { IOQueryError } from "./IOQueryError"
 import { toQueryState } from "./queryState"
 import type { UseIOQueryOptions } from "./useIOQuery"
@@ -15,13 +15,8 @@ import { useIOQuery } from "./useIOQuery"
  *
  * `refetch` keeps React Query's own signature rather than a lossy re-declaration.
  */
-export type UseIOQueryStateResult<A, E> = AsyncState<IOQueryError<E>, A> &
-  Pick<UseQueryResult<A, IOQueryError<E>>, "refetch"> & {
-    readonly isIdle: boolean
-    readonly isPending: boolean
-    readonly isSuccess: boolean
-    readonly isFailure: boolean
-  }
+export type UseIOQueryStateResult<A, E> = AsyncStateWithFlags<IOQueryError<E>, A> &
+  Pick<UseQueryResult<A, IOQueryError<E>>, "refetch">
 
 /**
  * `useIOQuery` projected straight onto the `AsyncState` ADT — the flag-soup-free path
@@ -55,11 +50,7 @@ export function useIOQueryState<A, E, TData = A, TQueryKey extends QueryKey = Qu
   const state = toQueryState(query)
 
   return {
-    ...state,
-    isIdle: state._tag === "Idle",
-    isPending: state._tag === "Pending",
-    isSuccess: state._tag === "Success",
-    isFailure: state._tag === "Failure",
+    ...withFlags(state),
     refetch: query.refetch,
   }
 }
