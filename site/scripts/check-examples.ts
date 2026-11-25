@@ -43,6 +43,45 @@ declare global {
 }
 `;
 
+/** The placeholders functype-log's README samples share: a program to run, and a test's `expect`. */
+const LOG_PRELUDE = `
+import type { Logger } from "functype-log"
+
+declare global {
+  const program: IO<Logger, never, unknown>
+  const myProgram: IO<Logger, never, unknown>
+  const doWork: () => IO<never, never, number>
+  const err: Error
+  const myStream: { write(text: string): void }
+  const format: (args: ReadonlyArray<unknown>) => string
+  const UserSchema: { parse(data: unknown): User }
+  const logger: Logger
+  function expect(actual: unknown): {
+    toBe(expected: unknown): void
+    toEqual(expected: unknown): void
+    toBeInstanceOf(type: abstract new (...args: never[]) => unknown): void
+  }
+}
+`;
+
+const OS_PRELUDE = `
+declare global {
+  const src: string
+  const dest: string
+}
+`;
+
+const REACT_PRELUDE = `
+declare global {
+  type Config = { readonly theme: string }
+  type Token = { readonly id: string; readonly name: string }
+  type CreateTokenInput = { readonly name: string }
+  const url: string
+  const headers: Record<string, string>
+  const toast: (message: string, options: { readonly detail: string }) => void
+}
+`;
+
 /** Each built page with TypeScript samples, by its path under dist-site without `/index.html`. */
 const PAGE_PRELUDES: Readonly<Record<string, string>> = {
   ...Object.fromEntries(
@@ -54,20 +93,12 @@ const PAGE_PRELUDES: Readonly<Record<string, string>> = {
   "": SITE_PRELUDE + LANDING_PRELUDE,
   "feature-matrix": SITE_PRELUDE,
   eslint: SITE_PRELUDE + ESLINT_PRELUDE,
+  "functype-log": SITE_PRELUDE + LOG_PRELUDE,
+  "functype-os": SITE_PRELUDE + OS_PRELUDE,
+  "functype-react": SITE_PRELUDE + REACT_PRELUDE,
+  "functype-eval": SITE_PRELUDE,
+  "eslint-config": SITE_PRELUDE,
 };
-
-/**
- * Pages whose samples aren't checked yet: the package pages, which render each package's README.
- * Their samples are fragments, JSX, or imports of packages this repo doesn't install, and one shows a
- * real functype-react typing bug. #633 makes them compile and takes them off this list.
- */
-const NOT_YET_CHECKED: ReadonlySet<string> = new Set([
-  "functype-log",
-  "functype-os",
-  "functype-react",
-  "functype-eval",
-  "eslint-config",
-]);
 
 const TYPESCRIPT = new Set(["ts", "typescript"]);
 
@@ -154,13 +185,7 @@ const main = (): number => {
     );
     return 1;
   }
-  const allSamples = htmlFiles(DIST).flatMap(samplesOf);
-  const skipped = allSamples.filter((sample) =>
-    NOT_YET_CHECKED.has(sample.page),
-  );
-  const samples = allSamples.filter(
-    (sample) => !NOT_YET_CHECKED.has(sample.page),
-  );
+  const samples = htmlFiles(DIST).flatMap(samplesOf);
   const unlabeled = samples.filter((sample) => sample.language === undefined);
   const typescript = samples.filter(
     (sample) =>
@@ -245,7 +270,7 @@ const main = (): number => {
   console.log(
     `check-examples: ${checked.length} TypeScript samples on ${pages.length} pages checked in ${seconds}s; ` +
       `${samples.filter((sample) => sample.ignored).length} opted out with data-typecheck="ignore"; ` +
-      `not TypeScript: ${byLanguage || "none"}; ${skipped.length} on pages not yet checked (#633). ${failures.length === 0 ? "All compile." : `${failures.length} failed.`}`,
+      `not TypeScript: ${byLanguage || "none"}. ${failures.length === 0 ? "All compile." : `${failures.length} failed.`}`,
   );
   return failures.length === 0 ? 0 : 1;
 };

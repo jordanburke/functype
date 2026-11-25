@@ -52,7 +52,7 @@ const parsed = useTry<Config>() // value: Try<Config>
 
 ## Tier 2 — pattern matching in JSX
 
-```tsx
+```tsx ignore
 import { Match, MatchOption } from "functype-react"
 
 <MatchOption value={user}
@@ -73,7 +73,7 @@ Omitting a `_tag` case is a compile error.
 
 ## Tier 3 — async / IO
 
-```ts
+```tsx ignore
 import { Http } from "functype/fetch"
 import { useIO } from "functype-react/async"
 
@@ -89,7 +89,7 @@ On unmount or a `deps` change the signal aborts, and the effect stops at its nex
 
 For React 19 `use()` + Suspense:
 
-```tsx
+```tsx ignore
 import { AsyncBoundary, useIOValue } from "functype-react/async"
 
 function UserPanel({ id }: { id: string }) {
@@ -106,7 +106,7 @@ function UserPanel({ id }: { id: string }) {
 
 ## Tier 4 — forms with accumulating validation
 
-```ts
+```tsx ignore
 import { useValidatedForm, valid, invalid, type Validated } from "functype-react/forms"
 import { List } from "functype"
 
@@ -115,7 +115,7 @@ type SignupForm = { email: string; age: number }
 const validate = (s: SignupForm): Validated<string, SignupForm> => {
   const errs = List<string>([])
     .concat(s.email.includes("@") ? List([]) : List(["email must contain @"]))
-    .concat(s.age >= 18         ? List([]) : List(["age must be 18+"]))
+    .concat(s.age >= 18 ? List([]) : List(["age must be 18+"]))
   return errs.isEmpty ? valid(s) : invalid(errs)
 }
 
@@ -129,7 +129,9 @@ function Signup() {
     <form onSubmit={form.handleSubmit(async (s) => api.signup(s))}>
       <input value={form.values.email} onChange={(e) => form.setField("email", e.target.value)} />
       <input type="number" value={form.values.age} onChange={(e) => form.setField("age", Number(e.target.value))} />
-      {form.errors.toArray().map((err, i) => <p key={i}>{err}</p>)}
+      {form.errors.toArray().map((err, i) => (
+        <p key={i}>{err}</p>
+      ))}
       <button disabled={!form.isValid}>sign up</button>
     </form>
   )
@@ -144,7 +146,7 @@ Errors accumulate applicatively — every failing rule is surfaced in one pass, 
 
 `functype-react/query` owns that bridge. Failures arrive boxed as `IOQueryError<E>`: a real `Error` with a populated `.message`, whose `.error` is still the fully discriminable functype error. Its `.name` is the cause's `_tag`, or a `TypedError`'s code (`NOT_FOUND`), so an error tracker groups by cause and can drop expected failures by name. A defect or an untagged cause keeps the name `IOQueryError`. Use `instanceof IOQueryError` or `isIOQueryError`, not `.name`, to recognize the box.
 
-```ts
+```tsx ignore
 import { useIOQuery } from "functype-react/query"
 import { Http, HttpErrors, type HttpError } from "functype/fetch"
 
@@ -170,7 +172,7 @@ if (error) {
 
 The result above is still React Query's — `data` is `A | undefined`, so the success path needs a `!` or a guard. `toQueryState` projects it onto the same `AsyncState` ADT that `functype-react/async` returns, so a query matches exhaustively like any other functype value:
 
-```tsx
+```tsx ignore
 import { Match } from "functype-react"
 import { toQueryState, useIOQuery } from "functype-react/query"
 
@@ -196,7 +198,7 @@ The projection is a pure function over the result, so you keep everything else R
 
 If the ADT is all you need, `useIOQueryState` skips the projection step — it returns `AsyncState` directly, plus the `isIdle`/`isPending`/`isSuccess`/`isFailure` flags and `refetch`, mirroring what `useIO` returns in Tier 3:
 
-```tsx
+```tsx ignore
 const user = useIOQueryState(["user", id], ({ signal }) => Http.get<User>(url, { signal }))
 
 <Match value={user}>
@@ -221,6 +223,7 @@ Two behaviours worth knowing before you rely on the ADT:
 Mutations mirror the shape (React Query supplies no `AbortSignal` to mutations, so the callback takes only the variables):
 
 ```ts
+import { Http } from "functype/fetch"
 import { useIOMutation } from "functype-react/query"
 
 const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, { headers, body }), {
@@ -230,7 +233,9 @@ const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, {
 
 For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
-```ts
+```ts ignore
+import { useQuery } from "@tanstack/react-query"
+import { Http } from "functype/fetch"
 import { ioQueryFn } from "functype-react/query"
 
 useQuery({
@@ -242,7 +247,11 @@ useQuery({
 
 `ioQueryFn` is generic over the query context, so a richer one flows through unchanged — annotate the callback parameter to reach `pageParam` in an infinite query:
 
-```ts
+```ts ignore
+import { type QueryFunctionContext, type QueryKey, useInfiniteQuery } from "@tanstack/react-query"
+import { Http } from "functype/fetch"
+import { ioQueryFn } from "functype-react/query"
+
 useInfiniteQuery({
   queryKey: ["events"],
   queryFn: ioQueryFn(({ signal, pageParam }: QueryFunctionContext<QueryKey, number>) =>

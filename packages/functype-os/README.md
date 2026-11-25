@@ -119,7 +119,7 @@ Discriminated union error types for exhaustive matching.
 import type { OsError } from "functype-os"
 import { EnvError, PathError, FsError, ConfigError } from "functype-os"
 
-const handleError = (error: OsError) => {
+const handleError = (error: OsError): string => {
   switch (error._tag) {
     case "EnvError":
       return `Missing env var: ${error.variable}`
@@ -129,6 +129,8 @@ const handleError = (error: OsError) => {
       return `FS error: ${error.operation} on ${error.path}`
     case "ConfigError":
       return `No config found in: ${error.candidates.join(", ")}`
+    case "ProcessError":
+      return `Command failed: ${error.command}`
   }
 }
 ```
