@@ -4,7 +4,7 @@ import { Try } from "functype"
 import type { Exit, IO } from "functype/io"
 import { useCallback, useEffect, useReducer, useRef, useState } from "react"
 
-import type { AsyncState } from "./AsyncState"
+import { type AsyncState, type AsyncStateWithFlags, withFlags } from "./AsyncState"
 
 type Action<E, A> =
   | { readonly type: "PENDING" }
@@ -17,11 +17,11 @@ function reducer<E, A>(_state: AsyncState<E, A>, action: Action<E, A>): AsyncSta
   return { _tag: "Failure", error: action.error }
 }
 
-export type UseIOResult<E, A> = AsyncState<E, A> & {
-  readonly isIdle: boolean
-  readonly isPending: boolean
-  readonly isSuccess: boolean
-  readonly isFailure: boolean
+/**
+ * `AsyncState` with its `is…` flags and a `refetch` trigger. Each flag narrows the state, so
+ * `if (state.isFailure)` makes `state.error` available, the same as checking `_tag`.
+ */
+export type UseIOResult<E, A> = AsyncStateWithFlags<E, A> & {
   refetch: () => void
 }
 
@@ -81,11 +81,7 @@ export function useIO<E, A>(
   if (defect) throw defect.value
 
   return {
-    ...state,
-    isIdle: state._tag === "Idle",
-    isPending: state._tag === "Pending",
-    isSuccess: state._tag === "Success",
-    isFailure: state._tag === "Failure",
+    ...withFlags(state),
     refetch,
   }
 }

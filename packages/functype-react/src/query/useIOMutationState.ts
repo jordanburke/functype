@@ -3,7 +3,7 @@
 import type { UseMutationResult } from "@tanstack/react-query"
 import type { IO } from "functype/io"
 
-import type { AsyncState } from "../async/AsyncState"
+import { type AsyncStateWithFlags, withFlags } from "../async/AsyncState"
 import type { IOQueryError } from "./IOQueryError"
 import { toMutationState } from "./queryState"
 import type { UseIOMutationOptions } from "./useIOMutation"
@@ -14,13 +14,8 @@ import { useIOMutation } from "./useIOMutation"
  * useless without its trigger, so `mutate` / `mutateAsync` / `reset` are carried
  * through with React Query's own signatures.
  */
-export type UseIOMutationStateResult<A, E, V, TContext> = AsyncState<IOQueryError<E>, A> &
-  Pick<UseMutationResult<A, IOQueryError<E>, V, TContext>, "mutate" | "mutateAsync" | "reset"> & {
-    readonly isIdle: boolean
-    readonly isPending: boolean
-    readonly isSuccess: boolean
-    readonly isFailure: boolean
-  }
+export type UseIOMutationStateResult<A, E, V, TContext> = AsyncStateWithFlags<IOQueryError<E>, A> &
+  Pick<UseMutationResult<A, IOQueryError<E>, V, TContext>, "mutate" | "mutateAsync" | "reset">
 
 /**
  * `useIOMutation` projected onto the `AsyncState` ADT, so a mutation's lifecycle matches
@@ -49,11 +44,7 @@ export function useIOMutationState<A, E, V = void, TContext = unknown>(
   const state = toMutationState(mutation)
 
   return {
-    ...state,
-    isIdle: state._tag === "Idle",
-    isPending: state._tag === "Pending",
-    isSuccess: state._tag === "Success",
-    isFailure: state._tag === "Failure",
+    ...withFlags(state),
     mutate: mutation.mutate,
     mutateAsync: mutation.mutateAsync,
     reset: mutation.reset,

@@ -8,6 +8,7 @@ import type { MatchCases } from "../../src/match/Match"
 import type { IOQueryError } from "../../src/query/IOQueryError"
 import type { ioMutationFn, ioQueryFn } from "../../src/query/ioQueryFn"
 import { toQueryState } from "../../src/query/queryState"
+import type { UseIOMutationStateResult } from "../../src/query/useIOMutationState"
 import type { UseIOQueryStateResult } from "../../src/query/useIOQueryState"
 import type { useIOMutation } from "../../src/query/useIOMutation"
 import type { useIOQuery } from "../../src/query/useIOQuery"
@@ -83,7 +84,16 @@ describe("useIOQueryState types", () => {
     type Success = Extract<UseIOQueryStateResult<number, HttpError>, { _tag: "Success" }>
 
     expectTypeOf<Success["value"]>().toEqualTypeOf<number>()
-    expectTypeOf<Success["isSuccess"]>().toEqualTypeOf<boolean>()
+    expectTypeOf<Success["isSuccess"]>().toEqualTypeOf<true>()
+    expectTypeOf<Success["isFailure"]>().toEqualTypeOf<false>()
+  })
+
+  it("narrows by flag the way it narrows by _tag", () => {
+    const read = (state: UseIOQueryStateResult<number, HttpError>): void => {
+      if (state.isFailure) expectTypeOf(state.error.error).toEqualTypeOf<HttpError>()
+      if (state.isSuccess) expectTypeOf(state.value).toEqualTypeOf<number>()
+    }
+    void read
   })
 
   it("keeps the typed error reachable on the Failure branch", () => {
@@ -114,5 +124,15 @@ describe("primitive types", () => {
 
     expectTypeOf<Fn>().parameter(0).toEqualTypeOf<{ name: string }>()
     expectTypeOf<ReturnType<Fn>>().toEqualTypeOf<Promise<number>>()
+  })
+})
+
+describe("useIOMutationState types", () => {
+  it("narrows by flag the way it narrows by _tag", () => {
+    const read = (state: UseIOMutationStateResult<number, HttpError, { name: string }, unknown>): void => {
+      if (state.isFailure) expectTypeOf(state.error.error).toEqualTypeOf<HttpError>()
+      if (state.isSuccess) expectTypeOf(state.value).toEqualTypeOf<number>()
+    }
+    void read
   })
 })

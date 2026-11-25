@@ -1,5 +1,5 @@
 export { AsyncBoundary } from "./AsyncBoundary"
-export type { AsyncState } from "./AsyncState"
+export { type AsyncState, type AsyncStateWithFlags, withFlags } from "./AsyncState"
 export { useIO, type UseIOResult } from "./useIO"
 export { useIOPromise } from "./useIOPromise"
 export { useIOValue } from "./useIOValue"
