@@ -288,6 +288,7 @@ const compilerOptions = (): ts.CompilerOptions => {
       ...exportPaths(PACKAGE_ROOT),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-os")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-log")),
+      ...exportPaths(join(REPO_ROOT, "packages", "functype-react")),
     },
   }
 }

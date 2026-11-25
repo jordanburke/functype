@@ -33,6 +33,8 @@ await program.provideLayer(LoggerLive.console()).runOrThrow()
 ### Console (dev)
 
 ```typescript
+import { LoggerLive } from "functype-log"
+
 await program.provideLayer(LoggerLive.console()).runOrThrow()
 await program.provideLayer(LoggerLive.console({ prefix: "[APP]" })).runOrThrow()
 ```
@@ -40,6 +42,8 @@ await program.provideLayer(LoggerLive.console({ prefix: "[APP]" })).runOrThrow()
 `ConsoleLoggerOptions` accepts `level`, `prefix`, `stream`, `console`, and `sink` (see [Custom sink](#custom-sink)):
 
 ```typescript
+import { LoggerLive } from "functype-log"
+
 // Drop anything below this level. Every level passes when it isn't set.
 LoggerLive.console({ level: "warn" })
 
@@ -81,7 +85,7 @@ log.info("connection established") // → stderr, not stdout
 
 `sink` hands each `LogEntry` to your function instead of writing to a console. It's the way to reach pino, a vendor, or anything else. functype-log ships no transports.
 
-```typescript
+```typescript ignore
 import pino from "pino"
 import { LoggerLive, type LogSink } from "functype-log"
 
@@ -101,7 +105,7 @@ await program.provideLayer(LoggerLive.console({ sink })).runOrThrow()
 
 Trace IDs come from OpenTelemetry's active span, read in a sink. This needs only `@opentelemetry/api` and a registered OpenTelemetry SDK. functype-log doesn't depend on either.
 
-```typescript
+```typescript ignore
 import { trace } from "@opentelemetry/api"
 
 const sink: LogSink = ({ level, message, metadata, error }) => {
@@ -119,7 +123,7 @@ The span must be active, not only started: open it with `tracer.startActiveSpan`
 
 functype-log 2.0 no longer uses LogLayer. `LoggerLive.fromLogLayer` and `logLayerAdapter` are gone. If you passed a LogLayer instance in, write a sink for the library behind it instead. For pino:
 
-```typescript
+```typescript ignore
 import pino from "pino"
 import { LoggerLive, type LogSink } from "functype-log"
 
@@ -136,35 +140,42 @@ For code that isn't IO-shaped, `createDirectConsoleLogger({ sink })` takes the s
 ### Silent (testing/suppression)
 
 ```typescript
+import { LoggerLive } from "functype-log"
+
 await program.provideLayer(LoggerLive.silent()).runOrThrow()
 ```
 
 ## Logger API
 
 ```typescript
-const log = yield * IO.service(Logger)
+import { IO } from "functype"
+import { Logger } from "functype-log"
 
-// Log levels
-yield * log.trace("verbose detail")
-yield * log.debug("debug info")
-yield * log.info("informational")
-yield * log.warn("warning")
-yield * log.error("error occurred")
-yield * log.fatal("fatal error")
+const handler = IO.gen(function* () {
+  const log = yield* IO.service(Logger)
 
-// Structured metadata
-yield * log.info("user action", { userId: "123", action: "login" })
+  // Log levels
+  yield* log.trace("verbose detail")
+  yield* log.debug("debug info")
+  yield* log.info("informational")
+  yield* log.warn("warning")
+  yield* log.error("error occurred")
+  yield* log.fatal("fatal error")
 
-// Error context
-yield * log.withError(err).error("operation failed")
+  // Structured metadata
+  yield* log.info("user action", { userId: "123", action: "login" })
 
-// Persistent context
-const reqLog = log.withContext({ requestId: "req-1" })
-yield * reqLog.info("first") // includes requestId
-yield * reqLog.info("second") // includes requestId
+  // Error context
+  yield* log.withError(err).error("operation failed")
 
-// Child logger
-const child = log.child({ handler: "users" })
+  // Persistent context
+  const reqLog = log.withContext({ requestId: "req-1" })
+  yield* reqLog.info("first") // includes requestId
+  yield* reqLog.info("second") // includes requestId
+
+  // Child logger
+  const child = log.child({ handler: "users" })
+})
 ```
 
 ## Middleware
@@ -174,6 +185,8 @@ const child = log.child({ handler: "users" })
 Wraps any IO with start/complete logging at debug level:
 
 ```typescript
+import { Decoder } from "functype/decoder"
+import { Http } from "functype/fetch"
 import { withLogging } from "functype-log"
 
 const fetchUsers = Http.get("/api/users", { decode: Decoder.fromThrowing((data) => UserSchema.parse(data)) })
@@ -186,7 +199,8 @@ const logged = withLogging("fetchUsers", fetchUsers)
 Logs after an effect completes:
 
 ```typescript
-import { tapLog } from "functype-log"
+import { IO } from "functype"
+import { Logger, tapLog } from "functype-log"
 
 const result = await tapLog<number[]>(
   "info",
@@ -201,7 +215,7 @@ const result = await tapLog<number[]>(
 `createTestLogger` captures log entries in memory for assertions:
 
 ```typescript
-import { createTestLogger } from "functype-log"
+import { createTestLogger, Logger } from "functype-log"
 
 const { logger, entries, hasEntry, clear } = createTestLogger()
 
@@ -213,7 +227,7 @@ expect(hasEntry("info", "Starting")).toBe(true)
 expect(hasEntry("info", /fetched \d+ items/)).toBe(true)
 
 // Entries are List<LogEntry> with full metadata
-const first = entries().head()
+const first = entries().headOption().orThrow()
 expect(first.level).toBe("info")
 expect(first.metadata).toEqual({ version: "1.0.0" })
 expect(first.timestamp).toBeInstanceOf(Date)
@@ -221,7 +235,7 @@ expect(first.timestamp).toBeInstanceOf(Date)
 
 ## Subpath Exports
 
-```typescript
+```typescript ignore
 import { Logger } from "functype-log" // everything
 import { Logger } from "functype-log/logger" // types only
 import { LoggerLive } from "functype-log/layers" // layer constructors
