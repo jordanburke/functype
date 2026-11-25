@@ -1,6 +1,6 @@
 {
   "name": "functype-log",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "IO-native logging for functype — Tag/Layer DI, a console logger, a one-function sink, and test utilities",
   "keywords": [
     "functype",
