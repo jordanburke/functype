@@ -56,6 +56,19 @@ const PAGE_PRELUDES: Readonly<Record<string, string>> = {
   eslint: SITE_PRELUDE + ESLINT_PRELUDE,
 };
 
+/**
+ * Pages whose samples aren't checked yet: the package pages, which render each package's README.
+ * Their samples are fragments, JSX, or imports of packages this repo doesn't install, and one shows a
+ * real functype-react typing bug. #633 makes them compile and takes them off this list.
+ */
+const NOT_YET_CHECKED: ReadonlySet<string> = new Set([
+  "functype-log",
+  "functype-os",
+  "functype-react",
+  "functype-eval",
+  "eslint-config",
+]);
+
 const TYPESCRIPT = new Set(["ts", "typescript"]);
 
 type Sample = {
@@ -141,7 +154,13 @@ const main = (): number => {
     );
     return 1;
   }
-  const samples = htmlFiles(DIST).flatMap(samplesOf);
+  const allSamples = htmlFiles(DIST).flatMap(samplesOf);
+  const skipped = allSamples.filter((sample) =>
+    NOT_YET_CHECKED.has(sample.page),
+  );
+  const samples = allSamples.filter(
+    (sample) => !NOT_YET_CHECKED.has(sample.page),
+  );
   const unlabeled = samples.filter((sample) => sample.language === undefined);
   const typescript = samples.filter(
     (sample) =>
@@ -226,7 +245,7 @@ const main = (): number => {
   console.log(
     `check-examples: ${checked.length} TypeScript samples on ${pages.length} pages checked in ${seconds}s; ` +
       `${samples.filter((sample) => sample.ignored).length} opted out with data-typecheck="ignore"; ` +
-      `not TypeScript: ${byLanguage || "none"}. ${failures.length === 0 ? "All compile." : `${failures.length} failed.`}`,
+      `not TypeScript: ${byLanguage || "none"}; ${skipped.length} on pages not yet checked (#633). ${failures.length === 0 ? "All compile." : `${failures.length} failed.`}`,
   );
   return failures.length === 0 ? 0 : 1;
 };

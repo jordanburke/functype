@@ -135,6 +135,31 @@ const TOOLING: ReadonlyArray<Link> = [
     "mcp-server",
     "Live type docs and compile-time code validation for AI agents",
   ),
+  sitePage(
+    "ESLint Config",
+    "eslint-config",
+    "Flat-config presets combining typescript-eslint, Prettier and import sorting; pairs with the plugin",
+  ),
+  sitePage(
+    "functype-log",
+    "functype-log",
+    "IO-native logging with Tag/Layer DI, a console logger, a one-function sink and test utilities",
+  ),
+  sitePage(
+    "functype-os",
+    "functype-os",
+    "Env vars, paths, files, platform detection and config lookup as Option, Either and IO",
+  ),
+  sitePage(
+    "functype-react",
+    "functype-react",
+    "React hooks and pattern-matching components for functype types (early release)",
+  ),
+  sitePage(
+    "functype-eval",
+    "functype-eval",
+    "Scores a codebase's functype adherence 0-100, with a per-file baseline/check ratchet",
+  ),
   {
     label: "CLI",
     url: `${REPO}/packages/functype#cli-documentation`,

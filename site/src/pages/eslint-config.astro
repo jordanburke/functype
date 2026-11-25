@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as EslintConfigReadme } from "../../../packages/eslint-config-functype/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/eslint-config-functype",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/eslint-config-functype",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="ESLint config for functional TypeScript | functype"
+  heading="ESLint config"
+  tagline="Flat-config presets, recommended and strict, that combine typescript-eslint, Prettier and import sorting for functional TypeScript. Pairs with the plugin."
+  links={links}
+>
+  <EslintConfigReadme />
+</DocLayout>

@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeOsReadme } from "../../../packages/functype-os/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-os",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-os",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-os: typed env vars, paths and files | functype"
+  heading="functype-os"
+  tagline="Node.js utilities that return functype types: environment variables, path expansion, file operations, platform detection and config file lookup."
+  links={links}
+>
+  <FunctypeOsReadme />
+</DocLayout>
