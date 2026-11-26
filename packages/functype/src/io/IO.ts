@@ -243,6 +243,8 @@ type IOEffect<R, E, A> =
       readonly _tag: "Timeout"
       readonly effect: IO<R, E, A>
       readonly duration: number
+      /** `timeoutTo`'s value: what the deadline produces instead of a `TimeoutError`. */
+      readonly fallback?: { readonly value: A }
     }
   | { readonly _tag: "InterruptWhen"; readonly effect: IO<R, E, A>; readonly signal: AbortSignal }
   | { readonly _tag: "All"; readonly effects: readonly IO<R, E, unknown>[]; readonly concurrency: Concurrency }
@@ -729,6 +731,10 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
 
   /**
    * Returns a fallback value if the effect doesn't complete within the specified duration.
+   *
+   * Only this deadline produces the fallback. The effect's own failures, including a
+   * `TimeoutError` from a timeout inside it, its defects and its interruption pass through
+   * unchanged, as the type `IO<R, E, A | B>` says.
    * @param ms - Maximum time in milliseconds
    * @param fallback - Value to return on timeout
    */
@@ -1079,7 +1085,7 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
   },
 
   timeoutTo(ms, fallback) {
-    return unsafeCoerce(this.timeout(ms).recover(unsafeCoerce(fallback)))
+    return createIO(unsafeCoerce({ _tag: "Timeout", effect: this, duration: ms, fallback: { value: fallback } }))
   },
 
   interruptOn(signal) {
@@ -1741,7 +1747,10 @@ const runLeaf = (
         if (effect.effects.length === 0) return Exit.die(new Error("No effects to race"))
         return onFreshStack(() => runRace(effect.effects, context, interruption, span), interruption)
       case "Timeout":
-        return onFreshStack(() => runTimeout(effect.effect, effect.duration, context, interruption, span), interruption)
+        return onFreshStack(
+          () => runTimeout(effect.effect, effect.duration, effect.fallback, context, interruption, span),
+          interruption,
+        )
       case "InterruptWhen":
         return onFreshStack(() => runRegion(effect, context, interruption, span), interruption)
       case "WithSpan":
@@ -1960,12 +1969,14 @@ const runRace = <R extends Type, E extends Type, A extends Type>(
  * Runs `effect` against a deadline of `duration` ms.
  *
  * If the effect settles first, the timer is cleared and the effect's signal stays live. If the
- * deadline comes first, the effect is aborted and the result is a `TimeoutError` at once, without
- * waiting for the effect to stop; its `bracket` release runs, detached, when it settles.
+ * deadline comes first, the effect is aborted and the result is a `TimeoutError` at once, or
+ * `timeoutTo`'s fallback, without waiting for the effect to stop; its `bracket` release runs,
+ * detached, when it settles.
  */
 const runTimeout = <R extends Type, E extends Type, A extends Type>(
   effect: IO<R, E, A>,
   duration: number,
+  fallback: { readonly value: A } | undefined,
   context: Context<R>,
   interruption: AbortSignal | undefined,
   span: unknown,
@@ -1976,7 +1987,7 @@ const runTimeout = <R extends Type, E extends Type, A extends Type>(
     const timer = setTimeout(() => {
       own.abort()
       scope.dispose()
-      resolve(Exit.fail(new TimeoutError(duration)))
+      resolve(fallback === undefined ? Exit.fail(new TimeoutError(duration)) : Exit.succeed(fallback.value))
     }, duration)
     void runEffect(_fx(effect), context, scope.signal, span).then((exit) => {
       clearTimeout(timer)
