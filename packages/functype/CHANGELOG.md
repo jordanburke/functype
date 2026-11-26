@@ -6,6 +6,10 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **eslint-plugin-functype: `prefer-option` names `@interop` as the way out for a host API's nullable.** A value a host API hands over, such as `Element | null` from `closest()` or `querySelector()`, isn't a row or payload, so the message's only suggestion, `Wire<…>`, didn't fit, and wrapping every DOM result in `Option` was the only way through. The message now also says to tag the declaration `@interop <reason>`, which the rule has always honoured.
+- **eslint-plugin-functype: `no-floating-io` explains a dropped logger call.** A dropped `log.warn(…)` from functype-log is an `IO`, so it logs nothing. When the dropped IO is a call to a log-level method (`trace`, `debug`, `info`, `warn`, `error`, `fatal`), the message now says that it logs nothing until run, and names `yield*`, `.run()`, and the eager `DirectLogger` from `toDirectLogger(log)`. functype-log's README says the same at the top.
+- **functype-react: the `useIOMutation` `onError` sample checks `defect` before reading `e.error._tag`.** The sample read the typed error unguarded, though on a defect `.error` isn't an `E`. The README also shows how to get the typed error as an `Option`.
+
 ## 2.2.1 - 2026-11-24
 
 - **functype-react: `isFailure`, `isSuccess`, `isPending` and `isIdle` now narrow the state** (#633). `useIO`, `useIOQueryState` and `useIOMutationState` typed every flag as `boolean`, so after `if (state.isFailure)` TypeScript still didn't know which case it had, and `state.error` didn't type-check. Each flag is now the literal `true` on its own case and `false` on the others, so a flag narrows the way `_tag` does. Two kinds of code stop compiling, both at compile time only. Code that builds one of these results by hand with `boolean` flags, such as a test mock, needs literal flags. Code that checks a flag and then handles that same case again, such as `if (s.isIdle) return null` followed by a `<Match>` with an `Idle` case or a later `s._tag === "Idle"` check, now gets an error, because TypeScript knows that case can't happen there; delete the dead branch.

@@ -94,7 +94,7 @@ const rule: Rule.RuleModule = {
     ],
     messages: {
       preferOption:
-        "Prefer Option<{{type}}> over nullable type '{{nullable}}'. If this is a row, body or payload shape, wrap the type in Wire<…>",
+        "Prefer Option<{{type}}> over nullable type '{{nullable}}'. If this is a row, body or payload shape, wrap the type in Wire<…>. If a host API hands it over or needs it, such as a DOM lookup, tag the declaration @interop <reason>",
       preferOptionReturn: "Prefer Option<{{type}}> as return type over nullable '{{nullable}}'",
       preferOptionOverOptional:
         "Prefer '{{name}}: Option<{{type}}>' over the optional '{{name}}?'. If this is a row, body or payload shape, wrap the type in Wire<…>",

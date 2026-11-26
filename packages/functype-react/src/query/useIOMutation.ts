@@ -21,7 +21,7 @@ export type UseIOMutationOptions<A, E, V, TContext> = Omit<
  *
  * ```ts
  * const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, { headers, body }), {
- *   onError: (e) => toast(e.message, { detail: e.error._tag }),
+ *   onError: (e) => toast(e.message, { detail: e.defect ? "unexpected" : e.error._tag }),
  * })
  *
  * create.mutate({ name: "ci" })
