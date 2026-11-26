@@ -22,6 +22,10 @@ const awaited = (code: string) => ({
   errors: [{ messageId: "awaitedIO" as const }],
 })
 
+/** A functype-log-shaped logger: each method returns an IO. */
+const logger =
+  io + "declare const log: { warn(message: string, metadata?: Record<string, unknown>): IO<never, never, void> }; "
+
 describe("no-floating-io (type-aware)", () => {
   typedRuleTester.run("no-floating-io", rule, {
     valid: [
@@ -79,6 +83,20 @@ describe("no-floating-io (type-aware)", () => {
       awaited("export async function f() { await save(1) }"),
       awaited("export async function f() { const n = await save(1); return n }"),
       awaited("export async function f() { return [await save(1)] }"),
+      {
+        name: "A dropped logger call gets the logger message, naming the level and the eager DirectLogger",
+        code: logger + 'export function fallback() { log.warn("rate limit unavailable", { retry: false }) }',
+        filename: typedFilename,
+        errors: [{ messageId: "floatingLog" as const, data: { level: "warn" } }],
+      },
+      {
+        name: "A non-logger method that returns an IO keeps the general message",
+        code:
+          logger +
+          "declare const repo: { save(id: number): IO<never, Error, number> }; export function f() { repo.save(1) }",
+        filename: typedFilename,
+        errors: [{ messageId: "floatingIO" as const }],
+      },
     ],
   })
 })

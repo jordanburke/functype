@@ -4,6 +4,15 @@ IO-native logging for the [functype](https://github.com/jordanburke/functype) ec
 
 Every log method returns `IO<never, never, void>` — logging is lazy, composable, and testable.
 
+**A log call on its own logs nothing.** `log.warn("…")` builds an IO; nothing is written until that IO runs. Inside `IO.gen`, `yield*` it. Outside IO, in a callback, an event handler or a fallback, use a `DirectLogger`, whose methods log at once. `toDirectLogger` turns the `Logger` you already have into one (`functype/no-floating-io` reports the dropped call):
+
+```typescript
+import { toDirectLogger } from "functype-log"
+
+const direct = toDirectLogger(logger)
+direct.warn("import rate limit unavailable", { retry: false }) // written now
+```
+
 ## Install
 
 ```bash
