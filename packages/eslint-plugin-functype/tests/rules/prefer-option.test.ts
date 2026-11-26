@@ -42,6 +42,13 @@ export function useOption<A>(initial?: A): { set: (a: A | null | undefined) => v
 }`,
       },
       {
+        name: "A DOM lookup's result passed to a helper tagged @interop",
+        code: `/** @interop Takes what closest() and querySelector() return, which is Element | null. */
+const reveal = (el: Element | null | undefined): void => {
+  el?.scrollIntoView({ block: "nearest" })
+}`,
+      },
+      {
         name: "Nullable field in an @interop type alias",
         code: `/** @interop Mirrors the shape the payment SDK posts to our webhook. */
 type WebhookBody = { readonly customer: string | null }`,
@@ -519,7 +526,7 @@ describe("prefer-option optional members and parameters (#446)", () => {
         errors: [
           {
             message:
-              "Prefer Option<string> over nullable type 'string | null'. If this is a row, body or payload shape, wrap the type in Wire<…>",
+              "Prefer Option<string> over nullable type 'string | null'. If this is a row, body or payload shape, wrap the type in Wire<…>. If a host API hands it over or needs it, such as a DOM lookup, tag the declaration @interop <reason>",
             suggestions: 2,
           },
         ],

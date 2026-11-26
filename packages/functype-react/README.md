@@ -227,9 +227,11 @@ import { Http } from "functype/fetch"
 import { useIOMutation } from "functype-react/query"
 
 const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, { headers, body }), {
-  onError: (e) => toast(e.message, { detail: e.error._tag }),
+  onError: (e) => toast(e.message, { detail: e.defect ? "unexpected" : e.error._tag }),
 })
 ```
+
+`e` is the `IOQueryError<E>` box, so the typed error is `e.error`, and only when `e.defect` is `false`. To branch on it as an `Option`, write `e.defect ? None<ApiError>() : Some(e.error)`, with your own error type in place of `ApiError`. A bare `None()` makes the result `Option<unknown>`.
 
 For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
