@@ -231,7 +231,7 @@ const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, {
 })
 ```
 
-`e` is the `IOQueryError<E>` box, so the typed error is `e.error`, and only when `e.defect` is `false`. To branch on it as an `Option`, write `e.defect ? None() : Some(e.error)`.
+`e` is the `IOQueryError<E>` box, so the typed error is `e.error`, and only when `e.defect` is `false`. To branch on it as an `Option`, write `e.defect ? None<ApiError>() : Some(e.error)`, with your own error type in place of `ApiError`. A bare `None()` makes the result `Option<unknown>`.
 
 For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
