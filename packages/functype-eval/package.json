@@ -1,6 +1,6 @@
 {
   "name": "functype-eval",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "description": "Fitness scoring and LLM evaluation for functional TypeScript codebases using the functype ecosystem",
   "keywords": [
     "functype",

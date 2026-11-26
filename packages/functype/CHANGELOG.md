@@ -6,6 +6,8 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+## 2.2.2 - 2026-11-26
+
 - **`timeoutTo` returns its fallback only when its deadline passes.** It was `timeout(ms).recover(fallback)`, and `recover` replaces every failure, so an effect that failed fast with its own error, or died, came back as the fallback, though the type `IO<R, E, A | B>` says `E` passes through. Now the effect's own failures, including a `TimeoutError` from a timeout inside it, its defects and its interruption pass through unchanged. If you relied on `timeoutTo` to also swallow failures, add `.recover(fallback)` after it.
 - **eslint-plugin-functype: `prefer-option` names `@interop` as the way out for a host API's nullable.** A value a host API hands over, such as `Element | null` from `closest()` or `querySelector()`, isn't a row or payload, so the message's only suggestion, `Wire<…>`, didn't fit, and wrapping every DOM result in `Option` was the only way through. The message now also says to tag the declaration `@interop <reason>`, which the rule has always honoured.
 - **eslint-plugin-functype: `no-floating-io` explains a dropped logger call.** A dropped `log.warn(…)` from functype-log is an `IO`, so it logs nothing. When the dropped IO is a call to a log-level method (`trace`, `debug`, `info`, `warn`, `error`, `fatal`), the message now says that it logs nothing until run, and names `yield*`, `.run()`, and the eager `DirectLogger` from `toDirectLogger(log)`. functype-log's README says the same at the top.
