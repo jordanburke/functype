@@ -1987,7 +1987,14 @@ const runTimeout = <R extends Type, E extends Type, A extends Type>(
     const timer = setTimeout(() => {
       own.abort()
       scope.dispose()
-      resolve(fallback === undefined ? Exit.fail(new TimeoutError(duration)) : Exit.succeed(fallback.value))
+      resolve(
+        fallback === undefined
+          ? Exit.fail(new TimeoutError(duration))
+          : // A cancelled run doesn't take timeoutTo's fallback, as recover skips its handler then.
+            interruption?.aborted === true
+            ? Exit.interrupted()
+            : Exit.succeed(fallback.value),
+      )
     }, duration)
     void runEffect(_fx(effect), context, scope.signal, span).then((exit) => {
       clearTimeout(timer)
