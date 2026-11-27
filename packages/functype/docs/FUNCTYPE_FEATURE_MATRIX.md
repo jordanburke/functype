@@ -128,7 +128,7 @@ Http.put(url, opts?)          // PUT
 Http.patch(url, opts?)        // PATCH
 Http.delete(url, opts?)       // DELETE
 Http.request(fullOpts)        // Full control
-Http.client(config)           // Create configured client (type HttpMethods) with baseUrl, defaultHeaders, custom fetch, beforeRequest (effectful request transformer)
+Http.client(config)           // Create configured client with baseUrl, defaultHeaders, custom fetch, beforeRequest (effectful request transformer)
 
 // Decoder.fromThrowing adapts any throwing parser (Zod, TypeBox, Valibot, or manual validators)
 Http.get("/api/users", { decode: Decoder.fromThrowing((data) => z.array(UserSchema).parse(data)) })
