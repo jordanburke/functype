@@ -1,7 +1,11 @@
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
 import { ESLint } from "eslint"
 import { describe, expect, it } from "vitest"
 
 import configRecommended from "../../eslint-config-functype/src/configs/recommended"
+import configStrict from "../../eslint-config-functype/src/configs/strict"
 import testOverrides from "../../eslint-config-functype/src/configs/test-overrides"
 import plugin from "../src/index"
 import ruleRegistry from "../src/rules"
@@ -158,5 +162,45 @@ describe("the test-file configs", () => {
     const [result] = await alone.lintText("export const answer = 42\n", { filePath: "test/foo.js" })
     expect(result?.fatalErrorCount).toBe(0)
     expect(result?.errorCount).toBe(0)
+  })
+})
+
+/**
+ * eslint-config-functype's README config, `[recommended, testOverrides]`, alone: the presets register
+ * the parser, with type information, and the plugins their rules use.
+ */
+describe("eslint-config-functype's presets on their own", () => {
+  const cwd = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures/preset")
+
+  const lint = async (preset: unknown): Promise<ReadonlyArray<ESLint.LintResult>> => {
+    const eslint = new ESLint({
+      cwd,
+      overrideConfigFile: true,
+      overrideConfig: [preset, testOverrides] as ESLint.Options["overrideConfig"],
+    })
+    return eslint.lintFiles(["src", "test"])
+  }
+
+  /** Each file's rule ids, keyed by its path from the fixture. Prettier's are left out: they track formatting. */
+  const rulesByFile = (results: ReadonlyArray<ESLint.LintResult>): Record<string, ReadonlyArray<string | null>> =>
+    Object.fromEntries(
+      results.map((r) => [
+        path.relative(cwd, r.filePath),
+        r.messages.map((m) => m.ruleId).filter((id) => id !== "prettier/prettier"),
+      ]),
+    )
+
+  it.each([
+    ["recommended", configRecommended],
+    ["strict", configStrict],
+  ])("%s lints TypeScript with type information, and a test directory's JavaScript", async (_, preset) => {
+    const results = await lint(preset)
+
+    expect(results.map((r) => r.fatalErrorCount)).toEqual([0, 0, 0])
+    expect(rulesByFile(results)).toEqual({
+      "src/floating.ts": ["@typescript-eslint/require-await", "@typescript-eslint/no-floating-promises"],
+      "test/setup.js": [],
+      "test/stub.ts": [],
+    })
   })
 })
