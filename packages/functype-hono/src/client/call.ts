@@ -18,15 +18,33 @@ export type CallError =
   | { readonly _tag: "InvalidBody"; readonly status: number; readonly cause: unknown }
 
 /**
- * What {@link call} gives for a body of type `T` sent in format `F`. JSON and text arrive as typed.
- * A `c.body(…)` response is read as text, since `call` reads only JSON and text, so a body sent
- * that way is a `string` unless it is `null`.
+ * What {@link call} gives for a body of type `T` sent in format `F`.
+ *
+ * - JSON and text arrive as typed.
+ * - A `c.body(…)` response is read as text, since `call` reads only JSON and text, so its body is
+ *   a `string`. A `c.body(null, …)` gives `null` for a 204 or 205 and `""` otherwise.
+ * - A route whose format Hono doesn't know, such as one returning a plain `Response` or a proxied
+ *   `fetch`, gives `unknown`: `call` reads it by its content type at runtime.
+ *
+ * @interop These are the bodies a Hono route sends over the wire, null included, as its client types them.
  */
-type ReadBody<T, F> = F extends "json" | "text" ? T : T extends null ? null : string
+type ReadBody<T, F, S> = string extends F
+  ? unknown
+  : F extends "json" | "text"
+    ? T
+    : T extends null
+      ? S extends 204 | 205
+        ? null
+        : null | ""
+      : string
 
 /** The body type of a Hono client response's 2xx statuses, as {@link call} reads it. */
 export type SuccessBody<R> =
-  R extends ClientResponse<infer T, infer S, infer F> ? (S extends SuccessStatusCode ? ReadBody<T, F> : never) : never
+  R extends ClientResponse<infer T, infer S, infer F>
+    ? S extends SuccessStatusCode
+      ? ReadBody<T, F, S>
+      : never
+    : never
 
 const CONTENTLESS: ReadonlySet<number> = new Set([204, 205, 304])
 
@@ -63,7 +81,8 @@ const success = <A>(response: Response): IOType<never, CallError, A> =>
  *
  * The body is read as JSON when the response's content type says so, as text otherwise, and as
  * `null` for 204 and 205. A binary body arrives as text, so call the client directly for a
- * download. A 304 isn't 2xx, so it is an `HttpError` with a `null` body.
+ * download. A 304 isn't 2xx, so it is an `HttpError` with a `null` body. `fetch` follows
+ * redirects, so a redirect route gives the target's body.
  *
  * @example
  * ```ts

@@ -68,6 +68,10 @@ const app = new Hono()
       err: () => c.text("never", 500),
     }),
   )
+  .post("/created", (c) =>
+    respond(IO.succeed(undefined), { ok: () => c.body(null, 201), err: () => c.text("never", 500) }),
+  )
+  .get("/plain", () => new Response('{"a":1}', { headers: { "content-type": "application/json" } }))
   .get("/hello", (c) =>
     respond(IO.succeed("hello"), { ok: (text) => c.text(text, 200), err: () => c.text("never", 500) }),
   )
@@ -156,6 +160,18 @@ describe("call", () => {
     const io = call(() => client.bytes.$get())
     expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, string>>()
     expect((await io.run()).orThrow()).toBe("hi")
+  })
+
+  it("types a null body with another 2xx as empty text, as it arrives", async () => {
+    const io = call(() => client.created.$post())
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, "" | null>>()
+    expect((await io.run()).orThrow()).toBe("")
+  })
+
+  it("types a route Hono can't type as unknown, and reads it by content type", async () => {
+    const io = call(() => client.plain.$get())
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, unknown>>()
+    expect((await io.run()).orThrow()).toEqual({ a: 1 })
   })
 
   it("gives null for a 205, and an HttpError with a null body for a 304", async () => {

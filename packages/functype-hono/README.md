@@ -64,9 +64,10 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
 
 - **A 2xx response** gives its body, typed from the route.
   - JSON is parsed when the response's content type says so, and other bodies are read as text, so a `c.body(…)` route's body is a `string`. For a binary download, call the client directly.
-  - A 204 or 205 gives `null`.
+  - A 204 or 205 gives `null`. A `c.body(null, …)` with another 2xx status gives `""`.
+  - A route Hono can't type, such as one returning a plain `Response` or a proxied `fetch`, gives `unknown`, read by its content type.
   - A JSON content type with an empty body is an `InvalidBody`.
-  - A route with no 2xx status, such as a redirect, gives `IO<never, CallError, never>`.
+  - A route with no 2xx status gives `IO<never, CallError, never>`. A redirect route is typed that way too, but `fetch` follows redirects by default, so at runtime it gives the target's body.
 - **Any other outcome** is a `CallError`:
   ```ts
   type CallError =
@@ -75,7 +76,7 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
     | { readonly _tag: "InvalidBody"; readonly status: number; readonly cause: unknown } // a 2xx body that didn't parse
   ```
   A 304 isn't 2xx, so it's an `HttpError` with a `null` body. The `body` of an `HttpError` is `unknown`, because a status can come from anywhere on the way, such as a proxy or `app.onError`. Check it before you use it.
-- **Your own error type:** map to it with a second argument, `call(request, (e) => toApiError(e))`.
+- **Your own error type:** map to it with a second argument, `call(request, (e) => toApiError(e))`. If that function throws, the run dies rather than failing with a typed error.
 - **Cancelling.** `request` gets the run's abort signal; pass it as `init.signal`. A cancelled run then aborts the fetch and ends interrupted, not as a `CallError`.
 
 `functype-hono/client` imports no server code, so it is safe to ship to browsers.
