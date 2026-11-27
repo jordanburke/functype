@@ -2,6 +2,8 @@ import type { IOType } from "functype"
 import { IO, Option } from "functype"
 import type { Kysely, KyselyPlugin } from "kysely"
 
+import { widen } from "./widen"
+
 /**
  * One transaction or savepoint: the connection-level state that IO's own types can't carry.
  *
@@ -64,9 +66,9 @@ const acquire = (scope: Scope): IOType<never, never, () => void> =>
 /** Runs `io` while holding `scope`'s lock, and unlocks on every outcome. */
 export const withLock = <R, E, A>(scope: Scope, io: IOType<R, E, A>): IOType<R, E, A> =>
   IO.bracket(
-    acquire(scope) as unknown as IOType<R, E, () => void>,
+    widen<R, E>()(acquire(scope)),
     () => io,
-    (unlock) => IO.sync(unlock) as unknown as IOType<R, never, void>,
+    (unlock) => widen<R, never>()(IO.sync(unlock)),
   )
 
 /** Records why the scope can't commit. The first reason stands. */
@@ -97,7 +99,7 @@ export const lockedQuery = <E, A>(
   IO.sync((): { started: boolean; signal: Option<AbortSignal> } => ({ started: false, signal: Option.none() })).flatMap(
     (call) =>
       IO.bracketExit(
-        acquire(scope) as unknown as IOType<never, E, () => void>,
+        widen<never, E>()(acquire(scope)),
         () =>
           IO.tryAsync((signal) => {
             call.started = true

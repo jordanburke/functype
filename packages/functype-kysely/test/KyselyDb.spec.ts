@@ -1,6 +1,6 @@
 import { PGlite } from "@electric-sql/pglite"
 import type { IOType } from "functype"
-import { IO, Tag } from "functype"
+import { IO, Option, Tag } from "functype"
 import type { DatabaseConnection, Dialect, QueryResult } from "kysely"
 import { Kysely, sql } from "kysely"
 import { PGliteDialect } from "kysely-pglite-dialect"
@@ -72,6 +72,67 @@ describe("Db.query", () => {
       () => "query failed" as const,
     )
     expectTypeOf(io).toEqualTypeOf<IOType<Kysely<Database>, "query failed", QueryResult<unknown>>>()
+    const result = await io.provideService(Db.tag, db).run()
+    expect(result.isLeft() && result.value).toBe("query failed")
+  })
+})
+
+describe("Db.queryOption", () => {
+  const balanceOf = (id: string) =>
+    Db.queryOption((d, signal) =>
+      d.selectFrom("account").select("balance").where("id", "=", id).executeTakeFirst({ signal }),
+    ).map((row) => row.map((r) => r.balance))
+
+  it("gives Some for a row and None for no row", async () => {
+    await insert("a", 5).provideService(Db.tag, db).run()
+    const io = balanceOf("a").zip(balanceOf("b"))
+    expectTypeOf(io).toEqualTypeOf<IOType<Kysely<Database>, DbError, readonly [Option<number>, Option<number>]>>()
+    const [found, missing] = (await io.provideService(Db.tag, db).run()).orThrow()
+    expect(found.orUndefined()).toBe(5)
+    expect(missing.isNone()).toBe(true)
+  })
+
+  it("treats a null result as None", async () => {
+    const io = Db.queryOption(() => Promise.resolve(null))
+    expectTypeOf(io).toEqualTypeOf<IOType<Kysely<Database>, DbError, Option<never>>>()
+    expect((await io.provideService(Db.tag, db).run()).orThrow().isNone()).toBe(true)
+  })
+
+  it("commits a transaction that found no row", async () => {
+    const program = Db.transaction(
+      balanceOf("missing").flatMap((balance) =>
+        insert(
+          balance.fold(
+            () => "created",
+            () => "existing",
+          ),
+        ),
+      ),
+    )
+    expect((await program.provideService(Db.tag, db).run()).isRight()).toBe(true)
+    expect(await ids()).toEqual(["created"])
+  })
+
+  it("still refuses the commit when the query itself fails and the program recovers", async () => {
+    const program = Db.transaction(
+      insert("a")
+        .flatMap(() =>
+          Db.queryOption((d) => sql<{ id: string }>`select * from missing_table`.execute(d).then((r) => r.rows[0])),
+        )
+        .recover(Option.none<{ id: string }>())
+        .map((row) => row.isNone()),
+    )
+    const result = await program.provideService(Db.tag, db).run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("maps the error with toError when given", async () => {
+    const io = Db.queryOption(
+      (d) => sql<{ id: string }>`select * from missing_table`.execute(d).then((r) => r.rows[0]),
+      () => "query failed" as const,
+    )
+    expectTypeOf(io).toEqualTypeOf<IOType<Kysely<Database>, "query failed", Option<{ id: string }>>>()
     const result = await io.provideService(Db.tag, db).run()
     expect(result.isLeft() && result.value).toBe("query failed")
   })

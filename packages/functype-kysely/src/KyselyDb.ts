@@ -16,6 +16,7 @@ import {
   scopeOf,
   withLock,
 } from "./Scope"
+import { widen } from "./widen"
 
 /**
  * A Kysely database as a functype service: a {@link TagType | Tag} to provide it under, queries
@@ -51,6 +52,28 @@ export type KyselyDb<DB> = {
   }
 
   /**
+   * Runs a Kysely call that may find no row, such as `executeTakeFirst`, as an IO of an `Option`:
+   * `Some` for a row, `None` for `undefined` or `null`. Otherwise it is {@link KyselyDb.query}.
+   *
+   * Prefer it to `executeTakeFirstOrThrow` inside a transaction. A missing row is then `None`, not
+   * a rejected query, so the program can handle it and the transaction still commits.
+   *
+   * @example
+   * ```ts
+   * const findUser = (id: string) =>
+   *   Db.queryOption((db, signal) => db.selectFrom("user").selectAll().where("id", "=", id).executeTakeFirst({ signal }))
+   * // IO<Kysely<Database>, DbError, Option<User>>
+   * ```
+   */
+  readonly queryOption: {
+    <A>(f: (db: Kysely<DB>, signal?: AbortSignal) => Promise<A>): IOType<Kysely<DB>, DbError, Option<NonNullable<A>>>
+    <A, E>(
+      f: (db: Kysely<DB>, signal?: AbortSignal) => Promise<A>,
+      toError: (error: unknown) => E,
+    ): IOType<Kysely<DB>, E, Option<NonNullable<A>>>
+  }
+
+  /**
    * Runs `program` in a transaction. It commits when `program` succeeds. It rolls back when
    * `program` fails with its own error, dies, or is cancelled, and that outcome passes through
    * unchanged. A failure to begin or commit is a {@link DbError}.
@@ -68,8 +91,9 @@ export type KyselyDb<DB> = {
    * **Steps run one at a time.** The transaction is one connection: its queries, nested
    * transactions and commit wait for each other, even under `IO.all`.
    *
-   * Both rules cover `Db.query` only. Any rejection of its function counts as a failed query,
-   * Kysely's `NoResultError` included. A statement run on the handle directly, or on one derived from
+   * Both rules cover `Db.query` and `Db.queryOption` only. Any rejection of their function counts
+   * as a failed query, Kysely's `NoResultError` included, so read a row that may be missing with
+   * `Db.queryOption` and `executeTakeFirst`, not `executeTakeFirstOrThrow`. A statement run on the handle directly, or on one derived from
    * it with `withSchema` or `withPlugin`, isn't serialized or checked.
    *
    * **Nesting uses a savepoint.** A `transaction` inside another one opens a savepoint, not a
@@ -157,12 +181,6 @@ const finish = (scope: Scope, f: () => Promise<unknown>): IOType<never, DbError,
     ),
   )
 
-/**
- * IO's type parameters are invariant, so an IO that needs fewer services or fails in fewer ways
- * doesn't widen on its own. Widening is sound: such an IO fits anywhere the wider one does.
- */
-const widen = <R, E, A>(io: object): IOType<R, E, A> => io as IOType<R, E, A>
-
 const savepointName = (): string => `functype_sp_${Math.random().toString(36).slice(2, 10)}`
 
 /**
@@ -194,11 +212,16 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
       return lockedQuery(scopeOf(db), (signal) => f(db, signal), mapError)
     })
 
+  const queryOption = <A, E>(
+    f: (db: Kysely<DB>, signal?: AbortSignal) => Promise<A>,
+    toError?: (error: unknown) => E,
+  ): IOType<Kysely<DB>, E | DbError, Option<NonNullable<A>>> => query(f, toError).map((a) => Option(a ?? undefined))
+
   const inTopLevel = <R, E, A>(db: Kysely<DB>, program: IOType<R, E, A>): IOType<R, E | DbError, A> =>
     IO.bracketExit(
-      widen<R, E | DbError, Controlled<DB>>(step(() => db.startTransaction().execute()).map((t) => controlled<DB>(t))),
+      widen<R, E | DbError>()(step(() => db.startTransaction().execute()).map((t) => controlled<DB>(t))),
       (trx) =>
-        widen<R, E | DbError, A>(
+        widen<R, E | DbError>()(
           program.provideService(tag, trx).flatMap((a) =>
             withLock(
               scopeOf(trx),
@@ -207,7 +230,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
           ),
         ),
       (trx) =>
-        widen<R, never, void>(
+        widen<R, never>()(
           trx.isCommitted || trx.isRolledBack
             ? IO.succeed(undefined)
             : withLock(
@@ -240,7 +263,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
     return withLock(
       parentScope,
       IO.bracketExit(
-        widen<R, E | DbError, Kysely<DB>>(
+        widen<R, E | DbError>()(
           step(() => savepointSql(parent, "savepoint", savepoint))
             .mapError((e) => {
               markFailed(parentScope, QUERY_FAILED)
@@ -249,7 +272,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
             .map(() => inner),
         ),
         (handle) =>
-          widen<R, E | DbError, A>(
+          widen<R, E | DbError>()(
             program.provideService(tag, handle).flatMap((a) =>
               withLock(
                 innerScope,
@@ -264,16 +287,16 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
         (_handle, exit) => {
           const undo = (): IOType<never, never, void> =>
             released.value ? IO.sync(() => markFailed(parentScope, RELEASED_THEN_GIVEN_UP)) : rollback()
-          return widen<R, never, void>(exit.fold(undo, () => IO.succeed(undefined), undo, undo))
+          return widen<R, never>()(exit.fold(undo, () => IO.succeed(undefined), undo, undo))
         },
       ),
     )
   }
 
   const transaction = <R, E, A>(program: IOType<R, E, A>): IOType<R | Kysely<DB>, E | DbError, A> =>
-    widen<R | Kysely<DB>, E | DbError, A>(
+    widen<R | Kysely<DB>, E | DbError>()(
       IO.service(tag).flatMap((db) => (db.isTransaction ? inSavepoint(db, program) : inTopLevel(db, program))),
     )
 
-  return { tag, query, transaction } as KyselyDb<DB>
+  return { tag, query, queryOption, transaction } as KyselyDb<DB>
 }
