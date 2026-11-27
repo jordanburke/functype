@@ -12,6 +12,7 @@
  * - `ioQueryFn` / `ioMutationFn` — framework-agnostic primitives; drop into any
  *   `useQuery` / `useSuspenseQuery` / `prefetchQuery` call for full option control.
  * - `useIOQuery` / `useIOMutation` — the common path, one call.
+ * - `useIOInfiniteQuery` — paged queries, with the page param as an `Option`.
  * - `toQueryState` / `toMutationState` — project a React Query result onto the
  *   `AsyncState` ADT so it can be matched exhaustively with the `<Match>` family,
  *   rather than read through `data && !error && !isLoading` flag soup.
@@ -21,6 +22,13 @@ export type { IOBridgeOptions, IOQueryFnContext } from "./ioQueryFn"
 export { ioMutationFn, ioQueryFn } from "./ioQueryFn"
 export type { MutationResultView, QueryResultView } from "./queryState"
 export { toMutationState, toQueryState } from "./queryState"
+export type {
+  IOInfiniteQueryContext,
+  IOPageParamFunction,
+  StoredPageParam,
+  UseIOInfiniteQueryOptions,
+} from "./useIOInfiniteQuery"
+export { useIOInfiniteQuery } from "./useIOInfiniteQuery"
 export type { UseIOMutationOptions } from "./useIOMutation"
 export { useIOMutation } from "./useIOMutation"
 export type { UseIOMutationStateResult } from "./useIOMutationState"

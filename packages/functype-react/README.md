@@ -16,13 +16,13 @@ pnpm add functype functype-react react react-dom
 
 ## Surface
 
-| Subpath                 | Contents                                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers         |
-| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                      |
-| `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                          |
-| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                       |
-| `functype-react/query`  | `useIOQuery(State)`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
+| Subpath                 | Contents                                                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers                               |
+| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                                            |
+| `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                                                |
+| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                                             |
+| `functype-react/query`  | `useIOQuery(State)`, `useIOInfiniteQuery`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
 
 `./async`, `./forms`, and `./query` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
 
@@ -233,7 +233,29 @@ const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, {
 
 `e` is the `IOQueryError<E>` box, so the typed error is `e.error`, and only when `e.defect` is `false`. To branch on it as an `Option`, write `e.defect ? None<ApiError>() : Some(e.error)`, with your own error type in place of `ApiError`. A bare `None()` makes the result `Option<unknown>`.
 
-For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
+For a paged query, `useIOInfiniteQuery` takes the page param as an `Option`. The first page gets `None`, and `getNextPageParam` returns `None` when there are no more pages, so a cursor needs no `null` sentinel:
+
+```ts
+import { type IO, Option } from "functype"
+import { useIOInfiniteQuery } from "functype-react/query"
+
+type ApiError = { readonly _tag: "ApiError"; readonly status: number }
+type EventPage = { readonly events: readonly string[]; readonly nextCursor: string | null }
+declare const fetchEvents: (cursor: Option<string>, signal: AbortSignal) => IO<never, ApiError, EventPage>
+
+const events = useIOInfiniteQuery(["events"], ({ pageParam, signal }) => fetchEvents(pageParam, signal), {
+  getNextPageParam: (last: EventPage) => Option(last.nextCursor),
+})
+// events.error is an IOQueryError<ApiError>; events.fetchNextPage and events.hasNextPage are React Query's own
+```
+
+- **Annotate the page in `getNextPageParam`,** as above. TypeScript types the effect's `pageParam` first, so it can only learn the param type from a `getNextPageParam` that types on its own. Without the annotation it reports `Option<string>` not assignable to `Option<never>` there.
+- **The param type can't hold `null` or `undefined`.** React Query reads a `null` next param as "no more pages", and `None` already says that.
+- **`data.pageParams` holds plain values.** React Query stores each param as itself, or as `null` for the first page, so its cache stays plain JSON for persisters and SSR.
+- **Other options pass through.** Every other `useInfiniteQuery` option, such as `select`, `maxPages` or `placeholderData: keepPreviousData`, works as usual.
+- **To match the result, project it.** `toQueryState(events)` gives an `AsyncState`. The hook returns React Query's result unchanged.
+
+For full control over the query object — or for `useSuspenseQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
 ```ts ignore
 import { useQuery } from "@tanstack/react-query"
@@ -247,7 +269,7 @@ useQuery({
 })
 ```
 
-`ioQueryFn` is generic over the query context, so a richer one flows through unchanged — annotate the callback parameter to reach `pageParam` in an infinite query:
+`ioQueryFn` is generic over the query context, so a richer one flows through unchanged. Annotate the callback parameter to reach `pageParam` when you call `useInfiniteQuery` yourself:
 
 ```ts ignore
 import { type QueryFunctionContext, type QueryKey, useInfiniteQuery } from "@tanstack/react-query"
