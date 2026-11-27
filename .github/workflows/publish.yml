@@ -18,7 +18,7 @@ name: Publish
 # start from the previous tag on the same major.
 #
 # OIDC trusted publishing for functype, functype-os, functype-log, functype-react
-# (provenance attestations). functype-mcp-server publishes with NPM_TOKEN.
+# (provenance attestations). functype-mcp-server and functype-kysely publish with NPM_TOKEN.
 # Eslint packages publish with NPM_TOKEN.
 
 on:

@@ -14,8 +14,8 @@
  *      `scripts/publish-line.ts`.
  *   3. Alignment-group drift: each lockstep group must publish at the same
  *      version. Two groups today:
- *        - Functype family (6 packages): functype, functype-os, functype-log,
- *          functype-react, functype-eval, functype-mcp-server — one functype line
+ *        - Functype family (7 packages): functype, functype-os, functype-log,
+ *          functype-react, functype-eval, functype-kysely, functype-mcp-server — one functype line
  *          (`2.x` from `main`, `1.x` from `release/1.x`).
  *        - Eslint pair: eslint-config-functype, eslint-plugin-functype —
  *          mirroring functype's version as `2.{major*100 + minor}.{patch}`, so
@@ -56,7 +56,7 @@ const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..")
  * Packages that must publish in lockstep — every member of a group must have
  * the same version at publish time.
  *
- * - Functype family: 6 packages on one functype line, bumped together by
+ * - Functype family: 7 packages on one functype line, bumped together by
  *   `scripts/release.ts`.
  * - Eslint pair: config + plugin on the mirrored `2.{major*100 + minor}.x` line, derived from the
  *   functype family version via `scripts/sync-eslint-mirror.ts` (intentional

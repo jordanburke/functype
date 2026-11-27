@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeKyselyReadme } from "../../../packages/functype-kysely/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-kysely",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-kysely",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-kysely: Kysely queries and transactions as typed IO | functype"
+  heading="functype-kysely"
+  tagline="Kysely queries that return typed IO, and transactions that commit on success and roll back on a typed failure, a defect or a cancel, with savepoints for nesting."
+  links={links}
+>
+  <FunctypeKyselyReadme />
+</DocLayout>

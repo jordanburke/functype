@@ -1,0 +1,77 @@
+{
+  "name": "functype-kysely",
+  "version": "2.2.2",
+  "description": "Kysely for functype — queries as typed IO, and transactions that roll back on a typed failure, a defect or a cancel",
+  "keywords": [
+    "functype",
+    "kysely",
+    "sql",
+    "transaction",
+    "io",
+    "typescript",
+    "functional"
+  ],
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-kysely",
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/functype",
+    "directory": "packages/functype-kysely"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "eslint src --max-warnings 0",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "peerDependencies": {
+    "functype": ">=2.0.0",
+    "kysely": ">=0.28.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.6.1",
+    "@types/node": "^24.19.2",
+    "eslint-config-prettier": "^10.1.8",
+    "functype": "workspace:^",
+    "kysely": "0.29.9",
+    "kysely-pglite-dialect": "1.4.0",
+    "ts-builds": "^5.0.0",
+    "tsdown": "^0.23.7",
+    "vitest": "^5.1.1"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "prettier": "ts-builds/prettier",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

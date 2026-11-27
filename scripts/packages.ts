@@ -8,13 +8,14 @@
 import { spawnSync } from "node:child_process"
 import { relative } from "node:path"
 
-/** The functype family: 6 packages on one functype line, bumped together by `release.ts`. */
+/** The functype family: 7 packages on one functype line, bumped together by `release.ts`. */
 export const FAMILY_PACKAGE_DIRS = [
   "packages/functype",
   "packages/functype-os",
   "packages/functype-log",
   "packages/functype-react",
   "packages/functype-eval",
+  "packages/functype-kysely",
   "packages/mcp-server",
 ] as const
 
