@@ -151,6 +151,11 @@ const TOOLING: ReadonlyArray<Link> = [
     "Kysely queries as typed IO, and transactions that roll back on a typed failure, a defect or a cancel",
   ),
   sitePage(
+    "functype-hono",
+    "functype-hono",
+    "Hono responses from IO with every status typed for the RPC client, and RPC client calls as IO",
+  ),
+  sitePage(
     "functype-os",
     "functype-os",
     "Env vars, paths, files, platform detection and config lookup as Option, Either and IO",

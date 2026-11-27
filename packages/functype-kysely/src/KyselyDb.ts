@@ -78,10 +78,11 @@ export type KyselyDb<DB> = {
    * `SAVEPOINT` (Postgres, MySQL, SQLite; not MSSQL).
    *
    * **A cancel waits for the query in flight.** A cancelled run stops before its next step and rolls
-   * back once the current query settles. A nested transaction that a `timeout` or `race` gave up on
-   * still finishes its rollback before the outer transaction's next step; if it was given up on
-   * after its savepoint was released, the outer commit is refused instead. A commit that has
-   * already started when the run is cancelled still commits, though the run reports the cancel.
+   * back once the current query settles. A nested transaction that a `timeout`, `race`, `IO.all` or
+   * `interruptOn` gave up on still finishes its rollback before the outer transaction's next step;
+   * if it was given up on after its savepoint was released, the outer commit is refused instead. A
+   * commit that has already started when the run is cancelled still commits, though the run
+   * reports the cancel.
    *
    * The provided service can also be a transaction you opened with Kysely itself, such as the
    * `trx` in `db.transaction().execute(callback)`. Then `transaction` opens a savepoint in it, but

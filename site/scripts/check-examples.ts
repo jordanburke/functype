@@ -87,6 +87,30 @@ declare global {
 }
 `;
 
+/** The server app functype-hono's client sample calls, typed as its server sample builds it. */
+const HONO_PRELUDE = `
+type UserRoute<O, S extends number> = {
+  input: { param: { id: string } }
+  output: O
+  outputFormat: "json"
+  status: S
+}
+declare global {
+  const app: import("hono").Hono<
+    import("hono/types").BlankEnv,
+    {
+      "/users/:id": {
+        $get:
+          | UserRoute<{ id: string; name: string }, 200>
+          | UserRoute<{ error: string; id: string }, 404>
+          | UserRoute<{ error: string }, 403>
+      }
+    },
+    "/"
+  >
+}
+`;
+
 const REACT_PRELUDE = `
 declare global {
   type Config = { readonly theme: string }
@@ -112,6 +136,7 @@ const PAGE_PRELUDES: Readonly<Record<string, string>> = {
   "functype-log": SITE_PRELUDE + LOG_PRELUDE,
   "functype-os": SITE_PRELUDE + OS_PRELUDE,
   "functype-kysely": SITE_PRELUDE + KYSELY_PRELUDE,
+  "functype-hono": SITE_PRELUDE + HONO_PRELUDE,
   "functype-react": SITE_PRELUDE + REACT_PRELUDE,
   "functype-eval": SITE_PRELUDE,
   "eslint-config": SITE_PRELUDE,
