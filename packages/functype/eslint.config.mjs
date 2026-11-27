@@ -55,8 +55,10 @@ export default [
       ecmaVersion: 2020,
       sourceType: "module",
 
+      // projectService, as eslint-config-functype's preset sets: typescript-eslint rejects
+      // `project` beside it.
       parserOptions: {
-        project: "./tsconfig.json",
+        projectService: true,
       },
     },
 

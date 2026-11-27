@@ -24,19 +24,19 @@ const PEER_DEPENDENCIES: PeerDependency[] = [
     name: "eslint-plugin-prettier",
     packageName: "eslint-plugin-prettier",
     description: "Code formatting rules",
-    required: false,
+    required: true,
   },
   {
     name: "eslint-plugin-simple-import-sort",
     packageName: "eslint-plugin-simple-import-sort",
     description: "Import sorting rules",
-    required: false,
+    required: true,
   },
   {
     name: "prettier",
     packageName: "prettier",
     description: "Code formatter",
-    required: false,
+    required: true,
   },
 ]
 

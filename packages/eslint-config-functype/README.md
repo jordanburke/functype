@@ -18,6 +18,13 @@ import testOverrides from "eslint-config-functype/test-overrides"
 export default [recommended, testOverrides]
 ```
 
+That is the whole config. `recommended` lints `**/*.{ts,tsx,mts,cts}`, and registers everything its rules need:
+
+- `@typescript-eslint/parser`, with `parserOptions: { projectService: true }`, so the type-aware rules such as `no-floating-promises` get type information from each file's nearest `tsconfig.json`;
+- the `@typescript-eslint`, `prettier` and `simple-import-sort` plugins.
+
+All five peers in the install line are required; a missing one stops the config from loading with the command that installs it.
+
 ### Strict mode
 
 ```js
@@ -26,6 +33,25 @@ import testOverrides from "eslint-config-functype/test-overrides"
 
 export default [strict, testOverrides]
 ```
+
+### A config that already registers the plugins
+
+If your config already registers these plugins, for example through `typescript-eslint`'s configs, or sets `parserOptions.project`, use the preset's rules in your own block, as `ts-builds` does:
+
+```js
+import functypeConfig from "eslint-config-functype"
+
+export default [
+  // ...your parser and plugin setup
+  { files: ["**/*.ts"], rules: functypeConfig.configs.recommended.rules },
+  functypeConfig.configs.testOverrides,
+]
+```
+
+Two things fail when the whole preset sits beside such a config:
+
+- **Two copies of a plugin.** ESLint accepts a plugin registered twice only when both are the same object. With one copy of each plugin installed, they are. When your direct `@typescript-eslint/eslint-plugin` is a different version from the one `typescript-eslint` depends on, npm installs two, and ESLint stops with `Cannot redefine plugin "@typescript-eslint"`. Align the versions, or use the rules as above.
+- **`project` beside `projectService`.** typescript-eslint rejects a file whose `parserOptions` set both: `Enabling "project" does nothing when "projectService" is enabled`. Drop `project`, or use the rules as above.
 
 ## Configs
 
