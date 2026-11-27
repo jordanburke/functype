@@ -2,13 +2,13 @@ import type { IOType } from "functype"
 import { InterruptedError, IO } from "functype"
 import type { Context } from "hono"
 import { Hono } from "hono"
-import type { InferResponseType } from "hono/client"
+import type { ClientResponse, InferResponseType } from "hono/client"
 import { hc } from "hono/client"
 import { validator } from "hono/validator"
 import { describe, expect, expectTypeOf, it } from "vitest"
 
 import { respond } from "../src"
-import type { CallError } from "../src/client"
+import type { CallError, SuccessBody } from "../src/client"
 import { call } from "../src/client"
 
 type User = { readonly id: string; readonly name: string }
@@ -79,6 +79,15 @@ const app = new Hono()
   )
   .get("/problem", () => new Response('{"title":"x"}', { headers: { "content-type": "application/problem+json" } }))
   .get("/ndjson", () => new Response('{"a":1}\n{"a":2}\n', { headers: { "content-type": "application/x-ndjson" } }))
+  .get("/maybe-away", (c) =>
+    respond(IO.succeed(c.req.query("away") === "1"), {
+      ok: (away) => (away ? c.redirect("/hello", 302) : c.json({ u: 1 }, 200)),
+      err: () => c.text("never", 500),
+    }),
+  )
+  .get("/away", (c) =>
+    respond(IO.succeed(undefined), { ok: () => c.redirect("/hello", 302), err: () => c.text("never", 500) }),
+  )
   .get("/plain", () => new Response('{"a":1}', { headers: { "content-type": "application/json" } }))
   .get("/hello", (c) =>
     respond(IO.succeed("hello"), { ok: (text) => c.text(text, 200), err: () => c.text("never", 500) }),
@@ -172,7 +181,7 @@ describe("call", () => {
 
   it("types a null body with another 2xx as empty text, as it arrives", async () => {
     const io = call(() => client.created.$post())
-    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, "" | null>>()
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, "">>()
     expect((await io.run()).orThrow()).toBe("")
   })
 
@@ -185,6 +194,18 @@ describe("call", () => {
   it("parses a +json content type, and reads ndjson as text", async () => {
     expect((await call(() => client.problem.$get()).run()).orThrow()).toEqual({ title: "x" })
     expect((await call(() => client.ndjson.$get()).run()).orThrow()).toBe('{"a":1}\n{"a":2}\n')
+  })
+
+  it("types a route with a redirect as unknown, alone or beside JSON", () => {
+    expectTypeOf(call(() => client["maybe-away"].$get())).toEqualTypeOf<IOType<never, CallError, unknown>>()
+    expectTypeOf(call(() => client.away.$get())).toEqualTypeOf<IOType<never, CallError, unknown>>()
+  })
+
+  it("types a response whose status is only a number as unknown", () => {
+    type Loose = ClientResponse<{ readonly a: number }, number, "json">
+    expectTypeOf<SuccessBody<Loose>>().toEqualTypeOf<unknown>()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- an untyped client
+    expectTypeOf<SuccessBody<any>>().toEqualTypeOf<unknown>()
   })
 
   it("types a route Hono can't type as unknown, and reads it by content type", async () => {

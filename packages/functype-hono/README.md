@@ -66,9 +66,10 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
   - JSON is parsed when the content type is `application/json` or a `+json` type such as `application/problem+json`, and other bodies are read as text. For a binary download, call the client directly.
   - `c.json` and `c.text` routes are typed as they send. The types assume the route keeps the content type those set; a route that overrides it with a header gets what its header says.
   - A 204 or 205 gives `null`. A `c.body(null, …)` with another 2xx status gives `""`.
-  - Any other body is `unknown`, because its content type is up to the route: a non-null `c.body(…)`, a plain `Response`, or a proxied `fetch`. Check it before you use it.
+  - Any other body is `unknown`, because its content type is up to the route: a non-null `c.body(…)`, a plain `Response`, or a proxied `fetch`. Check it before you use it. A handler that mixes `c.json` with one of those, or with `c.notFound()` or `c.html(…)`, makes the whole route `unknown`, because Hono can't type that leg.
   - A JSON content type with an empty body is an `InvalidBody`.
-  - A route with no 2xx status gives `IO<never, CallError, never>`. A redirect route is typed that way too, but `fetch` follows redirects by default, so at runtime it gives the target's body.
+  - A route with a redirect, alone or beside other responses, gives `unknown`: `fetch` follows redirects by default, so the body is the target's.
+  - A route with no 2xx status and no redirect gives `IO<never, CallError, never>`.
 - **Any other outcome** is a `CallError`:
   ```ts
   type CallError =

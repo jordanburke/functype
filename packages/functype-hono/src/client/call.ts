@@ -35,16 +35,33 @@ type ReadBody<T, F, S> = string extends F
     : T extends null
       ? S extends 204 | 205
         ? null
-        : null | ""
+        : ""
       : unknown
 
-/** The body type of a Hono client response's 2xx statuses, as {@link call} reads it. */
-export type SuccessBody<R> =
+/** The 2xx body of one response type: `unknown` when its status is only known to be a number. */
+type Body2xx<R> =
   R extends ClientResponse<infer T, infer S, infer F>
-    ? S extends SuccessStatusCode
-      ? ReadBody<T, F, S>
-      : never
+    ? number extends S
+      ? unknown
+      : S extends SuccessStatusCode
+        ? ReadBody<T, F, S>
+        : never
     : never
+
+/** True when some response of the route is a redirect. */
+type HasRedirect<R> = true extends (
+  R extends ClientResponse<unknown, number, infer F> ? (F extends "redirect" ? true : false) : false
+)
+  ? true
+  : false
+
+/**
+ * The body type of a Hono client response's 2xx statuses, as {@link call} reads it.
+ *
+ * A route with a redirect gives `unknown`: `fetch` follows redirects, so the body is the target's.
+ * So does an untyped client (`any`).
+ */
+export type SuccessBody<R> = 0 extends 1 & R ? unknown : HasRedirect<R> extends true ? unknown : Body2xx<R>
 
 const CONTENTLESS: ReadonlySet<number> = new Set([204, 205, 304])
 
