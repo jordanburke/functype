@@ -21,12 +21,12 @@ type Database = {
 export const Db = KyselyDb<Database>()
 
 const balance = (id: string) =>
-  Db.query((d) => d.selectFrom("account").select("balance").where("id", "=", id).executeTakeFirst())
+  Db.queryOption((d) => d.selectFrom("account").select("balance").where("id", "=", id).executeTakeFirst())
 
 declare const db: Kysely<Database> // your Kysely instance, below
 
 const result = await balance("alice").provideService(Db.tag, db).run()
-// Either<DbError, { balance: number } | undefined>
+// Either<DbError, Option<{ balance: number }>>
 ```
 
 `db` is an ordinary Kysely instance, with any dialect:
@@ -59,7 +59,17 @@ const accounts = Db.query((d, signal) =>
 )
 ```
 
-Pass a second argument to map the error yourself: `Db.query(f, (e) => myError(e))`. `isUniqueViolation(error)` checks for a unique-constraint or primary-key violation on Postgres, MySQL or SQLite.
+`Db.queryOption(f)` is `Db.query` for a row that may be missing. It gives `Some` for a row and `None` when `f` resolves to `undefined` or `null`, so pair it with `executeTakeFirst`:
+
+```ts
+const findAccount = (id: string) =>
+  Db.queryOption((d, signal) => d.selectFrom("account").selectAll().where("id", "=", id).executeTakeFirst({ signal }))
+// IO<Kysely<Database>, DbError, Option<{ id: string; balance: number }>>
+```
+
+Use it instead of `executeTakeFirstOrThrow` inside a transaction. There a rejected query refuses the commit, below, and a missing row is a rejection under `...OrThrow`, but `None` under `queryOption`.
+
+Pass a second argument to map the error yourself: `Db.query(f, (e) => myError(e))`, and the same for `Db.queryOption`. `isUniqueViolation(error)` checks for a unique-constraint or primary-key violation on Postgres, MySQL or SQLite.
 
 ## Transactions
 
@@ -78,10 +88,10 @@ const transfer = (from: string, to: string, amount: number) =>
     IO.gen(function* () {
       const source = yield* balance(from)
       const target = yield* balance(to)
-      const left = (source?.balance ?? 0) - amount
+      const left = source.map((row) => row.balance).getOrElse(() => 0) - amount
       if (left < 0) return yield* IO.fail<Overdrawn>({ _tag: "Overdrawn", id: from })
       yield* setBalance(from, left)
-      yield* setBalance(to, (target?.balance ?? 0) + amount)
+      yield* setBalance(to, target.map((row) => row.balance).getOrElse(() => 0) + amount)
     }),
   )
 // IO<Kysely<Database>, DbError | Overdrawn, undefined>
@@ -91,9 +101,9 @@ const transfer = (from: string, to: string, amount: number) =>
 - **A typed failure rolls back** and passes through unchanged: `transfer` fails with `Overdrawn`, not a wrapper.
 - **A defect rolls back**, and the run still dies.
 - **A cancel rolls back.** The run stops before its next step and rolls back once the query in flight settles. If you pass the signal to `execute`, Kysely stops waiting at once and the statement may still be running on the connection; the rollback then queues behind it. A commit that has already started when the run is cancelled still commits, though the run reports the cancel.
-- **A failed or abandoned query can't be recovered in place.** On Postgres, any failed statement aborts the transaction, and a later `COMMIT` silently rolls back. A write that a `timeout` gave up on may still land. So when a query fails, or a `timeout` or cancel gives up on it, and the program carries on, the commit fails with a `DbError` instead of reporting success. To carry on after a query that may fail or time out, run it in a nested `Db.transaction`, below: the savepoint waits for that query to settle, then undoes it. Any rejection of the function you give `Db.query` counts, `executeTakeFirstOrThrow`'s not-found error included, because a callback can run several statements and that error could hide one that failed. To look up a row that may be missing, use `executeTakeFirst` and handle `undefined`, or fail with `IO.fail`.
+- **A failed or abandoned query can't be recovered in place.** On Postgres, any failed statement aborts the transaction, and a later `COMMIT` silently rolls back. A write that a `timeout` gave up on may still land. So when a query fails, or a `timeout` or cancel gives up on it, and the program carries on, the commit fails with a `DbError` instead of reporting success. To carry on after a query that may fail or time out, run it in a nested `Db.transaction`, below: the savepoint waits for that query to settle, then undoes it. Any rejection of the function you give `Db.query` counts, `executeTakeFirstOrThrow`'s not-found error included, because a callback can run several statements and that error could hide one that failed. To look up a row that may be missing, use `Db.queryOption` with `executeTakeFirst`, above, and fail with `IO.fail` when the program needs the row.
 - **Steps run one at a time.** A transaction is one connection, so its queries, nested transactions and commit wait for each other, even under `IO.all`. A nested transaction that a `timeout`, `race`, `IO.all` failing fast or `interruptOn` gave up on still finishes its rollback before the next step runs. If that lands after the nested transaction's savepoint was already released, there's nothing left to roll back to and its writes are the outer transaction's, so the outer commit is refused instead. So racing two queries in one transaction always fails the commit: the loser still runs, and the race gives up on it.
-- **Both guards cover `Db.query`.** The one-at-a-time lock and the refused commit only see queries run through `Db.query` on the handle it gives you. A statement run on the transaction handle directly, such as `IO.service(Db.tag)` followed by `trx.insertInto(…).execute()`, or on a handle derived from it with `withSchema` or `withPlugin`, isn't serialized or checked.
+- **Both guards cover `Db.query` and `Db.queryOption`.** The one-at-a-time lock and the refused commit only see queries run through them on the handle they give you. A statement run on the transaction handle directly, such as `IO.service(Db.tag)` followed by `trx.insertInto(…).execute()`, or on a handle derived from it with `withSchema` or `withPlugin`, isn't serialized or checked.
 - **Other services stay in `R`.** A program that also needs a `Clock` gives a transaction that needs `Clock | Kysely<Database>`.
 
 ### Nesting
@@ -117,6 +127,39 @@ When the inner failure isn't recovered, it fails the outer transaction too, and 
 Savepoints are issued as `SAVEPOINT` SQL, which Postgres, MySQL and SQLite accept and MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, can be the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it. Kysely then owns the commit, so neither guard covers it, neither the one-at-a-time lock nor the refused commit: Kysely commits when your callback returns, even after a query failed and the program carried on, and even while a nested transaction a `timeout` gave up on is still running. Prefer `Db.transaction` for the outer transaction.
 
 Inside a nested transaction, use the handle `Db.query` gives you. Re-providing an outer transaction's handle captured earlier, with `provideService(Db.tag, trx)`, waits for the nested transaction to finish, which never happens: the run hangs. So does a run started inside a `Db.query` callback on the handle that callback got.
+
+## Moving an existing codebase over
+
+A codebase can move one function at a time.
+
+- **Provide `Db.tag` where you provided your own tag.** If the code already reads a `Kysely` from a functype `Tag`, point that name at `Db.tag`. Every `IO.service(tag)` and `provideService(tag, db)` keeps working, and `Db.transaction` sees the same handle.
+- **Wrap an `async` helper as one `Db.query`.** Pass it the handle `Db.query` gives you, not one captured earlier: a captured handle's statements run outside the transaction, or, on a pool with one connection, wait for it forever. Map its own error with `toError`, and let the rest become a `DbError`:
+
+```ts
+import type { Kysely } from "kysely"
+import { toDbError } from "functype-kysely"
+
+type NotFound = { readonly _tag: "NotFound"; readonly id: string }
+declare const isNotFound: (error: unknown) => error is NotFound
+
+// An older helper: async, and throws a NotFound
+declare const approveLegacy: (d: Kysely<Database>, id: string) => Promise<void>
+
+const approve = (id: string) =>
+  Db.query(
+    (d) => approveLegacy(d, id),
+    (e) => (isNotFound(e) ? e : toDbError(e)),
+  )
+// IO<Kysely<Database>, NotFound | DbError, void>
+```
+
+Inside `Db.transaction`, the helper's statements run as one step under the transaction's lock. When the helper rejects, the program fails and the transaction rolls back; if the program recovers from that, the commit is refused instead. To recover from the helper's error and still commit, run it in a nested `Db.transaction`.
+
+Three kinds of helper need a change first:
+
+- **A helper that catches a failed statement and carries on.** The refused commit only sees the callback reject. On Postgres, the caught statement has already aborted the transaction, so its `COMMIT` rolls back without an error, and the run reports success with nothing written. Plain Kysely does the same. Make the helper rethrow, or move the statement that may fail into a `Db.query` of its own inside a nested `Db.transaction`.
+- **A helper that opens its own transaction** with `d.transaction().execute(…)`. Kysely rejects that on a transaction handle, so the call fails and rolls back. Move it to `Db.transaction`.
+- **A helper that runs an already-moved function with `.run()`** on the handle it was given. The run waits for the lock its own callback holds, so it hangs, as under Nesting above. Call that function from the IO program instead.
 
 ## Two databases
 

@@ -78,7 +78,7 @@ declare global {
   const Db: import("functype-kysely").KyselyDb<Database>
   const balance: (
     id: string,
-  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, { readonly balance: number } | undefined>
+  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, import("functype").Option<{ readonly balance: number }>>
   const transfer: (
     from: string,
     to: string,
