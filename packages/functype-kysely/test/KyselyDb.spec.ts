@@ -454,6 +454,35 @@ describe("Db.transaction edge cases", () => {
   const inners = new WeakMap<DatabaseConnection, DatabaseConnection>()
   const unwrap = (c: DatabaseConnection): DatabaseConnection => inners.get(c) ?? c
 
+  it("refuses to commit when an IO.all sibling fails during a nested transaction's release", async () => {
+    // The sibling fails as RELEASE SAVEPOINT starts, so IO.all gives up on the nested transaction then.
+    const releasing = Promise.withResolvers<void>()
+    const slow = new Kysely<Database>({
+      dialect: slowReleaseDialect(new PGliteDialect(pglite), () => releasing.resolve()),
+    })
+    // Both effects share one type for IO.all.
+    const nested = Db.transaction(insert("n")).mapError((e): DbError | Overdrawn => e)
+    const sibling = IO.service(Db.tag).flatMap(() =>
+      IO.async(() => releasing.promise)
+        .recoverWith((e) => IO.die(e))
+        // IO is invariant in its types, so the failing step is cast to the shared type.
+        .flatMap(() => IO.fail(overdrawn("sibling")) as unknown as typeof nested),
+    )
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => IO.all([nested, sibling]).recover(undefined))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+
   it("refuses to commit when a cancel gives up on a nested transaction during its release", async () => {
     // The cancel fires as RELEASE SAVEPOINT starts, so the test doesn't depend on timing.
     const controller = new AbortController()

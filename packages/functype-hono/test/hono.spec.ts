@@ -62,6 +62,12 @@ const app = new Hono()
       { signal: c.req.raw.signal },
     ),
   )
+  .get("/bytes", (c) =>
+    respond(IO.succeed(new Uint8Array([104, 105])), {
+      ok: (bytes) => c.body(bytes, 200),
+      err: () => c.text("never", 500),
+    }),
+  )
   .get("/hello", (c) =>
     respond(IO.succeed("hello"), { ok: (text) => c.text(text, 200), err: () => c.text("never", 500) }),
   )
@@ -144,6 +150,28 @@ describe("call", () => {
     const io = call(() => client.hello.$get())
     expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, string>>()
     expect((await io.run()).orThrow()).toBe("hello")
+  })
+
+  it("reads a c.body route's body as text, and types it as a string", async () => {
+    const io = call(() => client.bytes.$get())
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, string>>()
+    expect((await io.run()).orThrow()).toBe("hi")
+  })
+
+  it("gives null for a 205, and an HttpError with a null body for a 304", async () => {
+    const status = (code: number) =>
+      hc<typeof app>("http://localhost", { fetch: () => Promise.resolve(new Response(null, { status: code })) })
+    expect((await call(() => status(205).users[":id"].$delete({ param: { id: "1" } })).run()).orThrow()).toBe(null)
+    const notModified = await call(() => status(304).users[":id"].$delete({ param: { id: "1" } })).run()
+    expect(notModified.isLeft() && notModified.value).toEqual({ _tag: "HttpError", status: 304, body: null })
+  })
+
+  it("fails with InvalidBody for a JSON content type with an empty body", async () => {
+    const empty = hc<typeof app>("http://localhost", {
+      fetch: () => Promise.resolve(new Response("", { status: 200, headers: { "content-type": "application/json" } })),
+    })
+    const result = await call(() => empty.users[":id"].$get({ param: { id: "1" }, query: { verbose: "0" } })).run()
+    expect(result.isLeft() && result.value._tag).toBe("InvalidBody")
   })
 
   it("fails with HttpError and the parsed body on a non-2xx status", async () => {

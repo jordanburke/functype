@@ -17,9 +17,16 @@ export type CallError =
   | { readonly _tag: "HttpError"; readonly status: number; readonly body: unknown }
   | { readonly _tag: "InvalidBody"; readonly status: number; readonly cause: unknown }
 
-/** The body type of a Hono client response's 2xx statuses. */
+/**
+ * What {@link call} gives for a body of type `T` sent in format `F`. JSON and text arrive as typed.
+ * A `c.body(…)` response is read as text, since `call` reads only JSON and text, so a body sent
+ * that way is a `string` unless it is `null`.
+ */
+type ReadBody<T, F> = F extends "json" | "text" ? T : T extends null ? null : string
+
+/** The body type of a Hono client response's 2xx statuses, as {@link call} reads it. */
 export type SuccessBody<R> =
-  R extends ClientResponse<infer T, infer S, infer _F> ? (S extends SuccessStatusCode ? T : never) : never
+  R extends ClientResponse<infer T, infer S, infer F> ? (S extends SuccessStatusCode ? ReadBody<T, F> : never) : never
 
 const CONTENTLESS: ReadonlySet<number> = new Set([204, 205, 304])
 
@@ -47,13 +54,16 @@ const success = <A>(response: Response): IOType<never, CallError, A> =>
 
 /**
  * Runs a Hono RPC client call as an IO: a 2xx response gives its typed body, and anything else a
- * {@link CallError}, or your own error through `toError`. It never throws.
+ * {@link CallError}, or your own error through `toError`. A failed request is a typed error, not
+ * a rejection; only a throw from `toError` itself, or a `request` that doesn't resolve to a
+ * `Response`, is a defect.
  *
  * `request` gets the run's abort signal; pass it as `init.signal` so a cancelled run aborts the
  * fetch. A cancelled call ends interrupted, not as a `CallError`.
  *
- * The body is read as JSON when the response says so, as text otherwise, and as `null` for 204,
- * 205 and 304.
+ * The body is read as JSON when the response's content type says so, as text otherwise, and as
+ * `null` for 204 and 205. A binary body arrives as text, so call the client directly for a
+ * download. A 304 isn't 2xx, so it is an `HttpError` with a `null` body.
  *
  * @example
  * ```ts

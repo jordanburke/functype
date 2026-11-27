@@ -3,7 +3,7 @@
 [Hono](https://hono.dev) for [functype](https://functype.org), on both sides of the wire:
 
 - **`respond`** turns an `IO` into a Hono response. A success and each typed failure get their own typed response, so Hono's RPC client still sees every status's body.
-- **`call`** (from `functype-hono/client`) runs a Hono RPC client call as an `IO`. A 2xx gives its typed body, anything else a typed error, and it never throws.
+- **`call`** (from `functype-hono/client`) runs a Hono RPC client call as an `IO`. A 2xx gives its typed body, and anything else a typed error rather than a rejection.
 
 ```bash
 pnpm add functype-hono functype hono
@@ -45,8 +45,8 @@ export const app = new Hono().get("/users/:id", (c) =>
 
 - **Several steps, one response.** Compose them with `flatMap` or `IO.gen` before `respond`. A failure at any step goes to `err`, so a route needs no early returns.
 - **The client keeps every status.** The handler returns the union of what `ok` and `err` return. Hono's client then types each status's body: 200 gives `User`, 404 gives `{ error: string; id: string }`, 403 gives `{ error: string }`.
-- **Responses must be typed.** `ok` and `err` must return Hono's typed responses: `c.json`, `c.text`, `c.body` or `c.redirect`. A plain `new Response(…)` would erase the types the client sees, so it doesn't compile.
-- **Defects go to `app.onError`.** A defect is rethrown as the original error, as a throw in a handler would be.
+- **Responses must be typed.** `ok` and `err` must return Hono's typed responses: `c.json`, `c.text`, `c.body` or `c.redirect`. A plain `new Response(…)` would erase the types the client sees, so it doesn't compile. Nor do `c.html(…)` and `c.notFound()`, which return a plain `Response` in Hono; for a not-found, return `c.json({ error: "not found" }, 404)`.
+- **Defects go to `app.onError`.** A defect is rethrown as the original error, as a throw in a handler would be. Hono routes only `Error` instances to `app.onError`, so an `IO.die` with another value doesn't reach it, as a bare `throw "x"` wouldn't.
 - **Services come first.** `respond` takes an IO that needs nothing, so provide its services before it: `respond(program.provideService(Db.tag, db), …)`.
 - **Cancelling is opt-in.** Pass `{ signal: c.req.raw.signal }` as a third argument to cancel the IO when the request's signal aborts. A cancel then throws an `InterruptedError`. Whether that signal aborts when a client disconnects depends on the runtime adapter, so it isn't the default.
 
@@ -63,8 +63,10 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
 ```
 
 - **A 2xx response** gives its body, typed from the route.
-  - JSON is parsed when the response's content type says so, and other bodies are read as text.
-  - A 204, 205 or 304 gives `null`.
+  - JSON is parsed when the response's content type says so, and other bodies are read as text, so a `c.body(…)` route's body is a `string`. For a binary download, call the client directly.
+  - A 204 or 205 gives `null`.
+  - A JSON content type with an empty body is an `InvalidBody`.
+  - A route with no 2xx status, such as a redirect, gives `IO<never, CallError, never>`.
 - **Any other outcome** is a `CallError`:
   ```ts
   type CallError =
@@ -72,7 +74,7 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
     | { readonly _tag: "HttpError"; readonly status: number; readonly body: unknown } // a non-2xx status
     | { readonly _tag: "InvalidBody"; readonly status: number; readonly cause: unknown } // a 2xx body that didn't parse
   ```
-  The `body` of an `HttpError` is `unknown`, because a status can come from anywhere on the way, such as a proxy or `app.onError`. Check it before you use it.
+  A 304 isn't 2xx, so it's an `HttpError` with a `null` body. The `body` of an `HttpError` is `unknown`, because a status can come from anywhere on the way, such as a proxy or `app.onError`. Check it before you use it.
 - **Your own error type:** map to it with a second argument, `call(request, (e) => toApiError(e))`.
 - **Cancelling.** `request` gets the run's abort signal; pass it as `init.signal`. A cancelled run then aborts the fetch and ends interrupted, not as a `CallError`.
 
