@@ -80,6 +80,12 @@ describe("searchParams", () => {
     expect(leafMatch(router)?.search).toEqual({ q: "123", page: undefined, sort: undefined, mine: undefined })
   })
 
+  it("validates an inline validator's route at runtime", async () => {
+    const router = buildRouter("/inline?q=cats&page=2")
+    await router.load()
+    expect(leafMatch(router)?.loaderData).toEqual({ page: 2, query: "cats" })
+  })
+
   it("round-trips through navigate, including a string that looks like a number", async () => {
     const router = buildRouter("/search")
     await router.load()
@@ -95,18 +101,30 @@ describe("SearchParam parsers", () => {
     inputs.map((raw) => field(raw).getOrElse(() => "none"))
 
   it("string", () => {
-    expect(values(SearchParam.string, ["a", "", 7, Number.NaN, true, null])).toEqual([
+    expect(values(SearchParam.string, ["a", "", 7, Number.NaN, true, false, null, [1]])).toEqual([
       "a",
       "none",
       "7",
       "none",
+      "true",
+      "false",
       "none",
       "none",
     ])
   })
 
   it("number and integer", () => {
-    expect(values(SearchParam.number, [2.5, "2.5", " ", "x", Infinity])).toEqual([2.5, 2.5, "none", "none", "none"])
+    expect(values(SearchParam.number, [2.5, "2.5", "-1e3", ".5", " ", "x", "0x10", "1.2.3", Infinity])).toEqual([
+      2.5,
+      2.5,
+      -1000,
+      0.5,
+      "none",
+      "none",
+      "none",
+      "none",
+      "none",
+    ])
     expect(values(SearchParam.integer, [2, "3", 2.5, "x"])).toEqual([2, 3, "none", "none"])
   })
 
@@ -128,7 +146,7 @@ describe("SearchParam parsers", () => {
   })
 
   it("types the search object with every key optional", () => {
-    expectTypeOf(listSearch({})).toEqualTypeOf<{
+    expectTypeOf(listSearch.parse({})).toEqualTypeOf<{
       readonly q?: string | undefined
       readonly page?: number | undefined
       readonly sort?: "new" | "old" | undefined

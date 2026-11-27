@@ -1,7 +1,7 @@
 import type { useNavigate } from "@tanstack/react-router"
 import { describe, expectTypeOf, it } from "vitest"
 
-import type { detailRoute, Filter, itemRoute, listRoute, searchRoute } from "./app"
+import type { detailRoute, Filter, inlineRoute, itemRoute, listRoute, searchRoute } from "./app"
 
 describe("exitRoute types", () => {
   it("puts a Right in the route context, for the route and its children", () => {
@@ -19,6 +19,17 @@ describe("searchParams types", () => {
       readonly page?: number | undefined
       readonly sort?: "new" | "old" | undefined
       readonly mine?: boolean | undefined
+    }>()
+  })
+
+  it("keeps its type written inline beside a beforeLoad and loaderDeps that read search", () => {
+    expectTypeOf<(typeof inlineRoute)["types"]["searchSchema"]>().toEqualTypeOf<{
+      readonly q?: string | undefined
+      readonly page?: number | undefined
+    }>()
+    expectTypeOf<(typeof inlineRoute)["types"]["loaderData"]>().toEqualTypeOf<{
+      page: number | undefined
+      query: string | undefined
     }>()
   })
 

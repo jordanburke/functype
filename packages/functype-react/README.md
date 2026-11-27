@@ -255,6 +255,8 @@ const events = useIOInfiniteQuery(["events"], ({ pageParam, signal }) => fetchEv
 - **`data.pageParams` holds plain values.** React Query stores each param as itself, or as `null` for the first page, so its cache stays plain JSON for persisters and SSR.
 - **Other options pass through.** Every other `useInfiniteQuery` option, such as `select`, `maxPages` or `placeholderData: keepPreviousData`, works as usual.
 - **To match the result, project it.** `toQueryState(events)` gives an `AsyncState`. The hook returns React Query's result unchanged.
+- **`None` is only ever the first page you fetched.** After `fetchPreviousPage`, or once `maxPages` drops the first page, a refetch starts from a page whose param is a `Some`, as plain React Query does. So pick params that your effect can fetch any page from, such as offsets or cursors.
+- **A one-page query** still needs a typed `None`: `getNextPageParam: () => Option.none<string>()`.
 
 For full control over the query object — or for `useSuspenseQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
@@ -348,8 +350,8 @@ const search = createRoute({
 - **A rejected or missing value is `undefined`.** TanStack merges `validateSearch`'s result over the raw search, so a key left out would keep its raw, unvalidated value; `undefined` replaces it. TanStack leaves `undefined` keys out of the URLs it writes.
 - **The same type works for `navigate`.** `navigate({ to: "/search", search: { q: "cats" } })` checks against it.
 - **The parsers expect TanStack's parsing.** TanStack hands each value to `validateSearch` already parsed as JSON where it can be: `?page=2` is the number 2, and `?mine=true` is `true`.
-  - `SearchParam.string` takes a non-empty string. A number, as a hand-typed `?q=123` parses, becomes its text. An empty value is rejected.
-  - `SearchParam.number` and `SearchParam.integer` take a number, or a string that reads as one.
+  - `SearchParam.string` takes a non-empty string. A number or boolean, as a hand-typed `?q=123` or `?q=true` parses, becomes its text. An empty value or `null` is rejected. TanStack has already parsed a hand-typed value as JSON by then, so its original text can be gone: `?q=1e3` arrives as `"1000"`, and a 20-digit number loses precision. Values that `navigate` writes are quoted, so they round-trip exactly.
+  - `SearchParam.number` and `SearchParam.integer` take a number, or a decimal string that reads as one. Hex such as `0x10` is rejected.
   - `SearchParam.boolean` takes `true` or `false`, or those strings.
   - `SearchParam.oneOf(...values)` takes one of the given strings.
 - **Your own parser:** any `(raw: unknown) => Option<T>` is a field.

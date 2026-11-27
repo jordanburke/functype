@@ -1,7 +1,7 @@
 {
   "name": "functype-react",
   "version": "2.2.2",
-  "description": "React bindings for functype \u2014 ADT-aware hooks and exhaustive pattern matching components",
+  "description": "React bindings for functype — ADT-aware hooks and exhaustive pattern matching components",
   "keywords": [
     "functype",
     "react",

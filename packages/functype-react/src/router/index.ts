@@ -9,5 +9,5 @@
  */
 export type { RouteExit } from "./guard"
 export { exitRoute } from "./guard"
-export type { SearchField, SearchOf } from "./search"
+export type { SearchField, SearchOf, SearchValidator } from "./search"
 export { SearchParam, searchParams } from "./search"

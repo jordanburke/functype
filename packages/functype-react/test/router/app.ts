@@ -54,8 +54,24 @@ const slowRoute = createRoute({
   beforeLoad: async () => exitRoute<void>(await Promise.resolve(Either.left(redirect({ to: "/search" })))),
 })
 export const searchRoute = createRoute({ getParentRoute: () => root, path: "/search", validateSearch: listSearch })
+// Written inline, beside a beforeLoad and loaderDeps that read search: TanStack loses a function
+// validator's type here, which is why searchParams returns a { parse } object.
+export const inlineRoute = createRoute({
+  getParentRoute: () => root,
+  path: "/inline",
+  validateSearch: searchParams({ q: SearchParam.string, page: SearchParam.integer }),
+  beforeLoad: ({ search }) => ({ query: search.q }),
+  loaderDeps: ({ search }) => ({ page: search.page }),
+  loader: ({ deps, context }) => ({ page: deps.page, query: context.query }),
+})
 
-const routeTree = root.addChildren([listRoute.addChildren([detailRoute]), itemRoute, slowRoute, searchRoute])
+const routeTree = root.addChildren([
+  listRoute.addChildren([detailRoute]),
+  itemRoute,
+  slowRoute,
+  searchRoute,
+  inlineRoute,
+])
 
 export const buildRouter = (path: string) =>
   createRouter({ routeTree, history: createMemoryHistory({ initialEntries: [path] }) })

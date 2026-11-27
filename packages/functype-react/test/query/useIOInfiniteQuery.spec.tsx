@@ -238,6 +238,14 @@ describe("useIOInfiniteQuery types", () => {
       }))
   })
 
+  it("takes a typed None for a one-page query", () => {
+    const use = () =>
+      useIOInfiniteQuery(["one"], ({ pageParam }) => fetchPage(pageParam), {
+        getNextPageParam: () => Option.none<string>(),
+      })
+    expectTypeOf<ReturnType<typeof use>["data"]>().toEqualTypeOf<InfiniteData<Page, string | null> | undefined>()
+  })
+
   it("rejects a page param type that includes null", () => {
     void (() =>
       // @ts-expect-error P can't include null: None already means "no more pages"
