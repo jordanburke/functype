@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { Decoder, type DecoderError } from "@/decoder"
 import { Left, Right } from "@/either/Either"
 import { Http } from "@/fetch/Http"
 import type { HttpMethodOptions, HttpRequestOptions } from "@/fetch/HttpRequest"
+import type { HttpMethods } from "@/index"
 import { IO } from "@/io"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
@@ -299,6 +300,18 @@ describe("Http", () => {
       await http.get("https://other.api/resource").runOrThrow()
 
       expect(fetch).toHaveBeenCalledWith("https://other.api/resource", expect.anything())
+    })
+
+    it("names the client's type HttpMethods, exported from the root", async () => {
+      const fetch = mockFetch({ status: 200, statusText: "OK", body: { ok: true } })
+      const http = Http.client({ fetch: fetch as unknown as typeof globalThis.fetch, baseUrl: "https://api.test" })
+      expectTypeOf(http).toEqualTypeOf<HttpMethods>()
+
+      const health = (client: HttpMethods, path: string) => client.get<{ ok: boolean }>(path)
+      const res = await health(http, "/health").runOrThrow()
+
+      expect(res.data).toEqual({ ok: true })
+      expect(fetch).toHaveBeenCalledWith("https://api.test/health", expect.anything())
     })
   })
 

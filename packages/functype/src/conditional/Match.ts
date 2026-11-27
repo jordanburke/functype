@@ -640,6 +640,15 @@ const MatchStatics = MatchCompanion
  *   .default("Unknown")
  *
  * @example
+ * // A string-literal result widens to string, so mark each result `as const`
+ * // to match into a literal union
+ * type Grade = "healthy" | "degraded" | "unknown"
+ * const grade: Grade = Match(status)
+ *   .caseValue("ok", "healthy" as const)
+ *   .caseValue("degraded", () => "degraded" as const)
+ *   .default("unknown" as const)
+ *
+ * @example
  * // Using exhaustive() method
  * type Status = "idle" | "loading" | "success" | "error"
  * const result = Match<Status, string>("success")

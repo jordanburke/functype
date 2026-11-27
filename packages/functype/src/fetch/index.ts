@@ -1,4 +1,4 @@
-export type { HttpCompanion } from "./Http"
+export type { HttpCompanion, HttpMethods } from "./Http"
 export { Http } from "./Http"
 export type { HttpClientConfig } from "./HttpClient"
 export { HttpClient } from "./HttpClient"
