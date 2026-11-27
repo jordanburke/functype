@@ -71,6 +71,22 @@ declare global {
 }
 `;
 
+/** What functype-kysely's README samples build on: the first sample's schema, service and queries. */
+const KYSELY_PRELUDE = `
+declare global {
+  type Database = { readonly account: { readonly id: string; readonly balance: number } }
+  const Db: import("functype-kysely").KyselyDb<Database>
+  const balance: (
+    id: string,
+  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, { readonly balance: number } | undefined>
+  const transfer: (
+    from: string,
+    to: string,
+    amount: number,
+  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, undefined>
+}
+`;
+
 const REACT_PRELUDE = `
 declare global {
   type Config = { readonly theme: string }
@@ -95,6 +111,7 @@ const PAGE_PRELUDES: Readonly<Record<string, string>> = {
   eslint: SITE_PRELUDE + ESLINT_PRELUDE,
   "functype-log": SITE_PRELUDE + LOG_PRELUDE,
   "functype-os": SITE_PRELUDE + OS_PRELUDE,
+  "functype-kysely": SITE_PRELUDE + KYSELY_PRELUDE,
   "functype-react": SITE_PRELUDE + REACT_PRELUDE,
   "functype-eval": SITE_PRELUDE,
   "eslint-config": SITE_PRELUDE,

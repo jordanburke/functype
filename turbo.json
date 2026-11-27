@@ -95,6 +95,9 @@
         "$TURBO_ROOT$/packages/functype-os/package.json",
         "$TURBO_ROOT$/packages/functype-log/src/**",
         "$TURBO_ROOT$/packages/functype-log/package.json",
+        "$TURBO_ROOT$/packages/functype-kysely/src/**",
+        "$TURBO_ROOT$/packages/functype-kysely/package.json",
+        "$TURBO_ROOT$/packages/*/README.md",
         "$TURBO_ROOT$/packages/eslint-plugin-functype/README.md"
       ],
       "outputs": []

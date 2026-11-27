@@ -389,6 +389,36 @@ importers:
         specifier: ^5.1.0
         version: 5.1.1(@types/node@24.19.2)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/functype-kysely:
+    devDependencies:
+      '@electric-sql/pglite':
+        specifier: 0.5.17
+        version: 0.5.17
+      '@types/node':
+        specifier: ^24.19.2
+        version: 24.19.2
+      eslint-config-prettier:
+        specifier: ^10.1.8
+        version: 10.1.8(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))
+      functype:
+        specifier: workspace:^
+        version: link:../functype
+      kysely:
+        specifier: 0.29.9
+        version: 0.29.9
+      kysely-pglite-dialect:
+        specifier: 1.4.0
+        version: 1.4.0(@electric-sql/pglite@0.5.17)(kysely@0.29.9)
+      ts-builds:
+        specifier: ^5.0.0
+        version: 5.0.0(@types/node@24.19.2)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@31.0.1)(supports-color@7.2.0)(tsdown@0.23.7(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      tsdown:
+        specifier: ^0.23.7
+        version: 0.23.7(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13))
+      vitest:
+        specifier: ^5.1.1
+        version: 5.1.1(@types/node@24.19.2)(@vitest/coverage-v8@5.1.1)(@vitest/ui@5.1.1)(jsdom@31.0.1)(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/functype-log:
     devDependencies:
       '@types/node':
@@ -796,6 +826,9 @@ packages:
 
   '@dual-bundle/import-meta-resolve@4.2.1':
     resolution: {integrity: sha512-id+7YRUgoUX6CgV0DtuhirQWodeeA7Lf4i2x71JS/vtA5pRb/hIGWlw+G6MeXvsM+MXrz0VAydTGElX1rAfgPg==}
+
+  '@electric-sql/pglite@0.5.17':
+    resolution: {integrity: sha512-8SvKjiUjaU+0O0dbxjOfN+jXz14TEqDWbwDkYOW1aQ11y/ph2JvFVI27ABBo5nfw+ZfSqy4hKCNlbnbB1TDE+g==}
 
   '@emmetio/abbreviation@2.3.3':
     resolution: {integrity: sha512-mgv58UrU3rh4YgbE/TzgLQwJ3pFsHHhCLqY20aJq+9comytTXUDNGG/SMtSeMJdkpxgXSXunBGLD8Boka3JyVA==}
@@ -3043,6 +3076,16 @@ packages:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
 
+  kysely-pglite-dialect@1.4.0:
+    resolution: {integrity: sha512-nCCR5QFZDdIHxVOJAv2DllXn+2Ll+TStq7lwcjow+jkFPYNDe0RIz+8FTmb3Nwbj0trr8kOMFqI2BZ91zH/P+w==}
+    peerDependencies:
+      '@electric-sql/pglite': ^0.2.0 || ^0.3.0 || ^0.4.0 || ^0.5.0
+      kysely: '>=0.23.0'
+
+  kysely@0.29.9:
+    resolution: {integrity: sha512-K48ErswC3MlIcBqR0pYIIEl+n9rIgwxgzaM1FxKHMXn7egxr1NHj7bCeF98mXl9A3/QoL5I7mo5S/mLXgeDgGA==}
+    engines: {node: '>=22.0.0'}
+
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
@@ -4526,6 +4569,8 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.9
 
   '@dual-bundle/import-meta-resolve@4.2.1': {}
+
+  '@electric-sql/pglite@0.5.17': {}
 
   '@emmetio/abbreviation@2.3.3':
     dependencies:
@@ -6594,6 +6639,13 @@ snapshots:
   kleur@3.0.3: {}
 
   kleur@4.1.5: {}
+
+  kysely-pglite-dialect@1.4.0(@electric-sql/pglite@0.5.17)(kysely@0.29.9):
+    dependencies:
+      '@electric-sql/pglite': 0.5.17
+      kysely: 0.29.9
+
+  kysely@0.29.9: {}
 
   levn@0.4.1:
     dependencies:

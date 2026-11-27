@@ -289,6 +289,9 @@ const compilerOptions = (): ts.CompilerOptions => {
       ...exportPaths(join(REPO_ROOT, "packages", "functype-os")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-log")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-react")),
+      ...exportPaths(join(REPO_ROOT, "packages", "functype-kysely")),
+      // functype-kysely's README imports Kysely's types; functype itself doesn't depend on it.
+      kysely: [join(REPO_ROOT, "packages", "functype-kysely", "node_modules", "kysely", "dist", "index.d.ts")],
     },
   }
 }

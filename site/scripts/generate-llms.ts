@@ -146,6 +146,11 @@ const TOOLING: ReadonlyArray<Link> = [
     "IO-native logging with Tag/Layer DI, a console logger, a one-function sink and test utilities",
   ),
   sitePage(
+    "functype-kysely",
+    "functype-kysely",
+    "Kysely queries as typed IO, and transactions that roll back on a typed failure, a defect or a cancel",
+  ),
+  sitePage(
     "functype-os",
     "functype-os",
     "Env vars, paths, files, platform detection and config lookup as Option, Either and IO",
