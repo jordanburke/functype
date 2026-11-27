@@ -399,11 +399,20 @@ describe("Db.transaction after a query a timeout gave up on", () => {
 })
 
 describe("Db.transaction edge cases", () => {
-  it("commits after a recovered executeTakeFirstOrThrow that found no row", async () => {
+  it("refuses to commit after a recovered executeTakeFirstOrThrow, which counts as a failed query", async () => {
     const missing = Db.query((d) =>
       d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow(),
     )
     const result = await Db.transaction(insert("a").flatMap(() => missing.recover(() => undefined)))
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("commits a not-found row read with executeTakeFirst", async () => {
+    const missing = Db.query((d) => d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirst())
+    const result = await Db.transaction(insert("a").flatMap(() => missing))
       .provideService(Db.tag, db)
       .run()
     expect(result.isRight()).toBe(true)
@@ -465,21 +474,29 @@ describe("Db.transaction edge cases", () => {
 })
 
 describe("Db.transaction after a NoResultError", () => {
-  it("still refuses to commit when the callback's other statement failed", async () => {
-    const both = Db.query((d) =>
-      Promise.all([
-        d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow(),
-        d.insertInto("account").values({ id: "a", balance: 0 }).execute(),
-      ]),
-    )
-    const result = await Db.transaction(
-      insert("a")
-        .flatMap(() => both.recover(() => undefined))
-        .flatMap(() => IO.sleep(50)),
-    )
-      .provideService(Db.tag, db)
-      .run()
-    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
-    expect(await ids()).toEqual([])
+  it("refuses to commit when the callback's other statement failed, even one sent later", async () => {
+    const notFound = (d: Kysely<Database>) =>
+      d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow()
+    const shapes = [
+      Db.query((d) => Promise.all([notFound(d), d.insertInto("account").values({ id: "a", balance: 0 }).execute()])),
+      Db.query((d) =>
+        Promise.all([
+          notFound(d),
+          d
+            .selectFrom("account")
+            .select("id")
+            .execute()
+            .then(() => d.insertInto("account").values({ id: "a", balance: 0 }).execute()),
+        ]),
+      ),
+    ]
+    for (const both of shapes) {
+      await db.deleteFrom("account").execute()
+      const result = await Db.transaction(insert("a").flatMap(() => both.recover(() => undefined)))
+        .provideService(Db.tag, db)
+        .run()
+      expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+      expect(await ids()).toEqual([])
+    }
   })
 })

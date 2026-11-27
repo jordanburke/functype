@@ -69,8 +69,7 @@ export type KyselyDb<DB> = {
    * transactions and commit wait for each other, even under `IO.all`.
    *
    * Both rules cover `Db.query` only. Any rejection of its function counts as a failed query,
-   * except Kysely's `NoResultError`, after which the commit first checks the transaction with
-   * `select 1`. A statement run on the handle directly, or on one derived from
+   * Kysely's `NoResultError` included. A statement run on the handle directly, or on one derived from
    * it with `withSchema` or `withPlugin`, isn't serialized or checked.
    *
    * **Nesting uses a savepoint.** A `transaction` inside another one opens a savepoint, not a
@@ -148,23 +147,11 @@ const refused = (message: string): DbError => ({ _tag: "DbError", code: Option.n
 /** What a commit fails with when a query in its scope failed, or was given up on, and the program carried on. */
 export const recoveredQueryError = (): DbError => refused(QUERY_FAILED)
 
-/**
- * After a `NoResultError`, checks that the transaction still runs statements: an aborted Postgres
- * transaction rejects `select 1`.
- */
-const healthCheck = <DB>(scope: Scope, handle: Kysely<DB>): IOType<never, DbError, void> =>
-  scope.check.value
-    ? IO.tryAsync(
-        () => sql`select 1`.execute(handle),
-        () => refused(QUERY_FAILED),
-      ).map(() => undefined)
-    : IO.succeed(undefined)
-
 /** Commits, or releases a savepoint, unless something on the scope went wrong. */
-const finish = <DB>(scope: Scope, handle: Kysely<DB>, f: () => Promise<unknown>): IOType<never, DbError, void> =>
+const finish = (scope: Scope, f: () => Promise<unknown>): IOType<never, DbError, void> =>
   IO.sync(() => scope.failed.value).flatMap((failed) =>
     failed.fold(
-      () => healthCheck(scope, handle).flatMap(() => step(f).map(() => undefined)),
+      () => step(f).map(() => undefined),
       (reason) => IO.fail(refused(reason)),
     ),
   )
@@ -214,7 +201,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
           program.provideService(tag, trx).flatMap((a) =>
             withLock(
               scopeOf(trx),
-              finish(scopeOf(trx), trx, () => trx.commit().execute()),
+              finish(scopeOf(trx), () => trx.commit().execute()),
             ).map(() => a),
           ),
         ),
@@ -265,7 +252,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
             program.provideService(tag, handle).flatMap((a) =>
               withLock(
                 innerScope,
-                finish(innerScope, handle, () =>
+                finish(innerScope, () =>
                   savepointSql(handle, "release savepoint", savepoint).then(() => {
                     released.value = true
                   }),

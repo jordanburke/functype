@@ -1,7 +1,6 @@
 import type { IOType } from "functype"
 import { IO, Option } from "functype"
 import type { Kysely, KyselyPlugin } from "kysely"
-import { NoResultError } from "kysely"
 
 /**
  * One transaction or savepoint: the connection-level state that IO's own types can't carry.
@@ -17,15 +16,13 @@ import { NoResultError } from "kysely"
  *   a transaction on any failed statement, and its COMMIT then rolls back without an error; a write
  *   given up on may still land. So such a scope refuses to commit. A nested `Db.transaction` is how
  *   a program recovers from a failed query.
- * - `check` is set when a query rejected with Kysely's `NoResultError`. That error usually means
- *   the statement succeeded and found no row, so it doesn't mark the scope, but a callback running
- *   several statements could have hidden a failed one behind it. The commit then runs `select 1`
- *   first: on an aborted Postgres transaction that fails, and the commit is refused.
+ * - Any rejection of a query's callback counts, Kysely's `NoResultError` included: a callback can
+ *   run several statements, and a not-found error could hide one that failed and aborted the
+ *   transaction.
  */
 export type Scope = {
   readonly lock: Lock
   readonly failed: { value: Option<string> }
-  readonly check: { value: boolean }
 }
 
 type Lock = {
@@ -56,7 +53,7 @@ const scopes = new WeakMap<object, Scope>()
 export const scopeOf = (trx: object): Scope => {
   const existing = scopes.get(trx)
   if (existing !== undefined) return existing
-  const scope: Scope = { lock: createLock(), failed: { value: Option.none() }, check: { value: false } }
+  const scope: Scope = { lock: createLock(), failed: { value: Option.none() } }
   scopes.set(trx, scope)
   return scope
 }
@@ -89,50 +86,38 @@ export const SAVEPOINT_ROLLBACK_FAILED =
 /**
  * Runs one query on a transaction's scope, holding its lock. A query that started and didn't
  * succeed marks the scope, whether it failed, or a timeout or cancel gave up on it, even if it then
- * succeeded. A `NoResultError` sets the scope's `check` instead (see {@link Scope}). The mark is set
- * in the bracket's release, which runs even in a cancelled region, where error handlers don't.
+ * succeeded. The mark is set in the bracket's release, which runs even in a cancelled region, where
+ * error handlers don't.
  */
 export const lockedQuery = <E, A>(
   scope: Scope,
   run: (signal?: AbortSignal) => Promise<A>,
   mapError: (error: unknown) => E,
 ): IOType<never, E, A> =>
-  IO.sync((): { started: boolean; noResult: boolean; signal: Option<AbortSignal> } => ({
-    started: false,
-    noResult: false,
-    signal: Option.none(),
-  })).flatMap((call) =>
-    IO.bracketExit(
-      acquire(scope) as unknown as IOType<never, E, () => void>,
-      () =>
-        IO.tryAsync((signal) => {
-          call.started = true
-          call.signal = Option(signal)
-          return run(signal).catch((e: unknown): Promise<A> => {
-            call.noResult = e instanceof NoResultError
-            return Promise.reject(e)
-          })
-        }, mapError),
-      (unlock, exit) =>
-        IO.sync(() => {
-          const mark = (): void => {
-            if (call.started) markFailed(scope, QUERY_FAILED)
-          }
-          // `executeTakeFirstOrThrow` throws on the client after the statement succeeded, so
-          // the transaction is usually still healthy; the commit checks.
-          const markUnlessNoResult = (): void => {
-            if (call.noResult) scope.check.value = true
-            else mark()
-          }
-          // A query that settles after its region was cancelled still succeeds here, though the
-          // program has moved on without it.
-          const markIfGivenUp = (): void => {
-            if (call.signal.exists((signal) => signal.aborted)) mark()
-          }
-          exit.fold(markUnlessNoResult, markIfGivenUp, mark, mark)
-          unlock()
-        }),
-    ),
+  IO.sync((): { started: boolean; signal: Option<AbortSignal> } => ({ started: false, signal: Option.none() })).flatMap(
+    (call) =>
+      IO.bracketExit(
+        acquire(scope) as unknown as IOType<never, E, () => void>,
+        () =>
+          IO.tryAsync((signal) => {
+            call.started = true
+            call.signal = Option(signal)
+            return run(signal)
+          }, mapError),
+        (unlock, exit) =>
+          IO.sync(() => {
+            const mark = (): void => {
+              if (call.started) markFailed(scope, QUERY_FAILED)
+            }
+            // A query that settles after its region was cancelled still succeeds here, though the
+            // program has moved on without it.
+            const markIfGivenUp = (): void => {
+              if (call.signal.exists((signal) => signal.aborted)) mark()
+            }
+            exit.fold(mark, markIfGivenUp, mark, mark)
+            unlock()
+          }),
+      ),
   )
 
 const NO_OP: KyselyPlugin = {
