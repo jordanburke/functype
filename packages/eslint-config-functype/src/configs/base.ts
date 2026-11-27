@@ -45,11 +45,26 @@ const load = <T>(name: string): T => {
 /** The files the presets lint: TypeScript in every module flavour. */
 export const typescriptFiles = ["**/*.{ts,tsx,mts,cts}"]
 
-/** Every plugin whose rules the presets set. */
+const isInstalled = (name: string): boolean => {
+  try {
+    require.resolve(name)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Every plugin whose rules the presets set. The two @typescript-eslint packages are required. The
+ * prettier and import-sort plugins stay optional, as they were when the presets were rules only, so
+ * a config that takes the rules without theirs still loads; the check above warns when one is missing.
+ */
 export const plugins: Record<string, Plugin> = {
   "@typescript-eslint": load<Plugin>("@typescript-eslint/eslint-plugin"),
-  prettier: load<Plugin>("eslint-plugin-prettier"),
-  "simple-import-sort": load<Plugin>("eslint-plugin-simple-import-sort"),
+  ...(isInstalled("eslint-plugin-prettier") ? { prettier: load<Plugin>("eslint-plugin-prettier") } : {}),
+  ...(isInstalled("eslint-plugin-simple-import-sort")
+    ? { "simple-import-sort": load<Plugin>("eslint-plugin-simple-import-sort") }
+    : {}),
 }
 
 /**

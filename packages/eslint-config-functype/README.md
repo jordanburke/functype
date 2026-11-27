@@ -23,7 +23,9 @@ That is the whole config. `recommended` lints `**/*.{ts,tsx,mts,cts}`, and regis
 - `@typescript-eslint/parser`, with `parserOptions: { projectService: true }`, so the type-aware rules such as `no-floating-promises` get type information from each file's nearest `tsconfig.json`;
 - the `@typescript-eslint`, `prettier` and `simple-import-sort` plugins.
 
-All five peers in the install line are required; a missing one stops the config from loading with the command that installs it.
+Install all five peers. A missing `@typescript-eslint` package stops the config from loading, with the command that installs it. A missing `prettier`, `eslint-plugin-prettier` or `eslint-plugin-simple-import-sort` prints a warning, and the preset's rules from that plugin then fail to load.
+
+`projectService` lints a TypeScript file only if a `tsconfig.json` includes it. So `eslint .` stops at a root `vitest.config.ts` or `tsdown.config.ts` that no tsconfig includes: "was not found by the project service". Lint the source directories (`eslint src`), add those files to `ignores`, or list them in `parserOptions.projectService.allowDefaultProject`.
 
 ### Strict mode
 

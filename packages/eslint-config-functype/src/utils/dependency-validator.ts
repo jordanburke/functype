@@ -24,19 +24,19 @@ const PEER_DEPENDENCIES: PeerDependency[] = [
     name: "eslint-plugin-prettier",
     packageName: "eslint-plugin-prettier",
     description: "Code formatting rules",
-    required: true,
+    required: false,
   },
   {
     name: "eslint-plugin-simple-import-sort",
     packageName: "eslint-plugin-simple-import-sort",
     description: "Import sorting rules",
-    required: true,
+    required: false,
   },
   {
     name: "prettier",
     packageName: "prettier",
     description: "Code formatter",
-    required: true,
+    required: false,
   },
 ]
 
@@ -71,7 +71,9 @@ export function validatePeerDependencies(): ValidationResult {
         // Required dependency is missing - this will cause errors
       } else {
         // Optional dependency is missing - add warning
-        warnings.push(`Optional plugin '${dep.name}' not found. Some rules will be skipped.`)
+        warnings.push(
+          `Optional peer '${dep.name}' not found. A config that uses the whole preset fails on its rules; install it, or use the preset's rules without them.`,
+        )
       }
     }
   }
