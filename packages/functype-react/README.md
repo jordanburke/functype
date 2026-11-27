@@ -23,8 +23,9 @@ pnpm add functype functype-react react react-dom
 | `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                                                |
 | `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                                             |
 | `functype-react/query`  | `useIOQuery(State)`, `useIOInfiniteQuery`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
+| `functype-react/router` | `exitRoute`, `searchParams`, `SearchParam` — TanStack Router guards and typed search params                                                                       |
 
-`./async`, `./forms`, and `./query` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
+`./async`, `./forms`, `./query` and `./router` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
 
 ## Tier 1 — stable hooks + ADT hooks
 
@@ -288,11 +289,78 @@ useInfiniteQuery({
 
 Both the hooks and the primitives are generic over any `IO<never, E, A>` — nothing here is HTTP-specific. `Error.message` is derived structurally (`formatIOError`); pass `formatError` to override it. The derivation prefers, in order: a raw `Error`'s `.message`, the HTTP shape (`HTTP 403 Forbidden — /api/x`) for anything carrying a numeric `status`, a tagged error's own `message`, then the bare `_tag`, then JSON.
 
+## Tier 6 — TanStack Router
+
+`functype-react/router` needs `@tanstack/react-router`, an optional peer.
+
+### Guards: `exitRoute`
+
+TanStack Router redirects or shows Not Found only when `beforeLoad` or `loader` throws `redirect()` or `notFound()`. `exitRoute` takes an `Either` instead: a `Left` is thrown the way the router expects, and a `Right` is returned, so in `beforeLoad` it becomes the route's context.
+
+```ts
+import { createRootRoute, createRoute, notFound, redirect } from "@tanstack/react-router"
+import { Either } from "functype"
+import { exitRoute, type RouteExit } from "functype-react/router"
+
+type Filter = "open" | "closed"
+const isFilter = (value: string): value is Filter => value === "open" || value === "closed"
+
+const checkFilter = (filter: string): Either<RouteExit, { readonly filter: Filter }> => {
+  if (filter === "all") return Either.left(redirect({ to: "/list/$filter", params: { filter: "open" } }))
+  return isFilter(filter) ? Either.right({ filter }) : Either.left(notFound())
+}
+
+const root = createRootRoute()
+const list = createRoute({
+  getParentRoute: () => root,
+  path: "/list/$filter",
+  beforeLoad: ({ params }) => exitRoute(checkFilter(params.filter)),
+  loader: ({ context }) => context.filter, // Filter
+})
+```
+
+- **Typing:** a named check with a declared `Either<RouteExit, …>` return type, as above, types cleanly. When you build the `Either` inline, give `exitRoute` its `Right` type, or `void` for a guard that adds no context: `exitRoute<void>(…)`.
+- **Async guards:** `await` the check first: `beforeLoad: async () => exitRoute(await check())`.
+- **No wrapper:** `exitRoute` goes inside a plain `beforeLoad`. A wrapper around the whole function would lose the typed `params` that TanStack gives `beforeLoad`.
+
+### Search params: `searchParams`
+
+`searchParams` builds a `validateSearch` from one parser per key. Each parser returns an `Option`, so there's no `undefined` spreading per field:
+
+```ts
+import { createRootRoute, createRoute } from "@tanstack/react-router"
+import { SearchParam, searchParams } from "functype-react/router"
+
+const root = createRootRoute()
+const search = createRoute({
+  getParentRoute: () => root,
+  path: "/search",
+  validateSearch: searchParams({
+    q: SearchParam.string,
+    page: SearchParam.integer,
+    sort: SearchParam.oneOf("new", "old"),
+    mine: SearchParam.boolean,
+  }),
+})
+// search.useSearch(): { q?: string | undefined; page?: number | undefined; sort?: "new" | "old" | undefined; mine?: boolean | undefined }
+```
+
+- **A rejected or missing value is `undefined`.** TanStack merges `validateSearch`'s result over the raw search, so a key left out would keep its raw, unvalidated value; `undefined` replaces it. TanStack leaves `undefined` keys out of the URLs it writes.
+- **The same type works for `navigate`.** `navigate({ to: "/search", search: { q: "cats" } })` checks against it.
+- **The parsers expect TanStack's parsing.** TanStack hands each value to `validateSearch` already parsed as JSON where it can be: `?page=2` is the number 2, and `?mine=true` is `true`.
+  - `SearchParam.string` takes a non-empty string. A number, as a hand-typed `?q=123` parses, becomes its text. An empty value is rejected.
+  - `SearchParam.number` and `SearchParam.integer` take a number, or a string that reads as one.
+  - `SearchParam.boolean` takes `true` or `false`, or those strings.
+  - `SearchParam.oneOf(...values)` takes one of the given strings.
+- **Your own parser:** any `(raw: unknown) => Option<T>` is a field.
+- **Keys no parser names** still pass through at runtime, as TanStack keeps them, but they aren't in the type.
+
 ## Compatibility
 
 - **TypeScript**: `strict: true` + `noUncheckedIndexedAccess: true`. Loose configs will silently lose the type-level exhaustiveness guarantees.
 - **React**: peer dep range `>=18 <20`. Tier 3's `useIOValue` (and consequently anything that depends on React 19's `use()` hook) is React-19-only at runtime; the rest of the package works on both.
 - **SSR / RSC**: hooks are client-only and marked with `"use client"`. `<Match>` family components are pure and render fine in Server Components.
+- **TanStack Router**: Tier 6 targets `@tanstack/react-router` `>=1.60.0`, an optional peer.
 - **React Query**: Tier 5 targets `@tanstack/react-query` v5 (`>=5.0.0`), an optional peer. The `ioQueryFn` / `ioMutationFn` primitives type their context structurally, so they carry no `@tanstack` types and are unaffected by its major-version churn.
 
 ## Linting

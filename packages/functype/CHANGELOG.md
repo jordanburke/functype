@@ -6,6 +6,9 @@ Entries follow [Keep a Changelog](https://keepachangelog.com/) conventions: writ
 
 ## Unreleased
 
+- **`functype-react/router`, a new subpath for TanStack Router** (optional peer `@tanstack/react-router >=1.60.0`).
+  - `exitRoute(either)` ends `beforeLoad` or `loader` from an `Either`: a `Left` `redirect()` or `notFound()` is thrown the way the router expects, and a `Right` is returned, so in `beforeLoad` it becomes route context.
+  - `searchParams({ key: parser })` builds a typed `validateSearch` from one `Option` parser per key, with `SearchParam.string`, `number`, `integer`, `boolean` and `oneOf`. A rejected value is `undefined`, because TanStack merges the result over the raw search, and the same type works for `navigate`'s `search`.
 - **`useIOInfiniteQuery` in `functype-react/query`.** `useInfiniteQuery` for effects: each page is an `IO<never, E, A>`, and a failure on any page reaches `error` as an `IOQueryError<E>`, as with `useIOQuery`. The page param is an `Option`: the first page gets `None`, and `getNextPageParam` (and `getPreviousPageParam`) return `None` when there are no more pages. React Query still stores plain values, `P` or `null` for the first page, so its cache stays JSON. Every other `useInfiniteQuery` option passes through, and `toQueryState` projects the result.
 - **New package: `functype-kysely`.** Kysely for functype. `KyselyDb<DB>()` makes a database service with a tag to provide a `Kysely` instance under, and two functions:
   - `Db.query(f)` runs one Kysely call as an `IO`. A throw becomes a `DbError` with the driver's code (the SQLSTATE on Postgres), or your own error with `Db.query(f, toError)`. `f` gets the run's abort signal to pass to `execute`.
