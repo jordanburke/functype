@@ -12,14 +12,20 @@ import { NoResultError } from "kysely"
  *   interleaving with a sibling's, and makes a commit wait for a nested scope still running after a
  *   `timeout` or `race` gave up on it.
  * - `failed` holds why the scope can't commit, once something on it went wrong: a query that
- *   started and didn't succeed (it failed, or a timeout or cancel gave up on it), or a nested
- *   savepoint whose rollback failed. Postgres aborts a transaction on any failed statement, and its
- *   COMMIT then rolls back without an error; a write given up on may still land. So such a scope
- *   refuses to commit. A nested `Db.transaction` is how a program recovers from a failed query.
+ *   started and didn't succeed (it failed, or a timeout or cancel gave up on it), a nested
+ *   savepoint whose rollback failed, or one a timeout gave up on after its release. Postgres aborts
+ *   a transaction on any failed statement, and its COMMIT then rolls back without an error; a write
+ *   given up on may still land. So such a scope refuses to commit. A nested `Db.transaction` is how
+ *   a program recovers from a failed query.
+ * - `check` is set when a query rejected with Kysely's `NoResultError`. That error usually means
+ *   the statement succeeded and found no row, so it doesn't mark the scope, but a callback running
+ *   several statements could have hidden a failed one behind it. The commit then runs `select 1`
+ *   first: on an aborted Postgres transaction that fails, and the commit is refused.
  */
 export type Scope = {
   readonly lock: Lock
   readonly failed: { value: Option<string> }
+  readonly check: { value: boolean }
 }
 
 type Lock = {
@@ -50,7 +56,7 @@ const scopes = new WeakMap<object, Scope>()
 export const scopeOf = (trx: object): Scope => {
   const existing = scopes.get(trx)
   if (existing !== undefined) return existing
-  const scope: Scope = { lock: createLock(), failed: { value: Option.none() } }
+  const scope: Scope = { lock: createLock(), failed: { value: Option.none() }, check: { value: false } }
   scopes.set(trx, scope)
   return scope
 }
@@ -83,8 +89,8 @@ export const SAVEPOINT_ROLLBACK_FAILED =
 /**
  * Runs one query on a transaction's scope, holding its lock. A query that started and didn't
  * succeed marks the scope, whether it failed, or a timeout or cancel gave up on it, even if it then
- * succeeded. The mark is set in the bracket's release, which runs even in a cancelled region, where
- * error handlers don't.
+ * succeeded. A `NoResultError` sets the scope's `check` instead (see {@link Scope}). The mark is set
+ * in the bracket's release, which runs even in a cancelled region, where error handlers don't.
  */
 export const lockedQuery = <E, A>(
   scope: Scope,
@@ -113,9 +119,10 @@ export const lockedQuery = <E, A>(
             if (call.started) markFailed(scope, QUERY_FAILED)
           }
           // `executeTakeFirstOrThrow` throws on the client after the statement succeeded, so
-          // the transaction is still healthy.
+          // the transaction is usually still healthy; the commit checks.
           const markUnlessNoResult = (): void => {
-            if (!call.noResult) mark()
+            if (call.noResult) scope.check.value = true
+            else mark()
           }
           // A query that settles after its region was cancelled still succeeds here, though the
           // program has moved on without it.

@@ -69,7 +69,8 @@ export type KyselyDb<DB> = {
    * transactions and commit wait for each other, even under `IO.all`.
    *
    * Both rules cover `Db.query` only. Any rejection of its function counts as a failed query,
-   * except Kysely's `NoResultError`. A statement run on the handle directly, or on one derived from
+   * except Kysely's `NoResultError`, after which the commit first checks the transaction with
+   * `select 1`. A statement run on the handle directly, or on one derived from
    * it with `withSchema` or `withPlugin`, isn't serialized or checked.
    *
    * **Nesting uses a savepoint.** A `transaction` inside another one opens a savepoint, not a
@@ -79,8 +80,9 @@ export type KyselyDb<DB> = {
    *
    * **A cancel waits for the query in flight.** A cancelled run stops before its next step and rolls
    * back once the current query settles. A nested transaction that a `timeout` or `race` gave up on
-   * still finishes its rollback before the outer transaction's next step. A commit that has already started when the run is
-   * cancelled still commits, though the run reports the cancel.
+   * still finishes its rollback before the outer transaction's next step; if it was given up on
+   * after its savepoint was released, the outer commit is refused instead. A commit that has
+   * already started when the run is cancelled still commits, though the run reports the cancel.
    *
    * The provided service can also be a transaction you opened with Kysely itself, such as the
    * `trx` in `db.transaction().execute(callback)`. Then `transaction` opens a savepoint in it, but
@@ -146,11 +148,23 @@ const refused = (message: string): DbError => ({ _tag: "DbError", code: Option.n
 /** What a commit fails with when a query in its scope failed, or was given up on, and the program carried on. */
 export const recoveredQueryError = (): DbError => refused(QUERY_FAILED)
 
+/**
+ * After a `NoResultError`, checks that the transaction still runs statements: an aborted Postgres
+ * transaction rejects `select 1`.
+ */
+const healthCheck = <DB>(scope: Scope, handle: Kysely<DB>): IOType<never, DbError, void> =>
+  scope.check.value
+    ? IO.tryAsync(
+        () => sql`select 1`.execute(handle),
+        () => refused(QUERY_FAILED),
+      ).map(() => undefined)
+    : IO.succeed(undefined)
+
 /** Commits, or releases a savepoint, unless something on the scope went wrong. */
-const finish = (scope: Scope, f: () => Promise<unknown>): IOType<never, DbError, void> =>
+const finish = <DB>(scope: Scope, handle: Kysely<DB>, f: () => Promise<unknown>): IOType<never, DbError, void> =>
   IO.sync(() => scope.failed.value).flatMap((failed) =>
     failed.fold(
-      () => step(f).map(() => undefined),
+      () => healthCheck(scope, handle).flatMap(() => step(f).map(() => undefined)),
       (reason) => IO.fail(refused(reason)),
     ),
   )
@@ -200,7 +214,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
           program.provideService(tag, trx).flatMap((a) =>
             withLock(
               scopeOf(trx),
-              finish(scopeOf(trx), () => trx.commit().execute()),
+              finish(scopeOf(trx), trx, () => trx.commit().execute()),
             ).map(() => a),
           ),
         ),
@@ -251,7 +265,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
             program.provideService(tag, handle).flatMap((a) =>
               withLock(
                 innerScope,
-                finish(innerScope, () =>
+                finish(innerScope, handle, () =>
                   savepointSql(handle, "release savepoint", savepoint).then(() => {
                     released.value = true
                   }),
