@@ -128,6 +128,15 @@ describe("SearchParam parsers", () => {
     expect(values(SearchParam.integer, [2, "3", 2.5, "x"])).toEqual([2, 3, "none", "none"])
   })
 
+  it("rejects a long digit string with a bad suffix in linear time", () => {
+    const hostile = `${"0".repeat(200_000)}x`
+    const started = performance.now()
+    expect(SearchParam.number(hostile).isNone()).toBe(true)
+    expect(SearchParam.number(`${"0".repeat(200_000)}.5`).getOrElse(() => 0)).toBe(0.5)
+    // The old pattern took about a minute on 256,000 digits; a linear check takes milliseconds.
+    expect(performance.now() - started).toBeLessThan(500)
+  })
+
   it("boolean", () => {
     expect(values(SearchParam.boolean, [true, false, "true", "false", "yes", 1])).toEqual([
       true,

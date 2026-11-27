@@ -19,8 +19,11 @@ const text = (raw: unknown): OptionType<string> => {
   return typeof raw === "boolean" ? Option(String(raw)) : Option.none()
 }
 
-/** A decimal number as text: digits, an optional fraction and exponent. No hex, no blanks. */
-const DECIMAL = /^-?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/
+/**
+ * A decimal number as text: digits, an optional fraction and exponent. No hex, no blanks. Each digit
+ * run has one way to match, so a long input from a crafted URL is checked in linear time.
+ */
+const DECIMAL = /^-?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$/
 
 const numeric = (raw: unknown): OptionType<number> => {
   if (typeof raw === "number") return Number.isFinite(raw) ? Option(raw) : Option.none()
