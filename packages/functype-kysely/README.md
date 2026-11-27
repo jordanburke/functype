@@ -88,10 +88,10 @@ const transfer = (from: string, to: string, amount: number) =>
     IO.gen(function* () {
       const source = yield* balance(from)
       const target = yield* balance(to)
-      const left = (source?.balance ?? 0) - amount
+      const left = source.map((row) => row.balance).getOrElse(() => 0) - amount
       if (left < 0) return yield* IO.fail<Overdrawn>({ _tag: "Overdrawn", id: from })
       yield* setBalance(from, left)
-      yield* setBalance(to, (target?.balance ?? 0) + amount)
+      yield* setBalance(to, target.map((row) => row.balance).getOrElse(() => 0) + amount)
     }),
   )
 // IO<Kysely<Database>, DbError | Overdrawn, undefined>
@@ -127,6 +127,33 @@ When the inner failure isn't recovered, it fails the outer transaction too, and 
 Savepoints are issued as `SAVEPOINT` SQL, which Postgres, MySQL and SQLite accept and MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, can be the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it. Kysely then owns the commit, so neither guard covers it, neither the one-at-a-time lock nor the refused commit: Kysely commits when your callback returns, even after a query failed and the program carried on, and even while a nested transaction a `timeout` gave up on is still running. Prefer `Db.transaction` for the outer transaction.
 
 Inside a nested transaction, use the handle `Db.query` gives you. Re-providing an outer transaction's handle captured earlier, with `provideService(Db.tag, trx)`, waits for the nested transaction to finish, which never happens: the run hangs. So does a run started inside a `Db.query` callback on the handle that callback got.
+
+## Moving an existing codebase over
+
+A codebase can move one function at a time.
+
+- **Provide `Db.tag` where you provided your own tag.** If the code already reads a `Kysely` from a functype `Tag`, point that name at `Db.tag`. Every `IO.service(tag)` and `provideService(tag, db)` keeps working, and `Db.transaction` sees the same handle.
+- **Wrap an `async` helper as one `Db.query`.** Pass it the handle `Db.query` gives you, not one captured earlier, or its statements run outside the transaction. Map its own error with `toError`, and let the rest become a `DbError`:
+
+```ts
+import type { Kysely } from "kysely"
+import { toDbError } from "functype-kysely"
+
+type NotFound = { readonly _tag: "NotFound"; readonly id: string }
+declare const isNotFound: (error: unknown) => error is NotFound
+
+// An older helper: async, and throws a NotFound
+declare const approveLegacy: (d: Kysely<Database>, id: string) => Promise<void>
+
+const approve = (id: string) =>
+  Db.query(
+    (d) => approveLegacy(d, id),
+    (e) => (isNotFound(e) ? e : toDbError(e)),
+  )
+// IO<Kysely<Database>, NotFound | DbError, void>
+```
+
+This is safe inside `Db.transaction`. The helper's statements run as one step under the transaction's lock. A rejection fails the program, so the transaction rolls back, and if the program recovers from it, the commit is refused instead. To recover from the helper's error and still commit, run it in a nested `Db.transaction`.
 
 ## Two databases
 
