@@ -20,6 +20,30 @@ const result = Match(statusCode)
   .default(() => "Unknown");
 ```
 
+### Matching into a string-literal union
+
+A string literal passed as a result widens to `string`, as it does in `let x = "healthy"`. So a match into a union such as `Grade` fails to type-check without help:
+
+```ts ignore
+type Grade = "healthy" | "degraded" | "unknown";
+const reply: string = "ok";
+
+// Type 'string' is not assignable to type 'Grade'.
+const grade: Grade = Match(reply).caseValue("ok", "healthy").default("unknown");
+```
+
+Mark each result `as const`, in a value or a thunk, and the result type is the union of the literals:
+
+```typescript
+type Grade = "healthy" | "degraded" | "unknown";
+const reply: string = "ok";
+
+const grade: Grade = Match(reply)
+  .caseValue("ok", "healthy" as const)
+  .caseValue("degraded", () => "degraded" as const)
+  .default("unknown" as const);
+```
+
 ### Pattern Matching on Types
 
 ```typescript

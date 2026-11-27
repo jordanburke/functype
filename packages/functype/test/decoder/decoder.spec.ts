@@ -305,6 +305,36 @@ describe("Decoder", () => {
     })
   })
 
+  describe("DecoderError.formatPath", () => {
+    it("joins segments with dots and attaches bracketed indices", () => {
+      expect(DE.formatPath(["endpoints", "[1]", "name"])).toBe("endpoints[1].name")
+      expect(DE.formatPath(["[0]", "id"])).toBe("[0].id")
+      expect(DE.formatPath(["tags", "[0]", "[2]"])).toBe("tags[0][2]")
+      expect(DE.formatPath(["name"])).toBe("name")
+    })
+
+    it("renders an empty path as (root)", () => {
+      expect(DE.formatPath([])).toBe("(root)")
+    })
+
+    it("gives each flattened failure the path format prints before its message", () => {
+      const d = Decoder.object({ endpoints: Decoder.list(Decoder.object({ name: Decoder.string })) })
+      const result = d({ endpoints: [{ name: "a" }, { name: 1 }] })
+      result.fold(
+        (e) => {
+          const paths = DE.flatten(e)
+            .toArray()
+            .map((leaf) => DE.formatPath(leaf.path))
+          expect(paths).toEqual(["endpoints[1].name"])
+          expect(DE.format(e).startsWith("endpoints[1].name: ")).toBe(true)
+        },
+        () => {
+          throw new Error("Expected Left")
+        },
+      )
+    })
+  })
+
   describe("pluggability — third-party validators", () => {
     it("a hand-rolled (raw) => Either<DecoderError, T> IS a Decoder<T>", () => {
       // Demonstrates the "no plugin registration" property.

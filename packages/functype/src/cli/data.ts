@@ -585,7 +585,7 @@ export const TYPES: Record<string, TypeData> = {
         "Http.patch(url, { body, decode, params }?)",
         "Http.delete(url, { decode, params }?)",
         "Http.request({ url, decode, params })",
-        "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest, afterResponse })",
+        "Http.client({ baseUrl, defaultHeaders, fetch, beforeRequest, afterResponse }): HttpMethods",
       ],
       transform: [
         ".tap(f)",
@@ -667,6 +667,7 @@ export const TYPES: Record<string, TypeData> = {
         "DecoderError.prepend(segment, e) — used by combinators to attribute child failures",
         "DecoderError.flatten(e): List<{path, message}> — collect leaves",
         "DecoderError.format(e): string — render tree as multi-line",
+        "DecoderError.formatPath(path): string — one path as format renders it (endpoints[1].name; (root) when empty)",
       ],
     },
   },

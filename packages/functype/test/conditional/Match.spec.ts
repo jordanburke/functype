@@ -135,6 +135,35 @@ describe("Match", () => {
     })
   })
 
+  describe("literal results", () => {
+    type Grade = "healthy" | "degraded" | "unknown"
+    const grade = (status: string): Grade =>
+      Match(status)
+        .caseValue("ok", "healthy" as const)
+        .caseValue("degraded", () => "degraded" as const)
+        .default("unknown" as const)
+
+    it("as const on each result, value or thunk, keeps the literal union the docs show", () => {
+      const result = Match("ok" as string)
+        .caseValue("ok", "healthy" as const)
+        .caseValue("degraded", () => "degraded" as const)
+        .default("unknown" as const)
+
+      expectTypeOf(result).toEqualTypeOf<Grade>()
+      expect(grade("ok")).toBe("healthy")
+      expect(grade("degraded")).toBe("degraded")
+      expect(grade("down")).toBe("unknown")
+    })
+
+    it("without as const a string-literal result widens to string", () => {
+      const result = Match("ok" as string)
+        .caseValue("ok", "healthy")
+        .default("unknown")
+
+      expectTypeOf(result).toEqualTypeOf<string>()
+    })
+  })
+
   describe("basic pattern matching", () => {
     it("should match with case predicates", () => {
       const value = 42
