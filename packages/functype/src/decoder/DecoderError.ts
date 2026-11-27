@@ -93,6 +93,11 @@ const format = (e: DecoderError): string =>
     .map(({ path, message }) => `${formatPath(path)}: ${message}`)
     .join("\n")
 
+/**
+ * Render one path, as `format` does: segments joined with dots, bracketed indices attached
+ * (`["endpoints", "[1]", "name"]` → `endpoints[1].name`), and an empty path as `(root)`.
+ * Pairs with `flatten` to report each failure's path without its message.
+ */
 const formatPath = (path: ReadonlyArray<string>): string => {
   if (path.length === 0) return "(root)"
   return path.reduce<string>((acc, seg) => {
@@ -110,6 +115,7 @@ const DecoderErrorCompanion = {
   prepend,
   flatten,
   format,
+  formatPath,
 }
 
 // The statics under a second name: the .d.ts then declares no value called DecoderErrorCompanion beside the interface

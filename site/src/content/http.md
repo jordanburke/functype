@@ -300,6 +300,17 @@ const testApi = Http.client({
 });
 ```
 
+The client's type is `HttpMethods`, so a function that takes a client can name it:
+
+```typescript
+import { Http, type HttpMethods } from "functype/fetch";
+
+const health = (http: HttpMethods) => http.get("/health");
+health(api);
+```
+
+`HttpMethods` is the client; `HttpMethod` is the verb union (`"GET" | "POST" | …`), and `HttpClient` is the `Tag` for providing a client config to an `IO` program.
+
 ### HttpClientConfig
 
 ```typescript
