@@ -342,3 +342,57 @@ describe("KyselyDb names", () => {
     expect(KyselyDb<Database>("Replica").tag.id).not.toBe(Db.tag.id)
   })
 })
+
+describe("Db.transaction after a query a timeout gave up on", () => {
+  const late = (id: string) =>
+    Db.query((d) => settle(100).then(() => d.insertInto("account").values({ id, balance: 0 }).execute()))
+
+  it("refuses to commit when the query then fails", async () => {
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() =>
+          late("a")
+            .timeout(30)
+            .recover(() => undefined),
+        )
+        .flatMap(() => IO.succeed("done")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("refuses to commit when the write lands after the program gave up on it", async () => {
+    const result = await Db.transaction(
+      insert("a").flatMap(() =>
+        late("b")
+          .timeout(30)
+          .recover(() => undefined),
+      ),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("rolls a savepoint back only after the query in it settles", async () => {
+    const inner = Db.transaction(
+      late("n1")
+        .timeout(30)
+        .recover(() => undefined)
+        .flatMap(() => IO.fail(overdrawn("n1"))),
+    )
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => inner.recover(() => undefined))
+        .flatMap(() => IO.sleep(150))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a", "b"])
+  })
+})

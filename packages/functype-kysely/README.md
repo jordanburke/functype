@@ -90,8 +90,8 @@ const transfer = (from: string, to: string, amount: number) =>
 - **Success commits.** A failed commit, such as a deferred constraint, is a `DbError`.
 - **A typed failure rolls back** and passes through unchanged: `transfer` fails with `Overdrawn`, not a wrapper.
 - **A defect rolls back**, and the run still dies.
-- **A cancel rolls back.** The run stops before its next step and rolls back once the query in flight settles. A commit that has already started when the run is cancelled still commits, though the run reports the cancel.
-- **A failed query can't be recovered in place.** On Postgres, any failed statement aborts the transaction, and a later `COMMIT` silently rolls back. So when a query fails and the program recovers and carries on, the commit fails with a `DbError` instead of reporting success. To carry on after a query that may fail, run it in a nested `Db.transaction`, below.
+- **A cancel rolls back.** The run stops before its next step and rolls back once the query in flight settles. If you pass the signal to `execute`, Kysely stops waiting at once and the statement may still be running on the connection; the rollback then queues behind it. A commit that has already started when the run is cancelled still commits, though the run reports the cancel.
+- **A failed or abandoned query can't be recovered in place.** On Postgres, any failed statement aborts the transaction, and a later `COMMIT` silently rolls back. A write that a `timeout` gave up on may still land. So when a query fails, or a `timeout` or cancel gives up on it, and the program carries on, the commit fails with a `DbError` instead of reporting success. To carry on after a query that may fail or time out, run it in a nested `Db.transaction`, below: the savepoint waits for that query to settle, then undoes it.
 - **Steps run one at a time.** A transaction is one connection, so its queries, nested transactions and commit wait for each other, even under `IO.all`. A nested transaction that a `timeout` or `race` gave up on still finishes its rollback before the next step runs.
 - **Other services stay in `R`.** A program that also needs a `Clock` gives a transaction that needs `Clock | Kysely<Database>`.
 
@@ -113,7 +113,9 @@ const transferAndAudit = (from: string, to: string, amount: number) =>
 
 When the inner failure isn't recovered, it fails the outer transaction too, and everything rolls back.
 
-Savepoints are issued as `SAVEPOINT` SQL, which Postgres, MySQL and SQLite accept and MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, works as the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it.
+Savepoints are issued as `SAVEPOINT` SQL, which Postgres, MySQL and SQLite accept and MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, can be the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it. Kysely then owns the commit, so the two guards above don't cover it: Kysely commits when your callback returns, even after a query failed and the program carried on, and even while a nested transaction a `timeout` gave up on is still running. Prefer `Db.transaction` for the outer transaction.
+
+Inside a nested transaction, use the handle `Db.query` gives you. Re-providing an outer transaction's handle captured earlier, with `provideService(Db.tag, trx)`, waits for the nested transaction to finish, which never happens: the run hangs.
 
 ## Two databases
 

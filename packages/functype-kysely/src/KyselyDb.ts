@@ -6,7 +6,15 @@ import { sql } from "kysely"
 import type { DbError } from "./DbError"
 import { toDbError } from "./DbError"
 import type { Scope } from "./Scope"
-import { childHandle, markFailed, scopeOf, withLock } from "./Scope"
+import {
+  childHandle,
+  lockedQuery,
+  markFailed,
+  QUERY_FAILED,
+  SAVEPOINT_ROLLBACK_FAILED,
+  scopeOf,
+  withLock,
+} from "./Scope"
 
 /**
  * A Kysely database as a functype service: a {@link TagType | Tag} to provide it under, queries
@@ -50,10 +58,11 @@ export type KyselyDb<DB> = {
    * ordinary IO: compose them with `flatMap` and `IO.gen`, and fail with your own typed errors;
    * nothing needs to throw to roll back.
    *
-   * **A failed query can't be recovered in place.** Postgres aborts a transaction on any failed
-   * statement, and its COMMIT then rolls back without an error. So when a `Db.query` fails and the
-   * program recovers and carries on, the commit fails with a {@link DbError} rather than report a
-   * commit that didn't happen. Run a query you want to recover from in a nested `transaction`.
+   * **A failed or abandoned query can't be recovered in place.** Postgres aborts a transaction on
+   * any failed statement, and its COMMIT then rolls back without an error; a write a `timeout` gave
+   * up on may still land. So when a `Db.query` fails, or a timeout or cancel gives up on it, and the
+   * program carries on, the commit fails with a {@link DbError} rather than report a commit that
+   * didn't happen. Run a query you may need to recover from in a nested `transaction`.
    *
    * **Steps run one at a time.** The transaction is one connection: its queries, nested
    * transactions and commit wait for each other, even under `IO.all`.
@@ -69,7 +78,11 @@ export type KyselyDb<DB> = {
    * cancelled still commits, though the run reports the cancel.
    *
    * The provided service can also be a transaction you opened with Kysely itself, such as the
-   * `trx` in `db.transaction().execute(callback)`. Then `transaction` opens a savepoint in it.
+   * `trx` in `db.transaction().execute(callback)`. Then `transaction` opens a savepoint in it, but
+   * Kysely owns the commit, so the two guards above don't apply to it.
+   *
+   * Inside a nested transaction, don't re-provide an outer handle captured earlier: the nested
+   * transaction holds the outer one's lock, so a query on it waits forever.
    *
    * @example
    * ```ts
@@ -123,19 +136,18 @@ const rollbackQuietly = (
     .map(() => undefined)
     .recoverWith(() => IO.sync(onFailure))
 
-/** What a commit fails with when a query in its scope failed and the program carried on. */
-export const recoveredQueryError = (): DbError => ({
-  _tag: "DbError",
-  code: Option.none(),
-  message:
-    "A query in this transaction failed and the program carried on, so it can't commit: Postgres has already aborted it. Run a query you want to recover from in a nested Db.transaction.",
-  cause: undefined,
-})
+const refused = (message: string): DbError => ({ _tag: "DbError", code: Option.none(), message, cause: undefined })
 
-/** Commits, or releases a savepoint, unless a query in the scope failed. */
+/** What a commit fails with when a query in its scope failed, or was given up on, and the program carried on. */
+export const recoveredQueryError = (): DbError => refused(QUERY_FAILED)
+
+/** Commits, or releases a savepoint, unless something on the scope went wrong. */
 const finish = (scope: Scope, f: () => Promise<unknown>): IOType<never, DbError, void> =>
   IO.sync(() => scope.failed.value).flatMap((failed) =>
-    failed ? IO.fail(recoveredQueryError()) : step(f).map(() => undefined),
+    failed.fold(
+      () => step(f).map(() => undefined),
+      (reason) => IO.fail(refused(reason)),
+    ),
   )
 
 /**
@@ -172,17 +184,7 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
     IO.service(tag).flatMap((db) => {
       const mapError = toError ?? ((e: unknown): E | DbError => toDbError(e))
       if (!db.isTransaction) return IO.tryAsync((signal) => f(db, signal), mapError)
-      const scope = scopeOf(db)
-      return withLock(
-        scope,
-        IO.tryAsync(
-          (signal) => f(db, signal),
-          (e) => {
-            markFailed(scope)
-            return mapError(e)
-          },
-        ),
-      )
+      return lockedQuery(scopeOf(db), (signal) => f(db, signal), mapError)
     })
 
   const inTopLevel = <R, E, A>(db: Kysely<DB>, program: IOType<R, E, A>): IOType<R, E | DbError, A> =>
@@ -213,10 +215,15 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
     const inner = childHandle(parent)
     const innerScope = scopeOf(inner)
     const savepoint = savepointName()
+    // Release and rollback take the savepoint's own lock, so they wait for a query in it that a
+    // timeout gave up on: its write lands before the rollback, which then undoes it.
     const rollback = (): IOType<never, never, void> =>
-      rollbackQuietly(
-        () => savepointSql(inner, "rollback to savepoint", savepoint),
-        () => markFailed(parentScope),
+      withLock(
+        innerScope,
+        rollbackQuietly(
+          () => savepointSql(inner, "rollback to savepoint", savepoint),
+          () => markFailed(parentScope, SAVEPOINT_ROLLBACK_FAILED),
+        ),
       )
     // The savepoint holds its parent's lock for its whole life, so no sibling statement lands
     // between its open and its release or rollback.
@@ -226,18 +233,19 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
         widen<R, E | DbError, Kysely<DB>>(
           step(() => savepointSql(parent, "savepoint", savepoint))
             .mapError((e) => {
-              markFailed(parentScope)
+              markFailed(parentScope, QUERY_FAILED)
               return e
             })
             .map(() => inner),
         ),
         (handle) =>
           widen<R, E | DbError, A>(
-            program
-              .provideService(tag, handle)
-              .flatMap((a) =>
-                finish(innerScope, () => savepointSql(handle, "release savepoint", savepoint)).map(() => a),
-              ),
+            program.provideService(tag, handle).flatMap((a) =>
+              withLock(
+                innerScope,
+                finish(innerScope, () => savepointSql(handle, "release savepoint", savepoint)),
+              ).map(() => a),
+            ),
           ),
         (_handle, exit) => widen<R, never, void>(exit.fold(rollback, () => IO.succeed(undefined), rollback, rollback)),
       ),
