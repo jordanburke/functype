@@ -71,6 +71,14 @@ const app = new Hono()
   .post("/created", (c) =>
     respond(IO.succeed(undefined), { ok: () => c.body(null, 201), err: () => c.text("never", 500) }),
   )
+  .get("/cached", (c) =>
+    respond(IO.succeed('{"a":1}'), {
+      ok: (json) => c.body(json, 200, { "content-type": "application/json" }),
+      err: () => c.text("never", 500),
+    }),
+  )
+  .get("/problem", () => new Response('{"title":"x"}', { headers: { "content-type": "application/problem+json" } }))
+  .get("/ndjson", () => new Response('{"a":1}\n{"a":2}\n', { headers: { "content-type": "application/x-ndjson" } }))
   .get("/plain", () => new Response('{"a":1}', { headers: { "content-type": "application/json" } }))
   .get("/hello", (c) =>
     respond(IO.succeed("hello"), { ok: (text) => c.text(text, 200), err: () => c.text("never", 500) }),
@@ -156,9 +164,9 @@ describe("call", () => {
     expect((await io.run()).orThrow()).toBe("hello")
   })
 
-  it("reads a c.body route's body as text, and types it as a string", async () => {
+  it("types a c.body route's body as unknown, since its content type is up to the route", async () => {
     const io = call(() => client.bytes.$get())
-    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, string>>()
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, unknown>>()
     expect((await io.run()).orThrow()).toBe("hi")
   })
 
@@ -166,6 +174,17 @@ describe("call", () => {
     const io = call(() => client.created.$post())
     expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, "" | null>>()
     expect((await io.run()).orThrow()).toBe("")
+  })
+
+  it("reads a c.body route with a JSON content type as JSON, typed unknown", async () => {
+    const io = call(() => client.cached.$get())
+    expectTypeOf(io).toEqualTypeOf<IOType<never, CallError, unknown>>()
+    expect((await io.run()).orThrow()).toEqual({ a: 1 })
+  })
+
+  it("parses a +json content type, and reads ndjson as text", async () => {
+    expect((await call(() => client.problem.$get()).run()).orThrow()).toEqual({ title: "x" })
+    expect((await call(() => client.ndjson.$get()).run()).orThrow()).toBe('{"a":1}\n{"a":2}\n')
   })
 
   it("types a route Hono can't type as unknown, and reads it by content type", async () => {

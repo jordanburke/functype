@@ -18,13 +18,13 @@ export type CallError =
   | { readonly _tag: "InvalidBody"; readonly status: number; readonly cause: unknown }
 
 /**
- * What {@link call} gives for a body of type `T` sent in format `F`.
+ * What {@link call} gives for a body of type `T` sent in format `F`. `call` reads a body by its
+ * content type at runtime, so only formats whose content type Hono sets are typed:
  *
- * - JSON and text arrive as typed.
- * - A `c.body(…)` response is read as text, since `call` reads only JSON and text, so its body is
- *   a `string`. A `c.body(null, …)` gives `null` for a 204 or 205 and `""` otherwise.
- * - A route whose format Hono doesn't know, such as one returning a plain `Response` or a proxied
- *   `fetch`, gives `unknown`: `call` reads it by its content type at runtime.
+ * - `c.json` and `c.text` arrive as typed, assuming the route keeps their content type.
+ * - A `c.body(null, …)` gives `null` for a 204 or 205 and `""` otherwise.
+ * - Any other body, such as a non-null `c.body(…)`, a plain `Response` or a proxied `fetch`, gives
+ *   `unknown`: its content type is up to the route, so check it before you use it.
  *
  * @interop These are the bodies a Hono route sends over the wire, null included, as its client types them.
  */
@@ -36,7 +36,7 @@ type ReadBody<T, F, S> = string extends F
       ? S extends 204 | 205
         ? null
         : null | ""
-      : string
+      : unknown
 
 /** The body type of a Hono client response's 2xx statuses, as {@link call} reads it. */
 export type SuccessBody<R> =
@@ -48,8 +48,11 @@ export type SuccessBody<R> =
 
 const CONTENTLESS: ReadonlySet<number> = new Set([204, 205, 304])
 
-const isJson = (response: Response): boolean =>
-  (response.headers.get("content-type") ?? "").toLowerCase().includes("json")
+/** `application/json`, or a `+json` type such as `application/problem+json`. */
+const isJson = (response: Response): boolean => {
+  const type = (response.headers.get("content-type") ?? "").toLowerCase().split(";")[0]?.trim() ?? ""
+  return type === "application/json" || type.endsWith("+json")
+}
 
 const readBody = (response: Response): Promise<unknown> => {
   if (CONTENTLESS.has(response.status)) return Promise.resolve(null)
@@ -79,9 +82,9 @@ const success = <A>(response: Response): IOType<never, CallError, A> =>
  * `request` gets the run's abort signal; pass it as `init.signal` so a cancelled run aborts the
  * fetch. A cancelled call ends interrupted, not as a `CallError`.
  *
- * The body is read as JSON when the response's content type says so, as text otherwise, and as
- * `null` for 204 and 205. A binary body arrives as text, so call the client directly for a
- * download. A 304 isn't 2xx, so it is an `HttpError` with a `null` body. `fetch` follows
+ * The body is read as JSON when the content type is `application/json` or a `+json` type, as
+ * text otherwise, and as `null` for 204 and 205. A binary body arrives as text, so call the client
+ * directly for a download. A 304 isn't 2xx, so it is an `HttpError` with a `null` body. `fetch` follows
  * redirects, so a redirect route gives the target's body.
  *
  * @example

@@ -63,9 +63,10 @@ const user = (id: string) => call((signal) => client.users[":id"].$get({ param: 
 ```
 
 - **A 2xx response** gives its body, typed from the route.
-  - JSON is parsed when the response's content type says so, and other bodies are read as text, so a `c.body(…)` route's body is a `string`. For a binary download, call the client directly.
+  - JSON is parsed when the content type is `application/json` or a `+json` type such as `application/problem+json`, and other bodies are read as text. For a binary download, call the client directly.
+  - `c.json` and `c.text` routes are typed as they send. The types assume the route keeps the content type those set; a route that overrides it with a header gets what its header says.
   - A 204 or 205 gives `null`. A `c.body(null, …)` with another 2xx status gives `""`.
-  - A route Hono can't type, such as one returning a plain `Response` or a proxied `fetch`, gives `unknown`, read by its content type.
+  - Any other body is `unknown`, because its content type is up to the route: a non-null `c.body(…)`, a plain `Response`, or a proxied `fetch`. Check it before you use it.
   - A JSON content type with an empty body is an `InvalidBody`.
   - A route with no 2xx status gives `IO<never, CallError, never>`. A redirect route is typed that way too, but `fetch` follows redirects by default, so at runtime it gives the target's body.
 - **Any other outcome** is a `CallError`:

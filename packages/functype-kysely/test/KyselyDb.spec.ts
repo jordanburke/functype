@@ -419,8 +419,8 @@ describe("Db.transaction edge cases", () => {
     expect(await ids()).toEqual(["a"])
   })
 
-  /** PGlite, with RELEASE SAVEPOINT held back 100 ms; `onRelease` runs as it starts. */
-  const slowReleaseDialect = (inner: Dialect, onRelease: () => void): Dialect => ({
+  /** PGlite, with RELEASE SAVEPOINT held back `delay` ms; `onRelease` runs as it starts. */
+  const slowReleaseDialect = (inner: Dialect, onRelease: () => void, delay = 100): Dialect => ({
     createAdapter: () => inner.createAdapter(),
     createIntrospector: (d) => inner.createIntrospector(d),
     createQueryCompiler: () => inner.createQueryCompiler(),
@@ -434,7 +434,7 @@ describe("Db.transaction edge cases", () => {
             executeQuery: async (query) => {
               if (query.sql.startsWith("release savepoint")) {
                 onRelease()
-                await settle(100)
+                await settle(delay)
               }
               return connection.executeQuery(query)
             },
@@ -471,6 +471,25 @@ describe("Db.transaction edge cases", () => {
     const result = await Db.transaction(
       insert("a")
         .flatMap(() => IO.all([nested, sibling]).recover(undefined))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+
+  it("refuses to commit when a timeout gives up on a nested transaction during its release", async () => {
+    // The release is held 400 ms and the timeout is 200 ms, so it lands in the release unless
+    // opening the savepoint and one insert take over 200 ms.
+    const slow = new Kysely<Database>({ dialect: slowReleaseDialect(new PGliteDialect(pglite), () => undefined, 400) })
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => Db.transaction(insert("n")).timeout(200).recover(undefined))
         .flatMap(() => insert("b")),
     )
       .provideService(Db.tag, slow)
