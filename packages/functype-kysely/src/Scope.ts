@@ -11,10 +11,14 @@ import type { Kysely, KyselyPlugin } from "kysely"
  *   interleaving with a sibling's, and makes a commit wait for a nested scope still running after a
  *   `timeout` or `race` gave up on it.
  * - `failed` holds why the scope can't commit, once something on it went wrong: a query that
- *   started and didn't succeed (it failed, or a timeout or cancel gave up on it), or a nested
- *   savepoint whose rollback failed. Postgres aborts a transaction on any failed statement, and its
- *   COMMIT then rolls back without an error; a write given up on may still land. So such a scope
- *   refuses to commit. A nested `Db.transaction` is how a program recovers from a failed query.
+ *   started and didn't succeed (it failed, or a timeout or cancel gave up on it), a nested
+ *   savepoint whose rollback failed, or one a timeout gave up on after its release. Postgres aborts
+ *   a transaction on any failed statement, and its COMMIT then rolls back without an error; a write
+ *   given up on may still land. So such a scope refuses to commit. A nested `Db.transaction` is how
+ *   a program recovers from a failed query.
+ * - Any rejection of a query's callback counts, Kysely's `NoResultError` included: a callback can
+ *   run several statements, and a not-found error could hide one that failed and aborted the
+ *   transaction.
  */
 export type Scope = {
   readonly lock: Lock
@@ -72,6 +76,9 @@ export const markFailed = (scope: Scope, reason: string): void => {
 
 export const QUERY_FAILED =
   "A query in this transaction failed, or a timeout or cancel gave up on it, and the program carried on, so the transaction can't commit: Postgres may already have aborted it, and a write given up on may still have landed. Run a query you may need to recover from in a nested Db.transaction."
+
+export const RELEASED_THEN_GIVEN_UP =
+  "A timeout or cancel gave up on a nested Db.transaction after its savepoint was released, so its writes are already part of this transaction, which can't commit."
 
 export const SAVEPOINT_ROLLBACK_FAILED =
   "A nested Db.transaction in this transaction failed to roll back to its savepoint, so the transaction can't commit."

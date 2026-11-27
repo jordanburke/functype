@@ -1,7 +1,7 @@
 import { PGlite } from "@electric-sql/pglite"
 import type { IOType } from "functype"
 import { IO, Tag } from "functype"
-import type { Dialect, QueryResult } from "kysely"
+import type { DatabaseConnection, Dialect, QueryResult } from "kysely"
 import { Kysely, sql } from "kysely"
 import { PGliteDialect } from "kysely-pglite-dialect"
 import { afterAll, beforeAll, beforeEach, describe, expect, expectTypeOf, it } from "vitest"
@@ -30,9 +30,10 @@ const ids = async (): Promise<readonly string[]> =>
 
 const settle = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// PGlite starts its WASM Postgres on the first query, which can take a while on a busy CI runner.
 beforeAll(async () => {
   await sql`create table account (id text primary key, balance integer not null)`.execute(db)
-})
+}, 60_000)
 
 beforeEach(async () => {
   await db.deleteFrom("account").execute()
@@ -394,5 +395,108 @@ describe("Db.transaction after a query a timeout gave up on", () => {
       .run()
     expect(result.isRight()).toBe(true)
     expect(await ids()).toEqual(["a", "b"])
+  })
+})
+
+describe("Db.transaction edge cases", () => {
+  it("refuses to commit after a recovered executeTakeFirstOrThrow, which counts as a failed query", async () => {
+    const missing = Db.query((d) =>
+      d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow(),
+    )
+    const result = await Db.transaction(insert("a").flatMap(() => missing.recover(() => undefined)))
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("commits a not-found row read with executeTakeFirst", async () => {
+    const missing = Db.query((d) => d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirst())
+    const result = await Db.transaction(insert("a").flatMap(() => missing))
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a"])
+  })
+
+  /** PGlite, with RELEASE SAVEPOINT held back 100 ms. */
+  const slowReleaseDialect = (inner: Dialect): Dialect => ({
+    createAdapter: () => inner.createAdapter(),
+    createIntrospector: (d) => inner.createIntrospector(d),
+    createQueryCompiler: () => inner.createQueryCompiler(),
+    createDriver: () => {
+      const driver = inner.createDriver()
+      return {
+        init: () => driver.init(),
+        acquireConnection: async () => {
+          const connection = await driver.acquireConnection()
+          const wrapper: DatabaseConnection = {
+            executeQuery: async (query) => {
+              if (query.sql.startsWith("release savepoint")) await settle(100)
+              return connection.executeQuery(query)
+            },
+            streamQuery: (query, chunkSize) => connection.streamQuery(query, chunkSize),
+          }
+          inners.set(wrapper, connection)
+          return wrapper
+        },
+        beginTransaction: (c, s) => driver.beginTransaction(unwrap(c), s),
+        commitTransaction: (c) => driver.commitTransaction(unwrap(c)),
+        rollbackTransaction: (c) => driver.rollbackTransaction(unwrap(c)),
+        releaseConnection: (c) => driver.releaseConnection(unwrap(c)),
+        destroy: () => Promise.resolve(),
+      }
+    },
+  })
+  const inners = new WeakMap<DatabaseConnection, DatabaseConnection>()
+  const unwrap = (c: DatabaseConnection): DatabaseConnection => inners.get(c) ?? c
+
+  it("refuses to commit when a timeout gives up on a nested transaction during its release", async () => {
+    const slow = new Kysely<Database>({ dialect: slowReleaseDialect(new PGliteDialect(pglite)) })
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() =>
+          Db.transaction(insert("n"))
+            .timeout(30)
+            .recover(() => undefined),
+        )
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+})
+
+describe("Db.transaction after a NoResultError", () => {
+  it("refuses to commit when the callback's other statement failed, even one sent later", async () => {
+    const notFound = (d: Kysely<Database>) =>
+      d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow()
+    const shapes = [
+      Db.query((d) => Promise.all([notFound(d), d.insertInto("account").values({ id: "a", balance: 0 }).execute()])),
+      Db.query((d) =>
+        Promise.all([
+          notFound(d),
+          d
+            .selectFrom("account")
+            .select("id")
+            .execute()
+            .then(() => d.insertInto("account").values({ id: "a", balance: 0 }).execute()),
+        ]),
+      ),
+    ]
+    for (const both of shapes) {
+      await db.deleteFrom("account").execute()
+      const result = await Db.transaction(insert("a").flatMap(() => both.recover(() => undefined)))
+        .provideService(Db.tag, db)
+        .run()
+      expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+      expect(await ids()).toEqual([])
+    }
   })
 })
