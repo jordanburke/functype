@@ -40,6 +40,9 @@ const EXPECTED_INTEROP: Readonly<Record<string, number>> = {
   "async/useIOValue.ts": 1,
   "hooks/useOption.ts": 1,
   "query/ioQueryFn.ts": 1,
+  "query/useIOInfiniteQuery.ts": 1,
+  "router/guard.ts": 1,
+  "router/search.ts": 1,
 }
 
 const SRC_DIR = join(import.meta.dirname, "..", "src")

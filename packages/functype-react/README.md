@@ -16,15 +16,16 @@ pnpm add functype functype-react react react-dom
 
 ## Surface
 
-| Subpath                 | Contents                                                                                                                                    |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers         |
-| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                      |
-| `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                          |
-| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                       |
-| `functype-react/query`  | `useIOQuery(State)`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
+| Subpath                 | Contents                                                                                                                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `functype-react` (main) | Stable hooks (`useStable*`), ADT hooks (`useOption`, `useEither`, `useTry`, `useList`), `Match` family components, equality helpers                               |
+| `functype-react/match`  | `<Match>`, `<MatchOption>`, `<MatchEither>`, `<MatchTry>` (also re-exported from main)                                                                            |
+| `functype-react/async`  | `useIO`, `useIOPromise`, `useIOValue` (React 19 `use()` bridge), `<AsyncBoundary>`                                                                                |
+| `functype-react/forms`  | `Validated<E, A>` type alias, `useValidatedField`, `useValidatedForm`                                                                                             |
+| `functype-react/query`  | `useIOQuery(State)`, `useIOInfiniteQuery`, `useIOMutation(State)`, `ioQueryFn`, `ioMutationFn`, `IOQueryError`, `toQueryState` — TanStack Query adapters for `IO` |
+| `functype-react/router` | `exitRoute`, `searchParams`, `SearchParam` — TanStack Router guards and typed search params                                                                       |
 
-`./async`, `./forms`, and `./query` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
+`./async`, `./forms`, `./query` and `./router` stay off the main entry so consumers who don't touch Suspense, applicative forms, or React Query tree-shake them out.
 
 ## Tier 1 — stable hooks + ADT hooks
 
@@ -233,7 +234,31 @@ const create = useIOMutation((body: CreateTokenInput) => Http.post<Token>(url, {
 
 `e` is the `IOQueryError<E>` box, so the typed error is `e.error`, and only when `e.defect` is `false`. To branch on it as an `Option`, write `e.defect ? None<ApiError>() : Some(e.error)`, with your own error type in place of `ApiError`. A bare `None()` makes the result `Option<unknown>`.
 
-For full control over the query object — or for `useSuspenseQuery` / `useInfiniteQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
+For a paged query, `useIOInfiniteQuery` takes the page param as an `Option`. The first page gets `None`, and `getNextPageParam` returns `None` when there are no more pages, so a cursor needs no `null` sentinel:
+
+```ts
+import { type IO, Option } from "functype"
+import { useIOInfiniteQuery } from "functype-react/query"
+
+type ApiError = { readonly _tag: "ApiError"; readonly status: number }
+type EventPage = { readonly events: readonly string[]; readonly nextCursor: string | null }
+declare const fetchEvents: (cursor: Option<string>, signal: AbortSignal) => IO<never, ApiError, EventPage>
+
+const events = useIOInfiniteQuery(["events"], ({ pageParam, signal }) => fetchEvents(pageParam, signal), {
+  getNextPageParam: (last: EventPage) => Option(last.nextCursor),
+})
+// events.error is an IOQueryError<ApiError>; events.fetchNextPage and events.hasNextPage are React Query's own
+```
+
+- **Annotate the page in `getNextPageParam`,** as above. TypeScript types the effect's `pageParam` first, so it can only learn the param type from a `getNextPageParam` that types on its own. Without the annotation it reports `Option<string>` not assignable to `Option<never>` there.
+- **The param type can't hold `null` or `undefined`.** React Query reads a `null` next param as "no more pages", and `None` already says that.
+- **`data.pageParams` holds plain values.** React Query stores each param as itself, or as `null` for the first page, so its cache stays plain JSON for persisters and SSR.
+- **Other options pass through.** Every other `useInfiniteQuery` option, such as `select`, `maxPages` or `placeholderData: keepPreviousData`, works as usual.
+- **To match the result, project it.** `toQueryState(events)` gives an `AsyncState`. The hook returns React Query's result unchanged.
+- **`None` is only ever the first page you fetched.** After `fetchPreviousPage`, or once `maxPages` drops the first page, a refetch starts from a page whose param is a `Some`, as plain React Query does. So pick params that your effect can fetch any page from, such as offsets or cursors.
+- **A one-page query** still needs a typed `None`: `getNextPageParam: () => Option.none<string>()`.
+
+For full control over the query object — or for `useSuspenseQuery` / `queryClient.prefetchQuery` — drop to the primitives. They carry no `@tanstack` types at all, so they compose with any of those:
 
 ```ts ignore
 import { useQuery } from "@tanstack/react-query"
@@ -247,7 +272,7 @@ useQuery({
 })
 ```
 
-`ioQueryFn` is generic over the query context, so a richer one flows through unchanged — annotate the callback parameter to reach `pageParam` in an infinite query:
+`ioQueryFn` is generic over the query context, so a richer one flows through unchanged. Annotate the callback parameter to reach `pageParam` when you call `useInfiniteQuery` yourself:
 
 ```ts ignore
 import { type QueryFunctionContext, type QueryKey, useInfiniteQuery } from "@tanstack/react-query"
@@ -266,11 +291,78 @@ useInfiniteQuery({
 
 Both the hooks and the primitives are generic over any `IO<never, E, A>` — nothing here is HTTP-specific. `Error.message` is derived structurally (`formatIOError`); pass `formatError` to override it. The derivation prefers, in order: a raw `Error`'s `.message`, the HTTP shape (`HTTP 403 Forbidden — /api/x`) for anything carrying a numeric `status`, a tagged error's own `message`, then the bare `_tag`, then JSON.
 
+## Tier 6 — TanStack Router
+
+`functype-react/router` needs `@tanstack/react-router`, an optional peer.
+
+### Guards: `exitRoute`
+
+TanStack Router redirects or shows Not Found only when `beforeLoad` or `loader` throws `redirect()` or `notFound()`. `exitRoute` takes an `Either` instead: a `Left` is thrown the way the router expects, and a `Right` is returned, so in `beforeLoad` it becomes the route's context.
+
+```ts
+import { createRootRoute, createRoute, notFound, redirect } from "@tanstack/react-router"
+import { Either } from "functype"
+import { exitRoute, type RouteExit } from "functype-react/router"
+
+type Filter = "open" | "closed"
+const isFilter = (value: string): value is Filter => value === "open" || value === "closed"
+
+const checkFilter = (filter: string): Either<RouteExit, { readonly filter: Filter }> => {
+  if (filter === "all") return Either.left(redirect({ to: "/list/$filter", params: { filter: "open" } }))
+  return isFilter(filter) ? Either.right({ filter }) : Either.left(notFound())
+}
+
+const root = createRootRoute()
+const list = createRoute({
+  getParentRoute: () => root,
+  path: "/list/$filter",
+  beforeLoad: ({ params }) => exitRoute(checkFilter(params.filter)),
+  loader: ({ context }) => context.filter, // Filter
+})
+```
+
+- **Typing:** a named check with a declared `Either<RouteExit, …>` return type, as above, types cleanly. When you build the `Either` inline, give `exitRoute` its `Right` type, or `void` for a guard that adds no context: `exitRoute<void>(…)`.
+- **Async guards:** `await` the check first: `beforeLoad: async () => exitRoute(await check())`.
+- **No wrapper:** `exitRoute` goes inside a plain `beforeLoad`. A wrapper around the whole function would lose the typed `params` that TanStack gives `beforeLoad`.
+
+### Search params: `searchParams`
+
+`searchParams` builds a `validateSearch` from one parser per key. Each parser returns an `Option`, so there's no `undefined` spreading per field:
+
+```ts
+import { createRootRoute, createRoute } from "@tanstack/react-router"
+import { SearchParam, searchParams } from "functype-react/router"
+
+const root = createRootRoute()
+const search = createRoute({
+  getParentRoute: () => root,
+  path: "/search",
+  validateSearch: searchParams({
+    q: SearchParam.string,
+    page: SearchParam.integer,
+    sort: SearchParam.oneOf("new", "old"),
+    mine: SearchParam.boolean,
+  }),
+})
+// search.useSearch(): { q?: string | undefined; page?: number | undefined; sort?: "new" | "old" | undefined; mine?: boolean | undefined }
+```
+
+- **A rejected or missing value is `undefined`.** TanStack merges `validateSearch`'s result over the raw search, so a key left out would keep its raw, unvalidated value; `undefined` replaces it. TanStack leaves `undefined` keys out of the URLs it writes.
+- **The same type works for `navigate`.** `navigate({ to: "/search", search: { q: "cats" } })` checks against it.
+- **The parsers expect TanStack's parsing.** TanStack hands each value to `validateSearch` already parsed as JSON where it can be: `?page=2` is the number 2, and `?mine=true` is `true`.
+  - `SearchParam.string` takes a non-empty string. A number or boolean, as a hand-typed `?q=123` or `?q=true` parses, becomes its text. An empty value or `null` is rejected. TanStack has already parsed a hand-typed value as JSON by then, so its original text can be gone: `?q=1e3` arrives as `"1000"`, and a 20-digit number loses precision. Values that `navigate` writes are quoted, so they round-trip exactly.
+  - `SearchParam.number` and `SearchParam.integer` take a number, or a decimal string that reads as one. Hex such as `0x10` is rejected.
+  - `SearchParam.boolean` takes `true` or `false`, or those strings.
+  - `SearchParam.oneOf(...values)` takes one of the given strings.
+- **Your own parser:** any `(raw: unknown) => Option<T>` is a field.
+- **Keys no parser names** still pass through at runtime, as TanStack keeps them, but they aren't in the type.
+
 ## Compatibility
 
 - **TypeScript**: `strict: true` + `noUncheckedIndexedAccess: true`. Loose configs will silently lose the type-level exhaustiveness guarantees.
 - **React**: peer dep range `>=18 <20`. Tier 3's `useIOValue` (and consequently anything that depends on React 19's `use()` hook) is React-19-only at runtime; the rest of the package works on both.
 - **SSR / RSC**: hooks are client-only and marked with `"use client"`. `<Match>` family components are pure and render fine in Server Components.
+- **TanStack Router**: Tier 6 targets `@tanstack/react-router` `>=1.60.0`, an optional peer.
 - **React Query**: Tier 5 targets `@tanstack/react-query` v5 (`>=5.0.0`), an optional peer. The `ioQueryFn` / `ioMutationFn` primitives type their context structurally, so they carry no `@tanstack` types and are unaffected by its major-version churn.
 
 ## Linting

@@ -39,8 +39,8 @@ export type UseIOQueryOptions<A, E, TData, TQueryKey extends QueryKey> = Omit<
  * ```
  *
  * Every other `useQuery` option (`select`, `staleTime`, `placeholderData`, …) passes
- * through untouched. For full control over the query object — or for
- * `useSuspenseQuery` / `useInfiniteQuery` — use the `ioQueryFn` primitive directly.
+ * through untouched. For paged queries use `useIOInfiniteQuery`. For full control over the query
+ * object, or for `useSuspenseQuery`, use the `ioQueryFn` primitive directly.
  */
 export function useIOQuery<A, E, TData = A, TQueryKey extends QueryKey = QueryKey>(
   queryKey: TQueryKey,

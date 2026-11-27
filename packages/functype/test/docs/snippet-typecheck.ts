@@ -289,6 +289,20 @@ const compilerOptions = (): ts.CompilerOptions => {
       ...exportPaths(join(REPO_ROOT, "packages", "functype-os")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-log")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-react")),
+      // functype-react's README imports TanStack Router, which functype doesn't depend on.
+      "@tanstack/react-router": [
+        join(
+          REPO_ROOT,
+          "packages",
+          "functype-react",
+          "node_modules",
+          "@tanstack",
+          "react-router",
+          "dist",
+          "esm",
+          "index.d.ts",
+        ),
+      ],
       ...exportPaths(join(REPO_ROOT, "packages", "functype-kysely")),
       ...exportPaths(join(REPO_ROOT, "packages", "functype-hono")),
       // functype-kysely's README imports Kysely's types; functype itself doesn't depend on it.
