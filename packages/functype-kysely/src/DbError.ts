@@ -33,11 +33,16 @@ export const toDbError = (e: unknown): DbError => ({
   cause: e,
 })
 
-const UNIQUE_VIOLATION_CODES: ReadonlySet<string> = new Set(["23505", "ER_DUP_ENTRY", "SQLITE_CONSTRAINT_UNIQUE"])
+const UNIQUE_VIOLATION_CODES: ReadonlySet<string> = new Set([
+  "23505",
+  "ER_DUP_ENTRY",
+  "SQLITE_CONSTRAINT_UNIQUE",
+  "SQLITE_CONSTRAINT_PRIMARYKEY",
+])
 
 /**
- * True when the error is a unique-constraint violation: SQLSTATE `23505` on Postgres,
- * `ER_DUP_ENTRY` on MySQL, `SQLITE_CONSTRAINT_UNIQUE` on SQLite.
+ * True when the error is a unique-constraint or primary-key violation: SQLSTATE `23505` on
+ * Postgres, `ER_DUP_ENTRY` on MySQL, `SQLITE_CONSTRAINT_UNIQUE` or `SQLITE_CONSTRAINT_PRIMARYKEY` on SQLite.
  *
  * @example
  * ```ts

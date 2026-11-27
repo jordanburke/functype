@@ -14,7 +14,7 @@ pnpm release patch        # or: minor, major
 git push --follow-tags    # → triggers CI publish
 ```
 
-That's it. `pnpm release` bumps all 8 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version npm doesn't have yet.
+That's it. `pnpm release` bumps all 9 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version npm doesn't have yet.
 
 ## What `pnpm release` does
 
@@ -70,7 +70,7 @@ From 2.0-prep until 2.0.0 shipped, both served `release/1.x` instead, so users r
 
 "Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
 
-`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 8 install.
+`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 9 install.
 
 - **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`. For a release on an older line than npm `latest`, such as a 1.x fix after 2.0.0, add `--latest=false --notes-start-tag <the previous tag on that major>`; `pnpm exec tsx scripts/publish-tag.ts vX.Y.Z` prints both.
 - **Check one version:** `pnpm verify-published functype@1.16.1`.

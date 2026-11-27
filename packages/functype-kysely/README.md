@@ -51,17 +51,19 @@ type DbError = {
 }
 ```
 
-`f` also gets the run's `AbortSignal`. Pass it to `execute`, and a cancelled run cancels the query on the dialects that support it:
+`f` also gets the run's `AbortSignal`. Pass it to `execute` (Kysely 0.29 and later), and a cancelled run stops waiting for the query. By default the query keeps running on the server; add `inflightQueryAbortStrategy: "cancel query"` to cancel it there, on dialects that support that:
 
 ```ts
-const accounts = Db.query((d, signal) => d.selectFrom("account").selectAll().execute({ signal }))
+const accounts = Db.query((d, signal) =>
+  d.selectFrom("account").selectAll().execute({ signal, inflightQueryAbortStrategy: "cancel query" }),
+)
 ```
 
-Pass a second argument to map the error yourself: `Db.query(f, (e) => myError(e))`. `isUniqueViolation(error)` checks for a unique-constraint violation on Postgres, MySQL or SQLite.
+Pass a second argument to map the error yourself: `Db.query(f, (e) => myError(e))`. `isUniqueViolation(error)` checks for a unique-constraint or primary-key violation on Postgres, MySQL or SQLite.
 
 ## Transactions
 
-`Db.transaction(program)` runs an IO program in a transaction. Inside it, every `Db.query` sees the transaction, so the steps are ordinary IO. They compose with `flatMap`, `recover` and `IO.gen`, and fail with your own errors:
+`Db.transaction(program)` runs an IO program in a transaction. Inside it, every `Db.query` sees the transaction, so the steps are ordinary IO. They compose with `flatMap` and `IO.gen`, and fail with your own errors:
 
 ```ts
 import { IO } from "functype"
@@ -82,13 +84,15 @@ const transfer = (from: string, to: string, amount: number) =>
       yield* setBalance(to, (target?.balance ?? 0) + amount)
     }),
   )
-// IO<Kysely<Database>, DbError | Overdrawn, void>
+// IO<Kysely<Database>, DbError | Overdrawn, undefined>
 ```
 
 - **Success commits.** A failed commit, such as a deferred constraint, is a `DbError`.
 - **A typed failure rolls back** and passes through unchanged: `transfer` fails with `Overdrawn`, not a wrapper.
 - **A defect rolls back**, and the run still dies.
 - **A cancel rolls back.** The run stops before its next step and rolls back once the query in flight settles. A commit that has already started when the run is cancelled still commits, though the run reports the cancel.
+- **A failed query can't be recovered in place.** On Postgres, any failed statement aborts the transaction, and a later `COMMIT` silently rolls back. So when a query fails and the program recovers and carries on, the commit fails with a `DbError` instead of reporting success. To carry on after a query that may fail, run it in a nested `Db.transaction`, below.
+- **Steps run one at a time.** A transaction is one connection, so its queries, nested transactions and commit wait for each other, even under `IO.all`. A nested transaction that a `timeout` or `race` gave up on still finishes its rollback before the next step runs.
 - **Other services stay in `R`.** A program that also needs a `Clock` gives a transaction that needs `Clock | Kysely<Database>`.
 
 ### Nesting
@@ -109,11 +113,15 @@ const transferAndAudit = (from: string, to: string, amount: number) =>
 
 When the inner failure isn't recovered, it fails the outer transaction too, and everything rolls back.
 
-Savepoints need a dialect with `SAVEPOINT`: Postgres, MySQL and SQLite have it, MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, works as the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it.
+Savepoints are issued as `SAVEPOINT` SQL, which Postgres, MySQL and SQLite accept and MSSQL doesn't. A transaction opened with Kysely itself, such as the `trx` in `db.transaction().execute(callback)`, works as the outer one too: provide it under `Db.tag`, and `Db.transaction` opens a savepoint in it.
+
+## Two databases
+
+Each `KyselyDb` names its service, `"Db"` by default, so give a second database its own name: `KyselyDb<Database>("Replica")`. `R` names the schema type, not the service, so two services over the same schema look alike in `R`. Providing only one of them still compiles, and the run dies with a missing-service error.
 
 ## Testing
 
-[PGlite](https://pglite.dev) runs Postgres in process, so a test can use a real database with no server. This package's own tests run on it with [`kysely-pglite-dialect`](https://www.npmjs.com/package/kysely-pglite-dialect):
+[PGlite](https://pglite.dev) runs Postgres in process, so a test can use a real database with no server. This package's own tests run on it with [`kysely-pglite-dialect`](https://www.npmjs.com/package/kysely-pglite-dialect), whose 1.4 release supports PGlite up to 0.5:
 
 ```ts ignore
 import { PGlite } from "@electric-sql/pglite"

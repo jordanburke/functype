@@ -392,8 +392,8 @@ importers:
   packages/functype-kysely:
     devDependencies:
       '@electric-sql/pglite':
-        specifier: 0.6.1
-        version: 0.6.1
+        specifier: 0.5.17
+        version: 0.5.17
       '@types/node':
         specifier: ^24.19.2
         version: 24.19.2
@@ -408,7 +408,7 @@ importers:
         version: 0.29.9
       kysely-pglite-dialect:
         specifier: 1.4.0
-        version: 1.4.0(@electric-sql/pglite@0.6.1)(kysely@0.29.9)
+        version: 1.4.0(@electric-sql/pglite@0.5.17)(kysely@0.29.9)
       ts-builds:
         specifier: ^5.0.0
         version: 5.0.0(@types/node@24.19.2)(@typescript-eslint/parser@8.73.0(eslint@10.15.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(jiti@2.7.0)(jsdom@31.0.1)(supports-color@7.2.0)(tsdown@0.23.7(@volar/typescript@2.4.28(typescript@6.0.3))(tsx@4.23.15)(typescript@6.0.3)(unrun@0.2.37(synckit@0.11.13)))(vite@8.3.8(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
@@ -827,8 +827,8 @@ packages:
   '@dual-bundle/import-meta-resolve@4.2.1':
     resolution: {integrity: sha512-id+7YRUgoUX6CgV0DtuhirQWodeeA7Lf4i2x71JS/vtA5pRb/hIGWlw+G6MeXvsM+MXrz0VAydTGElX1rAfgPg==}
 
-  '@electric-sql/pglite@0.6.1':
-    resolution: {integrity: sha512-vdKk6mgzw8uqouCyPa20eNhPafF1OI5LXTvdWBj2plJhDHT2j5ohDdVdZUClJrWwU5MZZB018z68qZec/JmjRw==}
+  '@electric-sql/pglite@0.5.17':
+    resolution: {integrity: sha512-8SvKjiUjaU+0O0dbxjOfN+jXz14TEqDWbwDkYOW1aQ11y/ph2JvFVI27ABBo5nfw+ZfSqy4hKCNlbnbB1TDE+g==}
 
   '@emmetio/abbreviation@2.3.3':
     resolution: {integrity: sha512-mgv58UrU3rh4YgbE/TzgLQwJ3pFsHHhCLqY20aJq+9comytTXUDNGG/SMtSeMJdkpxgXSXunBGLD8Boka3JyVA==}
@@ -4570,7 +4570,7 @@ snapshots:
 
   '@dual-bundle/import-meta-resolve@4.2.1': {}
 
-  '@electric-sql/pglite@0.6.1': {}
+  '@electric-sql/pglite@0.5.17': {}
 
   '@emmetio/abbreviation@2.3.3':
     dependencies:
@@ -6640,9 +6640,9 @@ snapshots:
 
   kleur@4.1.5: {}
 
-  kysely-pglite-dialect@1.4.0(@electric-sql/pglite@0.6.1)(kysely@0.29.9):
+  kysely-pglite-dialect@1.4.0(@electric-sql/pglite@0.5.17)(kysely@0.29.9):
     dependencies:
-      '@electric-sql/pglite': 0.6.1
+      '@electric-sql/pglite': 0.5.17
       kysely: 0.29.9
 
   kysely@0.29.9: {}

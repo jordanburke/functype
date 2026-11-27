@@ -1,13 +1,14 @@
 import { PGlite } from "@electric-sql/pglite"
 import type { IOType } from "functype"
 import { IO, Tag } from "functype"
-import type { QueryResult } from "kysely"
+import type { Dialect, QueryResult } from "kysely"
 import { Kysely, sql } from "kysely"
 import { PGliteDialect } from "kysely-pglite-dialect"
 import { afterAll, beforeAll, beforeEach, describe, expect, expectTypeOf, it } from "vitest"
 
 import type { DbError } from "../src"
 import { isUniqueViolation, KyselyDb } from "../src"
+import { recoveredQueryError } from "../src/KyselyDb"
 
 type Database = {
   readonly account: { readonly id: string; readonly balance: number }
@@ -216,5 +217,128 @@ describe("nested Db.transaction", () => {
       .run()
     expect(result.isLeft() && result.value).toEqual(overdrawn("b"))
     expect(await ids()).toEqual([])
+  })
+})
+
+describe("Db.transaction with steps that overlap", () => {
+  it("runs sibling nested transactions one at a time under IO.all", async () => {
+    const t1 = Db.transaction(
+      insert("x1")
+        .flatMap(() => Db.query(() => settle(100)))
+        .flatMap(() => insert("x2")),
+    )
+    const t2 = Db.transaction(
+      Db.query(() => settle(30))
+        .flatMap(() => insert("y1"))
+        .flatMap(() => IO.fail(overdrawn("y1"))),
+    ).recover(() => undefined)
+    for (const pair of [
+      [t1, t2],
+      [t2, t1],
+    ] as const) {
+      await db.deleteFrom("account").execute()
+      const result = await Db.transaction(insert("a").flatMap(() => IO.all([...pair])))
+        .provideService(Db.tag, db)
+        .run()
+      expect(result.isRight()).toBe(true)
+      expect(await ids()).toEqual(["a", "x1", "x2"])
+    }
+  })
+
+  it("rolls a timed-out nested transaction back before the outer one goes on", async () => {
+    const slow = Db.transaction(insert("n1").flatMap(() => Db.query(() => settle(200))))
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => slow.timeout(50).recover(() => undefined))
+        .flatMap(() => insert("b"))
+        .flatMap(() => IO.sleep(300))
+        .flatMap(() => insert("c")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a", "b", "c"])
+  })
+
+  it("doesn't commit a timed-out nested transaction's writes", async () => {
+    const slow = Db.transaction(insert("n1").flatMap(() => Db.query(() => settle(200))))
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => slow.timeout(50).recover(() => undefined))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a", "b"])
+  })
+})
+
+describe("Db.transaction after a failed query", () => {
+  it("fails the commit when the program recovered a failed query itself", async () => {
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => insert("a"))
+        .recover(() => undefined)
+        .flatMap(() => IO.succeed("done")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
+  })
+
+  it("fails the savepoint's release the same way, and the outer transaction can recover", async () => {
+    const inner = Db.transaction(insert("a").recover(() => undefined))
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => inner)
+        .recover(() => undefined)
+        .flatMap(() => insert("c")),
+    )
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a", "c"])
+  })
+})
+
+/** PGlite, with a rollback that runs and then throws. */
+const flakyDialect = (inner: Dialect): Dialect => ({
+  createAdapter: () => inner.createAdapter(),
+  createIntrospector: (d) => inner.createIntrospector(d),
+  createQueryCompiler: () => inner.createQueryCompiler(),
+  createDriver: () => {
+    const driver = inner.createDriver()
+    return {
+      init: () => driver.init(),
+      acquireConnection: () => driver.acquireConnection(),
+      beginTransaction: (c, s) => driver.beginTransaction(c, s),
+      commitTransaction: (c) => driver.commitTransaction(c),
+      rollbackTransaction: async (c) => {
+        await driver.rollbackTransaction(c)
+        throw new Error("rollback lost")
+      },
+      releaseConnection: (c) => driver.releaseConnection(c),
+      destroy: () => driver.destroy(),
+    }
+  },
+})
+
+describe("Db.transaction when the rollback fails", () => {
+  it("keeps the program's own failure", async () => {
+    const flaky = new Kysely<Database>({ dialect: flakyDialect(new PGliteDialect(pglite)) })
+    const result = await Db.transaction(insert("a").flatMap(() => IO.fail(overdrawn("a"))))
+      .provideService(Db.tag, flaky)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(overdrawn("a"))
+    expect(await ids()).toEqual([])
+  })
+})
+
+describe("KyselyDb names", () => {
+  it("doesn't share a tag with a plain Tag of the same name", () => {
+    expect(Db.tag.id).not.toBe(Tag<Database>("Db").id)
+    expect(KyselyDb<Database>("Replica").tag.id).not.toBe(Db.tag.id)
   })
 })

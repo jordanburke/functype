@@ -38,10 +38,10 @@
   },
   "peerDependencies": {
     "functype": ">=2.0.0",
-    "kysely": ">=0.28.0"
+    "kysely": ">=0.29.0"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "0.6.1",
+    "@electric-sql/pglite": "0.5.17",
     "@types/node": "^24.19.2",
     "eslint-config-prettier": "^10.1.8",
     "functype": "workspace:^",

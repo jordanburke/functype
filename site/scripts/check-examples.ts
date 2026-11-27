@@ -83,7 +83,7 @@ declare global {
     from: string,
     to: string,
     amount: number,
-  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, void>
+  ) => import("functype").IOType<import("kysely").Kysely<Database>, import("functype-kysely").DbError, undefined>
 }
 `;
 
