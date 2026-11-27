@@ -14,7 +14,7 @@
  *   1. Verify clean working tree, on main or release/<major>.x, in sync with its origin
  *   2. Run `pnpm validate` (full workspace lint + typecheck + test + build)
  *   3. Compute new functype version from current + bump level
- *   4. Apply to all 7 family package.jsons
+ *   4. Apply to all 8 family package.jsons
  *   5. Run `pnpm sync:eslint-mirror` → eslint pair = 2.{major*100+minor}.{patch}
  *   6. Run `pnpm -F functype-mcp-server sync:registry` → server.json tracks pkg.version
  *  6b. Run `pnpm -F site generate:llms` → llms.txt / llms-full.txt embed the new version
@@ -171,7 +171,7 @@ if (!/^\d+\.\d+\.\d+$/.test(next)) {
 
 console.log(`\nReleasing functype family: ${current} → ${next} (${bumpLevel})`);
 
-// 4. Bump all 7 family packages
+// 4. Bump all 8 family packages
 for (const dir of FAMILY_PACKAGE_DIRS) {
   const pkg = readPkg(dir);
   pkg.version = next;

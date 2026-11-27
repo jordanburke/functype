@@ -1,6 +1,6 @@
 # Releasing from the monorepo
 
-The functype family (7 packages) ships together on one version line, `2.x` from `main`; the eslint pair (2 packages) ships together on the mirrored `2.200.x` line (see Eslint mirror encoding). All 9 publishable packages release in lockstep from a single git tag.
+The functype family (8 packages) ships together on one version line, `2.x` from `main`; the eslint pair (2 packages) ships together on the mirrored `2.200.x` line (see Eslint mirror encoding). All 10 publishable packages release in lockstep from a single git tag.
 
 ## TL;DR
 
@@ -14,13 +14,13 @@ pnpm release patch        # or: minor, major
 git push --follow-tags    # → triggers CI publish
 ```
 
-That's it. `pnpm release` bumps all 9 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version npm doesn't have yet.
+That's it. `pnpm release` bumps all 10 packages, runs every safety gate locally, cuts the CHANGELOG `## Unreleased` section into a dated version header, commits, and tags `vX.Y.Z`. Pushing the tag triggers `.github/workflows/publish.yml` which validates again, runs `check-publish-safety`, and publishes any package whose version npm doesn't have yet.
 
 ## What `pnpm release` does
 
 1. **Preflight** — verifies the working tree is clean, you're on `main` or a `release/<major>.x` branch, and that branch is in sync with its `origin` copy.
 2. **Validate** — runs `pnpm validate` (full workspace: lint + typecheck + test + build).
-3. **Bump functype family** — applies the new version to all 7 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-kysely`, `functype-mcp-server`). The list lives in `scripts/packages.ts`.
+3. **Bump functype family** — applies the new version to all 8 family `package.json`s (`functype`, `functype-os`, `functype-log`, `functype-react`, `functype-eval`, `functype-kysely`, `functype-hono`, `functype-mcp-server`). The list lives in `scripts/packages.ts`.
 4. **Sync eslint mirror** — runs `pnpm sync:eslint-mirror`, computing the eslint pair version from the encoding `eslint = 2.{functype.major*100 + functype.minor}.{functype.patch}` (e.g. `functype@1.1.0` → `eslint@2.101.0`).
 5. **Sync mcp-server `server.json`** — `pnpm -F functype-mcp-server sync:registry` writes the new version to the MCP registry manifest.
 6. **Cut CHANGELOG** — takes `## Unreleased` content in `packages/functype/CHANGELOG.md` and rewrites the heading to `## {version} - {date}`, leaving a fresh empty `## Unreleased` at top.
@@ -37,7 +37,7 @@ That's it. `pnpm release` bumps all 9 packages, runs every safety gate locally, 
 4. **Verify the release installs** — `pnpm verify-published` (see below). The GitHub release is created only after it passes.
 5. **GitHub release** — creates a release entry with auto-generated notes from commits between this tag and the previous one.
 
-OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server`, `functype-kysely` and the eslint pair publish via `NPM_TOKEN`. A new package can't have a trusted publisher until its first version exists, so it publishes with the token until one is set up.
+OIDC trusted publishing produces npm provenance attestations for `functype`, `functype-os`, `functype-log`, `functype-react`. `functype-mcp-server`, `functype-kysely`, `functype-hono` and the eslint pair publish via `NPM_TOKEN`. A new package can't have a trusted publisher until its first version exists, so it publishes with the token until one is set up.
 
 ## Release branches (`release/<major>.x`)
 
@@ -70,7 +70,7 @@ From 2.0-prep until 2.0.0 shipped, both served `release/1.x` instead, so users r
 
 "Published" in the publish log means npm accepted the upload, not that anyone can install it. In 1.16.1 and 1.17.0, `functype-log`, `functype-eval` and `functype-mcp-server` had `latest` pointing at the new version while its metadata and tarball returned 404, so a clean `npm install` failed for about 6 minutes. Both cleared on their own.
 
-`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 9 install.
+`pnpm verify-published` reads the document `npm install` reads, the abbreviated packument at `registry.npmjs.org/<name>`. It checks that the packument lists the version, that the dist-tag points at it, and that its tarball answers 200. It retries every 30 seconds for up to 30 minutes, and each request times out after 15 seconds. It exits 0 once all 10 install.
 
 - **It fails in CI:** don't republish. A staged version can still finish or roll back on its own, and republishing over it gets `E409`. Re-run `pnpm verify-published` locally until it passes, then create the GitHub release by hand: `gh release create vX.Y.Z --generate-notes`. For a release on an older line than npm `latest`, such as a 1.x fix after 2.0.0, add `--latest=false --notes-start-tag <the previous tag on that major>`; `pnpm exec tsx scripts/publish-tag.ts vX.Y.Z` prints both.
 - **Check one version:** `pnpm verify-published functype@1.16.1`.
@@ -82,7 +82,7 @@ The publish gate refuses to proceed if any of these holds:
 
 1. **Unauthorized major.** Any package bumping its major version requires `ALLOW_MAJOR=<pkg>[,<pkg>]` env on the publish step. Per-release authorization, no "always allow" mode.
 2. **Downgrade.** Local version below the highest npm version on its own functype line, so a 1.x fix after 2.0.0 is compared with 1.x, not with `latest`. The eslint pair's line is its minor divided by 100. Never auto-authorized. See `scripts/publish-line.ts`.
-3. **Family alignment drift.** The 7 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
+3. **Family alignment drift.** The 8 functype-* packages must be at the same version. Drift here means something bypassed `pnpm release` (manual edit, conflict resolution, snapshot leakage, dependabot).
 4. **Eslint mirror drift.** The eslint pair must match `2.{functype.major*100 + functype.minor}.{functype.patch}`. Verified by `pnpm sync:eslint-mirror:check`.
 5. **mcp-server `server.json` drift.** The MCP registry manifest version must match `packages/mcp-server/package.json`. Verified by `pnpm -F functype-mcp-server sync:registry:check`.
 6. **Unlisted package.** Every non-private workspace package must be in `scripts/packages.ts`, the one list `release.ts`, this gate, `verify-published` and `sync-eslint-mirror` all read. Otherwise `pnpm -r publish` would publish it with no bump, alignment check or install check.
@@ -116,13 +116,13 @@ The `×100` reserves headroom for double-digit minors. At `functype.minor >= 100
 When you intentionally do a major:
 
 ```bash
-ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-eval,functype-kysely,functype-mcp-server" pnpm release major
+ALLOW_MAJOR="functype,functype-os,functype-log,functype-react,functype-eval,functype-kysely,functype-hono,functype-mcp-server" pnpm release major
 git push --follow-tags
 ```
 
 And edit `.github/workflows/publish.yml` to set the same `ALLOW_MAJOR` on the `Check publish safety` step env. Remove the override in a follow-up PR after the major lands.
 
-(All 7 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
+(All 8 family packages must be listed because the family bumps together and `check-publish-safety` requires explicit per-package authorization for any major.)
 
 ## Snapshot releases (testing pre-publish)
 
@@ -148,7 +148,7 @@ A more polished snapshot mode could be added to `release.ts` (a `--dry-run` flag
 - Workflow filename: `publish.yml`
 - Environment: (blank)
 
-`functype-mcp-server`, `functype-kysely` and the eslint pair publish via `NPM_TOKEN`. A new package can't have a trusted publisher until its first version exists, so it publishes with the token until one is set up. The token is stored as a repo secret; no per-package npm config needed.
+`functype-mcp-server`, `functype-kysely`, `functype-hono` and the eslint pair publish via `NPM_TOKEN`. A new package can't have a trusted publisher until its first version exists, so it publishes with the token until one is set up. The token is stored as a repo secret; no per-package npm config needed.
 
 ## Node version requirement
 

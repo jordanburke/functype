@@ -367,7 +367,7 @@ Http.put(url, { body, decode })   // PUT
 Http.patch(url, { body, decode }) // PATCH
 Http.delete(url, opts?)           // DELETE
 Http.request({ url, decode })     // Full control (url, method, headers, body, parseAs, decode, flatten, params)
-Http.client(config)               // Create client with baseUrl, defaultHeaders, custom fetch, beforeRequest, afterResponse
+Http.client(config): HttpMethods  // Create client with baseUrl, defaultHeaders, custom fetch, beforeRequest, afterResponse
 
 // HttpClientConfig hooks:
 //   beforeRequest: (HttpRequestView) => IO<never, HttpError, HttpRequestView>
@@ -428,6 +428,7 @@ DecoderError.leaf(path, message, cause?)      // single failure at a path
 DecoderError.composite(path, children)        // aggregate; paths absolute on leaves after prepend
 DecoderError.flatten(e): List<{path, message}> // collect all leaves
 DecoderError.format(e): string                // multi-line render for display
+DecoderError.formatPath(path): string         // one path as format renders it: endpoints[1].name, (root)
 ```
 
 ## functype Refactoring Patterns

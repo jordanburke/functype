@@ -419,8 +419,8 @@ describe("Db.transaction edge cases", () => {
     expect(await ids()).toEqual(["a"])
   })
 
-  /** PGlite, with RELEASE SAVEPOINT held back 100 ms. */
-  const slowReleaseDialect = (inner: Dialect): Dialect => ({
+  /** PGlite, with RELEASE SAVEPOINT held back `delay` ms; `onRelease` runs as it starts. */
+  const slowReleaseDialect = (inner: Dialect, onRelease: () => void, delay = 100): Dialect => ({
     createAdapter: () => inner.createAdapter(),
     createIntrospector: (d) => inner.createIntrospector(d),
     createQueryCompiler: () => inner.createQueryCompiler(),
@@ -432,7 +432,10 @@ describe("Db.transaction edge cases", () => {
           const connection = await driver.acquireConnection()
           const wrapper: DatabaseConnection = {
             executeQuery: async (query) => {
-              if (query.sql.startsWith("release savepoint")) await settle(100)
+              if (query.sql.startsWith("release savepoint")) {
+                onRelease()
+                await settle(delay)
+              }
               return connection.executeQuery(query)
             },
             streamQuery: (query, chunkSize) => connection.streamQuery(query, chunkSize),
@@ -451,15 +454,63 @@ describe("Db.transaction edge cases", () => {
   const inners = new WeakMap<DatabaseConnection, DatabaseConnection>()
   const unwrap = (c: DatabaseConnection): DatabaseConnection => inners.get(c) ?? c
 
-  it("refuses to commit when a timeout gives up on a nested transaction during its release", async () => {
-    const slow = new Kysely<Database>({ dialect: slowReleaseDialect(new PGliteDialect(pglite)) })
+  it("refuses to commit when an IO.all sibling fails during a nested transaction's release", async () => {
+    // The sibling fails as RELEASE SAVEPOINT starts, so IO.all gives up on the nested transaction then.
+    const releasing = Promise.withResolvers<void>()
+    const slow = new Kysely<Database>({
+      dialect: slowReleaseDialect(new PGliteDialect(pglite), () => releasing.resolve()),
+    })
+    // Both effects share one type for IO.all.
+    const nested = Db.transaction(insert("n")).mapError((e): DbError | Overdrawn => e)
+    const sibling = IO.service(Db.tag).flatMap(() =>
+      IO.async(() => releasing.promise)
+        .recoverWith((e) => IO.die(e))
+        // IO is invariant in its types, so the failing step is cast to the shared type.
+        .flatMap(() => IO.fail(overdrawn("sibling")) as unknown as typeof nested),
+    )
     const result = await Db.transaction(
       insert("a")
-        .flatMap(() =>
-          Db.transaction(insert("n"))
-            .timeout(30)
-            .recover(() => undefined),
-        )
+        .flatMap(() => IO.all([nested, sibling]).recover(undefined))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+
+  it("refuses to commit when a timeout gives up on a nested transaction during its release", async () => {
+    // The release is held 400 ms and the timeout is 200 ms, so it lands in the release unless
+    // opening the savepoint and one insert take over 200 ms.
+    const slow = new Kysely<Database>({ dialect: slowReleaseDialect(new PGliteDialect(pglite), () => undefined, 400) })
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => Db.transaction(insert("n")).timeout(200).recover(undefined))
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+
+  it("refuses to commit when a cancel gives up on a nested transaction during its release", async () => {
+    // The cancel fires as RELEASE SAVEPOINT starts, so the test doesn't depend on timing.
+    const controller = new AbortController()
+    const slow = new Kysely<Database>({
+      dialect: slowReleaseDialect(new PGliteDialect(pglite), () => controller.abort()),
+    })
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() => Db.transaction(insert("n")).interruptOn(controller.signal).recover(undefined))
         .flatMap(() => insert("b")),
     )
       .provideService(Db.tag, slow)
@@ -473,7 +524,7 @@ describe("Db.transaction edge cases", () => {
   })
 })
 
-describe("Db.transaction after a NoResultError", () => {
+describe("Db.transaction after a not-found error", () => {
   it("refuses to commit when the callback's other statement failed, even one sent later", async () => {
     const notFound = (d: Kysely<Database>) =>
       d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow()
@@ -498,5 +549,15 @@ describe("Db.transaction after a NoResultError", () => {
       expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
       expect(await ids()).toEqual([])
     }
+  })
+})
+
+describe("Db.transaction with a race", () => {
+  it("refuses to commit after racing two queries, since the race gives up on the loser", async () => {
+    const result = await Db.transaction(IO.race([insert("w"), insert("l")]))
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isLeft() && result.value).toEqual(recoveredQueryError())
+    expect(await ids()).toEqual([])
   })
 })

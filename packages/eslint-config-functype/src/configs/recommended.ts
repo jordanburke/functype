@@ -1,28 +1,12 @@
-import {
-  createValidationError,
-  shouldValidateDependencies,
-  validatePeerDependencies,
-} from "../utils/dependency-validator"
+import { languageOptions, plugins, typescriptFiles } from "./base"
 
-// Validate peer dependencies on config load
-if (shouldValidateDependencies()) {
-  const result = validatePeerDependencies()
-  if (!result.isValid) {
-    throw createValidationError(result)
-  }
-
-  // Log warnings for missing optional dependencies
-  if (result.warnings.length > 0) {
-    console.warn("\n⚠️  eslint-config-functype warnings:")
-    result.warnings.forEach((warning) => console.warn(`   ${warning}`))
-    console.warn("")
-  }
-}
-
-// ESLint 9.x Flat Config Format
-// Complete functional TypeScript config with formatting and import organization
+// ESLint flat config: a complete preset for TypeScript files. It registers the parser, with type
+// information, and every plugin its rules use, so `export default [recommended]` lints on its own.
 export default {
   name: "functype/recommended",
+  files: typescriptFiles,
+  languageOptions,
+  plugins,
   rules: {
     // Core JavaScript immutability
     "prefer-const": "error",

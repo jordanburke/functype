@@ -340,7 +340,12 @@ const head = (url: string, options?: HttpMethodOptions<void>): IO<never, HttpErr
 const optionsMethod = (url: string, options?: HttpMethodOptions<void>): IO<never, HttpError, HttpResponse<void>> =>
   request<void>({ ...options, url, method: "OPTIONS", parseAs: "raw" })
 
-type HttpMethods = {
+/**
+ * The client `Http.client(config)` returns: `request` and one method per HTTP verb, each bound to the client's config.
+ * Name it to pass a client around, such as `(http: HttpMethods) => http.get("/health")`.
+ * Not to be confused with `HttpMethod`, the verb union `"GET" | "POST" | …`.
+ */
+export type HttpMethods = {
   readonly request: <T = unknown, TReq = unknown>(
     options: HttpRequestOptions<T, TReq>,
   ) => IO<never, HttpError, HttpResponse<T>>

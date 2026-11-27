@@ -304,8 +304,15 @@ const compilerOptions = (): ts.CompilerOptions => {
         ),
       ],
       ...exportPaths(join(REPO_ROOT, "packages", "functype-kysely")),
+      ...exportPaths(join(REPO_ROOT, "packages", "functype-hono")),
       // functype-kysely's README imports Kysely's types; functype itself doesn't depend on it.
       kysely: [join(REPO_ROOT, "packages", "functype-kysely", "node_modules", "kysely", "dist", "index.d.ts")],
+      // functype-hono's README imports Hono, which functype doesn't depend on either.
+      hono: [join(REPO_ROOT, "packages", "functype-hono", "node_modules", "hono", "dist", "types", "index.d.ts")],
+      "hono/*": [
+        join(REPO_ROOT, "packages", "functype-hono", "node_modules", "hono", "dist", "types", "*", "index.d.ts"),
+        join(REPO_ROOT, "packages", "functype-hono", "node_modules", "hono", "dist", "types", "*.d.ts"),
+      ],
     },
   }
 }
