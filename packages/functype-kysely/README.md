@@ -133,7 +133,7 @@ Inside a nested transaction, use the handle `Db.query` gives you. Re-providing a
 A codebase can move one function at a time.
 
 - **Provide `Db.tag` where you provided your own tag.** If the code already reads a `Kysely` from a functype `Tag`, point that name at `Db.tag`. Every `IO.service(tag)` and `provideService(tag, db)` keeps working, and `Db.transaction` sees the same handle.
-- **Wrap an `async` helper as one `Db.query`.** Pass it the handle `Db.query` gives you, not one captured earlier, or its statements run outside the transaction. Map its own error with `toError`, and let the rest become a `DbError`:
+- **Wrap an `async` helper as one `Db.query`.** Pass it the handle `Db.query` gives you, not one captured earlier: a captured handle's statements run outside the transaction, or, on a pool with one connection, wait for it forever. Map its own error with `toError`, and let the rest become a `DbError`:
 
 ```ts
 import type { Kysely } from "kysely"
@@ -153,7 +153,13 @@ const approve = (id: string) =>
 // IO<Kysely<Database>, NotFound | DbError, void>
 ```
 
-This is safe inside `Db.transaction`. The helper's statements run as one step under the transaction's lock. A rejection fails the program, so the transaction rolls back, and if the program recovers from it, the commit is refused instead. To recover from the helper's error and still commit, run it in a nested `Db.transaction`.
+Inside `Db.transaction`, the helper's statements run as one step under the transaction's lock. When the helper rejects, the program fails and the transaction rolls back; if the program recovers from that, the commit is refused instead. To recover from the helper's error and still commit, run it in a nested `Db.transaction`.
+
+Three kinds of helper need a change first:
+
+- **A helper that catches a failed statement and carries on.** The refused commit only sees the callback reject. On Postgres, the caught statement has already aborted the transaction, so its `COMMIT` rolls back without an error, and the run reports success with nothing written. Plain Kysely does the same. Make the helper rethrow, or move the statement that may fail into a `Db.query` of its own inside a nested `Db.transaction`.
+- **A helper that opens its own transaction** with `d.transaction().execute(…)`. Kysely rejects that on a transaction handle, so the call fails and rolls back. Move it to `Db.transaction`.
+- **A helper that runs an already-moved function with `.run()`** on the handle it was given. The run waits for the lock its own callback holds, so it hangs, as under Nesting above. Call that function from the IO program instead.
 
 ## Two databases
 

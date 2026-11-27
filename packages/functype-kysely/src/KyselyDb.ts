@@ -93,8 +93,10 @@ export type KyselyDb<DB> = {
    *
    * Both rules cover `Db.query` and `Db.queryOption` only. Any rejection of their function counts
    * as a failed query, Kysely's `NoResultError` included, so read a row that may be missing with
-   * `Db.queryOption` and `executeTakeFirst`, not `executeTakeFirstOrThrow`. A statement run on the handle directly, or on one derived from
-   * it with `withSchema` or `withPlugin`, isn't serialized or checked.
+   * `Db.queryOption` and `executeTakeFirst`, not `executeTakeFirstOrThrow`. A function that catches
+   * a failed statement and resolves isn't a failed query, so on Postgres its COMMIT rolls back
+   * silently. A statement run on the handle directly, or on one derived from it with `withSchema`
+   * or `withPlugin`, isn't serialized or checked.
    *
    * **Nesting uses a savepoint.** A `transaction` inside another one opens a savepoint, not a
    * second transaction. When the inner program fails, its writes roll back to the savepoint and the

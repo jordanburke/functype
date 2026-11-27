@@ -92,6 +92,14 @@ describe("Db.queryOption", () => {
     expect(missing.isNone()).toBe(true)
   })
 
+  it("keeps a falsy value other than null or undefined as Some", async () => {
+    const isSome = <A>(value: A) => Db.queryOption(() => Promise.resolve(value)).map((found) => found.isSome())
+    const found = await IO.all([isSome(0), isSome(""), isSome(false)])
+      .provideService(Db.tag, db)
+      .run()
+    expect(found.orThrow()).toEqual([true, true, true])
+  })
+
   it("treats a null result as None", async () => {
     const io = Db.queryOption(() => Promise.resolve(null))
     expectTypeOf(io).toEqualTypeOf<IOType<Kysely<Database>, DbError, Option<never>>>()
