@@ -1,0 +1,25 @@
+---
+import DocLayout from "../layouts/DocLayout.astro";
+// Rendered straight from the package README, so npm and the site show the same text.
+import { Content as FunctypeHonoReadme } from "../../../packages/functype-hono/README.md";
+
+const links = [
+  {
+    href: "https://www.npmjs.com/package/functype-hono",
+    label: "npm package",
+  },
+  {
+    href: "https://github.com/jordanburke/functype/tree/main/packages/functype-hono",
+    label: "Source on GitHub",
+  },
+];
+---
+
+<DocLayout
+  title="functype-hono: Hono responses and RPC calls as typed IO | functype"
+  heading="functype-hono"
+  tagline="Turn an IO into a Hono response with every status typed for the RPC client, and run RPC client calls as IO with typed errors."
+  links={links}
+>
+  <FunctypeHonoReadme />
+</DocLayout>

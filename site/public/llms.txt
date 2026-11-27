@@ -80,6 +80,7 @@ Install with `npm install functype`. Every type listed below is also available f
 - [ESLint Config](https://functype.org/eslint-config): Flat-config presets combining typescript-eslint, Prettier and import sorting; pairs with the plugin
 - [functype-log](https://functype.org/functype-log): IO-native logging with Tag/Layer DI, a console logger, a one-function sink and test utilities
 - [functype-kysely](https://functype.org/functype-kysely): Kysely queries as typed IO, and transactions that roll back on a typed failure, a defect or a cancel
+- [functype-hono](https://functype.org/functype-hono): Hono responses from IO with every status typed for the RPC client, and RPC client calls as IO
 - [functype-os](https://functype.org/functype-os): Env vars, paths, files, platform detection and config lookup as Option, Either and IO
 - [functype-react](https://functype.org/functype-react): React hooks and pattern-matching components for functype types (early release)
 - [functype-eval](https://functype.org/functype-eval): Scores a codebase's functype adherence 0-100, with a per-file baseline/check ratchet

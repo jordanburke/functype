@@ -1,0 +1,80 @@
+{
+  "name": "functype-hono",
+  "version": "2.2.2",
+  "description": "Hono for functype — respond to a request from an IO, and call a typed Hono client as an IO",
+  "keywords": [
+    "functype",
+    "hono",
+    "rpc",
+    "http",
+    "io",
+    "typescript",
+    "functional"
+  ],
+  "author": "jordan.burke@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/jordanburke/functype/tree/main/packages/functype-hono",
+  "bugs": {
+    "url": "https://github.com/jordanburke/functype/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jordanburke/functype",
+    "directory": "packages/functype-hono"
+  },
+  "scripts": {
+    "validate": "ts-builds validate",
+    "format": "ts-builds format",
+    "format:check": "ts-builds format:check",
+    "lint": "ts-builds lint",
+    "lint:check": "eslint src --max-warnings 0",
+    "typecheck": "ts-builds typecheck",
+    "test": "ts-builds test",
+    "test:watch": "ts-builds test:watch",
+    "test:coverage": "ts-builds test:coverage",
+    "build": "ts-builds build",
+    "dev": "ts-builds dev",
+    "prepublishOnly": "pnpm validate"
+  },
+  "peerDependencies": {
+    "functype": ">=2.0.0",
+    "hono": ">=4.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "eslint-config-prettier": "^10.1.8",
+    "functype": "workspace:^",
+    "hono": "4.13.19",
+    "ts-builds": "^5.0.0",
+    "tsdown": "^0.23.7",
+    "vitest": "^5.1.1"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "import": "./dist/client/index.js",
+      "default": "./dist/client/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "prettier": "ts-builds/prettier",
+  "engines": {
+    "node": ">=18.17.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
