@@ -396,3 +396,65 @@ describe("Db.transaction after a query a timeout gave up on", () => {
     expect(await ids()).toEqual(["a", "b"])
   })
 })
+
+describe("Db.transaction edge cases", () => {
+  it("commits after a recovered executeTakeFirstOrThrow that found no row", async () => {
+    const missing = Db.query((d) =>
+      d.selectFrom("account").selectAll().where("id", "=", "nobody").executeTakeFirstOrThrow(),
+    )
+    const result = await Db.transaction(insert("a").flatMap(() => missing.recover(() => undefined)))
+      .provideService(Db.tag, db)
+      .run()
+    expect(result.isRight()).toBe(true)
+    expect(await ids()).toEqual(["a"])
+  })
+
+  /** PGlite, with RELEASE SAVEPOINT held back 100 ms. */
+  const slowReleaseDialect = (inner: Dialect): Dialect => ({
+    createAdapter: () => inner.createAdapter(),
+    createIntrospector: (d) => inner.createIntrospector(d),
+    createQueryCompiler: () => inner.createQueryCompiler(),
+    createDriver: () => {
+      const driver = inner.createDriver()
+      return {
+        init: () => driver.init(),
+        acquireConnection: async () => {
+          const connection = await driver.acquireConnection()
+          return {
+            executeQuery: async (query) => {
+              if (query.sql.startsWith("release savepoint")) await settle(100)
+              return connection.executeQuery(query)
+            },
+            streamQuery: (query, chunkSize) => connection.streamQuery(query, chunkSize),
+          }
+        },
+        beginTransaction: (c, s) => driver.beginTransaction(c, s),
+        commitTransaction: (c) => driver.commitTransaction(c),
+        rollbackTransaction: (c) => driver.rollbackTransaction(c),
+        releaseConnection: (c) => driver.releaseConnection(c),
+        destroy: () => driver.destroy(),
+      }
+    },
+  })
+
+  it("refuses to commit when a timeout gives up on a nested transaction during its release", async () => {
+    const slow = new Kysely<Database>({ dialect: slowReleaseDialect(new PGliteDialect(pglite)) })
+    const result = await Db.transaction(
+      insert("a")
+        .flatMap(() =>
+          Db.transaction(insert("n"))
+            .timeout(30)
+            .recover(() => undefined),
+        )
+        .flatMap(() => insert("b")),
+    )
+      .provideService(Db.tag, slow)
+      .run()
+    const error = result.fold(
+      (e) => e,
+      () => undefined,
+    )
+    expect(error?.message).toMatch(/after its savepoint was released/)
+    expect(await ids()).toEqual([])
+  })
+})

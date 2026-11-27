@@ -11,6 +11,7 @@ import {
   lockedQuery,
   markFailed,
   QUERY_FAILED,
+  RELEASED_THEN_GIVEN_UP,
   SAVEPOINT_ROLLBACK_FAILED,
   scopeOf,
   withLock,
@@ -67,6 +68,10 @@ export type KyselyDb<DB> = {
    * **Steps run one at a time.** The transaction is one connection: its queries, nested
    * transactions and commit wait for each other, even under `IO.all`.
    *
+   * Both rules cover `Db.query` only. Any rejection of its function counts as a failed query,
+   * except Kysely's `NoResultError`. A statement run on the handle directly, or on one derived from
+   * it with `withSchema` or `withPlugin`, isn't serialized or checked.
+   *
    * **Nesting uses a savepoint.** A `transaction` inside another one opens a savepoint, not a
    * second transaction. When the inner program fails, its writes roll back to the savepoint and the
    * outer transaction stays usable, so an outer `recover` can carry on. This needs a dialect with
@@ -79,7 +84,7 @@ export type KyselyDb<DB> = {
    *
    * The provided service can also be a transaction you opened with Kysely itself, such as the
    * `trx` in `db.transaction().execute(callback)`. Then `transaction` opens a savepoint in it, but
-   * Kysely owns the commit, so the two guards above don't apply to it.
+   * Kysely owns the commit, so neither the one-at-a-time lock nor the refused commit covers it.
    *
    * Inside a nested transaction, don't re-provide an outer handle captured earlier: the nested
    * transaction holds the outer one's lock, so a query on it waits forever.
@@ -215,6 +220,9 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
     const inner = childHandle(parent)
     const innerScope = scopeOf(inner)
     const savepoint = savepointName()
+    // Set once RELEASE SAVEPOINT succeeds. A cancel can still land after it, and then there is no
+    // savepoint left to roll back to: its writes are already the parent's.
+    const released = { value: false }
     // Release and rollback take the savepoint's own lock, so they wait for a query in it that a
     // timeout gave up on: its write lands before the rollback, which then undoes it.
     const rollback = (): IOType<never, never, void> =>
@@ -243,11 +251,19 @@ export const KyselyDb = <DB>(name = "Db"): KyselyDb<DB> => {
             program.provideService(tag, handle).flatMap((a) =>
               withLock(
                 innerScope,
-                finish(innerScope, () => savepointSql(handle, "release savepoint", savepoint)),
+                finish(innerScope, () =>
+                  savepointSql(handle, "release savepoint", savepoint).then(() => {
+                    released.value = true
+                  }),
+                ),
               ).map(() => a),
             ),
           ),
-        (_handle, exit) => widen<R, never, void>(exit.fold(rollback, () => IO.succeed(undefined), rollback, rollback)),
+        (_handle, exit) => {
+          const undo = (): IOType<never, never, void> =>
+            released.value ? IO.sync(() => markFailed(parentScope, RELEASED_THEN_GIVEN_UP)) : rollback()
+          return widen<R, never, void>(exit.fold(undo, () => IO.succeed(undefined), undo, undo))
+        },
       ),
     )
   }
