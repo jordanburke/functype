@@ -119,6 +119,8 @@ export interface OptionBase<out T extends Type>
    * @returns The result of applying the appropriate function
    */
   fold<U>(onNone: () => U, onSome: (value: T) => U): U
+  /** The two branches may return different types; the result is their union. */
+  fold<U, V>(onNone: () => U, onSome: (value: T) => V): U | V
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -199,6 +201,8 @@ export interface OptionBase<out T extends Type>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Some: (value: T) => R; None: () => S }): R | S
 }
 
 /** An Option holding a value. Discriminated by `_tag: "Some"`. */
@@ -278,13 +282,13 @@ const SomeProto = define<SomeOf<A>>()("Some", {
   forEach(f) {
     f(this.value)
   },
-  fold(_onNone, onSome) {
+  fold<U, V>(_onNone: () => U, onSome: (value: A) => V): U | V {
     return onSome(this.value)
   },
   async foldAsync(_onNone, onSome) {
     return onSome(this.value)
   },
-  match(patterns) {
+  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): R | S {
     return patterns.Some(this.value)
   },
   flatMap(f) {
@@ -401,13 +405,13 @@ const NoneProto = define<NoneOf<A>>()("None", {
     return true
   },
   forEach() {},
-  fold(onNone) {
+  fold<U, V>(onNone: () => U): U | V {
     return onNone()
   },
   async foldAsync(onNone) {
     return onNone()
   },
-  match(patterns) {
+  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): R | S {
     return patterns.None()
   },
   flatMap() {

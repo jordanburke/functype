@@ -116,6 +116,8 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): R | S
 }
 
 /**
@@ -256,7 +258,7 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
     return (op) => this.value.reduceRight((acc, value) => op(value, acc), z)
   },
 
-  match(patterns) {
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): R | S {
     return this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value])
   },
 

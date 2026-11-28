@@ -95,6 +95,8 @@ export interface TryBase<out T>
    * @returns The result of applying the appropriate function
    */
   fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
+  /** The two branches may return different types; the result is their union. */
+  fold<U extends Type, V extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => V): U | V
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -110,6 +112,8 @@ export interface TryBase<out T>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Success: (value: T) => R; Failure: (error: Error) => S }): R | S
   /**
    * Recovers from a Failure by applying a function to the error, returning a new Try.
    * The recovery value may be a wider type; the result is `Try<T | U>`, matching
@@ -206,13 +210,13 @@ const SuccessProto = define<SuccessOf<A>>()("Success", {
   async flatMapAsync(f) {
     return f(this.value)
   },
-  fold(_onFailure, onSuccess) {
+  fold<U, V>(_onFailure: (error: Error) => U, onSuccess: (value: A) => V): U | V {
     return onSuccess(this.value)
   },
   async foldAsync(_onFailure, onSuccess) {
     return onSuccess(this.value)
   },
-  match(patterns) {
+  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): R | S {
     return patterns.Success(this.value)
   },
   recover() {
@@ -325,13 +329,13 @@ const FailureProto = define<FailureOf<A>>()("Failure", {
   flatMapAsync() {
     return Promise.resolve(Failure(this.error))
   },
-  fold(onFailure) {
+  fold<U, V>(onFailure: (error: Error) => U): U | V {
     return onFailure(this.error)
   },
   async foldAsync(onFailure) {
     return onFailure(this.error)
   },
-  match(patterns) {
+  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): R | S {
     return patterns.Failure(this.error)
   },
   recover(f) {

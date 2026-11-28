@@ -103,6 +103,8 @@ export interface OptionBase<out T extends Type>
    * @returns The result of applying the appropriate function
    */
   fold<U>(onNone: () => U, onSome: (value: T) => U): U
+  /** The two branches may return different types; the result is their union. */
+  fold<U, V>(onNone: () => U, onSome: (value: T) => V): U | V
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -183,6 +185,8 @@ export interface OptionBase<out T extends Type>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Some: (value: T) => R; None: () => S }): R | S
 }
 
 export interface SomeOf<out T extends Type> extends OptionBase<T> {
@@ -277,6 +281,8 @@ export interface EitherBase<out L extends Type, out R extends Type>
   filterOrElse<L2 extends Type>(predicate: (value: R) => boolean, onUnsatisfied: (value: R) => L2): Either<L | L2, R>
   bimap<L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2): Either<L2, R2>
   fold<T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T): T
+  /** The two branches may return different types; the result is their union. */
+  fold<T extends Type, U extends Type>(onLeft: (value: L) => T, onRight: (value: R) => U): T | U
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise, keeping chains fluent when at least one branch is async.
@@ -296,6 +302,8 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * Pattern matches over the Either, applying a handler function based on the variant
    */
   match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
+  /** The two branches may return different types; the result is their union. */
+  match<T, U>(patterns: { Left: (value: L) => T; Right: (value: R) => U }): T | U
   /**
    * Returns the value and tag for inspection
    */
@@ -385,6 +393,8 @@ export interface TryBase<out T>
    * @returns The result of applying the appropriate function
    */
   fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
+  /** The two branches may return different types; the result is their union. */
+  fold<U extends Type, V extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => V): U | V
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -400,6 +410,8 @@ export interface TryBase<out T>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Success: (value: T) => R; Failure: (error: Error) => S }): R | S
   /**
    * Recovers from a Failure by applying a function to the error, returning a new Try.
    * The recovery value may be a wider type; the result is \`Try<T | U>\`, matching
@@ -526,6 +538,8 @@ export interface FailureOf<out T> extends TryBase<T> {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): R | S
 }`,
 
   Set: `export interface Set<out A> extends FunctypeCollection<A, "Set">, Collection<A> {
@@ -642,6 +656,8 @@ export interface FailureOf<out T> extends TryBase<T> {
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => S }): R | S
   toValue(): { _tag: "Map"; value: [K, V][] }
 }`,
 
@@ -923,6 +939,13 @@ export interface ExitBase<E extends Type, A extends Type> {
     onInterrupted?: (fiberId: string) => T,
     onDie?: (defect: unknown) => T,
   ): T
+  /** The handlers may return different types; the result is their union. */
+  fold<T, U, V = T, W = T>(
+    onFailure: (e: E) => T,
+    onSuccess: (a: A) => U,
+    onInterrupted?: (fiberId: string) => V,
+    onDie?: (defect: unknown) => W,
+  ): T | U | V | W
 
   /**
    * Pattern matches over the Exit with object patterns.
@@ -936,6 +959,13 @@ export interface ExitBase<E extends Type, A extends Type> {
     Interrupted: (fiberId: string) => T
     Die?: (defect: unknown) => T
   }): T
+  /** The handlers may return different types; the result is their union. */
+  match<T, U, V = T, W = T>(patterns: {
+    Success: (value: A) => T
+    Failure: (error: E) => U
+    Interrupted: (fiberId: string) => V
+    Die?: (defect: unknown) => W
+  }): T | U | V | W
 
   /**
    * Returns the success value or throws

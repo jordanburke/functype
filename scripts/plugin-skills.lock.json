@@ -1,10 +1,10 @@
 {
   "functype": {
-    "version": "2.2.1",
-    "sha256": "966019b5b49a10605a564150a4a42d743eb095ac7e046ace2d8c54b530b750f3"
+    "version": "2.2.2",
+    "sha256": "3718a124b02463efffd87842e4e158735f329ea21ded52aeab4b4fbfd35e02bb"
   },
   "functype-developer": {
-    "version": "1.0.9",
-    "sha256": "3fa0c66f3125b1767fa780e26c02ab71966362d4baf9c90030c40fd1ea8f96fc"
+    "version": "1.0.10",
+    "sha256": "250c0522996f2d0e3e14be636f16ce63ba52d72f04a9ccc7b61495499c8fb6db"
   }
 }

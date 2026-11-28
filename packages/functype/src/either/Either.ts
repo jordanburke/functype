@@ -106,6 +106,8 @@ export interface EitherBase<out L extends Type, out R extends Type>
   filterOrElse<L2 extends Type>(predicate: (value: R) => boolean, onUnsatisfied: (value: R) => L2): Either<L | L2, R>
   bimap<L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2): Either<L2, R2>
   fold<T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T): T
+  /** The two branches may return different types; the result is their union. */
+  fold<T extends Type, U extends Type>(onLeft: (value: L) => T, onRight: (value: R) => U): T | U
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise, keeping chains fluent when at least one branch is async.
@@ -125,6 +127,8 @@ export interface EitherBase<out L extends Type, out R extends Type>
    * Pattern matches over the Either, applying a handler function based on the variant
    */
   match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
+  /** The two branches may return different types; the result is their union. */
+  match<T, U>(patterns: { Left: (value: L) => T; Right: (value: R) => U }): T | U
   /**
    * Returns the value and tag for inspection
    */
@@ -260,7 +264,7 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   bimap(_fl, fr) {
     return RightConstructor(fr(this.value))
   },
-  fold(_onLeft, onRight) {
+  fold<T, U>(_onLeft: (value: B) => T, onRight: (value: A) => U): T | U {
     return onRight(this.value)
   },
   async foldAsync(_onLeft, onRight) {
@@ -272,7 +276,7 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   foldRight(z) {
     return (op) => op(this.value, z)
   },
-  match(patterns) {
+  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): T | U {
     return patterns.Right(this.value)
   },
   swap() {
@@ -403,7 +407,7 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   bimap(fl) {
     return LeftConstructor(fl(this.value))
   },
-  fold(onLeft) {
+  fold<T, U>(onLeft: (value: B) => T): T | U {
     return onLeft(this.value)
   },
   async foldAsync(onLeft) {
@@ -415,7 +419,7 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   foldRight(z) {
     return () => z
   },
-  match(patterns) {
+  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): T | U {
     return patterns.Left(this.value)
   },
   swap() {

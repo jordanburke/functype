@@ -213,14 +213,14 @@ All Serializable types provide static deserialization methods:
 
 Note: `fold` has different semantics per type category:
 
-- **Sum types** (Option, Either, Try, IO): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match
+- **Sum types** (Option, Either, Try, IO): `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B` — pattern match. A second overload, `fold<B, C>(onEmpty: () => B, onValue: (value: A) => C): B | C`, takes branches of different types, such as `IO.fail(e)` against `IO.succeed(a)`.
 - **Collections** (List, Set, Map, Stack, Tuple, LazyList): `fold<B>(initial: B, fn: (acc: B, a: A) => B): B` — left-reduce accumulator
 
 `foldAsync` (Option, Either, Try) — same shape as `fold` but accepts sync or async handlers and always returns `Promise<B>`. Use when at least one branch performs async work to avoid `T | Promise<T>` unions.
 
 ### Matchable
 
-- `match<R>(patterns: Record<Tags, (value: A) => R>): R`
+- `match<R>(patterns: Record<Tags, (value: A) => R>): R`. A second overload takes handlers of different types and returns their union, as `fold` does.
 
 ### Serializable
 

@@ -68,6 +68,8 @@ export interface Map<K, out V>
    * @returns The result of applying the matching handler function
    */
   match<R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R
+  /** The two branches may return different types; the result is their union. */
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => S }): R | S
   toValue(): { _tag: "Map"; value: [K, V][] }
 }
 
@@ -174,7 +176,7 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
     return tuplesOf(this.value).reduce(fn, initial)
   },
 
-  match(patterns) {
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[A, B]>>) => S }): R | S {
     return this.value.size === 0 ? patterns.Empty() : patterns.NonEmpty(tuplesOf(this.value))
   },
 

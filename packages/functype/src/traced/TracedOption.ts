@@ -45,6 +45,8 @@ export type TracedOption<A> = {
   flatMap<B>(f: (a: A) => Option<B>, label?: string): TracedOption<B>
   filter(predicate: (a: A) => boolean, label?: string): TracedOption<A>
   fold<B>(onNone: () => B, onSome: (a: A) => B, label?: string): B
+  /** The two branches may return different types; the result is their union. */
+  fold<B, C>(onNone: () => B, onSome: (a: A) => C, label?: string): B | C
   getOrElse<B = never>(defaultValue: () => A | B, label?: string): A | B
   unwrap(): Option<A>
 }
@@ -107,7 +109,7 @@ const TracedOptionProto = define<TracedOptionOf<Hole>, "_tag" | "inner" | "trace
       return TracedOption(out, this.tracer, this.spanId, emit(this, "filter", variantOf(out), label, { kept }))
     },
 
-    fold(onNone, onSome, label) {
+    fold<B, C>(onNone: () => B, onSome: (a: Hole) => C, label?: string): B | C {
       emit(this, "fold", undefined, label)
       return this.inner.fold(onNone, onSome)
     },

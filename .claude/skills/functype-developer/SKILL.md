@@ -307,7 +307,7 @@ When implementing interfaces, refer to this checklist:
 
 **Foldable:**
 
-- [ ] `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
+- [ ] `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`, then the overload `fold<B, C>(onEmpty: () => B, onValue: (value: A) => C): B | C`. One-type first, so a call whose branches share a type keeps inferring it. Type the prototype's implementation with the two-type signature, since overloads give it no contextual types.
 - [ ] `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
 - [ ] `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
 
