@@ -3,6 +3,7 @@ import type { Foldable } from "@/foldable/Foldable"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { freezeInDevelopment } from "@/internal/freeze"
+import { unify } from "@/internal/unify"
 import { List } from "@/list/List"
 import type { Matchable } from "@/matchable"
 import { Option } from "@/option/Option"
@@ -11,7 +12,7 @@ import type { Serializable } from "@/serializable/Serializable"
 import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import type { Traversable } from "@/traversable/Traversable"
 import { reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 import type { Valuable } from "@/valuable/Valuable"
 
 /**
@@ -99,7 +100,7 @@ export type Stack<A extends Type> = {
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
    * @returns The result of applying the matching handler function
    */
-  match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
+  match<R, S = R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): Unify<R, S>
 } & Traversable<A> &
   Valuable<"Stack", A[]> &
   Serializable<A> &
@@ -205,8 +206,8 @@ const StackProto = define<StackOf<A>, "_tag" | "value">()("Stack", {
     return (op: (a: A, b: B) => B): B => this.value.reduceRight((acc, value) => op(value, acc), z)
   },
 
-  match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R {
-    return this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value])
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): Unify<R, S> {
+    return unify(this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value]))
   },
 
   toValue() {

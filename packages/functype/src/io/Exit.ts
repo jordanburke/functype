@@ -3,9 +3,10 @@ import type { Either } from "@/either/Either"
 import { Left, Right } from "@/either/Either"
 import { type A as AnyA, type B as AnyE, define, type Mutable } from "@/internal/define"
 import { safeStringify } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 /**
  * Exit type module - represents the outcome of running an IO effect.
@@ -73,19 +74,12 @@ export interface ExitBase<E extends Type, A extends Type> {
    * behaviour, where defects were indistinguishable from typed failures. Supply it
    * when the distinction matters; note the value it receives is `unknown`, not `E`.
    */
-  fold<T>(
-    onFailure: (e: E) => T,
-    onSuccess: (a: A) => T,
-    onInterrupted?: (fiberId: string) => T,
-    onDie?: (defect: unknown) => T,
-  ): T
-  /** The handlers may return different types; the result is their union. */
-  fold<T, U, V = T, W = T>(
+  fold<T, U = T, V = T, W = T>(
     onFailure: (e: E) => T,
     onSuccess: (a: A) => U,
     onInterrupted?: (fiberId: string) => V,
     onDie?: (defect: unknown) => W,
-  ): T | U | V | W
+  ): Unify<T, Unify<U, Unify<V, W>>>
 
   /**
    * Pattern matches over the Exit with object patterns.
@@ -93,19 +87,12 @@ export interface ExitBase<E extends Type, A extends Type> {
    * `Die` is optional for the same back-compat reason as {@link fold}'s `onDie`, and
    * falls back to `Failure` when absent.
    */
-  match<T>(patterns: {
-    Success: (value: A) => T
-    Failure: (error: E) => T
-    Interrupted: (fiberId: string) => T
-    Die?: (defect: unknown) => T
-  }): T
-  /** The handlers may return different types; the result is their union. */
-  match<T, U, V = T, W = T>(patterns: {
+  match<T, U = T, V = T, W = T>(patterns: {
     Success: (value: A) => T
     Failure: (error: E) => U
     Interrupted: (fiberId: string) => V
     Die?: (defect: unknown) => W
-  }): T | U | V | W
+  }): Unify<T, Unify<U, Unify<V, W>>>
 
   /**
    * Returns the success value or throws
@@ -235,16 +222,16 @@ const SuccessProto = define<SuccessExitOf<AnyE, AnyA>>()("Success", {
   flatMap(f) {
     return f(this.value)
   },
-  fold<T, U, V, W>(_onFailure: (e: AnyE) => T, onSuccess: (a: AnyA) => U): T | U | V | W {
-    return onSuccess(this.value)
+  fold<T, U, V, W>(_onFailure: (e: AnyE) => T, onSuccess: (a: AnyA) => U): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(onSuccess(this.value))
   },
   match<T, U, V, W>(patterns: {
     Success: (value: AnyA) => T
     Failure: (error: AnyE) => U
     Interrupted: (fiberId: string) => V
     Die?: (defect: unknown) => W
-  }): T | U | V | W {
-    return patterns.Success(this.value)
+  }): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(patterns.Success(this.value))
   },
   orThrow() {
     return this.value
@@ -296,16 +283,16 @@ const FailureProto = define<FailureExitOf<AnyE, AnyA>, "_tag" | "error">()("Fail
   flatMap() {
     return FailureExit(this.error)
   },
-  fold<T, U, V, W>(onFailure: (e: AnyE) => T): T | U | V | W {
-    return onFailure(this.error)
+  fold<T, U, V, W>(onFailure: (e: AnyE) => T): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(onFailure(this.error))
   },
   match<T, U, V, W>(patterns: {
     Success: (value: AnyA) => T
     Failure: (error: AnyE) => U
     Interrupted: (fiberId: string) => V
     Die?: (defect: unknown) => W
-  }): T | U | V | W {
-    return patterns.Failure(this.error)
+  }): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(patterns.Failure(this.error))
   },
   orThrow() {
     throw this.error
@@ -373,16 +360,16 @@ const DieProto = define<DieExitOf<AnyE, AnyA>, "_tag" | "defect">()("Die", {
     _onSuccess: (a: AnyA) => U,
     _onInterrupted?: (fiberId: string) => V,
     onDie?: (defect: unknown) => W,
-  ): T | U | V | W {
-    return onDie ? onDie(this.defect) : onFailure(this.defect as AnyE)
+  ): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(onDie ? onDie(this.defect) : onFailure(this.defect as AnyE))
   },
   match<T, U, V, W>(patterns: {
     Success: (value: AnyA) => T
     Failure: (error: AnyE) => U
     Interrupted: (fiberId: string) => V
     Die?: (defect: unknown) => W
-  }): T | U | V | W {
-    return patterns.Die ? patterns.Die(this.defect) : patterns.Failure(this.defect as AnyE)
+  }): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(patterns.Die ? patterns.Die(this.defect) : patterns.Failure(this.defect as AnyE))
   },
   orThrow() {
     throw this.defect
@@ -438,8 +425,8 @@ const InterruptedProto = define<InterruptedExitOf<AnyE, AnyA>, "_tag" | "fiberId
     _onFailure: (e: AnyE) => T,
     _onSuccess: (a: AnyA) => U,
     onInterrupted?: (fiberId: string) => V,
-  ): T | U | V | W {
-    if (onInterrupted) return onInterrupted(this.fiberId)
+  ): Unify<T, Unify<U, Unify<V, W>>> {
+    if (onInterrupted) return unify(onInterrupted(this.fiberId))
     throw interruptedError(this.fiberId)
   },
   match<T, U, V, W>(patterns: {
@@ -447,8 +434,8 @@ const InterruptedProto = define<InterruptedExitOf<AnyE, AnyA>, "_tag" | "fiberId
     Failure: (error: AnyE) => U
     Interrupted: (fiberId: string) => V
     Die?: (defect: unknown) => W
-  }): T | U | V | W {
-    return patterns.Interrupted(this.fiberId)
+  }): Unify<T, Unify<U, Unify<V, W>>> {
+    return unify(patterns.Interrupted(this.fiberId))
   },
   orThrow() {
     throw interruptedError(this.fiberId)

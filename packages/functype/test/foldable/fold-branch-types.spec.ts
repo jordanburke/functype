@@ -1,13 +1,14 @@
 import { describe, expect, expectTypeOf, it } from "vitest"
 
 import type { IOType } from "@/index"
-import { Either, Exit, IO, List, Map, None, Obj, Option, Some, Try } from "@/index"
+import { Either, Exit, IO, Left, List, Map, None, Obj, Option, Right, Some, Stack, Try } from "@/index"
 import { TracedOption } from "@/traced"
 
 /**
- * `fold` and `match` on a sum type take branches of different types, and return their union
- * (#653). Each has two overloads: the one-type form first, so every call that compiled before
- * keeps its inferred type, and the two-type form second, for branches that differ.
+ * `fold` and `match` on a sum type take branches of different types (#653). The result is
+ * `Unify<U, V>`: the wider branch type when one contains the other, so every call that compiled
+ * before keeps its inferred type, and `U | V` otherwise. It is one signature, not an overload
+ * pair, because TypeScript can't call an overloaded method on a union receiver.
  */
 
 type Forbidden = { readonly _tag: "Forbidden" }
@@ -53,7 +54,10 @@ describe("fold and match with branches of different types", () => {
     expectTypeOf(io).toEqualTypeOf<IOType<never, Forbidden, never> | IOType<never, Missing, never>>()
   })
 
-  it("widens match on Option, Either, Try, List and Map", () => {
+  it("widens match on Option, Either, Try, List, Map and Stack", () => {
+    expectTypeOf(Stack([1]).match({ Empty: () => "empty" as const, NonEmpty: (vs) => vs.length })).toEqualTypeOf<
+      "empty" | number
+    >()
     expectTypeOf(o.match({ None: () => "none" as const, Some: (n) => n })).toEqualTypeOf<number | "none">()
     const either: Either<Missing, number> = Either.right(1)
     expectTypeOf(either.match({ Left: (l) => l._tag, Right: (n) => n })).toEqualTypeOf<"Missing" | number>()
@@ -171,6 +175,35 @@ describe("fold and match keep the types they inferred before", () => {
     expect(typed.orThrow()).toBe(1)
   })
 
+  it("keeps one type on Either, Try, Exit and IO when the branches share one", () => {
+    const either: Either<Missing, number> = Either.right(1)
+    expectTypeOf(
+      either.fold(
+        () => 0,
+        (n) => n,
+      ),
+    ).toEqualTypeOf<number>()
+    expectTypeOf(
+      Try(() => 1).fold(
+        () => [],
+        (n) => [n],
+      ),
+    ).toEqualTypeOf<number[]>()
+    const exit: Exit<Missing, number> = Exit.succeed(1)
+    expectTypeOf(
+      exit.fold(
+        () => 0,
+        (n) => n,
+      ),
+    ).toEqualTypeOf<number>()
+    expectTypeOf(
+      IO.succeed(1).fold(
+        () => 0,
+        (n) => n,
+      ),
+    ).toEqualTypeOf<IOType<never, never, number>>()
+  })
+
   it("keeps an empty array branch and an element branch as one array type", () => {
     const folded = o.fold(
       () => [],
@@ -181,6 +214,78 @@ describe("fold and match keep the types they inferred before", () => {
     const matched = List<number>([]).match({ Empty: () => [], NonEmpty: (vs) => vs })
     expectTypeOf(matched).toEqualTypeOf<number[]>()
     expect(matched.includes(1)).toBe(false)
+  })
+})
+
+describe("fold and match on a union receiver", () => {
+  const flag = Math.random() > 2
+
+  it("still resolves on a union of two IOs", async () => {
+    const io = (flag ? IO.succeed(1) : IO.fail(missing)).fold(
+      () => 0,
+      (r) => r,
+    )
+    expectTypeOf(io).toEqualTypeOf<IOType<never, never, number>>()
+    expect((await io.run()).orThrow()).toBe(0)
+  })
+
+  it("still resolves on a union of two Eithers, two Options, and an Option or a Try", () => {
+    const either = (v: number) => {
+      if (v > 0) return Right<string, number>(v)
+      return Left<Error, number>(new Error("x"))
+    }
+    const option = (v: number) => (v > 0 ? Option(v) : Option("s"))
+    const two: Option<number> | Try<number> = flag ? Option(1) : Try(() => 1)
+    expectTypeOf(
+      either(1).fold(
+        (l) => String(l),
+        (r) => String(r),
+      ),
+    ).toEqualTypeOf<string>()
+    expectTypeOf(
+      option(1).fold(
+        () => "n",
+        (r) => String(r),
+      ),
+    ).toEqualTypeOf<string>()
+    expectTypeOf(
+      two.fold(
+        () => 0,
+        (n: number) => n,
+      ),
+    ).toEqualTypeOf<number>()
+    expect(
+      option(1).fold(
+        () => "n",
+        (r) => String(r),
+      ),
+    ).toBe("1")
+  })
+})
+
+describe("fold in generic code", () => {
+  it("resolves to the type parameter's own types", () => {
+    const orUndefined = <T>(x: Option<T>): T | undefined =>
+      x.fold(
+        () => undefined,
+        (v) => v,
+      )
+    const orEmpty = <T>(x: Option<T>): Option<T> =>
+      x.fold(
+        () => None<T>(),
+        (v) => Some(v),
+      )
+    expect(orUndefined(Option(1))).toBe(1)
+    expect(orEmpty(Option(2)).orThrow()).toBe(2)
+  })
+
+  it("keeps an any branch any, as before", () => {
+    const loose: unknown = "x"
+    const anyBranch = o.fold(
+      () => loose as never as ReturnType<typeof JSON.parse>,
+      (v) => v,
+    )
+    expectTypeOf(anyBranch).toBeAny()
   })
 })
 

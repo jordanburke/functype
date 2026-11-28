@@ -7,6 +7,7 @@ import type { FunctypeSum } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import { List } from "@/list"
 import { Option, Some } from "@/option"
 import type { Pipe } from "@/pipe"
@@ -21,7 +22,7 @@ import {
   serializeError,
 } from "@/serialization"
 import type { Promisable } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 /**
  * Possible types of Try instances
@@ -94,9 +95,7 @@ export interface TryBase<out T>
    * @param onSuccess - Function to apply if the Try is Success
    * @returns The result of applying the appropriate function
    */
-  fold<U extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => U): U
-  /** The two branches may return different types; the result is their union. */
-  fold<U extends Type, V extends Type>(onFailure: (error: Error) => U, onSuccess: (value: T) => V): U | V
+  fold<U extends Type, V extends Type = U>(onFailure: (error: Error) => U, onSuccess: (value: T) => V): Unify<U, V>
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -111,9 +110,7 @@ export interface TryBase<out T>
    * @param patterns - Object with handler functions for Success and Failure variants
    * @returns The result of applying the matching handler function
    */
-  match<R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => R }): R
-  /** The two branches may return different types; the result is their union. */
-  match<R, S>(patterns: { Success: (value: T) => R; Failure: (error: Error) => S }): R | S
+  match<R, S = R>(patterns: { Success: (value: T) => R; Failure: (error: Error) => S }): Unify<R, S>
   /**
    * Recovers from a Failure by applying a function to the error, returning a new Try.
    * The recovery value may be a wider type; the result is `Try<T | U>`, matching
@@ -210,14 +207,14 @@ const SuccessProto = define<SuccessOf<A>>()("Success", {
   async flatMapAsync(f) {
     return f(this.value)
   },
-  fold<U, V>(_onFailure: (error: Error) => U, onSuccess: (value: A) => V): U | V {
-    return onSuccess(this.value)
+  fold<U, V>(_onFailure: (error: Error) => U, onSuccess: (value: A) => V): Unify<U, V> {
+    return unify(onSuccess(this.value))
   },
   async foldAsync(_onFailure, onSuccess) {
     return onSuccess(this.value)
   },
-  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): R | S {
-    return patterns.Success(this.value)
+  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): Unify<R, S> {
+    return unify(patterns.Success(this.value))
   },
   recover() {
     return this
@@ -329,14 +326,14 @@ const FailureProto = define<FailureOf<A>>()("Failure", {
   flatMapAsync() {
     return Promise.resolve(Failure(this.error))
   },
-  fold<U, V>(onFailure: (error: Error) => U): U | V {
-    return onFailure(this.error)
+  fold<U, V>(onFailure: (error: Error) => U): Unify<U, V> {
+    return unify(onFailure(this.error))
   },
   async foldAsync(onFailure) {
     return onFailure(this.error)
   },
-  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): R | S {
-    return patterns.Failure(this.error)
+  match<R, S>(patterns: { Success: (value: A) => R; Failure: (error: Error) => S }): Unify<R, S> {
+    return unify(patterns.Failure(this.error))
   },
   recover(f) {
     return Try(() => f(this.error))

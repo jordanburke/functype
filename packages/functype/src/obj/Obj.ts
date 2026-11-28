@@ -6,12 +6,13 @@ import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { freezeInDevelopment } from "@/internal/freeze"
 import { safeStringify } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import { Option } from "@/option"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer } from "@/serialization"
 import { Tuple } from "@/tuple"
 import type { Promisable, Widen } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 import { type Either, List, Right, Try } from "../index"
 
@@ -167,9 +168,7 @@ export interface Obj<T extends Record<string, Type>>
    * @param onValue - Handler for non-empty Obj
    * @returns The result of the matching handler
    */
-  fold<U extends Type>(onEmpty: () => U, onValue: (value: T) => U): U
-  /** The two branches may return different types; the result is their union. */
-  fold<U extends Type, V extends Type>(onEmpty: () => U, onValue: (value: T) => V): U | V
+  fold<U extends Type, V extends Type = U>(onEmpty: () => U, onValue: (value: T) => V): Unify<U, V>
 
   /**
    * Returns a string representation of this Obj
@@ -273,8 +272,8 @@ const ObjProto = define<Obj<A>, "_tag" | "data">()("Obj", {
     return wrap(fn(this.data))
   },
 
-  fold<U extends Type, V extends Type>(onEmpty: () => U, onValue: (value: A) => V): U | V {
-    return Object.keys(this.data).length === 0 ? onEmpty() : onValue(this.data)
+  fold<U extends Type, V extends Type>(onEmpty: () => U, onValue: (value: A) => V): Unify<U, V> {
+    return unify(Object.keys(this.data).length === 0 ? onEmpty() : onValue(this.data))
   },
 
   match<R>(patterns: { Obj: (value: A) => R }): R {

@@ -4,10 +4,11 @@ import type { Functype } from "@/functype"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import type { Promisable, Widen } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 import type { Either } from "../index"
 import { Left, List, Right, Try } from "../index"
@@ -118,9 +119,7 @@ export interface OptionBase<out T extends Type>
    * @param onSome - Function to apply if the Option has a value
    * @returns The result of applying the appropriate function
    */
-  fold<U>(onNone: () => U, onSome: (value: T) => U): U
-  /** The two branches may return different types; the result is their union. */
-  fold<U, V>(onNone: () => U, onSome: (value: T) => V): U | V
+  fold<U, V = U>(onNone: () => U, onSome: (value: T) => V): Unify<U, V>
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise.
@@ -200,9 +199,7 @@ export interface OptionBase<out T extends Type>
    * @param patterns - Object with handler functions for Some and None variants
    * @returns The result of applying the matching handler function
    */
-  match<R>(patterns: { Some: (value: T) => R; None: () => R }): R
-  /** The two branches may return different types; the result is their union. */
-  match<R, S>(patterns: { Some: (value: T) => R; None: () => S }): R | S
+  match<R, S = R>(patterns: { Some: (value: T) => R; None: () => S }): Unify<R, S>
 }
 
 /** An Option holding a value. Discriminated by `_tag: "Some"`. */
@@ -282,14 +279,14 @@ const SomeProto = define<SomeOf<A>>()("Some", {
   forEach(f) {
     f(this.value)
   },
-  fold<U, V>(_onNone: () => U, onSome: (value: A) => V): U | V {
-    return onSome(this.value)
+  fold<U, V>(_onNone: () => U, onSome: (value: A) => V): Unify<U, V> {
+    return unify(onSome(this.value))
   },
   async foldAsync(_onNone, onSome) {
     return onSome(this.value)
   },
-  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): R | S {
-    return patterns.Some(this.value)
+  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): Unify<R, S> {
+    return unify(patterns.Some(this.value))
   },
   flatMap(f) {
     return f(this.value)
@@ -405,14 +402,14 @@ const NoneProto = define<NoneOf<A>>()("None", {
     return true
   },
   forEach() {},
-  fold<U, V>(onNone: () => U): U | V {
-    return onNone()
+  fold<U, V>(onNone: () => U): Unify<U, V> {
+    return unify(onNone())
   },
   async foldAsync(onNone) {
     return onNone()
   },
-  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): R | S {
-    return patterns.None()
+  match<R, S>(patterns: { Some: (value: A) => R; None: () => S }): Unify<R, S> {
+    return unify(patterns.None())
   },
   flatMap() {
     return NONE

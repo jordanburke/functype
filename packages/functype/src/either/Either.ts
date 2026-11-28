@@ -6,6 +6,7 @@ import { base64ToUtf8 } from "@/internal/base64"
 import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/concurrency"
 import { type A, type B, define, type Mutable } from "@/internal/define"
 import { showValue } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import { List } from "@/list/List"
 import type { Option } from "@/option/Option"
 import { None, Some } from "@/option/Option"
@@ -13,7 +14,7 @@ import type { Reshapeable } from "@/reshapeable"
 import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
 import { Try } from "@/try"
 import type { AsyncMonad, Promisable } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 /**
  * Either type module
@@ -105,9 +106,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
    */
   filterOrElse<L2 extends Type>(predicate: (value: R) => boolean, onUnsatisfied: (value: R) => L2): Either<L | L2, R>
   bimap<L2 extends Type, R2 extends Type>(fl: (value: L) => L2, fr: (value: R) => R2): Either<L2, R2>
-  fold<T extends Type>(onLeft: (value: L) => T, onRight: (value: R) => T): T
-  /** The two branches may return different types; the result is their union. */
-  fold<T extends Type, U extends Type>(onLeft: (value: L) => T, onRight: (value: R) => U): T | U
+  fold<T extends Type, U extends Type = T>(onLeft: (value: L) => T, onRight: (value: R) => U): Unify<T, U>
   /**
    * Async variant of fold. Accepts sync or async handlers on either branch and
    * always returns a Promise, keeping chains fluent when at least one branch is async.
@@ -126,9 +125,7 @@ export interface EitherBase<out L extends Type, out R extends Type>
   /**
    * Pattern matches over the Either, applying a handler function based on the variant
    */
-  match<T>(patterns: { Left: (value: L) => T; Right: (value: R) => T }): T
-  /** The two branches may return different types; the result is their union. */
-  match<T, U>(patterns: { Left: (value: L) => T; Right: (value: R) => U }): T | U
+  match<T, U = T>(patterns: { Left: (value: L) => T; Right: (value: R) => U }): Unify<T, U>
   /**
    * Returns the value and tag for inspection
    */
@@ -264,8 +261,8 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   bimap(_fl, fr) {
     return RightConstructor(fr(this.value))
   },
-  fold<T, U>(_onLeft: (value: B) => T, onRight: (value: A) => U): T | U {
-    return onRight(this.value)
+  fold<T, U>(_onLeft: (value: B) => T, onRight: (value: A) => U): Unify<T, U> {
+    return unify(onRight(this.value))
   },
   async foldAsync(_onLeft, onRight) {
     return onRight(this.value)
@@ -276,8 +273,8 @@ const RightProto = define<RightOf<B, A>>()("Right", {
   foldRight(z) {
     return (op) => op(this.value, z)
   },
-  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): T | U {
-    return patterns.Right(this.value)
+  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): Unify<T, U> {
+    return unify(patterns.Right(this.value))
   },
   swap() {
     return Left(this.value)
@@ -407,8 +404,8 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   bimap(fl) {
     return LeftConstructor(fl(this.value))
   },
-  fold<T, U>(onLeft: (value: B) => T): T | U {
-    return onLeft(this.value)
+  fold<T, U>(onLeft: (value: B) => T): Unify<T, U> {
+    return unify(onLeft(this.value))
   },
   async foldAsync(onLeft) {
     return onLeft(this.value)
@@ -419,8 +416,8 @@ const LeftProto = define<LeftOf<B, A>>()("Left", {
   foldRight(z) {
     return () => z
   },
-  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): T | U {
-    return patterns.Left(this.value)
+  match<T, U>(patterns: { Left: (value: B) => T; Right: (value: A) => U }): Unify<T, U> {
+    return unify(patterns.Left(this.value))
   },
   swap() {
     return RightConstructor(this.value)

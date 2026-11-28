@@ -4,6 +4,7 @@ import { Companion, type Foldable } from "@/index"
 import { base64ToUtf8 } from "@/internal/base64"
 import { type A, type B, define, type Mutable } from "@/internal/define"
 import { freezeInDevelopment } from "@/internal/freeze"
+import { unify } from "@/internal/unify"
 import { List } from "@/list/List"
 import { Option } from "@/option/Option"
 import type { Pipe } from "@/pipe"
@@ -13,6 +14,7 @@ import { Set } from "@/set/Set"
 import type { KVTraversable } from "@/traversable/KVTraversable"
 import { Tuple } from "@/tuple/Tuple"
 import type { Widen } from "@/typeclass"
+import type { Unify } from "@/types"
 
 import { ESMap } from "./shim"
 
@@ -67,9 +69,7 @@ export interface Map<K, out V>
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
    * @returns The result of applying the matching handler function
    */
-  match<R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => R }): R
-  /** The two branches may return different types; the result is their union. */
-  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => S }): R | S
+  match<R, S = R>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[K, V]>>) => S }): Unify<R, S>
   toValue(): { _tag: "Map"; value: [K, V][] }
 }
 
@@ -176,8 +176,8 @@ const MapProto = define<MapOf<A, B>, "_tag" | "value">()("Map", {
     return tuplesOf(this.value).reduce(fn, initial)
   },
 
-  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[A, B]>>) => S }): R | S {
-    return this.value.size === 0 ? patterns.Empty() : patterns.NonEmpty(tuplesOf(this.value))
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (entries: Array<Tuple<[A, B]>>) => S }): Unify<R, S> {
+    return unify(this.value.size === 0 ? patterns.Empty() : patterns.NonEmpty(tuplesOf(this.value)))
   },
 
   get(key) {

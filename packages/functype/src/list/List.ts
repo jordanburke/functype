@@ -7,6 +7,7 @@ import { type ConcurrencyOptions, traverseWithConcurrency } from "@/internal/con
 import { type A, define, type Mutable } from "@/internal/define"
 import { freezeInDevelopment } from "@/internal/freeze"
 import { safeStringify } from "@/internal/stringify"
+import { unify } from "@/internal/unify"
 import { None, Option } from "@/option/Option"
 import type { Reshapeable } from "@/reshapeable"
 import { createSerializer, expectMarker, type ParsedEnvelope } from "@/serialization"
@@ -15,7 +16,7 @@ import { Try } from "@/try"
 import type { Typeable } from "@/typeable/Typeable"
 import { type ExtractTag, isTypeable } from "@/typeable/Typeable"
 import { type Flattened, reduceRightWiden, reduceWiden, type Widen } from "@/typeclass"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 /** An array or another non-string iterable: what `flatten` spreads. */
 const isSpreadable = <B>(item: unknown): item is Iterable<B> =>
@@ -115,9 +116,7 @@ export interface List<out A> extends FunctypeCollection<A, "List">, Doable<A>, R
    * @param patterns - Object with handler functions for Empty and NonEmpty variants
    * @returns The result of applying the matching handler function
    */
-  match<R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => R }): R
-  /** The two branches may return different types; the result is their union. */
-  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): R | S
+  match<R, S = R>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): Unify<R, S>
 }
 
 /**
@@ -258,8 +257,8 @@ const ListProto = define<ListOf<A>, "_tag" | "value">()("List", {
     return (op) => this.value.reduceRight((acc, value) => op(value, acc), z)
   },
 
-  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): R | S {
-    return this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value])
+  match<R, S>(patterns: { Empty: () => R; NonEmpty: (values: A[]) => S }): Unify<R, S> {
+    return unify(this.value.length === 0 ? patterns.Empty() : patterns.NonEmpty([...this.value]))
   },
 
   remove(value) {
