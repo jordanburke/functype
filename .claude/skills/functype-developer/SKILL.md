@@ -307,7 +307,7 @@ When implementing interfaces, refer to this checklist:
 
 **Foldable:**
 
-- [ ] `fold<B>(onEmpty: () => B, onValue: (value: A) => B): B`
+- [ ] `fold<B, C = B>(onEmpty: () => B, onValue: (value: A) => C): Unify<B, C>`. One signature, not overloads: TypeScript can't call an overloaded method on a union receiver. The prototype's implementation returns `unify(...)` from `@/internal/unify`.
 - [ ] `foldLeft<B>(z: B): (op: (b: B, a: A) => B) => B`
 - [ ] `foldRight<B>(z: B): (op: (a: A, b: B) => B) => B`
 

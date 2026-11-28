@@ -8,7 +8,7 @@ import { safeStringify } from "@/internal/stringify"
 import type { Option } from "@/option/Option"
 import { None, Option as OptionConstructor, Some } from "@/option/Option"
 import { Try } from "@/try/Try"
-import type { Type } from "@/types"
+import type { Type, Unify } from "@/types"
 
 import type { Context } from "./Context"
 import { Context as ContextCompanion } from "./Context"
@@ -427,12 +427,15 @@ export interface IO<in out R extends Type, out E extends Type, out A extends Typ
    * @param onSuccess - Handler for successes
    * @returns New IO with handled result
    */
-  fold<B extends Type>(onFailure: (e: E) => B, onSuccess: (a: A) => B): IO<R, never, B>
+  fold<B extends Type, C extends Type = B>(onFailure: (e: E) => B, onSuccess: (a: A) => C): IO<R, never, Unify<B, C>>
 
   /**
    * Pattern matches with object pattern syntax.
    */
-  match<B extends Type>(patterns: { failure: (e: E) => B; success: (a: A) => B }): IO<R, never, B>
+  match<B extends Type, C extends Type = B>(patterns: {
+    failure: (e: E) => B
+    success: (a: A) => C
+  }): IO<R, never, Unify<B, C>>
 
   /**
    * Catches errors with a specific tag and handles them.
@@ -899,11 +902,17 @@ const IOProto = define<IO<AnyR, AnyE, AnyA>, IOEffectKey>()("IO", {
     return createIO(unsafeCoerce({ _tag: "RecoverWith", effect: this, f }))
   },
 
-  fold(onFailure, onSuccess) {
+  fold<B extends Type, C extends Type>(
+    onFailure: (e: AnyE) => B,
+    onSuccess: (a: AnyA) => C,
+  ): IO<AnyR, never, Unify<B, C>> {
     return createIO(unsafeCoerce({ _tag: "Fold", effect: this, onFailure, onSuccess }))
   },
 
-  match(patterns) {
+  match<B extends Type, C extends Type>(patterns: {
+    failure: (e: AnyE) => B
+    success: (a: AnyA) => C
+  }): IO<AnyR, never, Unify<B, C>> {
     return this.fold(patterns.failure, patterns.success)
   },
 
